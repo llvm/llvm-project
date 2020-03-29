@@ -18,14 +18,14 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
         if (nmlObjSymbol && nmlObjSymbol->has<ObjectEntityDetails>()) {
           const auto *symDetails{
               std::get_if<ObjectEntityDetails>(&nmlObjSymbol->details())};
-          if (symDetails && symDetails->IsAssumedSize()) {  // C8104
+          if (symDetails && symDetails->IsAssumedSize()) { // C8104
             context_.Say(nmlObjName.source,
                 "A namelist group object '%s' must not be"
                 " assumed-size"_err_en_US,
                 nmlObjSymbol->name());
           }
           if (nml->attrs().test(Attr::PUBLIC) &&
-              nmlObjSymbol->attrs().test(Attr::PRIVATE)) {  // C8105
+              nmlObjSymbol->attrs().test(Attr::PRIVATE)) { // C8105
             context_.Say(nmlObjName.source,
                 "A PRIVATE namelist group object '%s' must not be in a "
                 "PUBLIC namelist"_err_en_US,
@@ -37,4 +37,4 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
   }
 }
 
-}
+} // namespace Fortran::semantics

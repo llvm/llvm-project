@@ -27,7 +27,7 @@ Triplet::Triplet() : stride_{Expr<SubscriptInteger>{1}} {}
 Triplet::Triplet(std::optional<Expr<SubscriptInteger>> &&l,
     std::optional<Expr<SubscriptInteger>> &&u,
     std::optional<Expr<SubscriptInteger>> &&s)
-  : stride_{s ? std::move(*s) : Expr<SubscriptInteger>{1}} {
+    : stride_{s ? std::move(*s) : Expr<SubscriptInteger>{1}} {
   if (l) {
     lower_.emplace(std::move(*l));
   }
@@ -77,8 +77,8 @@ bool Triplet::IsStrideOne() const {
 
 CoarrayRef::CoarrayRef(SymbolVector &&base, std::vector<Subscript> &&ss,
     std::vector<Expr<SubscriptInteger>> &&css)
-  : base_{std::move(base)}, subscript_(std::move(ss)),
-    cosubscript_(std::move(css)) {
+    : base_{std::move(base)}, subscript_(std::move(ss)),
+      cosubscript_(std::move(css)) {
   CHECK(!base_.empty());
   CHECK(!cosubscript_.empty());
 }
@@ -230,7 +230,8 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
       case 4:
         return {AsCategoryExpr(Constant<Type<TypeCategory::Character, 4>>{
             *newStaticData->AsU32String()})};
-      default: CRASH_NO_CASE;
+      default:
+        CRASH_NO_CASE;
       }
     }
   }
@@ -239,7 +240,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
 
 DescriptorInquiry::DescriptorInquiry(
     const NamedEntity &base, Field field, int dim)
-  : base_{base}, field_{field}, dimension_{dim} {
+    : base_{base}, field_{field}, dimension_{dim} {
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
   CHECK((field == Field::Len && dim == 0) ||
@@ -247,7 +248,7 @@ DescriptorInquiry::DescriptorInquiry(
 }
 
 DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
-  : base_{std::move(base)}, field_{field}, dimension_{dim} {
+    : base_{std::move(base)}, field_{field}, dimension_{dim} {
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
   CHECK((field == Field::Len && dim == 0) ||
@@ -298,11 +299,10 @@ std::optional<Expr<SubscriptInteger>> CoarrayRef::LEN() const {
 }
 
 std::optional<Expr<SubscriptInteger>> DataRef::LEN() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return SymbolLEN(symbol); },
-          [](const auto &x) { return x.LEN(); },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef symbol) { return SymbolLEN(symbol); },
+                        [](const auto &x) { return x.LEN(); },
+                    },
       u);
 }
 
@@ -316,14 +316,13 @@ std::optional<Expr<SubscriptInteger>> Substring::LEN() const {
   }
 }
 
-template<typename T>
+template <typename T>
 std::optional<Expr<SubscriptInteger>> Designator<T>::LEN() const {
   if constexpr (T::category == TypeCategory::Character) {
-    return std::visit(
-        common::visitors{
-            [](SymbolRef symbol) { return SymbolLEN(symbol); },
-            [](const auto &x) { return x.LEN(); },
-        },
+    return std::visit(common::visitors{
+                          [](SymbolRef symbol) { return SymbolLEN(symbol); },
+                          [](const auto &x) { return x.LEN(); },
+                      },
         u);
   } else {
     common::die("Designator<non-char>::LEN() called");
@@ -354,11 +353,10 @@ std::optional<Expr<SubscriptInteger>> ProcedureDesignator::LEN() const {
 
 // Rank()
 int BaseObject::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return symbol->Rank(); },
-          [](const StaticDataObject::Pointer &) { return 0; },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef symbol) { return symbol->Rank(); },
+                        [](const StaticDataObject::Pointer &) { return 0; },
+                    },
       u);
 }
 
@@ -370,22 +368,20 @@ int Component::Rank() const {
 }
 
 int NamedEntity::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](const SymbolRef s) { return s->Rank(); },
-          [](const Component &c) { return c.Rank(); },
-      },
+  return std::visit(common::visitors{
+                        [](const SymbolRef s) { return s->Rank(); },
+                        [](const Component &c) { return c.Rank(); },
+                    },
       u_);
 }
 
 int Subscript::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](const IndirectSubscriptIntegerExpr &x) {
-            return x.value().Rank();
-          },
-          [](const Triplet &) { return 1; },
-      },
+  return std::visit(common::visitors{
+                        [](const IndirectSubscriptIntegerExpr &x) {
+                          return x.value().Rank();
+                        },
+                        [](const Triplet &) { return 1; },
+                    },
       u);
 }
 
@@ -416,31 +412,28 @@ int CoarrayRef::Rank() const {
 }
 
 int DataRef::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return symbol->Rank(); },
-          [](const auto &x) { return x.Rank(); },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef symbol) { return symbol->Rank(); },
+                        [](const auto &x) { return x.Rank(); },
+                    },
       u);
 }
 
 int Substring::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](const DataRef &dataRef) { return dataRef.Rank(); },
-          [](const StaticDataObject::Pointer &) { return 0; },
-      },
+  return std::visit(common::visitors{
+                        [](const DataRef &dataRef) { return dataRef.Rank(); },
+                        [](const StaticDataObject::Pointer &) { return 0; },
+                    },
       parent_);
 }
 
 int ComplexPart::Rank() const { return complex_.Rank(); }
 
-template<typename T> int Designator<T>::Rank() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return symbol->Rank(); },
-          [](const auto &x) { return x.Rank(); },
-      },
+template <typename T> int Designator<T>::Rank() const {
+  return std::visit(common::visitors{
+                        [](SymbolRef symbol) { return symbol->Rank(); },
+                        [](const auto &x) { return x.Rank(); },
+                    },
       u);
 }
 
@@ -450,42 +443,38 @@ const Symbol &Component::GetFirstSymbol() const {
 }
 
 const Symbol &NamedEntity::GetFirstSymbol() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef s) -> const Symbol & { return s; },
-          [](const Component &c) -> const Symbol & {
-            return c.GetFirstSymbol();
-          },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef s) -> const Symbol & { return s; },
+                        [](const Component &c) -> const Symbol & {
+                          return c.GetFirstSymbol();
+                        },
+                    },
       u_);
 }
 
 const Symbol &NamedEntity::GetLastSymbol() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef s) -> const Symbol & { return s; },
-          [](const Component &c) -> const Symbol & {
-            return c.GetLastSymbol();
-          },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef s) -> const Symbol & { return s; },
+                        [](const Component &c) -> const Symbol & {
+                          return c.GetLastSymbol();
+                        },
+                    },
       u_);
 }
 
 const Component *NamedEntity::UnwrapComponent() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef) -> const Component * { return nullptr; },
-          [](const Component &c) { return &c; },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef) -> const Component * { return nullptr; },
+                        [](const Component &c) { return &c; },
+                    },
       u_);
 }
 
 Component *NamedEntity::UnwrapComponent() {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef &) -> Component * { return nullptr; },
-          [](Component &c) { return &c; },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef &) -> Component * { return nullptr; },
+                        [](Component &c) { return &c; },
+                    },
       u_);
 }
 
@@ -496,33 +485,30 @@ const Symbol &ArrayRef::GetFirstSymbol() const {
 const Symbol &ArrayRef::GetLastSymbol() const { return base_.GetLastSymbol(); }
 
 const Symbol &DataRef::GetFirstSymbol() const {
-  return *std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return &*symbol; },
-          [](const auto &x) { return &x.GetFirstSymbol(); },
-      },
+  return *std::visit(common::visitors{
+                         [](SymbolRef symbol) { return &*symbol; },
+                         [](const auto &x) { return &x.GetFirstSymbol(); },
+                     },
       u);
 }
 
 const Symbol &DataRef::GetLastSymbol() const {
-  return *std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return &*symbol; },
-          [](const auto &x) { return &x.GetLastSymbol(); },
-      },
+  return *std::visit(common::visitors{
+                         [](SymbolRef symbol) { return &*symbol; },
+                         [](const auto &x) { return &x.GetLastSymbol(); },
+                     },
       u);
 }
 
 BaseObject Substring::GetBaseObject() const {
-  return std::visit(
-      common::visitors{
-          [](const DataRef &dataRef) {
-            return BaseObject{dataRef.GetFirstSymbol()};
-          },
-          [](StaticDataObject::Pointer pointer) {
-            return BaseObject{std::move(pointer)};
-          },
-      },
+  return std::visit(common::visitors{
+                        [](const DataRef &dataRef) {
+                          return BaseObject{dataRef.GetFirstSymbol()};
+                        },
+                        [](StaticDataObject::Pointer pointer) {
+                          return BaseObject{std::move(pointer)};
+                        },
+                    },
       parent_);
 }
 
@@ -535,7 +521,7 @@ const Symbol *Substring::GetLastSymbol() const {
       parent_);
 }
 
-template<typename T> BaseObject Designator<T>::GetBaseObject() const {
+template <typename T> BaseObject Designator<T>::GetBaseObject() const {
   return std::visit(
       common::visitors{
           [](SymbolRef symbol) { return BaseObject{symbol}; },
@@ -553,7 +539,7 @@ template<typename T> BaseObject Designator<T>::GetBaseObject() const {
       u);
 }
 
-template<typename T> const Symbol *Designator<T>::GetLastSymbol() const {
+template <typename T> const Symbol *Designator<T>::GetLastSymbol() const {
   return std::visit(
       common::visitors{
           [](SymbolRef symbol) { return &*symbol; },
@@ -571,7 +557,8 @@ template<typename T> const Symbol *Designator<T>::GetLastSymbol() const {
       u);
 }
 
-template<typename T> std::optional<DynamicType> Designator<T>::GetType() const {
+template <typename T>
+std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return {Result::GetType()};
   } else {
@@ -616,7 +603,7 @@ static bool AreSameSymbol(const Symbol &x, const Symbol &y) {
 
 // Implements operator==() for a union type, using special case handling
 // for Symbol references.
-template<typename A> static bool TestVariableEquality(const A &x, const A &y) {
+template <typename A> static bool TestVariableEquality(const A &x, const A &y) {
   const SymbolRef *xSymbol{std::get_if<SymbolRef>(&x.u)};
   if (const SymbolRef * ySymbol{std::get_if<SymbolRef>(&y.u)}) {
     return xSymbol && AreSameSymbol(*xSymbol, *ySymbol);
@@ -639,7 +626,7 @@ bool NamedEntity::operator==(const NamedEntity &that) const {
     return !that.IsSymbol() && GetComponent() == that.GetComponent();
   }
 }
-template<int KIND>
+template <int KIND>
 bool TypeParamInquiry<KIND>::operator==(
     const TypeParamInquiry<KIND> &that) const {
   return &*parameter_ == &*that.parameter_ && base_ == that.base_;
@@ -670,11 +657,11 @@ bool ComplexPart::operator==(const ComplexPart &that) const {
 bool ProcedureRef::operator==(const ProcedureRef &that) const {
   return proc_ == that.proc_ && arguments_ == that.arguments_;
 }
-template<typename T>
+template <typename T>
 bool Designator<T>::operator==(const Designator<T> &that) const {
   return TestVariableEquality(*this, that);
 }
-template<typename T>
+template <typename T>
 bool Variable<T>::operator==(const Variable<T> &that) const {
   return u == that.u;
 }
@@ -684,6 +671,6 @@ bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
 }
 
 INSTANTIATE_VARIABLE_TEMPLATES
-}
+} // namespace Fortran::evaluate
 
 template class Fortran::common::Indirection<Fortran::evaluate::Component, true>;

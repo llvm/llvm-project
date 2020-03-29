@@ -136,7 +136,7 @@ TYPE_CONTEXT_PARSER("CLOSE statement"_en_US,
 //         READ format [, input-item-list]
 constexpr auto inputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
-        some("," >> inputItem)) ||  // legacy extension: leading comma
+        some("," >> inputItem)) || // legacy extension: leading comma
     optionalList(inputItem)};
 
 TYPE_CONTEXT_PARSER("READ statement"_en_US,
@@ -217,7 +217,7 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
-        some("," >> outputItem)) ||  // legacy: allow leading comma
+        some("," >> outputItem)) || // legacy: allow leading comma
     optionalList(outputItem)};
 
 TYPE_CONTEXT_PARSER("WRITE statement"_en_US,
@@ -285,7 +285,7 @@ TYPE_PARSER(first(construct<WaitSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<WaitSpec>("IOMSG =" >> msgVariable),
     construct<WaitSpec>("IOSTAT =" >> statVariable)))
 
-template<typename A> common::IfNoLvalue<std::list<A>, A> singletonList(A &&x) {
+template <typename A> common::IfNoLvalue<std::list<A>, A> singletonList(A &&x) {
   std::list<A> result;
   result.push_front(std::move(x));
   return result;
@@ -661,4 +661,4 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                    pure(format::ControlEditDesc::Kind::Dollar)) ||
         "\\" >> construct<format::ControlEditDesc>(
                     pure(format::ControlEditDesc::Kind::Backslash))))
-}
+} // namespace Fortran::parser

@@ -83,10 +83,18 @@ RealFlags ScopedHostFloatingPointEnvironment::CurrentFlags() {
 
 void ScopedHostFloatingPointEnvironment::SetRounding(Rounding rounding) {
   switch (rounding.mode) {
-  case RoundingMode::TiesToEven: fesetround(FE_TONEAREST); break;
-  case RoundingMode::ToZero: fesetround(FE_TOWARDZERO); break;
-  case RoundingMode::Up: fesetround(FE_UPWARD); break;
-  case RoundingMode::Down: fesetround(FE_DOWNWARD); break;
+  case RoundingMode::TiesToEven:
+    fesetround(FE_TONEAREST);
+    break;
+  case RoundingMode::ToZero:
+    fesetround(FE_TOWARDZERO);
+    break;
+  case RoundingMode::Up:
+    fesetround(FE_UPWARD);
+    break;
+  case RoundingMode::Down:
+    fesetround(FE_DOWNWARD);
+    break;
   case RoundingMode::TiesAwayFromZero:
     std::fprintf(stderr, "SetRounding: TiesAwayFromZero not available");
     std::abort();

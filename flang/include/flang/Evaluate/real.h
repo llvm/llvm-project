@@ -35,7 +35,7 @@ static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 // class template must be (or look like) an instance of Integer<>;
 // the second specifies the number of effective bits (binary precision)
 // in the fraction.
-template<typename WORD, int PREC>
+template <typename WORD, int PREC>
 class Real : public common::RealDetails<PREC> {
 public:
   using Word = WORD;
@@ -49,11 +49,11 @@ public:
 
   static constexpr int bits{Word::bits};
   static_assert(bits >= Details::bits);
-  using Fraction = Integer<binaryPrecision>;  // all bits made explicit
+  using Fraction = Integer<binaryPrecision>; // all bits made explicit
 
-  template<typename W, int P> friend class Real;
+  template <typename W, int P> friend class Real;
 
-  constexpr Real() {}  // +0.0
+  constexpr Real() {} // +0.0
   constexpr Real(const Real &) = default;
   constexpr Real(const Word &bits) : word_{bits} {}
   constexpr Real &operator=(const Real &) = default;
@@ -91,10 +91,10 @@ public:
     return Exponent() == 0 && !GetSignificand().IsZero();
   }
 
-  constexpr Real ABS() const {  // non-arithmetic, no flags returned
+  constexpr Real ABS() const { // non-arithmetic, no flags returned
     return {word_.IBCLR(bits - 1)};
   }
-  constexpr Real SetSign(bool toNegative) const {  // non-arithmetic
+  constexpr Real SetSign(bool toNegative) const { // non-arithmetic
     if (toNegative) {
       return {word_.IBSET(bits - 1)};
     } else {
@@ -122,7 +122,7 @@ public:
   ValueWithRealFlags<Real> HYPOT(
       const Real &, Rounding rounding = defaultRounding) const;
 
-  template<typename INT> constexpr INT EXPONENT() const {
+  template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
       return INT::HUGE();
     } else {
@@ -143,7 +143,7 @@ public:
   }
   static constexpr Real TINY() {
     Real tiny;
-    tiny.Normalize(false, 1, Fraction::MASKL(1));  // minimum *normal* number
+    tiny.Normalize(false, 1, Fraction::MASKL(1)); // minimum *normal* number
     return tiny;
   }
 
@@ -177,17 +177,17 @@ public:
     return {infinity};
   }
 
-  template<typename INT>
+  template <typename INT>
   static ValueWithRealFlags<Real> FromInteger(
       const INT &n, Rounding rounding = defaultRounding) {
     bool isNegative{n.IsNegative()};
     INT absN{n};
     if (isNegative) {
-      absN = n.Negate().value;  // overflow is safe to ignore
+      absN = n.Negate().value; // overflow is safe to ignore
     }
     int leadz{absN.LEADZ()};
     if (leadz >= absN.bits) {
-      return {};  // all bits zero -> +0.0
+      return {}; // all bits zero -> +0.0
     }
     ValueWithRealFlags<Real> result;
     int exponent{exponentBias + absN.bits - leadz - 1};
@@ -211,7 +211,7 @@ public:
       common::RoundingMode = common::RoundingMode::ToZero) const;
 
   // Conversion to an integer (INT(), NINT(), FLOOR(), CEILING())
-  template<typename INT>
+  template <typename INT>
   constexpr ValueWithRealFlags<INT> ToInteger(
       common::RoundingMode mode = common::RoundingMode::ToZero) const {
     ValueWithRealFlags<INT> result;
@@ -226,7 +226,7 @@ public:
         RealFlag::Overflow, exponent >= exponentBias + result.value.bits);
     result.flags |= intPart.flags;
     int shift{
-        exponent - exponentBias - binaryPrecision + 1};  // positive -> left
+        exponent - exponentBias - binaryPrecision + 1}; // positive -> left
     result.value =
         result.value.ConvertUnsigned(intPart.value.GetFraction().SHIFTR(-shift))
             .value.SHIFTL(shift);
@@ -244,7 +244,7 @@ public:
     return result;
   }
 
-  template<typename A>
+  template <typename A>
   static ValueWithRealFlags<Real> Convert(
       const A &x, Rounding rounding = defaultRounding) {
     bool isNegative{x.IsNegative()};
@@ -312,10 +312,11 @@ public:
 
   // Emits a character representation for an equivalent Fortran constant
   // or parenthesized constant expression that produces this value.
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind, bool minimal = false) const;
+  llvm::raw_ostream &AsFortran(
+      llvm::raw_ostream &, int kind, bool minimal = false) const;
 
 private:
-  using Significand = Integer<significandBits>;  // no implicit bit
+  using Significand = Integer<significandBits>; // no implicit bit
 
   constexpr Significand GetSignificand() const {
     return Significand::ConvertUnsigned(word_).value;
@@ -361,15 +362,15 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{};  // an Integer<>
+  Word word_{}; // an Integer<>
 };
 
-extern template class Real<Integer<16>, 11>;  // IEEE half format
-extern template class Real<Integer<16>, 8>;  // the "other" half format
-extern template class Real<Integer<32>, 24>;  // IEEE single
-extern template class Real<Integer<64>, 53>;  // IEEE double
-extern template class Real<Integer<80>, 64>;  // 80387 extended precision
-extern template class Real<Integer<128>, 113>;  // IEEE quad
+extern template class Real<Integer<16>, 11>; // IEEE half format
+extern template class Real<Integer<16>, 8>; // the "other" half format
+extern template class Real<Integer<32>, 24>; // IEEE single
+extern template class Real<Integer<64>, 53>; // IEEE double
+extern template class Real<Integer<80>, 64>; // 80387 extended precision
+extern template class Real<Integer<128>, 113>; // IEEE quad
 // N.B. No "double-double" support.
-}
-#endif  // FORTRAN_EVALUATE_REAL_H_
+} // namespace Fortran::evaluate::value
+#endif // FORTRAN_EVALUATE_REAL_H_

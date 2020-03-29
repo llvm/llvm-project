@@ -38,29 +38,29 @@ public:
 
   void SignalError(int iostatOrErrno, const char *msg, ...);
   void SignalError(int iostatOrErrno);
-  template<typename... X> void SignalError(const char *msg, X &&... xs) {
+  template <typename... X> void SignalError(const char *msg, X &&... xs) {
     SignalError(IostatGenericError, msg, std::forward<X>(xs)...);
   }
 
-  void SignalErrno();  // SignalError(errno)
-  void SignalEnd();  // input only; EOF on internal write is an error
-  void SignalEor();  // non-advancing input only; EOR on write is an error
+  void SignalErrno(); // SignalError(errno)
+  void SignalEnd(); // input only; EOF on internal write is an error
+  void SignalEor(); // non-advancing input only; EOR on write is an error
 
   int GetIoStat() const { return ioStat_; }
   bool GetIoMsg(char *, std::size_t);
 
 private:
   enum Flag : std::uint8_t {
-    hasIoStat = 1,  // IOSTAT=
-    hasErr = 2,  // ERR=
-    hasEnd = 4,  // END=
-    hasEor = 8,  // EOR=
-    hasIoMsg = 16,  // IOMSG=
+    hasIoStat = 1, // IOSTAT=
+    hasErr = 2, // ERR=
+    hasEnd = 4, // END=
+    hasEor = 8, // EOR=
+    hasIoMsg = 16, // IOMSG=
   };
   std::uint8_t flags_{0};
   int ioStat_{0};
   OwningPtr<char> ioMsg_;
 };
 
-}
-#endif  // FORTRAN_RUNTIME_IO_ERROR_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_IO_ERROR_H_

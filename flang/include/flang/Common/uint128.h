@@ -13,7 +13,7 @@
 #define FORTRAN_COMMON_UINT128_H_
 
 #ifndef AVOID_NATIVE_UINT128_T
-#define AVOID_NATIVE_UINT128_T 1  // always use this code for now for testing
+#define AVOID_NATIVE_UINT128_T 1 // always use this code for now for testing
 #endif
 
 #include "leading-zero-bit-count.h"
@@ -31,14 +31,14 @@ public:
   constexpr UnsignedInt128(unsigned long n) : low_{n} {}
   constexpr UnsignedInt128(unsigned long long n) : low_{n} {}
   constexpr UnsignedInt128(int n)
-    : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                               n < 0)} {}
+      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
+                                                 n < 0)} {}
   constexpr UnsignedInt128(long n)
-    : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                               n < 0)} {}
+      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
+                                                 n < 0)} {}
   constexpr UnsignedInt128(long long n)
-    : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
-                                               n < 0)} {}
+      : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
+                                                 n < 0)} {}
   constexpr UnsignedInt128(const UnsignedInt128 &) = default;
   constexpr UnsignedInt128(UnsignedInt128 &&) = default;
   constexpr UnsignedInt128 &operator=(const UnsignedInt128 &) = default;
@@ -241,7 +241,7 @@ public:
 
 private:
   constexpr UnsignedInt128(std::uint64_t hi, std::uint64_t lo)
-    : low_{lo}, high_{hi} {}
+      : low_{lo}, high_{hi} {}
   constexpr int LeadingZeroes() const {
     if (high_ == 0) {
       return 64 + LeadingZeroBitCount(low_);
@@ -261,14 +261,14 @@ using uint128_t = __uint128_t;
 using uint128_t = UnsignedInt128;
 #endif
 
-template<int BITS> struct HostUnsignedIntTypeHelper {
+template <int BITS> struct HostUnsignedIntTypeHelper {
   using type = std::conditional_t<(BITS <= 8), std::uint8_t,
       std::conditional_t<(BITS <= 16), std::uint16_t,
           std::conditional_t<(BITS <= 32), std::uint32_t,
               std::conditional_t<(BITS <= 64), std::uint64_t, uint128_t>>>>;
 };
-template<int BITS>
+template <int BITS>
 using HostUnsignedIntType = typename HostUnsignedIntTypeHelper<BITS>::type;
 
-}
+} // namespace Fortran::common
 #endif

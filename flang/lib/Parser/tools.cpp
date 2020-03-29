@@ -91,4 +91,4 @@ const CoindexedNamedObject *GetCoindexedNamedObject(
       },
       allocateObject.u);
 }
-}
+} // namespace Fortran::parser

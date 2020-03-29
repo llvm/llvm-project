@@ -22,4 +22,4 @@ private:
   fenv_t currentFenv_;
 };
 
-#endif  // FORTRAN_TEST_EVALUATE_FP_TESTING_H_
+#endif // FORTRAN_TEST_EVALUATE_FP_TESTING_H_

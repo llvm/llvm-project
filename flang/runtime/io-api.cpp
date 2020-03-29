@@ -23,7 +23,7 @@
 
 namespace Fortran::runtime::io {
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginInternalArrayListIO(const Descriptor &descriptor,
     void ** /*scratchArea*/, std::size_t /*scratchBytes*/,
     const char *sourceFile, int sourceLine) {
@@ -47,7 +47,7 @@ Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &descriptor,
       descriptor, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginInternalArrayFormattedIO(const Descriptor &descriptor,
     const char *format, std::size_t formatLength, void ** /*scratchArea*/,
     std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine) {
@@ -71,7 +71,7 @@ Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &descriptor,
       formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginInternalFormattedIO(
     std::conditional_t<DIR == Direction::Input, const char, char> *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
@@ -101,7 +101,7 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginExternalListIO(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -138,7 +138,7 @@ Cookie IONAME(BeginExternalListInput)(
       unitNumber, sourceFile, sourceLine);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -174,7 +174,7 @@ Cookie IONAME(BeginExternalFormattedInput)(const char *format,
       format, formatLength, unitNumber, sourceFile, sourceLine);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 Cookie BeginUnformattedIO(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -191,7 +191,7 @@ Cookie BeginUnformattedIO(
     if (file.access == Access::Sequential && !file.recordLength.has_value()) {
       // Create space for (sub)record header to be completed by
       // UnformattedIoStatementState<Direction::Output>::EndIoStatement()
-      io.Emit("\0\0\0\0", 4);  // placeholder for record length header
+      io.Emit("\0\0\0\0", 4); // placeholder for record length header
     }
   }
   return &io;
@@ -209,7 +209,7 @@ Cookie IONAME(BeginUnformattedInput)(
       unitNumber, sourceFile, sourceLine);
 }
 
-Cookie IONAME(BeginOpenUnit)(  // OPEN(without NEWUNIT=)
+Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   bool wasExtant{false};
   Terminator terminator{sourceFile, sourceLine};
@@ -219,7 +219,7 @@ Cookie IONAME(BeginOpenUnit)(  // OPEN(without NEWUNIT=)
       unit, wasExtant, sourceFile, sourceLine);
 }
 
-Cookie IONAME(BeginOpenNewUnit)(  // OPEN(NEWUNIT=j)
+Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   return IONAME(BeginOpenUnit)(
@@ -265,8 +265,10 @@ static bool YesOrNo(const char *keyword, std::size_t length, const char *what,
     IoErrorHandler &handler) {
   static const char *keywords[]{"YES", "NO", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: return true;
-  case 1: return false;
+  case 0:
+    return true;
+  case 1:
+    return false;
   default:
     handler.SignalError(IostatErrorInKeyword, "Invalid %s='%.*s'", what,
         static_cast<int>(length), keyword);
@@ -292,8 +294,12 @@ bool IONAME(SetBlank)(Cookie cookie, const char *keyword, std::size_t length) {
   ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"NULL", "ZERO", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: connection.modes.editingFlags &= ~blankZero; return true;
-  case 1: connection.modes.editingFlags |= blankZero; return true;
+  case 0:
+    connection.modes.editingFlags &= ~blankZero;
+    return true;
+  case 1:
+    connection.modes.editingFlags |= blankZero;
+    return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid BLANK='%.*s'", static_cast<int>(length), keyword);
@@ -307,8 +313,12 @@ bool IONAME(SetDecimal)(
   ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"COMMA", "POINT", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: connection.modes.editingFlags |= decimalComma; return true;
-  case 1: connection.modes.editingFlags &= ~decimalComma; return true;
+  case 0:
+    connection.modes.editingFlags |= decimalComma;
+    return true;
+  case 1:
+    connection.modes.editingFlags &= ~decimalComma;
+    return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid DECIMAL='%.*s'", static_cast<int>(length), keyword);
@@ -321,9 +331,15 @@ bool IONAME(SetDelim)(Cookie cookie, const char *keyword, std::size_t length) {
   ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"APOSTROPHE", "QUOTE", "NONE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: connection.modes.delim = '\''; return true;
-  case 1: connection.modes.delim = '"'; return true;
-  case 2: connection.modes.delim = '\0'; return true;
+  case 0:
+    connection.modes.delim = '\'';
+    return true;
+  case 1:
+    connection.modes.delim = '"';
+    return true;
+  case 2:
+    connection.modes.delim = '\0';
+    return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid DELIM='%.*s'", static_cast<int>(length), keyword);
@@ -390,11 +406,21 @@ bool IONAME(SetRound)(Cookie cookie, const char *keyword, std::size_t length) {
   static const char *keywords[]{"UP", "DOWN", "ZERO", "NEAREST", "COMPATIBLE",
       "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: connection.modes.round = decimal::RoundUp; return true;
-  case 1: connection.modes.round = decimal::RoundDown; return true;
-  case 2: connection.modes.round = decimal::RoundToZero; return true;
-  case 3: connection.modes.round = decimal::RoundNearest; return true;
-  case 4: connection.modes.round = decimal::RoundCompatible; return true;
+  case 0:
+    connection.modes.round = decimal::RoundUp;
+    return true;
+  case 1:
+    connection.modes.round = decimal::RoundDown;
+    return true;
+  case 2:
+    connection.modes.round = decimal::RoundToZero;
+    return true;
+  case 3:
+    connection.modes.round = decimal::RoundNearest;
+    return true;
+  case 4:
+    connection.modes.round = decimal::RoundCompatible;
+    return true;
   case 5:
     connection.modes.round = executionEnvironment.defaultOutputRoundingMode;
     return true;
@@ -410,9 +436,11 @@ bool IONAME(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"PLUS", "YES", "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: connection.modes.editingFlags |= signPlus; return true;
+  case 0:
+    connection.modes.editingFlags |= signPlus;
+    return true;
   case 1:
-  case 2:  // processor default is SS
+  case 2: // processor default is SS
     connection.modes.editingFlags &= ~signPlus;
     return true;
   default:
@@ -433,9 +461,15 @@ bool IONAME(SetAccess)(Cookie cookie, const char *keyword, std::size_t length) {
   Access access{connection.access};
   static const char *keywords[]{"SEQUENTIAL", "DIRECT", "STREAM", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: access = Access::Sequential; break;
-  case 1: access = Access::Direct; break;
-  case 2: access = Access::Stream; break;
+  case 0:
+    access = Access::Sequential;
+    break;
+  case 1:
+    access = Access::Direct;
+    break;
+  case 2:
+    access = Access::Stream;
+    break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ACCESS='%.*s'",
         static_cast<int>(length), keyword);
@@ -460,9 +494,14 @@ bool IONAME(SetAction)(Cookie cookie, const char *keyword, std::size_t length) {
   bool mayWrite{true};
   static const char *keywords[]{"READ", "WRITE", "READWRITE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: mayWrite = false; break;
-  case 1: mayRead = false; break;
-  case 2: break;
+  case 0:
+    mayWrite = false;
+    break;
+  case 1:
+    mayRead = false;
+    break;
+  case 2:
+    break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ACTION='%.*s'",
         static_cast<int>(length), keyword);
@@ -489,8 +528,12 @@ bool IONAME(SetAsynchronous)(
   }
   static const char *keywords[]{"YES", "NO", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: open->unit().set_mayAsynchronous(true); return true;
-  case 1: open->unit().set_mayAsynchronous(false); return true;
+  case 0:
+    open->unit().set_mayAsynchronous(true);
+    return true;
+  case 1:
+    open->unit().set_mayAsynchronous(false);
+    return true;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ASYNCHRONOUS='%.*s'",
         static_cast<int>(length), keyword);
@@ -509,8 +552,12 @@ bool IONAME(SetEncoding)(
   bool isUTF8{false};
   static const char *keywords[]{"UTF-8", "DEFAULT", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: isUTF8 = true; break;
-  case 1: isUTF8 = false; break;
+  case 0:
+    isUTF8 = true;
+    break;
+  case 1:
+    isUTF8 = false;
+    break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ENCODING='%.*s'",
         static_cast<int>(length), keyword);
@@ -534,8 +581,12 @@ bool IONAME(SetForm)(Cookie cookie, const char *keyword, std::size_t length) {
   bool isUnformatted{false};
   static const char *keywords[]{"FORMATTED", "UNFORMATTED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
-  case 0: isUnformatted = false; break;
-  case 1: isUnformatted = true; break;
+  case 0:
+    isUnformatted = false;
+    break;
+  case 1:
+    isUnformatted = true;
+    break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid FORM='%.*s'",
         static_cast<int>(length), keyword);
@@ -559,9 +610,15 @@ bool IONAME(SetPosition)(
   }
   static const char *positions[]{"ASIS", "REWIND", "APPEND", nullptr};
   switch (IdentifyValue(keyword, length, positions)) {
-  case 0: open->set_position(Position::AsIs); return true;
-  case 1: open->set_position(Position::Rewind); return true;
-  case 2: open->set_position(Position::Append); return true;
+  case 0:
+    open->set_position(Position::AsIs);
+    return true;
+  case 1:
+    open->set_position(Position::Rewind);
+    return true;
+  case 2:
+    open->set_position(Position::Append);
+    return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid POSITION='%.*s'", static_cast<int>(length), keyword);
@@ -593,11 +650,21 @@ bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
     static const char *statuses[]{
         "OLD", "NEW", "SCRATCH", "REPLACE", "UNKNOWN", nullptr};
     switch (IdentifyValue(keyword, length, statuses)) {
-    case 0: open->set_status(OpenStatus::Old); return true;
-    case 1: open->set_status(OpenStatus::New); return true;
-    case 2: open->set_status(OpenStatus::Scratch); return true;
-    case 3: open->set_status(OpenStatus::Replace); return true;
-    case 4: open->set_status(OpenStatus::Unknown); return true;
+    case 0:
+      open->set_status(OpenStatus::Old);
+      return true;
+    case 1:
+      open->set_status(OpenStatus::New);
+      return true;
+    case 2:
+      open->set_status(OpenStatus::Scratch);
+      return true;
+    case 3:
+      open->set_status(OpenStatus::Replace);
+      return true;
+    case 4:
+      open->set_status(OpenStatus::Unknown);
+      return true;
     default:
       io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
           "Invalid STATUS='%.*s'", static_cast<int>(length), keyword);
@@ -607,8 +674,12 @@ bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
   if (auto *close{io.get_if<CloseStatementState>()}) {
     static const char *statuses[]{"KEEP", "DELETE", nullptr};
     switch (IdentifyValue(keyword, length, statuses)) {
-    case 0: close->set_status(CloseStatus::Keep); return true;
-    case 1: close->set_status(CloseStatus::Delete); return true;
+    case 0:
+      close->set_status(CloseStatus::Keep);
+      return true;
+    case 1:
+      close->set_status(CloseStatus::Delete);
+      return true;
     default:
       io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
           "Invalid STATUS='%.*s'", static_cast<int>(length), keyword);
@@ -616,7 +687,7 @@ bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
     return false;
   }
   if (io.get_if<NoopCloseStatementState>()) {
-    return true;  // don't bother validating STATUS= in a no-op CLOSE
+    return true; // don't bother validating STATUS= in a no-op CLOSE
   }
   io.GetIoErrorHandler().Crash(
       "SetStatus() called when not in an OPEN or CLOSE statement");
@@ -636,11 +707,20 @@ bool IONAME(SetFile)(
 
 static bool SetInteger(int &x, int kind, int value) {
   switch (kind) {
-  case 1: reinterpret_cast<std::int8_t &>(x) = value; return true;
-  case 2: reinterpret_cast<std::int16_t &>(x) = value; return true;
-  case 4: x = value; return true;
-  case 8: reinterpret_cast<std::int64_t &>(x) = value; return true;
-  default: return false;
+  case 1:
+    reinterpret_cast<std::int8_t &>(x) = value;
+    return true;
+  case 2:
+    reinterpret_cast<std::int16_t &>(x) = value;
+    return true;
+  case 4:
+    x = value;
+    return true;
+  case 8:
+    reinterpret_cast<std::int64_t &>(x) = value;
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -661,8 +741,7 @@ bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
 
 bool IONAME(OutputDescriptor)(Cookie cookie, const Descriptor &) {
   IoStatementState &io{*cookie};
-  io.GetIoErrorHandler().Crash(
-      "OutputDescriptor: not yet implemented");  // TODO
+  io.GetIoErrorHandler().Crash("OutputDescriptor: not yet implemented"); // TODO
 }
 
 bool IONAME(OutputUnformattedBlock)(
@@ -812,7 +891,7 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
 
 void IONAME(GetIoMsg)(Cookie cookie, char *msg, std::size_t length) {
   IoErrorHandler &handler{cookie->GetIoErrorHandler()};
-  if (handler.GetIoStat()) {  // leave "msg" alone when no error
+  if (handler.GetIoStat()) { // leave "msg" alone when no error
     handler.GetIoMsg(msg, length);
   }
 }
@@ -821,4 +900,4 @@ enum Iostat IONAME(EndIoStatement)(Cookie cookie) {
   IoStatementState &io{*cookie};
   return static_cast<enum Iostat>(io.EndIoStatement());
 }
-}
+} // namespace Fortran::runtime::io

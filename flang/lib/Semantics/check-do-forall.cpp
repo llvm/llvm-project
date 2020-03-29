@@ -27,7 +27,7 @@ using ActualArgumentRef = common::Reference<const ActualArgument>;
 inline bool operator<(ActualArgumentRef x, ActualArgumentRef y) {
   return &*x < &*y;
 }
-}
+} // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
 
@@ -55,7 +55,7 @@ static const parser::ConcurrentHeader &GetConcurrentHeader(
   return std::get<common::Indirection<parser::ConcurrentHeader>>(stmt.t)
       .value();
 }
-template<typename T>
+template <typename T>
 static const std::list<parser::ConcurrentControl> &GetControls(const T &x) {
   return std::get<std::list<parser::ConcurrentControl>>(
       GetConcurrentHeader(x).t);
@@ -73,7 +73,7 @@ static const parser::Name &GetDoVariable(
 }
 
 // Return the (possibly null)  name of the construct
-template<typename A>
+template <typename A>
 static const parser::Name *MaybeGetConstructName(const A &a) {
   return common::GetPtrFromOptional(std::get<0>(std::get<0>(a.t).statement.t));
 }
@@ -99,13 +99,13 @@ class DoConcurrentBodyEnforce {
 public:
   DoConcurrentBodyEnforce(
       SemanticsContext &context, parser::CharBlock doConcurrentSourcePosition)
-    : context_{context}, doConcurrentSourcePosition_{
-                             doConcurrentSourcePosition} {}
+      : context_{context}, doConcurrentSourcePosition_{
+                               doConcurrentSourcePosition} {}
   std::set<parser::Label> labels() { return labels_; }
-  template<typename T> bool Pre(const T &) { return true; }
-  template<typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
 
-  template<typename T> bool Pre(const parser::Statement<T> &statement) {
+  template <typename T> bool Pre(const parser::Statement<T> &statement) {
     currentStatementSourcePosition_ = statement.source;
     if (statement.label.has_value()) {
       labels_.insert(*statement.label);
@@ -113,7 +113,7 @@ public:
     return true;
   }
 
-  template<typename T> bool Pre(const parser::UnlabeledStatement<T> &stmt) {
+  template <typename T> bool Pre(const parser::UnlabeledStatement<T> &stmt) {
     currentStatementSourcePosition_ = stmt.source;
     return true;
   }
@@ -246,7 +246,7 @@ public:
       if (name.symbol) {
         const Symbol &entity{*name.symbol};
         const DeclTypeSpec *entityType{entity.GetType()};
-        if ((entityType && entityType->IsPolymorphic()) ||  // POINTER case
+        if ((entityType && entityType->IsPolymorphic()) || // POINTER case
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
           SayDeallocateOfPolymorph(
               currentStatementSourcePosition_, entity, reason);
@@ -330,7 +330,8 @@ public:
 
 private:
   // Return the (possibly null) name of the statement
-  template<typename A> static const parser::Name *MaybeGetStmtName(const A &a) {
+  template <typename A>
+  static const parser::Name *MaybeGetStmtName(const A &a) {
     return common::GetPtrFromOptional(std::get<0>(a.t));
   }
 
@@ -347,7 +348,7 @@ private:
   parser::CharBlock currentStatementSourcePosition_;
   SemanticsContext &context_;
   parser::CharBlock doConcurrentSourcePosition_;
-};  // class DoConcurrentBodyEnforce
+}; // class DoConcurrentBodyEnforce
 
 // Class for enforcing C1130 -- in a DO CONCURRENT with DEFAULT(NONE),
 // variables from enclosing scopes must have their locality specified
@@ -355,12 +356,12 @@ class DoConcurrentVariableEnforce {
 public:
   DoConcurrentVariableEnforce(
       SemanticsContext &context, parser::CharBlock doConcurrentSourcePosition)
-    : context_{context},
-      doConcurrentSourcePosition_{doConcurrentSourcePosition},
-      blockScope_{context.FindScope(doConcurrentSourcePosition_)} {}
+      : context_{context},
+        doConcurrentSourcePosition_{doConcurrentSourcePosition},
+        blockScope_{context.FindScope(doConcurrentSourcePosition_)} {}
 
-  template<typename T> bool Pre(const T &) { return true; }
-  template<typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
 
   // Check to see if the name is a variable from an enclosing scope
   void Post(const parser::Name &name) {
@@ -382,13 +383,13 @@ private:
   SemanticsContext &context_;
   parser::CharBlock doConcurrentSourcePosition_;
   const Scope &blockScope_;
-};  // class DoConcurrentVariableEnforce
+}; // class DoConcurrentVariableEnforce
 
 // Find a DO or FORALL and enforce semantics checks on its body
 class DoContext {
 public:
   DoContext(SemanticsContext &context, IndexVarKind kind)
-    : context_{context}, kind_{kind} {}
+      : context_{context}, kind_{kind} {}
 
   // Mark this DO construct as a point of definition for the DO variables
   // or index-names it contains.  If they're already defined, emit an error
@@ -459,24 +460,23 @@ public:
               std::get_if<evaluate::ProcedureRef>(&assignment->u)}) {
         CheckForImpureCall(*proc);
       }
-      std::visit(
-          common::visitors{
-              [](const evaluate::Assignment::Intrinsic &) {},
-              [&](const evaluate::ProcedureRef &proc) {
-                CheckForImpureCall(proc);
-              },
-              [&](const evaluate::Assignment::BoundsSpec &bounds) {
-                for (const auto &bound : bounds) {
-                  CheckForImpureCall(SomeExpr{bound});
-                }
-              },
-              [&](const evaluate::Assignment::BoundsRemapping &bounds) {
-                for (const auto &bound : bounds) {
-                  CheckForImpureCall(SomeExpr{bound.first});
-                  CheckForImpureCall(SomeExpr{bound.second});
-                }
-              },
-          },
+      std::visit(common::visitors{
+                     [](const evaluate::Assignment::Intrinsic &) {},
+                     [&](const evaluate::ProcedureRef &proc) {
+                       CheckForImpureCall(proc);
+                     },
+                     [&](const evaluate::Assignment::BoundsSpec &bounds) {
+                       for (const auto &bound : bounds) {
+                         CheckForImpureCall(SomeExpr{bound});
+                       }
+                     },
+                     [&](const evaluate::Assignment::BoundsRemapping &bounds) {
+                       for (const auto &bound : bounds) {
+                         CheckForImpureCall(SomeExpr{bound.first});
+                         CheckForImpureCall(SomeExpr{bound.second});
+                       }
+                     },
+                 },
           assignment->u);
     }
   }
@@ -514,7 +514,7 @@ private:
                 sourceLocation, symType->IsNumeric(TypeCategory::Real));
           }
         }
-      }  // No messages for INTEGER
+      } // No messages for INTEGER
     }
   }
 
@@ -745,7 +745,7 @@ private:
     CheckConcurrentHeader(std::get<parser::ConcurrentHeader>(concurrent.t));
   }
 
-  template<typename T> void CheckForImpureCall(const T &x) {
+  template <typename T> void CheckForImpureCall(const T &x) {
     const auto &intrinsics{context_.foldingContext().intrinsics()};
     if (auto bad{FindImpureCall(intrinsics, x)}) {
       context_.Say(
@@ -808,7 +808,7 @@ private:
   SemanticsContext &context_;
   const IndexVarKind kind_;
   parser::CharBlock currentStatementSourcePosition_;
-};  // class DoContext
+}; // class DoContext
 
 void DoForallChecker::Enter(const parser::DoConstruct &doConstruct) {
   DoContext doContext{context_, IndexVarKind::DO};
@@ -851,7 +851,8 @@ static const parser::Name *MaybeGetNodeName(const ConstructNode &construct) {
       [&](const auto &x) { return MaybeGetConstructName(*x); }, construct);
 }
 
-template<typename A> static parser::CharBlock GetConstructPosition(const A &a) {
+template <typename A>
+static parser::CharBlock GetConstructPosition(const A &a) {
   return std::get<0>(a.t).source;
 }
 
@@ -887,25 +888,24 @@ static bool ConstructIsDoConcurrent(const ConstructNode &construct) {
 // leave DO CONCURRENT, CRITICAL, or CHANGE TEAM constructs.
 void DoForallChecker::CheckForBadLeave(
     StmtType stmtType, const ConstructNode &construct) const {
-  std::visit(
-      common::visitors{
-          [&](const parser::DoConstruct *doConstructPtr) {
-            if (doConstructPtr->IsDoConcurrent()) {
-              // C1135 and C1167 -- CYCLE and EXIT statements can't leave a
-              // DO CONCURRENT
-              SayBadLeave(stmtType, "DO CONCURRENT", construct);
-            }
-          },
-          [&](const parser::CriticalConstruct *) {
-            // C1135 and C1168 -- similarly, for CRITICAL
-            SayBadLeave(stmtType, "CRITICAL", construct);
-          },
-          [&](const parser::ChangeTeamConstruct *) {
-            // C1135 and C1168 -- similarly, for CHANGE TEAM
-            SayBadLeave(stmtType, "CHANGE TEAM", construct);
-          },
-          [](const auto *) {},
-      },
+  std::visit(common::visitors{
+                 [&](const parser::DoConstruct *doConstructPtr) {
+                   if (doConstructPtr->IsDoConcurrent()) {
+                     // C1135 and C1167 -- CYCLE and EXIT statements can't leave
+                     // a DO CONCURRENT
+                     SayBadLeave(stmtType, "DO CONCURRENT", construct);
+                   }
+                 },
+                 [&](const parser::CriticalConstruct *) {
+                   // C1135 and C1168 -- similarly, for CRITICAL
+                   SayBadLeave(stmtType, "CRITICAL", construct);
+                 },
+                 [&](const parser::ChangeTeamConstruct *) {
+                   // C1135 and C1168 -- similarly, for CHANGE TEAM
+                   SayBadLeave(stmtType, "CHANGE TEAM", construct);
+                 },
+                 [](const auto *) {},
+             },
       construct);
 }
 
@@ -914,7 +914,7 @@ static bool StmtMatchesConstruct(const parser::Name *stmtName,
     const ConstructNode &construct) {
   bool inDoConstruct{MaybeGetDoConstruct(construct) != nullptr};
   if (!stmtName) {
-    return inDoConstruct;  // Unlabeled statements match all DO constructs
+    return inDoConstruct; // Unlabeled statements match all DO constructs
   } else if (constructName && constructName->source == stmtName->source) {
     return stmtType == StmtType::EXIT || inDoConstruct;
   } else {
@@ -942,7 +942,7 @@ void DoForallChecker::CheckNesting(
     const parser::Name *constructName{MaybeGetNodeName(construct)};
     if (StmtMatchesConstruct(stmtName, stmtType, constructName, construct)) {
       CheckDoConcurrentExit(stmtType, construct);
-      return;  // We got a match, so we're finished checking
+      return; // We got a match, so we're finished checking
     }
     CheckForBadLeave(stmtType, construct);
   }
@@ -979,7 +979,7 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
         if (intent == common::Intent::Out) {
           context.CheckIndexVarRedefine(location, *var);
         } else {
-          context.WarnIndexVarRedefine(location, *var);  // INTENT(INOUT)
+          context.WarnIndexVarRedefine(location, *var); // INTENT(INOUT)
         }
       }
     }
@@ -1002,7 +1002,7 @@ void DoForallChecker::Leave(const parser::CallStmt &callStmt) {
     const evaluate::ActualArguments &checkedArgs{typedCall->arguments()};
     for (const auto &checkedOptionalArg : checkedArgs) {
       if (parsedArgIter == parsedArgs.end()) {
-        break;  // No more parsed arguments, we're done.
+        break; // No more parsed arguments, we're done.
       }
       const auto &parsedArg{std::get<parser::ActualArg>(parsedArgIter->t)};
       ++parsedArgIter;
@@ -1028,8 +1028,8 @@ void DoForallChecker::Leave(const parser::ConnectSpec &connectSpec) {
 using ActualArgumentSet = std::set<evaluate::ActualArgumentRef>;
 
 struct CollectActualArgumentsHelper
-  : public evaluate::SetTraverse<CollectActualArgumentsHelper,
-        ActualArgumentSet> {
+    : public evaluate::SetTraverse<CollectActualArgumentsHelper,
+          ActualArgumentSet> {
   using Base = SetTraverse<CollectActualArgumentsHelper, ActualArgumentSet>;
   CollectActualArgumentsHelper() : Base{*this} {}
   using Base::operator();
@@ -1038,7 +1038,7 @@ struct CollectActualArgumentsHelper
   }
 };
 
-template<typename A> ActualArgumentSet CollectActualArguments(const A &x) {
+template <typename A> ActualArgumentSet CollectActualArguments(const A &x) {
   return CollectActualArgumentsHelper{}(x);
 }
 
@@ -1078,4 +1078,4 @@ void DoForallChecker::Leave(const parser::StatVariable &statVariable) {
   context_.CheckIndexVarRedefine(statVariable.v.thing.thing);
 }
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

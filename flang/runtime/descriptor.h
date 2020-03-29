@@ -58,14 +58,14 @@ class DescriptorAddendum {
 public:
   enum Flags {
     StaticDescriptor = 0x001,
-    ImplicitAllocatable = 0x002,  // compiler-created allocatable
-    DoNotFinalize = 0x004,  // compiler temporary
-    Target = 0x008,  // TARGET attribute
+    ImplicitAllocatable = 0x002, // compiler-created allocatable
+    DoNotFinalize = 0x004, // compiler temporary
+    Target = 0x008, // TARGET attribute
   };
 
   explicit DescriptorAddendum(
       const DerivedType *dt = nullptr, std::uint64_t flags = 0)
-    : derivedType_{dt}, flags_{flags} {}
+      : derivedType_{dt}, flags_{flags} {}
 
   const DerivedType *derivedType() const { return derivedType_; }
   DescriptorAddendum &set_derivedType(const DerivedType *dt) {
@@ -98,7 +98,7 @@ public:
 private:
   const DerivedType *derivedType_{nullptr};
   std::uint64_t flags_{0};
-  TypeParameterValue len_[1];  // must be the last component
+  TypeParameterValue len_[1]; // must be the last component
   // The LEN type parameter values can also include captured values of
   // specification expressions that were used for bounds and for LEN type
   // parameters of components.  The values have been truncated to the LEN
@@ -190,16 +190,16 @@ public:
     return offset;
   }
 
-  template<typename A> A *OffsetElement(std::size_t offset) const {
+  template <typename A> A *OffsetElement(std::size_t offset) const {
     return reinterpret_cast<A *>(
         reinterpret_cast<char *>(raw_.base_addr) + offset);
   }
 
-  template<typename A> A *Element(const SubscriptValue *subscript) const {
+  template <typename A> A *Element(const SubscriptValue *subscript) const {
     return OffsetElement<A>(SubscriptsToByteOffset(subscript));
   }
 
-  template<typename A> A *ZeroBasedIndexedElement(std::size_t n) const {
+  template <typename A> A *ZeroBasedIndexedElement(std::size_t n) const {
     SubscriptValue at[maxRank];
     if (SubscriptsForZeroBasedElementNumber(at, n)) {
       return Element<A>(at);
@@ -257,7 +257,7 @@ public:
   std::size_t Elements() const;
 
   int Allocate(const SubscriptValue lb[], const SubscriptValue ub[],
-      std::size_t charLen = 0);  // TODO: SOURCE= and MOLD=
+      std::size_t charLen = 0); // TODO: SOURCE= and MOLD=
   int Deallocate(bool finalize = true);
   void Destroy(char *data, bool finalize = true) const;
 
@@ -293,7 +293,7 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 //   StaticDescriptor<R,A,LP> statDesc;
 //   Descriptor &descriptor{statDesc.descriptor()};
 //   descriptor.Establish( ... );
-template<int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
+template <int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
 class alignas(Descriptor) StaticDescriptor {
 public:
   static constexpr int maxRank{MAX_RANK};
@@ -331,5 +331,5 @@ public:
 private:
   char storage_[byteSize];
 };
-}
-#endif  // FORTRAN_RUNTIME_DESCRIPTOR_H_
+} // namespace Fortran::runtime
+#endif // FORTRAN_RUNTIME_DESCRIPTOR_H_

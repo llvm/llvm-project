@@ -70,20 +70,20 @@ static constexpr CategorySet IntrinsicType{
 static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
-    defaultRealKind,  // is also the default COMPLEX kind
+    defaultRealKind, // is also the default COMPLEX kind
     doublePrecision, defaultCharKind, defaultLogicalKind,
-    any,  // matches any kind value; each instance is independent
-    same,  // match any kind, but all "same" kinds must be equal
-    operand,  // match any kind, with promotion (non-standard)
-    typeless,  // BOZ literals are INTEGER with this kind
-    teamType,  // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
-    kindArg,  // this argument is KIND=
-    effectiveKind,  // for function results: "kindArg" value, possibly defaulted
-    dimArg,  // this argument is DIM=
-    likeMultiply,  // for DOT_PRODUCT and MATMUL
-    subscript,  // address-sized integer
-    size,  // default KIND= for SIZE(), UBOUND, &c.
-    addressable,  // for PRESENT(), &c.; anything (incl. procedure) but BOZ
+    any, // matches any kind value; each instance is independent
+    same, // match any kind, but all "same" kinds must be equal
+    operand, // match any kind, with promotion (non-standard)
+    typeless, // BOZ literals are INTEGER with this kind
+    teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
+    kindArg, // this argument is KIND=
+    effectiveKind, // for function results: "kindArg" value, possibly defaulted
+    dimArg, // this argument is DIM=
+    likeMultiply, // for DOT_PRODUCT and MATMUL
+    subscript, // address-sized integer
+    size, // default KIND= for SIZE(), UBOUND, &c.
+    addressable, // for PRESENT(), &c.; anything (incl. procedure) but BOZ
 )
 
 struct TypePattern {
@@ -166,27 +166,27 @@ static constexpr TypePattern KINDLogical{LogicalType, KindCode::effectiveKind};
 // The default rank pattern for dummy arguments and function results is
 // "elemental".
 ENUM_CLASS(Rank,
-    elemental,  // scalar, or array that conforms with other array arguments
-    elementalOrBOZ,  // elemental, or typeless BOZ literal scalar
+    elemental, // scalar, or array that conforms with other array arguments
+    elementalOrBOZ, // elemental, or typeless BOZ literal scalar
     scalar, vector,
-    shape,  // INTEGER vector of known length and no negative element
+    shape, // INTEGER vector of known length and no negative element
     matrix,
-    array,  // not scalar, rank is known and greater than zero
-    known,  // rank is known and can be scalar
-    anyOrAssumedRank,  // rank can be unknown; assumed-type TYPE(*) allowed
-    conformable,  // scalar, or array of same rank & shape as "array" argument
-    reduceOperation,  // a pure function with constraints for REDUCE
-    dimReduced,  // scalar if no DIM= argument, else rank(array)-1
-    dimRemoved,  // scalar, or rank(array)-1
-    rankPlus1,  // rank(known)+1
-    shaped,  // rank is length of SHAPE vector
+    array, // not scalar, rank is known and greater than zero
+    known, // rank is known and can be scalar
+    anyOrAssumedRank, // rank can be unknown; assumed-type TYPE(*) allowed
+    conformable, // scalar, or array of same rank & shape as "array" argument
+    reduceOperation, // a pure function with constraints for REDUCE
+    dimReduced, // scalar if no DIM= argument, else rank(array)-1
+    dimRemoved, // scalar, or rank(array)-1
+    rankPlus1, // rank(known)+1
+    shaped, // rank is length of SHAPE vector
 )
 
 ENUM_CLASS(Optionality, required, optional,
-    defaultsToSameKind,  // for MatchingDefaultKIND
-    defaultsToDefaultForResult,  // for DefaultingKIND
-    defaultsToSizeKind,  // for SizeDefaultKIND
-    repeats,  // for MAX/MIN and their several variants
+    defaultsToSameKind, // for MatchingDefaultKIND
+    defaultsToDefaultForResult, // for DefaultingKIND
+    defaultsToSizeKind, // for SizeDefaultKIND
+    repeats, // for MAX/MIN and their several variants
 )
 
 struct IntrinsicDummyArgument {
@@ -224,7 +224,7 @@ static constexpr IntrinsicDummyArgument OptionalMASK{
     "mask", AnyLogical, Rank::conformable, Optionality::optional};
 
 struct IntrinsicInterface {
-  static constexpr int maxArguments{7};  // if not a MAX/MIN(...)
+  static constexpr int maxArguments{7}; // if not a MAX/MIN(...)
   const char *name{nullptr};
   IntrinsicDummyArgument dummy[maxArguments];
   TypePattern result;
@@ -350,7 +350,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"dot_product",
         {{"vector_a", AnyComplex, Rank::vector},
             {"vector_b", AnyNumeric, Rank::vector}},
-        ResultNumeric, Rank::scalar},  // conjugates vector_a
+        ResultNumeric, Rank::scalar}, // conjugates vector_a
     {"dot_product",
         {{"vector_a", AnyIntOrReal, Rank::vector},
             {"vector_b", AnyNumeric, Rank::vector}},
@@ -600,7 +600,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"rank", {{"a", AnyData, Rank::anyOrAssumedRank}}, DefaultInt,
         Rank::scalar},
     {"real", {{"a", SameComplex, Rank::elemental}},
-        SameReal},  // 16.9.160(4)(ii)
+        SameReal}, // 16.9.160(4)(ii)
     {"real", {{"a", AnyNumeric, Rank::elementalOrBOZ}, DefaultingKIND},
         KINDReal},
     {"reduce",
@@ -943,7 +943,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"mvbits",
         {{"from", SameInt}, {"frompos", AnyInt}, {"len", AnyInt},
             {"to", SameInt}, {"topos", AnyInt}},
-        {}},  // elemental
+        {}}, // elemental
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -953,7 +953,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {{"size", DefaultInt, Rank::scalar, Optionality::optional},
             {"put", DefaultInt, Rank::vector, Optionality::optional},
             {"get", DefaultInt, Rank::vector, Optionality::optional}},
-        {}},  // TODO: at most one argument can be present
+        {}}, // TODO: at most one argument can be present
     {"system_clock",
         {{"count", AnyInt, Rank::scalar, Optionality::optional},
             {"count_rate", AnyIntOrReal, Rank::scalar, Optionality::optional},
@@ -1066,7 +1066,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (!arg) {
       if (d.optionality == Optionality::required) {
         messages.Say("missing mandatory '%s=' argument"_err_en_US, d.keyword);
-        return std::nullopt;  // missing non-OPTIONAL argument
+        return std::nullopt; // missing non-OPTIONAL argument
       } else {
         continue;
       }
@@ -1114,13 +1114,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     } else if (!d.typePattern.categorySet.test(type->category())) {
       messages.Say("Actual argument for '%s=' has bad type '%s'"_err_en_US,
           d.keyword, type->AsFortran());
-      return std::nullopt;  // argument has invalid type category
+      return std::nullopt; // argument has invalid type category
     }
     bool argOk{false};
     switch (d.typePattern.kindCode) {
     case KindCode::none:
     case KindCode::typeless:
-    case KindCode::teamType:  // TODO: TEAM_TYPE
+    case KindCode::teamType: // TODO: TEAM_TYPE
       argOk = false;
       break;
     case KindCode::defaultIntegerKind:
@@ -1138,7 +1138,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::defaultLogicalKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Logical);
       break;
-    case KindCode::any: argOk = true; break;
+    case KindCode::any:
+      argOk = true;
+      break;
     case KindCode::kindArg:
       CHECK(type->category() == TypeCategory::Integer);
       CHECK(!kindArg);
@@ -1175,8 +1177,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
                   "for intrinsic '%s'",
           d.keyword, name);
       break;
-    case KindCode::addressable: argOk = true; break;
-    default: CRASH_NO_CASE;
+    case KindCode::addressable:
+      argOk = true;
+      break;
+    default:
+      CRASH_NO_CASE;
     }
     if (!argOk) {
       messages.Say(
@@ -1210,8 +1215,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         }
         argOk = rank == 0 || rank == elementalRank;
         break;
-      case Rank::scalar: argOk = rank == 0; break;
-      case Rank::vector: argOk = rank == 1; break;
+      case Rank::scalar:
+        argOk = rank == 0;
+        break;
+      case Rank::vector:
+        argOk = rank == 1;
+        break;
       case Rank::shape:
         CHECK(!shapeArgSize);
         if (rank == 1) {
@@ -1229,7 +1238,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           return std::nullopt;
         }
         break;
-      case Rank::matrix: argOk = rank == 2; break;
+      case Rank::matrix:
+        argOk = rank == 2;
+        break;
       case Rank::array:
         argOk = rank > 0;
         if (!arrayArg) {
@@ -1244,7 +1255,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         }
         argOk = rank == knownArg->Rank();
         break;
-      case Rank::anyOrAssumedRank: argOk = true; break;
+      case Rank::anyOrAssumedRank:
+        argOk = true;
+        break;
       case Rank::conformable:
         CHECK(arrayArg);
         argOk = rank == 0 || rank == arrayArg->Rank();
@@ -1383,7 +1396,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       common::die(
           "INTERNAL: bad KindCode appears on intrinsic '%s' result", name);
       break;
-    default: CRASH_NO_CASE;
+    default:
+      CRASH_NO_CASE;
     }
   } else {
     if (!call.isSubroutineCall) {
@@ -1396,10 +1410,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Determine the rank of the function result.
   int resultRank{0};
   switch (rank) {
-  case Rank::elemental: resultRank = elementalRank; break;
-  case Rank::scalar: resultRank = 0; break;
-  case Rank::vector: resultRank = 1; break;
-  case Rank::matrix: resultRank = 2; break;
+  case Rank::elemental:
+    resultRank = elementalRank;
+    break;
+  case Rank::scalar:
+    resultRank = 0;
+    break;
+  case Rank::vector:
+    resultRank = 1;
+    break;
+  case Rank::matrix:
+    resultRank = 2;
+    break;
   case Rank::conformable:
     CHECK(arrayArg);
     resultRank = arrayArg->Rank();
@@ -1496,7 +1518,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
 class IntrinsicProcTable::Implementation {
 public:
   explicit Implementation(const common::IntrinsicTypeDefaultKinds &dfts)
-    : defaults_{dfts} {
+      : defaults_{dfts} {
     for (const IntrinsicInterface &f : genericIntrinsicFunction) {
       genericFuncs_.insert(std::make_pair(std::string{f.name}, &f));
     }
@@ -1798,10 +1820,14 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
     const common::IntrinsicTypeDefaultKinds &defaults) {
   TypeCategory category{TypeCategory::Integer};
   switch (interface.result.kindCode) {
-  case KindCode::defaultIntegerKind: break;
+  case KindCode::defaultIntegerKind:
+    break;
   case KindCode::doublePrecision:
-  case KindCode::defaultRealKind: category = TypeCategory::Real; break;
-  default: CRASH_NO_CASE;
+  case KindCode::defaultRealKind:
+    category = TypeCategory::Real;
+    break;
+  default:
+    CRASH_NO_CASE;
   }
   int kind{interface.result.kindCode == KindCode::doublePrecision
           ? defaults.doublePrecisionKind()
@@ -1836,7 +1862,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
         return specificCall;
       }
     }
-    return std::nullopt;  // TODO
+    return std::nullopt; // TODO
   }
 
   // Helper to avoid emitting errors before it is sure there is no match
@@ -2063,4 +2089,4 @@ llvm::raw_ostream &IntrinsicProcTable::Implementation::Dump(
 llvm::raw_ostream &IntrinsicProcTable::Dump(llvm::raw_ostream &o) const {
   return impl_->Dump(o);
 }
-}
+} // namespace Fortran::evaluate

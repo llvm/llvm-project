@@ -91,5 +91,5 @@ private:
   std::unordered_map<CharBlock, Definition> definitions_;
   std::stack<CanDeadElseAppear> ifStack_;
 };
-}
-#endif  // FORTRAN_PARSER_PREPROCESSOR_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PREPROCESSOR_H_

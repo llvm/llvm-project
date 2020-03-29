@@ -64,7 +64,7 @@ public:
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
-  template<typename... A> Message &Say(A &&... a) {
+  template <typename... A> Message &Say(A &&... a) {
     Message &m{messages_.Say(std::forward<A>(a)...)};
     std::optional<ProvenanceRange> range{m.GetProvenanceRange(cooked_)};
     CHECK(!range || cooked_.IsValid(*range));
@@ -76,19 +76,19 @@ private:
     enum class Kind {
       Comment,
       ConditionalCompilationDirective,
-      IncludeDirective,  // #include
-      DefinitionDirective,  // #define & #undef
+      IncludeDirective, // #include
+      DefinitionDirective, // #define & #undef
       PreprocessorDirective,
-      IncludeLine,  // Fortran INCLUDE
+      IncludeLine, // Fortran INCLUDE
       CompilerDirective,
       Source
     };
     LineClassification(Kind k, std::size_t po = 0, const char *s = nullptr)
-      : kind{k}, payloadOffset{po}, sentinel{s} {}
+        : kind{k}, payloadOffset{po}, sentinel{s} {}
     LineClassification(LineClassification &&) = default;
     Kind kind;
-    std::size_t payloadOffset;  // byte offset of content
-    const char *sentinel;  // if it's a compiler directive
+    std::size_t payloadOffset; // byte offset of content
+    const char *sentinel; // if it's a compiler directive
   };
 
   void BeginSourceLine(const char *at) {
@@ -187,15 +187,15 @@ private:
   int prescannerNesting_{0};
 
   Provenance startProvenance_;
-  const char *start_{nullptr};  // beginning of current source file content
-  const char *limit_{nullptr};  // first address after end of current source
-  const char *nextLine_{nullptr};  // next line to process; <= limit_
-  const char *directiveSentinel_{nullptr};  // current compiler directive
+  const char *start_{nullptr}; // beginning of current source file content
+  const char *limit_{nullptr}; // first address after end of current source
+  const char *nextLine_{nullptr}; // next line to process; <= limit_
+  const char *directiveSentinel_{nullptr}; // current compiler directive
 
   // This data members are state for processing the source line containing
   // "at_", which goes to up to the newline character before "nextLine_".
-  const char *at_{nullptr};  // next character to process; < nextLine_
-  int column_{1};  // card image column position of next character
+  const char *at_{nullptr}; // next character to process; < nextLine_
+  int column_{1}; // card image column position of next character
   bool tabInCurrentLine_{false};
   bool slashInCurrentLine_{false};
   bool preventHollerith_{false};
@@ -225,8 +225,8 @@ private:
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.
   static const int prime1{1019}, prime2{1021};
-  std::bitset<prime2> compilerDirectiveBloomFilter_;  // 128 bytes
+  std::bitset<prime2> compilerDirectiveBloomFilter_; // 128 bytes
   std::unordered_set<std::string> compilerDirectiveSentinels_;
 };
-}
-#endif  // FORTRAN_PARSER_PRESCAN_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PRESCAN_H_

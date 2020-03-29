@@ -47,12 +47,12 @@ private:
   std::map<std::size_t, LogForPosition> perPos_;
 };
 
-template<typename PA> class InstrumentedParser {
+template <typename PA> class InstrumentedParser {
 public:
   using resultType = typename PA::resultType;
   constexpr InstrumentedParser(const InstrumentedParser &) = default;
   constexpr InstrumentedParser(const MessageFixedText &tag, const PA &parser)
-    : tag_{tag}, parser_{parser} {}
+      : tag_{tag}, parser_{parser} {}
   std::optional<resultType> Parse(ParseState &state) const {
     if (UserState * ustate{state.userState()}) {
       if (ParsingLog * log{ustate->log()}) {
@@ -75,10 +75,10 @@ private:
   const PA parser_;
 };
 
-template<typename PA>
+template <typename PA>
 inline constexpr auto instrumented(
     const MessageFixedText &tag, const PA &parser) {
   return InstrumentedParser{tag, parser};
 }
-}
-#endif  // FORTRAN_PARSER_INSTRUMENTED_PARSER_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_INSTRUMENTED_PARSER_H_

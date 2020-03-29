@@ -30,6 +30,6 @@ bool ResolveNames(SemanticsContext &, const parser::Program &);
 void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
 void DumpSymbols(llvm::raw_ostream &);
 
-}
+} // namespace Fortran::semantics
 
-#endif  // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_
+#endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

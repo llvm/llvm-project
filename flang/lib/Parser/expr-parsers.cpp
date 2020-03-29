@@ -84,7 +84,7 @@ constexpr auto primary{instrumented("primary"_en_US,
 // R1002 level-1-expr -> [defined-unary-op] primary
 // TODO: Reasonable extension: permit multiple defined-unary-ops
 constexpr auto level1Expr{sourced(
-    first(primary,  // must come before define op to resolve .TRUE._8 ambiguity
+    first(primary, // must come before define op to resolve .TRUE._8 ambiguity
         construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)),
         extension<LanguageFeature::SignedPrimary>(
             construct<Expr>(construct<Expr::UnaryPlus>("+" >> primary))),
@@ -110,7 +110,7 @@ inline std::optional<Expr> MultOperand::Parse(ParseState &state) {
       std::function<Expr(Expr &&)> power{[&result](Expr &&right) {
         return Expr{Expr::Power(std::move(result).value(), std::move(right))};
       }};
-      return applyLambda(power, multOperand).Parse(state);  // right-recursive
+      return applyLambda(power, multOperand).Parse(state); // right-recursive
     }
   }
   return result;
@@ -362,7 +362,7 @@ constexpr struct Level5Expr {
 
 // R1022 expr -> [expr defined-binary-op] level-5-expr
 // Defined binary operators associate leftwards.
-template<> std::optional<Expr> Parser<Expr>::Parse(ParseState &state) {
+template <> std::optional<Expr> Parser<Expr>::Parse(ParseState &state) {
   std::optional<Expr> result{level5Expr.Parse(state)};
   if (result) {
     auto source{result->source};
@@ -513,4 +513,4 @@ TYPE_CONTEXT_PARSER("END FORALL statement"_en_US,
 TYPE_CONTEXT_PARSER("FORALL statement"_en_US,
     construct<ForallStmt>("FORALL" >> indirect(concurrentHeader),
         unlabeledStatement(forallAssignmentStmt)))
-}
+} // namespace Fortran::parser

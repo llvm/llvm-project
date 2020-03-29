@@ -172,23 +172,40 @@ void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
 static GenericKind MapIntrinsicOperator(IntrinsicOperator op) {
   switch (op) {
     SWITCH_COVERS_ALL_CASES
-  case IntrinsicOperator::Concat: return GenericKind::OtherKind::Concat;
-  case IntrinsicOperator::Power: return NumericOperator::Power;
-  case IntrinsicOperator::Multiply: return NumericOperator::Multiply;
-  case IntrinsicOperator::Divide: return NumericOperator::Divide;
-  case IntrinsicOperator::Add: return NumericOperator::Add;
-  case IntrinsicOperator::Subtract: return NumericOperator::Subtract;
-  case IntrinsicOperator::AND: return LogicalOperator::And;
-  case IntrinsicOperator::OR: return LogicalOperator::Or;
-  case IntrinsicOperator::EQV: return LogicalOperator::Eqv;
-  case IntrinsicOperator::NEQV: return LogicalOperator::Neqv;
-  case IntrinsicOperator::NOT: return LogicalOperator::Not;
-  case IntrinsicOperator::LT: return RelationalOperator::LT;
-  case IntrinsicOperator::LE: return RelationalOperator::LE;
-  case IntrinsicOperator::EQ: return RelationalOperator::EQ;
-  case IntrinsicOperator::NE: return RelationalOperator::NE;
-  case IntrinsicOperator::GE: return RelationalOperator::GE;
-  case IntrinsicOperator::GT: return RelationalOperator::GT;
+  case IntrinsicOperator::Concat:
+    return GenericKind::OtherKind::Concat;
+  case IntrinsicOperator::Power:
+    return NumericOperator::Power;
+  case IntrinsicOperator::Multiply:
+    return NumericOperator::Multiply;
+  case IntrinsicOperator::Divide:
+    return NumericOperator::Divide;
+  case IntrinsicOperator::Add:
+    return NumericOperator::Add;
+  case IntrinsicOperator::Subtract:
+    return NumericOperator::Subtract;
+  case IntrinsicOperator::AND:
+    return LogicalOperator::And;
+  case IntrinsicOperator::OR:
+    return LogicalOperator::Or;
+  case IntrinsicOperator::EQV:
+    return LogicalOperator::Eqv;
+  case IntrinsicOperator::NEQV:
+    return LogicalOperator::Neqv;
+  case IntrinsicOperator::NOT:
+    return LogicalOperator::Not;
+  case IntrinsicOperator::LT:
+    return RelationalOperator::LT;
+  case IntrinsicOperator::LE:
+    return RelationalOperator::LE;
+  case IntrinsicOperator::EQ:
+    return RelationalOperator::EQ;
+  case IntrinsicOperator::NE:
+    return RelationalOperator::NE;
+  case IntrinsicOperator::GE:
+    return RelationalOperator::GE;
+  case IntrinsicOperator::GT:
+    return RelationalOperator::GT;
   }
 }
 
@@ -203,7 +220,7 @@ private:
   SemanticsContext &context_;
   ArraySpec arraySpec_;
 
-  template<typename T> void Analyze(const std::list<T> &list) {
+  template <typename T> void Analyze(const std::list<T> &list) {
     for (const auto &elem : list) {
       Analyze(elem);
     }
@@ -240,15 +257,14 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
-  std::visit(
-      common::visitors{
-          [&](const parser::AssumedSizeSpec &y) {
-            Analyze(std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
-            Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
-          },
-          [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
-          [&](const auto &y) { Analyze(y); },
-      },
+  std::visit(common::visitors{
+                 [&](const parser::AssumedSizeSpec &y) {
+                   Analyze(std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
+                   Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
+                 },
+                 [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
+                 [&](const auto &y) { Analyze(y); },
+             },
       x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
@@ -356,15 +372,15 @@ void EquivalenceSets::AddToSet(const parser::Designator &designator) {
 }
 
 void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
-  std::set<std::size_t> existing;  // indices of sets intersecting this one
+  std::set<std::size_t> existing; // indices of sets intersecting this one
   for (auto &obj : currSet_) {
     auto it{objectToSet_.find(obj)};
     if (it != objectToSet_.end()) {
-      existing.insert(it->second);  // symbol already in this set
+      existing.insert(it->second); // symbol already in this set
     }
   }
   if (existing.empty()) {
-    sets_.push_back({});  // create a new equivalence set
+    sets_.push_back({}); // create a new equivalence set
     MergeInto(source, currSet_, sets_.size() - 1);
   } else {
     auto it{existing.begin()};
@@ -388,7 +404,7 @@ bool EquivalenceSets::CheckCanEquivalence(
   bool isChar1{IsCharacterSequenceType(type1)};
   bool isChar2{IsCharacterSequenceType(type2)};
   if (sym1.attrs().test(Attr::PROTECTED) &&
-      !sym2.attrs().test(Attr::PROTECTED)) {  // C8114
+      !sym2.attrs().test(Attr::PROTECTED)) { // C8114
     msg = "Equivalence set cannot contain '%s'"
           " with PROTECTED attribute and '%s' without"_err_en_US;
   } else if (isNum1) {
@@ -398,7 +414,7 @@ bool EquivalenceSets::CheckCanEquivalence(
         msg = "Equivalence set contains '%s' that is numeric sequence "
               "type and '%s' that is character"_en_US;
       }
-    } else if (!isNum2) {  // C8110
+    } else if (!isNum2) { // C8110
       msg = "Equivalence set cannot contain '%s'"
             " that is numeric sequence type and '%s' that is not"_err_en_US;
     }
@@ -409,11 +425,11 @@ bool EquivalenceSets::CheckCanEquivalence(
         msg = "Equivalence set contains '%s' that is character sequence "
               "type and '%s' that is numeric"_en_US;
       }
-    } else if (!isChar2) {  // C8111
+    } else if (!isChar2) { // C8111
       msg = "Equivalence set cannot contain '%s'"
             " that is character sequence type and '%s' that is not"_err_en_US;
     }
-  } else if (!isNum2 && !isChar2 && *type1 != *type2) {  // C8112, C8113
+  } else if (!isNum2 && !isChar2 && *type1 != *type2) { // C8112, C8113
     msg = "Equivalence set cannot contain '%s' and '%s' with different types"
           " that are neither numeric nor character sequence types"_err_en_US;
   }
@@ -432,7 +448,7 @@ void EquivalenceSets::MergeInto(const parser::CharBlock &source,
   for (const auto &obj : src) {
     if (const auto *obj2{Find(dst, obj.symbol)}) {
       if (obj == *obj2) {
-        continue;  // already there
+        continue; // already there
       }
       context_.Say(source,
           "'%s' and '%s' cannot have the same first storage unit"_err_en_US,
@@ -487,7 +503,7 @@ bool EquivalenceSets::CheckDataRef(
       common::visitors{
           [&](const parser::Name &name) { return CheckObject(name); },
           [&](const common::Indirection<parser::StructureComponent> &) {
-            context_.Say(source,  // C8107
+            context_.Say(source, // C8107
                 "Derived type component '%s' is not allowed in an equivalence set"_err_en_US,
                 source);
             return false;
@@ -498,7 +514,7 @@ bool EquivalenceSets::CheckDataRef(
               ok &= std::visit(
                   common::visitors{
                       [&](const parser::SubscriptTriplet &) {
-                        context_.Say(source,  // C924, R872
+                        context_.Say(source, // C924, R872
                             "Array section '%s' is not allowed in an equivalence set"_err_en_US,
                             source);
                         return false;
@@ -512,7 +528,7 @@ bool EquivalenceSets::CheckDataRef(
             return ok;
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
-            context_.Say(source,  // C924 (R872)
+            context_.Say(source, // C924 (R872)
                 "Coindexed object '%s' is not allowed in an equivalence set"_err_en_US,
                 source);
             return false;
@@ -533,43 +549,43 @@ static bool InCommonWithBind(const Symbol &symbol) {
 // If symbol can't be in equivalence set report error and return false;
 bool EquivalenceSets::CheckObject(const parser::Name &name) {
   if (!name.symbol) {
-    return false;  // an error has already occurred
+    return false; // an error has already occurred
   }
   currObject_.symbol = name.symbol;
   parser::MessageFixedText msg{"", 0};
   const Symbol &symbol{*name.symbol};
-  if (symbol.owner().IsDerivedType()) {  // C8107
+  if (symbol.owner().IsDerivedType()) { // C8107
     msg = "Derived type component '%s'"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.IsDummy()) {  // C8106
+  } else if (symbol.IsDummy()) { // C8106
     msg = "Dummy argument '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.IsFuncResult()) {  // C8106
+  } else if (symbol.IsFuncResult()) { // C8106
     msg = "Function result '%s' is not allow in an equivalence set"_err_en_US;
-  } else if (IsPointer(symbol)) {  // C8106
+  } else if (IsPointer(symbol)) { // C8106
     msg = "Pointer '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (IsAllocatable(symbol)) {  // C8106
+  } else if (IsAllocatable(symbol)) { // C8106
     msg = "Allocatable variable '%s'"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.Corank() > 0) {  // C8106
+  } else if (symbol.Corank() > 0) { // C8106
     msg = "Coarray '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.has<UseDetails>()) {  // C8115
+  } else if (symbol.has<UseDetails>()) { // C8115
     msg = "Use-associated variable '%s'"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::BIND_C)) {  // C8106
+  } else if (symbol.attrs().test(Attr::BIND_C)) { // C8106
     msg = "Variable '%s' with BIND attribute"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::TARGET)) {  // C8108
+  } else if (symbol.attrs().test(Attr::TARGET)) { // C8108
     msg = "Variable '%s' with TARGET attribute"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (IsNamedConstant(symbol)) {  // C8106
+  } else if (IsNamedConstant(symbol)) { // C8106
     msg = "Named constant '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (InCommonWithBind(symbol)) {  // C8106
+  } else if (InCommonWithBind(symbol)) { // C8106
     msg = "Variable '%s' in common block with BIND attribute"
           " is not allowed in an equivalence set"_err_en_US;
   } else if (const auto *type{symbol.GetType()}) {
     if (const auto *derived{type->AsDerived()}) {
       if (const auto *comp{FindUltimateComponent(
-              *derived, IsAllocatableOrPointer)}) {  // C8106
+              *derived, IsAllocatableOrPointer)}) { // C8106
         msg = IsPointer(*comp)
             ? "Derived type object '%s' with pointer ultimate component"
               " is not allowed in an equivalence set"_err_en_US
@@ -605,14 +621,14 @@ bool EquivalenceSets::CheckArrayBound(const parser::Expr &bound) {
     return false;
   }
   if (expr->Rank() > 0) {
-    context_.Say(bound.source,  // C924, R872
+    context_.Say(bound.source, // C924, R872
         "Array with vector subscript '%s' is not allowed in an equivalence set"_err_en_US,
         bound.source);
     return false;
   }
   auto subscript{evaluate::ToInt64(*expr)};
   if (!subscript) {
-    context_.Say(bound.source,  // C8109
+    context_.Say(bound.source, // C8109
         "Array with nonconstant subscript '%s' is not allowed in an equivalence set"_err_en_US,
         bound.source);
     return false;
@@ -630,7 +646,7 @@ bool EquivalenceSets::CheckSubstringBound(
   }
   auto subscript{evaluate::ToInt64(*expr)};
   if (!subscript) {
-    context_.Say(bound.source,  // C8109
+    context_.Say(bound.source, // C8109
         "Substring with nonconstant bound '%s' is not allowed in an equivalence set"_err_en_US,
         bound.source);
     return false;
@@ -638,7 +654,7 @@ bool EquivalenceSets::CheckSubstringBound(
   if (!isStart) {
     auto start{currObject_.substringStart};
     if (*subscript < (start ? *start : 1)) {
-      context_.Say(bound.source,  // C8116
+      context_.Say(bound.source, // C8116
           "Substring with zero length is not allowed in an equivalence set"_err_en_US);
       return false;
     }
@@ -663,11 +679,13 @@ bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
     auto defaultKind{context_.GetDefaultKind(category)};
     switch (category) {
     case TypeCategory::Integer:
-    case TypeCategory::Logical: return *kind == defaultKind;
+    case TypeCategory::Logical:
+      return *kind == defaultKind;
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return *kind == defaultKind || *kind == context_.doublePrecisionKind();
-    default: return false;
+    default:
+      return false;
     }
   }
   return false;
@@ -701,4 +719,4 @@ bool EquivalenceSets::IsSequenceType(const DeclTypeSpec *type,
   }
 }
 
-}
+} // namespace Fortran::semantics

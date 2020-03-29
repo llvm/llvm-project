@@ -20,38 +20,38 @@ class Terminator;
 
 [[nodiscard]] void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
-template<typename A>[[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
+template <typename A>[[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
 void FreeMemory(void *);
-template<typename A> void FreeMemory(A *p) {
+template <typename A> void FreeMemory(A *p) {
   FreeMemory(reinterpret_cast<void *>(p));
 }
-template<typename A> void FreeMemoryAndNullify(A *&p) {
+template <typename A> void FreeMemoryAndNullify(A *&p) {
   FreeMemory(p);
   p = nullptr;
 }
 
-template<typename A> struct New {
-  template<typename... X>
+template <typename A> struct New {
+  template <typename... X>
   [[nodiscard]] A &operator()(const Terminator &terminator, X &&... x) {
     return *new (AllocateMemoryOrCrash(terminator, sizeof(A)))
         A{std::forward<X>(x)...};
   }
 };
 
-template<typename A> struct OwningPtrDeleter {
+template <typename A> struct OwningPtrDeleter {
   void operator()(A *p) { FreeMemory(p); }
 };
 
-template<typename A> using OwningPtr = std::unique_ptr<A, OwningPtrDeleter<A>>;
+template <typename A> using OwningPtr = std::unique_ptr<A, OwningPtrDeleter<A>>;
 
-template<typename A> struct Allocator {
+template <typename A> struct Allocator {
   using value_type = A;
   explicit Allocator(const Terminator &t) : terminator{t} {}
-  template<typename B>
+  template <typename B>
   explicit constexpr Allocator(const Allocator<B> &that) noexcept
-    : terminator{that.terminator} {}
+      : terminator{that.terminator} {}
   Allocator(const Allocator &) = default;
   Allocator(Allocator &&) = default;
   [[nodiscard]] constexpr A *allocate(std::size_t n) {
@@ -61,6 +61,6 @@ template<typename A> struct Allocator {
   constexpr void deallocate(A *p, std::size_t) { FreeMemory(p); }
   const Terminator &terminator;
 };
-}
+} // namespace Fortran::runtime
 
-#endif  // FORTRAN_RUNTIME_MEMORY_H_
+#endif // FORTRAN_RUNTIME_MEMORY_H_

@@ -23,4 +23,4 @@ std::optional<Success> DebugParser::Parse(ParseState &state) const {
   }
   return {Success{}};
 }
-}
+} // namespace Fortran::parser

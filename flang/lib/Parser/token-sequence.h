@@ -38,9 +38,9 @@ public:
     Put(that, at, count);
   }
   TokenSequence(TokenSequence &&that)
-    : start_{std::move(that.start_)}, nextStart_{that.nextStart_},
-      char_{std::move(that.char_)}, provenances_{std::move(that.provenances_)} {
-  }
+      : start_{std::move(that.start_)}, nextStart_{that.nextStart_},
+        char_{std::move(that.char_)}, provenances_{
+                                          std::move(that.provenances_)} {}
   TokenSequence(const std::string &s, Provenance p) { Put(s, p); }
 
   TokenSequence &operator=(const TokenSequence &that) {
@@ -125,5 +125,5 @@ private:
   std::vector<char> char_;
   OffsetToProvenanceMappings provenances_;
 };
-}
-#endif  // FORTRAN_PARSER_TOKEN_SEQUENCE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_TOKEN_SEQUENCE_H_

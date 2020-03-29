@@ -10,7 +10,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
@@ -52,7 +52,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           name, KIND, KIND);
     }
   } else if (name == "bessel_jn" || name == "bessel_yn") {
-    if (args.size() == 2) {  // elemental
+    if (args.size() == 2) { // elemental
       // runtime functions use int arg
       using Int4 = Type<TypeCategory::Integer, 4>;
       if (auto callable{
@@ -135,7 +135,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
     FoldingContext &context, ComplexComponent<KIND> &&x) {
   using Operand = Type<TypeCategory::Complex, KIND>;
@@ -162,4 +162,4 @@ Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
 
 FOR_EACH_REAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeReal>;
-}
+} // namespace Fortran::evaluate

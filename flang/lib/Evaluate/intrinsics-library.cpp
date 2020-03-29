@@ -46,7 +46,7 @@ bool HostIntrinsicProceduresLibrary::HasEquivalentProcedure(
 
 // Define which host runtime functions will be used for folding
 
-template<typename HostT>
+template <typename HostT>
 static void AddLibmRealHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
   using F = FuncPointer<HostT, HostT>;
@@ -96,7 +96,7 @@ static void AddLibmRealHostProcedures(
   }
 }
 
-template<typename HostT>
+template <typename HostT>
 static void AddLibmComplexHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
   using F = FuncPointer<std::complex<HostT>, const std::complex<HostT> &>;
@@ -207,21 +207,21 @@ enum class I {
 enum class L { F, R, P };
 
 struct NoSuchRuntimeSymbol {};
-template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
+template <L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 
 // Macros to declare fast/relaxed/precise libpgmath variants.
 #define DECLARE_PGMATH_FAST_REAL(func) \
   extern "C" float __fs_##func##_1(float); \
   extern "C" double __fd_##func##_1(double); \
-  template<> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
-  template<> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
+  template <> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
+  template <> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
 
 #define DECLARE_PGMATH_FAST_COMPLEX(func) \
   extern "C" float _Complex __fc_##func##_1(float _Complex); \
   extern "C" double _Complex __fz_##func##_1(double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::F, I::func, std::complex<float>>{__fc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::F, I::func, std::complex<double>>{__fz_##func##_1};
 
 #define DECLARE_PGMATH_FAST_ALL_FP(func) \
@@ -231,15 +231,15 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_PRECISE_REAL(func) \
   extern "C" float __ps_##func##_1(float); \
   extern "C" double __pd_##func##_1(double); \
-  template<> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
-  template<> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
+  template <> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
+  template <> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
 
 #define DECLARE_PGMATH_PRECISE_COMPLEX(func) \
   extern "C" float _Complex __pc_##func##_1(float _Complex); \
   extern "C" double _Complex __pz_##func##_1(double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::P, I::func, std::complex<float>>{__pc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::P, I::func, std::complex<double>>{__pz_##func##_1};
 
 #define DECLARE_PGMATH_PRECISE_ALL_FP(func) \
@@ -249,15 +249,15 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_RELAXED_REAL(func) \
   extern "C" float __rs_##func##_1(float); \
   extern "C" double __rd_##func##_1(double); \
-  template<> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
-  template<> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
+  template <> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
+  template <> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
 
 #define DECLARE_PGMATH_RELAXED_COMPLEX(func) \
   extern "C" float _Complex __rc_##func##_1(float _Complex); \
   extern "C" double _Complex __rz_##func##_1(double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::R, I::func, std::complex<float>>{__rc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::R, I::func, std::complex<double>>{__rz_##func##_1};
 
 #define DECLARE_PGMATH_RELAXED_ALL_FP(func) \
@@ -282,16 +282,16 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_FAST_REAL2(func) \
   extern "C" float __fs_##func##_1(float, float); \
   extern "C" double __fd_##func##_1(double, double); \
-  template<> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
-  template<> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
+  template <> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
+  template <> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
 
 #define DECLARE_PGMATH_FAST_COMPLEX2(func) \
   extern "C" float _Complex __fc_##func##_1(float _Complex, float _Complex); \
   extern "C" double _Complex __fz_##func##_1( \
       double _Complex, double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::F, I::func, std::complex<float>>{__fc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::F, I::func, std::complex<double>>{__fz_##func##_1};
 
 #define DECLARE_PGMATH_FAST_ALL_FP2(func) \
@@ -301,16 +301,16 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_PRECISE_REAL2(func) \
   extern "C" float __ps_##func##_1(float, float); \
   extern "C" double __pd_##func##_1(double, double); \
-  template<> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
-  template<> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
+  template <> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
+  template <> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
 
 #define DECLARE_PGMATH_PRECISE_COMPLEX2(func) \
   extern "C" float _Complex __pc_##func##_1(float _Complex, float _Complex); \
   extern "C" double _Complex __pz_##func##_1( \
       double _Complex, double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::P, I::func, std::complex<float>>{__pc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::P, I::func, std::complex<double>>{__pz_##func##_1};
 
 #define DECLARE_PGMATH_PRECISE_ALL_FP2(func) \
@@ -320,16 +320,16 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_RELAXED_REAL2(func) \
   extern "C" float __rs_##func##_1(float, float); \
   extern "C" double __rd_##func##_1(double, double); \
-  template<> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
-  template<> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
+  template <> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
+  template <> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
 
 #define DECLARE_PGMATH_RELAXED_COMPLEX2(func) \
   extern "C" float _Complex __rc_##func##_1(float _Complex, float _Complex); \
   extern "C" double _Complex __rz_##func##_1( \
       double _Complex, double _Complex); \
-  template<> \
+  template <> \
   constexpr auto Sym<L::R, I::func, std::complex<float>>{__rc_##func##_1}; \
-  template<> \
+  template <> \
   constexpr auto Sym<L::R, I::func, std::complex<double>>{__rz_##func##_1};
 
 #define DECLARE_PGMATH_RELAXED_ALL_FP2(func) \
@@ -354,12 +354,12 @@ template<L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
 #define DECLARE_PGMATH_MTH_VERSION_REAL(func) \
   extern "C" float __mth_i_##func(float); \
   extern "C" double __mth_i_d##func(double); \
-  template<> constexpr auto Sym<L::F, I::func, float>{__mth_i_##func}; \
-  template<> constexpr auto Sym<L::F, I::func, double>{__mth_i_d##func}; \
-  template<> constexpr auto Sym<L::P, I::func, float>{__mth_i_##func}; \
-  template<> constexpr auto Sym<L::P, I::func, double>{__mth_i_d##func}; \
-  template<> constexpr auto Sym<L::R, I::func, float>{__mth_i_##func}; \
-  template<> constexpr auto Sym<L::R, I::func, double>{__mth_i_d##func};
+  template <> constexpr auto Sym<L::F, I::func, float>{__mth_i_##func}; \
+  template <> constexpr auto Sym<L::F, I::func, double>{__mth_i_d##func}; \
+  template <> constexpr auto Sym<L::P, I::func, float>{__mth_i_##func}; \
+  template <> constexpr auto Sym<L::P, I::func, double>{__mth_i_d##func}; \
+  template <> constexpr auto Sym<L::R, I::func, float>{__mth_i_##func}; \
+  template <> constexpr auto Sym<L::R, I::func, double>{__mth_i_d##func};
 
 // Actual libpgmath declarations
 DECLARE_PGMATH_ALL(acos)
@@ -376,20 +376,20 @@ DECLARE_PGMATH_MTH_VERSION_REAL(bessel_y1)
 // bessel_jn and bessel_yn takes an int as first arg
 extern "C" float __mth_i_bessel_jn(int, float);
 extern "C" double __mth_i_dbessel_jn(int, double);
-template<> constexpr auto Sym<L::F, I::bessel_jn, float>{__mth_i_bessel_jn};
-template<> constexpr auto Sym<L::F, I::bessel_jn, double>{__mth_i_dbessel_jn};
-template<> constexpr auto Sym<L::P, I::bessel_jn, float>{__mth_i_bessel_jn};
-template<> constexpr auto Sym<L::P, I::bessel_jn, double>{__mth_i_dbessel_jn};
-template<> constexpr auto Sym<L::R, I::bessel_jn, float>{__mth_i_bessel_jn};
-template<> constexpr auto Sym<L::R, I::bessel_jn, double>{__mth_i_dbessel_jn};
+template <> constexpr auto Sym<L::F, I::bessel_jn, float>{__mth_i_bessel_jn};
+template <> constexpr auto Sym<L::F, I::bessel_jn, double>{__mth_i_dbessel_jn};
+template <> constexpr auto Sym<L::P, I::bessel_jn, float>{__mth_i_bessel_jn};
+template <> constexpr auto Sym<L::P, I::bessel_jn, double>{__mth_i_dbessel_jn};
+template <> constexpr auto Sym<L::R, I::bessel_jn, float>{__mth_i_bessel_jn};
+template <> constexpr auto Sym<L::R, I::bessel_jn, double>{__mth_i_dbessel_jn};
 extern "C" float __mth_i_bessel_yn(int, float);
 extern "C" double __mth_i_dbessel_yn(int, double);
-template<> constexpr auto Sym<L::F, I::bessel_yn, float>{__mth_i_bessel_yn};
-template<> constexpr auto Sym<L::F, I::bessel_yn, double>{__mth_i_dbessel_yn};
-template<> constexpr auto Sym<L::P, I::bessel_yn, float>{__mth_i_bessel_yn};
-template<> constexpr auto Sym<L::P, I::bessel_yn, double>{__mth_i_dbessel_yn};
-template<> constexpr auto Sym<L::R, I::bessel_yn, float>{__mth_i_bessel_yn};
-template<> constexpr auto Sym<L::R, I::bessel_yn, double>{__mth_i_dbessel_yn};
+template <> constexpr auto Sym<L::F, I::bessel_yn, float>{__mth_i_bessel_yn};
+template <> constexpr auto Sym<L::F, I::bessel_yn, double>{__mth_i_dbessel_yn};
+template <> constexpr auto Sym<L::P, I::bessel_yn, float>{__mth_i_bessel_yn};
+template <> constexpr auto Sym<L::P, I::bessel_yn, double>{__mth_i_dbessel_yn};
+template <> constexpr auto Sym<L::R, I::bessel_yn, float>{__mth_i_bessel_yn};
+template <> constexpr auto Sym<L::R, I::bessel_yn, double>{__mth_i_dbessel_yn};
 DECLARE_PGMATH_ALL(cos)
 DECLARE_PGMATH_ALL(cosh)
 DECLARE_PGMATH_MTH_VERSION_REAL(erf)
@@ -399,34 +399,34 @@ DECLARE_PGMATH_ALL(exp)
 DECLARE_PGMATH_MTH_VERSION_REAL(gamma)
 extern "C" float __mth_i_hypot(float, float);
 extern "C" double __mth_i_dhypot(double, double);
-template<> constexpr auto Sym<L::F, I::hypot, float>{__mth_i_hypot};
-template<> constexpr auto Sym<L::F, I::hypot, double>{__mth_i_dhypot};
-template<> constexpr auto Sym<L::P, I::hypot, float>{__mth_i_hypot};
-template<> constexpr auto Sym<L::P, I::hypot, double>{__mth_i_dhypot};
-template<> constexpr auto Sym<L::R, I::hypot, float>{__mth_i_hypot};
-template<> constexpr auto Sym<L::R, I::hypot, double>{__mth_i_dhypot};
+template <> constexpr auto Sym<L::F, I::hypot, float>{__mth_i_hypot};
+template <> constexpr auto Sym<L::F, I::hypot, double>{__mth_i_dhypot};
+template <> constexpr auto Sym<L::P, I::hypot, float>{__mth_i_hypot};
+template <> constexpr auto Sym<L::P, I::hypot, double>{__mth_i_dhypot};
+template <> constexpr auto Sym<L::R, I::hypot, float>{__mth_i_hypot};
+template <> constexpr auto Sym<L::R, I::hypot, double>{__mth_i_dhypot};
 DECLARE_PGMATH_ALL(log)
 DECLARE_PGMATH_REAL(log10)
 DECLARE_PGMATH_MTH_VERSION_REAL(log_gamma)
 // no function for modulo in libpgmath
 extern "C" float __fs_mod_1(float, float);
 extern "C" double __fd_mod_1(double, double);
-template<> constexpr auto Sym<L::F, I::mod, float>{__fs_mod_1};
-template<> constexpr auto Sym<L::F, I::mod, double>{__fd_mod_1};
-template<> constexpr auto Sym<L::P, I::mod, float>{__fs_mod_1};
-template<> constexpr auto Sym<L::P, I::mod, double>{__fd_mod_1};
-template<> constexpr auto Sym<L::R, I::mod, float>{__fs_mod_1};
-template<> constexpr auto Sym<L::R, I::mod, double>{__fd_mod_1};
+template <> constexpr auto Sym<L::F, I::mod, float>{__fs_mod_1};
+template <> constexpr auto Sym<L::F, I::mod, double>{__fd_mod_1};
+template <> constexpr auto Sym<L::P, I::mod, float>{__fs_mod_1};
+template <> constexpr auto Sym<L::P, I::mod, double>{__fd_mod_1};
+template <> constexpr auto Sym<L::R, I::mod, float>{__fs_mod_1};
+template <> constexpr auto Sym<L::R, I::mod, double>{__fd_mod_1};
 DECLARE_PGMATH_ALL2(pow)
 DECLARE_PGMATH_ALL(sin)
 DECLARE_PGMATH_ALL(sinh)
 DECLARE_PGMATH_MTH_VERSION_REAL(sqrt)
-DECLARE_PGMATH_COMPLEX(sqrt)  // real versions are __mth_i...
+DECLARE_PGMATH_COMPLEX(sqrt) // real versions are __mth_i...
 DECLARE_PGMATH_ALL(tan)
 DECLARE_PGMATH_ALL(tanh)
 
 // Fill the function map used for folding with libpgmath symbols
-template<L Lib, typename HostT>
+template <L Lib, typename HostT>
 static void AddLibpgmathRealHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
   static_assert(std::is_same_v<HostT, float> || std::is_same_v<HostT, double>);
@@ -437,7 +437,7 @@ static void AddLibpgmathRealHostProcedures(
       {"asinh", Sym<Lib, I::asinh, HostT>, true},
       {"atan", Sym<Lib, I::atan, HostT>, true},
       {"atan", Sym<Lib, I::atan2, HostT>,
-          true},  // atan is also the generic name for atan2
+          true}, // atan is also the generic name for atan2
       {"atanh", Sym<Lib, I::atanh, HostT>, true},
       {"bessel_j0", Sym<Lib, I::bessel_j0, HostT>, true},
       {"bessel_j1", Sym<Lib, I::bessel_j1, HostT>, true},
@@ -475,19 +475,19 @@ static void AddLibpgmathRealHostProcedures(
 // by a pair of register but std::complex<float> is returned by structure
 // address. To fix the issue, wrapper around C _Complex functions are defined
 // below.
-template<FuncPointer<float _Complex, float _Complex> func>
+template <FuncPointer<float _Complex, float _Complex> func>
 static std::complex<float> ComplexCFuncWrapper(std::complex<float> &arg) {
   float _Complex res{func(*reinterpret_cast<float _Complex *>(&arg))};
   return *reinterpret_cast<std::complex<float> *>(&res);
 }
 
-template<FuncPointer<double _Complex, double _Complex> func>
+template <FuncPointer<double _Complex, double _Complex> func>
 static std::complex<double> ComplexCFuncWrapper(std::complex<double> &arg) {
   double _Complex res{func(*reinterpret_cast<double _Complex *>(&arg))};
   return *reinterpret_cast<std::complex<double> *>(&res);
 }
 
-template<FuncPointer<float _Complex, float _Complex, float _Complex> func>
+template <FuncPointer<float _Complex, float _Complex, float _Complex> func>
 static std::complex<float> ComplexCFuncWrapper(
     std::complex<float> &arg1, std::complex<float> &arg2) {
   float _Complex res{func(*reinterpret_cast<float _Complex *>(&arg1),
@@ -495,7 +495,7 @@ static std::complex<float> ComplexCFuncWrapper(
   return *reinterpret_cast<std::complex<float> *>(&res);
 }
 
-template<FuncPointer<double _Complex, double _Complex, double _Complex> func>
+template <FuncPointer<double _Complex, double _Complex, double _Complex> func>
 static std::complex<double> ComplexCFuncWrapper(
     std::complex<double> &arg1, std::complex<double> &arg2) {
   double _Complex res{func(*reinterpret_cast<double _Complex *>(&arg1),
@@ -503,7 +503,7 @@ static std::complex<double> ComplexCFuncWrapper(
   return *reinterpret_cast<std::complex<double> *>(&res);
 }
 
-template<L Lib, typename HostT>
+template <L Lib, typename HostT>
 static void AddLibpgmathComplexHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
   static_assert(std::is_same_v<HostT, float> || std::is_same_v<HostT, double>);
@@ -535,7 +535,7 @@ static void AddLibpgmathComplexHostProcedures(
   }
 }
 
-template<L Lib>
+template <L Lib>
 static void InitHostIntrinsicLibraryWithLibpgmath(
     HostIntrinsicProceduresLibrary &lib) {
   if constexpr (host::FortranTypeExists<float>()) {
@@ -558,8 +558,8 @@ static void InitHostIntrinsicLibraryWithLibpgmath(
     AddLibmComplexHostProcedures<long double>(lib);
   }
 }
-}
-#endif  // LINK_WITH_LIBPGMATH
+} // namespace pgmath
+#endif // LINK_WITH_LIBPGMATH
 
 // Define which host runtime functions will be used for folding
 HostIntrinsicProceduresLibrary::HostIntrinsicProceduresLibrary() {
@@ -581,4 +581,4 @@ HostIntrinsicProceduresLibrary::HostIntrinsicProceduresLibrary() {
   InitHostIntrinsicLibraryWithLibm(*this);
 #endif
 }
-}
+} // namespace Fortran::evaluate

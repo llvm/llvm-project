@@ -25,7 +25,7 @@ public:
   using resultType = Success;
   constexpr DebugParser(const DebugParser &) = default;
   constexpr DebugParser(const char *str, std::size_t n)
-    : str_{str}, length_{n} {}
+      : str_{str}, length_{n} {}
   std::optional<Success> Parse(ParseState &) const;
 
 private:
@@ -36,5 +36,5 @@ private:
 constexpr DebugParser operator""_debug(const char str[], std::size_t n) {
   return DebugParser{str, n};
 }
-}
-#endif  // FORTRAN_PARSER_DEBUG_PARSER_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_DEBUG_PARSER_H_

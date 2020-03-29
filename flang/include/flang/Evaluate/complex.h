@@ -19,12 +19,12 @@ class raw_ostream;
 
 namespace Fortran::evaluate::value {
 
-template<typename REAL_TYPE> class Complex {
+template <typename REAL_TYPE> class Complex {
 public:
   using Part = REAL_TYPE;
   static constexpr int bits{2 * Part::bits};
 
-  constexpr Complex() {}  // (+0.0, +0.0)
+  constexpr Complex() {} // (+0.0, +0.0)
   constexpr Complex(const Complex &) = default;
   constexpr Complex(const Part &r, const Part &i) : re_{r}, im_{i} {}
   explicit constexpr Complex(const Part &r) : re_{r} {}
@@ -59,7 +59,7 @@ public:
     return re_.IsSignalingNaN() || im_.IsSignalingNaN();
   }
 
-  template<typename INT>
+  template <typename INT>
   static ValueWithRealFlags<Complex> FromInteger(
       const INT &n, Rounding rounding = defaultRounding) {
     ValueWithRealFlags<Complex> result;
@@ -101,5 +101,5 @@ extern template class Complex<Real<Integer<32>, 24>>;
 extern template class Complex<Real<Integer<64>, 53>>;
 extern template class Complex<Real<Integer<80>, 64>>;
 extern template class Complex<Real<Integer<128>, 113>>;
-}
-#endif  // FORTRAN_EVALUATE_COMPLEX_H_
+} // namespace Fortran::evaluate::value
+#endif // FORTRAN_EVALUATE_COMPLEX_H_

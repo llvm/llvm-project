@@ -20,7 +20,7 @@
 #define FORTRAN_COMMON_RESTORER_H_
 #include "idioms.h"
 namespace Fortran::common {
-template<typename A> class Restorer {
+template <typename A> class Restorer {
 public:
   explicit Restorer(A &p) : p_{p}, original_{std::move(p)} {}
   ~Restorer() { p_ = std::move(original_); }
@@ -30,17 +30,17 @@ private:
   A original_;
 };
 
-template<typename A, typename B>
+template <typename A, typename B>
 common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, B &&from) {
   Restorer<A> result{to};
   to = std::move(from);
   return result;
 }
-template<typename A, typename B>
+template <typename A, typename B>
 common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, const B &from) {
   Restorer<A> result{to};
   to = from;
   return result;
 }
-}
-#endif  // FORTRAN_COMMON_RESTORER_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_RESTORER_H_

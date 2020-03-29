@@ -22,15 +22,22 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   if (IsEnabled(LanguageFeature::LogicalAbbreviations)) {
     switch (opr) {
       SWITCH_COVERS_ALL_CASES
-    case LogicalOperator::And: result.push_back(".a."); break;
-    case LogicalOperator::Or: result.push_back(".o."); break;
-    case LogicalOperator::Not: result.push_back(".n."); break;
+    case LogicalOperator::And:
+      result.push_back(".a.");
+      break;
+    case LogicalOperator::Or:
+      result.push_back(".o.");
+      break;
+    case LogicalOperator::Not:
+      result.push_back(".n.");
+      break;
     case LogicalOperator::Neqv:
       if (IsEnabled(LanguageFeature::XOROperator)) {
         result.push_back(".x.");
       }
       break;
-    case LogicalOperator::Eqv: break;
+    case LogicalOperator::Eqv:
+      break;
     }
   }
   return result;
@@ -40,11 +47,16 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
     RelationalOperator opr) const {
   switch (opr) {
     SWITCH_COVERS_ALL_CASES
-  case RelationalOperator::LT: return {".lt.", "<"};
-  case RelationalOperator::LE: return {".le.", "<="};
-  case RelationalOperator::EQ: return {".eq.", "=="};
-  case RelationalOperator::GE: return {".ge.", ">="};
-  case RelationalOperator::GT: return {".gt.", ">"};
+  case RelationalOperator::LT:
+    return {".lt.", "<"};
+  case RelationalOperator::LE:
+    return {".le.", "<="};
+  case RelationalOperator::EQ:
+    return {".eq.", "=="};
+  case RelationalOperator::GE:
+    return {".ge.", ">="};
+  case RelationalOperator::GT:
+    return {".gt.", ">"};
   case RelationalOperator::NE:
     if (IsEnabled(LanguageFeature::AlternativeNE)) {
       return {".ne.", "/=", "<>"};
@@ -54,4 +66,4 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   }
 }
 
-}
+} // namespace Fortran::common

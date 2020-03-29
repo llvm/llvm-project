@@ -39,7 +39,7 @@ struct CallCharacteristics {
 
 struct SpecificCall {
   SpecificCall(SpecificIntrinsic &&si, ActualArguments &&as)
-    : specificIntrinsic{std::move(si)}, arguments{std::move(as)} {}
+      : specificIntrinsic{std::move(si)}, arguments{std::move(as)} {}
   SpecificIntrinsic specificIntrinsic;
   ActualArguments arguments;
 };
@@ -47,8 +47,8 @@ struct SpecificCall {
 struct SpecificIntrinsicFunctionInterface : public characteristics::Procedure {
   SpecificIntrinsicFunctionInterface(
       characteristics::Procedure &&p, std::string n, bool isRestrictedSpecific)
-    : characteristics::Procedure{std::move(p)}, genericName{n},
-      isRestrictedSpecific{isRestrictedSpecific} {}
+      : characteristics::Procedure{std::move(p)}, genericName{n},
+        isRestrictedSpecific{isRestrictedSpecific} {}
   std::string genericName;
   bool isRestrictedSpecific;
   // N.B. If there are multiple arguments, they all have the same type.
@@ -82,7 +82,7 @@ public:
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
-  Implementation *impl_{nullptr};  // owning pointer
+  Implementation *impl_{nullptr}; // owning pointer
 };
-}
-#endif  // FORTRAN_EVALUATE_INTRINSICS_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_INTRINSICS_H_

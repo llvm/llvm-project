@@ -10,7 +10,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Complex, KIND>> &&funcRef) {
@@ -61,7 +61,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
     FoldingContext &context, ComplexConstructor<KIND> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
@@ -77,4 +77,4 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
 
 FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeComplex>;
-}
+} // namespace Fortran::evaluate

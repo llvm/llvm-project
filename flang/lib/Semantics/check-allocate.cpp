@@ -24,7 +24,7 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
-  int sourceExprRank{0};  // only valid if gotMold || gotSource
+  int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
   bool gotTypeSpec{false};
@@ -36,16 +36,16 @@ class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-    : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
-                               alloc.t)},
-      name_{parser::GetLastName(allocateObject_)},
-      symbol_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
-      type_{symbol_ ? symbol_->GetType() : nullptr},
-      allocateShapeSpecRank_{ShapeSpecRank(alloc)}, rank_{symbol_
-                                                            ? symbol_->Rank()
-                                                            : 0},
-      allocateCoarraySpecRank_{CoarraySpecRank(alloc)},
-      corank_{symbol_ ? symbol_->Corank() : 0} {}
+      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
+                                 alloc.t)},
+        name_{parser::GetLastName(allocateObject_)},
+        symbol_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
+        type_{symbol_ ? symbol_->GetType() : nullptr},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, rank_{symbol_
+                                                              ? symbol_->Rank()
+                                                              : 0},
+        allocateCoarraySpecRank_{CoarraySpecRank(alloc)},
+        corank_{symbol_ ? symbol_->Corank() : 0} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -102,7 +102,7 @@ private:
 static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
     const parser::AllocateStmt &allocateStmt, SemanticsContext &context) {
   AllocateCheckerInfo info;
-  bool stopCheckingAllocate{false};  // for errors that would lead to ambiguity
+  bool stopCheckingAllocate{false}; // for errors that would lead to ambiguity
   if (const auto &typeSpec{
           std::get<std::optional<parser::TypeSpec>>(allocateStmt.t)}) {
     info.typeSpec = typeSpec->declTypeSpec;
@@ -134,14 +134,14 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
               std::visit(
                   common::visitors{
                       [&](const parser::StatVariable &) {
-                        if (info.gotStat) {  // C943
+                        if (info.gotStat) { // C943
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotStat = true;
                       },
                       [&](const parser::MsgVariable &) {
-                        if (info.gotMsg) {  // C943
+                        if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
@@ -151,12 +151,12 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                   statOrErr.u);
             },
             [&](const parser::AllocOpt::Source &source) {
-              if (info.gotSource) {  // C943
+              if (info.gotSource) { // C943
                 context.Say(
                     "SOURCE may not be duplicated in a ALLOCATE statement"_err_en_US);
                 stopCheckingAllocate = true;
               }
-              if (info.gotMold || info.gotTypeSpec) {  // C944
+              if (info.gotMold || info.gotTypeSpec) { // C944
                 context.Say(
                     "At most one of source-expr and type-spec may appear in a ALLOCATE statement"_err_en_US);
                 stopCheckingAllocate = true;
@@ -165,12 +165,12 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
               info.gotSource = true;
             },
             [&](const parser::AllocOpt::Mold &mold) {
-              if (info.gotMold) {  // C943
+              if (info.gotMold) { // C943
                 context.Say(
                     "MOLD may not be duplicated in a ALLOCATE statement"_err_en_US);
                 stopCheckingAllocate = true;
               }
-              if (info.gotSource || info.gotTypeSpec) {  // C944
+              if (info.gotSource || info.gotTypeSpec) { // C944
                 context.Say(
                     "At most one of source-expr and type-spec may appear in a ALLOCATE statement"_err_en_US);
                 stopCheckingAllocate = true;
@@ -227,7 +227,7 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
           }
         }
       }
-      if (info.gotSource) {  // C1594(6) - SOURCE= restrictions when pure
+      if (info.gotSource) { // C1594(6) - SOURCE= restrictions when pure
         const Scope &scope{context.FindScope(at)};
         if (FindPureProcedureContaining(scope)) {
           parser::ContextualMessages messages{at, &context.messages()};
@@ -341,7 +341,7 @@ static bool HaveSameAssumedTypeParameters(
     // type1 or do not exist in type1
     return type1AssumedParametersCount == type2AssumedParametersCount;
   }
-  return true;  // other intrinsic types have no length type parameters
+  return true; // other intrinsic types have no length type parameters
 }
 
 static std::optional<std::int64_t> GetTypeParameterInt64Value(
@@ -409,7 +409,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     CHECK(context.AnyFatalError());
     return false;
   }
-  if (!IsVariableName(*symbol_)) {  // C932 pre-requisite
+  if (!IsVariableName(*symbol_)) { // C932 pre-requisite
     context.Say(name_.source,
         "Name in ALLOCATE statement must be a variable name"_err_en_US);
     return false;
@@ -422,7 +422,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   GatherAllocationBasicInfo();
-  if (!IsAllocatableOrPointer(*symbol_)) {  // C932
+  if (!IsAllocatableOrPointer(*symbol_)) { // C932
     context.Say(name_.source,
         "Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
     return false;
@@ -596,7 +596,7 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
         return false;
       }
     }
-  } else {  // Not a coarray
+  } else { // Not a coarray
     if (hasAllocateCoarraySpec()) {
       // C941
       context.Say(name_.source,
@@ -622,4 +622,4 @@ void AllocateChecker::Leave(const parser::AllocateStmt &allocateStmt) {
     }
   }
 }
-}
+} // namespace Fortran::semantics

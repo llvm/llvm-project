@@ -61,5 +61,5 @@ private:
   LanguageFeatures warn_;
   bool warnAll_{false};
 };
-}
-#endif  // FORTRAN_COMMON_FORTRAN_FEATURES_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_FORTRAN_FEATURES_H_

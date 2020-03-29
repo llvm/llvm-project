@@ -21,17 +21,17 @@
 namespace Fortran::parser {
 
 // R401 xzy-list -> xzy [, xzy]...
-template<typename PA> inline constexpr auto nonemptyList(const PA &p) {
-  return nonemptySeparated(p, ","_tok);  // p-list
+template <typename PA> inline constexpr auto nonemptyList(const PA &p) {
+  return nonemptySeparated(p, ","_tok); // p-list
 }
 
-template<typename PA>
+template <typename PA>
 inline constexpr auto nonemptyList(MessageFixedText error, const PA &p) {
-  return withMessage(error, nonemptySeparated(p, ","_tok));  // p-list
+  return withMessage(error, nonemptySeparated(p, ","_tok)); // p-list
 }
 
-template<typename PA> inline constexpr auto optionalList(const PA &p) {
-  return defaulted(nonemptySeparated(p, ","_tok));  // [p-list]
+template <typename PA> inline constexpr auto optionalList(const PA &p) {
+  return defaulted(nonemptySeparated(p, ","_tok)); // [p-list]
 }
 
 // R402 xzy-name -> name
@@ -52,5 +52,5 @@ constexpr auto pointer{construct<Pointer>("POINTER"_tok)};
 constexpr auto protectedAttr{construct<Protected>("PROTECTED"_tok)};
 constexpr auto save{construct<Save>("SAVE"_tok)};
 
-}
+} // namespace Fortran::parser
 #endif

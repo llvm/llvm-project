@@ -29,7 +29,7 @@ namespace Fortran::runtime::io {
 // The DataEdit reference is const here (and elsewhere in this header) so that
 // one edit descriptor with a repeat factor may safely serve to edit
 // multiple elements of an array.
-template<typename INT = std::int64_t, typename UINT = std::uint64_t>
+template <typename INT = std::int64_t, typename UINT = std::uint64_t>
 bool EditIntegerOutput(IoStatementState &, const DataEdit &, INT);
 
 // Encapsulates the state of a REAL output conversion.
@@ -52,16 +52,16 @@ protected:
   bool EmitSuffix(const DataEdit &);
 
   IoStatementState &io_;
-  int trailingBlanks_{0};  // created when Gw editing maps to Fw
+  int trailingBlanks_{0}; // created when Gw editing maps to Fw
   char exponent_[16];
 };
 
-template<int binaryPrecision = 53>
+template <int binaryPrecision = 53>
 class RealOutputEditing : public RealOutputEditingBase {
 public:
-  template<typename A>
+  template <typename A>
   RealOutputEditing(IoStatementState &io, A x)
-    : RealOutputEditingBase{io}, x_{x} {}
+      : RealOutputEditingBase{io}, x_{x} {}
   bool Edit(const DataEdit &);
 
 private:
@@ -73,7 +73,7 @@ private:
   // it has a repeat count.
   bool EditEorDOutput(const DataEdit &);
   bool EditFOutput(const DataEdit &);
-  DataEdit EditForGOutput(DataEdit);  // returns an E or F edit
+  DataEdit EditForGOutput(DataEdit); // returns an E or F edit
   bool EditEXOutput(const DataEdit &);
   bool EditListDirectedOutput(const DataEdit &);
 
@@ -107,5 +107,5 @@ extern template class RealOutputEditing<53>;
 extern template class RealOutputEditing<64>;
 extern template class RealOutputEditing<113>;
 
-}
-#endif  // FORTRAN_RUNTIME_EDIT_OUTPUT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_EDIT_OUTPUT_H_

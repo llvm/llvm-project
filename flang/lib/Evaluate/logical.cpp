@@ -14,4 +14,4 @@ template class Logical<8>;
 template class Logical<16>;
 template class Logical<32>;
 template class Logical<64>;
-}
+} // namespace Fortran::evaluate::value

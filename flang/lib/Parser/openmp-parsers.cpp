@@ -23,7 +23,7 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
-template<typename A> constexpr decltype(auto) verbatim(A x) {
+template <typename A> constexpr decltype(auto) verbatim(A x) {
   return sourced(construct<Verbatim>(x));
 }
 
@@ -524,4 +524,4 @@ TYPE_PARSER(
 
 TYPE_PARSER(construct<OpenMPLoopConstruct>(
     Parser<OmpBeginLoopDirective>{} / endOmpLine))
-}
+} // namespace Fortran::parser

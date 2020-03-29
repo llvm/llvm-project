@@ -26,7 +26,7 @@ public:
   IsConstantExprHelper() : Base{*this} {}
   using Base::operator();
 
-  template<int KIND> bool operator()(const TypeParamInquiry<KIND> &inq) const {
+  template <int KIND> bool operator()(const TypeParamInquiry<KIND> &inq) const {
     return IsKindTypeParameter(inq.parameter());
   }
   bool operator()(const semantics::Symbol &symbol) const {
@@ -36,7 +36,7 @@ public:
   bool operator()(const semantics::ParamValue &param) const {
     return param.isExplicit() && (*this)(param.GetExplicit());
   }
-  template<typename T> bool operator()(const FunctionRef<T> &call) const {
+  template <typename T> bool operator()(const FunctionRef<T> &call) const {
     if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
       return intrinsic->name == "kind";
       // TODO: other inquiry intrinsics
@@ -46,7 +46,7 @@ public:
   }
 
   // Forbid integer division by zero in constants.
-  template<int KIND>
+  template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
@@ -58,7 +58,7 @@ public:
   }
 };
 
-template<typename A> bool IsConstantExpr(const A &x) {
+template <typename A> bool IsConstantExpr(const A &x) {
   return IsConstantExprHelper{}(x);
 }
 template bool IsConstantExpr(const Expr<SomeType> &);
@@ -69,15 +69,15 @@ template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 // This code determines whether an expression is allowable as the static
 // data address used to initialize a pointer with "=> x".  See C765.
 struct IsInitialDataTargetHelper
-  : public AllTraverse<IsInitialDataTargetHelper, true> {
+    : public AllTraverse<IsInitialDataTargetHelper, true> {
   using Base = AllTraverse<IsInitialDataTargetHelper, true>;
   using Base::operator();
   explicit IsInitialDataTargetHelper(parser::ContextualMessages &m)
-    : Base{*this}, messages_{m} {}
+      : Base{*this}, messages_{m} {}
 
   bool operator()(const BOZLiteralConstant &) const { return false; }
   bool operator()(const NullPointer &) const { return true; }
-  template<typename T> bool operator()(const Constant<T> &) const {
+  template <typename T> bool operator()(const Constant<T> &) const {
     return false;
   }
   bool operator()(const semantics::Symbol &symbol) const {
@@ -102,7 +102,7 @@ struct IsInitialDataTargetHelper
     return true;
   }
   bool operator()(const StaticDataObject &) const { return false; }
-  template<int KIND> bool operator()(const TypeParamInquiry<KIND> &) const {
+  template <int KIND> bool operator()(const TypeParamInquiry<KIND> &) const {
     return false;
   }
   bool operator()(const Triplet &x) const {
@@ -110,13 +110,13 @@ struct IsInitialDataTargetHelper
         IsConstantExpr(x.stride());
   }
   bool operator()(const Subscript &x) const {
-    return std::visit(
-        common::visitors{
-            [&](const Triplet &t) { return (*this)(t); },
-            [&](const auto &y) {
-              return y.value().Rank() == 0 && IsConstantExpr(y.value());
-            },
-        },
+    return std::visit(common::visitors{
+                          [&](const Triplet &t) { return (*this)(t); },
+                          [&](const auto &y) {
+                            return y.value().Rank() == 0 &&
+                                IsConstantExpr(y.value());
+                          },
+                      },
         x.u);
   }
   bool operator()(const CoarrayRef &) const { return false; }
@@ -125,16 +125,18 @@ struct IsInitialDataTargetHelper
         (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
-  template<typename T> bool operator()(const ArrayConstructor<T> &) const {
+  template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
   bool operator()(const StructureConstructor &) const { return false; }
-  template<typename T> bool operator()(const FunctionRef<T> &) { return false; }
-  template<typename D, typename R, typename... O>
+  template <typename T> bool operator()(const FunctionRef<T> &) {
+    return false;
+  }
+  template <typename D, typename R, typename... O>
   bool operator()(const Operation<D, R, O...> &) const {
     return false;
   }
-  template<typename T> bool operator()(const Parentheses<T> &x) const {
+  template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
   }
   bool operator()(const Relational<SomeType> &) const { return false; }
@@ -150,13 +152,13 @@ bool IsInitialDataTarget(
 
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
-  : public AnyTraverse<CheckSpecificationExprHelper,
-        std::optional<std::string>> {
+    : public AnyTraverse<CheckSpecificationExprHelper,
+          std::optional<std::string>> {
 public:
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<CheckSpecificationExprHelper, Result>;
   explicit CheckSpecificationExprHelper(const semantics::Scope &s)
-    : Base{*this}, scope_{s} {}
+      : Base{*this}, scope_{s} {}
   using Base::operator();
 
   Result operator()(const ProcedureDesignator &) const {
@@ -211,7 +213,7 @@ public:
     return std::nullopt;
   }
 
-  template<typename T> Result operator()(const FunctionRef<T> &x) const {
+  template <typename T> Result operator()(const FunctionRef<T> &x) const {
     if (const auto *symbol{x.proc().GetSymbol()}) {
       if (!semantics::IsPureProcedure(*symbol)) {
         return "reference to impure function '"s + symbol->name().ToString() +
@@ -221,7 +223,7 @@ public:
     } else {
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
       if (intrin.name == "present") {
-        return std::nullopt;  // no need to check argument(s)
+        return std::nullopt; // no need to check argument(s)
       }
       if (IsConstantExpr(x)) {
         // inquiry functions may not need to check argument(s)
@@ -235,7 +237,7 @@ private:
   const semantics::Scope &scope_;
 };
 
-template<typename A>
+template <typename A>
 void CheckSpecificationExpr(const A &x, parser::ContextualMessages &messages,
     const semantics::Scope &scope) {
   if (auto why{CheckSpecificationExprHelper{scope}(x)}) {
@@ -259,12 +261,12 @@ template void CheckSpecificationExpr(
 
 // IsSimplyContiguous() -- 9.5.4
 class IsSimplyContiguousHelper
-  : public AnyTraverse<IsSimplyContiguousHelper, std::optional<bool>> {
+    : public AnyTraverse<IsSimplyContiguousHelper, std::optional<bool>> {
 public:
-  using Result = std::optional<bool>;  // tri-state
+  using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsSimplyContiguousHelper, Result>;
   explicit IsSimplyContiguousHelper(const IntrinsicProcTable &t)
-    : Base{*this}, table_{t} {}
+      : Base{*this}, table_{t} {}
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
@@ -303,7 +305,7 @@ public:
   Result operator()(const ComplexPart &) const { return false; }
   Result operator()(const Substring &) const { return false; }
 
-  template<typename T> Result operator()(const FunctionRef<T> &x) const {
+  template <typename T> Result operator()(const FunctionRef<T> &x) const {
     if (auto chars{
             characteristics::Procedure::Characterize(x.proc(), table_)}) {
       if (chars->functionResult) {
@@ -347,17 +349,17 @@ private:
   const IntrinsicProcTable &table_;
 };
 
-template<typename A>
+template <typename A>
 bool IsSimplyContiguous(const A &x, const IntrinsicProcTable &table) {
   if (IsVariable(x)) {
     auto known{IsSimplyContiguousHelper{table}(x)};
     return known && *known;
   } else {
-    return true;  // not a variable
+    return true; // not a variable
   }
 }
 
 template bool IsSimplyContiguous(
     const Expr<SomeType> &, const IntrinsicProcTable &);
 
-}
+} // namespace Fortran::evaluate

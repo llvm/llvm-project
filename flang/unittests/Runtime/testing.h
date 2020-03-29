@@ -5,7 +5,7 @@
 #include <iosfwd>
 
 namespace llvm {
- class raw_ostream;
+class raw_ostream;
 }
 
 void StartTests();
@@ -14,4 +14,4 @@ int EndTests();
 
 void SetCharacter(char *, std::size_t, const char *);
 
-#endif  // FORTRAN_TEST_RUNTIME_TESTING_H_
+#endif // FORTRAN_TEST_RUNTIME_TESTING_H_

@@ -51,4 +51,4 @@ void FoldingContext::EndImpliedDo(parser::CharBlock name) {
     impliedDos_.erase(iter);
   }
 }
-}
+} // namespace Fortran::evaluate

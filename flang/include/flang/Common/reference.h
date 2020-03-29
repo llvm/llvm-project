@@ -15,7 +15,7 @@
 #define FORTRAN_COMMON_REFERENCE_H_
 #include <type_traits>
 namespace Fortran::common {
-template<typename A> class Reference {
+template <typename A> class Reference {
 public:
   using type = A;
   Reference(type &x) : p_{&x} {}
@@ -35,8 +35,8 @@ public:
   // creation of a temporary copy in cases like:
   //   Reference<type> ref;
   //   const Type &x{ref};  // creates ref to temp copy!
-  operator std::conditional_t<std::is_const_v<type>, type &, void>() const
-      noexcept {
+  operator std::conditional_t<std::is_const_v<type>, type &, void>()
+      const noexcept {
     if constexpr (std::is_const_v<type>) {
       return *p_;
     }
@@ -56,8 +56,8 @@ public:
   bool operator!=(const Reference &that) const { return !(*this == that); }
 
 private:
-  type *p_;  // never null
+  type *p_; // never null
 };
-template<typename A> Reference(A &)->Reference<A>;
-}
+template <typename A> Reference(A &) -> Reference<A>;
+} // namespace Fortran::common
 #endif

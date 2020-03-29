@@ -37,7 +37,7 @@ class DerivedTypeSpec;
 class ParamValue;
 class Symbol;
 bool IsDescriptor(const Symbol &);
-}
+} // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
 
@@ -45,7 +45,7 @@ using common::TypeCategory;
 
 // Specific intrinsic types are represented by specializations of
 // this class template Type<CATEGORY, KIND>.
-template<TypeCategory CATEGORY, int KIND = 0> class Type;
+template <TypeCategory CATEGORY, int KIND = 0> class Type;
 
 using SubscriptInteger = Type<TypeCategory::Integer, 8>;
 using CInteger = Type<TypeCategory::Integer, 4>;
@@ -65,10 +65,12 @@ static constexpr bool IsValidKindOfIntrinsicType(
   case TypeCategory::Complex:
     return kind == 2 || kind == 3 || kind == 4 || kind == 8 || kind == 10 ||
         kind == 16;
-  case TypeCategory::Character: return kind == 1 || kind == 2 || kind == 4;
+  case TypeCategory::Character:
+    return kind == 1 || kind == 2 || kind == 4;
   case TypeCategory::Logical:
     return kind == 1 || kind == 2 || kind == 4 || kind == 8;
-  default: return false;
+  default:
+    return false;
   }
 }
 
@@ -86,12 +88,12 @@ public:
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   constexpr DynamicType(int k, const semantics::ParamValue &pv)
-    : category_{TypeCategory::Character}, kind_{k}, charLength_{&pv} {
+      : category_{TypeCategory::Character}, kind_{k}, charLength_{&pv} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
       const semantics::DerivedTypeSpec &dt, bool poly = false)
-    : category_{TypeCategory::Derived}, derived_{&dt} {
+      : category_{TypeCategory::Derived}, derived_{&dt} {
     if (poly) {
       kind_ = ClassKind;
     }
@@ -113,7 +115,7 @@ public:
     result.category_ = TypeCategory::Derived;
     result.kind_ = ClassKind;
     result.derived_ = nullptr;
-    return result;  // CLASS(*)
+    return result; // CLASS(*)
   }
 
   static constexpr DynamicType AssumedType() {
@@ -121,7 +123,7 @@ public:
     result.category_ = TypeCategory::Derived;
     result.kind_ = AssumedTypeKind;
     result.derived_ = nullptr;
-    return result;  // TYPE(*)
+    return result; // TYPE(*)
   }
 
   // Comparison is deep -- type parameters are compared independently.
@@ -145,13 +147,13 @@ public:
   bool IsAssumedLengthCharacter() const;
   bool IsUnknownLengthCharacter() const;
   bool IsTypelessIntrinsicArgument() const;
-  constexpr bool IsAssumedType() const {  // TYPE(*)
+  constexpr bool IsAssumedType() const { // TYPE(*)
     return kind_ == AssumedTypeKind;
   }
-  constexpr bool IsPolymorphic() const {  // TYPE(*) or CLASS()
+  constexpr bool IsPolymorphic() const { // TYPE(*) or CLASS()
     return kind_ == ClassKind || IsAssumedType();
   }
-  constexpr bool IsUnlimitedPolymorphic() const {  // TYPE(*) or CLASS(*)
+  constexpr bool IsUnlimitedPolymorphic() const { // TYPE(*) or CLASS(*)
     return IsPolymorphic() && !derived_;
   }
   constexpr const semantics::DerivedTypeSpec &GetDerivedTypeSpec() const {
@@ -174,17 +176,17 @@ public:
   static std::optional<DynamicType> From(const semantics::DeclTypeSpec &);
   static std::optional<DynamicType> From(const semantics::Symbol &);
 
-  template<typename A> static std::optional<DynamicType> From(const A &x) {
+  template <typename A> static std::optional<DynamicType> From(const A &x) {
     return x.GetType();
   }
-  template<typename A> static std::optional<DynamicType> From(const A *p) {
+  template <typename A> static std::optional<DynamicType> From(const A *p) {
     if (!p) {
       return std::nullopt;
     } else {
       return From(*p);
     }
   }
-  template<typename A>
+  template <typename A>
   static std::optional<DynamicType> From(const std::optional<A> &x) {
     if (x) {
       return From(*x);
@@ -196,17 +198,17 @@ public:
 private:
   // Special kind codes are used to distinguish the following Fortran types.
   enum SpecialKind {
-    TypelessKind = -1,  // BOZ actual argument to intrinsic function
-    ClassKind = -2,  // CLASS(T) or CLASS(*)
-    AssumedTypeKind = -3,  // TYPE(*)
+    TypelessKind = -1, // BOZ actual argument to intrinsic function
+    ClassKind = -2, // CLASS(T) or CLASS(*)
+    AssumedTypeKind = -3, // TYPE(*)
   };
 
   constexpr DynamicType() {}
 
-  TypeCategory category_{TypeCategory::Derived};  // overridable default
+  TypeCategory category_{TypeCategory::Derived}; // overridable default
   int kind_{0};
   const semantics::ParamValue *charLength_{nullptr};
-  const semantics::DerivedTypeSpec *derived_{nullptr};  // TYPE(T), CLASS(T)
+  const semantics::DerivedTypeSpec *derived_{nullptr}; // TYPE(T), CLASS(T)
 };
 
 // Return the DerivedTypeSpec of a DynamicType if it has one.
@@ -216,7 +218,7 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 
 std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
 
-template<TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
+template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
   static constexpr int kind{KIND};
   constexpr bool operator==(const TypeBase &) const { return true; }
@@ -224,15 +226,15 @@ template<TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static std::string AsFortran() { return GetType().AsFortran(); }
 };
 
-template<int KIND>
+template <int KIND>
 class Type<TypeCategory::Integer, KIND>
-  : public TypeBase<TypeCategory::Integer, KIND> {
+    : public TypeBase<TypeCategory::Integer, KIND> {
 public:
   using Scalar = value::Integer<8 * KIND>;
 };
 
 // REAL(KIND=2) is IEEE half-precision (16 bits)
-template<>
+template <>
 class Type<TypeCategory::Real, 2> : public TypeBase<TypeCategory::Real, 2> {
 public:
   using Scalar =
@@ -241,7 +243,7 @@ public:
 
 // REAL(KIND=3) identifies the "other" half-precision format, which is
 // basically REAL(4) without its least-order 16 fraction bits.
-template<>
+template <>
 class Type<TypeCategory::Real, 3> : public TypeBase<TypeCategory::Real, 3> {
 public:
   using Scalar =
@@ -249,7 +251,7 @@ public:
 };
 
 // REAL(KIND=4) is IEEE-754 single precision (32 bits)
-template<>
+template <>
 class Type<TypeCategory::Real, 4> : public TypeBase<TypeCategory::Real, 4> {
 public:
   using Scalar =
@@ -257,7 +259,7 @@ public:
 };
 
 // REAL(KIND=8) is IEEE double precision (64 bits)
-template<>
+template <>
 class Type<TypeCategory::Real, 8> : public TypeBase<TypeCategory::Real, 8> {
 public:
   using Scalar =
@@ -265,52 +267,52 @@ public:
 };
 
 // REAL(KIND=10) is x87 FPU extended precision (80 bits, all explicit)
-template<>
+template <>
 class Type<TypeCategory::Real, 10> : public TypeBase<TypeCategory::Real, 10> {
 public:
   using Scalar = value::Real<value::Integer<80>, 64>;
 };
 
 // REAL(KIND=16) is IEEE quad precision (128 bits)
-template<>
+template <>
 class Type<TypeCategory::Real, 16> : public TypeBase<TypeCategory::Real, 16> {
 public:
   using Scalar = value::Real<value::Integer<128>, 113>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
-template<int KIND>
+template <int KIND>
 class Type<TypeCategory::Complex, KIND>
-  : public TypeBase<TypeCategory::Complex, KIND> {
+    : public TypeBase<TypeCategory::Complex, KIND> {
 public:
   using Part = Type<TypeCategory::Real, KIND>;
   using Scalar = value::Complex<typename Part::Scalar>;
 };
 
-template<>
+template <>
 class Type<TypeCategory::Character, 1>
-  : public TypeBase<TypeCategory::Character, 1> {
+    : public TypeBase<TypeCategory::Character, 1> {
 public:
   using Scalar = std::string;
 };
 
-template<>
+template <>
 class Type<TypeCategory::Character, 2>
-  : public TypeBase<TypeCategory::Character, 2> {
+    : public TypeBase<TypeCategory::Character, 2> {
 public:
   using Scalar = std::u16string;
 };
 
-template<>
+template <>
 class Type<TypeCategory::Character, 4>
-  : public TypeBase<TypeCategory::Character, 4> {
+    : public TypeBase<TypeCategory::Character, 4> {
 public:
   using Scalar = std::u32string;
 };
 
-template<int KIND>
+template <int KIND>
 class Type<TypeCategory::Logical, KIND>
-  : public TypeBase<TypeCategory::Logical, KIND> {
+    : public TypeBase<TypeCategory::Logical, KIND> {
 public:
   using Scalar = value::Logical<8 * KIND>;
 };
@@ -318,7 +320,7 @@ public:
 // Type functions
 
 // Given a specific type, find the type of the same kind in another category.
-template<TypeCategory CATEGORY, typename T>
+template <TypeCategory CATEGORY, typename T>
 using SameKind = Type<CATEGORY, std::decay_t<T>::kind>;
 
 // Many expressions, including subscripts, CHARACTER lengths, array bounds,
@@ -329,16 +331,16 @@ using IndirectSubscriptIntegerExpr =
 // For each intrinsic type category CAT, CategoryTypes<CAT> is an instantiation
 // of std::tuple<Type<CAT, K>> that comprises every kind value K in that
 // category that could possibly be supported on any target.
-template<TypeCategory CATEGORY, int KIND>
+template <TypeCategory CATEGORY, int KIND>
 using CategoryKindTuple =
     std::conditional_t<IsValidKindOfIntrinsicType(CATEGORY, KIND),
         std::tuple<Type<CATEGORY, KIND>>, std::tuple<>>;
 
-template<TypeCategory CATEGORY, int... KINDS>
+template <TypeCategory CATEGORY, int... KINDS>
 using CategoryTypesHelper =
     common::CombineTuples<CategoryKindTuple<CATEGORY, KINDS>...>;
 
-template<TypeCategory CATEGORY>
+template <TypeCategory CATEGORY>
 using CategoryTypes = CategoryTypesHelper<CATEGORY, 1, 2, 3, 4, 8, 10, 16, 32>;
 
 using IntegerTypes = CategoryTypes<TypeCategory::Integer>;
@@ -355,18 +357,18 @@ using LengthlessIntrinsicTypes =
     common::CombineTuples<NumericTypes, LogicalTypes>;
 
 // Predicates: does a type represent a specific intrinsic type?
-template<typename T>
+template <typename T>
 constexpr bool IsSpecificIntrinsicType{common::HasMember<T, AllIntrinsicTypes>};
 
 // Predicate: is a type an intrinsic type that is completely characterized
 // by its category and kind parameter value, or might it have a derived type
 // &/or a length type parameter?
-template<typename T>
+template <typename T>
 constexpr bool IsLengthlessIntrinsicType{
     common::HasMember<T, LengthlessIntrinsicTypes>};
 
 // Represents a type of any supported kind within a particular category.
-template<TypeCategory CATEGORY> struct SomeKind {
+template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
 };
@@ -384,16 +386,16 @@ struct SomeType {};
 class StructureConstructor;
 
 // Represents any derived type, polymorphic or not, as well as CLASS(*).
-template<> class SomeKind<TypeCategory::Derived> {
+template <> class SomeKind<TypeCategory::Derived> {
 public:
   static constexpr TypeCategory category{TypeCategory::Derived};
   using Scalar = StructureConstructor;
 
-  constexpr SomeKind() {}  // CLASS(*)
+  constexpr SomeKind() {} // CLASS(*)
   constexpr explicit SomeKind(const semantics::DerivedTypeSpec &dts)
-    : derivedTypeSpec_{&dts} {}
+      : derivedTypeSpec_{&dts} {}
   constexpr explicit SomeKind(const DynamicType &dt)
-    : SomeKind(dt.GetDerivedTypeSpec()) {}
+      : SomeKind(dt.GetDerivedTypeSpec()) {}
   CONSTEXPR_CONSTRUCTORS_AND_ASSIGNMENTS(SomeKind)
 
   bool IsUnlimitedPolymorphic() const { return !derivedTypeSpec_; }
@@ -427,13 +429,13 @@ using SomeCategory = std::tuple<SomeInteger, SomeReal, SomeComplex,
 using AllTypes =
     common::CombineTuples<AllIntrinsicTypes, std::tuple<SomeDerived>>;
 
-template<typename T> using Scalar = typename std::decay_t<T>::Scalar;
+template <typename T> using Scalar = typename std::decay_t<T>::Scalar;
 
 // When Scalar<T> is S, then TypeOf<S> is T.
 // TypeOf is implemented by scanning all supported types for a match
 // with Type<T>::Scalar.
-template<typename CONST> struct TypeOfHelper {
-  template<typename T> struct Predicate {
+template <typename CONST> struct TypeOfHelper {
+  template <typename T> struct Predicate {
     static constexpr bool value() {
       return std::is_same_v<std::decay_t<CONST>,
           std::decay_t<typename T::Scalar>>;
@@ -445,7 +447,7 @@ template<typename CONST> struct TypeOfHelper {
       std::tuple_element_t<index, AllIntrinsicTypes>, void>;
 };
 
-template<typename CONST> using TypeOf = typename TypeOfHelper<CONST>::type;
+template <typename CONST> using TypeOf = typename TypeOfHelper<CONST>::type;
 
 int SelectedCharKind(const std::string &, int defaultKind);
 int SelectedIntKind(std::int64_t precision = 0);
@@ -511,5 +513,5 @@ bool IsKindTypeParameter(const semantics::Symbol &);
 #define FOR_EACH_TYPE_AND_KIND(PREFIX, SUFFIX) \
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX)
-}
-#endif  // FORTRAN_EVALUATE_TYPE_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_TYPE_H_

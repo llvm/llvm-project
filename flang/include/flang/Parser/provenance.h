@@ -168,8 +168,8 @@ public:
       Provenance, std::size_t *offset = nullptr) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
-  std::string GetPath(Provenance) const;  // __FILE__
-  int GetLineNumber(Provenance) const;  // __LINE__
+  std::string GetPath(Provenance) const; // __FILE__
+  int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
   Provenance CompilerInsertionProvenance(const char *, std::size_t);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;
@@ -256,17 +256,17 @@ public:
   }
 
   std::size_t BufferedBytes() const;
-  void Marshal();  // marshals text into one contiguous block
+  void Marshal(); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings();
   std::string AcquireData() { return std::move(data_); }
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   AllSources &allSources_;
-  CharBuffer buffer_;  // before Marshal()
-  std::string data_;  // all of it, prescanned and preprocessed
+  CharBuffer buffer_; // before Marshal()
+  std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
 };
-}
-#endif  // FORTRAN_PARSER_PROVENANCE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PROVENANCE_H_

@@ -26,13 +26,13 @@ public:
   // Write out symbols referenced at this statement.
   void PrintSymbols(const parser::CharBlock &, llvm::raw_ostream &, int);
 
-  template<typename T> bool Pre(const T &) { return true; }
-  template<typename T> void Post(const T &) {}
-  template<typename T> bool Pre(const parser::Statement<T> &stmt) {
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const parser::Statement<T> &stmt) {
     currStmt_ = stmt.source;
     return true;
   }
-  template<typename T> void Post(const parser::Statement<T> &) {
+  template <typename T> void Post(const parser::Statement<T> &) {
     currStmt_ = std::nullopt;
   }
   bool Pre(const parser::OmpClause &clause) {
@@ -48,15 +48,15 @@ public:
   void Post(const parser::Name &name);
 
 private:
-  std::optional<SourceName> currStmt_;  // current statement we are processing
-  std::multimap<const char *, const Symbol *> symbols_;  // location to symbol
-  std::set<const Symbol *> symbolsDefined_;  // symbols that have been processed
+  std::optional<SourceName> currStmt_; // current statement we are processing
+  std::multimap<const char *, const Symbol *> symbols_; // location to symbol
+  std::set<const Symbol *> symbolsDefined_; // symbols that have been processed
   void Indent(llvm::raw_ostream &, int) const;
 };
 
 void SymbolDumpVisitor::PrintSymbols(
     const parser::CharBlock &location, llvm::raw_ostream &out, int indent) {
-  std::set<const Symbol *> done;  // prevent duplicates on this line
+  std::set<const Symbol *> done; // prevent duplicates on this line
   auto range{symbols_.equal_range(location.begin())};
   for (auto it{range.first}; it != range.second; ++it) {
     const auto *symbol{it->second};
@@ -93,4 +93,4 @@ void UnparseWithSymbols(llvm::raw_ostream &out, const parser::Program &program,
           int indent) { visitor.PrintSymbols(location, out, indent); }};
   parser::Unparse(out, program, encoding, false, true, &preStatement);
 }
-}
+} // namespace Fortran::semantics

@@ -263,7 +263,7 @@ TYPE_PARSER(construct<Rename>("OPERATOR (" >>
 // R1413 only-use-name -> use-name
 TYPE_PARSER(construct<Only>(Parser<Rename>{}) ||
     construct<Only>(indirect(genericSpec)) ||
-    construct<Only>(name))  // TODO: ambiguous, accepted by genericSpec
+    construct<Only>(name)) // TODO: ambiguous, accepted by genericSpec
 
 // R1416 submodule ->
 //         submodule-stmt [specification-part] [module-subprogram-part]
@@ -477,7 +477,7 @@ TYPE_CONTEXT_PARSER("FUNCTION statement"_en_US,
     construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
         parenthesized(optionalList(name)), maybe(suffix)) ||
         extension<LanguageFeature::OmitFunctionDummies>(
-            construct<FunctionStmt>(  // PGI & Intel accept "FUNCTION F"
+            construct<FunctionStmt>( // PGI & Intel accept "FUNCTION F"
                 many(prefixSpec), "FUNCTION" >> name,
                 construct<std::list<Name>>(),
                 construct<std::optional<Suffix>>())))
@@ -556,4 +556,4 @@ TYPE_PARSER(construct<ContainsStmt>("CONTAINS"_tok))
 TYPE_CONTEXT_PARSER("statement function definition"_en_US,
     construct<StmtFunctionStmt>(
         name, parenthesized(optionalList(name)), "=" >> scalar(expr)))
-}
+} // namespace Fortran::parser

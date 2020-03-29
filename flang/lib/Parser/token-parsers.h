@@ -114,24 +114,24 @@ constexpr struct SpaceCheck {
 // when a string literal appears before the sequencing operator >> or
 // after the sequencing operator /.  The literal "..."_id parses a
 // token that cannot be a prefix of a longer identifier.
-template<bool MandatoryFreeFormSpace = false, bool MustBeComplete = false>
+template <bool MandatoryFreeFormSpace = false, bool MustBeComplete = false>
 class TokenStringMatch {
 public:
   using resultType = Success;
   constexpr TokenStringMatch(const TokenStringMatch &) = default;
   constexpr TokenStringMatch(const char *str, std::size_t n)
-    : str_{str}, bytes_{n} {}
+      : str_{str}, bytes_{n} {}
   explicit constexpr TokenStringMatch(const char *str) : str_{str} {}
   std::optional<Success> Parse(ParseState &state) const {
     space.Parse(state);
     const char *start{state.GetLocation()};
     const char *p{str_};
-    std::optional<const char *> at;  // initially empty
+    std::optional<const char *> at; // initially empty
     for (std::size_t j{0}; j < bytes_ && *p != '\0'; ++j, ++p) {
       bool spaceSkipping{*p == ' '};
       if (spaceSkipping) {
         if (j + 1 == bytes_ || p[1] == ' ' || p[1] == '\0') {
-          continue;  // redundant; ignore
+          continue; // redundant; ignore
         }
       }
       if (!at) {
@@ -192,25 +192,25 @@ constexpr TokenStringMatch<false, true> operator""_id(
   return {str, n};
 }
 
-template<class PA>
+template <class PA>
 inline constexpr std::enable_if_t<std::is_class_v<PA>,
     SequenceParser<TokenStringMatch<>, PA>>
 operator>>(const char *str, const PA &p) {
   return SequenceParser<TokenStringMatch<>, PA>{TokenStringMatch<>{str}, p};
 }
 
-template<class PA>
+template <class PA>
 inline constexpr std::enable_if_t<std::is_class_v<PA>,
     FollowParser<PA, TokenStringMatch<>>>
 operator/(const PA &p, const char *str) {
   return FollowParser<PA, TokenStringMatch<>>{p, TokenStringMatch<>{str}};
 }
 
-template<class PA> inline constexpr auto parenthesized(const PA &p) {
+template <class PA> inline constexpr auto parenthesized(const PA &p) {
   return "(" >> p / ")";
 }
 
-template<class PA> inline constexpr auto bracketed(const PA &p) {
+template <class PA> inline constexpr auto bracketed(const PA &p) {
   return "[" >> p / "]";
 }
 
@@ -243,7 +243,7 @@ struct CharLiteralChar {
   }
 };
 
-template<char quote> struct CharLiteral {
+template <char quote> struct CharLiteral {
   using resultType = std::string;
   static std::optional<std::string> Parse(ParseState &state) {
     std::string str;
@@ -274,9 +274,14 @@ struct BOZLiteral {
       switch (ch) {
       case 'b':
       case 'o':
-      case 'z': base = ch; return true;
-      case 'x': base = 'z'; return true;
-      default: return false;
+      case 'z':
+        base = ch;
+        return true;
+      case 'x':
+        base = 'z';
+        return true;
+      default:
+        return false;
       }
     }};
 
@@ -543,7 +548,7 @@ constexpr struct ConsumedAllInputParser {
   }
 } consumedAllInput;
 
-template<char goal> struct SkipPast {
+template <char goal> struct SkipPast {
   using resultType = Success;
   constexpr SkipPast() {}
   constexpr SkipPast(const SkipPast &) {}
@@ -557,7 +562,7 @@ template<char goal> struct SkipPast {
   }
 };
 
-template<char goal> struct SkipTo {
+template <char goal> struct SkipTo {
   using resultType = Success;
   constexpr SkipTo() {}
   constexpr SkipTo(const SkipTo &) {}
@@ -578,11 +583,11 @@ template<char goal> struct SkipTo {
 // not appear, and the doubled colons are optional.
 //   [[, xyz] ::]     is  optionalBeforeColons(xyz)
 //   [[, xyz]... ::]  is  optionalBeforeColons(nonemptyList(xyz))
-template<typename PA> inline constexpr auto optionalBeforeColons(const PA &p) {
+template <typename PA> inline constexpr auto optionalBeforeColons(const PA &p) {
   return "," >> construct<std::optional<typename PA::resultType>>(p) / "::" ||
       ("::"_tok || !","_tok) >> defaulted(cut >> maybe(p));
 }
-template<typename PA>
+template <typename PA>
 inline constexpr auto optionalListBeforeColons(const PA &p) {
   return "," >> nonemptyList(p) / "::" ||
       ("::"_tok || !","_tok) >> defaulted(cut >> nonemptyList(p));
@@ -657,5 +662,5 @@ constexpr auto logicalFALSE{
 constexpr auto rawHollerithLiteral{
     deprecated<LanguageFeature::Hollerith>(HollerithLiteral{})};
 
-}
-#endif  // FORTRAN_PARSER_TOKEN_PARSERS_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_TOKEN_PARSERS_H_

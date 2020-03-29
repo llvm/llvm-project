@@ -17,4 +17,4 @@ namespace Fortran::runtime {
 OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
     const Descriptor *pad = nullptr, const Descriptor *order = nullptr);
 }
-#endif  // FORTRAN_RUNTIME_TRANSFORMATIONAL_H_
+#endif // FORTRAN_RUNTIME_TRANSFORMATIONAL_H_

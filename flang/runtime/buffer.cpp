@@ -16,8 +16,8 @@ namespace Fortran::runtime::io {
 void LeftShiftBufferCircularly(
     char *buffer, std::size_t bytes, std::size_t shift) {
   // Assume that we start with "efgabcd" and the left shift is 3.
-  std::reverse(buffer, buffer + shift);  // "gfeabcd"
-  std::reverse(buffer, buffer + bytes);  // "dcbaefg"
-  std::reverse(buffer, buffer + bytes - shift);  // "abcdefg"
+  std::reverse(buffer, buffer + shift); // "gfeabcd"
+  std::reverse(buffer, buffer + bytes); // "dcbaefg"
+  std::reverse(buffer, buffer + bytes - shift); // "abcdefg"
 }
-}
+} // namespace Fortran::runtime::io

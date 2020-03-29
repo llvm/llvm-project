@@ -17,7 +17,7 @@
 namespace Fortran::semantics {
 
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
-  : name_{name}, typeSymbol_{typeSymbol} {
+    : name_{name}, typeSymbol_{typeSymbol} {
   CHECK(typeSymbol.has<DerivedTypeDetails>());
 }
 DerivedTypeSpec::DerivedTypeSpec(const DerivedTypeSpec &that) = default;
@@ -157,7 +157,7 @@ void DerivedTypeSpec::EvaluateParameters(
 void DerivedTypeSpec::AddParamValue(SourceName name, ParamValue &&value) {
   CHECK(cooked_);
   auto pair{parameters_.insert(std::make_pair(name, std::move(value)))};
-  CHECK(pair.second);  // name was not already present
+  CHECK(pair.second); // name was not already present
 }
 
 bool DerivedTypeSpec::MightBeParameterized() const {
@@ -379,13 +379,13 @@ llvm::raw_ostream &operator<<(
 }
 
 ParamValue::ParamValue(MaybeIntExpr &&expr, common::TypeParamAttr attr)
-  : attr_{attr}, expr_{std::move(expr)} {}
+    : attr_{attr}, expr_{std::move(expr)} {}
 ParamValue::ParamValue(SomeIntExpr &&expr, common::TypeParamAttr attr)
-  : attr_{attr}, expr_{std::move(expr)} {}
+    : attr_{attr}, expr_{std::move(expr)} {}
 ParamValue::ParamValue(
     common::ConstantSubscript value, common::TypeParamAttr attr)
-  : ParamValue(
-        SomeIntExpr{evaluate::Expr<evaluate::SubscriptInteger>{value}}, attr) {}
+    : ParamValue(SomeIntExpr{evaluate::Expr<evaluate::SubscriptInteger>{value}},
+          attr) {}
 
 void ParamValue::SetExplicit(SomeIntExpr &&x) {
   category_ = Category::Explicit;
@@ -395,8 +395,10 @@ void ParamValue::SetExplicit(SomeIntExpr &&x) {
 std::string ParamValue::AsFortran() const {
   switch (category_) {
     SWITCH_COVERS_ALL_CASES
-  case Category::Assumed: return "*";
-  case Category::Deferred: return ":";
+  case Category::Assumed:
+    return "*";
+  case Category::Deferred:
+    return ":";
   case Category::Explicit:
     if (expr_) {
       std::string buf;
@@ -414,7 +416,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const ParamValue &x) {
 }
 
 IntrinsicTypeSpec::IntrinsicTypeSpec(TypeCategory category, KindExpr &&kind)
-  : category_{category}, kind_{std::move(kind)} {
+    : category_{category}, kind_{std::move(kind)} {
   CHECK(category != TypeCategory::Derived);
 }
 
@@ -422,7 +424,7 @@ static std::string KindAsFortran(const KindExpr &kind) {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
   if (auto k{evaluate::ToInt64(kind)}) {
-    ss << *k;  // emit unsuffixed kind code
+    ss << *k; // emit unsuffixed kind code
   } else {
     kind.AsFortran(ss);
   }
@@ -449,19 +451,19 @@ llvm::raw_ostream &operator<<(
 }
 
 DeclTypeSpec::DeclTypeSpec(NumericTypeSpec &&typeSpec)
-  : category_{Numeric}, typeSpec_{std::move(typeSpec)} {}
+    : category_{Numeric}, typeSpec_{std::move(typeSpec)} {}
 DeclTypeSpec::DeclTypeSpec(LogicalTypeSpec &&typeSpec)
-  : category_{Logical}, typeSpec_{std::move(typeSpec)} {}
+    : category_{Logical}, typeSpec_{std::move(typeSpec)} {}
 DeclTypeSpec::DeclTypeSpec(const CharacterTypeSpec &typeSpec)
-  : category_{Character}, typeSpec_{typeSpec} {}
+    : category_{Character}, typeSpec_{typeSpec} {}
 DeclTypeSpec::DeclTypeSpec(CharacterTypeSpec &&typeSpec)
-  : category_{Character}, typeSpec_{std::move(typeSpec)} {}
+    : category_{Character}, typeSpec_{std::move(typeSpec)} {}
 DeclTypeSpec::DeclTypeSpec(Category category, const DerivedTypeSpec &typeSpec)
-  : category_{category}, typeSpec_{typeSpec} {
+    : category_{category}, typeSpec_{typeSpec} {
   CHECK(category == TypeDerived || category == ClassDerived);
 }
 DeclTypeSpec::DeclTypeSpec(Category category, DerivedTypeSpec &&typeSpec)
-  : category_{category}, typeSpec_{std::move(typeSpec)} {
+    : category_{category}, typeSpec_{std::move(typeSpec)} {
   CHECK(category == TypeDerived || category == ClassDerived);
 }
 DeclTypeSpec::DeclTypeSpec(Category category) : category_{category} {
@@ -489,13 +491,20 @@ bool DeclTypeSpec::operator==(const DeclTypeSpec &that) const {
 std::string DeclTypeSpec::AsFortran() const {
   switch (category_) {
     SWITCH_COVERS_ALL_CASES
-  case Numeric: return numericTypeSpec().AsFortran();
-  case Logical: return logicalTypeSpec().AsFortran();
-  case Character: return characterTypeSpec().AsFortran();
-  case TypeDerived: return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
-  case ClassDerived: return "CLASS(" + derivedTypeSpec().AsFortran() + ')';
-  case TypeStar: return "TYPE(*)";
-  case ClassStar: return "CLASS(*)";
+  case Numeric:
+    return numericTypeSpec().AsFortran();
+  case Logical:
+    return logicalTypeSpec().AsFortran();
+  case Character:
+    return characterTypeSpec().AsFortran();
+  case TypeDerived:
+    return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+  case ClassDerived:
+    return "CLASS(" + derivedTypeSpec().AsFortran() + ')';
+  case TypeStar:
+    return "TYPE(*)";
+  case ClassStar:
+    return "CLASS(*)";
   }
 }
 
@@ -511,4 +520,4 @@ void ProcInterface::set_type(const DeclTypeSpec &type) {
   CHECK(!symbol_);
   type_ = &type;
 }
-}
+} // namespace Fortran::semantics

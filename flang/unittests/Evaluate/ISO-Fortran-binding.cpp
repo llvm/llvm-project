@@ -8,7 +8,7 @@ using namespace Fortran::runtime;
 using namespace Fortran::ISO;
 
 // CFI_CDESC_T test helpers
-template<int rank> class Test_CFI_CDESC_T {
+template <int rank> class Test_CFI_CDESC_T {
 public:
   Test_CFI_CDESC_T() {}
   ~Test_CFI_CDESC_T() {}
@@ -22,7 +22,7 @@ public:
     // suitable in size
     if (rank > 0) {
       MATCH(sizeof(dvStorage_), Descriptor::SizeInBytes(rank_, false));
-    } else {  // C++ implementation over-allocates for rank=0 by 24bytes.
+    } else { // C++ implementation over-allocates for rank=0 by 24bytes.
       MATCH(true, sizeof(dvStorage_) >= Descriptor::SizeInBytes(rank_, false));
     }
     // suitable in alignment
@@ -36,14 +36,14 @@ private:
   CFI_CDESC_T(rank) dvStorage_;
 };
 
-template<int rank> static void TestCdescMacroForAllRanksSmallerThan() {
+template <int rank> static void TestCdescMacroForAllRanksSmallerThan() {
   static_assert(rank > 0, "rank<0!");
   Test_CFI_CDESC_T<rank> obj;
   obj.Check();
   TestCdescMacroForAllRanksSmallerThan<rank - 1>();
 }
 
-template<> void TestCdescMacroForAllRanksSmallerThan<0>() {
+template <> void TestCdescMacroForAllRanksSmallerThan<0>() {
   Test_CFI_CDESC_T<0> obj;
   obj.Check();
 }
@@ -191,11 +191,11 @@ static void run_CFI_establish_tests() {
   const int rank3d{3};
   CFI_CDESC_T(rank3d) dv3darrayStorage;
   CFI_cdesc_t *dv_3darray{&dv3darrayStorage};
-  AddNoiseToCdesc(dv_3darray, rank3d);  // => dv_3darray->dim[2].extent = -42
+  AddNoiseToCdesc(dv_3darray, rank3d); // => dv_3darray->dim[2].extent = -42
   check_CFI_establish(dv_3darray, nullptr, CFI_attribute_other, CFI_type_int, 4,
       rank3d, extents);
   MATCH(false,
-      dv_3darray->dim[2].extent == 2 + 66);  // extents was read
+      dv_3darray->dim[2].extent == 2 + 66); // extents was read
 }
 
 static void check_CFI_address(
@@ -412,13 +412,13 @@ static void run_CFI_section_tests() {
   bool testPreConditions{true};
   constexpr CFI_index_t m{5}, n{6}, o{7};
   constexpr CFI_rank_t rank{3};
-  long long array[o][n][m];  // Fortran A(m,n,o)
+  long long array[o][n][m]; // Fortran A(m,n,o)
   long long counter{1};
 
   for (CFI_index_t k{0}; k < o; ++k) {
     for (CFI_index_t j{0}; j < n; ++j) {
       for (CFI_index_t i{0}; i < m; ++i) {
-        array[k][j][i] = counter++;  // Fortran A(i,j,k)
+        array[k][j][i] = counter++; // Fortran A(i,j,k)
       }
     }
   }
@@ -446,7 +446,7 @@ static void run_CFI_section_tests() {
   }
 
   retCode = CFI_section(
-      result, source, lb, ub, strides);  // Fortran B = A(2:4:2, 5:5:0, 4:6:2)
+      result, source, lb, ub, strides); // Fortran B = A(2:4:2, 5:5:0, 4:6:2)
   MATCH(true, retCode == CFI_SUCCESS);
 
   const CFI_index_t lbs0{source->dim[0].lower_bound};
@@ -477,7 +477,7 @@ static void run_CFI_section_tests() {
   lb[0] = 4;
   ub[0] = 2;
   retCode = CFI_section(
-      result, source, lb, ub, strides);  // Fortran B = A(4:2:-1, 5:5:0, 4:6:2)
+      result, source, lb, ub, strides); // Fortran B = A(4:2:-1, 5:5:0, 4:6:2)
   MATCH(true, retCode == CFI_SUCCESS);
 
   resJ = result->dim[1].lower_bound;
@@ -540,7 +540,7 @@ static void run_CFI_select_part_tests() {
   }
 
   std::size_t displacement{offsetof(Galaxy, stars)};
-  std::size_t elem_len{0};  // ignored
+  std::size_t elem_len{0}; // ignored
   retCode = CFI_select_part(result, source, displacement, elem_len);
   MATCH(CFI_SUCCESS, retCode);
 
@@ -572,7 +572,7 @@ static void run_CFI_select_part_tests() {
   }
 
   displacement = offsetof(Galaxy, name) + 2;
-  elem_len = 2;  // not ignored this time
+  elem_len = 2; // not ignored this time
   retCode = CFI_select_part(result, source, displacement, elem_len);
   MATCH(CFI_SUCCESS, retCode);
 

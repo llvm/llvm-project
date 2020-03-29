@@ -18,7 +18,7 @@ void DataChecker::Leave(const parser::DataStmtConstant &dataConst) {
       const parser::Expr &parsedExpr{
           std::get<parser::ComponentDataSource>(component.t).v.value()};
       if (const auto *expr{GetExpr(parsedExpr)}) {
-        if (!evaluate::IsConstantExpr(*expr)) {  // C884
+        if (!evaluate::IsConstantExpr(*expr)) { // C884
           context_.Say(parsedExpr.source,
               "Structure constructor in data value must be a constant expression"_err_en_US);
         }
@@ -38,7 +38,7 @@ void DataChecker::Leave(const parser::DataStmtRepeat &dataRepeat) {
         auto expr{
             evaluate::Fold(context_.foldingContext(), std::move(checked))};
         if (auto i64{ToInt64(expr)}) {
-          if (*i64 < 0) {  // C882
+          if (*i64 < 0) { // C882
             context_.Say(designator->source,
                 "Repeat count for data value must not be negative"_err_en_US);
           }
@@ -47,4 +47,4 @@ void DataChecker::Leave(const parser::DataStmtRepeat &dataRepeat) {
     }
   }
 }
-}
+} // namespace Fortran::semantics

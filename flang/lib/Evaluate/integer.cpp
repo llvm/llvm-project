@@ -28,4 +28,4 @@ static_assert(Integer<64>::partBits == 32);
 static_assert(std::is_same_v<typename Integer<64>::Part, std::uint32_t>);
 static_assert(Integer<128>::partBits == 32);
 static_assert(std::is_same_v<typename Integer<128>::Part, std::uint32_t>);
-}
+} // namespace Fortran::evaluate::value

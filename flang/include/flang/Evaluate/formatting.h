@@ -26,24 +26,25 @@
 
 namespace Fortran::evaluate {
 
-template<typename A>
+template <typename A>
 auto operator<<(llvm::raw_ostream &o, const A &x) -> decltype(x.AsFortran(o)) {
   return x.AsFortran(o);
 }
 
-template<typename A>
-auto operator<<(llvm::raw_ostream &o, const A &x) -> decltype(o << x.AsFortran()) {
+template <typename A>
+auto operator<<(llvm::raw_ostream &o, const A &x)
+    -> decltype(o << x.AsFortran()) {
   return o << x.AsFortran();
 }
 
-template<typename A, bool COPYABLE>
+template <typename A, bool COPYABLE>
 auto operator<<(
     llvm::raw_ostream &o, const Fortran::common::Indirection<A, COPYABLE> &x)
     -> decltype(o << x.value()) {
   return o << x.value();
 }
 
-template<typename A>
+template <typename A>
 auto operator<<(llvm::raw_ostream &o, const std::optional<A> &x)
     -> decltype(o << *x) {
   if (x) {
@@ -53,5 +54,5 @@ auto operator<<(llvm::raw_ostream &o, const std::optional<A> &x)
   }
   return o;
 }
-}
-#endif  // FORTRAN_EVALUATE_FORMATTING_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_FORMATTING_H_

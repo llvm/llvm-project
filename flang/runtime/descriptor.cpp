@@ -200,7 +200,7 @@ bool Descriptor::SubscriptsForZeroBasedElementNumber(SubscriptValue *subscript,
     coefficient *= dim.Extent();
   }
   if (elementNumber >= coefficient) {
-    return false;  // out of range
+    return false; // out of range
   }
   for (int j{raw_.rank - 1}; j >= 0; --j) {
     int k{permutation ? permutation[j] : j};
@@ -249,4 +249,4 @@ void DescriptorAddendum::Dump(FILE *f) const {
   std::fprintf(f, "  flags 0x%jx\n", static_cast<std::intmax_t>(flags_));
   // TODO: LEN parameter values
 }
-}
+} // namespace Fortran::runtime

@@ -40,9 +40,9 @@ public:
 
 private:
   const char *name_;
-  TypeCode typeCode_;  // INTEGER, but not necessarily default kind
-  int which_{-1};  // index into DescriptorAddendum LEN type parameter values
-  TypeParameterValue value_;  // default in the case of LEN type parameter
+  TypeCode typeCode_; // INTEGER, but not necessarily default kind
+  int which_{-1}; // index into DescriptorAddendum LEN type parameter values
+  TypeParameterValue value_; // default in the case of LEN type parameter
 };
 
 // Components that have any need for a descriptor will either reference
@@ -64,10 +64,10 @@ public:
   bool IsPrivate() const { return (flags_ & PRIVATE) != 0; }
   bool IsDescriptor() const { return (flags_ & IS_DESCRIPTOR) != 0; }
 
-  template<typename A> A *Locate(char *dtInstance) const {
+  template <typename A> A *Locate(char *dtInstance) const {
     return reinterpret_cast<A *>(dtInstance + offset_);
   }
-  template<typename A> const A *Locate(const char *dtInstance) const {
+  template <typename A> const A *Locate(const char *dtInstance) const {
     return reinterpret_cast<const A *>(dtInstance + offset_);
   }
 
@@ -95,7 +95,7 @@ private:
   std::uint32_t flags_{0};
   TypeCode typeCode_{CFI_type_other};
   const Descriptor *staticDescriptor_{nullptr};
-  std::size_t offset_{0};  // byte offset in derived type instance
+  std::size_t offset_{0}; // byte offset in derived type instance
 };
 
 struct ExecutableCode {
@@ -121,9 +121,9 @@ public:
   DerivedType(const char *n, std::size_t kps, std::size_t lps,
       const TypeParameter *tp, std::size_t cs, const Component *ca,
       std::size_t tbps, const TypeBoundProcedure *tbp, std::size_t sz)
-    : name_{n}, kindParameters_{kps}, lenParameters_{lps}, typeParameter_{tp},
-      components_{cs}, component_{ca}, typeBoundProcedures_{tbps},
-      typeBoundProcedure_{tbp}, bytes_{sz} {
+      : name_{n}, kindParameters_{kps}, lenParameters_{lps}, typeParameter_{tp},
+        components_{cs}, component_{ca}, typeBoundProcedures_{tbps},
+        typeBoundProcedure_{tbp}, bytes_{sz} {
     if (IsNontrivialAnalysis()) {
       flags_ |= NONTRIVIAL;
     }
@@ -175,16 +175,16 @@ private:
   // LEN type parameters.  Conservative.
   bool IsNontrivialAnalysis() const;
 
-  const char *name_{""};  // NUL-terminated constant text
+  const char *name_{""}; // NUL-terminated constant text
   std::size_t kindParameters_{0};
   std::size_t lenParameters_{0};
-  const TypeParameter *typeParameter_{nullptr};  // array
-  std::size_t components_{0};  // *not* including type parameters
-  const Component *component_{nullptr};  // array
+  const TypeParameter *typeParameter_{nullptr}; // array
+  std::size_t components_{0}; // *not* including type parameters
+  const Component *component_{nullptr}; // array
   std::size_t typeBoundProcedures_{0};
-  const TypeBoundProcedure *typeBoundProcedure_{nullptr};  // array
+  const TypeBoundProcedure *typeBoundProcedure_{nullptr}; // array
   std::uint64_t flags_{0};
   std::size_t bytes_{0};
 };
-}
-#endif  // FORTRAN_RUNTIME_DERIVED_TYPE_H_
+} // namespace Fortran::runtime
+#endif // FORTRAN_RUNTIME_DERIVED_TYPE_H_

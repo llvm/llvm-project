@@ -13,7 +13,7 @@
 
 namespace Fortran::runtime::io {
 
-template<typename INT, typename UINT>
+template <typename INT, typename UINT>
 bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
   char buffer[130], *end = &buffer[sizeof buffer], *p = end;
   bool isNegative{false};
@@ -29,7 +29,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
   case 'G':
   case 'I':
     if (isNegative || (edit.modes.editingFlags & signPlus)) {
-      signChars = 1;  // '-' or '+'
+      signChars = 1; // '-' or '+'
     }
     while (un > 0) {
       auto quotient{common::DivideUnsignedBy<UINT, 10>(un)};
@@ -63,11 +63,11 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
   int digits = end - p;
   int leadingZeroes{0};
   int editWidth{edit.width.value_or(0)};
-  if (edit.digits && digits <= *edit.digits) {  // Iw.m
+  if (edit.digits && digits <= *edit.digits) { // Iw.m
     if (*edit.digits == 0 && n == 0) {
       // Iw.0 with zero value: output field must be blank.  For I0.0
       // and a zero value, emit one blank character.
-      signChars = 0;  // in case of SP
+      signChars = 0; // in case of SP
       editWidth = std::max(1, editWidth);
     } else {
       leadingZeroes = *edit.digits - digits;
@@ -104,21 +104,21 @@ const char *RealOutputEditingBase::FormatExponent(
     e = quotient;
   }
   if (edit.expoDigits) {
-    if (int ed{*edit.expoDigits}) {  // Ew.dEe with e > 0
+    if (int ed{*edit.expoDigits}) { // Ew.dEe with e > 0
       while (exponent > exponent_ + 2 /*E+*/ && exponent + ed > eEnd) {
         *--exponent = '0';
       }
     } else if (exponent == eEnd) {
-      *--exponent = '0';  // Ew.dE0 with zero-valued exponent
+      *--exponent = '0'; // Ew.dE0 with zero-valued exponent
     }
-  } else {  // ensure at least two exponent digits
+  } else { // ensure at least two exponent digits
     while (exponent + 2 > eEnd) {
       *--exponent = '0';
     }
   }
   *--exponent = expo < 0 ? '-' : '+';
   if (edit.expoDigits || exponent + 3 == eEnd) {
-    *--exponent = edit.descriptor == 'D' ? 'D' : 'E';  // not 'G'
+    *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G'
   }
   length = eEnd - exponent;
   return exponent;
@@ -157,7 +157,7 @@ bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
   }
 }
 
-template<int binaryPrecision>
+template <int binaryPrecision>
 decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
     int significantDigits, const DataEdit &edit, int flags) {
   if (edit.modes.editingFlags & signPlus) {
@@ -166,7 +166,7 @@ decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
       significantDigits, edit.modes.round, x_)};
-  if (!converted.str) {  // overflow
+  if (!converted.str) { // overflow
     io_.GetIoErrorHandler().Crash(
         "RealOutputEditing::Convert : buffer size %zd was insufficient",
         sizeof buffer_);
@@ -175,24 +175,24 @@ decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
 }
 
 // 13.7.2.3.3 in F'2018
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
-  int editDigits{edit.digits.value_or(0)};  // 'd' field
-  int editWidth{edit.width.value_or(0)};  // 'w' field
+  int editDigits{edit.digits.value_or(0)}; // 'd' field
+  int editWidth{edit.width.value_or(0)}; // 'w' field
   int significantDigits{editDigits};
   int flags{0};
-  if (editWidth == 0) {  // "the processor selects the field width"
-    if (edit.digits.has_value()) {  // E0.d
-      editWidth = editDigits + 6;  // -.666E+ee
-    } else {  // E0
+  if (editWidth == 0) { // "the processor selects the field width"
+    if (edit.digits.has_value()) { // E0.d
+      editWidth = editDigits + 6; // -.666E+ee
+    } else { // E0
       flags |= decimal::Minimize;
       significantDigits =
-          sizeof buffer_ - 5;  // sign, NUL, + 3 extra for EN scaling
+          sizeof buffer_ - 5; // sign, NUL, + 3 extra for EN scaling
     }
   }
   bool isEN{edit.variation == 'N'};
   bool isES{edit.variation == 'S'};
-  int scale{isEN || isES ? 1 : edit.modes.scale};  // 'kP' value
+  int scale{isEN || isES ? 1 : edit.modes.scale}; // 'kP' value
   int zeroesAfterPoint{0};
   if (scale < 0) {
     zeroesAfterPoint = -scale;
@@ -205,7 +205,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(significantDigits, edit, flags)};
-    if (converted.length > 0 && !IsDecimalNumber(converted.str)) {  // Inf, NaN
+    if (converted.length > 0 && !IsDecimalNumber(converted.str)) { // Inf, NaN
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
@@ -257,16 +257,16 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
 }
 
 // 13.7.2.3.2 in F'2018
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
-  int fracDigits{edit.digits.value_or(0)};  // 'd' field
+  int fracDigits{edit.digits.value_or(0)}; // 'd' field
   int extraDigits{0};
-  int editWidth{edit.width.value_or(0)};  // 'w' field
+  int editWidth{edit.width.value_or(0)}; // 'w' field
   int flags{0};
-  if (editWidth == 0) {  // "the processor selects the field width"
-    if (!edit.digits.has_value()) {  // F0
+  if (editWidth == 0) { // "the processor selects the field width"
+    if (!edit.digits.has_value()) { // F0
       flags |= decimal::Minimize;
-      fracDigits = sizeof buffer_ - 2;  // sign & NUL
+      fracDigits = sizeof buffer_ - 2; // sign & NUL
     }
   }
   // Multiple conversions may be needed to get the right number of
@@ -274,7 +274,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(extraDigits + fracDigits, edit, flags)};
-    if (converted.length > 0 && !IsDecimalNumber(converted.str)) {  // Inf, NaN
+    if (converted.length > 0 && !IsDecimalNumber(converted.str)) { // Inf, NaN
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
@@ -283,9 +283,9 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
     if (expo > extraDigits) {
       extraDigits = expo;
       if (flags & decimal::Minimize) {
-        fracDigits = sizeof buffer_ - extraDigits - 2;  // sign & NUL
+        fracDigits = sizeof buffer_ - extraDigits - 2; // sign & NUL
       }
-      continue;  // try again
+      continue; // try again
     }
     int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
     int convertedDigits{static_cast<int>(converted.length) - signLength};
@@ -299,7 +299,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
-      ++zeroesBeforePoint;  // "." -> "0."
+      ++zeroesBeforePoint; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
@@ -324,30 +324,30 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
 }
 
 // 13.7.5.2.3 in F'2018
-template<int binaryPrecision>
+template <int binaryPrecision>
 DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
   if (!edit.width.has_value() ||
       (*edit.width > 0 && edit.digits.value_or(-1) == 0)) {
-    return edit;  // Gw.0 -> Ew.0 for w > 0
+    return edit; // Gw.0 -> Ew.0 for w > 0
   }
   decimal::ConversionToDecimalResult converted{Convert(1, edit)};
-  if (!IsDecimalNumber(converted.str)) {  // Inf, NaN
+  if (!IsDecimalNumber(converted.str)) { // Inf, NaN
     return edit;
   }
-  int expo{IsZero() ? 1 : converted.decimalExponent};  // 's'
+  int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
   int significantDigits{
-      edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)};  // 'd'
+      edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
   if (expo < 0 || expo > significantDigits) {
-    return edit;  // Ew.d
+    return edit; // Ew.d
   }
   edit.descriptor = 'F';
-  edit.modes.scale = 0;  // kP is ignored for G when no exponent field
+  edit.modes.scale = 0; // kP is ignored for G when no exponent field
   trailingBlanks_ = 0;
   int editWidth{edit.width.value_or(0)};
   if (editWidth > 0) {
     int expoDigits{edit.expoDigits.value_or(0)};
-    trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4;  // 'n'
+    trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4; // 'n'
     *edit.width = std::max(0, editWidth - trailingBlanks_);
   }
   if (edit.digits.has_value()) {
@@ -357,46 +357,49 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
 }
 
 // 13.10.4 in F'2018
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditListDirectedOutput(
     const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{Convert(1, edit)};
-  if (!IsDecimalNumber(converted.str)) {  // Inf, NaN
+  if (!IsDecimalNumber(converted.str)) { // Inf, NaN
     return EditEorDOutput(edit);
   }
   int expo{converted.decimalExponent};
   if (expo < 0 || expo > BinaryFloatingPoint::decimalPrecision) {
     DataEdit copy{edit};
-    copy.modes.scale = 1;  // 1P
+    copy.modes.scale = 1; // 1P
     return EditEorDOutput(copy);
   }
   return EditFOutput(edit);
 }
 
 // 13.7.5.2.6 in F'2018
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditEXOutput(const DataEdit &) {
   io_.GetIoErrorHandler().Crash(
-      "EX output editing is not yet implemented");  // TODO
+      "EX output editing is not yet implemented"); // TODO
 }
 
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
   switch (edit.descriptor) {
-  case 'D': return EditEorDOutput(edit);
+  case 'D':
+    return EditEorDOutput(edit);
   case 'E':
     if (edit.variation == 'X') {
       return EditEXOutput(edit);
     } else {
       return EditEorDOutput(edit);
     }
-  case 'F': return EditFOutput(edit);
+  case 'F':
+    return EditFOutput(edit);
   case 'B':
   case 'O':
   case 'Z':
     return EditIntegerOutput(
         io_, edit, decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw);
-  case 'G': return Edit(EditForGOutput(edit));
+  case 'G':
+    return Edit(EditForGOutput(edit));
   default:
     if (edit.IsListDirected()) {
       return EditListDirectedOutput(edit);
@@ -417,7 +420,8 @@ bool ListDirectedLogicalOutput(IoStatementState &io,
 bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
   switch (edit.descriptor) {
   case 'L':
-  case 'G': return io.Emit(truth ? "T" : "F", 1);
+  case 'G':
+    return io.Emit(truth ? "T" : "F", 1);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a LOGICAL data item",
@@ -469,7 +473,8 @@ bool EditDefaultCharacterOutput(IoStatementState &io, const DataEdit &edit,
     const char *x, std::size_t length) {
   switch (edit.descriptor) {
   case 'A':
-  case 'G': break;
+  case 'G':
+    break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",
@@ -493,4 +498,4 @@ template class RealOutputEditing<24>;
 template class RealOutputEditing<53>;
 template class RealOutputEditing<64>;
 template class RealOutputEditing<113>;
-}
+} // namespace Fortran::runtime::io

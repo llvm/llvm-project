@@ -35,7 +35,7 @@ bool ParsingLog::Fails(
   }
   auto &entry{tagIter->second};
   if (entry.deferred && !state.deferMessages()) {
-    return false;  // don't fail fast, we want to generate messages
+    return false; // don't fail fast, we want to generate messages
   }
   ++entry.count;
   if (!state.deferMessages()) {
@@ -74,4 +74,4 @@ void ParsingLog::Dump(llvm::raw_ostream &o, const CookedSource &cooked) const {
     }
   }
 }
-}
+} // namespace Fortran::parser

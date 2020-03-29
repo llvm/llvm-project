@@ -35,7 +35,8 @@ using common::RelationalOperator;
 ENUM_CLASS(Ordering, Less, Equal, Greater)
 ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)
 
-template<typename A> static constexpr Ordering Compare(const A &x, const A &y) {
+template <typename A>
+static constexpr Ordering Compare(const A &x, const A &y) {
   if (x < y) {
     return Ordering::Less;
   } else if (x > y) {
@@ -87,17 +88,21 @@ static constexpr bool Satisfies(RelationalOperator op, Ordering order) {
     return op == RelationalOperator::NE || op == RelationalOperator::GE ||
         op == RelationalOperator::GT;
   }
-  return false;  // silence g++ warning
+  return false; // silence g++ warning
 }
 
 static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   switch (relation) {
-  case Relation::Less: return Satisfies(op, Ordering::Less);
-  case Relation::Equal: return Satisfies(op, Ordering::Equal);
-  case Relation::Greater: return Satisfies(op, Ordering::Greater);
-  case Relation::Unordered: return false;
+  case Relation::Less:
+    return Satisfies(op, Ordering::Less);
+  case Relation::Equal:
+    return Satisfies(op, Ordering::Equal);
+  case Relation::Greater:
+    return Satisfies(op, Ordering::Greater);
+  case Relation::Unordered:
+    return false;
   }
-  return false;  // silence g++ warning
+  return false; // silence g++ warning
 }
 
 ENUM_CLASS(
@@ -105,7 +110,7 @@ ENUM_CLASS(
 
 using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
-template<typename A> struct ValueWithRealFlags {
+template <typename A> struct ValueWithRealFlags {
   A AccumulateFlags(RealFlags &f) {
     f |= flags;
     return value;
@@ -139,20 +144,20 @@ constexpr bool isHostLittleEndian{true};
 
 // HostUnsignedInt<BITS> finds the smallest native unsigned integer type
 // whose size is >= BITS.
-template<bool LE8, bool LE16, bool LE32, bool LE64> struct SmallestUInt {};
-template<> struct SmallestUInt<true, true, true, true> {
+template <bool LE8, bool LE16, bool LE32, bool LE64> struct SmallestUInt {};
+template <> struct SmallestUInt<true, true, true, true> {
   using type = std::uint8_t;
 };
-template<> struct SmallestUInt<false, true, true, true> {
+template <> struct SmallestUInt<false, true, true, true> {
   using type = std::uint16_t;
 };
-template<> struct SmallestUInt<false, false, true, true> {
+template <> struct SmallestUInt<false, false, true, true> {
   using type = std::uint32_t;
 };
-template<> struct SmallestUInt<false, false, false, true> {
+template <> struct SmallestUInt<false, false, false, true> {
   using type = std::uint64_t;
 };
-template<int BITS>
+template <int BITS>
 using HostUnsignedInt =
     typename SmallestUInt<BITS <= 8, BITS <= 16, BITS <= 32, BITS <= 64>::type;
 
@@ -188,8 +193,8 @@ using HostUnsignedInt =
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(t)
 
 #define UNION_CONSTRUCTORS(t) \
-  template<typename _A> explicit t(const _A &x) : u{x} {} \
-  template<typename _A, typename = common::NoLvalue<_A>> \
+  template <typename _A> explicit t(const _A &x) : u{x} {} \
+  template <typename _A, typename = common::NoLvalue<_A>> \
   explicit t(_A &&x) : u(std::move(x)) {}
 
 #define EVALUATE_UNION_CLASS_BOILERPLATE(t) \
@@ -199,29 +204,29 @@ using HostUnsignedInt =
 
 // Forward definition of Expr<> so that it can be indirectly used in its own
 // definition
-template<typename A> class Expr;
+template <typename A> class Expr;
 
 class FoldingContext {
 public:
   FoldingContext(
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t)
-    : defaults_{d}, intrinsics_{t} {}
+      : defaults_{d}, intrinsics_{t} {}
   FoldingContext(const parser::ContextualMessages &m,
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t,
       Rounding round = defaultRounding, bool flush = false)
-    : messages_{m}, defaults_{d}, intrinsics_{t}, rounding_{round},
-      flushSubnormalsToZero_{flush} {}
+      : messages_{m}, defaults_{d}, intrinsics_{t}, rounding_{round},
+        flushSubnormalsToZero_{flush} {}
   FoldingContext(const FoldingContext &that)
-    : messages_{that.messages_}, defaults_{that.defaults_},
-      intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-      flushSubnormalsToZero_{that.flushSubnormalsToZero_},
-      pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+      : messages_{that.messages_}, defaults_{that.defaults_},
+        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
+        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
-    : messages_{m}, defaults_{that.defaults_},
-      intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-      flushSubnormalsToZero_{that.flushSubnormalsToZero_},
-      pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+      : messages_{m}, defaults_{that.defaults_},
+        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
+        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
 
   parser::ContextualMessages &messages() { return messages_; }
   const parser::ContextualMessages &messages() const { return messages_; }
@@ -263,5 +268,5 @@ private:
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);
-}
-#endif  // FORTRAN_EVALUATE_COMMON_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_COMMON_H_

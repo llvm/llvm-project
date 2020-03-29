@@ -31,26 +31,26 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
 #if __x86_64__
   hasSubnormalFlushingHardwareControl_ = true;
   if (context.flushSubnormalsToZero()) {
-    currentFenv_.__mxcsr |= 0x8000;  // result
-    currentFenv_.__mxcsr |= 0x0040;  // operands
+    currentFenv_.__mxcsr |= 0x8000; // result
+    currentFenv_.__mxcsr |= 0x0040; // operands
   } else {
-    currentFenv_.__mxcsr &= ~0x8000;  // result
-    currentFenv_.__mxcsr &= ~0x0040;  // operands
+    currentFenv_.__mxcsr &= ~0x8000; // result
+    currentFenv_.__mxcsr &= ~0x0040; // operands
   }
 #elif defined(__aarch64__)
 #if defined(__GNU_LIBRARY__)
   hasSubnormalFlushingHardwareControl_ = true;
   if (context.flushSubnormalsToZero()) {
-    currentFenv_.__fpcr |= (1U << 24);  // control register
+    currentFenv_.__fpcr |= (1U << 24); // control register
   } else {
-    currentFenv_.__fpcr &= ~(1U << 24);  // control register
+    currentFenv_.__fpcr &= ~(1U << 24); // control register
   }
 #elif defined(__BIONIC__)
   hasSubnormalFlushingHardwareControl_ = true;
   if (context.flushSubnormalsToZero()) {
-    currentFenv_.__control |= (1U << 24);  // control register
+    currentFenv_.__control |= (1U << 24); // control register
   } else {
-    currentFenv_.__control &= ~(1U << 24);  // control register
+    currentFenv_.__control &= ~(1U << 24); // control register
   }
 #else
   // If F18 is built with other C libraries on AArch64, software flushing will
@@ -76,10 +76,18 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
     return;
   }
   switch (context.rounding().mode) {
-  case common::RoundingMode::TiesToEven: fesetround(FE_TONEAREST); break;
-  case common::RoundingMode::ToZero: fesetround(FE_TOWARDZERO); break;
-  case common::RoundingMode::Up: fesetround(FE_UPWARD); break;
-  case common::RoundingMode::Down: fesetround(FE_DOWNWARD); break;
+  case common::RoundingMode::TiesToEven:
+    fesetround(FE_TONEAREST);
+    break;
+  case common::RoundingMode::ToZero:
+    fesetround(FE_TOWARDZERO);
+    break;
+  case common::RoundingMode::Up:
+    fesetround(FE_UPWARD);
+    break;
+  case common::RoundingMode::Down:
+    fesetround(FE_DOWNWARD);
+    break;
   case common::RoundingMode::TiesAwayFromZero:
     fesetround(FE_TONEAREST);
     context.messages().Say(
@@ -135,4 +143,4 @@ void HostFloatingPointEnvironment::CheckAndRestoreFloatingPointEnvironment(
   }
   errno = 0;
 }
-}
+} // namespace Fortran::evaluate::host

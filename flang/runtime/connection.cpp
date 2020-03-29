@@ -29,4 +29,4 @@ void ConnectionState::HandleAbsolutePosition(std::int64_t n) {
 void ConnectionState::HandleRelativePosition(std::int64_t n) {
   positionInRecord = std::max(leftTabLimit.value_or(0), positionInRecord + n);
 }
-}
+} // namespace Fortran::runtime::io

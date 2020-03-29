@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "config.h"
 #include "io-error.h"
+#include "config.h"
 #include "magic-numbers.h"
 #include "tools.h"
 #include <cerrno>
@@ -31,12 +31,12 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
     }
   } else if (iostatOrErrno == IostatEor && (flags_ & hasEor)) {
     if (!ioStat_ || ioStat_ < IostatEor) {
-      ioStat_ = IostatEor;  // least priority
+      ioStat_ = IostatEor; // least priority
     }
   } else if (iostatOrErrno != IostatOk) {
     if (flags_ & (hasIoStat | hasErr)) {
       if (ioStat_ <= 0) {
-        ioStat_ = iostatOrErrno;  // priority over END=/EOR=
+        ioStat_ = iostatOrErrno; // priority over END=/EOR=
         if (msg && (flags_ & hasIoMsg)) {
           char buffer[256];
           va_list ap;
@@ -102,7 +102,7 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
   return false;
 #endif
   ::strncpy(buffer, newBuf, bufferLength - 1);
-  buffer[bufferLength-1] = '\n';
+  buffer[bufferLength - 1] = '\n';
   return true;
 }
-}
+} // namespace Fortran::runtime::io

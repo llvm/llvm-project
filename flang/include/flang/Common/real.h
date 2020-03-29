@@ -20,14 +20,22 @@ namespace Fortran::common {
 // Total representation size in bits for each type
 static constexpr int BitsForBinaryPrecision(int binaryPrecision) {
   switch (binaryPrecision) {
-  case 8: return 16;  // IEEE single (truncated): 1+8+7
-  case 11: return 16;  // IEEE half precision: 1+5+10
-  case 24: return 32;  // IEEE single precision: 1+8+23
-  case 53: return 64;  // IEEE double precision: 1+11+52
-  case 64: return 80;  // x87 extended precision: 1+15+64
-  case 106: return 128;  // "double-double": 2*(1+11+52)
-  case 113: return 128;  // IEEE quad precision: 1+15+112
-  default: return -1;
+  case 8:
+    return 16; // IEEE single (truncated): 1+8+7
+  case 11:
+    return 16; // IEEE half precision: 1+5+10
+  case 24:
+    return 32; // IEEE single precision: 1+8+23
+  case 53:
+    return 64; // IEEE double precision: 1+11+52
+  case 64:
+    return 80; // x87 extended precision: 1+15+64
+  case 106:
+    return 128; // "double-double": 2*(1+11+52)
+  case 113:
+    return 128; // IEEE quad precision: 1+15+112
+  default:
+    return -1;
   }
 }
 
@@ -37,18 +45,26 @@ static constexpr int BitsForBinaryPrecision(int binaryPrecision) {
 // exactly with FORMAT(E0.22981).
 static constexpr int MaxDecimalConversionDigits(int binaryPrecision) {
   switch (binaryPrecision) {
-  case 8: return 93;
-  case 11: return 17;
-  case 24: return 105;
-  case 53: return 751;
-  case 64: return 11495;
-  case 106: return 2 * 751;
-  case 113: return 11530;
-  default: return -1;
+  case 8:
+    return 93;
+  case 11:
+    return 17;
+  case 24:
+    return 105;
+  case 53:
+    return 751;
+  case 64:
+    return 11495;
+  case 106:
+    return 2 * 751;
+  case 113:
+    return 11530;
+  default:
+    return -1;
   }
 }
 
-template<int BINARY_PRECISION> class RealDetails {
+template <int BINARY_PRECISION> class RealDetails {
 private:
   // Converts bit widths to whole decimal digits
   static constexpr int LogBaseTwoToLogBaseTen(int logb2) {
@@ -82,5 +98,5 @@ public:
   static_assert(exponentBits <= 15);
 };
 
-}
-#endif  // FORTRAN_COMMON_REAL_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_REAL_H_

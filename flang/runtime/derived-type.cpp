@@ -48,7 +48,7 @@ void DerivedType::Initialize(char *instance) const {
       f(instance);
     }
   }
-#if 0  // TODO
+#if 0 // TODO
   for (std::size_t j{0}; j < components_; ++j) {
     if (const Descriptor * descriptor{component_[j].GetDescriptor(instance)}) {
       // invoke initialization TBP
@@ -74,4 +74,4 @@ void DerivedType::Destroy(char *instance, bool finalize) const {
     }
   }
 }
-}
+} // namespace Fortran::runtime

@@ -22,13 +22,13 @@ struct GenericExprWrapper {
 struct GenericAssignmentWrapper {
   ~GenericAssignmentWrapper();
 };
-}
+} // namespace Fortran::evaluate
 
 namespace Fortran::parser {
 
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
-  : kind{k}, names(std::move(n)) {
+    : kind{k}, names(std::move(n)) {
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }
@@ -75,9 +75,9 @@ DataRef::DataRef(std::list<PartRef> &&prl) : u{std::move(prl.front().name)} {
 
 // R1001 - R1022 expression
 Expr::Expr(Designator &&x)
-  : u{common::Indirection<Designator>::Make(std::move(x))} {}
+    : u{common::Indirection<Designator>::Make(std::move(x))} {}
 Expr::Expr(FunctionReference &&x)
-  : u{common::Indirection<FunctionReference>::Make(std::move(x))} {}
+    : u{common::Indirection<FunctionReference>::Make(std::move(x))} {}
 
 const std::optional<LoopControl> &DoConstruct::GetLoopControl() const {
   const NonLabelDoStmt &doStmt{
@@ -124,7 +124,7 @@ static Designator MakeArrayElementRef(
 }
 
 // Set source in any type of node that has it.
-template<typename T> T WithSource(CharBlock source, T &&x) {
+template <typename T> T WithSource(CharBlock source, T &&x) {
   x.source = source;
   return std::move(x);
 }
@@ -257,7 +257,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
-}
+} // namespace Fortran::parser
 
 template class std::unique_ptr<Fortran::evaluate::GenericExprWrapper>;
 template class std::unique_ptr<Fortran::evaluate::GenericAssignmentWrapper>;

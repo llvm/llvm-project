@@ -80,11 +80,11 @@ bool IsDescriptor(const Symbol &symbol) {
       },
       symbol.details());
 }
-}
+} // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
 
-template<typename A> inline bool PointeeComparison(const A *x, const A *y) {
+template <typename A> inline bool PointeeComparison(const A *x, const A *y) {
   return x == y || (x && y && *x == *y);
 }
 
@@ -198,7 +198,7 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
   }
   auto thisQuery{std::make_pair(&x, &y)};
   if (inProgress.find(thisQuery) != inProgress.end()) {
-    return true;  // recursive use of types in components
+    return true; // recursive use of types in components
   }
   inProgress.insert(thisQuery);
   const auto &xDetails{xSymbol.get<semantics::DerivedTypeDetails>()};
@@ -243,7 +243,7 @@ static bool AreSameComponent(const semantics::Symbol &x,
   if (x.attrs().test(semantics::Attr::PRIVATE)) {
     return false;
   }
-#if 0  // TODO
+#if 0 // TODO
   if (const auto *xObject{x.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (const auto *yObject{y.detailsIf<semantics::ObjectEntityDetails>()}) {
 #else
@@ -256,7 +256,7 @@ static bool AreSameComponent(const semantics::Symbol &x,
 else {
   return false;
 }
-}
+} // namespace Fortran::evaluate
 else {
   // TODO: non-object components
   return true;
@@ -343,7 +343,7 @@ bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
     return false;
   } else if (!derived_ || !that.derived_ ||
       !IsKindCompatible(*derived_, *that.derived_)) {
-    return false;  // kind params don't match
+    return false; // kind params don't match
   } else {
     return AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic());
   }
@@ -377,7 +377,7 @@ std::optional<DynamicType> DynamicType::From(
 }
 
 std::optional<DynamicType> DynamicType::From(const semantics::Symbol &symbol) {
-  return From(symbol.GetType());  // Symbol -> DeclTypeSpec -> DynamicType
+  return From(symbol.GetType()); // Symbol -> DeclTypeSpec -> DynamicType
 }
 
 DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
@@ -387,37 +387,45 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
     case TypeCategory::Integer:
       return DynamicType{TypeCategory::Integer, std::max(kind_, that.kind_)};
     case TypeCategory::Real:
-    case TypeCategory::Complex: return that;
-    default: CRASH_NO_CASE;
+    case TypeCategory::Complex:
+      return that;
+    default:
+      CRASH_NO_CASE;
     }
     break;
   case TypeCategory::Real:
     switch (that.category_) {
-    case TypeCategory::Integer: return *this;
+    case TypeCategory::Integer:
+      return *this;
     case TypeCategory::Real:
       return DynamicType{TypeCategory::Real, std::max(kind_, that.kind_)};
     case TypeCategory::Complex:
       return DynamicType{TypeCategory::Complex, std::max(kind_, that.kind_)};
-    default: CRASH_NO_CASE;
+    default:
+      CRASH_NO_CASE;
     }
     break;
   case TypeCategory::Complex:
     switch (that.category_) {
-    case TypeCategory::Integer: return *this;
+    case TypeCategory::Integer:
+      return *this;
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return DynamicType{TypeCategory::Complex, std::max(kind_, that.kind_)};
-    default: CRASH_NO_CASE;
+    default:
+      CRASH_NO_CASE;
     }
     break;
   case TypeCategory::Logical:
     switch (that.category_) {
     case TypeCategory::Logical:
       return DynamicType{TypeCategory::Logical, std::max(kind_, that.kind_)};
-    default: CRASH_NO_CASE;
+    default:
+      CRASH_NO_CASE;
     }
     break;
-  default: CRASH_NO_CASE;
+  default:
+    CRASH_NO_CASE;
   }
   return *this;
 }
@@ -463,7 +471,7 @@ bool SomeKind<TypeCategory::Derived>::operator==(
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
 }
 
-int SelectedCharKind(const std::string &s, int defaultKind) {  // 16.9.168
+int SelectedCharKind(const std::string &s, int defaultKind) { // 16.9.168
   auto lower{parser::ToLowerCaseLetters(s)};
   auto n{lower.size()};
   while (n > 0 && lower[0] == ' ') {
@@ -491,7 +499,7 @@ public:
   explicit SelectedIntKindVisitor(std::int64_t p) : precision_{p} {}
   using Result = std::optional<int>;
   using Types = IntegerTypes;
-  template<typename T> Result Test() const {
+  template <typename T> Result Test() const {
     if (Scalar<T>::RANGE >= precision_) {
       return T::kind;
     } else {
@@ -514,10 +522,10 @@ int SelectedIntKind(std::int64_t precision) {
 class SelectedRealKindVisitor {
 public:
   explicit SelectedRealKindVisitor(std::int64_t p, std::int64_t r)
-    : precision_{p}, range_{r} {}
+      : precision_{p}, range_{r} {}
   using Result = std::optional<int>;
   using Types = RealTypes;
-  template<typename T> Result Test() const {
+  template <typename T> Result Test() const {
     if (Scalar<T>::PRECISION >= precision_ && Scalar<T>::RANGE >= range_) {
       return {T::kind};
     } else {
@@ -557,4 +565,4 @@ int SelectedRealKind(
     }
   }
 }
-}
+} // namespace Fortran::evaluate

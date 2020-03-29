@@ -53,7 +53,7 @@ std::size_t TokenSequence::SkipBlanks(std::size_t at) const {
       return at;
     }
   }
-  return tokens;  // even if at > tokens
+  return tokens; // even if at > tokens
 }
 
 void TokenSequence::RemoveLastToken() {
@@ -285,4 +285,4 @@ ProvenanceRange TokenSequence::GetIntervalProvenanceRange(
 ProvenanceRange TokenSequence::GetProvenanceRange() const {
   return GetIntervalProvenanceRange(0, start_.size());
 }
-}
+} // namespace Fortran::parser

@@ -56,8 +56,8 @@ public:
   void Parse(llvm::raw_ostream &debugOutput);
   void ClearLog();
 
-  void EmitMessage(llvm::raw_ostream &o, const char *at, const std::string &message,
-      bool echoSourceLine = false) const {
+  void EmitMessage(llvm::raw_ostream &o, const char *at,
+      const std::string &message, bool echoSourceLine = false) const {
     cooked_.allSources().EmitMessage(
         o, cooked_.GetProvenanceRange(CharBlock(at)), message, echoSourceLine);
   }
@@ -73,5 +73,5 @@ private:
   std::optional<Program> parseTree_;
   ParsingLog log_;
 };
-}
-#endif  // FORTRAN_PARSER_PARSING_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PARSING_H_

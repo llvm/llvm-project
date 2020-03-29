@@ -41,12 +41,12 @@ struct IntrinsicTypeDataEditDesc {
   IntrinsicTypeDataEditDesc &operator=(IntrinsicTypeDataEditDesc &&) = default;
   IntrinsicTypeDataEditDesc(Kind &&k, std::optional<int> &&w,
       std::optional<int> &&d, std::optional<int> &&e)
-    : kind{k}, width{std::move(w)}, digits{std::move(d)}, exponentWidth{
-                                                              std::move(e)} {}
+      : kind{k}, width{std::move(w)}, digits{std::move(d)}, exponentWidth{
+                                                                std::move(e)} {}
   Kind kind;
-  std::optional<int> width;  // w
-  std::optional<int> digits;  // m or d
-  std::optional<int> exponentWidth;  // e
+  std::optional<int> width; // w
+  std::optional<int> digits; // m or d
+  std::optional<int> exponentWidth; // e
 };
 
 // R1307 data-edit-desc (part 2 of 2) ->
@@ -57,7 +57,7 @@ struct DerivedTypeDataEditDesc {
   DerivedTypeDataEditDesc(DerivedTypeDataEditDesc &&) = default;
   DerivedTypeDataEditDesc &operator=(DerivedTypeDataEditDesc &&) = default;
   DerivedTypeDataEditDesc(std::string &&t, std::list<std::int64_t> &&p)
-    : type{std::move(t)}, parameters{std::move(p)} {}
+      : type{std::move(t)}, parameters{std::move(p)} {}
   std::string type;
   std::list<std::int64_t> parameters;
 };
@@ -94,8 +94,8 @@ struct ControlEditDesc {
     RP,
     DC,
     DP,
-    Dollar,  // extension: inhibit newline on output
-    Backslash,  // ditto, but only on terminals
+    Dollar, // extension: inhibit newline on output
+    Backslash, // ditto, but only on terminals
   };
   ControlEditDesc() = delete;
   ControlEditDesc(ControlEditDesc &&) = default;
@@ -104,7 +104,7 @@ struct ControlEditDesc {
   ControlEditDesc(Kind k, std::int64_t ct) : kind{k}, count{ct} {}
   ControlEditDesc(std::int64_t ct, Kind k) : kind{k}, count{ct} {}
   Kind kind;
-  std::int64_t count{1};  // r, k, or n
+  std::int64_t count{1}; // r, k, or n
 };
 
 // R1304 format-item ->
@@ -116,10 +116,10 @@ struct FormatItem {
   FormatItem() = delete;
   FormatItem(FormatItem &&) = default;
   FormatItem &operator=(FormatItem &&) = default;
-  template<typename A, typename = common::NoLvalue<A>>
+  template <typename A, typename = common::NoLvalue<A>>
   FormatItem(std::optional<std::uint64_t> &&r, A &&x)
-    : repeatCount{std::move(r)}, u{std::move(x)} {}
-  template<typename A, typename = common::NoLvalue<A>>
+      : repeatCount{std::move(r)}, u{std::move(x)} {}
+  template <typename A, typename = common::NoLvalue<A>>
   explicit FormatItem(A &&x) : u{std::move(x)} {}
   std::optional<std::uint64_t> repeatCount;
   std::variant<IntrinsicTypeDataEditDesc, DerivedTypeDataEditDesc,
@@ -136,10 +136,10 @@ struct FormatSpecification {
   FormatSpecification(FormatSpecification &&) = default;
   FormatSpecification &operator=(FormatSpecification &&) = default;
   explicit FormatSpecification(std::list<FormatItem> &&is)
-    : items(std::move(is)) {}
+      : items(std::move(is)) {}
   FormatSpecification(std::list<FormatItem> &&is, std::list<FormatItem> &&us)
-    : items(std::move(is)), unlimitedItems(std::move(us)) {}
+      : items(std::move(is)), unlimitedItems(std::move(us)) {}
   std::list<FormatItem> items, unlimitedItems;
 };
-}
-#endif  // FORTRAN_PARSER_FORMAT_SPECIFICATION_H_
+} // namespace Fortran::format
+#endif // FORTRAN_PARSER_FORMAT_SPECIFICATION_H_

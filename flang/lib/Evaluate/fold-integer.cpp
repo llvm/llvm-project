@@ -10,7 +10,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Integer, KIND>;
@@ -27,7 +27,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
                 static_cast<std::intmax_t>(*dim64), rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
-            dim = *dim64 - 1;  // 1-based to 0-based
+            dim = *dim64 - 1; // 1-based to 0-based
           }
         } else {
           // DIM= is present but not constant
@@ -48,7 +48,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
                 ConvertToType<T>(Expr<ExtentType>{std::move(*extents)}));
           }
         } else {
-          lowerBoundsAreOne = symbol.Rank() == 0;  // LBOUND(array%component)
+          lowerBoundsAreOne = symbol.Rank() == 0; // LBOUND(array%component)
         }
       }
       if (lowerBoundsAreOne) {
@@ -65,7 +65,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
   return Expr<T>{std::move(funcRef)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Integer, KIND>;
@@ -82,7 +82,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
                 static_cast<std::intmax_t>(*dim64), rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
-            dim = *dim64 - 1;  // 1-based to 0-based
+            dim = *dim64 - 1; // 1-based to 0-based
           }
         } else {
           // DIM= is present but not constant
@@ -112,7 +112,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
             }
           }
         } else {
-          takeBoundsFromShape = symbol.Rank() == 0;  // UBOUND(array%component)
+          takeBoundsFromShape = symbol.Rank() == 0; // UBOUND(array%component)
         }
       }
       if (takeBoundsFromShape) {
@@ -132,7 +132,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   return Expr<T>{std::move(funcRef)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer, KIND>> &&funcRef) {
@@ -177,7 +177,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u);
     }
   } else if (name == "count") {
-    if (!args[1]) {  // TODO: COUNT(x,DIM=d)
+    if (!args[1]) { // TODO: COUNT(x,DIM=d)
       if (const auto *constant{UnwrapConstantValue<LogicalResult>(args[0])}) {
         std::int64_t result{0};
         for (const auto &element : constant->values()) {
@@ -260,7 +260,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "iand" || name == "ior" || name == "ieor") {
     auto fptr{&Scalar<T>::IAND};
-    if (name == "iand") {  // done in fptr declaration
+    if (name == "iand") { // done in fptr declaration
     } else if (name == "ior") {
       fptr = &Scalar<T>::IOR;
     } else if (name == "ieor") {
@@ -275,7 +275,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     // Second argument can be of any kind. However, it must be smaller or
     // equal than BIT_SIZE. It can be converted to Int4 to simplify.
     auto fptr{&Scalar<T>::IBCLR};
-    if (name == "ibclr") {  // done in fprt definition
+    if (name == "ibclr") { // done in fprt definition
     } else if (name == "ibset") {
       fptr = &Scalar<T>::IBSET;
     } else if (name == "ishft") {
@@ -299,7 +299,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       return std::visit(
           [&](const auto &kch) -> Expr<T> {
             using TC = typename std::decay_t<decltype(kch)>::Result;
-            if (UnwrapExpr<Expr<SomeLogical>>(args[2])) {  // BACK=
+            if (UnwrapExpr<Expr<SomeLogical>>(args[2])) { // BACK=
               return FoldElementalIntrinsic<T, TC, TC, LogicalResult>(context,
                   std::move(funcRef),
                   ScalarFunc<T, TC, TC, LogicalResult>{
@@ -367,7 +367,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   }));
             }
             auto fptr{&Scalar<TI>::LEADZ};
-            if (name == "leadz") {  // done in fptr definition
+            if (name == "leadz") { // done in fptr definition
             } else if (name == "trailz") {
               fptr = &Scalar<TI>::TRAILZ;
             } else if (name == "popcnt") {
@@ -562,7 +562,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             }));
   } else if (name == "size") {
     if (auto shape{GetShape(context, args[0])}) {
-      if (auto &dimArg{args[1]}) {  // DIM= is present, get one extent
+      if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
         if (auto dim{GetInt64Arg(args[1])}) {
           int rank{GetRank(*shape)};
           if (*dim >= 1 && *dim <= rank) {
@@ -597,7 +597,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
 }
 
 // Substitute a bare type parameter reference with its value if it has one now
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> FoldOperation(
     FoldingContext &context, TypeParamInquiry<KIND> &&inquiry) {
   using IntKIND = Type<TypeCategory::Integer, KIND>;
@@ -644,4 +644,4 @@ std::optional<std::int64_t> ToInt64(const Expr<SomeType> &expr) {
 
 FOR_EACH_INTEGER_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeInteger>;
-}
+} // namespace Fortran::evaluate

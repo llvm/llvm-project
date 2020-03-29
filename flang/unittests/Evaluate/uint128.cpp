@@ -106,7 +106,7 @@ static void TestVsNative() {
       TestVsNative(m ^ ~n, m ^ n);
       TestVsNative(m ^ n, ~m ^ n);
       TestVsNative(m ^ ~n, ~m ^ n);
-      Test(m, 10000000000000000);  // important case for decimal conversion
+      Test(m, 10000000000000000); // important case for decimal conversion
       Test(~m, 10000000000000000);
     }
   }

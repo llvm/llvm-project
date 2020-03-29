@@ -28,7 +28,7 @@
 namespace Fortran::common {
 
 // The default case does not support (deep) copy construction or assignment.
-template<typename A, bool COPY = false> class Indirection {
+template <typename A, bool COPY = false> class Indirection {
 public:
   using element_type = A;
   Indirection() = delete;
@@ -59,7 +59,7 @@ public:
   bool operator==(const A &that) const { return *p_ == that; }
   bool operator==(const Indirection &that) const { return *p_ == *that.p_; }
 
-  template<typename... ARGS>
+  template <typename... ARGS>
   static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&... args) {
     return {new A(std::move(args)...)};
   }
@@ -69,7 +69,7 @@ private:
 };
 
 // Variant with copy construction and assignment
-template<typename A> class Indirection<A, true> {
+template <typename A> class Indirection<A, true> {
 public:
   using element_type = A;
 
@@ -111,7 +111,7 @@ public:
   bool operator==(const A &that) const { return *p_ == that; }
   bool operator==(const Indirection &that) const { return *p_ == *that.p_; }
 
-  template<typename... ARGS>
+  template <typename... ARGS>
   static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&... args) {
     return {new A(std::move(args)...)};
   }
@@ -120,7 +120,7 @@ private:
   A *p_{nullptr};
 };
 
-template<typename A> using CopyableIndirection = Indirection<A, true>;
+template <typename A> using CopyableIndirection = Indirection<A, true>;
 
 // For use with std::unique_ptr<> when declaring owning pointers to
 // forward-referenced types, here's a minimal custom deleter that avoids
@@ -129,13 +129,13 @@ template<typename A> using CopyableIndirection = Indirection<A, true>;
 // type is visible.  Be advised, std::unique_ptr<> does not have copy
 // semantics; if you need ownership, copy semantics, and nullability,
 // std::optional<CopyableIndirection<>> works.
-template<typename A> class Deleter {
+template <typename A> class Deleter {
 public:
   void operator()(A *) const;
 };
-}
+} // namespace Fortran::common
 #define DEFINE_DELETER(A) \
-  template<> void Fortran::common::Deleter<A>::operator()(A *p) const { \
+  template <> void Fortran::common::Deleter<A>::operator()(A *p) const { \
     delete p; \
   }
-#endif  // FORTRAN_COMMON_INDIRECTION_H_
+#endif // FORTRAN_COMMON_INDIRECTION_H_

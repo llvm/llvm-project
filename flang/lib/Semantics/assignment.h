@@ -21,7 +21,7 @@ struct MaskedElsewhereStmt;
 struct PointerAssignmentStmt;
 struct WhereConstructStmt;
 struct WhereStmt;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -53,8 +53,8 @@ private:
   common::Indirection<AssignmentContext> context_;
 };
 
-}
+} // namespace Fortran::semantics
 
 extern template class Fortran::common::Indirection<
     Fortran::semantics::AssignmentContext>;
-#endif  // FORTRAN_SEMANTICS_ASSIGNMENT_H_
+#endif // FORTRAN_SEMANTICS_ASSIGNMENT_H_

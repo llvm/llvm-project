@@ -65,7 +65,9 @@ void OpenFile::Open(
       return;
     }
     break;
-  case OpenStatus::New: flags |= O_CREAT | O_EXCL; break;
+  case OpenStatus::New:
+    flags |= O_CREAT | O_EXCL;
+    break;
   case OpenStatus::Scratch:
     if (path_.get()) {
       handler.SignalError("FILE= must not appear with STATUS='SCRATCH'");
@@ -73,7 +75,9 @@ void OpenFile::Open(
     }
     fd_ = openfile_mkstemp(handler);
     return;
-  case OpenStatus::Replace: flags |= O_CREAT | O_TRUNC; break;
+  case OpenStatus::Replace:
+    flags |= O_CREAT | O_TRUNC;
+    break;
   case OpenStatus::Unknown:
     if (fd_ >= 0) {
       return;
@@ -122,7 +126,8 @@ void OpenFile::Close(CloseStatus status, IoErrorHandler &handler) {
   pending_.reset();
   knownSize_.reset();
   switch (status) {
-  case CloseStatus::Keep: break;
+  case CloseStatus::Keep:
+    break;
   case CloseStatus::Delete:
     if (path_.get()) {
       ::unlink(path_.get());
@@ -350,4 +355,4 @@ int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
   pending_.reset(&New<Pending>{}(terminator, id, iostat, std::move(pending_)));
   return id;
 }
-}
+} // namespace Fortran::runtime::io

@@ -70,4 +70,4 @@ void PurityChecker::Left() {
   }
 }
 
-}
+} // namespace Fortran::semantics

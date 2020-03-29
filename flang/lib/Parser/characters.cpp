@@ -33,7 +33,7 @@ int UTF_8CharacterBytes(const char *p) {
   }
 }
 
-template<typename STRING>
+template <typename STRING>
 std::string QuoteCharacterLiteralHelper(
     const STRING &str, bool backslashEscapes, Encoding encoding) {
   std::string result{'"'};
@@ -42,7 +42,7 @@ std::string QuoteCharacterLiteralHelper(
     using CharT = std::decay_t<decltype(ch)>;
     char32_t ch32{static_cast<std::make_unsigned_t<CharT>>(ch)};
     if (ch32 == static_cast<unsigned char>('"')) {
-      emit('"');  // double the " when it appears in the text
+      emit('"'); // double the " when it appears in the text
     }
     EmitQuotedChar(ch32, emit, emit, backslashEscapes, encoding);
   }
@@ -65,7 +65,7 @@ std::string QuoteCharacterLiteral(
   return QuoteCharacterLiteralHelper(str, backslashEscapes, encoding);
 }
 
-template<> EncodedCharacter EncodeCharacter<Encoding::LATIN_1>(char32_t ucs) {
+template <> EncodedCharacter EncodeCharacter<Encoding::LATIN_1>(char32_t ucs) {
   CHECK(ucs <= 0xff);
   EncodedCharacter result;
   result.buffer[0] = ucs;
@@ -73,7 +73,7 @@ template<> EncodedCharacter EncodeCharacter<Encoding::LATIN_1>(char32_t ucs) {
   return result;
 }
 
-template<> EncodedCharacter EncodeCharacter<Encoding::UTF_8>(char32_t ucs) {
+template <> EncodedCharacter EncodeCharacter<Encoding::UTF_8>(char32_t ucs) {
   // N.B. char32_t is unsigned
   EncodedCharacter result;
   if (ucs <= 0x7f) {
@@ -118,12 +118,14 @@ template<> EncodedCharacter EncodeCharacter<Encoding::UTF_8>(char32_t ucs) {
 EncodedCharacter EncodeCharacter(Encoding encoding, char32_t ucs) {
   switch (encoding) {
     SWITCH_COVERS_ALL_CASES
-  case Encoding::LATIN_1: return EncodeCharacter<Encoding::LATIN_1>(ucs);
-  case Encoding::UTF_8: return EncodeCharacter<Encoding::UTF_8>(ucs);
+  case Encoding::LATIN_1:
+    return EncodeCharacter<Encoding::LATIN_1>(ucs);
+  case Encoding::UTF_8:
+    return EncodeCharacter<Encoding::UTF_8>(ucs);
   }
 }
 
-template<Encoding ENCODING, typename STRING>
+template <Encoding ENCODING, typename STRING>
 std::string EncodeString(const STRING &str) {
   std::string result;
   for (auto ch : str) {
@@ -141,7 +143,7 @@ template std::string EncodeString<Encoding::UTF_8, std::u16string>(
 template std::string EncodeString<Encoding::UTF_8, std::u32string>(
     const std::u32string &);
 
-template<>
+template <>
 DecodedCharacter DecodeRawCharacter<Encoding::LATIN_1>(
     const char *cp, std::size_t bytes) {
   if (bytes >= 1) {
@@ -151,7 +153,7 @@ DecodedCharacter DecodeRawCharacter<Encoding::LATIN_1>(
   }
 }
 
-template<>
+template <>
 DecodedCharacter DecodeRawCharacter<Encoding::UTF_8>(
     const char *cp, std::size_t bytes) {
   auto p{reinterpret_cast<const std::uint8_t *>(cp)};
@@ -174,7 +176,7 @@ DecodedCharacter DecodeRawCharacter<Encoding::UTF_8>(
     ch = ((ch & 0x1f) << 6) | (p[1] & 0x3f);
     return {ch, 2};
   } else {
-    return {};  // not valid UTF-8
+    return {}; // not valid UTF-8
   }
 }
 
@@ -186,7 +188,7 @@ static DecodedCharacter DecodeEscapedCharacter(
     } else if (IsOctalDigit(cp[1])) {
       std::size_t maxLen{std::min(std::size_t{4}, bytes)};
       char32_t code{static_cast<char32_t>(DecimalDigitValue(cp[1]))};
-      std::size_t len{2};  // so far
+      std::size_t len{2}; // so far
       for (; code <= 037 && len < maxLen && IsOctalDigit(cp[len]); ++len) {
         code = 8 * code + DecimalDigitValue(cp[len]);
       }
@@ -207,7 +209,7 @@ static DecodedCharacter DecodeEscapedCharacter(
   return {static_cast<unsigned char>(cp[0]), 1};
 }
 
-template<Encoding ENCODING>
+template <Encoding ENCODING>
 static DecodedCharacter DecodeEscapedCharacters(
     const char *cp, std::size_t bytes) {
   char buffer[EncodedCharacter::maxEncodingBytes];
@@ -229,7 +231,7 @@ static DecodedCharacter DecodeEscapedCharacters(
   return code;
 }
 
-template<Encoding ENCODING>
+template <Encoding ENCODING>
 DecodedCharacter DecodeCharacter(
     const char *cp, std::size_t bytes, bool backslashEscapes) {
   if (backslashEscapes && bytes >= 2 && *cp == '\\') {
@@ -255,7 +257,7 @@ DecodedCharacter DecodeCharacter(Encoding encoding, const char *cp,
   }
 }
 
-template<typename RESULT, Encoding ENCODING>
+template <typename RESULT, Encoding ENCODING>
 RESULT DecodeString(const std::string &s, bool backslashEscapes) {
   RESULT result;
   const char *p{s.c_str()};
@@ -283,4 +285,4 @@ template std::u16string DecodeString<std::u16string, Encoding::UTF_8>(
     const std::string &, bool);
 template std::u32string DecodeString<std::u32string, Encoding::UTF_8>(
     const std::string &, bool);
-}
+} // namespace Fortran::parser

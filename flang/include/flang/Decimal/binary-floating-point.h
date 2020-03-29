@@ -21,9 +21,9 @@
 
 namespace Fortran::decimal {
 
-template<int BINARY_PRECISION>
+template <int BINARY_PRECISION>
 struct BinaryFloatingPointNumber
-  : public common::RealDetails<BINARY_PRECISION> {
+    : public common::RealDetails<BINARY_PRECISION> {
 
   using Details = common::RealDetails<BINARY_PRECISION>;
   using Details::bits;
@@ -40,7 +40,7 @@ struct BinaryFloatingPointNumber
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);
   static constexpr RawType significandMask{(RawType{1} << significandBits) - 1};
 
-  constexpr BinaryFloatingPointNumber() {}  // zero
+  constexpr BinaryFloatingPointNumber() {} // zero
   constexpr BinaryFloatingPointNumber(
       const BinaryFloatingPointNumber &that) = default;
   constexpr BinaryFloatingPointNumber(
@@ -50,7 +50,7 @@ struct BinaryFloatingPointNumber
   constexpr BinaryFloatingPointNumber &operator=(
       BinaryFloatingPointNumber &&that) = default;
 
-  template<typename A> explicit constexpr BinaryFloatingPointNumber(A x) {
+  template <typename A> explicit constexpr BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw <= sizeof x);
     std::memcpy(reinterpret_cast<void *>(&raw),
         reinterpret_cast<const void *>(&x), sizeof raw);
@@ -92,5 +92,5 @@ struct BinaryFloatingPointNumber
 
   RawType raw{0};
 };
-}
+} // namespace Fortran::decimal
 #endif

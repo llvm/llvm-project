@@ -26,7 +26,7 @@ namespace Fortran::common {
 // index of the first type T in the list for which PREDICATE<T>::value() is
 // true is returned, or -1 if the predicate is false for every type in the list.
 // This is a compile-time operation; see SearchTypes below for a run-time form.
-template<int N, template<typename> class PREDICATE, typename TUPLE>
+template <int N, template <typename> class PREDICATE, typename TUPLE>
 struct SearchTypeListHelper {
   static constexpr int value() {
     if constexpr (N >= std::tuple_size_v<TUPLE>) {
@@ -39,41 +39,41 @@ struct SearchTypeListHelper {
   }
 };
 
-template<template<typename> class PREDICATE, typename... TYPES>
+template <template <typename> class PREDICATE, typename... TYPES>
 constexpr int SearchTypeList{
     SearchTypeListHelper<0, PREDICATE, std::tuple<TYPES...>>::value()};
 
 // TypeIndex<A, TYPES...> scans a list of types for simple type equality.
 // The zero-based index of A in the list is returned, or -1 if A is not present.
-template<typename A> struct MatchType {
-  template<typename B> struct Match {
+template <typename A> struct MatchType {
+  template <typename B> struct Match {
     static constexpr bool value() {
       return std::is_same_v<std::decay_t<A>, std::decay_t<B>>;
     }
   };
 };
 
-template<typename A, typename... TYPES>
+template <typename A, typename... TYPES>
 constexpr int TypeIndex{SearchTypeList<MatchType<A>::template Match, TYPES...>};
 
 // IsTypeInList<A, TYPES...> is a simple presence predicate.
-template<typename A, typename... TYPES>
+template <typename A, typename... TYPES>
 constexpr bool IsTypeInList{TypeIndex<A, TYPES...> >= 0};
 
 // OverMembers extracts the list of types that constitute the alternatives
 // of a std::variant or elements of a std::tuple and passes that list as
 // parameter types to a given variadic template.
-template<template<typename...> class, typename> struct OverMembersHelper;
-template<template<typename...> class T, typename... Ts>
+template <template <typename...> class, typename> struct OverMembersHelper;
+template <template <typename...> class T, typename... Ts>
 struct OverMembersHelper<T, std::variant<Ts...>> {
   using type = T<Ts...>;
 };
-template<template<typename...> class T, typename... Ts>
+template <template <typename...> class T, typename... Ts>
 struct OverMembersHelper<T, std::tuple<Ts...>> {
   using type = T<Ts...>;
 };
 
-template<template<typename...> class T, typename TUPLEorVARIANT>
+template <template <typename...> class T, typename TUPLEorVARIANT>
 using OverMembers =
     typename OverMembersHelper<T, std::decay_t<TUPLEorVARIANT>>::type;
 
@@ -82,23 +82,23 @@ using OverMembers =
 // The zero-based index of the first type T among the alternatives for which
 // PREDICATE<T>::value() is true is returned, or -1 when the predicate is false
 // for every type in the set.
-template<template<typename> class PREDICATE> struct SearchMembersHelper {
-  template<typename... Ts> struct Scanner {
+template <template <typename> class PREDICATE> struct SearchMembersHelper {
+  template <typename... Ts> struct Scanner {
     static constexpr int value() { return SearchTypeList<PREDICATE, Ts...>; }
   };
 };
 
-template<template<typename> class PREDICATE, typename TUPLEorVARIANT>
+template <template <typename> class PREDICATE, typename TUPLEorVARIANT>
 constexpr int SearchMembers{
     OverMembers<SearchMembersHelper<PREDICATE>::template Scanner,
         TUPLEorVARIANT>::value()};
 
-template<typename A, typename TUPLEorVARIANT>
+template <typename A, typename TUPLEorVARIANT>
 constexpr bool HasMember{
     SearchMembers<MatchType<A>::template Match, TUPLEorVARIANT> >= 0};
 
 // std::optional<std::optional<A>> -> std::optional<A>
-template<typename A>
+template <typename A>
 std::optional<A> JoinOptional(std::optional<std::optional<A>> &&x) {
   if (x) {
     return std::move(*x);
@@ -107,7 +107,7 @@ std::optional<A> JoinOptional(std::optional<std::optional<A>> &&x) {
 }
 
 // Convert an std::optional to an ordinary pointer
-template<typename A> const A *GetPtrFromOptional(const std::optional<A> &x) {
+template <typename A> const A *GetPtrFromOptional(const std::optional<A> &x) {
   if (x) {
     return &*x;
   } else {
@@ -117,13 +117,13 @@ template<typename A> const A *GetPtrFromOptional(const std::optional<A> &x) {
 
 // Copy a value from one variant type to another.  The types allowed in the
 // source variant must all be allowed in the destination variant type.
-template<typename TOV, typename FROMV> TOV CopyVariant(const FROMV &u) {
+template <typename TOV, typename FROMV> TOV CopyVariant(const FROMV &u) {
   return std::visit([](const auto &x) -> TOV { return {x}; }, u);
 }
 
 // Move a value from one variant type to another.  The types allowed in the
 // source variant must all be allowed in the destination variant type.
-template<typename TOV, typename FROMV>
+template <typename TOV, typename FROMV>
 common::IfNoLvalue<TOV, FROMV> MoveVariant(FROMV &&u) {
   return std::visit(
       [](auto &&x) -> TOV { return {std::move(x)}; }, std::move(u));
@@ -134,26 +134,26 @@ common::IfNoLvalue<TOV, FROMV> MoveVariant(FROMV &&u) {
 // types.  E.g.,
 //   CombineTuples<std::tuple<char, int>, std::tuple<float, double>>
 // is std::tuple<char, int, float, double>.
-template<typename... TUPLES> struct CombineTuplesHelper {
+template <typename... TUPLES> struct CombineTuplesHelper {
   static decltype(auto) f(TUPLES *... a) {
     return std::tuple_cat(std::move(*a)...);
   }
   using type = decltype(f(static_cast<TUPLES *>(nullptr)...));
 };
-template<typename... TUPLES>
+template <typename... TUPLES>
 using CombineTuples = typename CombineTuplesHelper<TUPLES...>::type;
 
 // CombineVariants takes a list of std::variant<> instantiations and constructs
 // a new instantiation that holds all of their alternatives, which must be
 // pairwise distinct.
-template<typename> struct VariantToTupleHelper;
-template<typename... Ts> struct VariantToTupleHelper<std::variant<Ts...>> {
+template <typename> struct VariantToTupleHelper;
+template <typename... Ts> struct VariantToTupleHelper<std::variant<Ts...>> {
   using type = std::tuple<Ts...>;
 };
-template<typename VARIANT>
+template <typename VARIANT>
 using VariantToTuple = typename VariantToTupleHelper<VARIANT>::type;
 
-template<typename A, typename... REST> struct AreTypesDistinctHelper {
+template <typename A, typename... REST> struct AreTypesDistinctHelper {
   static constexpr bool value() {
     if constexpr (sizeof...(REST) > 0) {
       // extra () for clang-format
@@ -163,10 +163,10 @@ template<typename A, typename... REST> struct AreTypesDistinctHelper {
     return true;
   }
 };
-template<typename... Ts>
+template <typename... Ts>
 constexpr bool AreTypesDistinct{AreTypesDistinctHelper<Ts...>::value()};
 
-template<typename A, typename... Ts> struct AreSameTypeHelper {
+template <typename A, typename... Ts> struct AreSameTypeHelper {
   using type = A;
   static constexpr bool value() {
     if constexpr (sizeof...(Ts) == 0) {
@@ -178,53 +178,53 @@ template<typename A, typename... Ts> struct AreSameTypeHelper {
   }
 };
 
-template<typename... Ts>
+template <typename... Ts>
 constexpr bool AreSameType{AreSameTypeHelper<Ts...>::value()};
 
-template<typename> struct TupleToVariantHelper;
-template<typename... Ts> struct TupleToVariantHelper<std::tuple<Ts...>> {
+template <typename> struct TupleToVariantHelper;
+template <typename... Ts> struct TupleToVariantHelper<std::tuple<Ts...>> {
   static_assert(AreTypesDistinct<Ts...>,
       "TupleToVariant: types are not pairwise distinct");
   using type = std::variant<Ts...>;
 };
-template<typename TUPLE>
+template <typename TUPLE>
 using TupleToVariant = typename TupleToVariantHelper<TUPLE>::type;
 
-template<typename... VARIANTS> struct CombineVariantsHelper {
+template <typename... VARIANTS> struct CombineVariantsHelper {
   using type = TupleToVariant<CombineTuples<VariantToTuple<VARIANTS>...>>;
 };
-template<typename... VARIANTS>
+template <typename... VARIANTS>
 using CombineVariants = typename CombineVariantsHelper<VARIANTS...>::type;
 
 // SquashVariantOfVariants: given a std::variant whose alternatives are
 // all std::variant instantiations, form a new union over their alternatives.
-template<typename VARIANT>
+template <typename VARIANT>
 using SquashVariantOfVariants = OverMembers<CombineVariants, VARIANT>;
 
 // Given a type function, MapTemplate applies it to each of the types
 // in a tuple or variant, and collect the results in a given variadic
 // template (typically a std::variant).
-template<template<typename> class, template<typename...> class, typename...>
+template <template <typename> class, template <typename...> class, typename...>
 struct MapTemplateHelper;
-template<template<typename> class F, template<typename...> class PACKAGE,
+template <template <typename> class F, template <typename...> class PACKAGE,
     typename... Ts>
 struct MapTemplateHelper<F, PACKAGE, std::tuple<Ts...>> {
   using type = PACKAGE<F<Ts>...>;
 };
-template<template<typename> class F, template<typename...> class PACKAGE,
+template <template <typename> class F, template <typename...> class PACKAGE,
     typename... Ts>
 struct MapTemplateHelper<F, PACKAGE, std::variant<Ts...>> {
   using type = PACKAGE<F<Ts>...>;
 };
-template<template<typename> class F, typename TUPLEorVARIANT,
-    template<typename...> class PACKAGE = std::variant>
+template <template <typename> class F, typename TUPLEorVARIANT,
+    template <typename...> class PACKAGE = std::variant>
 using MapTemplate =
     typename MapTemplateHelper<F, PACKAGE, TUPLEorVARIANT>::type;
 
 // std::tuple<std::optional<>...> -> std::optional<std::tuple<...>>
 // i.e., inverts a tuple of optional values into an optional tuple that has
 // a value only if all of the original elements were present.
-template<typename... A, std::size_t... J>
+template <typename... A, std::size_t... J>
 std::optional<std::tuple<A...>> AllElementsPresentHelper(
     std::tuple<std::optional<A>...> &&t, std::index_sequence<J...>) {
   bool present[]{std::get<J>(t).has_value()...};
@@ -236,7 +236,7 @@ std::optional<std::tuple<A...>> AllElementsPresentHelper(
   return {std::make_tuple(*std::get<J>(t)...)};
 }
 
-template<typename... A>
+template <typename... A>
 std::optional<std::tuple<A...>> AllElementsPresent(
     std::tuple<std::optional<A>...> &&t) {
   return AllElementsPresentHelper(
@@ -246,7 +246,7 @@ std::optional<std::tuple<A...>> AllElementsPresent(
 // std::vector<std::optional<A>> -> std::optional<std::vector<A>>
 // i.e., inverts a vector of optional values into an optional vector that
 // will have a value only when all of the original elements are present.
-template<typename A>
+template <typename A>
 std::optional<std::vector<A>> AllElementsPresent(
     std::vector<std::optional<A>> &&v) {
   for (const auto &maybeA : v) {
@@ -264,7 +264,7 @@ std::optional<std::vector<A>> AllElementsPresent(
 // (std::optional<>...) -> std::optional<std::tuple<...>>
 // i.e., given some number of optional values, return a optional tuple of
 // those values that is present only of all of the values were so.
-template<typename... A>
+template <typename... A>
 std::optional<std::tuple<A...>> AllPresent(std::optional<A> &&... x) {
   return AllElementsPresent(std::make_tuple(std::move(x)...));
 }
@@ -274,7 +274,7 @@ std::optional<std::tuple<A...>> AllPresent(std::optional<A> &&... x) {
 // N.B. If the function returns std::optional, MapOptional will return
 // std::optional<std::optional<...>> and you will probably want to
 // run it through JoinOptional to "squash" it.
-template<typename R, typename... A>
+template <typename R, typename... A>
 std::optional<R> MapOptional(
     std::function<R(A &&...)> &&f, std::optional<A> &&... x) {
   if (auto args{AllPresent(std::move(x)...)}) {
@@ -282,7 +282,7 @@ std::optional<R> MapOptional(
   }
   return std::nullopt;
 }
-template<typename R, typename... A>
+template <typename R, typename... A>
 std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&... x) {
   return MapOptional(std::function<R(A && ...)>{f}, std::move(x)...);
 }
@@ -297,7 +297,7 @@ std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&... x) {
 // and invoke VISITOR::Test<T>() on each until it returns a value that
 // casts to true.  If no invocation of Test succeeds, SearchTypes will
 // return a default value.
-template<std::size_t J, typename VISITOR>
+template <std::size_t J, typename VISITOR>
 common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
     VISITOR &&visitor, typename VISITOR::Result &&defaultResult) {
   using Tuple = typename VISITOR::Types;
@@ -312,12 +312,12 @@ common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
   }
 }
 
-template<typename VISITOR>
+template <typename VISITOR>
 common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypes(
     VISITOR &&visitor,
     typename VISITOR::Result defaultResult = typename VISITOR::Result{}) {
   return SearchTypesHelper<0, VISITOR>(
       std::move(visitor), std::move(defaultResult));
 }
-}
-#endif  // FORTRAN_COMMON_TEMPLATE_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_TEMPLATE_H_

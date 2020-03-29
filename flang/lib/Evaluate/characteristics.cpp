@@ -24,7 +24,7 @@ using namespace Fortran::parser::literals;
 namespace Fortran::evaluate::characteristics {
 
 // Copy attributes from a symbol to dst based on the mapping in pairs.
-template<typename A, typename B>
+template <typename A, typename B>
 static void CopyAttrs(const semantics::Symbol &src, A &dst,
     const std::initializer_list<std::pair<semantics::Attr, B>> &pairs) {
   for (const auto &pair : pairs) {
@@ -245,17 +245,17 @@ bool DummyDataObject::CanBePassedViaImplicitInterface() const {
           Attrs{Attr::Allocatable, Attr::Asynchronous, Attr::Optional,
               Attr::Pointer, Attr::Target, Attr::Value, Attr::Volatile})
           .any()) {
-    return false;  // 15.4.2.2(3)(a)
+    return false; // 15.4.2.2(3)(a)
   } else if ((type.attrs() &
                  TypeAndShape::Attrs{TypeAndShape::Attr::AssumedShape,
                      TypeAndShape::Attr::AssumedRank,
                      TypeAndShape::Attr::Coarray})
                  .any()) {
-    return false;  // 15.4.2.2(3)(b-d)
+    return false; // 15.4.2.2(3)(b-d)
   } else if (type.type().IsPolymorphic()) {
-    return false;  // 15.4.2.2(3)(f)
+    return false; // 15.4.2.2(3)(f)
   } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
-    return derived->parameters().empty();  // 15.4.2.2(3)(e)
+    return derived->parameters().empty(); // 15.4.2.2(3)(e)
   } else {
     return true;
   }
@@ -278,7 +278,7 @@ llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
 }
 
 DummyProcedure::DummyProcedure(Procedure &&p)
-  : procedure{new Procedure{std::move(p)}} {}
+    : procedure{new Procedure{std::move(p)}} {}
 
 bool DummyProcedure::operator==(const DummyProcedure &that) const {
   return attrs == that.attrs && intent == that.intent &&
@@ -322,7 +322,7 @@ llvm::raw_ostream &AlternateReturn::Dump(llvm::raw_ostream &o) const {
 DummyArgument::~DummyArgument() {}
 
 bool DummyArgument::operator==(const DummyArgument &that) const {
-  return u == that.u;  // name and passed-object usage are not characteristics
+  return u == that.u; // name and passed-object usage are not characteristics
 }
 
 std::optional<DummyArgument> DummyArgument::Characterize(
@@ -398,16 +398,15 @@ bool DummyArgument::IsOptional() const {
 }
 
 void DummyArgument::SetOptional(bool value) {
-  std::visit(
-      common::visitors{
-          [value](DummyDataObject &data) {
-            data.attrs.set(DummyDataObject::Attr::Optional, value);
-          },
-          [value](DummyProcedure &proc) {
-            proc.attrs.set(DummyProcedure::Attr::Optional, value);
-          },
-          [](AlternateReturn &) { DIE("cannot set optional"); },
-      },
+  std::visit(common::visitors{
+                 [value](DummyDataObject &data) {
+                   data.attrs.set(DummyDataObject::Attr::Optional, value);
+                 },
+                 [value](DummyProcedure &proc) {
+                   proc.attrs.set(DummyProcedure::Attr::Optional, value);
+                 },
+                 [](AlternateReturn &) { DIE("cannot set optional"); },
+             },
       u);
 }
 
@@ -470,17 +469,17 @@ bool FunctionResult::IsAssumedLengthCharacter() const {
 
 bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
   if (attrs.test(Attr::Pointer) || attrs.test(Attr::Allocatable)) {
-    return false;  // 15.4.2.2(4)(b)
+    return false; // 15.4.2.2(4)(b)
   } else if (const auto *typeAndShape{GetTypeAndShape()}) {
     if (typeAndShape->Rank() > 0) {
-      return false;  // 15.4.2.2(4)(a)
+      return false; // 15.4.2.2(4)(a)
     } else {
       const DynamicType &type{typeAndShape->type()};
       switch (type.category()) {
       case TypeCategory::Character:
         if (const auto *param{type.charLength()}) {
           if (const auto &expr{param->GetExplicit()}) {
-            return IsConstantExpr(*expr);  // 15.4.2.2(4)(c)
+            return IsConstantExpr(*expr); // 15.4.2.2(4)(c)
           }
         }
         return false;
@@ -490,38 +489,39 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
           for (const auto &pair : spec.parameters()) {
             if (const auto &expr{pair.second.GetExplicit()}) {
               if (!IsConstantExpr(*expr)) {
-                return false;  // 15.4.2.2(4)(c)
+                return false; // 15.4.2.2(4)(c)
               }
             }
           }
           return true;
         }
         return false;
-      default: return true;
+      default:
+        return true;
       }
     }
   } else {
-    return false;  // 15.4.2.2(4)(b) - procedure pointer
+    return false; // 15.4.2.2(4)(b) - procedure pointer
   }
 }
 
 llvm::raw_ostream &FunctionResult::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
-  std::visit(
-      common::visitors{
-          [&](const TypeAndShape &ts) { ts.Dump(o); },
-          [&](const CopyableIndirection<Procedure> &p) {
-            p.value().Dump(o << " procedure(") << ')';
-          },
-      },
+  std::visit(common::visitors{
+                 [&](const TypeAndShape &ts) { ts.Dump(o); },
+                 [&](const CopyableIndirection<Procedure> &p) {
+                   p.value().Dump(o << " procedure(") << ')';
+                 },
+             },
       u);
   return o;
 }
 
 Procedure::Procedure(FunctionResult &&fr, DummyArguments &&args, Attrs a)
-  : functionResult{std::move(fr)}, dummyArguments{std::move(args)}, attrs{a} {}
+    : functionResult{std::move(fr)}, dummyArguments{std::move(args)}, attrs{a} {
+}
 Procedure::Procedure(DummyArguments &&args, Attrs a)
-  : dummyArguments{std::move(args)}, attrs{a} {}
+    : dummyArguments{std::move(args)}, attrs{a} {}
 Procedure::~Procedure() {}
 
 bool Procedure::operator==(const Procedure &that) const {
@@ -573,7 +573,7 @@ std::optional<Procedure> Procedure::Characterize(
       });
   if (result.attrs.test(Attr::Elemental) &&
       !symbol.attrs().test(semantics::Attr::IMPURE)) {
-    result.attrs.set(Attr::Pure);  // explicitly flag pure procedures
+    result.attrs.set(Attr::Pure); // explicitly flag pure procedures
   }
   return std::visit(
       common::visitors{
@@ -686,7 +686,7 @@ std::optional<Procedure> Procedure::Characterize(
 
 bool Procedure::CanBeCalledViaImplicitInterface() const {
   if (attrs.test(Attr::Elemental) || attrs.test(Attr::BindC)) {
-    return false;  // 15.4.2.2(5,6)
+    return false; // 15.4.2.2(5,6)
   } else if (IsFunction() &&
       !functionResult->CanBeReturnedViaImplicitInterface()) {
     return false;
@@ -765,11 +765,11 @@ bool DistinguishUtils::DistinguishableOpOrAssign(
   auto &args1{proc1.dummyArguments};
   auto &args2{proc2.dummyArguments};
   if (args1.size() != args2.size()) {
-    return true;  // C1511: distinguishable based on number of arguments
+    return true; // C1511: distinguishable based on number of arguments
   }
   for (std::size_t i{0}; i < args1.size(); ++i) {
     if (Distinguishable(args1[i], args2[i])) {
-      return true;  // C1511, C1512: distinguishable based on this arg
+      return true; // C1511, C1512: distinguishable based on this arg
     }
   }
   return false;
@@ -782,23 +782,23 @@ bool DistinguishUtils::Distinguishable(
   auto count1{CountDummyProcedures(args1)};
   auto count2{CountDummyProcedures(args2)};
   if (count1.notOptional > count2.total || count2.notOptional > count1.total) {
-    return true;  // distinguishable based on C1514 rule 2
+    return true; // distinguishable based on C1514 rule 2
   }
   if (Rule3Distinguishable(proc1, proc2)) {
-    return true;  // distinguishable based on C1514 rule 3
+    return true; // distinguishable based on C1514 rule 3
   }
   if (Rule1DistinguishingArg(args1, args2)) {
-    return true;  // distinguishable based on C1514 rule 1
+    return true; // distinguishable based on C1514 rule 1
   }
   int pos1{FindFirstToDistinguishByPosition(args1, args2)};
   int name1{FindLastToDistinguishByName(args1, args2)};
   if (pos1 >= 0 && pos1 <= name1) {
-    return true;  // distinguishable based on C1514 rule 4
+    return true; // distinguishable based on C1514 rule 4
   }
   int pos2{FindFirstToDistinguishByPosition(args2, args1)};
   int name2{FindLastToDistinguishByName(args2, args1)};
   if (pos2 >= 0 && pos2 <= name2) {
-    return true;  // distinguishable based on C1514 rule 4
+    return true; // distinguishable based on C1514 rule 4
   }
   return false;
 }
@@ -843,7 +843,7 @@ const DummyArgument *DistinguishUtils::Rule1DistinguishingArg(
 // - the dummy argument at that position is distinguishable from it
 int DistinguishUtils::FindFirstToDistinguishByPosition(
     const DummyArguments &args1, const DummyArguments &args2) {
-  int effective{0};  // position of arg1 in list, ignoring passed arg
+  int effective{0}; // position of arg1 in list, ignoring passed arg
   for (std::size_t i{0}; i < args1.size(); ++i) {
     const DummyArgument &arg1{args1.at(i)};
     if (!arg1.pass && !arg1.IsOptional()) {
@@ -901,7 +901,7 @@ int DistinguishUtils::CountNotDistinguishableFrom(
 bool DistinguishUtils::Distinguishable(
     const DummyArgument &x, const DummyArgument &y) {
   if (x.u.index() != y.u.index()) {
-    return true;  // different kind: data/proc/alt-return
+    return true; // different kind: data/proc/alt-return
   }
   return std::visit(
       common::visitors{
@@ -949,7 +949,7 @@ bool DistinguishUtils::Distinguishable(
 bool DistinguishUtils::Distinguishable(
     const FunctionResult &x, const FunctionResult &y) {
   if (x.u.index() != y.u.index()) {
-    return true;  // one is data object, one is procedure
+    return true; // one is data object, one is procedure
   }
   return std::visit(
       common::visitors{
@@ -1020,7 +1020,7 @@ DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyArgument)
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyProcedure)
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(FunctionResult)
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(Procedure)
-}
+} // namespace Fortran::evaluate::characteristics
 
 template class Fortran::common::Indirection<
     Fortran::evaluate::characteristics::Procedure, true>;

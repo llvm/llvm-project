@@ -10,7 +10,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Character, KIND>> &&funcRef) {
@@ -38,14 +38,14 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "new_line") {
     return Expr<T>{Constant<T>{CharacterUtils<KIND>::NEW_LINE()}};
-  } else if (name == "repeat") {  // not elemental
+  } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
             context, funcRef.arguments())}) {
       return Expr<T>{Constant<T>{
           CharacterUtils<KIND>::REPEAT(std::get<Scalar<T>>(*scalars),
               std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64())}};
     }
-  } else if (name == "trim") {  // not elemental
+  } else if (name == "trim") { // not elemental
     if (auto scalar{
             GetScalarConstantArguments<T>(context, funcRef.arguments())}) {
       return Expr<T>{Constant<T>{
@@ -57,7 +57,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
     FoldingContext &context, Concat<KIND> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
@@ -70,7 +70,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
   return Expr<Result>{std::move(x)};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
     FoldingContext &context, SetLength<KIND> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
@@ -93,4 +93,4 @@ Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
 
 FOR_EACH_CHARACTER_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeCharacter>;
-}
+} // namespace Fortran::evaluate

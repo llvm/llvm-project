@@ -80,7 +80,7 @@ typedef signed char CFI_type_t;
 #define CFI_type_char 32
 #define CFI_type_cptr 33
 #define CFI_type_struct 34
-#define CFI_type_other (-1)  // must be negative
+#define CFI_type_other (-1) // must be negative
 
 /* Error code macros */
 #define CFI_SUCCESS 0 /* must be zero */
@@ -108,13 +108,13 @@ namespace cfi_internal {
 // The below structure emulates a flexible array. This structure does not take
 // care of getting the memory storage. Note that it already contains one element
 // because a struct cannot be empty.
-template<typename T> struct FlexibleArray : T {
+template <typename T> struct FlexibleArray : T {
   T &operator[](int index) { return *(this + index); }
   const T &operator[](int index) const { return *(this + index); }
   operator T *() { return this; }
   operator const T *() const { return this; }
 };
-}
+} // namespace cfi_internal
 #endif
 
 /* 18.5.3 generic data descriptor */
@@ -139,13 +139,13 @@ typedef struct CFI_cdesc_t {
 // The struct below take care of getting the memory storage for C++ CFI_cdesc_t
 // that contain an emulated flexible array.
 namespace cfi_internal {
-template<int r> struct CdescStorage : public CFI_cdesc_t {
+template <int r> struct CdescStorage : public CFI_cdesc_t {
   static_assert((r > 1 && r <= CFI_MAX_RANK), "CFI_INVALID_RANK");
   CFI_dim_t dim[r - 1];
 };
-template<> struct CdescStorage<1> : public CFI_cdesc_t {};
-template<> struct CdescStorage<0> : public CFI_cdesc_t {};
-}
+template <> struct CdescStorage<1> : public CFI_cdesc_t {};
+template <> struct CdescStorage<0> : public CFI_cdesc_t {};
+} // namespace cfi_internal
 #define CFI_CDESC_T(rank) cfi_internal::CdescStorage<rank>
 #else
 #define CFI_CDESC_T(rank) \
@@ -174,8 +174,8 @@ int CFI_select_part(CFI_cdesc_t *, const CFI_cdesc_t *source,
 int CFI_setpointer(
     CFI_cdesc_t *, const CFI_cdesc_t *source, const CFI_index_t lower_bounds[]);
 #ifdef __cplusplus
-}  // extern "C"
-}  // inline namespace Fortran_2018
+} // extern "C"
+} // inline namespace Fortran_2018
 }
 }
 #endif

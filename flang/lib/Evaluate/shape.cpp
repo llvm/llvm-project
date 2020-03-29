@@ -18,7 +18,7 @@
 #include "flang/Semantics/symbol.h"
 #include <functional>
 
-using namespace std::placeholders;  // _1, _2, &c. for std::bind()
+using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
 
@@ -36,7 +36,7 @@ bool IsExplicitShape(const Symbol &symbol0) {
   const Symbol &symbol{ResolveAssociations(symbol0)};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     const auto &shape{details->shape()};
-    return shape.Rank() == 0 || shape.IsExplicitShape();  // even if scalar
+    return shape.Rank() == 0 || shape.IsExplicitShape(); // even if scalar
   } else {
     return false;
   }
@@ -186,7 +186,7 @@ public:
   using Base = Traverse<GetLowerBoundHelper, ExtentExpr>;
   using Base::operator();
   GetLowerBoundHelper(FoldingContext &c, int d)
-    : Base{*this}, context_{c}, dimension_{d} {}
+      : Base{*this}, context_{c}, dimension_{d} {}
   static ExtentExpr Default() { return ExtentExpr{1}; }
   static ExtentExpr Combine(Result &&, Result &&) { return Default(); }
   ExtentExpr operator()(const Symbol &);
@@ -318,7 +318,7 @@ MaybeExtentExpr GetExtent(FoldingContext &context, const Subscript &subscript,
           [&](const IndirectSubscriptIntegerExpr &subs) -> MaybeExtentExpr {
             if (auto shape{GetShape(context, subs.value())}) {
               if (GetRank(*shape) > 0) {
-                CHECK(GetRank(*shape) == 1);  // vector-valued subscript
+                CHECK(GetRank(*shape) == 1); // vector-valued subscript
                 return std::move(shape->at(0));
               }
             }
@@ -378,7 +378,7 @@ Shape GetUpperBounds(FoldingContext &context, const NamedEntity &base) {
         result.emplace_back(Fold(context, common::Clone(*bound)));
       } else if (details->IsAssumedSize()) {
         CHECK(dim + 1 == base.Rank());
-        result.emplace_back(std::nullopt);  // UBOUND folding replaces with -1
+        result.emplace_back(std::nullopt); // UBOUND folding replaces with -1
       } else {
         result.emplace_back(ComputeUpperBound(context,
             GetLowerBound(context, base, dim), GetExtent(context, base, dim)));
@@ -409,7 +409,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             }
           },
           [](const semantics::EntityDetails &) {
-            return Scalar();  // no dimensions seen
+            return Scalar(); // no dimensions seen
           },
           [&](const semantics::ProcEntityDetails &proc) {
             if (const Symbol * interface{proc.interface().symbol()}) {
@@ -617,7 +617,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         }
       }
     } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) {  // NULL(MOLD=)
+                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results
@@ -653,4 +653,4 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
   }
   return true;
 }
-}
+} // namespace Fortran::evaluate

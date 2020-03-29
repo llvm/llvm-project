@@ -40,4 +40,4 @@ std::string EnumIndexToString(int index, const char *enumNames) {
   }
   return std::string(p, q - p);
 }
-}
+} // namespace Fortran::common

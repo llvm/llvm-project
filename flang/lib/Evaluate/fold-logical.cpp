@@ -11,7 +11,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Logical, KIND>> &&funcRef) {
@@ -21,7 +21,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "all") {
-    if (!args[1]) {  // TODO: ALL(x,DIM=d)
+    if (!args[1]) { // TODO: ALL(x,DIM=d)
       if (const auto *constant{UnwrapConstantValue<T>(args[0])}) {
         bool result{true};
         for (const auto &element : constant->values()) {
@@ -34,7 +34,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "any") {
-    if (!args[1]) {  // TODO: ANY(x,DIM=d)
+    if (!args[1]) { // TODO: ANY(x,DIM=d)
       if (const auto *constant{UnwrapConstantValue<T>(args[0])}) {
         bool result{false};
         for (const auto &element : constant->values()) {
@@ -61,7 +61,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       }
     }
     auto fptr{&Scalar<LargestInt>::BGE};
-    if (name == "bge") {  // done in fptr declaration
+    if (name == "bge") { // done in fptr declaration
     } else if (name == "bgt") {
       fptr = &Scalar<LargestInt>::BGT;
     } else if (name == "ble") {
@@ -95,7 +95,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
-template<typename T>
+template <typename T>
 Expr<LogicalResult> FoldOperation(
     FoldingContext &context, Relational<T> &&relation) {
   if (auto array{ApplyElementwise(context, relation,
@@ -133,7 +133,7 @@ Expr<LogicalResult> FoldOperation(
       std::move(relation.u));
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
     FoldingContext &context, Not<KIND> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
@@ -147,7 +147,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   return Expr<Ty>{x};
 }
 
-template<int KIND>
+template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
     FoldingContext &context, LogicalOperation<KIND> &&operation) {
   using LOGICAL = Type<TypeCategory::Logical, KIND>;
@@ -162,11 +162,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   if (auto folded{OperandsAreConstants(operation)}) {
     bool xt{folded->first.IsTrue()}, yt{folded->second.IsTrue()}, result{};
     switch (operation.logicalOperator) {
-    case LogicalOperator::And: result = xt && yt; break;
-    case LogicalOperator::Or: result = xt || yt; break;
-    case LogicalOperator::Eqv: result = xt == yt; break;
-    case LogicalOperator::Neqv: result = xt != yt; break;
-    case LogicalOperator::Not: DIE("not a binary operator");
+    case LogicalOperator::And:
+      result = xt && yt;
+      break;
+    case LogicalOperator::Or:
+      result = xt || yt;
+      break;
+    case LogicalOperator::Eqv:
+      result = xt == yt;
+      break;
+    case LogicalOperator::Neqv:
+      result = xt != yt;
+      break;
+    case LogicalOperator::Not:
+      DIE("not a binary operator");
     }
     return Expr<LOGICAL>{Constant<LOGICAL>{result}};
   }
@@ -175,4 +184,4 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
 
 FOR_EACH_LOGICAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeLogical>;
-}
+} // namespace Fortran::evaluate

@@ -50,12 +50,12 @@ private:
   // comprise two default REAL components.
   int defaultIntegerKind_{4};
   int subscriptIntegerKind_{8};
-  int sizeIntegerKind_{4};  // SIZE(), UBOUND(), &c. default KIND=
+  int sizeIntegerKind_{4}; // SIZE(), UBOUND(), &c. default KIND=
   int defaultRealKind_{defaultIntegerKind_};
   int doublePrecisionKind_{2 * defaultRealKind_};
   int quadPrecisionKind_{2 * doublePrecisionKind_};
   int defaultCharacterKind_{1};
   int defaultLogicalKind_{defaultIntegerKind_};
 };
-}
-#endif  // FORTRAN_COMMON_DEFAULT_KINDS_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_DEFAULT_KINDS_H_

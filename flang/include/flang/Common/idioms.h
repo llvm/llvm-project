@@ -34,11 +34,11 @@
 #if __GNUC__ == 7
 // Avoid a deduction bug in GNU 7.x headers by forcing the answer.
 namespace std {
-template<typename A>
+template <typename A>
 struct is_trivially_copy_constructible<list<A>> : false_type {};
-template<typename A>
+template <typename A>
 struct is_trivially_copy_constructible<optional<list<A>>> : false_type {};
-}
+} // namespace std
 #endif
 
 // enable "this is a std::string"s with the 's' suffix
@@ -54,11 +54,11 @@ namespace Fortran::common {
 //         ...
 //         [&](const auto &catchAll) { ... }}, variantObject);
 
-template<typename... LAMBDAS> struct visitors : LAMBDAS... {
+template <typename... LAMBDAS> struct visitors : LAMBDAS... {
   using LAMBDAS::operator()...;
 };
 
-template<typename... LAMBDAS> visitors(LAMBDAS... x)->visitors<LAMBDAS...>;
+template <typename... LAMBDAS> visitors(LAMBDAS... x) -> visitors<LAMBDAS...>;
 
 // Calls std::fprintf(stderr, ...), then abort().
 [[noreturn]] void die(const char *, ...);
@@ -93,11 +93,11 @@ template<typename... LAMBDAS> visitors(LAMBDAS... x)->visitors<LAMBDAS...>;
 // in template specialization definitions.
 #define CLASS_TRAIT(T) \
   namespace class_trait_ns_##T { \
-    template<typename A> std::true_type test(typename A::T *); \
-    template<typename A> std::false_type test(...); \
-    template<typename A> \
+    template <typename A> std::true_type test(typename A::T *); \
+    template <typename A> std::false_type test(...); \
+    template <typename A> \
     constexpr bool has_trait{decltype(test<A>(nullptr))::value}; \
-    template<typename A> constexpr bool trait_value() { \
+    template <typename A> constexpr bool trait_value() { \
       if constexpr (has_trait<A>) { \
         using U = typename A::T; \
         return U::value; \
@@ -106,7 +106,7 @@ template<typename... LAMBDAS> visitors(LAMBDAS... x)->visitors<LAMBDAS...>;
       } \
     } \
   } \
-  template<typename A> constexpr bool T{class_trait_ns_##T::trait_value<A>()};
+  template <typename A> constexpr bool T{class_trait_ns_##T::trait_value<A>()};
 
 #if !defined ATTRIBUTE_UNUSED && (__clang__ || __GNUC__)
 #define ATTRIBUTE_UNUSED __attribute__((unused))
@@ -119,7 +119,7 @@ template<typename... LAMBDAS> visitors(LAMBDAS... x)->visitors<LAMBDAS...>;
 
 std::string EnumIndexToString(int index, const char *names);
 
-template<typename A> struct ListItemCount {
+template <typename A> struct ListItemCount {
   constexpr ListItemCount(std::initializer_list<A> list) : value{list.size()} {}
   const std::size_t value;
 };
@@ -138,7 +138,7 @@ template<typename A> struct ListItemCount {
 // Check that a pointer is non-null and dereference it
 #define DEREF(p) Fortran::common::Deref(p, __FILE__, __LINE__)
 
-template<typename T> constexpr T &Deref(T *p, const char *file, int line) {
+template <typename T> constexpr T &Deref(T *p, const char *file, int line) {
   if (!p) {
     Fortran::common::die("nullptr dereference at %s(%d)", file, line);
   }
@@ -146,7 +146,7 @@ template<typename T> constexpr T &Deref(T *p, const char *file, int line) {
 }
 
 // Given a const reference to a value, return a copy of the value.
-template<typename A> A Clone(const A &x) { return x; }
+template <typename A> A Clone(const A &x) { return x; }
 
 // C++ does a weird and dangerous thing when deducing template type parameters
 // from function arguments: lvalue references are allowed to match rvalue
@@ -159,8 +159,8 @@ template<typename A> A Clone(const A &x) { return x; }
 // or, for constructors,
 //   template<typename A, typename = common::NoLvalue<A>> int foo(A &&);
 // This works with parameter packs too.
-template<typename A, typename... B>
+template <typename A, typename... B>
 using IfNoLvalue = std::enable_if_t<(... && !std::is_lvalue_reference_v<B>), A>;
-template<typename... RVREF> using NoLvalue = IfNoLvalue<void, RVREF...>;
-}
-#endif  // FORTRAN_COMMON_IDIOMS_H_
+template <typename... RVREF> using NoLvalue = IfNoLvalue<void, RVREF...>;
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_IDIOMS_H_

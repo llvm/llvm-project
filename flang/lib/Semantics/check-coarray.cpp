@@ -21,12 +21,12 @@ class CriticalBodyEnforce {
 public:
   CriticalBodyEnforce(
       SemanticsContext &context, parser::CharBlock criticalSourcePosition)
-    : context_{context}, criticalSourcePosition_{criticalSourcePosition} {}
+      : context_{context}, criticalSourcePosition_{criticalSourcePosition} {}
   std::set<parser::Label> labels() { return labels_; }
-  template<typename T> bool Pre(const T &) { return true; }
-  template<typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
 
-  template<typename T> bool Pre(const parser::Statement<T> &statement) {
+  template <typename T> bool Pre(const parser::Statement<T> &statement) {
     currentStatementSourcePosition_ = statement.source;
     if (statement.label.has_value()) {
       labels_.insert(*statement.label);
@@ -62,11 +62,11 @@ private:
   parser::CharBlock criticalSourcePosition_;
 };
 
-template<typename T>
+template <typename T>
 static void CheckTeamType(SemanticsContext &context, const T &x) {
   if (const auto *expr{GetExpr(x)}) {
     if (!IsTeamType(evaluate::GetDerivedTypeSpec(expr->GetType()))) {
-      context.Say(parser::FindSourceLocation(x),  // C1114
+      context.Say(parser::FindSourceLocation(x), // C1114
           "Team value must be of type TEAM_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
     }
   }
@@ -118,10 +118,10 @@ void CoarrayChecker::CheckNamesAreDistinct(
     const auto &selector{std::get<parser::Selector>(assoc.t)};
     const auto &declName{std::get<parser::Name>(decl.t)};
     if (context_.HasError(declName)) {
-      continue;  // already reported an error about this name
+      continue; // already reported an error about this name
     }
     if (auto *prev{getPreviousUse(declName)}) {
-      Say2(declName.source,  // C1113
+      Say2(declName.source, // C1113
           "Coarray '%s' was already used as a selector or coarray in this statement"_err_en_US,
           *prev, "Previous use of '%s'"_en_US);
     }
@@ -129,7 +129,7 @@ void CoarrayChecker::CheckNamesAreDistinct(
     const parser::Name *name{parser::Unwrap<parser::Name>(selector)};
     if (name) {
       if (auto *prev{getPreviousUse(*name)}) {
-        Say2(name->source,  // C1113, C1115
+        Say2(name->source, // C1113, C1115
             "Selector '%s' was already used as a selector or coarray in this statement"_err_en_US,
             *prev, "Previous use of '%s'"_en_US);
       }
@@ -143,4 +143,4 @@ void CoarrayChecker::Say2(const parser::CharBlock &name1,
   context_.Say(name1, std::move(msg1), name1)
       .Attach(name2, std::move(msg2), name2);
 }
-}
+} // namespace Fortran::semantics

@@ -17,7 +17,7 @@
 
 namespace Fortran::decimal {
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
     const char *&p, bool &inexact) {
   SetToZero();
@@ -43,7 +43,7 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
     }
   }
   if (q == start || (q == start + 1 && *start == '.')) {
-    return false;  // require at least one digit
+    return false; // require at least one digit
   }
   // There's a valid number here; set the reference argument to point to
   // the first character afterward.
@@ -81,7 +81,7 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
     exponent_ -= static_cast<int>(q - point - 1);
   }
   if (q == first) {
-    exponent_ = 0;  // all zeros
+    exponent_ = 0; // all zeros
   }
   // Rack the decimal digits up into big Digits.
   for (auto times{radix}; q-- > first;) {
@@ -125,7 +125,7 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
         expo = 10 * Real::decimalRange;
         exponent_ = 0;
       }
-      p = q;  // exponent was valid
+      p = q; // exponent was valid
       if (negExpo) {
         exponent_ -= expo;
       } else {
@@ -133,7 +133,8 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
       }
     }
   } break;
-  default: break;
+  default:
+    break;
   }
   return true;
 }
@@ -142,7 +143,7 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
 // binary floating-point value with an unbiased (i.e., signed)
 // binary exponent, an integer value (not a fraction) with an implied
 // binary point to its *right*, and some guard bits for rounding.
-template<int PREC> class IntermediateFloat {
+template <int PREC> class IntermediateFloat {
 public:
   static constexpr int precision{PREC};
   using IntType = common::HostUnsignedIntType<precision>;
@@ -154,7 +155,7 @@ public:
 
   // Assumes that exponent_ is valid on entry, and may increment it.
   // Returns the number of guard_ bits that have been determined.
-  template<typename UINT> bool SetTo(UINT n) {
+  template <typename UINT> bool SetTo(UINT n) {
     static constexpr int nBits{CHAR_BIT * sizeof n};
     if constexpr (precision >= nBits) {
       value_ = n;
@@ -187,7 +188,7 @@ public:
       bool isNegative, FortranRounding) const;
 
 private:
-  static constexpr int guardBits{3};  // guard, round, sticky
+  static constexpr int guardBits{3}; // guard, round, sticky
   using GuardType = int;
   static constexpr GuardType oneHalf{GuardType{1} << (guardBits - 1)};
 
@@ -196,7 +197,7 @@ private:
   int exponent_{0};
 };
 
-template<int PREC>
+template <int PREC>
 ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     bool isNegative, FortranRounding rounding) const {
   using Binary = BinaryFloatingPointNumber<PREC>;
@@ -231,10 +232,17 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   case RoundDefault:
     incr = guard > oneHalf || (guard == oneHalf && (fraction & 1));
     break;
-  case RoundUp: incr = guard != 0 && !isNegative; break;
-  case RoundDown: incr = guard != 0 && isNegative; break;
-  case RoundToZero: break;
-  case RoundCompatible: incr = guard >= oneHalf; break;
+  case RoundUp:
+    incr = guard != 0 && !isNegative;
+    break;
+  case RoundDown:
+    incr = guard != 0 && isNegative;
+    break;
+  case RoundToZero:
+    break;
+  case RoundCompatible:
+    incr = guard >= oneHalf;
+    break;
   }
   if (incr) {
     if (fraction == mask) {
@@ -246,10 +254,10 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     }
   }
   if (expo == 1 && fraction < topBit) {
-    expo = 0;  // subnormal
+    expo = 0; // subnormal
   }
   if (expo >= Binary::maxExponent) {
-    expo = Binary::maxExponent;  // Inf
+    expo = Binary::maxExponent; // Inf
     flags |= Overflow;
     fraction = 0;
   }
@@ -263,14 +271,14 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   return {Binary(raw), static_cast<enum ConversionResultFlags>(flags)};
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 ConversionToBinaryResult<PREC>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   // On entry, *this holds a multi-precision integer value in a radix of a
   // large power of ten.  Its radix point is defined to be to the right of its
   // digits, and "exponent_" is the power of ten by which it is to be scaled.
   Normalize();
-  if (digits_ == 0) {  // zero value
+  if (digits_ == 0) { // zero value
     return {Real{SignBit()}};
   }
   // The value is not zero:  x = D. * 10.**E
@@ -279,9 +287,9 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   exponent_ += digits_ * log10Radix;
   // Sanity checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
-  if (exponent_ < -crazy) {  // underflow to +/-0.
+  if (exponent_ < -crazy) { // underflow to +/-0.
     return {Real{SignBit()}, Inexact};
-  } else if (exponent_ > crazy) {  // overflow to +/-Inf.
+  } else if (exponent_ > crazy) { // overflow to +/-Inf.
     return {Real{Infinity()}, Overflow};
   }
   // Apply any negative decimal exponent by multiplication
@@ -346,7 +354,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   return f.ToBinary(isNegative_, rounding_);
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 ConversionToBinaryResult<PREC>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(const char *&p) {
   bool inexact{false};
@@ -383,7 +391,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(const char *&p) {
   }
 }
 
-template<int PREC>
+template <int PREC>
 ConversionToBinaryResult<PREC> ConvertToBinary(
     const char *&p, enum FortranRounding rounding) {
   return BigRadixFloatingPointNumber<PREC>{rounding}.ConvertToBinary(p);
@@ -427,4 +435,4 @@ enum ConversionResultFlags ConvertDecimalToLongDouble(
 }
 #endif
 }
-}
+} // namespace Fortran::decimal

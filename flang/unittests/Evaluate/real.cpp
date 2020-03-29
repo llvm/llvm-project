@@ -45,7 +45,7 @@ void dumpTest() {
   }
 }
 
-template<typename R> void basicTests(int rm, Rounding rounding) {
+template <typename R> void basicTests(int rm, Rounding rounding) {
   static constexpr int kind{R::bits / 8};
   char desc[64];
   using Word = typename R::Word;
@@ -148,7 +148,7 @@ template<typename R> void basicTests(int rm, Rounding rounding) {
       TEST(!vr.value.IsInfinite())(ldesc);
       TEST(ivf.flags.empty())(ldesc);
       MATCH(x, ivf.value.ToUInt64())(ldesc);
-      if (rounding.mode == RoundingMode::TiesToEven) {  // to match stold()
+      if (rounding.mode == RoundingMode::TiesToEven) { // to match stold()
         std::string buf;
         llvm::raw_string_ostream ss{buf};
         vr.value.AsFortran(ss, kind, false /*exact*/);
@@ -284,9 +284,9 @@ inline std::uint32_t FlagsToBits(const RealFlags &flags) {
   }
   return bits;
 }
-#endif  // __clang__
+#endif // __clang__
 
-template<typename UINT = std::uint32_t, typename FLT = float, typename REAL>
+template <typename UINT = std::uint32_t, typename FLT = float, typename REAL>
 void inttest(std::int64_t x, int pass, Rounding rounding) {
   union {
     UINT ui;
@@ -296,10 +296,10 @@ void inttest(std::int64_t x, int pass, Rounding rounding) {
   Integer8 ix{x};
   ValueWithRealFlags<REAL> real;
   real = real.value.FromInteger(ix, rounding);
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
   fpenv.ClearFlags();
 #endif
-  FLT fcheck = x;  // TODO unsigned too
+  FLT fcheck = x; // TODO unsigned too
   auto actualFlags{FlagsToBits(fpenv.CurrentFlags())};
   u.f = fcheck;
   UINT rcheck{NormalizeNaN(u.ui)};
@@ -308,7 +308,7 @@ void inttest(std::int64_t x, int pass, Rounding rounding) {
   MATCH(actualFlags, FlagsToBits(real.flags))("%d 0x%llx", pass, x);
 }
 
-template<typename FLT = float> FLT ToIntPower(FLT x, int power) {
+template <typename FLT = float> FLT ToIntPower(FLT x, int power) {
   if (power == 0) {
     return x / x;
   }
@@ -330,7 +330,7 @@ template<typename FLT = float> FLT ToIntPower(FLT x, int power) {
   return result;
 }
 
-template<typename FLT, int decimalDigits>
+template <typename FLT, int decimalDigits>
 FLT TimesIntPowerOfTen(FLT x, int power) {
   if (power > decimalDigits || power < -decimalDigits) {
     auto maxExactPowerOfTen{
@@ -343,7 +343,7 @@ FLT TimesIntPowerOfTen(FLT x, int power) {
   return x * ToIntPower<FLT>(10.0, power);
 }
 
-template<typename UINT = std::uint32_t, typename FLT = float,
+template <typename UINT = std::uint32_t, typename FLT = float,
     typename REAL = Real4>
 void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
   for (int j{0}; j < 63; ++j) {
@@ -372,16 +372,16 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
     // unary operations
     {
       ValueWithRealFlags<REAL> aint{x.ToWholeNumber()};
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
       fpenv.ClearFlags();
 #endif
       FLT fcheck{std::trunc(fj)};
       auto actualFlags{FlagsToBits(fpenv.CurrentFlags())};
-      actualFlags &= ~Inexact;  // x86 std::trunc can set Inexact; AINT ain't
+      actualFlags &= ~Inexact; // x86 std::trunc can set Inexact; AINT ain't
       u.f = fcheck;
 #ifndef __clang__
       if (IsNaN(u.ui)) {
-        actualFlags |= InvalidArgument;  // x86 std::trunc(NaN) workaround
+        actualFlags |= InvalidArgument; // x86 std::trunc(NaN) workaround
       }
 #endif
       UINT rcheck{NormalizeNaN(u.ui)};
@@ -440,7 +440,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       REAL y{typename REAL::Word{std::uint64_t{rk}}};
       {
         ValueWithRealFlags<REAL> sum{x.Add(y, rounding)};
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
         fpenv.ClearFlags();
 #endif
         FLT fcheck{fj + fk};
@@ -457,7 +457,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       }
       {
         ValueWithRealFlags<REAL> diff{x.Subtract(y, rounding)};
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
         fpenv.ClearFlags();
 #endif
         FLT fcheck{fj - fk};
@@ -474,7 +474,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       }
       {
         ValueWithRealFlags<REAL> prod{x.Multiply(y, rounding)};
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
         fpenv.ClearFlags();
 #endif
         FLT fcheck{fj * fk};
@@ -491,7 +491,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       }
       {
         ValueWithRealFlags<REAL> quot{x.Divide(y, rounding)};
-#ifndef __clang__  // broken and also slow
+#ifndef __clang__ // broken and also slow
         fpenv.ClearFlags();
 #endif
         FLT fcheck{fj / fk};
@@ -524,7 +524,7 @@ void roundTest(int rm, Rounding rounding, std::uint32_t opds) {
 
 int main() {
   dumpTest();
-  std::uint32_t opds{512};  // for quick testing by default
+  std::uint32_t opds{512}; // for quick testing by default
   if (const char *p{std::getenv("REAL_TEST_OPERANDS")}) {
     // Use 8192 or 16384 for more exhaustive testing.
     opds = std::atol(p);

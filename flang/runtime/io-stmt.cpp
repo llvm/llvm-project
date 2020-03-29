@@ -25,17 +25,17 @@ std::optional<DataEdit> IoStatementBase::GetNextDataEdit(
   return std::nullopt;
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
     Buffer scalar, std::size_t length, const char *sourceFile, int sourceLine)
-  : IoStatementBase{sourceFile, sourceLine}, unit_{scalar, length} {}
+    : IoStatementBase{sourceFile, sourceLine}, unit_{scalar, length} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
     const Descriptor &d, const char *sourceFile, int sourceLine)
-  : IoStatementBase{sourceFile, sourceLine}, unit_{d, *this} {}
+    : IoStatementBase{sourceFile, sourceLine}, unit_{d, *this} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 bool InternalIoStatementState<DIR, CHAR>::Emit(
     const CharType *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
@@ -45,7 +45,7 @@ bool InternalIoStatementState<DIR, CHAR>::Emit(
   return unit_.Emit(data, chars, *this);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 std::optional<char32_t> InternalIoStatementState<DIR, CHAR>::GetCurrentChar() {
   if constexpr (DIR == Direction::Output) {
     Crash(
@@ -55,7 +55,7 @@ std::optional<char32_t> InternalIoStatementState<DIR, CHAR>::GetCurrentChar() {
   return unit_.GetCurrentChar(*this);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 bool InternalIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
   while (n-- > 0) {
     if (!unit_.AdvanceRecord(*this)) {
@@ -65,15 +65,15 @@ bool InternalIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
   return true;
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 void InternalIoStatementState<DIR, CHAR>::BackspaceRecord() {
   unit_.BackspaceRecord(*this);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 int InternalIoStatementState<DIR, CHAR>::EndIoStatement() {
   if constexpr (DIR == Direction::Output) {
-    unit_.EndIoStatement();  // fill
+    unit_.EndIoStatement(); // fill
   }
   auto result{IoStatementBase::EndIoStatement()};
   if (free_) {
@@ -82,56 +82,57 @@ int InternalIoStatementState<DIR, CHAR>::EndIoStatement() {
   return result;
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 void InternalIoStatementState<DIR, CHAR>::HandleAbsolutePosition(
     std::int64_t n) {
   return unit_.HandleAbsolutePosition(n);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 void InternalIoStatementState<DIR, CHAR>::HandleRelativePosition(
     std::int64_t n) {
   return unit_.HandleRelativePosition(n);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     Buffer buffer, std::size_t length, const CHAR *format,
     std::size_t formatLength, const char *sourceFile, int sourceLine)
-  : InternalIoStatementState<DIR, CHAR>{buffer, length, sourceFile, sourceLine},
-    ioStatementState_{*this}, format_{*this, format, formatLength} {}
+    : InternalIoStatementState<DIR, CHAR>{buffer, length, sourceFile,
+          sourceLine},
+      ioStatementState_{*this}, format_{*this, format, formatLength} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     const Descriptor &d, const CHAR *format, std::size_t formatLength,
     const char *sourceFile, int sourceLine)
-  : InternalIoStatementState<DIR, CHAR>{d, sourceFile, sourceLine},
-    ioStatementState_{*this}, format_{*this, format, formatLength} {}
+    : InternalIoStatementState<DIR, CHAR>{d, sourceFile, sourceLine},
+      ioStatementState_{*this}, format_{*this, format, formatLength} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 int InternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   if constexpr (DIR == Direction::Output) {
-    format_.Finish(*this);  // ignore any remaining input positioning actions
+    format_.Finish(*this); // ignore any remaining input positioning actions
   }
   return InternalIoStatementState<DIR, CHAR>::EndIoStatement();
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalListIoStatementState<DIR, CHAR>::InternalListIoStatementState(
     Buffer buffer, std::size_t length, const char *sourceFile, int sourceLine)
-  : InternalIoStatementState<DIR, CharType>{buffer, length, sourceFile,
-        sourceLine},
-    ioStatementState_{*this} {}
+    : InternalIoStatementState<DIR, CharType>{buffer, length, sourceFile,
+          sourceLine},
+      ioStatementState_{*this} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 InternalListIoStatementState<DIR, CHAR>::InternalListIoStatementState(
     const Descriptor &d, const char *sourceFile, int sourceLine)
-  : InternalIoStatementState<DIR, CharType>{d, sourceFile, sourceLine},
-    ioStatementState_{*this} {}
+    : InternalIoStatementState<DIR, CharType>{d, sourceFile, sourceLine},
+      ioStatementState_{*this} {}
 
 ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
-  : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
+    : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
 
 MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
 
@@ -145,16 +146,16 @@ int ExternalIoStatementBase::EndIoStatement() {
     unit_.leftTabLimit.reset();
   }
   auto result{IoStatementBase::EndIoStatement()};
-  unit_.EndIoStatement();  // annihilates *this in unit_.u_
+  unit_.EndIoStatement(); // annihilates *this in unit_.u_
   return result;
 }
 
 void OpenStatementState::set_path(
     const char *path, std::size_t length, int kind) {
-  if (kind != 1) {  // TODO
+  if (kind != 1) { // TODO
     Crash("OPEN: FILE= with unimplemented: CHARACTER(KIND=%d)", kind);
   }
-  std::size_t bytes{length * kind};  // TODO: UTF-8 encoding of Unicode path
+  std::size_t bytes{length * kind}; // TODO: UTF-8 encoding of Unicode path
   path_ = SaveDefaultCharacter(path, bytes, *this);
   pathLength_ = length;
 }
@@ -180,7 +181,7 @@ int NoopCloseStatementState::EndIoStatement() {
   return result;
 }
 
-template<Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
+template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Output) {
     if (!unit().nonAdvancing) {
       unit().AdvanceRecord(*this);
@@ -190,7 +191,7 @@ template<Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   return ExternalIoStatementBase::EndIoStatement();
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
     Crash("ExternalIoStatementState::Emit(char) called for input statement");
@@ -198,7 +199,7 @@ bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t chars) {
   return unit().Emit(data, chars * sizeof(*data), *this);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool ExternalIoStatementState<DIR>::Emit(
     const char16_t *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
@@ -210,7 +211,7 @@ bool ExternalIoStatementState<DIR>::Emit(
       reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool ExternalIoStatementState<DIR>::Emit(
     const char32_t *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
@@ -222,7 +223,7 @@ bool ExternalIoStatementState<DIR>::Emit(
       reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 std::optional<char32_t> ExternalIoStatementState<DIR>::GetCurrentChar() {
   if constexpr (DIR == Direction::Output) {
     Crash(
@@ -231,7 +232,7 @@ std::optional<char32_t> ExternalIoStatementState<DIR>::GetCurrentChar() {
   return unit().GetCurrentChar(*this);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool ExternalIoStatementState<DIR>::AdvanceRecord(int n) {
   while (n-- > 0) {
     if (!unit().AdvanceRecord(*this)) {
@@ -241,28 +242,28 @@ bool ExternalIoStatementState<DIR>::AdvanceRecord(int n) {
   return true;
 }
 
-template<Direction DIR> void ExternalIoStatementState<DIR>::BackspaceRecord() {
+template <Direction DIR> void ExternalIoStatementState<DIR>::BackspaceRecord() {
   unit().BackspaceRecord(*this);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 void ExternalIoStatementState<DIR>::HandleAbsolutePosition(std::int64_t n) {
   return unit().HandleAbsolutePosition(n);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 void ExternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
   return unit().HandleRelativePosition(n);
 }
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
     const char *sourceFile, int sourceLine)
-  : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
-    mutableModes_{unit.modes}, format_{*this, format, formatLength} {}
+    : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
+      mutableModes_{unit.modes}, format_{*this, format, formatLength} {}
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   format_.Finish(*this);
   return ExternalIoStatementState<DIR>::EndIoStatement();
@@ -359,7 +360,7 @@ void IoStatementState::SkipSpaces(std::optional<int> &remaining) {
 
 std::optional<char32_t> IoStatementState::NextInField(
     std::optional<int> &remaining) {
-  if (!remaining) {  // list-directed or namelist: check for separators
+  if (!remaining) { // list-directed or namelist: check for separators
     if (auto next{GetCurrentChar()}) {
       switch (*next) {
       case ' ':
@@ -370,8 +371,11 @@ std::optional<char32_t> IoStatementState::NextInField(
       case ')':
       case '\'':
       case '"':
-      case '*': break;
-      default: HandleRelativePosition(1); return next;
+      case '*':
+        break;
+      default:
+        HandleRelativePosition(1);
+        return next;
       }
     }
   } else if (*remaining > 0) {
@@ -383,7 +387,7 @@ std::optional<char32_t> IoStatementState::NextInField(
     const ConnectionState &connection{GetConnectionState()};
     if (!connection.IsAtEOF() && connection.recordLength &&
         connection.positionInRecord >= *connection.recordLength) {
-      if (connection.modes.pad) {  // PAD='YES'
+      if (connection.modes.pad) { // PAD='YES'
         --*remaining;
         return std::optional<char32_t>{' '};
       }
@@ -452,13 +456,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   ConnectionState &connection{io.GetConnectionState()};
   DataEdit edit;
   edit.descriptor = DataEdit::ListDirected;
-  edit.repeat = 1;  // may be overridden below
+  edit.repeat = 1; // may be overridden below
   edit.modes = connection.modes;
-  if (hitSlash_) {  // everything after '/' is nullified
+  if (hitSlash_) { // everything after '/' is nullified
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
-  if (remaining_ > 0 && !realPart_) {  // "r*c" repetition in progress
+  if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     while (connection.currentRecordNumber > initialRecordNumber_) {
       io.BackspaceRecord();
     }
@@ -511,10 +515,10 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       return edit;
     }
   }
-  if (imaginaryPart_) {  // can't repeat components
+  if (imaginaryPart_) { // can't repeat components
     return edit;
   }
-  if (*ch >= '0' && *ch <= '9') {  // look for "r*" repetition count
+  if (*ch >= '0' && *ch <= '9') { // look for "r*" repetition count
     auto start{connection.positionInRecord};
     int r{0};
     do {
@@ -527,10 +531,10 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       io.HandleRelativePosition(1);
       ch = io.GetCurrentChar();
     } while (ch && *ch >= '0' && *ch <= '9');
-    if (r > 0 && ch && *ch == '*') {  // subtle: r must be nonzero
+    if (r > 0 && ch && *ch == '*') { // subtle: r must be nonzero
       io.HandleRelativePosition(1);
       ch = io.GetCurrentChar();
-      if (!ch || *ch == ' ' || *ch == comma || *ch == '/') {  // "r*" null
+      if (!ch || *ch == ' ' || *ch == comma || *ch == '/') { // "r*" null
         edit.descriptor = DataEdit::ListDirectedNullValue;
         return edit;
       }
@@ -538,7 +542,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       remaining_ = r - edit.repeat;
       initialRecordNumber_ = connection.currentRecordNumber;
       initialPositionInRecord_ = connection.positionInRecord;
-    } else {  // not a repetition count, just an integer value; rewind
+    } else { // not a repetition count, just an integer value; rewind
       connection.positionInRecord = start;
     }
   }
@@ -549,7 +553,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   return edit;
 }
 
-template<Direction DIR> int UnformattedIoStatementState<DIR>::EndIoStatement() {
+template <Direction DIR>
+int UnformattedIoStatementState<DIR>::EndIoStatement() {
   auto &ext{static_cast<ExternalIoStatementState<DIR> &>(*this)};
   ExternalFileUnit &unit{ext.unit()};
   if (unit.access == Access::Sequential && !unit.recordLength.has_value()) {
@@ -587,4 +592,4 @@ template class ExternalListIoStatementState<Direction::Output>;
 template class ExternalListIoStatementState<Direction::Input>;
 template class UnformattedIoStatementState<Direction::Output>;
 template class UnformattedIoStatementState<Direction::Input>;
-}
+} // namespace Fortran::runtime::io

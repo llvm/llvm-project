@@ -37,7 +37,7 @@
 namespace Fortran::common {
 
 // Utility: Produces "const A" if B is const and A is not already so.
-template<typename A, typename B>
+template <typename A, typename B>
 using Constify = std::conditional_t<std::is_const_v<B> && !std::is_const_v<A>,
     std::add_const_t<A>, A>;
 
@@ -46,7 +46,7 @@ using Constify = std::conditional_t<std::is_const_v<B> && !std::is_const_v<A>,
 struct UnwrapperHelper {
 
   // Base case
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(B &x) -> Constify<A, B> * {
     if constexpr (std::is_same_v<std::decay_t<A>, std::decay_t<B>>) {
       return &x;
@@ -56,7 +56,7 @@ struct UnwrapperHelper {
   }
 
   // Implementations of specializations
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(B *p) -> Constify<A, B> * {
     if (p) {
       return Unwrap<A>(*p);
@@ -65,7 +65,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(const std::unique_ptr<B> &p) -> Constify<A, B> * {
     if (p.get()) {
       return Unwrap<A>(*p);
@@ -74,7 +74,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(const std::shared_ptr<B> &p) -> Constify<A, B> * {
     if (p.get()) {
       return Unwrap<A>(*p);
@@ -83,7 +83,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(std::optional<B> &x) -> Constify<A, B> * {
     if (x) {
       return Unwrap<A>(*x);
@@ -92,7 +92,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(const std::optional<B> &x) -> Constify<A, B> * {
     if (x) {
       return Unwrap<A>(*x);
@@ -101,7 +101,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename... Bs>
+  template <typename A, typename... Bs>
   static A *Unwrap(std::variant<Bs...> &u) {
     return std::visit(
         [](auto &x) -> A * {
@@ -115,23 +115,23 @@ struct UnwrapperHelper {
         u);
   }
 
-  template<typename A, typename... Bs>
+  template <typename A, typename... Bs>
   static auto Unwrap(const std::variant<Bs...> &u) -> std::add_const_t<A> * {
     return std::visit(
         [](const auto &x) -> std::add_const_t<A> * { return Unwrap<A>(x); }, u);
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(const Reference<B> &ref) -> Constify<A, B> * {
     return Unwrap<A>(*ref);
   }
 
-  template<typename A, typename B, bool COPY>
+  template <typename A, typename B, bool COPY>
   static auto Unwrap(const Indirection<B, COPY> &p) -> Constify<A, B> * {
     return Unwrap<A>(*p);
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static auto Unwrap(const CountedReference<B> &p) -> Constify<A, B> * {
     if (p.get()) {
       return Unwrap<A>(*p);
@@ -141,17 +141,17 @@ struct UnwrapperHelper {
   }
 };
 
-template<typename A, typename B> auto Unwrap(B &x) -> Constify<A, B> * {
+template <typename A, typename B> auto Unwrap(B &x) -> Constify<A, B> * {
   return UnwrapperHelper::Unwrap<A>(x);
 }
 
 // Returns a copy of a wrapped value, if present, otherwise a vacant optional.
-template<typename A, typename B> std::optional<A> UnwrapCopy(const B &x) {
+template <typename A, typename B> std::optional<A> UnwrapCopy(const B &x) {
   if (const A * p{Unwrap<A>(x)}) {
     return std::make_optional<A>(*p);
   } else {
     return std::nullopt;
   }
 }
-}
-#endif  // FORTRAN_COMMON_UNWRAP_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_UNWRAP_H_

@@ -72,7 +72,7 @@ enum DecimalConversionFlags {
 #define EXTRA_DECIMAL_CONVERSION_SPACE (1 + 1 + 16 - 1)
 
 #ifdef __cplusplus
-template<int PREC>
+template <int PREC>
 ConversionToDecimalResult ConvertToDecimal(char *, size_t,
     DecimalConversionFlags, int digits, enum FortranRounding rounding,
     BinaryFloatingPointNumber<PREC> x);
@@ -96,12 +96,12 @@ extern template ConversionToDecimalResult ConvertToDecimal<113>(char *, size_t,
     enum DecimalConversionFlags, int, enum FortranRounding,
     BinaryFloatingPointNumber<113>);
 
-template<int PREC> struct ConversionToBinaryResult {
+template <int PREC> struct ConversionToBinaryResult {
   BinaryFloatingPointNumber<PREC> binary;
   enum ConversionResultFlags flags { Exact };
 };
 
-template<int PREC>
+template <int PREC>
 ConversionToBinaryResult<PREC> ConvertToBinary(
     const char *&, enum FortranRounding = RoundNearest);
 
@@ -117,7 +117,7 @@ extern template ConversionToBinaryResult<64> ConvertToBinary<64>(
     const char *&, enum FortranRounding = RoundNearest);
 extern template ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding = RoundNearest);
-}  // namespace Fortran::decimal
+} // namespace Fortran::decimal
 extern "C" {
 #define NS(x) Fortran::decimal::x
 #else /* C++ */
@@ -146,6 +146,6 @@ enum NS(ConversionResultFlags) ConvertDecimalToLongDouble(
 #endif
 #undef NS
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 #endif

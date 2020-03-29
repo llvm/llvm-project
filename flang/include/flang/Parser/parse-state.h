@@ -36,24 +36,24 @@ class ParseState {
 public:
   // TODO: Add a constructor for parsing a normalized module file.
   ParseState(const CookedSource &cooked)
-    : p_{&cooked.data().front()}, limit_{&cooked.data().back() + 1} {}
+      : p_{&cooked.data().front()}, limit_{&cooked.data().back() + 1} {}
   ParseState(const ParseState &that)
-    : p_{that.p_}, limit_{that.limit_}, context_{that.context_},
-      userState_{that.userState_}, inFixedForm_{that.inFixedForm_},
-      anyErrorRecovery_{that.anyErrorRecovery_},
-      anyConformanceViolation_{that.anyConformanceViolation_},
-      deferMessages_{that.deferMessages_},
-      anyDeferredMessages_{that.anyDeferredMessages_},
-      anyTokenMatched_{that.anyTokenMatched_} {}
+      : p_{that.p_}, limit_{that.limit_}, context_{that.context_},
+        userState_{that.userState_}, inFixedForm_{that.inFixedForm_},
+        anyErrorRecovery_{that.anyErrorRecovery_},
+        anyConformanceViolation_{that.anyConformanceViolation_},
+        deferMessages_{that.deferMessages_},
+        anyDeferredMessages_{that.anyDeferredMessages_},
+        anyTokenMatched_{that.anyTokenMatched_} {}
   ParseState(ParseState &&that)
-    : p_{that.p_}, limit_{that.limit_}, messages_{std::move(that.messages_)},
-      context_{std::move(that.context_)}, userState_{that.userState_},
-      inFixedForm_{that.inFixedForm_},
-      anyErrorRecovery_{that.anyErrorRecovery_},
-      anyConformanceViolation_{that.anyConformanceViolation_},
-      deferMessages_{that.deferMessages_},
-      anyDeferredMessages_{that.anyDeferredMessages_},
-      anyTokenMatched_{that.anyTokenMatched_} {}
+      : p_{that.p_}, limit_{that.limit_}, messages_{std::move(that.messages_)},
+        context_{std::move(that.context_)}, userState_{that.userState_},
+        inFixedForm_{that.inFixedForm_},
+        anyErrorRecovery_{that.anyErrorRecovery_},
+        anyConformanceViolation_{that.anyConformanceViolation_},
+        deferMessages_{that.deferMessages_},
+        anyDeferredMessages_{that.anyDeferredMessages_},
+        anyTokenMatched_{that.anyTokenMatched_} {}
   ParseState &operator=(const ParseState &that) {
     p_ = that.p_, limit_ = that.limit_, context_ = that.context_;
     userState_ = that.userState_, inFixedForm_ = that.inFixedForm_;
@@ -121,7 +121,7 @@ public:
   const char *GetLocation() const { return p_; }
 
   void PushContext(MessageFixedText text) {
-    auto m{new Message{p_, text}};  // reference-counted
+    auto m{new Message{p_, text}}; // reference-counted
     m->SetContext(context_.get());
     context_ = Message::Reference{m};
   }
@@ -131,17 +131,18 @@ public:
     context_ = context_->attachment();
   }
 
-  template<typename... A> void Say(CharBlock range, A &&... args) {
+  template <typename... A> void Say(CharBlock range, A &&... args) {
     if (deferMessages_) {
       anyDeferredMessages_ = true;
     } else {
       messages_.Say(range, std::forward<A>(args)...).SetContext(context_.get());
     }
   }
-  template<typename... A> void Say(const MessageFixedText &text, A &&... args) {
+  template <typename... A>
+  void Say(const MessageFixedText &text, A &&... args) {
     Say(p_, text, std::forward<A>(args)...);
   }
-  template<typename... A>
+  template <typename... A>
   void Say(const MessageExpectedText &text, A &&... args) {
     Say(p_, text, std::forward<A>(args)...);
   }
@@ -228,5 +229,5 @@ private:
   // reflected in the copy and move constructors defined at the top of this
   // class definition!
 };
-}
-#endif  // FORTRAN_PARSER_PARSE_STATE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PARSE_STATE_H_

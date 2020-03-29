@@ -39,9 +39,9 @@ public:
   static ProgramTree Build(const parser::Submodule &);
   static ProgramTree Build(const parser::BlockData &);
 
-  ENUM_CLASS(Kind,  // kind of node
+  ENUM_CLASS(Kind, // kind of node
       Program, Function, Subroutine, MpSubprogram, Module, Submodule, BlockData)
-  using Stmt = std::variant<  // the statement that introduces the program unit
+  using Stmt = std::variant< // the statement that introduces the program unit
       const parser::Statement<parser::ProgramStmt> *,
       const parser::Statement<parser::FunctionStmt> *,
       const parser::Statement<parser::SubroutineStmt> *,
@@ -52,7 +52,7 @@ public:
 
   ProgramTree(const parser::Name &name, const parser::SpecificationPart &spec,
       const parser::ExecutionPart *exec = nullptr)
-    : name_{name}, spec_{spec}, exec_{exec} {}
+      : name_{name}, spec_{spec}, exec_{exec} {}
 
   const parser::Name &name() const { return name_; }
   Kind GetKind() const;
@@ -63,23 +63,24 @@ public:
   void set_isSpecificationPartResolved(bool yes = true) {
     isSpecificationPartResolved_ = yes;
   }
-  const parser::ParentIdentifier &GetParentId() const;  // only for Submodule
+  const parser::ParentIdentifier &GetParentId() const; // only for Submodule
   const parser::SpecificationPart &spec() const { return spec_; }
   const parser::ExecutionPart *exec() const { return exec_; }
   std::list<ProgramTree> &children() { return children_; }
   const std::list<ProgramTree> &children() const { return children_; }
   Symbol::Flag GetSubpFlag() const;
-  bool IsModule() const;  // Module or Submodule
-  bool HasModulePrefix() const;  // in function or subroutine stmt
+  bool IsModule() const; // Module or Submodule
+  bool HasModulePrefix() const; // in function or subroutine stmt
   Scope *scope() const { return scope_; }
   void set_scope(Scope &);
   void AddChild(ProgramTree &&);
 
-  template<typename T> ProgramTree &set_stmt(const parser::Statement<T> &stmt) {
+  template <typename T>
+  ProgramTree &set_stmt(const parser::Statement<T> &stmt) {
     stmt_ = &stmt;
     return *this;
   }
-  template<typename T>
+  template <typename T>
   ProgramTree &set_endStmt(const parser::Statement<T> &stmt) {
     endStmt_ = &stmt.source;
     return *this;
@@ -97,5 +98,5 @@ private:
   bool isSpecificationPartResolved_{false};
 };
 
-}
-#endif  // FORTRAN_SEMANTICS_PROGRAM_TREE_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_PROGRAM_TREE_H_

@@ -22,6 +22,6 @@ struct ExecutionEnvironment {
   enum decimal::FortranRounding defaultOutputRoundingMode;
 };
 extern ExecutionEnvironment executionEnvironment;
-}
+} // namespace Fortran::runtime
 
-#endif  // FORTRAN_RUNTIME_ENVIRONMENT_H_
+#endif // FORTRAN_RUNTIME_ENVIRONMENT_H_

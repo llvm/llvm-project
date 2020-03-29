@@ -111,5 +111,5 @@ int RTNAME(AllocatableDeallocate)(Descriptor &, bool hasStat = false,
     Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
 }
-}
-#endif  // FORTRAN_RUNTIME_ALLOCATABLE_H_
+} // namespace Fortran::runtime
+#endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

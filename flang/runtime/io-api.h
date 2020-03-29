@@ -19,7 +19,7 @@
 namespace Fortran::runtime {
 class Descriptor;
 class NamelistGroup;
-}
+} // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
 
@@ -27,7 +27,7 @@ class IoStatementState;
 using Cookie = IoStatementState *;
 using ExternalUnit = int;
 using AsynchronousId = int;
-static constexpr ExternalUnit DefaultUnit{-1};  // READ(*), WRITE(*), PRINT
+static constexpr ExternalUnit DefaultUnit{-1}; // READ(*), WRITE(*), PRINT
 
 extern "C" {
 
@@ -242,7 +242,7 @@ bool IONAME(SetEncoding)(Cookie, const char *, std::size_t);
 bool IONAME(SetForm)(Cookie, const char *, std::size_t);
 // POSITION=ASIS, REWIND, APPEND
 bool IONAME(SetPosition)(Cookie, const char *, std::size_t);
-bool IONAME(SetRecl)(Cookie, std::size_t);  // RECL=
+bool IONAME(SetRecl)(Cookie, std::size_t); // RECL=
 
 // STATUS can be set during an OPEN or CLOSE statement.
 // For OPEN: STATUS=OLD, NEW, SCRATCH, REPLACE, UNKNOWN
@@ -265,7 +265,7 @@ bool IONAME(GetIoLength)(Cookie, std::int64_t, int kind = 8);
 
 // GetIoMsg() does not modify its argument unless an error or
 // end-of-record/file condition is present.
-void IONAME(GetIoMsg)(Cookie, char *, std::size_t);  // IOMSG=
+void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.
@@ -293,6 +293,6 @@ bool IONAME(InquireInteger64)(
 // rather than by terminating the image.
 enum Iostat IONAME(EndIoStatement)(Cookie);
 
-}  // extern "C"
-}
+} // extern "C"
+} // namespace Fortran::runtime::io
 #endif

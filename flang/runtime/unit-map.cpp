@@ -55,7 +55,7 @@ void UnitMap::CloseAll(IoErrorHandler &handler) {
   CriticalSection critical{lock_};
   for (int j{0}; j < buckets_; ++j) {
     while (Chain * p{bucket_[j].get()}) {
-      bucket_[j].swap(p->next);  // pops p from head of list
+      bucket_[j].swap(p->next); // pops p from head of list
       p->unit.CloseUnit(CloseStatus::Keep, handler);
       p->unit.~ExternalFileUnit();
       FreeMemory(p);
@@ -66,7 +66,7 @@ void UnitMap::CloseAll(IoErrorHandler &handler) {
 ExternalFileUnit &UnitMap::Create(int n, const Terminator &terminator) {
   Chain &chain{New<Chain>{}(terminator, n)};
   chain.next.reset(&chain);
-  bucket_[Hash(n)].swap(chain.next);  // pushes new node as list head
+  bucket_[Hash(n)].swap(chain.next); // pushes new node as list head
   return chain.unit;
 }
-}
+} // namespace Fortran::runtime::io

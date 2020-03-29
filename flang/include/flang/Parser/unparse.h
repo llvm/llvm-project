@@ -22,7 +22,7 @@ namespace Fortran::evaluate {
 struct GenericExprWrapper;
 struct GenericAssignmentWrapper;
 class ProcedureRef;
-}
+} // namespace Fortran::evaluate
 
 namespace Fortran::parser {
 
@@ -48,6 +48,6 @@ void Unparse(llvm::raw_ostream &out, const Program &program,
     Encoding encoding = Encoding::UTF_8, bool capitalizeKeywords = true,
     bool backslashEscapes = true, preStatementType *preStatement = nullptr,
     AnalyzedObjectsAsFortran * = nullptr);
-}
+} // namespace Fortran::parser
 
 #endif

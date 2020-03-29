@@ -16,4 +16,4 @@ FORTRAN_EXTERN_C_BEGIN
 void RTNAME(ProgramStart)(int, const char *[], const char *[]);
 FORTRAN_EXTERN_C_END
 
-#endif  // FORTRAN_RUNTIME_MAIN_H_
+#endif // FORTRAN_RUNTIME_MAIN_H_

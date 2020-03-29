@@ -6,7 +6,7 @@
 using Fortran::evaluate::Ordering;
 using Fortran::evaluate::value::Integer;
 
-template<int BITS, typename INT = Integer<BITS>> void exhaustiveTesting() {
+template <int BITS, typename INT = Integer<BITS>> void exhaustiveTesting() {
   std::uint64_t maxUnsignedValue{(std::uint64_t{1} << BITS) - 1};
   std::int64_t maxPositiveSignedValue{(std::int64_t{1} << (BITS - 1)) - 1};
   std::int64_t mostNegativeSignedValue{-(std::int64_t{1} << (BITS - 1))};

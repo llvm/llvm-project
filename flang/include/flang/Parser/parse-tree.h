@@ -58,15 +58,15 @@ namespace Fortran::semantics {
 class Symbol;
 class DeclTypeSpec;
 class DerivedTypeSpec;
-}
+} // namespace Fortran::semantics
 
 // Expressions in the parse tree have owning pointers that can be set to
 // type-checked generic expression representations by semantic analysis.
 namespace Fortran::evaluate {
-struct GenericExprWrapper;  // forward definition, wraps Expr<SomeType>
-struct GenericAssignmentWrapper;  // forward definition, represent assignment
-class ProcedureRef;  // forward definition, represents a CALL statement
-}
+struct GenericExprWrapper; // forward definition, wraps Expr<SomeType>
+struct GenericAssignmentWrapper; // forward definition, represent assignment
+class ProcedureRef; // forward definition, represents a CALL statement
+} // namespace Fortran::evaluate
 
 // Most non-template classes in this file use these default definitions
 // for their move constructor and move assignment operator=, and disable
@@ -97,7 +97,7 @@ class ProcedureRef;  // forward definition, represents a CALL statement
 // Many classes below simply wrap a std::variant<> discriminated union,
 // which is conventionally named "u".
 #define UNION_CLASS_BOILERPLATE(classname) \
-  template<typename A, typename = common::NoLvalue<A>> \
+  template <typename A, typename = common::NoLvalue<A>> \
   classname(A &&x) : u(std::move(x)) {} \
   using UnionTrait = std::true_type; \
   BOILERPLATE(classname)
@@ -105,7 +105,7 @@ class ProcedureRef;  // forward definition, represents a CALL statement
 // Many other classes below simply wrap a std::tuple<> structure, which
 // is conventionally named "t".
 #define TUPLE_CLASS_BOILERPLATE(classname) \
-  template<typename... Ts, typename = common::NoLvalue<Ts...>> \
+  template <typename... Ts, typename = common::NoLvalue<Ts...>> \
   classname(Ts &&... args) : t(std::move(args)...) {} \
   using TupleTrait = std::true_type; \
   BOILERPLATE(classname)
@@ -129,123 +129,123 @@ namespace Fortran::parser {
 // Some references to the representations of their parses require
 // indirection.  The Indirect<> pointer wrapper class is used to
 // enforce ownership semantics and non-nullability.
-struct SpecificationPart;  // R504
-struct ExecutableConstruct;  // R514
-struct ActionStmt;  // R515
-struct AcImpliedDo;  // R774
-struct DataImpliedDo;  // R840
-struct Designator;  // R901
-struct Variable;  // R902
-struct Expr;  // R1001
-struct WhereConstruct;  // R1042
-struct ForallConstruct;  // R1050
-struct InputImpliedDo;  // R1218
-struct OutputImpliedDo;  // R1218
-struct FunctionReference;  // R1520
-struct FunctionSubprogram;  // R1529
-struct SubroutineSubprogram;  // R1534
+struct SpecificationPart; // R504
+struct ExecutableConstruct; // R514
+struct ActionStmt; // R515
+struct AcImpliedDo; // R774
+struct DataImpliedDo; // R840
+struct Designator; // R901
+struct Variable; // R902
+struct Expr; // R1001
+struct WhereConstruct; // R1042
+struct ForallConstruct; // R1050
+struct InputImpliedDo; // R1218
+struct OutputImpliedDo; // R1218
+struct FunctionReference; // R1520
+struct FunctionSubprogram; // R1529
+struct SubroutineSubprogram; // R1534
 
 // These additional forward references are declared so that the order of
 // class definitions in this header file can remain reasonably consistent
 // with order of the the requirement productions in the grammar.
-struct DerivedTypeDef;  // R726
-struct EnumDef;  // R759
-struct TypeDeclarationStmt;  // R801
-struct AccessStmt;  // R827
-struct AllocatableStmt;  // R829
-struct AsynchronousStmt;  // R831
-struct BindStmt;  // R832
-struct CodimensionStmt;  // R834
-struct ContiguousStmt;  // R836
-struct DataStmt;  // R837
-struct DataStmtValue;  // R843
-struct DimensionStmt;  // R848
-struct IntentStmt;  // R849
-struct OptionalStmt;  // R850
-struct ParameterStmt;  // R851
+struct DerivedTypeDef; // R726
+struct EnumDef; // R759
+struct TypeDeclarationStmt; // R801
+struct AccessStmt; // R827
+struct AllocatableStmt; // R829
+struct AsynchronousStmt; // R831
+struct BindStmt; // R832
+struct CodimensionStmt; // R834
+struct ContiguousStmt; // R836
+struct DataStmt; // R837
+struct DataStmtValue; // R843
+struct DimensionStmt; // R848
+struct IntentStmt; // R849
+struct OptionalStmt; // R850
+struct ParameterStmt; // R851
 struct OldParameterStmt;
-struct PointerStmt;  // R853
-struct ProtectedStmt;  // R855
-struct SaveStmt;  // R856
-struct TargetStmt;  // R859
-struct ValueStmt;  // R861
-struct VolatileStmt;  // R862
-struct ImplicitStmt;  // R863
-struct ImportStmt;  // R867
-struct NamelistStmt;  // R868
-struct EquivalenceStmt;  // R870
-struct CommonStmt;  // R873
-struct Substring;  // R908
+struct PointerStmt; // R853
+struct ProtectedStmt; // R855
+struct SaveStmt; // R856
+struct TargetStmt; // R859
+struct ValueStmt; // R861
+struct VolatileStmt; // R862
+struct ImplicitStmt; // R863
+struct ImportStmt; // R867
+struct NamelistStmt; // R868
+struct EquivalenceStmt; // R870
+struct CommonStmt; // R873
+struct Substring; // R908
 struct CharLiteralConstantSubstring;
-struct DataRef;  // R911
-struct StructureComponent;  // R913
-struct CoindexedNamedObject;  // R914
-struct ArrayElement;  // R917
-struct AllocateStmt;  // R927
-struct NullifyStmt;  // R939
-struct DeallocateStmt;  // R941
-struct AssignmentStmt;  // R1032
-struct PointerAssignmentStmt;  // R1033
-struct WhereStmt;  // R1041, R1045, R1046
-struct ForallStmt;  // R1055
-struct AssociateConstruct;  // R1102
-struct BlockConstruct;  // R1107
-struct ChangeTeamConstruct;  // R1111
-struct CriticalConstruct;  // R1116
-struct DoConstruct;  // R1119
-struct LabelDoStmt;  // R1121
-struct ConcurrentHeader;  // R1125
-struct EndDoStmt;  // R1132
-struct CycleStmt;  // R1133
-struct IfConstruct;  // R1134
-struct IfStmt;  // R1139
-struct CaseConstruct;  // R1140
-struct SelectRankConstruct;  // R1148
-struct SelectTypeConstruct;  // R1152
-struct ExitStmt;  // R1156
-struct GotoStmt;  // R1157
-struct ComputedGotoStmt;  // R1158
-struct StopStmt;  // R1160, R1161
-struct SyncAllStmt;  // R1164
-struct SyncImagesStmt;  // R1166
-struct SyncMemoryStmt;  // R1168
-struct SyncTeamStmt;  // R1169
-struct EventPostStmt;  // R1170, R1171
-struct EventWaitStmt;  // R1172, R1173, R1174
-struct FormTeamStmt;  // R1175, R1176, R1177
-struct LockStmt;  // R1178
-struct UnlockStmt;  // R1180
-struct OpenStmt;  // R1204
-struct CloseStmt;  // R1208
-struct ReadStmt;  // R1210
-struct WriteStmt;  // R1211
-struct PrintStmt;  // R1212
-struct WaitStmt;  // R1222
-struct BackspaceStmt;  // R1224
-struct EndfileStmt;  // R1225
-struct RewindStmt;  // R1226
-struct FlushStmt;  // R1228
-struct InquireStmt;  // R1230
-struct FormatStmt;  // R1301
-struct MainProgram;  // R1401
-struct Module;  // R1404
-struct UseStmt;  // R1409
-struct Submodule;  // R1416
-struct BlockData;  // R1420
-struct InterfaceBlock;  // R1501
-struct GenericSpec;  // R1508
-struct GenericStmt;  // R1510
-struct ExternalStmt;  // R1511
-struct ProcedureDeclarationStmt;  // R1512
-struct IntrinsicStmt;  // R1519
-struct Call;  // R1520 & R1521
-struct CallStmt;  // R1521
-struct ProcedureDesignator;  // R1522
-struct ActualArg;  // R1524
-struct SeparateModuleSubprogram;  // R1538
-struct EntryStmt;  // R1541
-struct ReturnStmt;  // R1542
-struct StmtFunctionStmt;  // R1544
+struct DataRef; // R911
+struct StructureComponent; // R913
+struct CoindexedNamedObject; // R914
+struct ArrayElement; // R917
+struct AllocateStmt; // R927
+struct NullifyStmt; // R939
+struct DeallocateStmt; // R941
+struct AssignmentStmt; // R1032
+struct PointerAssignmentStmt; // R1033
+struct WhereStmt; // R1041, R1045, R1046
+struct ForallStmt; // R1055
+struct AssociateConstruct; // R1102
+struct BlockConstruct; // R1107
+struct ChangeTeamConstruct; // R1111
+struct CriticalConstruct; // R1116
+struct DoConstruct; // R1119
+struct LabelDoStmt; // R1121
+struct ConcurrentHeader; // R1125
+struct EndDoStmt; // R1132
+struct CycleStmt; // R1133
+struct IfConstruct; // R1134
+struct IfStmt; // R1139
+struct CaseConstruct; // R1140
+struct SelectRankConstruct; // R1148
+struct SelectTypeConstruct; // R1152
+struct ExitStmt; // R1156
+struct GotoStmt; // R1157
+struct ComputedGotoStmt; // R1158
+struct StopStmt; // R1160, R1161
+struct SyncAllStmt; // R1164
+struct SyncImagesStmt; // R1166
+struct SyncMemoryStmt; // R1168
+struct SyncTeamStmt; // R1169
+struct EventPostStmt; // R1170, R1171
+struct EventWaitStmt; // R1172, R1173, R1174
+struct FormTeamStmt; // R1175, R1176, R1177
+struct LockStmt; // R1178
+struct UnlockStmt; // R1180
+struct OpenStmt; // R1204
+struct CloseStmt; // R1208
+struct ReadStmt; // R1210
+struct WriteStmt; // R1211
+struct PrintStmt; // R1212
+struct WaitStmt; // R1222
+struct BackspaceStmt; // R1224
+struct EndfileStmt; // R1225
+struct RewindStmt; // R1226
+struct FlushStmt; // R1228
+struct InquireStmt; // R1230
+struct FormatStmt; // R1301
+struct MainProgram; // R1401
+struct Module; // R1404
+struct UseStmt; // R1409
+struct Submodule; // R1416
+struct BlockData; // R1420
+struct InterfaceBlock; // R1501
+struct GenericSpec; // R1508
+struct GenericStmt; // R1510
+struct ExternalStmt; // R1511
+struct ProcedureDeclarationStmt; // R1512
+struct IntrinsicStmt; // R1519
+struct Call; // R1520 & R1521
+struct CallStmt; // R1521
+struct ProcedureDesignator; // R1522
+struct ActualArg; // R1524
+struct SeparateModuleSubprogram; // R1538
+struct EntryStmt; // R1541
+struct ReturnStmt; // R1542
+struct StmtFunctionStmt; // R1544
 
 // Directives, extensions, and deprecated statements
 struct CompilerDirective;
@@ -274,7 +274,7 @@ struct Verbatim {
 // R403 scalar-xyz -> xyz
 // These template class wrappers correspond to the Standard's modifiers
 // scalar-xyz, constant-xzy, int-xzy, default-char-xyz, & logical-xyz.
-template<typename A> struct Scalar {
+template <typename A> struct Scalar {
   using ConstraintTrait = std::true_type;
   Scalar(Scalar &&that) = default;
   Scalar(A &&that) : thing(std::move(that)) {}
@@ -282,7 +282,7 @@ template<typename A> struct Scalar {
   A thing;
 };
 
-template<typename A> struct Constant {
+template <typename A> struct Constant {
   using ConstraintTrait = std::true_type;
   Constant(Constant &&that) = default;
   Constant(A &&that) : thing(std::move(that)) {}
@@ -290,7 +290,7 @@ template<typename A> struct Constant {
   A thing;
 };
 
-template<typename A> struct Integer {
+template <typename A> struct Integer {
   using ConstraintTrait = std::true_type;
   Integer(Integer &&that) = default;
   Integer(A &&that) : thing(std::move(that)) {}
@@ -298,7 +298,7 @@ template<typename A> struct Integer {
   A thing;
 };
 
-template<typename A> struct Logical {
+template <typename A> struct Logical {
   using ConstraintTrait = std::true_type;
   Logical(Logical &&that) = default;
   Logical(A &&that) : thing(std::move(that)) {}
@@ -306,7 +306,7 @@ template<typename A> struct Logical {
   A thing;
 };
 
-template<typename A> struct DefaultChar {
+template <typename A> struct DefaultChar {
   using ConstraintTrait = std::true_type;
   DefaultChar(DefaultChar &&that) = default;
   DefaultChar(A &&that) : thing(std::move(that)) {}
@@ -314,11 +314,11 @@ template<typename A> struct DefaultChar {
   A thing;
 };
 
-using LogicalExpr = Logical<common::Indirection<Expr>>;  // R1024
-using DefaultCharExpr = DefaultChar<common::Indirection<Expr>>;  // R1025
-using IntExpr = Integer<common::Indirection<Expr>>;  // R1026
-using ConstantExpr = Constant<common::Indirection<Expr>>;  // R1029
-using IntConstantExpr = Integer<ConstantExpr>;  // R1031
+using LogicalExpr = Logical<common::Indirection<Expr>>; // R1024
+using DefaultCharExpr = DefaultChar<common::Indirection<Expr>>; // R1025
+using IntExpr = Integer<common::Indirection<Expr>>; // R1026
+using ConstantExpr = Constant<common::Indirection<Expr>>; // R1029
+using IntConstantExpr = Integer<ConstantExpr>; // R1031
 using ScalarLogicalExpr = Scalar<LogicalExpr>;
 using ScalarIntExpr = Scalar<IntExpr>;
 using ScalarIntConstantExpr = Scalar<IntConstantExpr>;
@@ -328,18 +328,18 @@ using ScalarDefaultCharExpr = Scalar<DefaultCharExpr>;
 using ScalarDefaultCharConstantExpr = Scalar<DefaultChar<ConstantExpr>>;
 
 // R611 label -> digit [digit]...
-using Label = std::uint64_t;  // validated later, must be in [1..99999]
+using Label = std::uint64_t; // validated later, must be in [1..99999]
 
 // A wrapper for xzy-stmt productions that are statements, so that
 // source provenances and labels have a uniform representation.
-template<typename A> struct UnlabeledStatement {
+template <typename A> struct UnlabeledStatement {
   explicit UnlabeledStatement(A &&s) : statement(std::move(s)) {}
   CharBlock source;
   A statement;
 };
-template<typename A> struct Statement : public UnlabeledStatement<A> {
+template <typename A> struct Statement : public UnlabeledStatement<A> {
   Statement(std::optional<long> &&lab, A &&s)
-    : UnlabeledStatement<A>{std::move(s)}, label(std::move(lab)) {}
+      : UnlabeledStatement<A>{std::move(s)}, label(std::move(lab)) {}
   std::optional<Label> label;
 };
 
@@ -548,7 +548,7 @@ WRAPPER_CLASS(Program, std::list<ProgramUnit>);
 struct Name {
   std::string ToString() const { return source.ToString(); }
   CharBlock source;
-  mutable semantics::Symbol *symbol{nullptr};  // filled in during semantics
+  mutable semantics::Symbol *symbol{nullptr}; // filled in during semantics
 };
 
 // R516 keyword -> name
@@ -609,7 +609,7 @@ EMPTY_CLASS(Star);
 
 struct TypeParamValue {
   UNION_CLASS_BOILERPLATE(TypeParamValue);
-  EMPTY_CLASS(Deferred);  // :
+  EMPTY_CLASS(Deferred); // :
   std::variant<ScalarIntExpr, Star, Deferred> u;
 };
 
@@ -647,14 +647,14 @@ struct CharSelector {
   struct LengthAndKind {
     BOILERPLATE(LengthAndKind);
     LengthAndKind(std::optional<TypeParamValue> &&l, ScalarIntConstantExpr &&k)
-      : length(std::move(l)), kind(std::move(k)) {}
+        : length(std::move(l)), kind(std::move(k)) {}
     std::optional<TypeParamValue> length;
     ScalarIntConstantExpr kind;
   };
   CharSelector(TypeParamValue &&l, ScalarIntConstantExpr &&k)
-    : u{LengthAndKind{std::make_optional(std::move(l)), std::move(k)}} {}
+      : u{LengthAndKind{std::make_optional(std::move(l)), std::move(k)}} {}
   CharSelector(ScalarIntConstantExpr &&k, std::optional<TypeParamValue> &&l)
-    : u{LengthAndKind{std::move(l), std::move(k)}} {}
+      : u{LengthAndKind{std::move(l), std::move(k)}} {}
   std::variant<LengthSelector, LengthAndKind> u;
 };
 
@@ -770,7 +770,7 @@ struct RealLiteralConstant {
     CharBlock source;
   };
   RealLiteralConstant(Real &&r, std::optional<KindParam> &&k)
-    : real{std::move(r)}, kind{std::move(k)} {}
+      : real{std::move(r)}, kind{std::move(k)} {}
   Real real;
   std::optional<KindParam> kind;
 };
@@ -797,7 +797,7 @@ struct ComplexPart {
 // R718 complex-literal-constant -> ( real-part , imag-part )
 struct ComplexLiteralConstant {
   TUPLE_CLASS_BOILERPLATE(ComplexLiteralConstant);
-  std::tuple<ComplexPart, ComplexPart> t;  // real, imaginary
+  std::tuple<ComplexPart, ComplexPart> t; // real, imaginary
 };
 
 // Extension: signed COMPLEX constant
@@ -1077,15 +1077,15 @@ struct TypeBoundProcedureStmt {
     BOILERPLATE(WithoutInterface);
     WithoutInterface(
         std::list<BindAttr> &&as, std::list<TypeBoundProcDecl> &&ds)
-      : attributes(std::move(as)), declarations(std::move(ds)) {}
+        : attributes(std::move(as)), declarations(std::move(ds)) {}
     std::list<BindAttr> attributes;
     std::list<TypeBoundProcDecl> declarations;
   };
   struct WithInterface {
     BOILERPLATE(WithInterface);
     WithInterface(Name &&n, std::list<BindAttr> &&as, std::list<Name> &&bs)
-      : interfaceName(std::move(n)), attributes(std::move(as)),
-        bindingNames(std::move(bs)) {}
+        : interfaceName(std::move(n)), attributes(std::move(as)),
+          bindingNames(std::move(bs)) {}
     Name interfaceName;
     std::list<BindAttr> attributes;
     std::list<Name> bindingNames;
@@ -1184,7 +1184,7 @@ struct EnumDef {
 
 // R773 ac-value -> expr | ac-implied-do
 struct AcValue {
-  struct Triplet {  // PGI/Intel extension
+  struct Triplet { // PGI/Intel extension
     TUPLE_CLASS_BOILERPLATE(Triplet);
     std::tuple<ScalarIntExpr, ScalarIntExpr, std::optional<ScalarIntExpr>> t;
   };
@@ -1198,7 +1198,7 @@ struct AcValue {
 struct AcSpec {
   BOILERPLATE(AcSpec);
   AcSpec(std::optional<TypeSpec> &&ts, std::list<AcValue> &&xs)
-    : type(std::move(ts)), values(std::move(xs)) {}
+      : type(std::move(ts)), values(std::move(xs)) {}
   explicit AcSpec(TypeSpec &&ts) : type{std::move(ts)} {}
   std::optional<TypeSpec> type;
   std::list<AcValue> values;
@@ -1210,12 +1210,12 @@ WRAPPER_CLASS(ArrayConstructor, AcSpec);
 // R1124 do-variable -> scalar-int-variable-name
 using DoVariable = Scalar<Integer<Name>>;
 
-template<typename VAR, typename BOUND> struct LoopBounds {
+template <typename VAR, typename BOUND> struct LoopBounds {
   LoopBounds(LoopBounds &&that) = default;
   LoopBounds(
       VAR &&name, BOUND &&lower, BOUND &&upper, std::optional<BOUND> &&step)
-    : name{std::move(name)}, lower{std::move(lower)}, upper{std::move(upper)},
-      step{std::move(step)} {}
+      : name{std::move(name)}, lower{std::move(lower)}, upper{std::move(upper)},
+        step{std::move(step)} {}
   LoopBounds &operator=(LoopBounds &&) = default;
   VAR name;
   BOUND lower, upper;
@@ -1528,7 +1528,7 @@ struct ImplicitSpec {
 // R866 implicit-name-spec -> EXTERNAL | TYPE
 struct ImplicitStmt {
   UNION_CLASS_BOILERPLATE(ImplicitStmt);
-  ENUM_CLASS(ImplicitNoneNameSpec, External, Type)  // R866
+  ENUM_CLASS(ImplicitNoneNameSpec, External, Type) // R866
   std::variant<std::list<ImplicitSpec>, std::list<ImplicitNoneNameSpec>> u;
 };
 
@@ -1624,8 +1624,7 @@ struct Expr {
     using IntrinsicUnary::IntrinsicUnary;
   };
 
-  WRAPPER_CLASS(
-      PercentLoc, common::Indirection<Variable>);  // %LOC(v) extension
+  WRAPPER_CLASS(PercentLoc, common::Indirection<Variable>); // %LOC(v) extension
 
   struct DefinedUnary {
     TUPLE_CLASS_BOILERPLATE(DefinedUnary);
@@ -1721,8 +1720,8 @@ struct PartRef {
   BOILERPLATE(PartRef);
   PartRef(Name &&n, std::list<SectionSubscript> &&ss,
       std::optional<ImageSelector> &&is)
-    : name{std::move(n)},
-      subscripts(std::move(ss)), imageSelector{std::move(is)} {}
+      : name{std::move(n)},
+        subscripts(std::move(ss)), imageSelector{std::move(is)} {}
   Name name;
   std::list<SectionSubscript> subscripts;
   std::optional<ImageSelector> imageSelector;
@@ -1792,7 +1791,7 @@ using ScalarIntVariable = Scalar<Integer<Variable>>;
 struct StructureComponent {
   BOILERPLATE(StructureComponent);
   StructureComponent(DataRef &&dr, Name &&n)
-    : base{std::move(dr)}, component(std::move(n)) {}
+      : base{std::move(dr)}, component(std::move(n)) {}
   DataRef base;
   Name component;
 };
@@ -1807,7 +1806,7 @@ struct ProcComponentRef {
 struct CoindexedNamedObject {
   BOILERPLATE(CoindexedNamedObject);
   CoindexedNamedObject(DataRef &&dr, ImageSelector &&is)
-    : base{std::move(dr)}, imageSelector{std::move(is)} {}
+      : base{std::move(dr)}, imageSelector{std::move(is)} {}
   DataRef base;
   ImageSelector imageSelector;
 };
@@ -1816,7 +1815,7 @@ struct CoindexedNamedObject {
 struct ArrayElement {
   BOILERPLATE(ArrayElement);
   ArrayElement(DataRef &&dr, std::list<SectionSubscript> &&ss)
-    : base{std::move(dr)}, subscripts(std::move(ss)) {}
+      : base{std::move(dr)}, subscripts(std::move(ss)) {}
   Substring ConvertToSubstring();
   StructureConstructor ConvertToStructureConstructor(
       const semantics::DerivedTypeSpec &);
@@ -2287,8 +2286,8 @@ struct CaseValueRange {
   struct Range {
     BOILERPLATE(Range);
     Range(std::optional<CaseValue> &&l, std::optional<CaseValue> &&u)
-      : lower{std::move(l)}, upper{std::move(u)} {}
-    std::optional<CaseValue> lower, upper;  // not both missing
+        : lower{std::move(l)}, upper{std::move(u)} {}
+    std::optional<CaseValue> lower, upper; // not both missing
   };
   std::variant<CaseValue, Range> u;
 };
@@ -2625,13 +2624,13 @@ struct ReadStmt {
   BOILERPLATE(ReadStmt);
   ReadStmt(std::optional<IoUnit> &&i, std::optional<Format> &&f,
       std::list<IoControlSpec> &&cs, std::list<InputItem> &&its)
-    : iounit{std::move(i)}, format{std::move(f)}, controls(std::move(cs)),
-      items(std::move(its)) {}
-  std::optional<IoUnit> iounit;  // if first in controls without UNIT= &/or
-                                 // followed by untagged format/namelist
-  std::optional<Format> format;  // if second in controls without FMT=/NML=, or
-                                 // no (io-control-spec-list); might be
-                                 // an untagged namelist group name
+      : iounit{std::move(i)}, format{std::move(f)}, controls(std::move(cs)),
+        items(std::move(its)) {}
+  std::optional<IoUnit> iounit; // if first in controls without UNIT= &/or
+                                // followed by untagged format/namelist
+  std::optional<Format> format; // if second in controls without FMT=/NML=, or
+                                // no (io-control-spec-list); might be
+                                // an untagged namelist group name
   std::list<IoControlSpec> controls;
   std::list<InputItem> items;
 };
@@ -2647,12 +2646,12 @@ struct WriteStmt {
   BOILERPLATE(WriteStmt);
   WriteStmt(std::optional<IoUnit> &&i, std::optional<Format> &&f,
       std::list<IoControlSpec> &&cs, std::list<OutputItem> &&its)
-    : iounit{std::move(i)}, format{std::move(f)}, controls(std::move(cs)),
-      items(std::move(its)) {}
-  std::optional<IoUnit> iounit;  // if first in controls without UNIT= &/or
-                                 // followed by untagged format/namelist
-  std::optional<Format> format;  // if second in controls without FMT=/NML=;
-                                 // might be an untagged namelist group, too
+      : iounit{std::move(i)}, format{std::move(f)}, controls(std::move(cs)),
+        items(std::move(its)) {}
+  std::optional<IoUnit> iounit; // if first in controls without UNIT= &/or
+                                // followed by untagged format/namelist
+  std::optional<Format> format; // if second in controls without FMT=/NML=;
+                                // might be an untagged namelist group, too
   std::list<IoControlSpec> controls;
   std::list<OutputItem> items;
 };
@@ -2947,10 +2946,10 @@ struct Only {
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 struct UseStmt {
   BOILERPLATE(UseStmt);
-  ENUM_CLASS(ModuleNature, Intrinsic, Non_Intrinsic)  // R1410
-  template<typename A>
+  ENUM_CLASS(ModuleNature, Intrinsic, Non_Intrinsic) // R1410
+  template <typename A>
   UseStmt(std::optional<ModuleNature> &&nat, Name &&n, std::list<A> &&x)
-    : nature(std::move(nat)), moduleName(std::move(n)), u(std::move(x)) {}
+      : nature(std::move(nat)), moduleName(std::move(n)), u(std::move(x)) {}
   std::optional<ModuleNature> nature;
   Name moduleName;
   std::variant<std::list<Rename>, std::list<Only>> u;
@@ -2998,9 +2997,9 @@ struct PrefixSpec {
 struct Suffix {
   BOILERPLATE(Suffix);
   Suffix(LanguageBindingSpec &&lbs, std::optional<Name> &&rn)
-    : binding(std::move(lbs)), resultName(std::move(rn)) {}
+      : binding(std::move(lbs)), resultName(std::move(rn)) {}
   Suffix(Name &&rn, std::optional<LanguageBindingSpec> &&lbs)
-    : binding(std::move(lbs)), resultName(std::move(rn)) {}
+      : binding(std::move(lbs)), resultName(std::move(rn)) {}
   std::optional<LanguageBindingSpec> binding;
   std::optional<Name> resultName;
 };
@@ -3103,8 +3102,8 @@ WRAPPER_CLASS(AltReturnSpec, Label);
 //         expr | variable | procedure-name | proc-component-ref |
 //         alt-return-spec
 struct ActualArg {
-  WRAPPER_CLASS(PercentRef, Variable);  // %REF(v) extension
-  WRAPPER_CLASS(PercentVal, Expr);  // %VAL(x) extension
+  WRAPPER_CLASS(PercentRef, Variable); // %REF(v) extension
+  WRAPPER_CLASS(PercentVal, Expr); // %VAL(x) extension
   UNION_CLASS_BOILERPLATE(ActualArg);
   ActualArg(Expr &&x) : u{common::Indirection<Expr>(std::move(x))} {}
   std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal>
@@ -3136,7 +3135,7 @@ struct CallStmt {
   WRAPPER_CLASS_BOILERPLATE(CallStmt, Call);
   mutable std::unique_ptr<evaluate::ProcedureRef,
       common::Deleter<evaluate::ProcedureRef>>
-      typedCall;  // filled by semantics
+      typedCall; // filled by semantics
 };
 
 // R1529 function-subprogram ->
@@ -3371,7 +3370,7 @@ struct OmpLinearClause {
     BOILERPLATE(WithModifier);
     WithModifier(OmpLinearModifier &&m, std::list<Name> &&n,
         std::optional<ScalarIntConstantExpr> &&s)
-      : modifier(std::move(m)), names(std::move(n)), step(std::move(s)) {}
+        : modifier(std::move(m)), names(std::move(n)), step(std::move(s)) {}
     OmpLinearModifier modifier;
     std::list<Name> names;
     std::optional<ScalarIntConstantExpr> step;
@@ -3380,7 +3379,7 @@ struct OmpLinearClause {
     BOILERPLATE(WithoutModifier);
     WithoutModifier(
         std::list<Name> &&n, std::optional<ScalarIntConstantExpr> &&s)
-      : names(std::move(n)), step(std::move(s)) {}
+        : names(std::move(n)), step(std::move(s)) {}
     std::list<Name> names;
     std::optional<ScalarIntConstantExpr> step;
   };
@@ -3774,7 +3773,7 @@ struct OpenMPBlockConstruct {
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-    : t({std::move(a), std::nullopt, std::nullopt}) {}
+      : t({std::move(a), std::nullopt, std::nullopt}) {}
   std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
@@ -3787,5 +3786,5 @@ struct OpenMPConstruct {
       OpenMPCriticalConstruct>
       u;
 };
-}
-#endif  // FORTRAN_PARSER_PARSE_TREE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_PARSE_TREE_H_

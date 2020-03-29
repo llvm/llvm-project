@@ -18,24 +18,24 @@ namespace Fortran::parser {
 
 // R403 scalar-xyz -> xyz
 // Also define constant-xyz, int-xyz, default-char-xyz.
-template<typename PA> inline constexpr auto scalar(const PA &p) {
-  return construct<Scalar<typename PA::resultType>>(p);  // scalar-p
+template <typename PA> inline constexpr auto scalar(const PA &p) {
+  return construct<Scalar<typename PA::resultType>>(p); // scalar-p
 }
 
-template<typename PA> inline constexpr auto constant(const PA &p) {
-  return construct<Constant<typename PA::resultType>>(p);  // constant-p
+template <typename PA> inline constexpr auto constant(const PA &p) {
+  return construct<Constant<typename PA::resultType>>(p); // constant-p
 }
 
-template<typename PA> inline constexpr auto integer(const PA &p) {
-  return construct<Integer<typename PA::resultType>>(p);  // int-p
+template <typename PA> inline constexpr auto integer(const PA &p) {
+  return construct<Integer<typename PA::resultType>>(p); // int-p
 }
 
-template<typename PA> inline constexpr auto logical(const PA &p) {
-  return construct<Logical<typename PA::resultType>>(p);  // logical-p
+template <typename PA> inline constexpr auto logical(const PA &p) {
+  return construct<Logical<typename PA::resultType>>(p); // logical-p
 }
 
-template<typename PA> inline constexpr auto defaultChar(const PA &p) {
-  return construct<DefaultChar<typename PA::resultType>>(p);  // default-char-p
+template <typename PA> inline constexpr auto defaultChar(const PA &p) {
+  return construct<DefaultChar<typename PA::resultType>>(p); // default-char-p
 }
 
 // N.B. charLiteralConstantWithoutKind does not skip preceding space.
@@ -97,9 +97,9 @@ inline constexpr auto loopBounds(decltype(scalarExpr) &p) {
   return construct<LoopBounds<ScalarName, ScalarExpr>>(
       scalar(name) / "=", p / ",", p, maybe("," >> p));
 }
-template<typename PA> inline constexpr auto loopBounds(const PA &p) {
+template <typename PA> inline constexpr auto loopBounds(const PA &p) {
   return construct<LoopBounds<DoVariable, typename PA::resultType>>(
       doVariable / "=", p / ",", p, maybe("," >> p));
 }
-}
+} // namespace Fortran::parser
 #endif

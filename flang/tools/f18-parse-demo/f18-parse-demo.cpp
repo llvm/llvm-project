@@ -80,13 +80,13 @@ double CPUseconds() { return 0; }
 
 struct DriverOptions {
   DriverOptions() {}
-  bool verbose{false};  // -v
-  bool compileOnly{false};  // -c
-  std::string outputPath;  // -o path
-  std::vector<std::string> searchDirectories{"."s};  // -I dir
-  bool forcedForm{false};  // -Mfixed or -Mfree appeared
-  bool warnOnNonstandardUsage{false};  // -Mstandard
-  bool warningsAreErrors{false};  // -Werror
+  bool verbose{false}; // -v
+  bool compileOnly{false}; // -c
+  std::string outputPath; // -o path
+  std::vector<std::string> searchDirectories{"."s}; // -I dir
+  bool forcedForm{false}; // -Mfixed or -Mfree appeared
+  bool warnOnNonstandardUsage{false}; // -Mstandard
+  bool warningsAreErrors{false}; // -Werror
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::LATIN_1};
   bool parseOnly{false};
   bool dumpProvenance{false};
@@ -100,7 +100,7 @@ struct DriverOptions {
 
 bool ParentProcess() {
   if (fork() == 0) {
-    return false;  // in child process
+    return false; // in child process
   }
   int childStat{0};
   wait(&childStat);
@@ -451,7 +451,7 @@ int main(int argc, char *const argv[]) {
   }
   if (!options.features.IsEnabled(
           Fortran::common::LanguageFeature::BackslashEscapes)) {
-    driver.fcArgs.push_back("-fno-backslash");  // PGI "-Mbackslash"
+    driver.fcArgs.push_back("-fno-backslash"); // PGI "-Mbackslash"
   }
 
   if (!anyFiles) {

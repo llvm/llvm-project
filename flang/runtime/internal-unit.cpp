@@ -14,7 +14,7 @@
 
 namespace Fortran::runtime::io {
 
-template<Direction DIR>
+template <Direction DIR>
 InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length) {
   recordLength = length;
@@ -24,7 +24,7 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
       CFI_attribute_pointer);
 }
 
-template<Direction DIR>
+template <Direction DIR>
 InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     const Descriptor &that, const Terminator &terminator) {
   RUNTIME_CHECK(terminator, that.type().IsCharacter());
@@ -37,8 +37,8 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
   endfileRecordNumber = d.Elements() + 1;
 }
 
-template<Direction DIR> void InternalDescriptorUnit<DIR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {  // blank fill
+template <Direction DIR> void InternalDescriptorUnit<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Output) { // blank fill
     while (char *record{CurrentRecord()}) {
       if (furthestPositionInRecord <
           recordLength.value_or(furthestPositionInRecord)) {
@@ -51,12 +51,12 @@ template<Direction DIR> void InternalDescriptorUnit<DIR>::EndIoStatement() {
   }
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool InternalDescriptorUnit<DIR>::Emit(
     const char *data, std::size_t bytes, IoErrorHandler &handler) {
   if constexpr (DIR == Direction::Input) {
     handler.Crash("InternalDescriptorUnit<Direction::Input>::Emit() called");
-    return false && data[bytes] != 0;  // bogus compare silences GCC warning
+    return false && data[bytes] != 0; // bogus compare silences GCC warning
   } else {
     if (bytes <= 0) {
       return true;
@@ -85,7 +85,7 @@ bool InternalDescriptorUnit<DIR>::Emit(
   }
 }
 
-template<Direction DIR>
+template <Direction DIR>
 std::optional<char32_t> InternalDescriptorUnit<DIR>::GetCurrentChar(
     IoErrorHandler &handler) {
   if constexpr (DIR == Direction::Output) {
@@ -107,13 +107,13 @@ std::optional<char32_t> InternalDescriptorUnit<DIR>::GetCurrentChar(
   return record[positionInRecord];
 }
 
-template<Direction DIR>
+template <Direction DIR>
 bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
   if (currentRecordNumber >= endfileRecordNumber.value_or(0)) {
     handler.SignalEnd();
     return false;
   }
-  if constexpr (DIR == Direction::Output) {  // blank fill
+  if constexpr (DIR == Direction::Output) { // blank fill
     if (furthestPositionInRecord <
         recordLength.value_or(furthestPositionInRecord)) {
       char *record{CurrentRecord()};
@@ -128,7 +128,7 @@ bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
   return true;
 }
 
-template<Direction DIR>
+template <Direction DIR>
 void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, currentRecordNumber > 1);
   --currentRecordNumber;
@@ -138,4 +138,4 @@ void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
 
 template class InternalDescriptorUnit<Direction::Output>;
 template class InternalDescriptorUnit<Direction::Input>;
-}
+} // namespace Fortran::runtime::io

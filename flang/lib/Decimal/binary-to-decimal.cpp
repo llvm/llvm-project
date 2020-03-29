@@ -11,10 +11,10 @@
 
 namespace Fortran::decimal {
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::BigRadixFloatingPointNumber(
     BinaryFloatingPointNumber<PREC> x, enum FortranRounding rounding)
-  : rounding_{rounding} {
+    : rounding_{rounding} {
   bool negative{x.IsNegative()};
   if (x.IsZero()) {
     isNegative_ = negative;
@@ -104,7 +104,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::BigRadixFloatingPointNumber(
   Normalize();
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 ConversionToDecimalResult
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
     std::size_t n, enum DecimalConversionFlags flags, int maxDigits) const {
@@ -176,10 +176,17 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
       incr = *end > '5' ||
           (*end == '5' && (p > end + 1 || ((end[-1] - '0') & 1) != 0));
       break;
-    case RoundUp: incr = !isNegative_; break;
-    case RoundDown: incr = isNegative_; break;
-    case RoundToZero: break;
-    case RoundCompatible: incr = *end >= '5'; break;
+    case RoundUp:
+      incr = !isNegative_;
+      break;
+    case RoundDown:
+      incr = isNegative_;
+      break;
+    case RoundToZero:
+      break;
+    case RoundCompatible:
+      incr = *end >= '5';
+      break;
     }
     p = end;
     if (incr) {
@@ -199,7 +206,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
   }
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Mean(
     const BigRadixFloatingPointNumber &that) {
   while (digits_ < that.digits_) {
@@ -222,7 +229,7 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Mean(
   return DivideBy<2>() != 0;
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 void BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Minimize(
     BigRadixFloatingPointNumber &&less, BigRadixFloatingPointNumber &&more) {
   int leastExponent{exponent_};
@@ -245,10 +252,10 @@ void BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Minimize(
     more.MultiplyBy<10>();
   }
   if (less.Mean(*this)) {
-    less.AddCarry();  // round up
+    less.AddCarry(); // round up
   }
   if (!more.Mean(*this)) {
-    more.Decrement();  // round down
+    more.Decrement(); // round down
   }
   while (less.digits_ < more.digits_) {
     less.digit_[less.digits_++] = 0;
@@ -292,7 +299,7 @@ void BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Minimize(
   Normalize();
 }
 
-template<int PREC, int LOG10RADIX>
+template <int PREC, int LOG10RADIX>
 void BigRadixFloatingPointNumber<PREC,
     LOG10RADIX>::LoseLeastSignificantDigit() {
   Digit LSD{digit_[0]};
@@ -306,17 +313,24 @@ void BigRadixFloatingPointNumber<PREC,
   case RoundDefault:
     incr = LSD > radix / 2 || (LSD == radix / 2 && digit_[0] % 2 != 0);
     break;
-  case RoundUp: incr = LSD > 0 && !isNegative_; break;
-  case RoundDown: incr = LSD > 0 && isNegative_; break;
-  case RoundToZero: break;
-  case RoundCompatible: incr = LSD >= radix / 2; break;
+  case RoundUp:
+    incr = LSD > 0 && !isNegative_;
+    break;
+  case RoundDown:
+    incr = LSD > 0 && isNegative_;
+    break;
+  case RoundToZero:
+    break;
+  case RoundCompatible:
+    incr = LSD >= radix / 2;
+    break;
   }
   for (int j{0}; (digit_[j] += incr) == radix; ++j) {
     digit_[j] = 0;
   }
 }
 
-template<int PREC>
+template <int PREC>
 ConversionToDecimalResult ConvertToDecimal(char *buffer, std::size_t size,
     enum DecimalConversionFlags flags, int digits,
     enum FortranRounding rounding, BinaryFloatingPointNumber<PREC> x) {
@@ -398,4 +412,4 @@ ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
 }
 #endif
 }
-}
+} // namespace Fortran::decimal

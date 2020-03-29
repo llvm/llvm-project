@@ -21,5 +21,5 @@ class SemanticsContext;
 /// \param program    the parse tree of the program
 /// \return true, iff the program's labels pass semantics checks
 bool ValidateLabels(SemanticsContext &context, const parser::Program &program);
-}
-#endif  // FORTRAN_SEMANTICS_RESOLVE_LABELS_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_RESOLVE_LABELS_H_

@@ -11,15 +11,15 @@
 using namespace Fortran::evaluate;
 
 // helper to call functions on all types from tuple
-template<typename... T> struct RunOnTypes {};
-template<typename Test, typename... T>
+template <typename... T> struct RunOnTypes {};
+template <typename Test, typename... T>
 struct RunOnTypes<Test, std::tuple<T...>> {
   static void Run() { (..., Test::template Run<T>()); }
 };
 
 // test for fold.h GetScalarConstantValue function
 struct TestGetScalarConstantValue {
-  template<typename T> static void Run() {
+  template <typename T> static void Run() {
     Expr<T> exprFullyTyped{Constant<T>{Scalar<T>{}}};
     Expr<SomeKind<T::category>> exprSomeKind{exprFullyTyped};
     Expr<SomeType> exprSomeType{exprSomeKind};
@@ -29,7 +29,7 @@ struct TestGetScalarConstantValue {
   }
 };
 
-template<typename T>
+template <typename T>
 static FunctionRef<T> CreateIntrinsicElementalCall(
     const std::string &name, const Expr<T> &arg) {
   Fortran::semantics::Attrs attrs;
@@ -45,12 +45,12 @@ static FunctionRef<T> CreateIntrinsicElementalCall(
 // HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment
 
 // Dummy host runtime functions where subnormal flushing matters
-float SubnormalFlusher1(float f) {  // given f is subnormal
-  return 2.3 * f;  // returns 0 if subnormal arguments are flushed to zero
+float SubnormalFlusher1(float f) { // given f is subnormal
+  return 2.3 * f; // returns 0 if subnormal arguments are flushed to zero
 }
 
-float SubnormalFlusher2(float f) {  // given f/2 is subnormal
-  return f / 2.3;  // returns 0 if subnormal
+float SubnormalFlusher2(float f) { // given f/2 is subnormal
+  return f / 2.3; // returns 0 if subnormal
 }
 
 void TestHostRuntimeSubnormalFlushing() {
@@ -98,7 +98,7 @@ void TestHostRuntimeSubnormalFlushing() {
       TEST(false);
     }
   } else {
-    TEST(false);  // Cannot run this test on the host
+    TEST(false); // Cannot run this test on the host
   }
 }
 

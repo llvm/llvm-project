@@ -14,7 +14,7 @@
 #include <cstdlib>
 
 static void ConfigureFloatingPoint() {
-#ifdef feclearexcept  // a macro in some environments; omit std::
+#ifdef feclearexcept // a macro in some environments; omit std::
   feclearexcept(FE_ALL_EXCEPT);
 #else
   std::feclearexcept(FE_ALL_EXCEPT);

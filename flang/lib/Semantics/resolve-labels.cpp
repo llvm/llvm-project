@@ -39,8 +39,8 @@ struct SourceStatementInfoTuplePOD {
   SourceStatementInfoTuplePOD(const parser::Label &parserLabel,
       const ProxyForScope &proxyForScope,
       const parser::CharBlock &parserCharBlock)
-    : parserLabel{parserLabel}, proxyForScope{proxyForScope},
-      parserCharBlock{parserCharBlock} {}
+      : parserLabel{parserLabel}, proxyForScope{proxyForScope},
+        parserCharBlock{parserCharBlock} {}
   parser::Label parserLabel;
   ProxyForScope proxyForScope;
   parser::CharBlock parserCharBlock;
@@ -51,7 +51,7 @@ enum class Legality { never, always, formerly };
 bool HasScope(ProxyForScope scope) { return scope != ProxyForScope{0u}; }
 
 // F18:R1131
-template<typename A>
+template <typename A>
 constexpr Legality IsLegalDoTerm(const parser::Statement<A> &) {
   if (std::is_same_v<A, common::Indirection<parser::EndDoStmt>> ||
       std::is_same_v<A, parser::EndDoStmt>) {
@@ -92,11 +92,11 @@ constexpr Legality IsLegalDoTerm(
   }
 }
 
-template<typename A> constexpr bool IsFormat(const parser::Statement<A> &) {
+template <typename A> constexpr bool IsFormat(const parser::Statement<A> &) {
   return std::is_same_v<A, common::Indirection<parser::FormatStmt>>;
 }
 
-template<typename A>
+template <typename A>
 constexpr Legality IsLegalBranchTarget(const parser::Statement<A> &) {
   if (std::is_same_v<A, parser::ActionStmt> ||
       std::is_same_v<A, parser::AssociateStmt> ||
@@ -128,7 +128,7 @@ constexpr Legality IsLegalBranchTarget(const parser::Statement<A> &) {
   }
 }
 
-template<typename A>
+template <typename A>
 constexpr LabeledStmtClassificationSet ConstructBranchTargetFlags(
     const parser::Statement<A> &statement) {
   LabeledStmtClassificationSet labeledStmtClassificationSet{};
@@ -155,11 +155,11 @@ static unsigned SayLabel(parser::Label label) {
 struct UnitAnalysis {
   UnitAnalysis() { scopeModel.push_back(0); }
   UnitAnalysis(UnitAnalysis &&that)
-    : doStmtSources{std::move(that.doStmtSources)},
-      formatStmtSources{std::move(that.formatStmtSources)},
-      otherStmtSources{std::move(that.otherStmtSources)},
-      targetStmts{std::move(that.targetStmts)}, scopeModel{std::move(
-                                                    that.scopeModel)} {}
+      : doStmtSources{std::move(that.doStmtSources)},
+        formatStmtSources{std::move(that.formatStmtSources)},
+        otherStmtSources{std::move(that.otherStmtSources)},
+        targetStmts{std::move(that.targetStmts)}, scopeModel{std::move(
+                                                      that.scopeModel)} {}
 
   SourceStmtList doStmtSources;
   SourceStmtList formatStmtSources;
@@ -171,7 +171,7 @@ struct UnitAnalysis {
 // Some parse tree record for statements simply wrap construct names;
 // others include them as tuple components.  Given a statement,
 // return a pointer to its name if it has one.
-template<typename A>
+template <typename A>
 const parser::CharBlock *GetStmtName(const parser::Statement<A> &stmt) {
   const std::optional<parser::Name> *name{nullptr};
   if constexpr (WrapperTrait<A>) {
@@ -199,7 +199,7 @@ using ExecutableConstructEndStmts = std::tuple<parser::EndIfStmt,
     parser::EndDoStmt, parser::EndSelectStmt, parser::EndChangeTeamStmt,
     parser::EndBlockStmt, parser::EndCriticalStmt, parser::EndAssociateStmt>;
 
-template<typename A>
+template <typename A>
 static constexpr bool IsExecutableConstructEndStmt{
     common::HasMember<A, ExecutableConstructEndStmts>};
 
@@ -208,10 +208,10 @@ public:
   ParseTreeAnalyzer(ParseTreeAnalyzer &&that) = default;
   ParseTreeAnalyzer(SemanticsContext &context) : context_{context} {}
 
-  template<typename A> constexpr bool Pre(const A &) { return true; }
-  template<typename A> constexpr void Post(const A &) {}
+  template <typename A> constexpr bool Pre(const A &) { return true; }
+  template <typename A> constexpr void Post(const A &) {}
 
-  template<typename A> bool Pre(const parser::Statement<A> &statement) {
+  template <typename A> bool Pre(const parser::Statement<A> &statement) {
     currentPosition_ = statement.source;
     if (statement.label) {
       auto label{statement.label.value()};
@@ -331,7 +331,7 @@ public:
   // and their intermediate or terminal statements that allow optional
   // construct names(e.g., ELSE).  When an optional construct name is present,
   // the construct as a whole must have a name that matches.
-  template<typename FIRST, typename CONSTRUCT, typename STMT>
+  template <typename FIRST, typename CONSTRUCT, typename STMT>
   void CheckOptionalName(const char *constructTag, const CONSTRUCT &a,
       const parser::Statement<STMT> &stmt) {
     if (const parser::CharBlock * name{GetStmtName(stmt)}) {
@@ -520,7 +520,7 @@ private:
     return PushSubscope();
   }
 
-  template<typename A> bool PushConstructName(const A &a) {
+  template <typename A> bool PushConstructName(const A &a) {
     const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
     if (optionalName) {
       constructNames_.emplace_back(optionalName->ToString());
@@ -536,7 +536,7 @@ private:
     }
     return PushSubscope();
   }
-  template<typename A> bool PushConstructNameWithoutBlock(const A &a) {
+  template <typename A> bool PushConstructNameWithoutBlock(const A &a) {
     const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
     if (optionalName) {
       constructNames_.emplace_back(optionalName->ToString());
@@ -544,11 +544,11 @@ private:
     return true;
   }
 
-  template<typename A> void PopConstructNameWithoutBlock(const A &a) {
+  template <typename A> void PopConstructNameWithoutBlock(const A &a) {
     CheckName(a);
     PopConstructNameIfPresent(a);
   }
-  template<typename A> void PopConstructNameIfPresent(const A &a) {
+  template <typename A> void PopConstructNameIfPresent(const A &a) {
     const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
     if (optionalName) {
       constructNames_.pop_back();
@@ -563,13 +563,13 @@ private:
     }
   }
 
-  template<typename A> void PopConstructName(const A &a) {
+  template <typename A> void PopConstructName(const A &a) {
     CheckName(a);
     PopScope();
     PopConstructNameIfPresent(a);
   }
 
-  template<typename FIRST, typename CASEBLOCK, typename CASE,
+  template <typename FIRST, typename CASEBLOCK, typename CASE,
       typename CONSTRUCT>
   void CheckSelectNames(const char *tag, const CONSTRUCT &construct) {
     CheckEndName<FIRST, parser::EndSelectStmt>(tag, construct);
@@ -609,7 +609,7 @@ private:
 
   // Checks for missing or mismatching names on various constructs (e.g., BLOCK)
   // and their END statements.  Both names must be present if either one is.
-  template<typename FIRST, typename END, typename CONSTRUCT>
+  template <typename FIRST, typename END, typename CONSTRUCT>
   void CheckEndName(const char *constructTag, const CONSTRUCT &a) {
     const auto &constructStmt{std::get<parser::Statement<FIRST>>(a.t)};
     const auto &endStmt{std::get<parser::Statement<END>>(a.t)};
@@ -1024,4 +1024,4 @@ bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
 bool ValidateLabels(SemanticsContext &context, const parser::Program &program) {
   return CheckConstraints(LabelAnalysis(context, program));
 }
-}
+} // namespace Fortran::semantics

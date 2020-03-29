@@ -28,7 +28,7 @@ struct Designator;
 struct Expr;
 struct GenericSpec;
 struct Name;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -108,16 +108,16 @@ private:
       const DeclTypeSpec *, std::function<bool(const IntrinsicTypeSpec &)>);
 
   SemanticsContext &context_;
-  std::vector<EquivalenceSet> sets_;  // all equivalence sets in this scope
+  std::vector<EquivalenceSet> sets_; // all equivalence sets in this scope
   // Map object to index of set it is in
   std::map<EquivalenceObject, std::size_t> objectToSet_;
-  EquivalenceSet currSet_;  // equivalence set currently being constructed
+  EquivalenceSet currSet_; // equivalence set currently being constructed
   struct {
     Symbol *symbol{nullptr};
     std::vector<ConstantSubscript> subscripts;
     std::optional<ConstantSubscript> substringStart;
-  } currObject_;  // equivalence object currently being constructed
+  } currObject_; // equivalence object currently being constructed
 };
 
-}
-#endif  // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

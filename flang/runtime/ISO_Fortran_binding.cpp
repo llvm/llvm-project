@@ -108,41 +108,99 @@ int CFI_deallocate(CFI_cdesc_t *descriptor) {
 static constexpr std::size_t MinElemLen(CFI_type_t type) {
   std::size_t minElemLen{0};
   switch (type) {
-  case CFI_type_signed_char: minElemLen = sizeof(signed char); break;
-  case CFI_type_short: minElemLen = sizeof(short); break;
-  case CFI_type_int: minElemLen = sizeof(int); break;
-  case CFI_type_long: minElemLen = sizeof(long); break;
-  case CFI_type_long_long: minElemLen = sizeof(long long); break;
-  case CFI_type_size_t: minElemLen = sizeof(std::size_t); break;
-  case CFI_type_int8_t: minElemLen = sizeof(std::int8_t); break;
-  case CFI_type_int16_t: minElemLen = sizeof(std::int16_t); break;
-  case CFI_type_int32_t: minElemLen = sizeof(std::int32_t); break;
-  case CFI_type_int64_t: minElemLen = sizeof(std::int64_t); break;
-  case CFI_type_int128_t: minElemLen = 2 * sizeof(std::int64_t); break;
-  case CFI_type_int_least8_t: minElemLen = sizeof(std::int_least8_t); break;
-  case CFI_type_int_least16_t: minElemLen = sizeof(std::int_least16_t); break;
-  case CFI_type_int_least32_t: minElemLen = sizeof(std::int_least32_t); break;
-  case CFI_type_int_least64_t: minElemLen = sizeof(std::int_least64_t); break;
+  case CFI_type_signed_char:
+    minElemLen = sizeof(signed char);
+    break;
+  case CFI_type_short:
+    minElemLen = sizeof(short);
+    break;
+  case CFI_type_int:
+    minElemLen = sizeof(int);
+    break;
+  case CFI_type_long:
+    minElemLen = sizeof(long);
+    break;
+  case CFI_type_long_long:
+    minElemLen = sizeof(long long);
+    break;
+  case CFI_type_size_t:
+    minElemLen = sizeof(std::size_t);
+    break;
+  case CFI_type_int8_t:
+    minElemLen = sizeof(std::int8_t);
+    break;
+  case CFI_type_int16_t:
+    minElemLen = sizeof(std::int16_t);
+    break;
+  case CFI_type_int32_t:
+    minElemLen = sizeof(std::int32_t);
+    break;
+  case CFI_type_int64_t:
+    minElemLen = sizeof(std::int64_t);
+    break;
+  case CFI_type_int128_t:
+    minElemLen = 2 * sizeof(std::int64_t);
+    break;
+  case CFI_type_int_least8_t:
+    minElemLen = sizeof(std::int_least8_t);
+    break;
+  case CFI_type_int_least16_t:
+    minElemLen = sizeof(std::int_least16_t);
+    break;
+  case CFI_type_int_least32_t:
+    minElemLen = sizeof(std::int_least32_t);
+    break;
+  case CFI_type_int_least64_t:
+    minElemLen = sizeof(std::int_least64_t);
+    break;
   case CFI_type_int_least128_t:
     minElemLen = 2 * sizeof(std::int_least64_t);
     break;
-  case CFI_type_int_fast8_t: minElemLen = sizeof(std::int_fast8_t); break;
-  case CFI_type_int_fast16_t: minElemLen = sizeof(std::int_fast16_t); break;
-  case CFI_type_int_fast32_t: minElemLen = sizeof(std::int_fast32_t); break;
-  case CFI_type_int_fast64_t: minElemLen = sizeof(std::int_fast64_t); break;
-  case CFI_type_intmax_t: minElemLen = sizeof(std::intmax_t); break;
-  case CFI_type_intptr_t: minElemLen = sizeof(std::intptr_t); break;
-  case CFI_type_ptrdiff_t: minElemLen = sizeof(std::ptrdiff_t); break;
-  case CFI_type_float: minElemLen = sizeof(float); break;
-  case CFI_type_double: minElemLen = sizeof(double); break;
-  case CFI_type_long_double: minElemLen = sizeof(long double); break;
-  case CFI_type_float_Complex: minElemLen = 2 * sizeof(float); break;
-  case CFI_type_double_Complex: minElemLen = 2 * sizeof(double); break;
+  case CFI_type_int_fast8_t:
+    minElemLen = sizeof(std::int_fast8_t);
+    break;
+  case CFI_type_int_fast16_t:
+    minElemLen = sizeof(std::int_fast16_t);
+    break;
+  case CFI_type_int_fast32_t:
+    minElemLen = sizeof(std::int_fast32_t);
+    break;
+  case CFI_type_int_fast64_t:
+    minElemLen = sizeof(std::int_fast64_t);
+    break;
+  case CFI_type_intmax_t:
+    minElemLen = sizeof(std::intmax_t);
+    break;
+  case CFI_type_intptr_t:
+    minElemLen = sizeof(std::intptr_t);
+    break;
+  case CFI_type_ptrdiff_t:
+    minElemLen = sizeof(std::ptrdiff_t);
+    break;
+  case CFI_type_float:
+    minElemLen = sizeof(float);
+    break;
+  case CFI_type_double:
+    minElemLen = sizeof(double);
+    break;
+  case CFI_type_long_double:
+    minElemLen = sizeof(long double);
+    break;
+  case CFI_type_float_Complex:
+    minElemLen = 2 * sizeof(float);
+    break;
+  case CFI_type_double_Complex:
+    minElemLen = 2 * sizeof(double);
+    break;
   case CFI_type_long_double_Complex:
     minElemLen = 2 * sizeof(long double);
     break;
-  case CFI_type_Bool: minElemLen = 1; break;
-  case CFI_type_cptr: minElemLen = sizeof(void *); break;
+  case CFI_type_Bool:
+    minElemLen = 1;
+    break;
+  case CFI_type_cptr:
+    minElemLen = sizeof(void *);
+    break;
   }
   return minElemLen;
 }
@@ -353,5 +411,5 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   }
   return CFI_SUCCESS;
 }
-}  // extern "C"
-}
+} // extern "C"
+} // namespace Fortran::ISO

@@ -175,13 +175,13 @@ int main() {
     double d;
     std::uint64_t n;
   } u;
-  u.n = 0x8000000000000000;  // -0
+  u.n = 0x8000000000000000; // -0
   realTest("(E9.1,';')", u.d, " -0.0E+00;");
   realTest("(F4.0,';')", u.d, " -0.;");
   realTest("(G8.0,';')", u.d, "-0.0E+00;");
   realTest("(G8.1,';')", u.d, " -0.    ;");
   realTest("(G0,';')", u.d, "-0.;");
-  u.n = 0x7ff0000000000000;  // +Inf
+  u.n = 0x7ff0000000000000; // +Inf
   realTest("(E9.1,';')", u.d, "      Inf;");
   realTest("(F9.1,';')", u.d, "      Inf;");
   realTest("(G9.1,';')", u.d, "      Inf;");
@@ -189,17 +189,17 @@ int main() {
   realTest("(SP,F9.1,';')", u.d, "     +Inf;");
   realTest("(SP,G9.1,';')", u.d, "     +Inf;");
   realTest("(G0,';')", u.d, "Inf;");
-  u.n = 0xfff0000000000000;  // -Inf
+  u.n = 0xfff0000000000000; // -Inf
   realTest("(E9.1,';')", u.d, "     -Inf;");
   realTest("(F9.1,';')", u.d, "     -Inf;");
   realTest("(G9.1,';')", u.d, "     -Inf;");
   realTest("(G0,';')", u.d, "-Inf;");
-  u.n = 0x7ff0000000000001;  // NaN
+  u.n = 0x7ff0000000000001; // NaN
   realTest("(E9.1,';')", u.d, "      NaN;");
   realTest("(F9.1,';')", u.d, "      NaN;");
   realTest("(G9.1,';')", u.d, "      NaN;");
   realTest("(G0,';')", u.d, "NaN;");
-  u.n = 0xfff0000000000001;  // NaN (sign irrelevant)
+  u.n = 0xfff0000000000001; // NaN (sign irrelevant)
   realTest("(E9.1,';')", u.d, "      NaN;");
   realTest("(F9.1,';')", u.d, "      NaN;");
   realTest("(G9.1,';')", u.d, "      NaN;");
@@ -208,7 +208,7 @@ int main() {
   realTest("(SP,G9.1,';')", u.d, "      NaN;");
   realTest("(G0,';')", u.d, "NaN;");
 
-  u.n = 0x3fb999999999999a;  // 0.1 rounded
+  u.n = 0x3fb999999999999a; // 0.1 rounded
   realTest("(E62.55,';')", u.d,
       " 0.1000000000000000055511151231257827021181583404541015625E+00;");
   realTest("(E0.0,';')", u.d, "0.E+00;");
@@ -228,7 +228,7 @@ int main() {
       ".1000000000000000055511151231257827021181583404541015625;");
   realTest("(G0,';')", u.d, ".1;");
 
-  u.n = 0x3ff8000000000000;  // 1.5
+  u.n = 0x3ff8000000000000; // 1.5
   realTest("(E9.2,';')", u.d, " 0.15E+01;");
   realTest("(F4.1,';')", u.d, " 1.5;");
   realTest("(G7.1,';')", u.d, " 2.    ;");
@@ -254,7 +254,7 @@ int main() {
 
   // TODO continue F and G editing tests on these data
 
-  u.n = 0xbff8000000000000;  // -1.5
+  u.n = 0xbff8000000000000; // -1.5
   realTest("(E9.2,';')", u.d, "-0.15E+01;");
   realTest("(RN,E8.1,';')", u.d, "-0.2E+01;");
   realTest("(RD,E8.1,';')", u.d, "-0.2E+01;");
@@ -262,7 +262,7 @@ int main() {
   realTest("(RZ,E8.1,';')", u.d, "-0.1E+01;");
   realTest("(RC,E8.1,';')", u.d, "-0.2E+01;");
 
-  u.n = 0x4004000000000000;  // 2.5
+  u.n = 0x4004000000000000; // 2.5
   realTest("(E9.2,';')", u.d, " 0.25E+01;");
   realTest("(RN,E8.1,';')", u.d, " 0.2E+01;");
   realTest("(RD,E8.1,';')", u.d, " 0.2E+01;");
@@ -270,7 +270,7 @@ int main() {
   realTest("(RZ,E8.1,';')", u.d, " 0.2E+01;");
   realTest("(RC,E8.1,';')", u.d, " 0.3E+01;");
 
-  u.n = 0xc004000000000000;  // -2.5
+  u.n = 0xc004000000000000; // -2.5
   realTest("(E9.2,';')", u.d, "-0.25E+01;");
   realTest("(RN,E8.1,';')", u.d, "-0.2E+01;");
   realTest("(RD,E8.1,';')", u.d, "-0.3E+01;");
@@ -278,7 +278,7 @@ int main() {
   realTest("(RZ,E8.1,';')", u.d, "-0.2E+01;");
   realTest("(RC,E8.1,';')", u.d, "-0.3E+01;");
 
-  u.n = 1;  // least positive nonzero subnormal
+  u.n = 1; // least positive nonzero subnormal
   realTest("(E32.17,';')", u.d, "         0.49406564584124654-323;");
   realTest("(ES32.17,';')", u.d, "         4.94065645841246544-324;");
   realTest("(EN32.17,';')", u.d, "         4.94065645841246544-324;");
@@ -362,7 +362,7 @@ int main() {
       "273816725095583738973359899366480994116420570263709027924276754456522908"
       "753868250641971826553344726563-323;");
 
-  u.n = 0x10000000000000;  // least positive nonzero normal
+  u.n = 0x10000000000000; // least positive nonzero normal
   realTest("(E723.716,';')", u.d,
       " 0."
       "222507385850720138309023271733240406421921598046233183055332741688720443"
@@ -378,7 +378,7 @@ int main() {
       "307;");
   realTest("(G0,';')", u.d, ".22250738585072014-307;");
 
-  u.n = 0x7fefffffffffffffuLL;  // greatest finite
+  u.n = 0x7fefffffffffffffuLL; // greatest finite
   realTest("(E32.17,';')", u.d, "         0.17976931348623157+309;");
   realTest("(E317.310,';')", u.d,
       " 0."
@@ -415,9 +415,9 @@ int main() {
   realInTest("(F18.1)", "               125", 0x4029000000000000);
   realInTest("(F18.2)", "               125", 0x3ff4000000000000);
   realInTest("(F18.3)", "               125", 0x3fc0000000000000);
-  realInTest("(-1P,F18.0)", "               125", 0x4093880000000000);  // 1250
-  realInTest("(1P,F18.0)", "               125", 0x4029000000000000);  // 12.5
-  realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000);  // 1250
+  realInTest("(-1P,F18.0)", "               125", 0x4093880000000000); // 1250
+  realInTest("(1P,F18.0)", "               125", 0x4029000000000000); // 12.5
+  realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000); // 1250
   realInTest("(DC,F18.0)", "              12,5", 0x4029000000000000);
 
   return EndTests();

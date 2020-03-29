@@ -72,7 +72,7 @@ private:
   enum class Category { Explicit, Deferred, Assumed };
   Bound(Category category) : category_{category} {}
   Bound(Category category, MaybeSubscriptIntExpr &&expr)
-    : category_{category}, expr_{std::move(expr)} {}
+      : category_{category}, expr_{std::move(expr)} {}
   Category category_{Category::Explicit};
   MaybeSubscriptIntExpr expr_;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Bound &);
@@ -107,7 +107,7 @@ public:
 private:
   enum class Category { Explicit, Deferred, Assumed };
   ParamValue(Category category, common::TypeParamAttr attr)
-    : category_{category}, attr_{attr} {}
+      : category_{category}, attr_{attr} {}
   Category category_{Category::Explicit};
   common::TypeParamAttr attr_{common::TypeParamAttr::Kind};
   MaybeIntExpr expr_;
@@ -130,13 +130,14 @@ protected:
 private:
   TypeCategory category_;
   KindExpr kind_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const IntrinsicTypeSpec &x);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &os, const IntrinsicTypeSpec &x);
 };
 
 class NumericTypeSpec : public IntrinsicTypeSpec {
 public:
   NumericTypeSpec(TypeCategory category, KindExpr &&kind)
-    : IntrinsicTypeSpec(category, std::move(kind)) {
+      : IntrinsicTypeSpec(category, std::move(kind)) {
     CHECK(common::IsNumericTypeCategory(category));
   }
 };
@@ -144,20 +145,21 @@ public:
 class LogicalTypeSpec : public IntrinsicTypeSpec {
 public:
   explicit LogicalTypeSpec(KindExpr &&kind)
-    : IntrinsicTypeSpec(TypeCategory::Logical, std::move(kind)) {}
+      : IntrinsicTypeSpec(TypeCategory::Logical, std::move(kind)) {}
 };
 
 class CharacterTypeSpec : public IntrinsicTypeSpec {
 public:
   CharacterTypeSpec(ParamValue &&length, KindExpr &&kind)
-    : IntrinsicTypeSpec(TypeCategory::Character, std::move(kind)),
-      length_{std::move(length)} {}
+      : IntrinsicTypeSpec(TypeCategory::Character, std::move(kind)),
+        length_{std::move(length)} {}
   const ParamValue &length() const { return length_; }
   std::string AsFortran() const;
 
 private:
   ParamValue length_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharacterTypeSpec &x);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &os, const CharacterTypeSpec &x);
 };
 
 class ShapeSpec {
@@ -224,7 +226,7 @@ struct ArraySpec : public std::vector<ShapeSpec> {
 
 private:
   // Check non-empty and predicate is true for each element.
-  template<typename P> bool CheckAll(P predicate) const {
+  template <typename P> bool CheckAll(P predicate) const {
     return !empty() && std::all_of(begin(), end(), predicate);
   }
 };
@@ -287,13 +289,14 @@ public:
 private:
   SourceName name_;
   const Symbol &typeSymbol_;
-  const Scope *scope_{nullptr};  // same as typeSymbol_.scope() unless PDT
+  const Scope *scope_{nullptr}; // same as typeSymbol_.scope() unless PDT
   bool cooked_{false};
   bool evaluated_{false};
   bool instantiated_{false};
   RawParameters rawParameters_;
   ParameterMapType parameters_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DerivedTypeSpec &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const DerivedTypeSpec &);
 };
 
 class DeclTypeSpec {
@@ -351,18 +354,24 @@ public:
   IntrinsicTypeSpec *AsIntrinsic();
   const IntrinsicTypeSpec *AsIntrinsic() const {
     switch (category_) {
-    case Numeric: return &std::get<NumericTypeSpec>(typeSpec_);
-    case Logical: return &std::get<LogicalTypeSpec>(typeSpec_);
-    case Character: return &std::get<CharacterTypeSpec>(typeSpec_);
-    default: return nullptr;
+    case Numeric:
+      return &std::get<NumericTypeSpec>(typeSpec_);
+    case Logical:
+      return &std::get<LogicalTypeSpec>(typeSpec_);
+    case Character:
+      return &std::get<CharacterTypeSpec>(typeSpec_);
+    default:
+      return nullptr;
     }
   }
 
   const DerivedTypeSpec *AsDerived() const {
     switch (category_) {
     case TypeDerived:
-    case ClassDerived: return &std::get<DerivedTypeSpec>(typeSpec_);
-    default: return nullptr;
+    case ClassDerived:
+      return &std::get<DerivedTypeSpec>(typeSpec_);
+    default:
+      return nullptr;
     }
   }
 
@@ -390,5 +399,5 @@ private:
   const Symbol *symbol_{nullptr};
   const DeclTypeSpec *type_{nullptr};
 };
-}
-#endif  // FORTRAN_SEMANTICS_TYPE_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_TYPE_H_

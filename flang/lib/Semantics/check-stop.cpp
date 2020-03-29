@@ -39,4 +39,4 @@ void StopChecker::Enter(const parser::StopStmt &stmt) {
   }
 }
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

@@ -49,10 +49,10 @@ public:
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 
-  template<typename A, typename... X>
+  template <typename A, typename... X>
   IoStatementState &BeginIoStatement(X &&... xs) {
     // TODO: Child data transfer statements vs. locking
-    lock_.Take();  // dropped in EndIoStatement()
+    lock_.Take(); // dropped in EndIoStatement()
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
@@ -102,8 +102,8 @@ private:
   // during a single list-directed READ due to the possibility of a
   // multi-record CHARACTER value with a "r*" repeat count.
   std::int64_t frameOffsetInFile_{0};
-  std::int64_t recordOffsetInFrame_{0};  // of currentRecordNumber
+  std::int64_t recordOffsetInFrame_{0}; // of currentRecordNumber
 };
 
-}
-#endif  // FORTRAN_RUNTIME_IO_UNIT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_IO_UNIT_H_

@@ -33,11 +33,11 @@ class Symbol;
 namespace Fortran::evaluate {
 class Component;
 class IntrinsicProcTable;
-}
+} // namespace Fortran::evaluate
 namespace Fortran::evaluate::characteristics {
 struct DummyArgument;
 struct Procedure;
-}
+} // namespace Fortran::evaluate::characteristics
 
 extern template class Fortran::common::Indirection<Fortran::evaluate::Component,
     true>;
@@ -133,7 +133,7 @@ private:
   // in the parse tree.
   std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType> u_;
   std::optional<parser::CharBlock> keyword_;
-  bool isAlternateReturn_{false};  // whether expr is a "*label" number
+  bool isAlternateReturn_{false}; // whether expr is a "*label" number
   bool isPassedObject_{false};
   common::Intent dummyIntent_{common::Intent::Default};
 };
@@ -152,7 +152,7 @@ struct SpecificIntrinsic {
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   IntrinsicProcedure name;
-  bool isRestrictedSpecific{false};  // if true, can only call it, not pass it
+  bool isRestrictedSpecific{false}; // if true, can only call it, not pass it
   common::CopyableIndirection<characteristics::Procedure> characteristics;
 };
 
@@ -164,7 +164,7 @@ struct ProcedureDesignator {
 
   // Exactly one of these will return a non-null pointer.
   const SpecificIntrinsic *GetSpecificIntrinsic() const;
-  const Symbol *GetSymbol() const;  // symbol or component symbol
+  const Symbol *GetSymbol() const; // symbol or component symbol
 
   // For references to NOPASS components and bindings only.
   // References to PASS components and bindings are represented
@@ -191,7 +191,7 @@ class ProcedureRef {
 public:
   CLASS_BOILERPLATE(ProcedureRef)
   ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a)
-    : proc_{std::move(p)}, arguments_(std::move(a)) {}
+      : proc_{std::move(p)}, arguments_(std::move(a)) {}
   ~ProcedureRef();
 
   ProcedureDesignator &proc() { return proc_; }
@@ -210,18 +210,18 @@ protected:
   ActualArguments arguments_;
 };
 
-template<typename A> class FunctionRef : public ProcedureRef {
+template <typename A> class FunctionRef : public ProcedureRef {
 public:
   using Result = A;
   CLASS_BOILERPLATE(FunctionRef)
   explicit FunctionRef(ProcedureRef &&pr) : ProcedureRef{std::move(pr)} {}
   FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
-    : ProcedureRef{std::move(p), std::move(a)} {}
+      : ProcedureRef{std::move(p), std::move(a)} {}
 
   std::optional<DynamicType> GetType() const { return proc_.GetType(); }
-  std::optional<Constant<Result>> Fold(FoldingContext &);  // for intrinsics
+  std::optional<Constant<Result>> Fold(FoldingContext &); // for intrinsics
 };
 
 FOR_EACH_SPECIFIC_TYPE(extern template class FunctionRef, )
-}
-#endif  // FORTRAN_EVALUATE_CALL_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_CALL_H_

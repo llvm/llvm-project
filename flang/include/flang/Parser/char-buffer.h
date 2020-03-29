@@ -24,8 +24,8 @@ class CharBuffer {
 public:
   CharBuffer() {}
   CharBuffer(CharBuffer &&that)
-    : blocks_(std::move(that.blocks_)), last_{that.last_}, bytes_{that.bytes_},
-      lastBlockEmpty_{that.lastBlockEmpty_} {
+      : blocks_(std::move(that.blocks_)), last_{that.last_},
+        bytes_{that.bytes_}, lastBlockEmpty_{that.lastBlockEmpty_} {
     that.clear();
   }
   CharBuffer &operator=(CharBuffer &&that) {
@@ -73,5 +73,5 @@ private:
   std::size_t bytes_{0};
   bool lastBlockEmpty_{false};
 };
-}
-#endif  // FORTRAN_PARSER_CHAR_BUFFER_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_CHAR_BUFFER_H_

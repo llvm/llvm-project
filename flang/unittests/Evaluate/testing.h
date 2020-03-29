@@ -32,5 +32,5 @@ FailureDetailPrinter Match(const char *file, int line, const std::string &want,
     const char *gots, const std::string &got);
 FailureDetailPrinter Compare(const char *file, int line, const char *xs,
     const char *rel, const char *ys, std::uint64_t x, std::uint64_t y);
-}
-#endif  // FORTRAN_EVALUATE_TESTING_H_
+} // namespace testing
+#endif // FORTRAN_EVALUATE_TESTING_H_

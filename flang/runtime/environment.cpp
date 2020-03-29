@@ -19,9 +19,9 @@ void ExecutionEnvironment::Configure(
   argc = ac;
   argv = av;
   envp = env;
-  listDirectedOutputLineLengthLimit = 79;  // PGI default
+  listDirectedOutputLineLengthLimit = 79; // PGI default
   defaultOutputRoundingMode =
-      decimal::FortranRounding::RoundNearest;  // RP(==RN)
+      decimal::FortranRounding::RoundNearest; // RP(==RN)
 
   if (auto *x{std::getenv("FORT_FMT_RECL")}) {
     char *end;
@@ -36,4 +36,4 @@ void ExecutionEnvironment::Configure(
 
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
-}
+} // namespace Fortran::runtime

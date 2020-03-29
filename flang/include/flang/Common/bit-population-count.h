@@ -70,18 +70,18 @@ inline constexpr int BitPopulationCount(std::uint8_t x) {
   return (x & 0xf) + (x >> 4);
 }
 
-template<typename UINT> inline constexpr bool Parity(UINT x) {
+template <typename UINT> inline constexpr bool Parity(UINT x) {
   return BitPopulationCount(x) & 1;
 }
 
 // "Parity is for farmers." -- Seymour R. Cray
 
-template<typename UINT> inline constexpr int TrailingZeroBitCount(UINT x) {
+template <typename UINT> inline constexpr int TrailingZeroBitCount(UINT x) {
   if ((x & 1) != 0) {
-    return 0;  // fast path for odd values
+    return 0; // fast path for odd values
   } else {
     return BitPopulationCount(static_cast<UINT>(x ^ (x - 1))) - !!x;
   }
 }
-}
-#endif  // FORTRAN_COMMON_BIT_POPULATION_COUNT_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_BIT_POPULATION_COUNT_H_

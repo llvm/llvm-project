@@ -93,4 +93,4 @@ std::optional<std::u32string> StaticDataObject::AsU32String() const {
   }
   return std::nullopt;
 }
-}
+} // namespace Fortran::evaluate

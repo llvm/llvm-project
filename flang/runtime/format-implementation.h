@@ -21,19 +21,19 @@
 
 namespace Fortran::runtime::io {
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
     const CharType *format, std::size_t formatLength, int maxHeight)
-  : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
-    formatLength_{static_cast<int>(formatLength)} {
+    : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
+      formatLength_{static_cast<int>(formatLength)} {
   RUNTIME_CHECK(terminator, maxHeight == maxHeight_);
   RUNTIME_CHECK(
       terminator, formatLength == static_cast<std::size_t>(formatLength_));
   stack_[0].start = offset_;
-  stack_[0].remaining = Iteration::unlimited;  // 13.4(8)
+  stack_[0].remaining = Iteration::unlimited; // 13.4(8)
 }
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetMaxParenthesisNesting(
     IoErrorHandler &handler, const CharType *format, std::size_t formatLength) {
   int maxNesting{0};
@@ -51,9 +51,11 @@ int FormatControl<CONTEXT>::GetMaxParenthesisNesting(
     } else if (*p != ' ') {
       switch (*p) {
       case '\'':
-      case '"': quote = *p; break;
+      case '"':
+        quote = *p;
+        break;
       case 'h':
-      case 'H':  // 9HHOLLERITH
+      case 'H': // 9HHOLLERITH
         p += repeat;
         if (p >= end) {
           handler.SignalError(IostatErrorInFormat,
@@ -61,12 +63,15 @@ int FormatControl<CONTEXT>::GetMaxParenthesisNesting(
           return maxNesting;
         }
         break;
-      case ' ': break;
+      case ' ':
+        break;
       case '(':
         ++nesting;
         maxNesting = std::max(nesting, maxNesting);
         break;
-      case ')': nesting = std::max(nesting - 1, 0); break;
+      case ')':
+        nesting = std::max(nesting - 1, 0);
+        break;
       }
       repeat = 0;
     }
@@ -81,7 +86,7 @@ int FormatControl<CONTEXT>::GetMaxParenthesisNesting(
   return maxNesting;
 }
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetIntField(
     IoErrorHandler &handler, CharType firstCh) {
   CharType ch{firstCh ? firstCh : PeekNext()};
@@ -118,7 +123,7 @@ int FormatControl<CONTEXT>::GetIntField(
   return result;
 }
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 static void HandleControl(CONTEXT &context, char ch, char next, int n) {
   MutableModes &modes{context.mutableModes()};
   switch (ch) {
@@ -144,21 +149,32 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'P':
     if (!next) {
-      modes.scale = n;  // kP - decimal scaling by 10**k
+      modes.scale = n; // kP - decimal scaling by 10**k
       return;
     }
     break;
   case 'R':
     switch (next) {
-    case 'N': modes.round = decimal::RoundNearest; return;
-    case 'Z': modes.round = decimal::RoundToZero; return;
-    case 'U': modes.round = decimal::RoundUp; return;
-    case 'D': modes.round = decimal::RoundDown; return;
-    case 'C': modes.round = decimal::RoundCompatible; return;
+    case 'N':
+      modes.round = decimal::RoundNearest;
+      return;
+    case 'Z':
+      modes.round = decimal::RoundToZero;
+      return;
+    case 'U':
+      modes.round = decimal::RoundUp;
+      return;
+    case 'D':
+      modes.round = decimal::RoundDown;
+      return;
+    case 'C':
+      modes.round = decimal::RoundCompatible;
+      return;
     case 'P':
       modes.round = executionEnvironment.defaultOutputRoundingMode;
       return;
-    default: break;
+    default:
+      break;
     }
     break;
   case 'X':
@@ -178,16 +194,17 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     }
     break;
   case 'T': {
-    if (!next) {  // Tn
-      context.HandleAbsolutePosition(n - 1);  // convert 1-based to 0-based
+    if (!next) { // Tn
+      context.HandleAbsolutePosition(n - 1); // convert 1-based to 0-based
       return;
     }
-    if (next == 'L' || next == 'R') {  // TLn & TRn
+    if (next == 'L' || next == 'R') { // TLn & TRn
       context.HandleRelativePosition(next == 'L' ? -n : n);
       return;
     }
   } break;
-  default: break;
+  default:
+    break;
   }
   if (next) {
     context.SignalError(IostatErrorInFormat,
@@ -202,7 +219,7 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
 // Handles all repetition counts and control edit descriptors.
 // Generally assumes that the format string has survived the common
 // format validator gauntlet.
-template<typename CONTEXT>
+template <typename CONTEXT>
 int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
   int unlimitedLoopCheck{-1};
   while (true) {
@@ -235,13 +252,13 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
             "FORMAT stack overflow: too many nested parentheses");
         return 0;
       }
-      stack_[height_].start = offset_ - 1;  // the '('
+      stack_[height_].start = offset_ - 1; // the '('
       if (unlimited || height_ == 0) {
         stack_[height_].remaining = Iteration::unlimited;
         unlimitedLoopCheck = offset_ - 1;
       } else if (repeat) {
         if (*repeat <= 0) {
-          *repeat = 1;  // error recovery
+          *repeat = 1; // error recovery
         }
         stack_[height_].remaining = *repeat - 1;
       } else {
@@ -254,9 +271,9 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     } else if (ch == ')') {
       if (height_ == 1) {
         if (stop) {
-          return 0;  // end of FORMAT and no data items remain
+          return 0; // end of FORMAT and no data items remain
         }
-        context.AdvanceRecord();  // implied / before rightmost )
+        context.AdvanceRecord(); // implied / before rightmost )
       }
       if (stack_[height_ - 1].remaining == Iteration::unlimited) {
         offset_ = stack_[height_ - 1].start + 1;
@@ -318,7 +335,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         return repeat && *repeat > 0 ? *repeat : 1;
       } else {
         // Control edit descriptor
-        if (ch == 'T') {  // Tn, TLn, TRn
+        if (ch == 'T') { // Tn, TLn, TRn
           repeat = GetIntField(context);
         }
         HandleControl(context, static_cast<char>(ch), static_cast<char>(next),
@@ -334,7 +351,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
   }
 }
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
     Context &context, int maxRepeat) {
 
@@ -352,7 +369,7 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
     }
   }
 
-  if (edit.descriptor == 'A') {  // width is optional for A[w]
+  if (edit.descriptor == 'A') { // width is optional for A[w]
     auto ch{PeekNext()};
     if (ch >= '0' && ch <= '9') {
       edit.width = GetIntField(context);
@@ -373,8 +390,8 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
 
   // Handle repeated nonparenthesized edit descriptors
   if (repeat > 1) {
-    stack_[height_].start = start;  // after repeat count
-    stack_[height_].remaining = repeat;  // full count
+    stack_[height_].start = start; // after repeat count
+    stack_[height_].remaining = repeat; // full count
     ++height_;
   }
   edit.repeat = 1;
@@ -384,7 +401,7 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
       if (stack_[height_ - 1].remaining > maxRepeat) {
         edit.repeat = maxRepeat;
         stack_[height_ - 1].remaining -= maxRepeat;
-        offset_ = start;  // repeat same edit descriptor next time
+        offset_ = start; // repeat same edit descriptor next time
       } else {
         edit.repeat = stack_[height_ - 1].remaining;
         --height_;
@@ -394,9 +411,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
   return edit;
 }
 
-template<typename CONTEXT>
+template <typename CONTEXT>
 void FormatControl<CONTEXT>::Finish(Context &context) {
   CueUpNextDataEdit(context, true /* stop at colon or end of FORMAT */);
 }
-}
-#endif  // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_

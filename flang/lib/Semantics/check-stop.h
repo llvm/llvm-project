@@ -28,6 +28,6 @@ private:
   SemanticsContext &context_;
 };
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics
 
-#endif  // FORTRAN_SEMANTICS_CHECK_STOP_H_
+#endif // FORTRAN_SEMANTICS_CHECK_STOP_H_

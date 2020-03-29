@@ -22,8 +22,8 @@ using namespace parser::literals;
 
 class CanonicalizationOfOmp {
 public:
-  template<typename T> bool Pre(T &) { return true; }
-  template<typename T> void Post(T &) {}
+  template <typename T> bool Pre(T &) { return true; }
+  template <typename T> void Post(T &) {}
   CanonicalizationOfOmp(parser::Messages &messages) : messages_{messages} {}
 
   void Post(parser::Block &block) {
@@ -43,11 +43,11 @@ public:
             "loop construct"_err_en_US,
             parser::ToUpperCaseLetters(dir.source.ToString()));
       }
-    }  // Block list
+    } // Block list
   }
 
 private:
-  template<typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
+  template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
     if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
       if (auto *z{std::get_if<common::Indirection<T>>(&y->u)}) {
         return &z->value();
@@ -98,7 +98,7 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
-        return;  // found do-loop
+        return; // found do-loop
       }
     }
     messages_.Say(dir.source,
@@ -114,4 +114,4 @@ bool CanonicalizeOmp(parser::Messages &messages, parser::Program &program) {
   Walk(program, omp);
   return !messages.AnyFatalError();
 }
-}
+} // namespace Fortran::semantics

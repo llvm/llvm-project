@@ -85,16 +85,16 @@ Triplet FoldOperation(FoldingContext &context, Triplet &&triplet) {
 }
 
 Subscript FoldOperation(FoldingContext &context, Subscript &&subscript) {
-  return std::visit(
-      common::visitors{
-          [&](IndirectSubscriptIntegerExpr &&expr) {
-            expr.value() = Fold(context, std::move(expr.value()));
-            return Subscript(std::move(expr));
-          },
-          [&](Triplet &&triplet) {
-            return Subscript(FoldOperation(context, std::move(triplet)));
-          },
-      },
+  return std::visit(common::visitors{
+                        [&](IndirectSubscriptIntegerExpr &&expr) {
+                          expr.value() = Fold(context, std::move(expr.value()));
+                          return Subscript(std::move(expr));
+                        },
+                        [&](Triplet &&triplet) {
+                          return Subscript(
+                              FoldOperation(context, std::move(triplet)));
+                        },
+                    },
       std::move(subscript.u));
 }
 
@@ -128,13 +128,12 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
 }
 
 DataRef FoldOperation(FoldingContext &context, DataRef &&dataRef) {
-  return std::visit(
-      common::visitors{
-          [&](SymbolRef symbol) { return DataRef{*symbol}; },
-          [&](auto &&x) {
-            return DataRef{FoldOperation(context, std::move(x))};
-          },
-      },
+  return std::visit(common::visitors{
+                        [&](SymbolRef symbol) { return DataRef{*symbol}; },
+                        [&](auto &&x) {
+                          return DataRef{FoldOperation(context, std::move(x))};
+                        },
+                    },
       std::move(dataRef.u));
 }
 
@@ -188,4 +187,4 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
 template class ExpressionBase<SomeDerived>;
 template class ExpressionBase<SomeType>;
 
-}
+} // namespace Fortran::evaluate

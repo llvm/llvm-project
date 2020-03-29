@@ -26,7 +26,7 @@ struct ProcedureRef {
   ~ProcedureRef();
 };
 ProcedureRef::~ProcedureRef() {}
-}
+} // namespace Fortran::evaluate
 
 DEFINE_DELETER(Fortran::evaluate::GenericExprWrapper)
 DEFINE_DELETER(Fortran::evaluate::GenericAssignmentWrapper)

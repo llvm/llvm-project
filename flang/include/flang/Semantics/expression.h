@@ -29,8 +29,8 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::parser {
 struct SourceLocationFindingVisitor {
-  template<typename A> bool Pre(const A &) { return true; }
-  template<typename A> void Post(const A &) {}
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
   bool Pre(const Expr &x) {
     source = x.source;
     return false;
@@ -51,7 +51,7 @@ struct SourceLocationFindingVisitor {
     source = x.source;
     return false;
   }
-  template<typename A> bool Pre(const UnlabeledStatement<A> &stmt) {
+  template <typename A> bool Pre(const UnlabeledStatement<A> &stmt) {
     source = stmt.source;
     return false;
   }
@@ -60,12 +60,12 @@ struct SourceLocationFindingVisitor {
   CharBlock source;
 };
 
-template<typename A> CharBlock FindSourceLocation(const A &x) {
+template <typename A> CharBlock FindSourceLocation(const A &x) {
   SourceLocationFindingVisitor visitor;
   Walk(x, visitor);
   return visitor.source;
 }
-}
+} // namespace Fortran::parser
 
 using namespace Fortran::parser::literals;
 
@@ -89,10 +89,10 @@ struct SetExprHelper {
   }
   void Set(const parser::Expr &x) { Set(x.typedExpr); }
   void Set(const parser::Variable &x) { Set(x.typedExpr); }
-  template<typename T> void Set(const common::Indirection<T> &x) {
+  template <typename T> void Set(const common::Indirection<T> &x) {
     Set(x.value());
   }
-  template<typename T> void Set(const T &x) {
+  template <typename T> void Set(const T &x) {
     if constexpr (ConstraintTrait<T>) {
       Set(x.thing);
     } else if constexpr (WrapperTrait<T>) {
@@ -103,11 +103,11 @@ struct SetExprHelper {
   GenericExprWrapper expr_;
 };
 
-template<typename T> void ResetExpr(const T &x) {
+template <typename T> void ResetExpr(const T &x) {
   SetExprHelper{GenericExprWrapper{/* error indicator */}}.Set(x);
 }
 
-template<typename T> void SetExpr(const T &x, Expr<SomeType> &&expr) {
+template <typename T> void SetExpr(const T &x, Expr<SomeType> &&expr) {
   SetExprHelper{GenericExprWrapper{std::move(expr)}}.Set(x);
 }
 
@@ -117,7 +117,7 @@ public:
 
   explicit ExpressionAnalyzer(semantics::SemanticsContext &sc) : context_{sc} {}
   ExpressionAnalyzer(semantics::SemanticsContext &sc, FoldingContext &fc)
-    : context_{sc}, foldingContext_{fc} {}
+      : context_{sc}, foldingContext_{fc} {}
   ExpressionAnalyzer(ExpressionAnalyzer &) = default;
 
   semantics::SemanticsContext &context() const { return context_; }
@@ -128,11 +128,11 @@ public:
     return foldingContext_.messages();
   }
 
-  template<typename... A> parser::Message *Say(A &&... args) {
+  template <typename... A> parser::Message *Say(A &&... args) {
     return GetContextualMessages().Say(std::forward<A>(args)...);
   }
 
-  template<typename T, typename... A>
+  template <typename T, typename... A>
   parser::Message *SayAt(const T &parsed, A &&... args) {
     return Say(parser::FindSourceLocation(parsed), std::forward<A>(args)...);
   }
@@ -156,10 +156,10 @@ public:
   MaybeExpr Analyze(const parser::Variable &);
   MaybeExpr Analyze(const parser::Designator &);
 
-  template<typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
+  template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
   }
-  template<typename A> MaybeExpr Analyze(const std::optional<A> &x) {
+  template <typename A> MaybeExpr Analyze(const std::optional<A> &x) {
     if (x) {
       return Analyze(*x);
     } else {
@@ -168,7 +168,7 @@ public:
   }
 
   // Implement constraint-checking wrappers from the Fortran grammar.
-  template<typename A> MaybeExpr Analyze(const parser::Scalar<A> &x) {
+  template <typename A> MaybeExpr Analyze(const parser::Scalar<A> &x) {
     auto result{Analyze(x.thing)};
     if (result) {
       if (int rank{result->Rank()}; rank != 0) {
@@ -180,13 +180,13 @@ public:
     }
     return result;
   }
-  template<typename A> MaybeExpr Analyze(const parser::Constant<A> &x) {
+  template <typename A> MaybeExpr Analyze(const parser::Constant<A> &x) {
     auto restorer{
         GetFoldingContext().messages().SetLocation(FindSourceLocation(x))};
     auto result{Analyze(x.thing)};
     if (result) {
       *result = Fold(std::move(*result));
-      if (!IsConstantExpr(*result)) {  //  C886, C887, C713
+      if (!IsConstantExpr(*result)) { //  C886, C887, C713
         SayAt(x, "Must be a constant value"_err_en_US);
         ResetExpr(x);
         return std::nullopt;
@@ -197,7 +197,7 @@ public:
     }
     return result;
   }
-  template<typename A> MaybeExpr Analyze(const parser::Integer<A> &x) {
+  template <typename A> MaybeExpr Analyze(const parser::Integer<A> &x) {
     auto result{Analyze(x.thing)};
     if (!EnforceTypeConstraint(
             parser::FindSourceLocation(x), result, TypeCategory::Integer)) {
@@ -206,7 +206,7 @@ public:
     }
     return result;
   }
-  template<typename A> MaybeExpr Analyze(const parser::Logical<A> &x) {
+  template <typename A> MaybeExpr Analyze(const parser::Logical<A> &x) {
     auto result{Analyze(x.thing)};
     if (!EnforceTypeConstraint(
             parser::FindSourceLocation(x), result, TypeCategory::Logical)) {
@@ -215,7 +215,7 @@ public:
     }
     return result;
   }
-  template<typename A> MaybeExpr Analyze(const parser::DefaultChar<A> &x) {
+  template <typename A> MaybeExpr Analyze(const parser::DefaultChar<A> &x) {
     auto result{Analyze(x.thing)};
     if (!EnforceTypeConstraint(parser::FindSourceLocation(x), result,
             TypeCategory::Character, true /* default kind */)) {
@@ -283,10 +283,10 @@ private:
   MaybeExpr Analyze(const parser::Expr::EQV &);
   MaybeExpr Analyze(const parser::Expr::NEQV &);
   MaybeExpr Analyze(const parser::Expr::DefinedBinary &);
-  template<typename A> MaybeExpr Analyze(const A &x) {
-    return Analyze(x.u);  // default case
+  template <typename A> MaybeExpr Analyze(const A &x) {
+    return Analyze(x.u); // default case
   }
-  template<typename... As> MaybeExpr Analyze(const std::variant<As...> &u) {
+  template <typename... As> MaybeExpr Analyze(const std::variant<As...> &u) {
     return std::visit(
         [&](const auto &x) {
           using Ty = std::decay_t<decltype(x)>;
@@ -321,8 +321,8 @@ private:
   // Analysis subroutines
   int AnalyzeKindParam(
       const std::optional<parser::KindParam> &, int defaultKind);
-  template<typename PARSED> MaybeExpr ExprOrVariable(const PARSED &);
-  template<typename PARSED> MaybeExpr IntLiteralConstant(const PARSED &);
+  template <typename PARSED> MaybeExpr ExprOrVariable(const PARSED &);
+  template <typename PARSED> MaybeExpr IntLiteralConstant(const PARSED &);
   MaybeExpr AnalyzeString(std::string &&, int kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
   std::optional<Expr<SubscriptInteger>> TripletPart(
@@ -370,13 +370,13 @@ private:
   MaybeExpr MakeFunctionRef(
       parser::CharBlock, ProcedureDesignator &&, ActualArguments &&);
   MaybeExpr MakeFunctionRef(parser::CharBlock intrinsic, ActualArguments &&);
-  template<typename T> T Fold(T &&expr) {
+  template <typename T> T Fold(T &&expr) {
     return evaluate::Fold(foldingContext_, std::move(expr));
   }
 
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
-  std::map<parser::CharBlock, int> acImpliedDos_;  // values are INTEGER kinds
+  std::map<parser::CharBlock, int> acImpliedDos_; // values are INTEGER kinds
   bool fatalErrors_{false};
   friend class ArgumentAnalyzer;
 };
@@ -385,12 +385,12 @@ inline bool AreConformable(int leftRank, int rightRank) {
   return leftRank == 0 || rightRank == 0 || leftRank == rightRank;
 }
 
-template<typename L, typename R>
+template <typename L, typename R>
 bool AreConformable(const L &left, const R &right) {
   return AreConformable(left.Rank(), right.Rank());
 }
 
-template<typename L, typename R>
+template <typename L, typename R>
 void ConformabilityCheck(
     parser::ContextualMessages &context, const L &left, const R &right) {
   if (!AreConformable(left, right)) {
@@ -398,12 +398,12 @@ void ConformabilityCheck(
         left.Rank(), right.Rank());
   }
 }
-}  // namespace Fortran::evaluate
+} // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
 
 // Semantic analysis of one expression, variable, or designator.
-template<typename A>
+template <typename A>
 std::optional<evaluate::Expr<evaluate::SomeType>> AnalyzeExpr(
     SemanticsContext &context, const A &expr) {
   return evaluate::ExpressionAnalyzer{context}.Analyze(expr);
@@ -426,8 +426,8 @@ class ExprChecker {
 public:
   explicit ExprChecker(SemanticsContext &);
 
-  template<typename A> bool Pre(const A &) { return true; }
-  template<typename A> void Post(const A &) {}
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
   bool Walk(const parser::Program &);
 
   bool Pre(const parser::Expr &x) {
@@ -452,23 +452,23 @@ public:
   }
   bool Pre(const parser::DataStmtConstant &);
 
-  template<typename A> bool Pre(const parser::Scalar<A> &x) {
+  template <typename A> bool Pre(const parser::Scalar<A> &x) {
     AnalyzeExpr(context_, x);
     return false;
   }
-  template<typename A> bool Pre(const parser::Constant<A> &x) {
+  template <typename A> bool Pre(const parser::Constant<A> &x) {
     AnalyzeExpr(context_, x);
     return false;
   }
-  template<typename A> bool Pre(const parser::Integer<A> &x) {
+  template <typename A> bool Pre(const parser::Integer<A> &x) {
     AnalyzeExpr(context_, x);
     return false;
   }
-  template<typename A> bool Pre(const parser::Logical<A> &x) {
+  template <typename A> bool Pre(const parser::Logical<A> &x) {
     AnalyzeExpr(context_, x);
     return false;
   }
-  template<typename A> bool Pre(const parser::DefaultChar<A> &x) {
+  template <typename A> bool Pre(const parser::DefaultChar<A> &x) {
     AnalyzeExpr(context_, x);
     return false;
   }
@@ -476,5 +476,5 @@ public:
 private:
   SemanticsContext &context_;
 };
-}  // namespace Fortran::semantics
-#endif  // FORTRAN_SEMANTICS_EXPRESSION_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_EXPRESSION_H_

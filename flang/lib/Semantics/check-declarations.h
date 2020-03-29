@@ -13,5 +13,5 @@
 namespace Fortran::semantics {
 class SemanticsContext;
 void CheckDeclarations(SemanticsContext &);
-}
+} // namespace Fortran::semantics
 #endif

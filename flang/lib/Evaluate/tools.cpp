@@ -705,13 +705,12 @@ bool IsProcedure(const Expr<SomeType> &expr) {
 }
 
 bool IsProcedurePointer(const Expr<SomeType> &expr) {
-  return std::visit(
-      common::visitors{
-          [](const NullPointer &) { return true; },
-          [](const ProcedureDesignator &) { return true; },
-          [](const ProcedureRef &) { return true; },
-          [](const auto &) { return false; },
-      },
+  return std::visit(common::visitors{
+                        [](const NullPointer &) { return true; },
+                        [](const ProcedureDesignator &) { return true; },
+                        [](const ProcedureRef &) { return true; },
+                        [](const auto &) { return false; },
+                    },
       expr.u);
 }
 

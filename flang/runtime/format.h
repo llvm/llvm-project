@@ -21,39 +21,39 @@
 namespace Fortran::runtime::io {
 
 enum EditingFlags {
-  blankZero = 1,  // BLANK=ZERO or BZ edit
-  decimalComma = 2,  // DECIMAL=COMMA or DC edit
-  signPlus = 4,  // SIGN=PLUS or SP edit
+  blankZero = 1, // BLANK=ZERO or BZ edit
+  decimalComma = 2, // DECIMAL=COMMA or DC edit
+  signPlus = 4, // SIGN=PLUS or SP edit
 };
 
 struct MutableModes {
-  std::uint8_t editingFlags{0};  // BN, DP, SS
+  std::uint8_t editingFlags{0}; // BN, DP, SS
   enum decimal::FortranRounding round{
       executionEnvironment
-          .defaultOutputRoundingMode};  // RP/ROUND='PROCESSOR_DEFAULT'
-  bool pad{false};  // PAD= mode on READ
-  char delim{'\0'};  // DELIM=
-  short scale{0};  // kP
+          .defaultOutputRoundingMode}; // RP/ROUND='PROCESSOR_DEFAULT'
+  bool pad{false}; // PAD= mode on READ
+  char delim{'\0'}; // DELIM=
+  short scale{0}; // kP
 };
 
 // A single edit descriptor extracted from a FORMAT
 struct DataEdit {
-  char descriptor;  // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
+  char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
 
   // Special internal data edit descriptors for list-directed I/O
-  static constexpr char ListDirected{'g'};  // non-COMPLEX list-directed
-  static constexpr char ListDirectedRealPart{'r'};  // emit "(r," or "(r;"
-  static constexpr char ListDirectedImaginaryPart{'z'};  // emit "z)"
-  static constexpr char ListDirectedNullValue{'n'};  // see 13.10.3.2
+  static constexpr char ListDirected{'g'}; // non-COMPLEX list-directed
+  static constexpr char ListDirectedRealPart{'r'}; // emit "(r," or "(r;"
+  static constexpr char ListDirectedImaginaryPart{'z'}; // emit "z)"
+  static constexpr char ListDirectedNullValue{'n'}; // see 13.10.3.2
   constexpr bool IsListDirected() const {
     return descriptor == ListDirected || descriptor == ListDirectedRealPart ||
         descriptor == ListDirectedImaginaryPart;
   }
 
-  char variation{'\0'};  // N, S, or X for EN, ES, EX
-  std::optional<int> width;  // the 'w' field; optional for A
-  std::optional<int> digits;  // the 'm' or 'd' field
-  std::optional<int> expoDigits;  // 'Ee' field
+  char variation{'\0'}; // N, S, or X for EN, ES, EX
+  std::optional<int> width; // the 'w' field; optional for A
+  std::optional<int> digits; // the 'm' or 'd' field
+  std::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
 };
@@ -76,7 +76,7 @@ struct DefaultFormatControlCallbacks : public IoErrorHandler {
 // Generates a sequence of DataEdits from a FORMAT statement or
 // default-CHARACTER string.  Driven by I/O item list processing.
 // Errors are fatal.  See clause 13.4 in Fortran 2018 for background.
-template<typename CONTEXT> class FormatControl {
+template <typename CONTEXT> class FormatControl {
 public:
   using Context = CONTEXT;
   using CharType = typename Context::CharType;
@@ -109,8 +109,8 @@ private:
 
   struct Iteration {
     static constexpr int unlimited{-1};
-    int start{0};  // offset in format_ of '(' or a repeated edit descriptor
-    int remaining{0};  // while >0, decrement and iterate
+    int start{0}; // offset in format_ of '(' or a repeated edit descriptor
+    int remaining{0}; // while >0, decrement and iterate
   };
 
   void SkipBlanks() {
@@ -151,10 +151,10 @@ private:
   std::uint8_t height_{0};
   const CharType *format_{nullptr};
   int formatLength_{0};
-  int offset_{0};  // next item is at format_[offset_]
+  int offset_{0}; // next item is at format_[offset_]
 
   // must be last, may be incomplete
   Iteration stack_[maxMaxHeight];
 };
-}
-#endif  // FORTRAN_RUNTIME_FORMAT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_FORMAT_H_

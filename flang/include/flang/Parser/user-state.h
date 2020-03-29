@@ -30,12 +30,12 @@ class CookedSource;
 class ParsingLog;
 class ParseState;
 
-class Success {};  // for when one must return something that's present
+class Success {}; // for when one must return something that's present
 
 class UserState {
 public:
   UserState(const CookedSource &cooked, common::LanguageFeatureControl features)
-    : cooked_{cooked}, features_{features} {}
+      : cooked_{cooked}, features_{features} {}
 
   const CookedSource &cooked() const { return cooked_; }
   const common::LanguageFeatureControl &features() const { return features_; }
@@ -139,5 +139,5 @@ struct StructureComponents {
   using resultType = DataComponentDefStmt;
   static std::optional<DataComponentDefStmt> Parse(ParseState &);
 };
-}
-#endif  // FORTRAN_PARSER_USER_STATE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_USER_STATE_H_

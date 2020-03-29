@@ -25,4 +25,4 @@ void *AllocateMemoryOrCrash(const Terminator &terminator, std::size_t bytes) {
 }
 
 void FreeMemory(void *p) { std::free(p); }
-}
+} // namespace Fortran::runtime

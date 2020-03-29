@@ -65,5 +65,5 @@ public:
 private:
   ISO::CFI_type_t raw_{CFI_type_other};
 };
-}
-#endif  // FORTRAN_RUNTIME_TYPE_CODE_H_
+} // namespace Fortran::runtime
+#endif // FORTRAN_RUNTIME_TYPE_CODE_H_

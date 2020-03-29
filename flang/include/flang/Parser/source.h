@@ -15,11 +15,11 @@
 //  - A Unicode byte order mark is recognized if present.
 
 #include "characters.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
-#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 class raw_ostream;
@@ -43,7 +43,9 @@ public:
   explicit SourceFile(Encoding e) : encoding_{e} {}
   ~SourceFile();
   std::string path() const { return path_; }
-  llvm::ArrayRef<char> content() const { return buf_->getBuffer().slice(bom_end_, buf_end_ - bom_end_); }
+  llvm::ArrayRef<char> content() const {
+    return buf_->getBuffer().slice(bom_end_, buf_end_ - bom_end_);
+  }
   std::size_t bytes() const { return content().size(); }
   std::size_t lines() const { return lineStart_.size(); }
   Encoding encoding() const { return encoding_; }
@@ -64,9 +66,9 @@ private:
   std::string path_;
   std::unique_ptr<llvm::WritableMemoryBuffer> buf_;
   std::vector<std::size_t> lineStart_;
-  std::size_t bom_end_ {0};
+  std::size_t bom_end_{0};
   std::size_t buf_end_;
   Encoding encoding_;
 };
-}
-#endif  // FORTRAN_PARSER_SOURCE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_SOURCE_H_

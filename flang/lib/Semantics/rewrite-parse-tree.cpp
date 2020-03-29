@@ -28,12 +28,12 @@ using namespace parser::literals;
 class RewriteMutator {
 public:
   RewriteMutator(SemanticsContext &context)
-    : errorOnUnresolvedName_{!context.AnyFatalError()},
-      messages_{context.messages()} {}
+      : errorOnUnresolvedName_{!context.AnyFatalError()},
+        messages_{context.messages()} {}
 
   // Default action for a parse tree node is to visit children.
-  template<typename T> bool Pre(T &) { return true; }
-  template<typename T> void Post(T &) {}
+  template <typename T> bool Pre(T &) { return true; }
+  template <typename T> void Post(T &) {}
 
   void Post(parser::Name &);
   void Post(parser::SpecificationPart &);
@@ -94,7 +94,7 @@ void RewriteMutator::Post(parser::SpecificationPart &x) {
 
 // Insert converted assignments at start of ExecutionPart.
 bool RewriteMutator::Pre(parser::ExecutionPart &x) {
-  auto origFirst{x.v.begin()};  // insert each elem before origFirst
+  auto origFirst{x.v.begin()}; // insert each elem before origFirst
   for (stmtFuncType &sf : stmtFuncsToConvert_) {
     auto stmt{sf.statement.value().ConvertToAssignment()};
     stmt.source = sf.source;
@@ -129,7 +129,7 @@ void RewriteMutator::Post(parser::IoUnit &x) {
 // statement in such a way that it can be misparsed as a format expression,
 // rewrite the I/O statement's parse tree node as if the namelist group
 // name had appeared with NML=.
-template<typename READ_OR_WRITE>
+template <typename READ_OR_WRITE>
 void FixMisparsedUntaggedNamelistName(READ_OR_WRITE &x) {
   if (x.iounit && x.format &&
       std::holds_alternative<parser::DefaultCharExpr>(x.format->u)) {
@@ -156,4 +156,4 @@ bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {
   return !context.AnyFatalError();
 }
 
-}
+} // namespace Fortran::semantics

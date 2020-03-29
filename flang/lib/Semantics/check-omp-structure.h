@@ -170,7 +170,7 @@ public:
 private:
   struct OmpContext {
     OmpContext(parser::CharBlock source, OmpDirective d)
-      : directiveSource{source}, directive{d} {}
+        : directiveSource{source}, directive{d} {}
     parser::CharBlock directiveSource{nullptr};
     parser::CharBlock clauseSource{nullptr};
     OmpDirective directive;
@@ -246,7 +246,7 @@ private:
   void CheckRequired(OmpClause);
   std::string ContextDirectiveAsFortran();
   void SayNotMatching(const parser::CharBlock &, const parser::CharBlock &);
-  template<typename A, typename B, typename C>
+  template <typename A, typename B, typename C>
   const A &CheckMatching(const B &beginDir, const C &endDir) {
     const A &begin{std::get<A>(beginDir.t)};
     const A &end{std::get<A>(endDir.t)};
@@ -261,7 +261,7 @@ private:
       const parser::OmpScheduleModifierType::ModType &);
 
   SemanticsContext &context_;
-  std::vector<OmpContext> ompContext_;  // used as a stack
+  std::vector<OmpContext> ompContext_; // used as a stack
 };
-}
-#endif  // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

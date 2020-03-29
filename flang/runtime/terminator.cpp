@@ -57,4 +57,4 @@ void Terminator::RegisterCrashHandler(
 void NotifyOtherImagesOfNormalEnd() {}
 void NotifyOtherImagesOfFailImageStatement() {}
 void NotifyOtherImagesOfErrorTermination() {}
-}
+} // namespace Fortran::runtime

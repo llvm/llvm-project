@@ -27,7 +27,7 @@ struct InquireSpec;
 struct IoControlSpec;
 struct OutputImpliedDo;
 struct StatVariable;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -65,5 +65,5 @@ private:
   void CheckForBadLeave(StmtType, const ConstructNode &) const;
   void CheckNesting(StmtType, const parser::Name *) const;
 };
-}
+} // namespace Fortran::semantics
 #endif

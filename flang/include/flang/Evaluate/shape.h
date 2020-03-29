@@ -53,7 +53,8 @@ std::optional<ConstantSubscripts> AsConstantExtents(
 
 inline int GetRank(const Shape &s) { return static_cast<int>(s.size()); }
 
-template<typename A> std::optional<Shape> GetShape(FoldingContext &, const A &);
+template <typename A>
+std::optional<Shape> GetShape(FoldingContext &, const A &);
 
 // The dimension argument to these inquiries is zero-based,
 // unlike the DIM= arguments to many intrinsics.
@@ -83,7 +84,7 @@ MaybeExtentExpr GetSize(Shape &&);
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 
 class GetShapeHelper
-  : public AnyTraverse<GetShapeHelper, std::optional<Shape>> {
+    : public AnyTraverse<GetShapeHelper, std::optional<Shape>> {
 public:
   using Result = std::optional<Shape>;
   using Base = AnyTraverse<GetShapeHelper, Result>;
@@ -92,7 +93,7 @@ public:
 
   Result operator()(const ImpliedDoIndex &) const { return Scalar(); }
   Result operator()(const DescriptorInquiry &) const { return Scalar(); }
-  template<int KIND> Result operator()(const TypeParamInquiry<KIND> &) const {
+  template <int KIND> Result operator()(const TypeParamInquiry<KIND> &) const {
     return Scalar();
   }
   Result operator()(const BOZLiteralConstant &) const { return Scalar(); }
@@ -101,7 +102,7 @@ public:
   }
   Result operator()(const StructureConstructor &) const { return Scalar(); }
 
-  template<typename T> Result operator()(const Constant<T> &c) const {
+  template <typename T> Result operator()(const Constant<T> &c) const {
     return AsShape(c.SHAPE());
   }
 
@@ -112,11 +113,11 @@ public:
   Result operator()(const Substring &) const;
   Result operator()(const ProcedureRef &) const;
 
-  template<typename T>
+  template <typename T>
   Result operator()(const ArrayConstructor<T> &aconst) const {
     return Shape{GetArrayConstructorExtent(aconst)};
   }
-  template<typename D, typename R, typename LO, typename RO>
+  template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {
     if (operation.right().Rank() > 0) {
       return (*this)(operation.right());
@@ -128,7 +129,7 @@ public:
 private:
   static Result Scalar() { return Shape{}; }
 
-  template<typename T>
+  template <typename T>
   MaybeExtentExpr GetArrayConstructorValueExtent(
       const ArrayConstructorValue<T> &value) const {
     return std::visit(
@@ -159,7 +160,7 @@ private:
         value.u);
   }
 
-  template<typename T>
+  template <typename T>
   MaybeExtentExpr GetArrayConstructorExtent(
       const ArrayConstructorValues<T> &values) const {
     ExtentExpr result{0};
@@ -176,7 +177,7 @@ private:
   FoldingContext &context_;
 };
 
-template<typename A>
+template <typename A>
 std::optional<Shape> GetShape(FoldingContext &context, const A &x) {
   return GetShapeHelper{context}(x);
 }
@@ -187,5 +188,5 @@ bool CheckConformance(parser::ContextualMessages &, const Shape &left,
     const Shape &right, const char *leftIs = "left operand",
     const char *rightIs = "right operand");
 
-}
-#endif  // FORTRAN_EVALUATE_SHAPE_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_SHAPE_H_

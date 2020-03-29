@@ -24,4 +24,4 @@ void IfStmtChecker::Leave(const parser::IfStmt &ifStmt) {
   }
 }
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

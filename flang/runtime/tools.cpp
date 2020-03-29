@@ -68,4 +68,4 @@ void ToFortranDefaultCharacter(
   }
 }
 
-}
+} // namespace Fortran::runtime

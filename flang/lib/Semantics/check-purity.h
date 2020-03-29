@@ -15,7 +15,7 @@ struct ExecutableConstruct;
 struct SubroutineSubprogram;
 struct FunctionSubprogram;
 struct PrefixSpec;
-}
+} // namespace Fortran::parser
 namespace Fortran::semantics {
 class PurityChecker : public virtual BaseChecker {
 public:
@@ -35,5 +35,5 @@ private:
   int depth_{0};
   int pureDepth_{-1};
 };
-}
+} // namespace Fortran::semantics
 #endif

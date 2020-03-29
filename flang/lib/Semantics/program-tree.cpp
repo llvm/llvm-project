@@ -13,7 +13,7 @@
 
 namespace Fortran::semantics {
 
-template<typename T>
+template <typename T>
 static ProgramTree BuildSubprogramTree(const parser::Name &name, const T &x) {
   const auto &spec{std::get<parser::SpecificationPart>(x.t)};
   const auto &exec{std::get<parser::ExecutionPart>(x.t)};
@@ -37,7 +37,7 @@ static ProgramTree BuildSubprogramTree(
   return ProgramTree{name, spec, nullptr};
 }
 
-template<typename T>
+template <typename T>
 static ProgramTree BuildModuleTree(const parser::Name &name, const T &x) {
   const auto &spec{std::get<parser::SpecificationPart>(x.t)};
   const auto &subps{std::get<std::optional<parser::ModuleSubprogramPart>>(x.t)};
@@ -130,17 +130,17 @@ Symbol::Flag ProgramTree::GetSubpFlag() const {
 
 bool ProgramTree::HasModulePrefix() const {
   using ListType = std::list<parser::PrefixSpec>;
-  const auto *prefixes{std::visit(
-      common::visitors{
-          [](const parser::Statement<parser::FunctionStmt> *x) {
-            return &std::get<ListType>(x->statement.t);
-          },
-          [](const parser::Statement<parser::SubroutineStmt> *x) {
-            return &std::get<ListType>(x->statement.t);
-          },
-          [](const auto *) -> const ListType * { return nullptr; },
-      },
-      stmt_)};
+  const auto *prefixes{
+      std::visit(common::visitors{
+                     [](const parser::Statement<parser::FunctionStmt> *x) {
+                       return &std::get<ListType>(x->statement.t);
+                     },
+                     [](const parser::Statement<parser::SubroutineStmt> *x) {
+                       return &std::get<ListType>(x->statement.t);
+                     },
+                     [](const auto *) -> const ListType * { return nullptr; },
+                 },
+          stmt_)};
   if (prefixes) {
     for (const auto &prefix : *prefixes) {
       if (std::holds_alternative<parser::PrefixSpec::Module>(prefix.u)) {
@@ -189,4 +189,4 @@ void ProgramTree::AddChild(ProgramTree &&child) {
   children_.emplace_back(std::move(child));
 }
 
-}
+} // namespace Fortran::semantics

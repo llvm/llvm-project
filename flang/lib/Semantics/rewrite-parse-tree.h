@@ -12,7 +12,7 @@
 namespace Fortran::parser {
 class Messages;
 struct Program;
-}
+} // namespace Fortran::parser
 namespace Fortran::semantics {
 class SemanticsContext;
 }
@@ -21,4 +21,4 @@ namespace Fortran::semantics {
 bool RewriteParseTree(SemanticsContext &, parser::Program &);
 }
 
-#endif  // FORTRAN_SEMANTICS_REWRITE_PARSE_TREE_H_
+#endif // FORTRAN_SEMANTICS_REWRITE_PARSE_TREE_H_

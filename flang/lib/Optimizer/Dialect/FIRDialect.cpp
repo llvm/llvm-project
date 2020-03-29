@@ -25,7 +25,7 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
   addOperations<
 #define GET_OP_LIST
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
-                >();
+      >();
 }
 
 // anchor the class vtable to this compilation unit

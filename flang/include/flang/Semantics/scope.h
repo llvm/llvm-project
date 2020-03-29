@@ -39,13 +39,14 @@ class SemanticsContext;
 struct EquivalenceObject {
   EquivalenceObject(Symbol &symbol, std::vector<ConstantSubscript> subscripts,
       std::optional<ConstantSubscript> substringStart)
-    : symbol{symbol}, subscripts{subscripts}, substringStart{substringStart} {}
+      : symbol{symbol}, subscripts{subscripts}, substringStart{substringStart} {
+  }
   bool operator==(const EquivalenceObject &) const;
   bool operator<(const EquivalenceObject &) const;
   std::string AsFortran() const;
 
   Symbol &symbol;
-  std::vector<ConstantSubscript> subscripts;  // for array elem
+  std::vector<ConstantSubscript> subscripts; // for array elem
   std::optional<ConstantSubscript> substringStart;
 };
 using EquivalenceSet = std::vector<EquivalenceObject>;
@@ -61,7 +62,7 @@ public:
   // Create the Global scope -- the root of the scope tree
   Scope() : Scope{*this, Kind::Global, nullptr} {}
   Scope(Scope &parent, Kind kind, Symbol *symbol)
-    : parent_{parent}, kind_{kind}, symbol_{symbol} {
+      : parent_{parent}, kind_{kind}, symbol_{symbol} {
     if (symbol) {
       symbol->set_scope(this);
     }
@@ -81,7 +82,7 @@ public:
   }
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
-  bool IsModule() const;  // only module, not submodule
+  bool IsModule() const; // only module, not submodule
   bool IsSubmodule() const;
   bool IsDerivedType() const { return kind_ == Kind::DerivedType; }
   bool IsParameterizedDerivedType() const;
@@ -127,13 +128,13 @@ public:
     return try_emplace(name, attrs, UnknownDetails());
   }
   /// Make a Symbol with provided details.
-  template<typename D>
+  template <typename D>
   common::IfNoLvalue<std::pair<iterator, bool>, D> try_emplace(
       const SourceName &name, D &&details) {
     return try_emplace(name, Attrs(), std::move(details));
   }
   /// Make a Symbol with attrs and details
-  template<typename D>
+  template <typename D>
   common::IfNoLvalue<std::pair<iterator, bool>, D> try_emplace(
       const SourceName &name, Attrs attrs, D &&details) {
     Symbol &symbol{MakeSymbol(name, attrs, std::move(details))};
@@ -153,7 +154,7 @@ public:
   Symbol *FindCommonBlock(const SourceName &);
 
   /// Make a Symbol but don't add it to the scope.
-  template<typename D>
+  template <typename D>
   common::IfNoLvalue<Symbol &, D> MakeSymbol(
       const SourceName &name, Attrs attrs, D &&details) {
     return allSymbols.Make(*this, name, attrs, std::move(details));
@@ -213,10 +214,10 @@ public:
   void InstantiateDerivedTypes(SemanticsContext &);
 
 private:
-  Scope &parent_;  // this is enclosing scope, not extended derived type base
+  Scope &parent_; // this is enclosing scope, not extended derived type base
   const Kind kind_;
   parser::CharBlock sourceRange_;
-  Symbol *const symbol_;  // if not null, symbol_->scope() == this
+  Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;
   mapType symbols_;
   mapType commonBlocks_;
@@ -227,7 +228,7 @@ private:
   std::string chars_;
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
-  DerivedTypeSpec *derivedTypeSpec_{nullptr};  // dTS->scope() == this
+  DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   // When additional data members are added to Scope, remember to
   // copy them, if appropriate, in InstantiateDerivedType().
 
@@ -240,5 +241,5 @@ private:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);
 };
-}
-#endif  // FORTRAN_SEMANTICS_SCOPE_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_SCOPE_H_

@@ -32,9 +32,7 @@ struct RealAttributeStorage : public mlir::AttributeStorage {
   RealAttributeStorage(const KeyTy &key)
       : RealAttributeStorage(key.first, key.second) {}
 
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_value(key);
-  }
+  static unsigned hashKey(const KeyTy &key) { return llvm::hash_value(key); }
 
   bool operator==(const KeyTy &key) const {
     return key.first == kind &&

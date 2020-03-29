@@ -41,11 +41,11 @@ class PointerAssignmentChecker {
 public:
   PointerAssignmentChecker(evaluate::FoldingContext &context,
       parser::CharBlock source, const std::string &description)
-    : context_{context}, source_{source}, description_{description} {}
+      : context_{context}, source_{source}, description_{description} {}
   PointerAssignmentChecker(evaluate::FoldingContext &context, const Symbol &lhs)
-    : context_{context}, source_{lhs.name()},
-      description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs},
-      procedure_{Procedure::Characterize(lhs, context.intrinsics())} {
+      : context_{context}, source_{lhs.name()},
+        description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs},
+        procedure_{Procedure::Characterize(lhs, context.intrinsics())} {
     set_lhsType(TypeAndShape::Characterize(lhs, context));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
@@ -57,10 +57,10 @@ public:
   void Check(const SomeExpr &);
 
 private:
-  template<typename T> void Check(const T &);
-  template<typename T> void Check(const evaluate::Expr<T> &);
-  template<typename T> void Check(const evaluate::FunctionRef<T> &);
-  template<typename T> void Check(const evaluate::Designator<T> &);
+  template <typename T> void Check(const T &);
+  template <typename T> void Check(const evaluate::Expr<T> &);
+  template <typename T> void Check(const evaluate::FunctionRef<T> &);
+  template <typename T> void Check(const evaluate::Designator<T> &);
   void Check(const evaluate::NullPointer &);
   void Check(const evaluate::ProcedureDesignator &);
   void Check(const evaluate::ProcedureRef &);
@@ -68,7 +68,7 @@ private:
   void Check(
       parser::CharBlock rhsName, bool isCall, const Procedure * = nullptr);
   bool LhsOkForUnlimitedPoly() const;
-  template<typename... A> parser::Message *Say(A &&...);
+  template <typename... A> parser::Message *Say(A &&...);
 
   evaluate::FoldingContext &context_;
   const parser::CharBlock source_;
@@ -105,22 +105,22 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isBoundsRemapping(
   return *this;
 }
 
-template<typename T> void PointerAssignmentChecker::Check(const T &) {
+template <typename T> void PointerAssignmentChecker::Check(const T &) {
   // Catch-all case for really bad target expression
   Say("Target associated with %s must be a designator or a call to a"
       " pointer-valued function"_err_en_US,
       description_);
 }
 
-template<typename T>
+template <typename T>
 void PointerAssignmentChecker::Check(const evaluate::Expr<T> &x) {
   std::visit([&](const auto &x) { Check(x); }, x.u);
 }
 
 void PointerAssignmentChecker::Check(const SomeExpr &rhs) {
-  if (HasVectorSubscript(rhs)) {  // C1025
+  if (HasVectorSubscript(rhs)) { // C1025
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
-  } else if (ExtractCoarrayRef(rhs)) {  // C1026
+  } else if (ExtractCoarrayRef(rhs)) { // C1026
     Say("A coindexed object may not be a pointer target"_err_en_US);
   } else {
     std::visit([&](const auto &x) { Check(x); }, rhs.u);
@@ -131,7 +131,7 @@ void PointerAssignmentChecker::Check(const evaluate::NullPointer &) {
   // P => NULL() without MOLD=; always OK
 }
 
-template<typename T>
+template <typename T>
 void PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   std::string funcName;
   const auto *symbol{f.proc().GetSymbol()};
@@ -145,7 +145,7 @@ void PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
     return;
   }
   std::optional<MessageFixedText> msg;
-  const auto &funcResult{proc->functionResult};  // C1025
+  const auto &funcResult{proc->functionResult}; // C1025
   if (!funcResult) {
     msg = "%s is associated with the non-existent result of reference to"
           " procedure"_err_en_US;
@@ -177,7 +177,7 @@ void PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   }
 }
 
-template<typename T>
+template <typename T>
 void PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   const Symbol *last{d.GetLastSymbol()};
   const Symbol *base{d.GetBaseObject().symbol()};
@@ -191,7 +191,7 @@ void PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
     // Shouldn't be here in this function unless lhs is an object pointer.
     msg = "In assignment to procedure %s, the target is not a procedure or"
           " procedure pointer"_err_en_US;
-  } else if (!evaluate::GetLastTarget(GetSymbolVector(d))) {  // C1025
+  } else if (!evaluate::GetLastTarget(GetSymbolVector(d))) { // C1025
     msg = "In assignment to object %s, the target '%s' is not an object with"
           " POINTER or TARGET attributes"_err_en_US;
   } else if (auto rhsType{TypeAndShape::Characterize(d, context_)}) {
@@ -199,7 +199,7 @@ void PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       msg = "%s associated with object '%s' with incompatible type or"
             " shape"_err_en_US;
     } else if (rhsType->corank() > 0 &&
-        (isVolatile_ != last->attrs().test(Attr::VOLATILE))) {  // C1020
+        (isVolatile_ != last->attrs().test(Attr::VOLATILE))) { // C1020
       // TODO: what if A is VOLATILE in A%B%C?  need a better test here
       if (isVolatile_) {
         msg = "Pointer may not be VOLATILE when target is a"
@@ -335,7 +335,7 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
   }
 }
 
-template<typename... A>
+template <typename... A>
 parser::Message *PointerAssignmentChecker::Say(A &&... x) {
   auto *msg{context_.messages().Say(std::forward<A>(x)...)};
   if (lhs_) {
@@ -377,7 +377,7 @@ static bool CheckPointerBounds(
                     messages.Say(
                         "Pointer bounds require %d elements but target has"
                         " only %d"_err_en_US,
-                        *lhsSize, *rhsSize);  // 10.2.2.3(9)
+                        *lhsSize, *rhsSize); // 10.2.2.3(9)
                   }
                 }
               }
@@ -393,13 +393,13 @@ static bool CheckPointerBounds(
     if (lhs.Rank() != static_cast<int>(numBounds)) {
       messages.Say("Pointer '%s' has rank %d but the number of bounds specified"
                    " is %d"_err_en_US,
-          lhs.AsFortran(), lhs.Rank(), numBounds);  // C1018
+          lhs.AsFortran(), lhs.Rank(), numBounds); // C1018
     }
   }
   if (isBoundsRemapping && rhs.Rank() != 1 &&
       !evaluate::IsSimplyContiguous(rhs, context.intrinsics())) {
     messages.Say("Pointer bounds remapping target must have rank 1 or be"
-                 " simply contiguous"_err_en_US);  // 10.2.2.3(9)
+                 " simply contiguous"_err_en_US); // 10.2.2.3(9)
   }
   return isBoundsRemapping;
 }
@@ -410,7 +410,7 @@ void CheckPointerAssignment(
   const SomeExpr &rhs{assignment.rhs};
   const Symbol *pointer{GetLastSymbol(lhs)};
   if (!pointer) {
-    return;  // error was reported
+    return; // error was reported
   }
   if (!IsPointer(*pointer)) {
     evaluate::SayWithDeclaration(context.messages(), *pointer,
@@ -418,7 +418,7 @@ void CheckPointerAssignment(
     return;
   }
   if (pointer->has<ProcEntityDetails>() && evaluate::ExtractCoarrayRef(lhs)) {
-    context.messages().Say(  // C1027
+    context.messages().Say( // C1027
         "Procedure pointer may not be a coindexed object"_err_en_US);
     return;
   }
@@ -444,4 +444,4 @@ void CheckPointerAssignment(evaluate::FoldingContext &context,
       .Check(rhs);
 }
 
-}
+} // namespace Fortran::semantics

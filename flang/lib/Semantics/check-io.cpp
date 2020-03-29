@@ -21,15 +21,15 @@ class FormatErrorReporter {
 public:
   FormatErrorReporter(SemanticsContext &context,
       const parser::CharBlock &formatCharBlock, int errorAllowance = 3)
-    : context_{context}, formatCharBlock_{formatCharBlock},
-      errorAllowance_{errorAllowance} {}
+      : context_{context}, formatCharBlock_{formatCharBlock},
+        errorAllowance_{errorAllowance} {}
 
   bool Say(const common::FormatMessage &);
 
 private:
   SemanticsContext &context_;
   const parser::CharBlock &formatCharBlock_;
-  int errorAllowance_;  // initialized to maximum number of errors to report
+  int errorAllowance_; // initialized to maximum number of errors to report
 };
 
 bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
@@ -56,7 +56,7 @@ bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
 void IoChecker::Enter(
     const parser::Statement<common::Indirection<parser::FormatStmt>> &stmt) {
   if (!stmt.label) {
-    context_.Say("Format statement must be labeled"_err_en_US);  // C1301
+    context_.Say("Format statement must be labeled"_err_en_US); // C1301
   }
   const char *formatStart{static_cast<const char *>(
       std::memchr(stmt.source.begin(), '(', stmt.source.size()))};
@@ -71,19 +71,20 @@ void IoChecker::Enter(
     validator.Check();
     break;
   }
-  case 2: {  // TODO: Get this to work.
+  case 2: { // TODO: Get this to work.
     common::FormatValidator<char16_t> validator{
         /*???*/ nullptr, /*???*/ 0, reporterWrapper};
     validator.Check();
     break;
   }
-  case 4: {  // TODO: Get this to work.
+  case 4: { // TODO: Get this to work.
     common::FormatValidator<char32_t> validator{
         /*???*/ nullptr, /*???*/ 0, reporterWrapper};
     validator.Check();
     break;
   }
-  default: CRASH_NO_CASE;
+  default:
+    CRASH_NO_CASE;
   }
 }
 
@@ -98,20 +99,48 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::ConnectSpec::CharExpr::Kind;
   switch (std::get<ParseKind>(spec.t)) {
-  case ParseKind::Access: specKind = IoSpecKind::Access; break;
-  case ParseKind::Action: specKind = IoSpecKind::Action; break;
-  case ParseKind::Asynchronous: specKind = IoSpecKind::Asynchronous; break;
-  case ParseKind::Blank: specKind = IoSpecKind::Blank; break;
-  case ParseKind::Decimal: specKind = IoSpecKind::Decimal; break;
-  case ParseKind::Delim: specKind = IoSpecKind::Delim; break;
-  case ParseKind::Encoding: specKind = IoSpecKind::Encoding; break;
-  case ParseKind::Form: specKind = IoSpecKind::Form; break;
-  case ParseKind::Pad: specKind = IoSpecKind::Pad; break;
-  case ParseKind::Position: specKind = IoSpecKind::Position; break;
-  case ParseKind::Round: specKind = IoSpecKind::Round; break;
-  case ParseKind::Sign: specKind = IoSpecKind::Sign; break;
-  case ParseKind::Convert: specKind = IoSpecKind::Convert; break;
-  case ParseKind::Dispose: specKind = IoSpecKind::Dispose; break;
+  case ParseKind::Access:
+    specKind = IoSpecKind::Access;
+    break;
+  case ParseKind::Action:
+    specKind = IoSpecKind::Action;
+    break;
+  case ParseKind::Asynchronous:
+    specKind = IoSpecKind::Asynchronous;
+    break;
+  case ParseKind::Blank:
+    specKind = IoSpecKind::Blank;
+    break;
+  case ParseKind::Decimal:
+    specKind = IoSpecKind::Decimal;
+    break;
+  case ParseKind::Delim:
+    specKind = IoSpecKind::Delim;
+    break;
+  case ParseKind::Encoding:
+    specKind = IoSpecKind::Encoding;
+    break;
+  case ParseKind::Form:
+    specKind = IoSpecKind::Form;
+    break;
+  case ParseKind::Pad:
+    specKind = IoSpecKind::Pad;
+    break;
+  case ParseKind::Position:
+    specKind = IoSpecKind::Position;
+    break;
+  case ParseKind::Round:
+    specKind = IoSpecKind::Round;
+    break;
+  case ParseKind::Sign:
+    specKind = IoSpecKind::Sign;
+    break;
+  case ParseKind::Convert:
+    specKind = IoSpecKind::Convert;
+    break;
+  case ParseKind::Dispose:
+    specKind = IoSpecKind::Dispose;
+    break;
   }
   SetSpecifier(specKind);
   if (const std::optional<std::string> charConst{GetConstExpr<std::string>(
@@ -137,7 +166,7 @@ void IoChecker::Enter(const parser::ConnectSpec::Recl &spec) {
     if (*recl <= 0) {
       context_.Say(parser::FindSourceLocation(spec),
           "RECL value (%jd) must be positive"_err_en_US,
-          std::move(static_cast<std::intmax_t>(*recl)));  // 12.5.6.15
+          std::move(static_cast<std::intmax_t>(*recl))); // 12.5.6.15
     }
   }
 }
@@ -204,7 +233,8 @@ void IoChecker::Enter(const parser::Format &spec) {
               validator.Check();
               break;
             }
-            default: CRASH_NO_CASE;
+            default:
+              CRASH_NO_CASE;
             }
           },
       },
@@ -224,7 +254,7 @@ void IoChecker::Enter(const parser::IdVariable &spec) {
   if (kind < defaultKind) {
     context_.Say(
         "ID kind (%d) is smaller than default INTEGER kind (%d)"_err_en_US,
-        std::move(kind), std::move(defaultKind));  // C1229
+        std::move(kind), std::move(defaultKind)); // C1229
   }
 }
 
@@ -240,7 +270,7 @@ void IoChecker::Enter(const parser::InputItem &spec) {
         // This check may be superseded by C928 or C1002.
         context_.Say(name.source,
             "'%s' must not be a whole assumed size array"_err_en_US,
-            name.source);  // C1231
+            name.source); // C1231
       }
     }
   }
@@ -257,31 +287,81 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::InquireSpec::CharVar::Kind;
   switch (std::get<ParseKind>(spec.t)) {
-  case ParseKind::Access: specKind = IoSpecKind::Access; break;
-  case ParseKind::Action: specKind = IoSpecKind::Action; break;
-  case ParseKind::Asynchronous: specKind = IoSpecKind::Asynchronous; break;
-  case ParseKind::Blank: specKind = IoSpecKind::Blank; break;
-  case ParseKind::Decimal: specKind = IoSpecKind::Decimal; break;
-  case ParseKind::Delim: specKind = IoSpecKind::Delim; break;
-  case ParseKind::Direct: specKind = IoSpecKind::Direct; break;
-  case ParseKind::Encoding: specKind = IoSpecKind::Encoding; break;
-  case ParseKind::Form: specKind = IoSpecKind::Form; break;
-  case ParseKind::Formatted: specKind = IoSpecKind::Formatted; break;
-  case ParseKind::Iomsg: specKind = IoSpecKind::Iomsg; break;
-  case ParseKind::Name: specKind = IoSpecKind::Name; break;
-  case ParseKind::Pad: specKind = IoSpecKind::Pad; break;
-  case ParseKind::Position: specKind = IoSpecKind::Position; break;
-  case ParseKind::Read: specKind = IoSpecKind::Read; break;
-  case ParseKind::Readwrite: specKind = IoSpecKind::Readwrite; break;
-  case ParseKind::Round: specKind = IoSpecKind::Round; break;
-  case ParseKind::Sequential: specKind = IoSpecKind::Sequential; break;
-  case ParseKind::Sign: specKind = IoSpecKind::Sign; break;
-  case ParseKind::Status: specKind = IoSpecKind::Status; break;
-  case ParseKind::Stream: specKind = IoSpecKind::Stream; break;
-  case ParseKind::Unformatted: specKind = IoSpecKind::Unformatted; break;
-  case ParseKind::Write: specKind = IoSpecKind::Write; break;
-  case ParseKind::Convert: specKind = IoSpecKind::Convert; break;
-  case ParseKind::Dispose: specKind = IoSpecKind::Dispose; break;
+  case ParseKind::Access:
+    specKind = IoSpecKind::Access;
+    break;
+  case ParseKind::Action:
+    specKind = IoSpecKind::Action;
+    break;
+  case ParseKind::Asynchronous:
+    specKind = IoSpecKind::Asynchronous;
+    break;
+  case ParseKind::Blank:
+    specKind = IoSpecKind::Blank;
+    break;
+  case ParseKind::Decimal:
+    specKind = IoSpecKind::Decimal;
+    break;
+  case ParseKind::Delim:
+    specKind = IoSpecKind::Delim;
+    break;
+  case ParseKind::Direct:
+    specKind = IoSpecKind::Direct;
+    break;
+  case ParseKind::Encoding:
+    specKind = IoSpecKind::Encoding;
+    break;
+  case ParseKind::Form:
+    specKind = IoSpecKind::Form;
+    break;
+  case ParseKind::Formatted:
+    specKind = IoSpecKind::Formatted;
+    break;
+  case ParseKind::Iomsg:
+    specKind = IoSpecKind::Iomsg;
+    break;
+  case ParseKind::Name:
+    specKind = IoSpecKind::Name;
+    break;
+  case ParseKind::Pad:
+    specKind = IoSpecKind::Pad;
+    break;
+  case ParseKind::Position:
+    specKind = IoSpecKind::Position;
+    break;
+  case ParseKind::Read:
+    specKind = IoSpecKind::Read;
+    break;
+  case ParseKind::Readwrite:
+    specKind = IoSpecKind::Readwrite;
+    break;
+  case ParseKind::Round:
+    specKind = IoSpecKind::Round;
+    break;
+  case ParseKind::Sequential:
+    specKind = IoSpecKind::Sequential;
+    break;
+  case ParseKind::Sign:
+    specKind = IoSpecKind::Sign;
+    break;
+  case ParseKind::Status:
+    specKind = IoSpecKind::Status;
+    break;
+  case ParseKind::Stream:
+    specKind = IoSpecKind::Stream;
+    break;
+  case ParseKind::Unformatted:
+    specKind = IoSpecKind::Unformatted;
+    break;
+  case ParseKind::Write:
+    specKind = IoSpecKind::Write;
+    break;
+  case ParseKind::Convert:
+    specKind = IoSpecKind::Convert;
+    break;
+  case ParseKind::Dispose:
+    specKind = IoSpecKind::Dispose;
+    break;
   }
   SetSpecifier(specKind);
 }
@@ -290,12 +370,24 @@ void IoChecker::Enter(const parser::InquireSpec::IntVar &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::InquireSpec::IntVar::Kind;
   switch (std::get<parser::InquireSpec::IntVar::Kind>(spec.t)) {
-  case ParseKind::Iostat: specKind = IoSpecKind::Iostat; break;
-  case ParseKind::Nextrec: specKind = IoSpecKind::Nextrec; break;
-  case ParseKind::Number: specKind = IoSpecKind::Number; break;
-  case ParseKind::Pos: specKind = IoSpecKind::Pos; break;
-  case ParseKind::Recl: specKind = IoSpecKind::Recl; break;
-  case ParseKind::Size: specKind = IoSpecKind::Size; break;
+  case ParseKind::Iostat:
+    specKind = IoSpecKind::Iostat;
+    break;
+  case ParseKind::Nextrec:
+    specKind = IoSpecKind::Nextrec;
+    break;
+  case ParseKind::Number:
+    specKind = IoSpecKind::Number;
+    break;
+  case ParseKind::Pos:
+    specKind = IoSpecKind::Pos;
+    break;
+  case ParseKind::Recl:
+    specKind = IoSpecKind::Recl;
+    break;
+  case ParseKind::Size:
+    specKind = IoSpecKind::Size;
+    break;
   }
   SetSpecifier(specKind);
 }
@@ -304,10 +396,18 @@ void IoChecker::Enter(const parser::InquireSpec::LogVar &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::InquireSpec::LogVar::Kind;
   switch (std::get<parser::InquireSpec::LogVar::Kind>(spec.t)) {
-  case ParseKind::Exist: specKind = IoSpecKind::Exist; break;
-  case ParseKind::Named: specKind = IoSpecKind::Named; break;
-  case ParseKind::Opened: specKind = IoSpecKind::Opened; break;
-  case ParseKind::Pending: specKind = IoSpecKind::Pending; break;
+  case ParseKind::Exist:
+    specKind = IoSpecKind::Exist;
+    break;
+  case ParseKind::Named:
+    specKind = IoSpecKind::Named;
+    break;
+  case ParseKind::Opened:
+    specKind = IoSpecKind::Opened;
+    break;
+  case ParseKind::Pending:
+    specKind = IoSpecKind::Pending;
+    break;
   }
   SetSpecifier(specKind);
 }
@@ -328,7 +428,7 @@ void IoChecker::Enter(const parser::IoControlSpec::Asynchronous &spec) {
     flags_.set(
         Flag::AsynchronousYes, parser::ToUpperCaseLetters(*charConst) == "YES");
     CheckStringValue(IoSpecKind::Asynchronous, *charConst,
-        parser::FindSourceLocation(spec));  // C1223
+        parser::FindSourceLocation(spec)); // C1223
   }
 }
 
@@ -336,13 +436,27 @@ void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::IoControlSpec::CharExpr::Kind;
   switch (std::get<ParseKind>(spec.t)) {
-  case ParseKind::Advance: specKind = IoSpecKind::Advance; break;
-  case ParseKind::Blank: specKind = IoSpecKind::Blank; break;
-  case ParseKind::Decimal: specKind = IoSpecKind::Decimal; break;
-  case ParseKind::Delim: specKind = IoSpecKind::Delim; break;
-  case ParseKind::Pad: specKind = IoSpecKind::Pad; break;
-  case ParseKind::Round: specKind = IoSpecKind::Round; break;
-  case ParseKind::Sign: specKind = IoSpecKind::Sign; break;
+  case ParseKind::Advance:
+    specKind = IoSpecKind::Advance;
+    break;
+  case ParseKind::Blank:
+    specKind = IoSpecKind::Blank;
+    break;
+  case ParseKind::Decimal:
+    specKind = IoSpecKind::Decimal;
+    break;
+  case ParseKind::Delim:
+    specKind = IoSpecKind::Delim;
+    break;
+  case ParseKind::Pad:
+    specKind = IoSpecKind::Pad;
+    break;
+  case ParseKind::Round:
+    specKind = IoSpecKind::Round;
+    break;
+  case ParseKind::Sign:
+    specKind = IoSpecKind::Sign;
+    break;
   }
   SetSpecifier(specKind);
   if (const std::optional<std::string> charConst{GetConstExpr<std::string>(
@@ -373,7 +487,7 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
     if (auto expr{GetExpr(*var)}) {
       if (!ExprTypeKindIsDefault(*expr, context_)) {
         // This may be too restrictive; other kinds may be valid.
-        context_.Say(  // C1202
+        context_.Say( // C1202
             "Invalid character kind for an internal file variable"_err_en_US);
       }
     }
@@ -429,28 +543,28 @@ void IoChecker::Enter(const parser::StatVariable &) {
 void IoChecker::Leave(const parser::BackspaceStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1240
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
   Done();
 }
 
 void IoChecker::Leave(const parser::CloseStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1208
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1208
   Done();
 }
 
 void IoChecker::Leave(const parser::EndfileStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1240
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
   Done();
 }
 
 void IoChecker::Leave(const parser::FlushStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1243
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1243
   Done();
 }
 
@@ -460,9 +574,9 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
     // Inquire by unit or by file (vs. by output list).
     CheckForRequiredSpecifier(
         flags_.test(Flag::NumberUnit) || specifierSet_.test(IoSpecKind::File),
-        "UNIT number or FILE");  // C1246
-    CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit);  // C1246
-    CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending);  // C1248
+        "UNIT number or FILE"); // C1246
+    CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
+    CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
   }
   Done();
 }
@@ -471,31 +585,31 @@ void IoChecker::Leave(const parser::OpenStmt &) {
   CheckForPureSubprogram();
   CheckForRequiredSpecifier(specifierSet_.test(IoSpecKind::Unit) ||
           specifierSet_.test(IoSpecKind::Newunit),
-      "UNIT or NEWUNIT");  // C1204, C1205
+      "UNIT or NEWUNIT"); // C1204, C1205
   CheckForProhibitedSpecifier(
-      IoSpecKind::Newunit, IoSpecKind::Unit);  // C1204, C1205
+      IoSpecKind::Newunit, IoSpecKind::Unit); // C1204, C1205
   CheckForRequiredSpecifier(flags_.test(Flag::StatusNew), "STATUS='NEW'",
-      IoSpecKind::File);  // 12.5.6.10
+      IoSpecKind::File); // 12.5.6.10
   CheckForRequiredSpecifier(flags_.test(Flag::StatusReplace),
-      "STATUS='REPLACE'", IoSpecKind::File);  // 12.5.6.10
+      "STATUS='REPLACE'", IoSpecKind::File); // 12.5.6.10
   CheckForProhibitedSpecifier(flags_.test(Flag::StatusScratch),
-      "STATUS='SCRATCH'", IoSpecKind::File);  // 12.5.6.10
+      "STATUS='SCRATCH'", IoSpecKind::File); // 12.5.6.10
   if (flags_.test(Flag::KnownStatus)) {
     CheckForRequiredSpecifier(IoSpecKind::Newunit,
         specifierSet_.test(IoSpecKind::File) ||
             flags_.test(Flag::StatusScratch),
-        "FILE or STATUS='SCRATCH'");  // 12.5.6.12
+        "FILE or STATUS='SCRATCH'"); // 12.5.6.12
   } else {
     CheckForRequiredSpecifier(IoSpecKind::Newunit,
         specifierSet_.test(IoSpecKind::File) ||
             specifierSet_.test(IoSpecKind::Status),
-        "FILE or STATUS");  // 12.5.6.12
+        "FILE or STATUS"); // 12.5.6.12
   }
   if (flags_.test(Flag::KnownAccess)) {
     CheckForRequiredSpecifier(flags_.test(Flag::AccessDirect),
-        "ACCESS='DIRECT'", IoSpecKind::Recl);  // 12.5.6.15
+        "ACCESS='DIRECT'", IoSpecKind::Recl); // 12.5.6.15
     CheckForProhibitedSpecifier(flags_.test(Flag::AccessStream),
-        "STATUS='STREAM'", IoSpecKind::Recl);  // 12.5.6.15
+        "STATUS='STREAM'", IoSpecKind::Recl); // 12.5.6.15
   }
   Done();
 }
@@ -547,29 +661,29 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
     return;
   }
   LeaveReadWrite();
-  CheckForProhibitedSpecifier(IoSpecKind::Delim);  // C1212
-  CheckForProhibitedSpecifier(IoSpecKind::Sign);  // C1212
-  CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End);  // C1220
+  CheckForProhibitedSpecifier(IoSpecKind::Delim); // C1212
+  CheckForProhibitedSpecifier(IoSpecKind::Sign); // C1212
+  CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   CheckForRequiredSpecifier(IoSpecKind::Eor,
       specifierSet_.test(IoSpecKind::Advance) && !flags_.test(Flag::AdvanceYes),
-      "ADVANCE with value 'NO'");  // C1222 + 12.6.2.1p2
+      "ADVANCE with value 'NO'"); // C1222 + 12.6.2.1p2
   CheckForRequiredSpecifier(IoSpecKind::Blank, flags_.test(Flag::FmtOrNml),
-      "FMT or NML");  // C1227
+      "FMT or NML"); // C1227
   CheckForRequiredSpecifier(
-      IoSpecKind::Pad, flags_.test(Flag::FmtOrNml), "FMT or NML");  // C1227
+      IoSpecKind::Pad, flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
   Done();
 }
 
 void IoChecker::Leave(const parser::RewindStmt &) {
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1240
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1240
   CheckForPureSubprogram();
   Done();
 }
 
 void IoChecker::Leave(const parser::WaitStmt &) {
   CheckForRequiredSpecifier(
-      flags_.test(Flag::NumberUnit), "UNIT number");  // C1237
+      flags_.test(Flag::NumberUnit), "UNIT number"); // C1237
   CheckForPureSubprogram();
   Done();
 }
@@ -579,50 +693,50 @@ void IoChecker::Leave(const parser::WriteStmt &) {
     CheckForPureSubprogram();
   }
   LeaveReadWrite();
-  CheckForProhibitedSpecifier(IoSpecKind::Blank);  // C1213
-  CheckForProhibitedSpecifier(IoSpecKind::End);  // C1213
-  CheckForProhibitedSpecifier(IoSpecKind::Eor);  // C1213
-  CheckForProhibitedSpecifier(IoSpecKind::Pad);  // C1213
-  CheckForProhibitedSpecifier(IoSpecKind::Size);  // C1213
+  CheckForProhibitedSpecifier(IoSpecKind::Blank); // C1213
+  CheckForProhibitedSpecifier(IoSpecKind::End); // C1213
+  CheckForProhibitedSpecifier(IoSpecKind::Eor); // C1213
+  CheckForProhibitedSpecifier(IoSpecKind::Pad); // C1213
+  CheckForProhibitedSpecifier(IoSpecKind::Size); // C1213
   CheckForRequiredSpecifier(
-      IoSpecKind::Sign, flags_.test(Flag::FmtOrNml), "FMT or NML");  // C1227
+      IoSpecKind::Sign, flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Delim,
       flags_.test(Flag::StarFmt) || specifierSet_.test(IoSpecKind::Nml),
-      "FMT=* or NML");  // C1228
+      "FMT=* or NML"); // C1228
   Done();
 }
 
 void IoChecker::LeaveReadWrite() const {
-  CheckForRequiredSpecifier(IoSpecKind::Unit);  // C1211
-  CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Rec);  // C1216
-  CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Fmt);  // C1216
+  CheckForRequiredSpecifier(IoSpecKind::Unit); // C1211
+  CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Rec); // C1216
+  CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Fmt); // C1216
   CheckForProhibitedSpecifier(
-      IoSpecKind::Nml, flags_.test(Flag::DataList), "a data list");  // C1216
+      IoSpecKind::Nml, flags_.test(Flag::DataList), "a data list"); // C1216
   CheckForProhibitedSpecifier(flags_.test(Flag::InternalUnit),
-      "UNIT=internal-file", IoSpecKind::Pos);  // C1219
+      "UNIT=internal-file", IoSpecKind::Pos); // C1219
   CheckForProhibitedSpecifier(flags_.test(Flag::InternalUnit),
-      "UNIT=internal-file", IoSpecKind::Rec);  // C1219
+      "UNIT=internal-file", IoSpecKind::Rec); // C1219
   CheckForProhibitedSpecifier(
-      flags_.test(Flag::StarUnit), "UNIT=*", IoSpecKind::Pos);  // C1219
+      flags_.test(Flag::StarUnit), "UNIT=*", IoSpecKind::Pos); // C1219
   CheckForProhibitedSpecifier(
-      flags_.test(Flag::StarUnit), "UNIT=*", IoSpecKind::Rec);  // C1219
+      flags_.test(Flag::StarUnit), "UNIT=*", IoSpecKind::Rec); // C1219
   CheckForProhibitedSpecifier(
-      IoSpecKind::Rec, flags_.test(Flag::StarFmt), "FMT=*");  // C1220
+      IoSpecKind::Rec, flags_.test(Flag::StarFmt), "FMT=*"); // C1220
   CheckForRequiredSpecifier(IoSpecKind::Advance,
       flags_.test(Flag::CharFmt) || flags_.test(Flag::LabelFmt),
-      "an explicit format");  // C1221
+      "an explicit format"); // C1221
   CheckForProhibitedSpecifier(IoSpecKind::Advance,
-      flags_.test(Flag::InternalUnit), "UNIT=internal-file");  // C1221
+      flags_.test(Flag::InternalUnit), "UNIT=internal-file"); // C1221
   CheckForRequiredSpecifier(flags_.test(Flag::AsynchronousYes),
       "ASYNCHRONOUS='YES'", flags_.test(Flag::NumberUnit),
-      "UNIT=number");  // C1224
+      "UNIT=number"); // C1224
   CheckForRequiredSpecifier(IoSpecKind::Id, flags_.test(Flag::AsynchronousYes),
-      "ASYNCHRONOUS='YES'");  // C1225
-  CheckForProhibitedSpecifier(IoSpecKind::Pos, IoSpecKind::Rec);  // C1226
+      "ASYNCHRONOUS='YES'"); // C1225
+  CheckForProhibitedSpecifier(IoSpecKind::Pos, IoSpecKind::Rec); // C1226
   CheckForRequiredSpecifier(IoSpecKind::Decimal, flags_.test(Flag::FmtOrNml),
-      "FMT or NML");  // C1227
+      "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Round, flags_.test(Flag::FmtOrNml),
-      "FMT or NML");  // C1227
+      "FMT or NML"); // C1227
 }
 
 void IoChecker::SetSpecifier(IoSpecKind specKind) {
@@ -755,11 +869,11 @@ void IoChecker::CheckForProhibitedSpecifier(
   }
 }
 
-void IoChecker::CheckForPureSubprogram() const {  // C1597
+void IoChecker::CheckForPureSubprogram() const { // C1597
   CHECK(context_.location());
   if (FindPureProcedureContaining(context_.FindScope(*context_.location()))) {
     context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
   }
 }
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

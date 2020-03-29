@@ -16,7 +16,7 @@ namespace Fortran::parser {
 class CharBlock;
 class Message;
 class MessageFixedText;
-}
+} // namespace Fortran::parser
 
 namespace llvm {
 class raw_ostream;
@@ -43,7 +43,8 @@ private:
   std::string containsBuf_;
 
   llvm::raw_string_ostream uses_{usesBuf_};
-  llvm::raw_string_ostream useExtraAttrs_{useExtraAttrsBuf_};  // attrs added to used entity
+  llvm::raw_string_ostream useExtraAttrs_{
+      useExtraAttrsBuf_}; // attrs added to used entity
   llvm::raw_string_ostream decls_{declsBuf_};
   llvm::raw_string_ostream contains_{containsBuf_};
 
@@ -76,5 +77,5 @@ private:
       parser::MessageFixedText &&, const std::string &);
 };
 
-}
+} // namespace Fortran::semantics
 #endif

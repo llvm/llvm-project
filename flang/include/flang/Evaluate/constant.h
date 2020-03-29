@@ -37,7 +37,7 @@ using SymbolRef = common::Reference<const Symbol>;
 // constants, use a generic expression like Expr<SomeInteger> &
 // Expr<SomeType>) to wrap the appropriate instantiation of Constant<>.
 
-template<typename> class Constant;
+template <typename> class Constant;
 
 // When describing shapes of constants or specifying 1-based subscript
 // values as indices into constants, use a vector of integers.
@@ -87,7 +87,7 @@ private:
 // Constant<> is specialized for Character kinds and SomeDerived.
 // The non-Character intrinsic types, and SomeDerived, share enough
 // common behavior that they use this common base class.
-template<typename RESULT, typename ELEMENT = Scalar<RESULT>>
+template <typename RESULT, typename ELEMENT = Scalar<RESULT>>
 class ConstantBase : public ConstantBounds {
   static_assert(RESULT::category != TypeCategory::Character);
 
@@ -95,11 +95,11 @@ public:
   using Result = RESULT;
   using Element = ELEMENT;
 
-  template<typename A>
+  template <typename A>
   ConstantBase(const A &x, Result res = Result{}) : result_{res}, values_{x} {}
-  template<typename A, typename = common::NoLvalue<A>>
+  template <typename A, typename = common::NoLvalue<A>>
   ConstantBase(A &&x, Result res = Result{})
-    : result_{res}, values_{std::move(x)} {}
+      : result_{res}, values_{std::move(x)} {}
   ConstantBase(
       std::vector<Element> &&, ConstantSubscripts &&, Result = Result{});
 
@@ -124,7 +124,7 @@ protected:
   std::vector<Element> values_;
 };
 
-template<typename T> class Constant : public ConstantBase<T> {
+template <typename T> class Constant : public ConstantBase<T> {
 public:
   using Result = T;
   using Base = ConstantBase<T>;
@@ -149,7 +149,7 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 };
 
-template<int KIND>
+template <int KIND>
 class Constant<Type<TypeCategory::Character, KIND>> : public ConstantBounds {
 public:
   using Result = Type<TypeCategory::Character, KIND>;
@@ -189,7 +189,7 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
 private:
-  Scalar<Result> values_;  // one contiguous string
+  Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
   ConstantSubscripts shape_;
   ConstantSubscripts lbounds_;
@@ -199,9 +199,9 @@ class StructureConstructor;
 using StructureConstructorValues =
     std::map<SymbolRef, common::CopyableIndirection<Expr<SomeType>>>;
 
-template<>
+template <>
 class Constant<SomeDerived>
-  : public ConstantBase<SomeDerived, StructureConstructorValues> {
+    : public ConstantBase<SomeDerived, StructureConstructorValues> {
 public:
   using Result = SomeDerived;
   using Element = StructureConstructorValues;
@@ -231,5 +231,5 @@ FOR_EACH_INTRINSIC_KIND(extern template class Constant, )
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(template class ConstantBase, ) \
   template class ConstantBase<SomeDerived, StructureConstructorValues>; \
   FOR_EACH_INTRINSIC_KIND(template class Constant, )
-}
-#endif  // FORTRAN_EVALUATE_CONSTANT_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_CONSTANT_H_

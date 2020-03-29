@@ -42,4 +42,4 @@ void ArithmeticIfStmtChecker::Leave(
   // statements and in the same inclusive scope.
 }
 
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

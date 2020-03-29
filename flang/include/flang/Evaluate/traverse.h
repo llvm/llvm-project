@@ -41,42 +41,43 @@
 #include <type_traits>
 
 namespace Fortran::evaluate {
-template<typename Visitor, typename Result> class Traverse {
+template <typename Visitor, typename Result> class Traverse {
 public:
   explicit Traverse(Visitor &v) : visitor_{v} {}
 
   // Packaging
-  template<typename A, bool C>
+  template <typename A, bool C>
   Result operator()(const common::Indirection<A, C> &x) const {
     return visitor_(x.value());
   }
-  template<typename A> Result operator()(SymbolRef x) const {
+  template <typename A> Result operator()(SymbolRef x) const {
     return visitor_(*x);
   }
-  template<typename A> Result operator()(const std::unique_ptr<A> &x) const {
+  template <typename A> Result operator()(const std::unique_ptr<A> &x) const {
     return visitor_(x.get());
   }
-  template<typename A> Result operator()(const std::shared_ptr<A> &x) const {
+  template <typename A> Result operator()(const std::shared_ptr<A> &x) const {
     return visitor_(x.get());
   }
-  template<typename A> Result operator()(const A *x) const {
+  template <typename A> Result operator()(const A *x) const {
     if (x) {
       return visitor_(*x);
     } else {
       return visitor_.Default();
     }
   }
-  template<typename A> Result operator()(const std::optional<A> &x) const {
+  template <typename A> Result operator()(const std::optional<A> &x) const {
     if (x) {
       return visitor_(*x);
     } else {
       return visitor_.Default();
     }
   }
-  template<typename... A> Result operator()(const std::variant<A...> &u) const {
+  template <typename... A>
+  Result operator()(const std::variant<A...> &u) const {
     return std::visit(visitor_, u);
   }
-  template<typename A> Result operator()(const std::vector<A> &x) const {
+  template <typename A> Result operator()(const std::vector<A> &x) const {
     return CombineContents(x);
   }
 
@@ -85,7 +86,7 @@ public:
     return visitor_.Default();
   }
   Result operator()(const NullPointer &) const { return visitor_.Default(); }
-  template<typename T> Result operator()(const Constant<T> &x) const {
+  template <typename T> Result operator()(const Constant<T> &x) const {
     if constexpr (T::category == TypeCategory::Derived) {
       std::optional<Result> result;
       for (const StructureConstructorValues &map : x.values()) {
@@ -119,7 +120,7 @@ public:
       return visitor_(x.GetFirstSymbol());
     }
   }
-  template<int KIND> Result operator()(const TypeParamInquiry<KIND> &x) const {
+  template <int KIND> Result operator()(const TypeParamInquiry<KIND> &x) const {
     return visitor_(x.base());
   }
   Result operator()(const Triplet &x) const {
@@ -140,10 +141,10 @@ public:
   Result operator()(const ComplexPart &x) const {
     return visitor_(x.complex());
   }
-  template<typename T> Result operator()(const Designator<T> &x) const {
+  template <typename T> Result operator()(const Designator<T> &x) const {
     return visitor_(x.u);
   }
-  template<typename T> Result operator()(const Variable<T> &x) const {
+  template <typename T> Result operator()(const Variable<T> &x) const {
     return visitor_(x.u);
   }
   Result operator()(const DescriptorInquiry &x) const {
@@ -173,20 +174,20 @@ public:
   Result operator()(const ProcedureRef &x) const {
     return Combine(x.proc(), x.arguments());
   }
-  template<typename T> Result operator()(const FunctionRef<T> &x) const {
+  template <typename T> Result operator()(const FunctionRef<T> &x) const {
     return visitor_(static_cast<const ProcedureRef &>(x));
   }
 
   // Other primaries
-  template<typename T>
+  template <typename T>
   Result operator()(const ArrayConstructorValue<T> &x) const {
     return visitor_(x.u);
   }
-  template<typename T>
+  template <typename T>
   Result operator()(const ArrayConstructorValues<T> &x) const {
     return CombineContents(x);
   }
-  template<typename T> Result operator()(const ImpliedDo<T> &x) const {
+  template <typename T> Result operator()(const ImpliedDo<T> &x) const {
     return Combine(x.lower(), x.upper(), x.stride(), x.values());
   }
   Result operator()(const semantics::ParamValue &x) const {
@@ -207,23 +208,23 @@ public:
   }
 
   // Operations and wrappers
-  template<typename D, typename R, typename O>
+  template <typename D, typename R, typename O>
   Result operator()(const Operation<D, R, O> &op) const {
     return visitor_(op.left());
   }
-  template<typename D, typename R, typename LO, typename RO>
+  template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &op) const {
     return Combine(op.left(), op.right());
   }
   Result operator()(const Relational<SomeType> &x) const {
     return visitor_(x.u);
   }
-  template<typename T> Result operator()(const Expr<T> &x) const {
+  template <typename T> Result operator()(const Expr<T> &x) const {
     return visitor_(x.u);
   }
 
 private:
-  template<typename ITER> Result CombineRange(ITER iter, ITER end) const {
+  template <typename ITER> Result CombineRange(ITER iter, ITER end) const {
     if (iter == end) {
       return visitor_.Default();
     } else {
@@ -235,11 +236,11 @@ private:
     }
   }
 
-  template<typename A> Result CombineContents(const A &x) const {
+  template <typename A> Result CombineContents(const A &x) const {
     return CombineRange(x.begin(), x.end());
   }
 
-  template<typename A, typename... Bs>
+  template <typename A, typename... Bs>
   Result Combine(const A &x, const Bs &... ys) const {
     if constexpr (sizeof...(Bs) == 0) {
       return visitor_(x);
@@ -253,7 +254,7 @@ private:
 
 // For validity checks across an expression: if any operator() result is
 // false, so is the overall result.
-template<typename Visitor, bool DefaultValue,
+template <typename Visitor, bool DefaultValue,
     typename Base = Traverse<Visitor, bool>>
 struct AllTraverse : public Base {
   AllTraverse(Visitor &v) : Base{v} {}
@@ -265,7 +266,7 @@ struct AllTraverse : public Base {
 // For searches over an expression: the first operator() result that
 // is truthful is the final result.  Works for Booleans, pointers,
 // and std::optional<>.
-template<typename Visitor, typename Result = bool,
+template <typename Visitor, typename Result = bool,
     typename Base = Traverse<Visitor, Result>>
 struct AnyTraverse : public Base {
   AnyTraverse(Visitor &v) : Base{v} {}
@@ -280,7 +281,8 @@ struct AnyTraverse : public Base {
   }
 };
 
-template<typename Visitor, typename Set, typename Base = Traverse<Visitor, Set>>
+template <typename Visitor, typename Set,
+    typename Base = Traverse<Visitor, Set>>
 struct SetTraverse : public Base {
   SetTraverse(Visitor &v) : Base{v} {}
   using Base::operator();
@@ -298,5 +300,5 @@ struct SetTraverse : public Base {
   }
 };
 
-}
+} // namespace Fortran::evaluate
 #endif

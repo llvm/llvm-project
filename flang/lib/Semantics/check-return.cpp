@@ -43,4 +43,4 @@ void ReturnStmtChecker::Leave(const parser::ReturnStmt &returnStmt) {
   }
 }
 
-}
+} // namespace Fortran::semantics

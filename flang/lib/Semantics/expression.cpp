@@ -873,21 +873,21 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::TripletPart(
 
 std::optional<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscript(
     const parser::SectionSubscript &ss) {
-  return std::visit(
-      common::visitors{
-          [&](const parser::SubscriptTriplet &t) {
-            return std::make_optional<Subscript>(Triplet{
-                TripletPart(std::get<0>(t.t)), TripletPart(std::get<1>(t.t)),
-                TripletPart(std::get<2>(t.t))});
-          },
-          [&](const auto &s) -> std::optional<Subscript> {
-            if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
-              return Subscript{std::move(*subscriptExpr)};
-            } else {
-              return std::nullopt;
-            }
-          },
-      },
+  return std::visit(common::visitors{
+                        [&](const parser::SubscriptTriplet &t) {
+                          return std::make_optional<Subscript>(
+                              Triplet{TripletPart(std::get<0>(t.t)),
+                                  TripletPart(std::get<1>(t.t)),
+                                  TripletPart(std::get<2>(t.t))});
+                        },
+                        [&](const auto &s) -> std::optional<Subscript> {
+                          if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
+                            return Subscript{std::move(*subscriptExpr)};
+                          } else {
+                            return std::nullopt;
+                          }
+                        },
+                    },
       ss.u);
 }
 
@@ -2027,30 +2027,29 @@ const Assignment *ExpressionAnalyzer::Analyze(
       x.typedAssignment.reset(new GenericAssignmentWrapper{});
     } else {
       Assignment assignment{std::move(*lhs), std::move(*rhs)};
-      std::visit(
-          common::visitors{
-              [&](const std::list<parser::BoundsRemapping> &list) {
-                Assignment::BoundsRemapping bounds;
-                for (const auto &elem : list) {
-                  auto lower{AsSubscript(Analyze(std::get<0>(elem.t)))};
-                  auto upper{AsSubscript(Analyze(std::get<1>(elem.t)))};
-                  if (lower && upper) {
-                    bounds.emplace_back(
-                        Fold(std::move(*lower)), Fold(std::move(*upper)));
-                  }
-                }
-                assignment.u = std::move(bounds);
-              },
-              [&](const std::list<parser::BoundsSpec> &list) {
-                Assignment::BoundsSpec bounds;
-                for (const auto &bound : list) {
-                  if (auto lower{AsSubscript(Analyze(bound.v))}) {
-                    bounds.emplace_back(Fold(std::move(*lower)));
-                  }
-                }
-                assignment.u = std::move(bounds);
-              },
-          },
+      std::visit(common::visitors{
+                     [&](const std::list<parser::BoundsRemapping> &list) {
+                       Assignment::BoundsRemapping bounds;
+                       for (const auto &elem : list) {
+                         auto lower{AsSubscript(Analyze(std::get<0>(elem.t)))};
+                         auto upper{AsSubscript(Analyze(std::get<1>(elem.t)))};
+                         if (lower && upper) {
+                           bounds.emplace_back(Fold(std::move(*lower)),
+                               Fold(std::move(*upper)));
+                         }
+                       }
+                       assignment.u = std::move(bounds);
+                     },
+                     [&](const std::list<parser::BoundsSpec> &list) {
+                       Assignment::BoundsSpec bounds;
+                       for (const auto &bound : list) {
+                         if (auto lower{AsSubscript(Analyze(bound.v))}) {
+                           bounds.emplace_back(Fold(std::move(*lower)));
+                         }
+                       }
+                       assignment.u = std::move(bounds);
+                     },
+                 },
           std::get<parser::PointerAssignmentStmt::Bounds>(x.t).u);
       x.typedAssignment.reset(
           new GenericAssignmentWrapper{std::move(assignment)});
@@ -2399,14 +2398,14 @@ static void FixMisparsedFunctionReference(
     parser::FunctionReference &funcRef{func->value()};
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
     if (Symbol *
-        origSymbol{std::visit(
-            common::visitors{
-                [&](parser::Name &name) { return name.symbol; },
-                [&](parser::ProcComponentRef &pcr) {
-                  return pcr.v.thing.component.symbol;
-                },
-            },
-            proc.u)}) {
+        origSymbol{
+            std::visit(common::visitors{
+                           [&](parser::Name &name) { return name.symbol; },
+                           [&](parser::ProcComponentRef &pcr) {
+                             return pcr.v.thing.component.symbol;
+                           },
+                       },
+                proc.u)}) {
       Symbol &symbol{origSymbol->GetUltimate()};
       if (symbol.has<semantics::ObjectEntityDetails>() ||
           symbol.has<semantics::AssocEntityDetails>()) {
@@ -2651,26 +2650,26 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  std::visit(
-      common::visitors{
-          [&](const common::Indirection<parser::Expr> &x) {
-            // TODO: Distinguish & handle procedure name and
-            // proc-component-ref
-            actual = AnalyzeExpr(x.value());
-          },
-          [&](const parser::AltReturnSpec &) {
-            if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
-            }
-          },
-          [&](const parser::ActualArg::PercentRef &) {
-            context_.Say("TODO: %REF() argument"_err_en_US);
-          },
-          [&](const parser::ActualArg::PercentVal &) {
-            context_.Say("TODO: %VAL() argument"_err_en_US);
-          },
-      },
+  std::visit(common::visitors{
+                 [&](const common::Indirection<parser::Expr> &x) {
+                   // TODO: Distinguish & handle procedure name and
+                   // proc-component-ref
+                   actual = AnalyzeExpr(x.value());
+                 },
+                 [&](const parser::AltReturnSpec &) {
+                   if (!isSubroutine) {
+                     context_.Say(
+                         "alternate return specification may not appear on"
+                         " function reference"_err_en_US);
+                   }
+                 },
+                 [&](const parser::ActualArg::PercentRef &) {
+                   context_.Say("TODO: %REF() argument"_err_en_US);
+                 },
+                 [&](const parser::ActualArg::PercentVal &) {
+                   context_.Say("TODO: %VAL() argument"_err_en_US);
+                 },
+             },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {
@@ -3030,14 +3029,13 @@ bool ExprChecker::Walk(const parser::Program &program) {
 }
 
 bool ExprChecker::Pre(const parser::DataStmtConstant &x) {
-  std::visit(
-      common::visitors{
-          [&](const parser::NullInit &) {},
-          [&](const parser::InitialDataTarget &y) {
-            AnalyzeExpr(context_, y.value());
-          },
-          [&](const auto &y) { AnalyzeExpr(context_, y); },
-      },
+  std::visit(common::visitors{
+                 [&](const parser::NullInit &) {},
+                 [&](const parser::InitialDataTarget &y) {
+                   AnalyzeExpr(context_, y.value());
+                 },
+                 [&](const auto &y) { AnalyzeExpr(context_, y); },
+             },
       x.u);
   return false;
 }

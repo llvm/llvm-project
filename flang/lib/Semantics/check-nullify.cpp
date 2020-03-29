@@ -32,7 +32,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               } else if (!IsVariableName(symbol) && !IsProcName(symbol)) {
                 messages.Say(name.source,
                     "name in NULLIFY statement must be a variable or procedure pointer name"_err_en_US);
-              } else if (!IsPointer(symbol)) {  // C951
+              } else if (!IsPointer(symbol)) { // C951
                 messages.Say(name.source,
                     "name in NULLIFY statement must have the POINTER attribute"_err_en_US);
               } else if (pure) {
@@ -42,7 +42,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
             [&](const parser::StructureComponent &structureComponent) {
               evaluate::ExpressionAnalyzer analyzer{context_};
               if (MaybeExpr checked{analyzer.Analyze(structureComponent)}) {
-                if (!IsPointer(*structureComponent.component.symbol)) {  // C951
+                if (!IsPointer(*structureComponent.component.symbol)) { // C951
                   messages.Say(structureComponent.component.source,
                       "component in NULLIFY statement must have the POINTER attribute"_err_en_US);
                 } else if (pure) {
@@ -64,4 +64,4 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
   // Some dependencies can be found compile time or at
   // runtime, but for now we choose to skip such checks.
 }
-}
+} // namespace Fortran::semantics

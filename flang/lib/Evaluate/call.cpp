@@ -18,12 +18,12 @@ namespace Fortran::evaluate {
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ActualArgument)
 ActualArgument::ActualArgument(Expr<SomeType> &&x) : u_{std::move(x)} {}
 ActualArgument::ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&v)
-  : u_{std::move(v)} {}
+    : u_{std::move(v)} {}
 ActualArgument::ActualArgument(AssumedType x) : u_{x} {}
 ActualArgument::~ActualArgument() {}
 
 ActualArgument::AssumedType::AssumedType(const Symbol &symbol)
-  : symbol_{symbol} {
+    : symbol_{symbol} {
   const semantics::DeclTypeSpec *type{symbol.GetType()};
   CHECK(type && type->category() == semantics::DeclTypeSpec::TypeStar);
 }
@@ -65,8 +65,8 @@ void ActualArgument::Parenthesize() {
 
 SpecificIntrinsic::SpecificIntrinsic(
     IntrinsicProcedure n, characteristics::Procedure &&chars)
-  : name{n}, characteristics{new characteristics::Procedure{std::move(chars)}} {
-}
+    : name{n}, characteristics{
+                   new characteristics::Procedure{std::move(chars)}} {}
 
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(SpecificIntrinsic)
 
@@ -77,7 +77,7 @@ bool SpecificIntrinsic::operator==(const SpecificIntrinsic &that) const {
 }
 
 ProcedureDesignator::ProcedureDesignator(Component &&c)
-  : u{common::CopyableIndirection<Component>::Make(std::move(c))} {}
+    : u{common::CopyableIndirection<Component>::Make(std::move(c))} {}
 
 bool ProcedureDesignator::operator==(const ProcedureDesignator &that) const {
   return u == that.u;
@@ -150,14 +150,13 @@ const Component *ProcedureDesignator::GetComponent() const {
 }
 
 const Symbol *ProcedureDesignator::GetSymbol() const {
-  return std::visit(
-      common::visitors{
-          [](SymbolRef symbol) { return &*symbol; },
-          [](const common::CopyableIndirection<Component> &c) {
-            return &c.value().GetLastSymbol();
-          },
-          [](const auto &) -> const Symbol * { return nullptr; },
-      },
+  return std::visit(common::visitors{
+                        [](SymbolRef symbol) { return &*symbol; },
+                        [](const common::CopyableIndirection<Component> &c) {
+                          return &c.value().GetLastSymbol();
+                        },
+                        [](const auto &) -> const Symbol * { return nullptr; },
+                    },
       u);
 }
 
@@ -213,5 +212,5 @@ int ProcedureRef::Rank() const {
 ProcedureRef::~ProcedureRef() {}
 
 FOR_EACH_SPECIFIC_TYPE(template class FunctionRef, )
-}
+} // namespace Fortran::evaluate
 DEFINE_DELETER(Fortran::evaluate::ProcedureRef)

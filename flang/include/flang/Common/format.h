@@ -29,30 +29,30 @@
 namespace Fortran::common {
 
 struct FormatMessage {
-  const char *text;  // message text; may have one %s argument
-  const char *arg;  // optional %s argument value
-  int offset;  // offset to message marker
-  int length;  // length of message marker
-  bool isError;  // vs. warning
+  const char *text; // message text; may have one %s argument
+  const char *arg; // optional %s argument value
+  int offset; // offset to message marker
+  int length; // length of message marker
+  bool isError; // vs. warning
 };
 
 // This declaration is logically private to class FormatValidator.
 // It is placed here to work around a clang compilation problem.
 ENUM_CLASS(TokenKind, None, A, B, BN, BZ, D, DC, DP, DT, E, EN, ES, EX, F, G, I,
     L, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z, Colon, Slash,
-    Backslash,  // nonstandard: inhibit newline on output
-    Dollar,  // nonstandard: inhibit newline on output on terminals
+    Backslash, // nonstandard: inhibit newline on output
+    Dollar, // nonstandard: inhibit newline on output on terminals
     Star, LParen, RParen, Comma, Point, Sign,
-    UnsignedInteger,  // value in integerValue_
-    String)  // char-literal-constant or Hollerith constant
+    UnsignedInteger, // value in integerValue_
+    String) // char-literal-constant or Hollerith constant
 
-template<typename CHAR = char> class FormatValidator {
+template <typename CHAR = char> class FormatValidator {
 public:
   using Reporter = std::function<bool(const FormatMessage &)>;
   FormatValidator(const CHAR *format, size_t length, Reporter reporter,
       IoStmtKind stmt = IoStmtKind::None)
-    : format_{format}, end_{format + length}, reporter_{reporter}, stmt_{stmt},
-      cursor_{format - 1} {
+      : format_{format}, end_{format + length}, reporter_{reporter},
+        stmt_{stmt}, cursor_{format - 1} {
     CHECK(format);
   }
 
@@ -128,54 +128,54 @@ private:
   bool check_d();
   void check_e();
 
-  const CHAR *const format_;  // format text
-  const CHAR *const end_;  // one-past-last of format_ text
+  const CHAR *const format_; // format text
+  const CHAR *const end_; // one-past-last of format_ text
   Reporter reporter_;
   IoStmtKind stmt_;
 
-  const CHAR *cursor_{};  // current location in format_
-  const CHAR *laCursor_{};  // lookahead cursor
-  Token token_{};  // current token
-  int64_t integerValue_{-1};  // value of UnsignedInteger token
-  Token knrToken_{};  // k, n, or r UnsignedInteger token
-  int64_t knrValue_{-1};  // -1 ==> not present
+  const CHAR *cursor_{}; // current location in format_
+  const CHAR *laCursor_{}; // lookahead cursor
+  Token token_{}; // current token
+  int64_t integerValue_{-1}; // value of UnsignedInteger token
+  Token knrToken_{}; // k, n, or r UnsignedInteger token
+  int64_t knrValue_{-1}; // -1 ==> not present
   int64_t wValue_{-1};
   bool previousTokenWasInt_{false};
-  char argString_[3]{};  // 1-2 character msg arg; usually edit descriptor name
+  char argString_[3]{}; // 1-2 character msg arg; usually edit descriptor name
   bool formatHasErrors_{false};
   bool unterminatedFormatError_{false};
   bool suppressMessageCascade_{false};
   bool reporterExit_{false};
-  int maxNesting_{0};  // max level of nested parentheses
+  int maxNesting_{0}; // max level of nested parentheses
 };
 
-template<typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
+template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
   for (++cursor_; cursor_ < end_; ++cursor_) {
     if (*cursor_ != ' ') {
       return toupper(*cursor_);
     }
   }
-  cursor_ = end_;  // don't allow cursor_ > end_
+  cursor_ = end_; // don't allow cursor_ > end_
   return ' ';
 }
 
-template<typename CHAR> CHAR FormatValidator<CHAR>::LookAheadChar() {
+template <typename CHAR> CHAR FormatValidator<CHAR>::LookAheadChar() {
   for (laCursor_ = cursor_ + 1; laCursor_ < end_; ++laCursor_) {
     if (*laCursor_ != ' ') {
       return toupper(*laCursor_);
     }
   }
-  laCursor_ = end_;  // don't allow laCursor_ > end_
+  laCursor_ = end_; // don't allow laCursor_ > end_
   return ' ';
 }
 
 // After a call to LookAheadChar, set token kind and advance cursor to laCursor.
-template<typename CHAR> void FormatValidator<CHAR>::Advance(TokenKind tk) {
+template <typename CHAR> void FormatValidator<CHAR>::Advance(TokenKind tk) {
   cursor_ = laCursor_;
   token_.set_kind(tk);
 }
 
-template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
+template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   // At entry, cursor_ points before the start of the next token.
   // At exit, cursor_ points to last CHAR of token_.
 
@@ -184,7 +184,7 @@ template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
   token_.set_kind(TokenKind::None);
   token_.set_offset(cursor_ - format_);
   token_.set_length(1);
-  if (c == '_' && integerValue_ >= 0) {  // C1305, C1309, C1310, C1312, C1313
+  if (c == '_' && integerValue_ >= 0) { // C1305, C1309, C1310, C1312, C1313
     ReportError("Kind parameter '_' character in format expression");
   }
   integerValue_ = -1;
@@ -232,7 +232,7 @@ template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
       cursor_ = end_;
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read) {  // 13.3.2p6
+    if (stmt_ == IoStmtKind::Read) { // 13.3.2p6
       ReportError("'H' edit descriptor in READ format expression");
     } else if (token_.kind() == TokenKind::None) {
       ReportError("Unterminated 'H' edit descriptor");
@@ -241,72 +241,154 @@ template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
     }
     break;
   }
-  case 'A': token_.set_kind(TokenKind::A); break;
+  case 'A':
+    token_.set_kind(TokenKind::A);
+    break;
   case 'B':
     switch (LookAheadChar()) {
-    case 'N': Advance(TokenKind::BN); break;
-    case 'Z': Advance(TokenKind::BZ); break;
-    default: token_.set_kind(TokenKind::B); break;
+    case 'N':
+      Advance(TokenKind::BN);
+      break;
+    case 'Z':
+      Advance(TokenKind::BZ);
+      break;
+    default:
+      token_.set_kind(TokenKind::B);
+      break;
     }
     break;
   case 'D':
     switch (LookAheadChar()) {
-    case 'C': Advance(TokenKind::DC); break;
-    case 'P': Advance(TokenKind::DP); break;
-    case 'T': Advance(TokenKind::DT); break;
-    default: token_.set_kind(TokenKind::D); break;
+    case 'C':
+      Advance(TokenKind::DC);
+      break;
+    case 'P':
+      Advance(TokenKind::DP);
+      break;
+    case 'T':
+      Advance(TokenKind::DT);
+      break;
+    default:
+      token_.set_kind(TokenKind::D);
+      break;
     }
     break;
   case 'E':
     switch (LookAheadChar()) {
-    case 'N': Advance(TokenKind::EN); break;
-    case 'S': Advance(TokenKind::ES); break;
-    case 'X': Advance(TokenKind::EX); break;
-    default: token_.set_kind(TokenKind::E); break;
+    case 'N':
+      Advance(TokenKind::EN);
+      break;
+    case 'S':
+      Advance(TokenKind::ES);
+      break;
+    case 'X':
+      Advance(TokenKind::EX);
+      break;
+    default:
+      token_.set_kind(TokenKind::E);
+      break;
     }
     break;
-  case 'F': token_.set_kind(TokenKind::F); break;
-  case 'G': token_.set_kind(TokenKind::G); break;
-  case 'I': token_.set_kind(TokenKind::I); break;
-  case 'L': token_.set_kind(TokenKind::L); break;
-  case 'O': token_.set_kind(TokenKind::O); break;
-  case 'P': token_.set_kind(TokenKind::P); break;
+  case 'F':
+    token_.set_kind(TokenKind::F);
+    break;
+  case 'G':
+    token_.set_kind(TokenKind::G);
+    break;
+  case 'I':
+    token_.set_kind(TokenKind::I);
+    break;
+  case 'L':
+    token_.set_kind(TokenKind::L);
+    break;
+  case 'O':
+    token_.set_kind(TokenKind::O);
+    break;
+  case 'P':
+    token_.set_kind(TokenKind::P);
+    break;
   case 'R':
     switch (LookAheadChar()) {
-    case 'C': Advance(TokenKind::RC); break;
-    case 'D': Advance(TokenKind::RD); break;
-    case 'N': Advance(TokenKind::RN); break;
-    case 'P': Advance(TokenKind::RP); break;
-    case 'U': Advance(TokenKind::RU); break;
-    case 'Z': Advance(TokenKind::RZ); break;
-    default: token_.set_kind(TokenKind::None); break;
+    case 'C':
+      Advance(TokenKind::RC);
+      break;
+    case 'D':
+      Advance(TokenKind::RD);
+      break;
+    case 'N':
+      Advance(TokenKind::RN);
+      break;
+    case 'P':
+      Advance(TokenKind::RP);
+      break;
+    case 'U':
+      Advance(TokenKind::RU);
+      break;
+    case 'Z':
+      Advance(TokenKind::RZ);
+      break;
+    default:
+      token_.set_kind(TokenKind::None);
+      break;
     }
     break;
   case 'S':
     switch (LookAheadChar()) {
-    case 'P': Advance(TokenKind::SP); break;
-    case 'S': Advance(TokenKind::SS); break;
-    default: token_.set_kind(TokenKind::S); break;
+    case 'P':
+      Advance(TokenKind::SP);
+      break;
+    case 'S':
+      Advance(TokenKind::SS);
+      break;
+    default:
+      token_.set_kind(TokenKind::S);
+      break;
     }
     break;
   case 'T':
     switch (LookAheadChar()) {
-    case 'L': Advance(TokenKind::TL); break;
-    case 'R': Advance(TokenKind::TR); break;
-    default: token_.set_kind(TokenKind::T); break;
+    case 'L':
+      Advance(TokenKind::TL);
+      break;
+    case 'R':
+      Advance(TokenKind::TR);
+      break;
+    default:
+      token_.set_kind(TokenKind::T);
+      break;
     }
     break;
-  case 'X': token_.set_kind(TokenKind::X); break;
-  case 'Z': token_.set_kind(TokenKind::Z); break;
+  case 'X':
+    token_.set_kind(TokenKind::X);
+    break;
+  case 'Z':
+    token_.set_kind(TokenKind::Z);
+    break;
   case '-':
-  case '+': token_.set_kind(TokenKind::Sign); break;
-  case '/': token_.set_kind(TokenKind::Slash); break;
-  case '(': token_.set_kind(TokenKind::LParen); break;
-  case ')': token_.set_kind(TokenKind::RParen); break;
-  case '.': token_.set_kind(TokenKind::Point); break;
-  case ':': token_.set_kind(TokenKind::Colon); break;
-  case '\\': token_.set_kind(TokenKind::Backslash); break;
-  case '$': token_.set_kind(TokenKind::Dollar); break;
+  case '+':
+    token_.set_kind(TokenKind::Sign);
+    break;
+  case '/':
+    token_.set_kind(TokenKind::Slash);
+    break;
+  case '(':
+    token_.set_kind(TokenKind::LParen);
+    break;
+  case ')':
+    token_.set_kind(TokenKind::RParen);
+    break;
+  case '.':
+    token_.set_kind(TokenKind::Point);
+    break;
+  case ':':
+    token_.set_kind(TokenKind::Colon);
+    break;
+  case '\\':
+    token_.set_kind(TokenKind::Backslash);
+    break;
+  case '$':
+    token_.set_kind(TokenKind::Dollar);
+    break;
   case '*':
     token_.set_kind(LookAheadChar() == '(' ? TokenKind::Star : TokenKind::None);
     break;
@@ -334,7 +416,7 @@ template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
       }
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read) {  // 13.3.2p6
+    if (stmt_ == IoStmtKind::Read) { // 13.3.2p6
       ReportError("String edit descriptor in READ format expression");
     } else if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
@@ -353,34 +435,34 @@ template<typename CHAR> void FormatValidator<CHAR>::NextToken() {
   SetLength();
 }
 
-template<typename CHAR> void FormatValidator<CHAR>::check_r(bool allowed) {
+template <typename CHAR> void FormatValidator<CHAR>::check_r(bool allowed) {
   if (!allowed && knrValue_ >= 0) {
     ReportError("Repeat specifier before '%s' edit descriptor", knrToken_);
   } else if (knrValue_ == 0) {
     ReportError("'%s' edit descriptor repeat specifier must be positive",
-        knrToken_);  // C1304
+        knrToken_); // C1304
   }
 }
 
 // Return the predicate "w value is present" to control further processing.
-template<typename CHAR> bool FormatValidator<CHAR>::check_w() {
+template <typename CHAR> bool FormatValidator<CHAR>::check_w() {
   if (token_.kind() == TokenKind::UnsignedInteger) {
     wValue_ = integerValue_;
     if (wValue_ == 0 &&
         (*argString_ == 'A' || *argString_ == 'L' ||
-            stmt_ == IoStmtKind::Read)) {  // C1306, 13.7.2.1p6
+            stmt_ == IoStmtKind::Read)) { // C1306, 13.7.2.1p6
       ReportError("'%s' edit descriptor 'w' value must be positive");
     }
     NextToken();
     return true;
   }
   if (*argString_ != 'A') {
-    ReportWarning("Expected '%s' edit descriptor 'w' value");  // C1306
+    ReportWarning("Expected '%s' edit descriptor 'w' value"); // C1306
   }
   return false;
 }
 
-template<typename CHAR> void FormatValidator<CHAR>::check_m() {
+template <typename CHAR> void FormatValidator<CHAR>::check_m() {
   if (token_.kind() != TokenKind::Point) {
     return;
   }
@@ -390,14 +472,14 @@ template<typename CHAR> void FormatValidator<CHAR>::check_m() {
     return;
   }
   if ((stmt_ == IoStmtKind::Print || stmt_ == IoStmtKind::Write) &&
-      wValue_ > 0 && integerValue_ > wValue_) {  // 13.7.2.2p5, 13.7.2.4p6
+      wValue_ > 0 && integerValue_ > wValue_) { // 13.7.2.2p5, 13.7.2.4p6
     ReportError("'%s' edit descriptor 'm' value is greater than 'w' value");
   }
   NextToken();
 }
 
 // Return the predicate "d value is present" to control further processing.
-template<typename CHAR> bool FormatValidator<CHAR>::check_d() {
+template <typename CHAR> bool FormatValidator<CHAR>::check_d() {
   if (token_.kind() != TokenKind::Point) {
     ReportError("Expected '%s' edit descriptor '.d' value");
     return false;
@@ -411,7 +493,7 @@ template<typename CHAR> bool FormatValidator<CHAR>::check_d() {
   return true;
 }
 
-template<typename CHAR> void FormatValidator<CHAR>::check_e() {
+template <typename CHAR> void FormatValidator<CHAR>::check_e() {
   if (token_.kind() != TokenKind::E) {
     return;
   }
@@ -423,7 +505,7 @@ template<typename CHAR> void FormatValidator<CHAR>::check_e() {
   NextToken();
 }
 
-template<typename CHAR> bool FormatValidator<CHAR>::Check() {
+template <typename CHAR> bool FormatValidator<CHAR>::Check() {
   if (!*format_) {
     ReportError("Empty format expression");
     return formatHasErrors_;
@@ -435,8 +517,8 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
   }
   NextToken();
 
-  int nestLevel{0};  // Outer level ()s are at level 0.
-  Token starToken{};  // unlimited format token
+  int nestLevel{0}; // Outer level ()s are at level 0.
+  Token starToken{}; // unlimited format token
   bool hasDataEditDesc{false};
 
   // Subject to error recovery exceptions, a loop iteration processes one
@@ -446,7 +528,7 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
   //  - the error reporter requests termination (error threshold reached)
   while (!reporterExit_) {
     Token signToken{};
-    knrValue_ = -1;  // -1 ==> not present
+    knrValue_ = -1; // -1 ==> not present
     wValue_ = -1;
     bool commaRequired{true};
 
@@ -519,12 +601,12 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
       NextToken();
       if (check_w()) {
         if (wValue_ > 0) {
-          if (check_d()) {  // C1307
+          if (check_d()) { // C1307
             check_e();
           }
         } else if (token_.kind() == TokenKind::Point && check_d() &&
             token_.kind() == TokenKind::E) {
-          ReportError("Unexpected 'e' in 'G0' edit descriptor");  // C1308
+          ReportError("Unexpected 'e' in 'G0' edit descriptor"); // C1308
           NextToken();
           if (token_.kind() == TokenKind::UnsignedInteger) {
             NextToken();
@@ -616,7 +698,9 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
       case TokenKind::ES:
       case TokenKind::EX:
       case TokenKind::F:
-      case TokenKind::G: commaRequired = false; break;
+      case TokenKind::G:
+        commaRequired = false;
+        break;
       default:;
       }
       cursor_ = saveCursor;
@@ -629,14 +713,14 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
       // R1315 position-edit-desc -> T n | TL n | TR n
       check_r(false);
       NextToken();
-      if (integerValue_ <= 0) {  // C1311
+      if (integerValue_ <= 0) { // C1311
         ReportError("'%s' edit descriptor must have a positive position value");
       }
       NextToken();
       break;
     case TokenKind::X:
       // R1315 position-edit-desc -> n X
-      if (knrValue_ == 0) {  // C1311
+      if (knrValue_ == 0) { // C1311
         ReportError("'X' edit descriptor must have a positive position value",
             knrToken_);
       } else if (knrValue_ < 0) {
@@ -695,11 +779,11 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
       do {
         if (nestLevel == 0) {
           // Any characters after level-0 ) are ignored.
-          return formatHasErrors_;  // normal exit (may have messages)
+          return formatHasErrors_; // normal exit (may have messages)
         }
         if (nestLevel == 1 && starToken.IsSet() && !hasDataEditDesc) {
           SetLength(starToken);
-          ReportError(  // C1303
+          ReportError( // C1303
               "Unlimited format item list must contain a data edit descriptor",
               starToken);
         }
@@ -718,31 +802,33 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
         break;
       }
       [[fallthrough]];
-    default: ReportError("Unexpected '%s' in format expression"); NextToken();
+    default:
+      ReportError("Unexpected '%s' in format expression");
+      NextToken();
     }
 
     // Process comma separator and exit an incomplete format.
     switch (token_.kind()) {
-    case TokenKind::Colon:  // Comma not required; token not yet processed.
-    case TokenKind::Slash:  // Comma not required; token not yet processed.
-    case TokenKind::RParen:  // Comma not allowed; token not yet processed.
+    case TokenKind::Colon: // Comma not required; token not yet processed.
+    case TokenKind::Slash: // Comma not required; token not yet processed.
+    case TokenKind::RParen: // Comma not allowed; token not yet processed.
       suppressMessageCascade_ = false;
       break;
-    case TokenKind::LParen:  // Comma not allowed; token already processed.
-    case TokenKind::Comma:  // Normal comma case; move past token.
+    case TokenKind::LParen: // Comma not allowed; token already processed.
+    case TokenKind::Comma: // Normal comma case; move past token.
       suppressMessageCascade_ = false;
       NextToken();
       break;
-    case TokenKind::Sign:  // Error; main switch has a better message.
-    case TokenKind::None:  // Error; token not yet processed.
+    case TokenKind::Sign: // Error; main switch has a better message.
+    case TokenKind::None: // Error; token not yet processed.
       if (cursor_ >= end_) {
-        return formatHasErrors_;  // incomplete format error exit
+        return formatHasErrors_; // incomplete format error exit
       }
       break;
     default:
       // Possible first token of the next format item; token not yet processed.
       if (commaRequired) {
-        const char *s{"Expected ',' or ')' in format expression"};  // C1302
+        const char *s{"Expected ',' or ')' in format expression"}; // C1302
         if (previousTokenWasInt_ && itemsWithLeadingInts_.test(token_.kind())) {
           ReportError(s);
         } else {
@@ -752,8 +838,8 @@ template<typename CHAR> bool FormatValidator<CHAR>::Check() {
     }
   }
 
-  return formatHasErrors_;  // error reporter (message threshold) exit
+  return formatHasErrors_; // error reporter (message threshold) exit
 }
 
-}
-#endif  // FORTRAN_COMMON_FORMAT_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_FORMAT_H_

@@ -17,7 +17,7 @@
 extern "C" {
 
 static void DescribeIEEESignaledExceptions() {
-#ifdef fetestexcept  // a macro in some environments; omit std::
+#ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
   auto excepts{std::fetestexcept(FE_ALL_EXCEPT)};

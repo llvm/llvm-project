@@ -13,35 +13,51 @@ namespace Fortran::common {
 const char *AsFortran(NumericOperator opr) {
   switch (opr) {
     SWITCH_COVERS_ALL_CASES
-  case NumericOperator::Power: return "**";
-  case NumericOperator::Multiply: return "*";
-  case NumericOperator::Divide: return "/";
-  case NumericOperator::Add: return "+";
-  case NumericOperator::Subtract: return "-";
+  case NumericOperator::Power:
+    return "**";
+  case NumericOperator::Multiply:
+    return "*";
+  case NumericOperator::Divide:
+    return "/";
+  case NumericOperator::Add:
+    return "+";
+  case NumericOperator::Subtract:
+    return "-";
   }
 }
 
 const char *AsFortran(LogicalOperator opr) {
   switch (opr) {
     SWITCH_COVERS_ALL_CASES
-  case LogicalOperator::And: return ".and.";
-  case LogicalOperator::Or: return ".or.";
-  case LogicalOperator::Eqv: return ".eqv.";
-  case LogicalOperator::Neqv: return ".neqv.";
-  case LogicalOperator::Not: return ".not.";
+  case LogicalOperator::And:
+    return ".and.";
+  case LogicalOperator::Or:
+    return ".or.";
+  case LogicalOperator::Eqv:
+    return ".eqv.";
+  case LogicalOperator::Neqv:
+    return ".neqv.";
+  case LogicalOperator::Not:
+    return ".not.";
   }
 }
 
 const char *AsFortran(RelationalOperator opr) {
   switch (opr) {
     SWITCH_COVERS_ALL_CASES
-  case RelationalOperator::LT: return "<";
-  case RelationalOperator::LE: return "<=";
-  case RelationalOperator::EQ: return "==";
-  case RelationalOperator::NE: return "/=";
-  case RelationalOperator::GE: return ">=";
-  case RelationalOperator::GT: return ">";
+  case RelationalOperator::LT:
+    return "<";
+  case RelationalOperator::LE:
+    return "<=";
+  case RelationalOperator::EQ:
+    return "==";
+  case RelationalOperator::NE:
+    return "/=";
+  case RelationalOperator::GE:
+    return ">=";
+  case RelationalOperator::GT:
+    return ">";
   }
 }
 
-}
+} // namespace Fortran::common

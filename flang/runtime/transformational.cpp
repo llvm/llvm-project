@@ -17,10 +17,14 @@ namespace Fortran::runtime {
 
 static inline std::int64_t GetInt64(const char *p, std::size_t bytes) {
   switch (bytes) {
-  case 1: return *reinterpret_cast<const std::int8_t *>(p);
-  case 2: return *reinterpret_cast<const std::int16_t *>(p);
-  case 4: return *reinterpret_cast<const std::int32_t *>(p);
-  case 8: return *reinterpret_cast<const std::int64_t *>(p);
+  case 1:
+    return *reinterpret_cast<const std::int8_t *>(p);
+  case 2:
+    return *reinterpret_cast<const std::int16_t *>(p);
+  case 4:
+    return *reinterpret_cast<const std::int32_t *>(p);
+  case 8:
+    return *reinterpret_cast<const std::int64_t *>(p);
   default:
     Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("no case for %dz bytes", bytes);
@@ -39,7 +43,7 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
       resultRank >= 0 && resultRank <= static_cast<SubscriptValue>(maxRank));
 
   // Extract and check the shape of the result; compute its element count.
-  SubscriptValue lowerBound[maxRank];  // all 1's
+  SubscriptValue lowerBound[maxRank]; // all 1's
   SubscriptValue resultExtent[maxRank];
   std::size_t shapeElementBytes{shape.ElementBytes()};
   std::size_t resultElements{1};
@@ -96,7 +100,7 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
   } else {
     result = Descriptor::Create(source.type(), elementBytes, nullptr,
         resultRank, resultExtent,
-        CFI_attribute_allocatable);  // TODO rearrange these arguments
+        CFI_attribute_allocatable); // TODO rearrange these arguments
   }
   DescriptorAddendum *resultAddendum{result->Addendum()};
   RUNTIME_CHECK(terminator, resultAddendum);
@@ -141,4 +145,4 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
 
   return result;
 }
-}
+} // namespace Fortran::runtime

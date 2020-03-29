@@ -78,10 +78,14 @@ bool EditIntegerInput(
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'G':
-  case 'I': break;
-  case 'B': return EditBOZInput(io, edit, n, 2, kind << 3);
-  case 'O': return EditBOZInput(io, edit, n, 8, kind << 3);
-  case 'Z': return EditBOZInput(io, edit, n, 16, kind << 3);
+  case 'I':
+    break;
+  case 'B':
+    return EditBOZInput(io, edit, n, 2, kind << 3);
+  case 'O':
+    return EditBOZInput(io, edit, n, 8, kind << 3);
+  case 'Z':
+    return EditBOZInput(io, edit, n, 16, kind << 3);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
@@ -96,7 +100,7 @@ bool EditIntegerInput(
     char32_t ch{*next};
     if (ch == ' ') {
       if (edit.modes.editingFlags & blankZero) {
-        ch = '0';  // BZ mode - treat blank as if it were zero
+        ch = '0'; // BZ mode - treat blank as if it were zero
       } else {
         continue;
       }
@@ -130,14 +134,14 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       buffer[got++] = '-';
     }
   }
-  if (!next) {  // empty field means zero
+  if (!next) { // empty field means zero
     if (got < bufferSize) {
       buffer[got++] = '0';
     }
     return got;
   }
   if (got < bufferSize) {
-    buffer[got++] = '.';  // input field is normalized to a fraction
+    buffer[got++] = '.'; // input field is normalized to a fraction
   }
   char32_t decimal = edit.modes.editingFlags & decimalComma ? ',' : '.';
   auto start{got};
@@ -154,7 +158,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       }
     }
-    if (next && *next == '(') {  // NaN(...)
+    if (next && *next == '(') { // NaN(...)
       while (next && *next != ')') {
         next = io.NextInField(remaining);
       }
@@ -165,7 +169,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       char32_t ch{*next};
       if (ch == ' ') {
         if (edit.modes.editingFlags & blankZero) {
-          ch = '0';  // BZ mode - treat blank as if it were zero
+          ch = '0'; // BZ mode - treat blank as if it were zero
         } else {
           continue;
         }
@@ -178,13 +182,13 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
-        decimalPoint = got - start;  // # of digits before the decimal point
+        decimalPoint = got - start; // # of digits before the decimal point
       } else {
         break;
       }
     }
     if (got == start && got < bufferSize) {
-      buffer[got++] = '0';  // all digits were zeroes
+      buffer[got++] = '0'; // all digits were zeroes
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
@@ -192,7 +196,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining);
     }
-    exponent = -edit.modes.scale;  // default exponent is -kP
+    exponent = -edit.modes.scale; // default exponent is -kP
     if (next &&
         (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9'))) {
       bool negExpo{*next == '-'};
@@ -226,13 +230,13 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       next = io.NextInField(remaining);
     }
     if (next) {
-      return 0;  // error: unused nonblank character in fixed-width field
+      return 0; // error: unused nonblank character in fixed-width field
     }
   }
   return got;
 }
 
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   static constexpr int maxDigits{
       common::MaxDecimalConversionDigits(binaryPrecision)};
@@ -266,14 +270,15 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   return true;
 }
 
-template<int binaryPrecision>
+template <int binaryPrecision>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'F':
-  case 'E':  // incl. EN, ES, & EX
+  case 'E': // incl. EN, ES, & EX
   case 'D':
-  case 'G': return EditCommonRealInput<binaryPrecision>(io, edit, n);
+  case 'G':
+    return EditCommonRealInput<binaryPrecision>(io, edit, n);
   case 'B':
     return EditBOZInput(
         io, edit, n, 2, common::BitsForBinaryPrecision(binaryPrecision));
@@ -296,7 +301,8 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'L':
-  case 'G': break;
+  case 'G':
+    break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used for LOGICAL input",
@@ -309,7 +315,7 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   }
   io.SkipSpaces(remaining);
   std::optional<char32_t> next{io.NextInField(remaining)};
-  if (next && *next == '.') {  // skip optional period
+  if (next && *next == '.') { // skip optional period
     next = io.NextInField(remaining);
   }
   if (!next) {
@@ -318,15 +324,19 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   }
   switch (*next) {
   case 'T':
-  case 't': x = true; break;
+  case 't':
+    x = true;
+    break;
   case 'F':
-  case 'f': x = false; break;
+  case 'f':
+    x = false;
+    break;
   default:
     io.GetIoErrorHandler().SignalError(
         "Bad character '%lc' in LOGICAL input field", *next);
     return false;
   }
-  if (remaining) {  // ignore the rest of the field
+  if (remaining) { // ignore the rest of the field
     io.HandleRelativePosition(*remaining);
   }
   return true;
@@ -353,7 +363,7 @@ static bool EditDelimitedCharacterInput(
         *x++ = *ch;
         --length;
       }
-    } else if (!io.AdvanceRecord()) {  // EOF
+    } else if (!io.AdvanceRecord()) { // EOF
       std::fill_n(x, length, ' ');
       return false;
     }
@@ -377,9 +387,11 @@ static bool EditListDirectedDefaultCharacterInput(
     case ',':
     case ';':
     case '/':
-      remaining = 0;  // value separator: stop
+      remaining = 0; // value separator: stop
       break;
-    default: *x++ = *next; --length;
+    default:
+      *x++ = *next;
+      --length;
     }
   }
   std::fill_n(x, length, ' ');
@@ -392,7 +404,8 @@ bool EditDefaultCharacterInput(
   case DataEdit::ListDirected:
     return EditListDirectedDefaultCharacterInput(io, x, length);
   case 'A':
-  case 'G': break;
+  case 'G':
+    break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",
@@ -426,4 +439,4 @@ template bool EditRealInput<24>(IoStatementState &, const DataEdit &, void *);
 template bool EditRealInput<53>(IoStatementState &, const DataEdit &, void *);
 template bool EditRealInput<64>(IoStatementState &, const DataEdit &, void *);
 template bool EditRealInput<113>(IoStatementState &, const DataEdit &, void *);
-}
+} // namespace Fortran::runtime::io

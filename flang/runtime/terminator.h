@@ -23,7 +23,7 @@ public:
   Terminator() {}
   Terminator(const Terminator &) = default;
   explicit Terminator(const char *sourceFileName, int sourceLine = 0)
-    : sourceFileName_{sourceFileName}, sourceLine_{sourceLine} {}
+      : sourceFileName_{sourceFileName}, sourceLine_{sourceLine} {}
   void SetLocation(const char *sourceFileName = nullptr, int sourceLine = 0) {
     sourceFileName_ = sourceFileName;
     sourceLine_ = sourceLine;
@@ -51,10 +51,10 @@ private:
 void NotifyOtherImagesOfNormalEnd();
 void NotifyOtherImagesOfFailImageStatement();
 void NotifyOtherImagesOfErrorTermination();
-}
+} // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
 void FlushOutputOnCrash(const Terminator &);
 }
 
-#endif  // FORTRAN_RUNTIME_TERMINATOR_H_
+#endif // FORTRAN_RUNTIME_TERMINATOR_H_

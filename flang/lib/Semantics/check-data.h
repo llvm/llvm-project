@@ -24,5 +24,5 @@ public:
 private:
   SemanticsContext &context_;
 };
-}
-#endif  // FORTRAN_SEMANTICS_CHECK_DATA_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_CHECK_DATA_H_

@@ -26,19 +26,19 @@ namespace Fortran::parser {
 
 Definition::Definition(
     const TokenSequence &repl, std::size_t firstToken, std::size_t tokens)
-  : replacement_{Tokenize({}, repl, firstToken, tokens)} {}
+    : replacement_{Tokenize({}, repl, firstToken, tokens)} {}
 
 Definition::Definition(const std::vector<std::string> &argNames,
     const TokenSequence &repl, std::size_t firstToken, std::size_t tokens,
     bool isVariadic)
-  : isFunctionLike_{true},
-    argumentCount_(argNames.size()), isVariadic_{isVariadic},
-    replacement_{Tokenize(argNames, repl, firstToken, tokens)} {}
+    : isFunctionLike_{true},
+      argumentCount_(argNames.size()), isVariadic_{isVariadic},
+      replacement_{Tokenize(argNames, repl, firstToken, tokens)} {}
 
 Definition::Definition(const std::string &predefined, AllSources &sources)
-  : isPredefined_{true}, replacement_{predefined,
-                             sources.AddCompilerInsertion(predefined).start()} {
-}
+    : isPredefined_{true},
+      replacement_{
+          predefined, sources.AddCompilerInsertion(predefined).start()} {}
 
 bool Definition::set_isDisabled(bool disable) {
   bool was{isDisabled_};
@@ -200,9 +200,9 @@ Preprocessor::Preprocessor(AllSources &allSources) : allSources_{allSources} {
   // of __DATE__ or __TIME__ change during compilation.
   std::time_t now;
   std::time(&now);
-  definitions_.emplace(SaveTokenAsName("__DATE__"s),  // e.g., "Jun 16 1904"
+  definitions_.emplace(SaveTokenAsName("__DATE__"s), // e.g., "Jun 16 1904"
       Definition{FormatTime(now, "\"%h %e %Y\""), allSources});
-  definitions_.emplace(SaveTokenAsName("__TIME__"s),  // e.g., "23:59:60"
+  definitions_.emplace(SaveTokenAsName("__TIME__"s), // e.g., "23:59:60"
       Definition{FormatTime(now, "\"%T\""), allSources});
   // The values of these predefined macros depend on their invocation sites.
   definitions_.emplace(
@@ -230,7 +230,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     }
   }
   if (j == tokens) {
-    return std::nullopt;  // input contains nothing that would be replaced
+    return std::nullopt; // input contains nothing that would be replaced
   }
   TokenSequence result{input, 0, j};
   for (; j < tokens; ++j) {
@@ -342,7 +342,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           allSources_.AddMacroCall(from, use, replaced.ToString())};
       result.Put(replaced, newRange);
     }
-    j = k;  // advance to the terminal ')'
+    j = k; // advance to the terminal ')'
   }
   return result;
 }
@@ -373,7 +373,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
     return;
   }
   if (IsDecimalDigit(dir.TokenAt(j)[0]) || dir.TokenAt(j)[0] == '"') {
-    return;  // treat like #line, ignore it
+    return; // treat like #line, ignore it
   }
   std::size_t dirOffset{j};
   std::string dirName{ToLowerCaseLetters(dir.TokenAt(dirOffset).ToString())};
@@ -677,8 +677,8 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
   enum Operator {
     PARENS,
     CONST,
-    NOTZERO,  // !
-    COMPLEMENT,  // ~
+    NOTZERO, // !
+    COMPLEMENT, // ~
     UPLUS,
     UMINUS,
     POWER,
@@ -707,13 +707,13 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
     COMMA
   };
   static const int precedence[]{
-      15, 15, 15, 15,  // (), 6, !, ~
-      14, 14,  // unary +, -
-      13, 12, 12, 12, 11, 11, 10, 10,  // **, *, /, %, +, -, <<, >>
-      9, 8, 7,  // &, ^, |
-      6, 6, 6, 6, 6, 6,  // relations .LT. to .GT.
-      5, 4, 3, 2, 2,  // .NOT., .AND., .OR., .EQV., .NEQV.
-      1, 0  // ?: and ,
+      15, 15, 15, 15, // (), 6, !, ~
+      14, 14, // unary +, -
+      13, 12, 12, 12, 11, 11, 10, 10, // **, *, /, %, +, -, <<, >>
+      9, 8, 7, // &, ^, |
+      6, 6, 6, 6, 6, 6, // relations .LT. to .GT.
+      5, 4, 3, 2, 2, // .NOT., .AND., .OR., .EQV., .NEQV.
+      1, 0 // ?: and ,
   };
   static const int operandPrecedence[]{0, -1, 15, 15, 15, 15, 13, 12, 12, 12,
       11, 11, 11, 11, 9, 8, 7, 7, 7, 7, 7, 7, 7, 6, 4, 3, 3, 3, 1, 0};
@@ -821,12 +821,22 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
             token.GetTokenProvenanceRange(*atToken), "expected ')'"_err_en_US};
       }
       return 0;
-    case NOTZERO: left = !left; break;
-    case COMPLEMENT: left = ~left; break;
-    case UPLUS: break;
-    case UMINUS: left = -left; break;
-    case NOT: left = -!left; break;
-    default: CRASH_NO_CASE;
+    case NOTZERO:
+      left = !left;
+      break;
+    case COMPLEMENT:
+      left = ~left;
+      break;
+    case UPLUS:
+      break;
+    case UMINUS:
+      left = -left;
+      break;
+    case NOT:
+      left = -!left;
+      break;
+    default:
+      CRASH_NO_CASE;
     }
   }
 
@@ -934,18 +944,40 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
       left = right >= 64 ? 0 : left >> right;
       break;
     case BITAND:
-    case AND: left = left & right; break;
-    case BITXOR: left = left ^ right; break;
+    case AND:
+      left = left & right;
+      break;
+    case BITXOR:
+      left = left ^ right;
+      break;
     case BITOR:
-    case OR: left = left | right; break;
-    case LT: left = -(left < right); break;
-    case LE: left = -(left <= right); break;
-    case EQ: left = -(left == right); break;
-    case NE: left = -(left != right); break;
-    case GE: left = -(left >= right); break;
-    case GT: left = -(left > right); break;
-    case EQV: left = -(!left == !right); break;
-    case NEQV: left = -(!left != !right); break;
+    case OR:
+      left = left | right;
+      break;
+    case LT:
+      left = -(left < right);
+      break;
+    case LE:
+      left = -(left <= right);
+      break;
+    case EQ:
+      left = -(left == right);
+      break;
+    case NE:
+      left = -(left != right);
+      break;
+    case GE:
+      left = -(left >= right);
+      break;
+    case GT:
+      left = -(left > right);
+      break;
+    case EQV:
+      left = -(!left == !right);
+      break;
+    case NEQV:
+      left = -(!left != !right);
+      break;
     case SELECT:
       if (*atToken >= tokens || token.TokenAt(*atToken).ToString() != ":") {
         *error = Message{token.GetTokenProvenanceRange(opAt),
@@ -958,8 +990,11 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
         left = left != 0 ? right : third;
       }
       break;
-    case COMMA: left = right; break;
-    default: CRASH_NO_CASE;
+    case COMMA:
+      left = right;
+      break;
+    default:
+      CRASH_NO_CASE;
     }
   }
   return left;
@@ -1014,4 +1049,4 @@ bool Preprocessor::IsIfPredicateTrue(const TokenSequence &expr,
   }
   return result;
 }
-}
+} // namespace Fortran::parser

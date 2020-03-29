@@ -41,35 +41,35 @@ private:
   std::map<std::string, std::size_t> offsets_;
 };
 
-template<typename A> auto Const(A &&x) -> Constant<TypeOf<A>> {
+template <typename A> auto Const(A &&x) -> Constant<TypeOf<A>> {
   return Constant<TypeOf<A>>{std::move(x)};
 }
 
-template<typename A> struct NamedArg {
+template <typename A> struct NamedArg {
   std::string keyword;
   A value;
 };
 
-template<typename A> static NamedArg<A> Named(std::string kw, A &&x) {
+template <typename A> static NamedArg<A> Named(std::string kw, A &&x) {
   return {kw, std::move(x)};
 }
 
 struct TestCall {
   TestCall(const common::IntrinsicTypeDefaultKinds &d,
       const IntrinsicProcTable &t, std::string n)
-    : defaults{d}, table{t}, name{n} {}
-  template<typename A> TestCall &Push(A &&x) {
+      : defaults{d}, table{t}, name{n} {}
+  template <typename A> TestCall &Push(A &&x) {
     args.emplace_back(AsGenericExpr(std::move(x)));
     keywords.push_back("");
     return *this;
   }
-  template<typename A> TestCall &Push(NamedArg<A> &&x) {
+  template <typename A> TestCall &Push(NamedArg<A> &&x) {
     args.emplace_back(AsGenericExpr(std::move(x.value)));
     keywords.push_back(x.keyword);
     strings.Save(x.keyword);
     return *this;
   }
-  template<typename A, typename... As> TestCall &Push(A &&x, As &&... xs) {
+  template <typename A, typename... As> TestCall &Push(A &&x, As &&... xs) {
     Push(std::move(x));
     return Push(std::move(xs)...);
   }
@@ -158,7 +158,7 @@ void TestIntrinsics() {
 
   TestCall{defaults, table, "bad"}
       .Push(Const(Scalar<Int4>{}))
-      .DoCall();  // bad intrinsic name
+      .DoCall(); // bad intrinsic name
   TestCall{defaults, table, "abs"}
       .Push(Named("a", Const(Scalar<Int4>{})))
       .DoCall(Int4::GetType());
@@ -167,12 +167,12 @@ void TestIntrinsics() {
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "abs"}
       .Push(Named("bad", Const(Scalar<Int4>{})))
-      .DoCall();  // bad keyword
-  TestCall{defaults, table, "abs"}.DoCall();  // insufficient args
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "abs"}.DoCall(); // insufficient args
   TestCall{defaults, table, "abs"}
       .Push(Const(Scalar<Int4>{}))
       .Push(Const(Scalar<Int4>{}))
-      .DoCall();  // too many args
+      .DoCall(); // too many args
   TestCall{defaults, table, "abs"}
       .Push(Const(Scalar<Int4>{}))
       .Push(Named("a", Const(Scalar<Int4>{})))
@@ -259,7 +259,7 @@ void TestIntrinsics() {
       .DoCall(Int4::GetType());
   // TODO: test other intrinsics
 }
-}
+} // namespace Fortran::evaluate
 
 int main() {
   Fortran::evaluate::TestIntrinsics();

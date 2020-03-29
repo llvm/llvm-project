@@ -34,7 +34,7 @@ class MessageFixedText {
 public:
   constexpr MessageFixedText(
       const char str[], std::size_t n, bool isFatal = false)
-    : text_{str, n}, isFatal_{isFatal} {}
+      : text_{str, n}, isFatal_{isFatal} {}
   constexpr MessageFixedText(const MessageFixedText &) = default;
   constexpr MessageFixedText(MessageFixedText &&) = default;
   constexpr MessageFixedText &operator=(const MessageFixedText &) = default;
@@ -57,7 +57,7 @@ constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, true /* fatal */};
 }
-}
+} // namespace literals
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
@@ -66,9 +66,9 @@ constexpr MessageFixedText operator""_err_en_US(
 // char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
-  template<typename... A>
+  template <typename... A>
   MessageFormattedText(const MessageFixedText &text, A &&... x)
-    : isFatal_{text.isFatal()} {
+      : isFatal_{text.isFatal()} {
     Format(&text, Convert(std::forward<A>(x))...);
   }
   MessageFormattedText(const MessageFormattedText &) = default;
@@ -82,15 +82,15 @@ public:
 private:
   void Format(const MessageFixedText *, ...);
 
-  template<typename A> A Convert(const A &x) {
+  template <typename A> A Convert(const A &x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return x;
   }
-  template<typename A> A Convert(A &x) {
+  template <typename A> A Convert(A &x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return x;
   }
-  template<typename A> common::IfNoLvalue<A, A> Convert(A &&x) {
+  template <typename A> common::IfNoLvalue<A, A> Convert(A &&x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return std::move(x);
   }
@@ -103,7 +103,7 @@ private:
 
   bool isFatal_{false};
   std::string string_;
-  std::forward_list<std::string> conversions_;  // preserves created strings
+  std::forward_list<std::string> conversions_; // preserves created strings
 };
 
 // Represents a formatted rendition of "expected '%s'"_err_en_US
@@ -146,27 +146,27 @@ public:
   Message &operator=(Message &&) = default;
 
   Message(ProvenanceRange pr, const MessageFixedText &t)
-    : location_{pr}, text_{t} {}
+      : location_{pr}, text_{t} {}
   Message(ProvenanceRange pr, const MessageFormattedText &s)
-    : location_{pr}, text_{s} {}
+      : location_{pr}, text_{s} {}
   Message(ProvenanceRange pr, MessageFormattedText &&s)
-    : location_{pr}, text_{std::move(s)} {}
+      : location_{pr}, text_{std::move(s)} {}
   Message(ProvenanceRange pr, const MessageExpectedText &t)
-    : location_{pr}, text_{t} {}
+      : location_{pr}, text_{t} {}
 
   Message(CharBlock csr, const MessageFixedText &t)
-    : location_{csr}, text_{t} {}
+      : location_{csr}, text_{t} {}
   Message(CharBlock csr, const MessageFormattedText &s)
-    : location_{csr}, text_{s} {}
+      : location_{csr}, text_{s} {}
   Message(CharBlock csr, MessageFormattedText &&s)
-    : location_{csr}, text_{std::move(s)} {}
+      : location_{csr}, text_{std::move(s)} {}
   Message(CharBlock csr, const MessageExpectedText &t)
-    : location_{csr}, text_{t} {}
+      : location_{csr}, text_{t} {}
 
-  template<typename RANGE, typename A, typename... As>
+  template <typename RANGE, typename A, typename... As>
   Message(RANGE r, const MessageFixedText &t, A &&x, As &&... xs)
-    : location_{r}, text_{MessageFormattedText{
-                        t, std::forward<A>(x), std::forward<As>(xs)...}} {}
+      : location_{r}, text_{MessageFormattedText{
+                          t, std::forward<A>(x), std::forward<As>(xs)...}} {}
 
   bool attachmentIsContext() const { return attachmentIsContext_; }
   Reference attachment() const { return attachment_; }
@@ -177,16 +177,16 @@ public:
   }
   Message &Attach(Message *);
   Message &Attach(std::unique_ptr<Message> &&);
-  template<typename... A> Message &Attach(A &&... args) {
-    return Attach(new Message{std::forward<A>(args)...});  // reference-counted
+  template <typename... A> Message &Attach(A &&... args) {
+    return Attach(new Message{std::forward<A>(args)...}); // reference-counted
   }
 
   bool SortBefore(const Message &that) const;
   bool IsFatal() const;
   std::string ToString() const;
   std::optional<ProvenanceRange> GetProvenanceRange(const CookedSource &) const;
-  void Emit(
-      llvm::raw_ostream &, const CookedSource &, bool echoSourceLine = true) const;
+  void Emit(llvm::raw_ostream &, const CookedSource &,
+      bool echoSourceLine = true) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock
   // within a particular CookedSource, replace its location with the
@@ -232,7 +232,7 @@ public:
   bool empty() const { return messages_.empty(); }
   void clear();
 
-  template<typename... A> Message &Say(A &&... args) {
+  template <typename... A> Message &Say(A &&... args) {
     last_ = messages_.emplace_after(last_, std::forward<A>(args)...);
     return *last_;
   }
@@ -272,7 +272,7 @@ public:
   ContextualMessages(CharBlock at, Messages *m) : at_{at}, messages_{m} {}
   explicit ContextualMessages(Messages *m) : messages_{m} {}
   ContextualMessages(const ContextualMessages &that)
-    : at_{that.at_}, messages_{that.messages_} {}
+      : at_{that.at_}, messages_{that.messages_} {}
 
   CharBlock at() const { return at_; }
   Messages *messages() const { return messages_; }
@@ -296,7 +296,7 @@ public:
     return common::ScopedSet(messages_, nullptr);
   }
 
-  template<typename... A> Message *Say(CharBlock at, A &&... args) {
+  template <typename... A> Message *Say(CharBlock at, A &&... args) {
     if (messages_ != nullptr) {
       return &messages_->Say(at, std::forward<A>(args)...);
     } else {
@@ -304,7 +304,7 @@ public:
     }
   }
 
-  template<typename... A> Message *Say(A &&... args) {
+  template <typename... A> Message *Say(A &&... args) {
     return Say(at_, std::forward<A>(args)...);
   }
 
@@ -312,5 +312,5 @@ private:
   CharBlock at_;
   Messages *messages_{nullptr};
 };
-}
-#endif  // FORTRAN_PARSER_MESSAGE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_MESSAGE_H_

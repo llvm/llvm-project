@@ -21,7 +21,7 @@ struct FormTeamStmt;
 struct ImageSelectorSpec;
 struct SyncTeamStmt;
 struct TeamValue;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -42,5 +42,5 @@ private:
   void Say2(const parser::CharBlock &, parser::MessageFixedText &&,
       const parser::CharBlock &, parser::MessageFixedText &&);
 };
-}
-#endif  // FORTRAN_SEMANTICS_CHECK_COARRAY_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_CHECK_COARRAY_H_

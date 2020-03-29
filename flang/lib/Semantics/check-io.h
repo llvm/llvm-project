@@ -85,7 +85,7 @@ private:
       AdvanceYes, AsynchronousYes, KnownStatus, StatusNew, StatusReplace,
       StatusScratch, DataList)
 
-  template<typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
+  template <typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
     using DefaultCharConstantType =
         evaluate::Type<common::TypeCategory::Character, 1>;
     if (const SomeExpr * expr{GetExpr(x)}) {
@@ -138,5 +138,5 @@ private:
   common::EnumSet<Flag, Flag_enumSize> flags_;
 };
 
-}
-#endif  // FORTRAN_SEMANTICS_CHECK_IO_H_
+} // namespace Fortran::semantics
+#endif // FORTRAN_SEMANTICS_CHECK_IO_H_

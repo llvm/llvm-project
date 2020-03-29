@@ -57,7 +57,7 @@ private:
     OwningPtr<Chain> next{nullptr};
   };
 
-  static constexpr int buckets_{1031};  // must be prime
+  static constexpr int buckets_{1031}; // must be prime
   int Hash(int n) { return n % buckets_; }
 
   ExternalFileUnit *Find(int n) {
@@ -67,8 +67,8 @@ private:
       if (p->unit.unitNumber() == n) {
         if (previous) {
           // Move found unit to front of chain for quicker lookup next time
-          previous->next.swap(p->next);  // now p->next.get() == p
-          bucket_[hash].swap(p->next);  // now bucket_[hash].get() == p
+          previous->next.swap(p->next); // now p->next.get() == p
+          bucket_[hash].swap(p->next); // now bucket_[hash].get() == p
         }
         return &p->unit;
       }
@@ -79,9 +79,9 @@ private:
   ExternalFileUnit &Create(int, const Terminator &);
 
   Lock lock_;
-  OwningPtr<Chain> bucket_[buckets_]{};  // all owned by *this
-  int nextNewUnit_{-1000};  // see 12.5.6.12 in Fortran 2018
-  OwningPtr<Chain> closing_{nullptr};  // units during CLOSE statement
+  OwningPtr<Chain> bucket_[buckets_]{}; // all owned by *this
+  int nextNewUnit_{-1000}; // see 12.5.6.12 in Fortran 2018
+  OwningPtr<Chain> closing_{nullptr}; // units during CLOSE statement
 };
-}
-#endif  // FORTRAN_RUNTIME_UNIT_MAP_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_UNIT_MAP_H_

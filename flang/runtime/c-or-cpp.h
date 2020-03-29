@@ -26,4 +26,4 @@
 #define NORETURN IF_CPLUSPLUS([[noreturn]])
 #define NO_ARGUMENTS IF_NOT_CPLUSPLUS(void)
 
-#endif  // FORTRAN_RUNTIME_C_OR_CPP_H_
+#endif // FORTRAN_RUNTIME_C_OR_CPP_H_

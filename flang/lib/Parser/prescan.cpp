@@ -27,18 +27,19 @@ static constexpr int maxPrescannerNesting{100};
 
 Prescanner::Prescanner(Messages &messages, CookedSource &cooked,
     Preprocessor &preprocessor, common::LanguageFeatureControl lfc)
-  : messages_{messages}, cooked_{cooked}, preprocessor_{preprocessor},
-    features_{lfc}, encoding_{cooked.allSources().encoding()} {}
+    : messages_{messages}, cooked_{cooked}, preprocessor_{preprocessor},
+      features_{lfc}, encoding_{cooked.allSources().encoding()} {}
 
 Prescanner::Prescanner(const Prescanner &that)
-  : messages_{that.messages_}, cooked_{that.cooked_},
-    preprocessor_{that.preprocessor_}, features_{that.features_},
-    inFixedForm_{that.inFixedForm_},
-    fixedFormColumnLimit_{that.fixedFormColumnLimit_},
-    encoding_{that.encoding_}, prescannerNesting_{that.prescannerNesting_ + 1},
-    skipLeadingAmpersand_{that.skipLeadingAmpersand_},
-    compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
-    compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
+    : messages_{that.messages_}, cooked_{that.cooked_},
+      preprocessor_{that.preprocessor_}, features_{that.features_},
+      inFixedForm_{that.inFixedForm_},
+      fixedFormColumnLimit_{that.fixedFormColumnLimit_},
+      encoding_{that.encoding_}, prescannerNesting_{that.prescannerNesting_ +
+                                     1},
+      skipLeadingAmpersand_{that.skipLeadingAmpersand_},
+      compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
+      compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
 
 static inline constexpr bool IsFixedFormCommentChar(char ch) {
   return ch == '!' || ch == '*' || ch == 'C' || ch == 'c';
@@ -93,7 +94,7 @@ void Prescanner::Statement() {
   LineClassification line{ClassifyLine(nextLine_)};
   switch (line.kind) {
   case LineClassification::Kind::Comment:
-    nextLine_ += line.payloadOffset;  // advance to '!' or newline
+    nextLine_ += line.payloadOffset; // advance to '!' or newline
     NextLine();
     return;
   case LineClassification::Kind::IncludeLine:
@@ -170,9 +171,10 @@ void Prescanner::Statement() {
     preprocessed->CloseToken();
     const char *ppd{preprocessed->ToCharBlock().begin()};
     LineClassification ppl{ClassifyLine(ppd)};
-    preprocessed->RemoveLastToken();  // remove the newline
+    preprocessed->RemoveLastToken(); // remove the newline
     switch (ppl.kind) {
-    case LineClassification::Kind::Comment: break;
+    case LineClassification::Kind::Comment:
+      break;
     case LineClassification::Kind::IncludeLine:
       FortranInclude(ppd + ppl.payloadOffset);
       break;
@@ -251,7 +253,7 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
       break;
     }
     if (*at_ != ' ' &&
-        !(*at_ == '0' && column_ == 6)) {  // '0' in column 6 becomes space
+        !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
       ++outCol;
     }
@@ -280,9 +282,9 @@ void Prescanner::SkipToEndOfLine() {
 
 bool Prescanner::MustSkipToEndOfLine() const {
   if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
-    return true;  // skip over ignored columns in right margin (73:80)
+    return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_) {
-    return true;  // inline comment goes to end of source line
+    return true; // inline comment goes to end of source line
   } else {
     return false;
   }
@@ -376,7 +378,7 @@ const char *Prescanner::SkipCComment(const char *p) const {
   p += 2;
   while (star != '*' || slash != '/') {
     if (p >= limit_) {
-      return nullptr;  // signifies an unterminated comment
+      return nullptr; // signifies an unterminated comment
     }
     star = slash;
     slash = *p++;
@@ -476,7 +478,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       }
       ExponentAndKind(tokens);
     } else if (nch == '.' && EmitCharAndAdvance(tokens, '.') == '.') {
-      EmitCharAndAdvance(tokens, '.');  // variadic macro definition ellipsis
+      EmitCharAndAdvance(tokens, '.'); // variadic macro definition ellipsis
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
@@ -582,7 +584,7 @@ void Prescanner::QuotedCharacterLiteral(
       // quote character in the literal (later).  There can be spaces between
       // the quotes in fixed form source.
       EmitChar(tokens, quote);
-      inCharLiteral_ = false;  // for cases like print *, '...'!comment
+      inCharLiteral_ = false; // for cases like print *, '...'!comment
       NextChar();
       if (InFixedFormSource()) {
         SkipSpaces();
@@ -649,7 +651,7 @@ bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
       return false;
     }
     CHECK(column_ == 7);
-    --at_;  // point to column 6 of continuation line
+    --at_; // point to column 6 of continuation line
     column_ = 6;
   }
   return false;
@@ -657,7 +659,7 @@ bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
 
 bool Prescanner::IsFixedFormCommentLine(const char *start) const {
   const char *p{start};
-  if (IsFixedFormCommentChar(*p) || *p == '%' ||  // VAX %list, %eject, &c.
+  if (IsFixedFormCommentChar(*p) || *p == '%' || // VAX %list, %eject, &c.
       ((*p == 'D' || *p == 'd') &&
           !features_.IsEnabled(LanguageFeature::OldDebugLines))) {
     return true;
@@ -670,7 +672,7 @@ bool Prescanner::IsFixedFormCommentLine(const char *start) const {
       anyTabs = true;
       ++p;
     } else if (*p == '0' && !anyTabs && p == start + 5) {
-      ++p;  // 0 in column 6 must treated as a space
+      ++p; // 0 in column 6 must treated as a space
     } else {
       break;
     }
@@ -867,7 +869,7 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
     }
     if (col1 == '\t' && nextLine_[1] >= '1' && nextLine_[1] <= '9') {
       tabInCurrentLine_ = true;
-      return nextLine_ + 2;  // VAX extension
+      return nextLine_ + 2; // VAX extension
     }
     if (col1 == ' ' && nextLine_[1] == ' ' && nextLine_[2] == ' ' &&
         nextLine_[3] == ' ' && nextLine_[4] == ' ') {
@@ -882,7 +884,7 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       }
     }
   }
-  return nullptr;  // not a continuation line
+  return nullptr; // not a continuation line
 }
 
 const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
@@ -1127,4 +1129,4 @@ void Prescanner::SourceFormChange(std::string &&dir) {
     inFixedForm_ = true;
   }
 }
-}
+} // namespace Fortran::parser

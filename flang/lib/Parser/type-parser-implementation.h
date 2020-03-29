@@ -21,7 +21,7 @@
 // causes it to crash on "decltype(pexpr)" when pexpr's top-level
 // operator is an overridden || of parsing alternatives.
 #define TYPE_PARSER(pexpr) \
-  template<> \
+  template <> \
   auto Parser<typename decltype(attempt(pexpr))::resultType>::Parse( \
       ParseState &state) \
       ->std::optional<resultType> { \

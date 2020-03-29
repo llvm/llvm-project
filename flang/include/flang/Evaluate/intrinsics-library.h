@@ -28,17 +28,17 @@ class FoldingContext;
 
 using TypeCode = unsigned char;
 
-template<typename TR, typename... TA> using FuncPointer = TR (*)(TA...);
+template <typename TR, typename... TA> using FuncPointer = TR (*)(TA...);
 // This specific type signature prevents GCC complaining about function casts.
 using GenericFunctionPointer = void (*)(void);
 
 enum class PassBy { Ref, Val };
-template<typename TA, PassBy Pass = PassBy::Ref> struct ArgumentInfo {
+template <typename TA, PassBy Pass = PassBy::Ref> struct ArgumentInfo {
   using Type = TA;
   static constexpr PassBy pass{Pass};
 };
 
-template<typename TR, typename... ArgInfo> struct Signature {
+template <typename TR, typename... ArgInfo> struct Signature {
   // Note valid template argument are of form
   //<TR, ArgumentInfo<TA, PassBy>...> where TA and TR belong to RuntimeTypes.
   // RuntimeTypes is a type union defined in intrinsics-library-templates.h to
@@ -55,7 +55,7 @@ struct IntrinsicProcedureRuntimeDescription {
   const bool isElemental;
   const GenericFunctionPointer callable;
   // Construct from description using host independent types (RuntimeTypes)
-  template<typename TR, typename... ArgInfo>
+  template <typename TR, typename... ArgInfo>
   IntrinsicProcedureRuntimeDescription(
       const Signature<TR, ArgInfo...> &signature, bool isElemental = false);
 };
@@ -64,19 +64,19 @@ struct IntrinsicProcedureRuntimeDescription {
 // constant folding.
 struct HostRuntimeIntrinsicProcedure : IntrinsicProcedureRuntimeDescription {
   // Construct from runtime pointer with host types (float, double....)
-  template<typename HostTR, typename... HostTA>
+  template <typename HostTR, typename... HostTA>
   HostRuntimeIntrinsicProcedure(const std::string &name,
       FuncPointer<HostTR, HostTA...> func, bool isElemental = false);
   HostRuntimeIntrinsicProcedure(
       const IntrinsicProcedureRuntimeDescription &rteProc,
       GenericFunctionPointer handle)
-    : IntrinsicProcedureRuntimeDescription{rteProc}, handle{handle} {}
+      : IntrinsicProcedureRuntimeDescription{rteProc}, handle{handle} {}
   GenericFunctionPointer handle;
 };
 
 // Defines a wrapper type that indirects calls to host runtime functions.
 // Valid ConstantContainer are Scalar (only for elementals) and Constant.
-template<template<typename> typename ConstantContainer, typename TR,
+template <template <typename> typename ConstantContainer, typename TR,
     typename... TA>
 using HostProcedureWrapper = std::function<ConstantContainer<TR>(
     FoldingContext &, ConstantContainer<TA>...)>;
@@ -95,7 +95,7 @@ public:
   }
   bool HasEquivalentProcedure(
       const IntrinsicProcedureRuntimeDescription &sym) const;
-  template<template<typename> typename ConstantContainer, typename TR,
+  template <template <typename> typename ConstantContainer, typename TR,
       typename... TA>
   std::optional<HostProcedureWrapper<ConstantContainer, TR, TA...>>
   GetHostProcedureWrapper(const std::string &name) const;
@@ -104,5 +104,5 @@ private:
   std::multimap<std::string, const HostRuntimeIntrinsicProcedure> procedures_;
 };
 
-}
-#endif  // FORTRAN_EVALUATE_INTRINSICS_LIBRARY_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_INTRINSICS_LIBRARY_H_

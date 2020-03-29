@@ -69,7 +69,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       .AddCompilerDirectiveSentinel("dir$");
   if (options.features.IsEnabled(LanguageFeature::OpenMP)) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
-    prescanner.AddCompilerDirectiveSentinel("$");  // OMP conditional line
+    prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
@@ -140,4 +140,4 @@ bool Parsing::ForTesting(std::string path, llvm::raw_ostream &err) {
   }
   return true;
 }
-}
+} // namespace Fortran::parser

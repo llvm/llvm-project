@@ -11,7 +11,7 @@
 
 namespace Fortran::evaluate::value {
 
-template<typename R>
+template <typename R>
 ValueWithRealFlags<Complex<R>> Complex<R>::Add(
     const Complex &that, Rounding rounding) const {
   RealFlags flags;
@@ -20,7 +20,7 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Add(
   return {Complex{reSum, imSum}, flags};
 }
 
-template<typename R>
+template <typename R>
 ValueWithRealFlags<Complex<R>> Complex<R>::Subtract(
     const Complex &that, Rounding rounding) const {
   RealFlags flags;
@@ -29,7 +29,7 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Subtract(
   return {Complex{reDiff, imDiff}, flags};
 }
 
-template<typename R>
+template <typename R>
 ValueWithRealFlags<Complex<R>> Complex<R>::Multiply(
     const Complex &that, Rounding rounding) const {
   // (a + ib)*(c + id) -> ac - bd + i(ad + bc)
@@ -43,14 +43,14 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Multiply(
   return {Complex{acbd, adbc}, flags};
 }
 
-template<typename R>
+template <typename R>
 ValueWithRealFlags<Complex<R>> Complex<R>::Divide(
     const Complex &that, Rounding rounding) const {
   // (a + ib)/(c + id) -> [(a+ib)*(c-id)] / [(c+id)*(c-id)]
   //   -> [ac+bd+i(bc-ad)] / (cc+dd)
   //   -> ((ac+bd)/(cc+dd)) + i((bc-ad)/(cc+dd))
   // but to avoid overflows, scale by d/c if c>=d, else c/d
-  Part scale;  // <= 1.0
+  Part scale; // <= 1.0
   RealFlags flags;
   bool cGEd{that.re_.ABS().Compare(that.im_.ABS()) != Relation::Less};
   if (cGEd) {
@@ -81,7 +81,7 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Divide(
   return {Complex{re, im}, flags};
 }
 
-template<typename R> std::string Complex<R>::DumpHexadecimal() const {
+template <typename R> std::string Complex<R>::DumpHexadecimal() const {
   std::string result{'('};
   result += re_.DumpHexadecimal();
   result += ',';
@@ -90,7 +90,7 @@ template<typename R> std::string Complex<R>::DumpHexadecimal() const {
   return result;
 }
 
-template<typename R>
+template <typename R>
 llvm::raw_ostream &Complex<R>::AsFortran(llvm::raw_ostream &o, int kind) const {
   re_.AsFortran(o << '(', kind);
   im_.AsFortran(o << ',', kind);
@@ -103,4 +103,4 @@ template class Complex<Real<Integer<32>, 24>>;
 template class Complex<Real<Integer<64>, 53>>;
 template class Complex<Real<Integer<80>, 64>>;
 template class Complex<Real<Integer<128>, 113>>;
-}
+} // namespace Fortran::evaluate::value

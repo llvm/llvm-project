@@ -21,7 +21,7 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
-template<int KIND>
+template <int KIND>
 std::optional<Expr<SubscriptInteger>>
 Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
@@ -63,18 +63,18 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
 Expr<SomeType>::~Expr() = default;
 
 #if defined(__APPLE__) && defined(__GNUC__)
-template<typename A>
+template <typename A>
 typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() {
   return *static_cast<Derived *>(this);
 }
 
-template<typename A>
+template <typename A>
 const typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() const {
   return *static_cast<const Derived *>(this);
 }
 #endif
 
-template<typename A>
+template <typename A>
 std::optional<DynamicType> ExpressionBase<A>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
@@ -84,13 +84,13 @@ std::optional<DynamicType> ExpressionBase<A>::GetType() const {
           if constexpr (!common::HasMember<decltype(x), TypelessExpression>) {
             return x.GetType();
           }
-          return std::nullopt;  // w/o "else" to dodge bogus g++ 8.1 warning
+          return std::nullopt; // w/o "else" to dodge bogus g++ 8.1 warning
         },
         derived().u);
   }
 }
 
-template<typename A> int ExpressionBase<A>::Rank() const {
+template <typename A> int ExpressionBase<A>::Rank() const {
   return std::visit(
       [](const auto &x) {
         if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
@@ -108,26 +108,26 @@ bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
   return name == that.name;
 }
 
-template<typename T>
+template <typename T>
 bool ImpliedDo<T>::operator==(const ImpliedDo<T> &that) const {
   return name_ == that.name_ && lower_ == that.lower_ &&
       upper_ == that.upper_ && stride_ == that.stride_ &&
       values_ == that.values_;
 }
 
-template<typename T>
+template <typename T>
 bool ArrayConstructorValue<T>::operator==(
     const ArrayConstructorValue<T> &that) const {
   return u == that.u;
 }
 
-template<typename R>
+template <typename R>
 bool ArrayConstructorValues<R>::operator==(
     const ArrayConstructorValues<R> &that) const {
   return values_ == that.values_;
 }
 
-template<int KIND>
+template <int KIND>
 bool ArrayConstructor<Type<TypeCategory::Character, KIND>>::operator==(
     const ArrayConstructor &that) const {
   return length_ == that.length_ &&
@@ -144,10 +144,10 @@ bool ArrayConstructor<SomeDerived>::operator==(
 StructureConstructor::StructureConstructor(
     const semantics::DerivedTypeSpec &spec,
     const StructureConstructorValues &values)
-  : result_{spec}, values_{values} {}
+    : result_{spec}, values_{values} {}
 StructureConstructor::StructureConstructor(
     const semantics::DerivedTypeSpec &spec, StructureConstructorValues &&values)
-  : result_{spec}, values_{std::move(values)} {}
+    : result_{spec}, values_{std::move(values)} {}
 
 bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
@@ -157,37 +157,37 @@ bool Relational<SomeType>::operator==(const Relational<SomeType> &that) const {
   return u == that.u;
 }
 
-template<int KIND>
+template <int KIND>
 bool Expr<Type<TypeCategory::Integer, KIND>>::operator==(
     const Expr<Type<TypeCategory::Integer, KIND>> &that) const {
   return u == that.u;
 }
 
-template<int KIND>
+template <int KIND>
 bool Expr<Type<TypeCategory::Real, KIND>>::operator==(
     const Expr<Type<TypeCategory::Real, KIND>> &that) const {
   return u == that.u;
 }
 
-template<int KIND>
+template <int KIND>
 bool Expr<Type<TypeCategory::Complex, KIND>>::operator==(
     const Expr<Type<TypeCategory::Complex, KIND>> &that) const {
   return u == that.u;
 }
 
-template<int KIND>
+template <int KIND>
 bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
     const Expr<Type<TypeCategory::Logical, KIND>> &that) const {
   return u == that.u;
 }
 
-template<int KIND>
+template <int KIND>
 bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
     const Expr<Type<TypeCategory::Character, KIND>> &that) const {
   return u == that.u;
 }
 
-template<TypeCategory CAT>
+template <TypeCategory CAT>
 bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
   return u == that.u;
 }
@@ -225,7 +225,7 @@ GenericExprWrapper::~GenericExprWrapper() {}
 
 GenericAssignmentWrapper::~GenericAssignmentWrapper() {}
 
-template<TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
+template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
   return std::visit(
       [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
       u);
@@ -242,6 +242,6 @@ std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
 }
 
 INSTANTIATE_EXPRESSION_TEMPLATES
-}
+} // namespace Fortran::evaluate
 DEFINE_DELETER(Fortran::evaluate::GenericExprWrapper)
 DEFINE_DELETER(Fortran::evaluate::GenericAssignmentWrapper)

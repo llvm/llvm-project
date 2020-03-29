@@ -27,7 +27,7 @@ void LeftShiftBufferCircularly(char *, std::size_t bytes, std::size_t shift);
 // preserve read data that may be reused by means of Tn/TLn edit descriptors
 // without needing to position the file (which may not always be possible,
 // e.g. a socket) and a general desire to reduce system call counts.
-template<typename STORE> class FileFrame {
+template <typename STORE> class FileFrame {
 public:
   using FileOffset = std::int64_t;
 
@@ -65,10 +65,10 @@ public:
           std::memmove(buffer_, buffer_ + start_, length_);
         } else {
           // [cde........ab] -> [abcde........]
-          auto n{start_ + length_ - size_};  // 3 for cde
+          auto n{start_ + length_ - size_}; // 3 for cde
           RUNTIME_CHECK(handler, length_ >= n);
-          std::memmove(buffer_ + n, buffer_ + start_, length_ - n);  // cdeab
-          LeftShiftBufferCircularly(buffer_, length_, n);  // abcde
+          std::memmove(buffer_ + n, buffer_ + start_, length_ - n); // cdeab
+          LeftShiftBufferCircularly(buffer_, length_, n); // abcde
         }
         start_ = 0;
       }
@@ -83,7 +83,7 @@ public:
       length_ += got;
       RUNTIME_CHECK(handler, length_ < size_);
       if (got < minBytes) {
-        break;  // error or EOF & program can handle it
+        break; // error or EOF & program can handle it
       }
     }
     return FrameLength();
@@ -165,12 +165,12 @@ private:
   static constexpr std::size_t minBuffer{64 << 10};
 
   char *buffer_{nullptr};
-  std::int64_t size_{0};  // current allocated buffer size
-  FileOffset fileOffset_{0};  // file offset corresponding to buffer valid data
-  std::int64_t start_{0};  // buffer_[] offset of valid data
-  std::int64_t length_{0};  // valid data length (can wrap)
-  std::int64_t frame_{0};  // offset of current frame in valid data
+  std::int64_t size_{0}; // current allocated buffer size
+  FileOffset fileOffset_{0}; // file offset corresponding to buffer valid data
+  std::int64_t start_{0}; // buffer_[] offset of valid data
+  std::int64_t length_{0}; // valid data length (can wrap)
+  std::int64_t frame_{0}; // offset of current frame in valid data
   bool dirty_{false};
 };
-}
-#endif  // FORTRAN_RUNTIME_BUFFER_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_BUFFER_H_

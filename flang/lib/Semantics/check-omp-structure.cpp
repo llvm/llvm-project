@@ -668,7 +668,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
 
       // TODO: ordered region binding check (requires nesting implementation)
     }
-  }  // doSet
+  } // doSet
 
   // 2.8.1 Simd Construct Restriction
   if (simdSet.test(GetContext().directive)) {
@@ -692,7 +692,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     }
 
     // TODO: A list-item cannot appear in more than one aligned clause
-  }  // SIMD
+  } // SIMD
 
   // 2.7.3 Single Construct Restriction
   if (GetContext().directive == OmpDirective::END_SINGLE) {
@@ -938,7 +938,8 @@ void OmpStructureChecker::Enter(const parser::OmpMapClause &x) {
             ContextDirectiveAsFortran());
       }
     } break;
-    default: break;
+    default:
+      break;
     }
   }
 }
@@ -995,4 +996,4 @@ void OmpStructureChecker::Enter(const parser::OmpScheduleClause &x) {
     }
   }
 }
-}
+} // namespace Fortran::semantics

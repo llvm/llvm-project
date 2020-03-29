@@ -19,7 +19,7 @@
 
 namespace Fortran::evaluate {
 
-template<int KIND> class CharacterUtils {
+template <int KIND> class CharacterUtils {
   using Character = Scalar<Type<TypeCategory::Character, KIND>>;
   using CharT = typename Character::value_type;
 
@@ -117,6 +117,6 @@ private:
   static constexpr CharT NewLine() { return 0x0a; }
 };
 
-}
+} // namespace Fortran::evaluate
 
-#endif  // FORTRAN_EVALUATE_CHARACTER_H_
+#endif // FORTRAN_EVALUATE_CHARACTER_H_

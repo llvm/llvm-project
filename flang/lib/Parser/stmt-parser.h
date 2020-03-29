@@ -23,7 +23,8 @@ namespace Fortran::parser {
 // R611 label -> digit [digit]...
 constexpr auto label{space >> digitString64 / spaceCheck};
 
-template<typename PA> inline constexpr auto unterminatedStatement(const PA &p) {
+template <typename PA>
+inline constexpr auto unterminatedStatement(const PA &p) {
   return skipStuffBeforeStatement >>
       sourced(construct<Statement<typename PA::resultType>>(
           maybe(label), space >> p));
@@ -38,13 +39,13 @@ constexpr auto endOfStmt{
                  semicolons || endOfLine)};
 constexpr auto forceEndOfStmt{recovery(endOfStmt, SkipPast<'\n'>{})};
 
-template<typename PA> inline constexpr auto statement(const PA &p) {
+template <typename PA> inline constexpr auto statement(const PA &p) {
   return unterminatedStatement(p) / endOfStmt;
 }
 
 // unlabeledStatement() is basically statement() for those few situations
 // in Fortran where a statement cannot have a label.
-template<typename PA> inline constexpr auto unlabeledStatement(const PA &p) {
+template <typename PA> inline constexpr auto unlabeledStatement(const PA &p) {
   return space >>
       sourced(construct<UnlabeledStatement<typename PA::resultType>>(p));
 }
@@ -55,7 +56,7 @@ template<typename PA> inline constexpr auto unlabeledStatement(const PA &p) {
 // question could also be a legal prefix of some other statement that might
 // be valid at that point.  It only makes sense to use this within "some()"
 // or "many()" so as to not end the list of statements.
-template<typename PA> inline constexpr auto unambiguousStatement(const PA &p) {
+template <typename PA> inline constexpr auto unambiguousStatement(const PA &p) {
   return unterminatedStatement(p) / forceEndOfStmt;
 }
 
@@ -95,5 +96,5 @@ constexpr auto progUnitEndStmtErrorRecovery{
     (many(!"END"_tok >> SkipPast<'\n'>{}) >>
         ("END"_tok >> SkipTo<'\n'>{} || consumedAllInput)) >>
     missingOptionalName};
-}
-#endif  // FORTRAN_PARSER_STMT_PARSER_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_STMT_PARSER_H_

@@ -40,7 +40,7 @@ static constexpr std::uint64_t TenToThe(int power) {
 // 10**(LOG10RADIX + 3) must be < 2**wordbits, and LOG10RADIX must be
 // even, so that pairs of decimal digits do not straddle Digits.
 // So LOG10RADIX must be 16 or 6.
-template<int PREC, int LOG10RADIX = 16> class BigRadixFloatingPointNumber {
+template <int PREC, int LOG10RADIX = 16> class BigRadixFloatingPointNumber {
 public:
   using Real = BinaryFloatingPointNumber<PREC>;
   static constexpr int log10Radix{LOG10RADIX};
@@ -67,7 +67,7 @@ private:
 public:
   explicit BigRadixFloatingPointNumber(
       enum FortranRounding rounding = RoundDefault)
-    : rounding_{rounding} {}
+      : rounding_{rounding} {}
 
   // Converts a binary floating point value.
   explicit BigRadixFloatingPointNumber(
@@ -113,8 +113,8 @@ public:
 
 private:
   BigRadixFloatingPointNumber(const BigRadixFloatingPointNumber &that)
-    : digits_{that.digits_}, exponent_{that.exponent_},
-      isNegative_{that.isNegative_}, rounding_{that.rounding_} {
+      : digits_{that.digits_}, exponent_{that.exponent_},
+        isNegative_{that.isNegative_}, rounding_{that.rounding_} {
     for (int j{0}; j < digits_; ++j) {
       digit_[j] = that.digit_[j];
     }
@@ -140,7 +140,7 @@ private:
 
   // Sets *this to an unsigned integer value.
   // Returns any remainder.
-  template<typename UINT> UINT SetTo(UINT n) {
+  template <typename UINT> UINT SetTo(UINT n) {
     static_assert(
         std::is_same_v<UINT, common::uint128_t> || std::is_unsigned_v<UINT>);
     SetToZero();
@@ -198,12 +198,12 @@ private:
 
   // This limited divisibility test only works for even divisors of the radix,
   // which is fine since it's only ever used with 2 and 5.
-  template<int N> bool IsDivisibleBy() const {
+  template <int N> bool IsDivisibleBy() const {
     static_assert(N > 1 && radix % N == 0, "bad modulus");
     return digits_ == 0 || (digit_[0] % N) == 0;
   }
 
-  template<unsigned DIVISOR> int DivideBy() {
+  template <unsigned DIVISOR> int DivideBy() {
     Digit remainder{0};
     for (int j{digits_ - 1}; j >= 0; --j) {
       Digit q{common::DivideUnsignedBy<Digit, DIVISOR>(digit_[j])};
@@ -214,7 +214,7 @@ private:
     return remainder;
   }
 
-  int DivideByPowerOfTwo(int twoPow) {  // twoPow <= LOG10RADIX
+  int DivideByPowerOfTwo(int twoPow) { // twoPow <= LOG10RADIX
     int remainder{0};
     for (int j{digits_ - 1}; j >= 0; --j) {
       Digit q{digit_[j] >> twoPow};
@@ -253,16 +253,16 @@ private:
     }
   }
 
-  template<int N> int MultiplyByHelper(int carry = 0) {
+  template <int N> int MultiplyByHelper(int carry = 0) {
     for (int j{0}; j < digits_; ++j) {
       auto v{N * digit_[j] + carry};
       carry = common::DivideUnsignedBy<Digit, radix>(v);
-      digit_[j] = v - carry * radix;  // i.e., v % radix
+      digit_[j] = v - carry * radix; // i.e., v % radix
     }
     return carry;
   }
 
-  template<int N> int MultiplyBy(int carry = 0) {
+  template <int N> int MultiplyBy(int carry = 0) {
     if (int newCarry{MultiplyByHelper<N>(carry)}) {
       return AddCarry(digits_, newCarry);
     } else {
@@ -270,7 +270,7 @@ private:
     }
   }
 
-  template<int N> int MultiplyWithoutNormalization() {
+  template <int N> int MultiplyWithoutNormalization() {
     if (int carry{MultiplyByHelper<N>(0)}) {
       if (digits_ < digitLimit_) {
         digit_[digits_++] = carry;
@@ -283,7 +283,7 @@ private:
     }
   }
 
-  template<int N> void MultiplyByRounded() {
+  template <int N> void MultiplyByRounded() {
     if (int carry{MultiplyBy<N>()}) {
       LoseLeastSignificantDigit();
       digit_[digits_ - 1] += carry;
@@ -291,7 +291,7 @@ private:
     }
   }
 
-  void LoseLeastSignificantDigit();  // with rounding
+  void LoseLeastSignificantDigit(); // with rounding
 
   void PushCarry(int carry) {
     if (digits_ == maxDigits && RemoveLeastOrderZeroDigits() == 0) {
@@ -319,12 +319,12 @@ private:
         (Raw{1} << (Real::significandBits - 2));
   }
 
-  Digit digit_[maxDigits];  // in little-endian order: digit_[0] is LSD
-  int digits_{0};  // # of elements in digit_[] array; zero when zero
-  int digitLimit_{maxDigits};  // precision clamp
-  int exponent_{0};  // signed power of ten
+  Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD
+  int digits_{0}; // # of elements in digit_[] array; zero when zero
+  int digitLimit_{maxDigits}; // precision clamp
+  int exponent_{0}; // signed power of ten
   bool isNegative_{false};
   enum FortranRounding rounding_ { RoundDefault };
 };
-}
+} // namespace Fortran::decimal
 #endif

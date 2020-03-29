@@ -60,4 +60,4 @@ template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Output>>;
 template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Input>>;
-}
+} // namespace Fortran::runtime::io

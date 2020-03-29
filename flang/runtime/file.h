@@ -94,5 +94,5 @@ private:
   int nextId_;
   OwningPtr<Pending> pending_;
 };
-}
-#endif  // FORTRAN_RUNTIME_FILE_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_FILE_H_

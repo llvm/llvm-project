@@ -22,7 +22,7 @@ class IoErrorHandler;
 
 // Points to (but does not own) a CHARACTER scalar or array for internal I/O.
 // Does not buffer.
-template<Direction DIR> class InternalDescriptorUnit : public ConnectionState {
+template <Direction DIR> class InternalDescriptorUnit : public ConnectionState {
 public:
   using Scalar =
       std::conditional_t<DIR == Direction::Input, const char *, char *>;
@@ -49,5 +49,5 @@ private:
 
 extern template class InternalDescriptorUnit<Direction::Output>;
 extern template class InternalDescriptorUnit<Direction::Input>;
-}
-#endif  // FORTRAN_RUNTIME_IO_INTERNAL_UNIT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_IO_INTERNAL_UNIT_H_

@@ -19,9 +19,9 @@ class RoundingBits {
 public:
   constexpr RoundingBits(
       bool guard = false, bool round = false, bool sticky = false)
-    : guard_{guard}, round_{round}, sticky_{sticky} {}
+      : guard_{guard}, round_{round}, sticky_{sticky} {}
 
-  template<typename FRACTION>
+  template <typename FRACTION>
   constexpr RoundingBits(const FRACTION &fraction, int rshift) {
     if (rshift > 0 && rshift < fraction.bits + 1) {
       guard_ = fraction.BTEST(rshift - 1);
@@ -76,23 +76,30 @@ public:
   // fraction, given a rounding mode and a summary of the lost bits.
   constexpr bool MustRound(
       Rounding rounding, bool isNegative, bool isOdd) const {
-    bool round{false};  // to dodge bogus g++ warning about missing return
+    bool round{false}; // to dodge bogus g++ warning about missing return
     switch (rounding.mode) {
     case common::RoundingMode::TiesToEven:
       round = guard_ && (round_ | sticky_ | isOdd);
       break;
-    case common::RoundingMode::ToZero: break;
-    case common::RoundingMode::Down: round = isNegative && !empty(); break;
-    case common::RoundingMode::Up: round = !isNegative && !empty(); break;
-    case common::RoundingMode::TiesAwayFromZero: round = guard_; break;
+    case common::RoundingMode::ToZero:
+      break;
+    case common::RoundingMode::Down:
+      round = isNegative && !empty();
+      break;
+    case common::RoundingMode::Up:
+      round = !isNegative && !empty();
+      break;
+    case common::RoundingMode::TiesAwayFromZero:
+      round = guard_;
+      break;
     }
     return round;
   }
 
 private:
-  bool guard_{false};  // 0.5 * ulp (unit in lowest place)
-  bool round_{false};  // 0.25 * ulp
-  bool sticky_{false};  // true if any lesser-valued bit would be set
+  bool guard_{false}; // 0.5 * ulp (unit in lowest place)
+  bool round_{false}; // 0.25 * ulp
+  bool sticky_{false}; // true if any lesser-valued bit would be set
 };
-}
-#endif  // FORTRAN_EVALUATE_ROUNDING_BITS_H_
+} // namespace Fortran::evaluate::value
+#endif // FORTRAN_EVALUATE_ROUNDING_BITS_H_

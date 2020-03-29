@@ -30,7 +30,7 @@ public:
   constexpr CharBlock() {}
   constexpr CharBlock(const char *x, std::size_t n = 1) : interval_{x, n} {}
   constexpr CharBlock(const char *b, const char *ep1)
-    : interval_{b, static_cast<std::size_t>(ep1 - b)} {}
+      : interval_{b, static_cast<std::size_t>(ep1 - b)} {}
   CharBlock(const std::string &s) : interval_{s.data(), s.size()} {}
   constexpr CharBlock(const CharBlock &) = default;
   constexpr CharBlock(CharBlock &&) = default;
@@ -61,7 +61,7 @@ public:
         return ch;
       }
     }
-    return ' ';  // non no-blank character
+    return ' '; // non no-blank character
   }
 
   bool IsBlank() const { return FirstNonBlank() == ' '; }
@@ -140,10 +140,10 @@ inline bool operator>(const char *left, const CharBlock &right) {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharBlock &x);
 
-}
+} // namespace Fortran::parser
 
 // Specializations to enable std::unordered_map<CharBlock, ...> &c.
-template<> struct std::hash<Fortran::parser::CharBlock> {
+template <> struct std::hash<Fortran::parser::CharBlock> {
   std::size_t operator()(const Fortran::parser::CharBlock &x) const {
     std::size_t hash{0}, bytes{x.size()};
     for (std::size_t j{0}; j < bytes; ++j) {
@@ -152,4 +152,4 @@ template<> struct std::hash<Fortran::parser::CharBlock> {
     return hash;
   }
 };
-#endif  // FORTRAN_PARSER_CHAR_BLOCK_H_
+#endif // FORTRAN_PARSER_CHAR_BLOCK_H_

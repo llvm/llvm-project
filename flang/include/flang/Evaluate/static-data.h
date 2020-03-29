@@ -78,5 +78,5 @@ private:
   int itemBytes_{1};
   std::vector<std::uint8_t> data_;
 };
-}
-#endif  // FORTRAN_EVALUATE_STATIC_DATA_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_STATIC_DATA_H_

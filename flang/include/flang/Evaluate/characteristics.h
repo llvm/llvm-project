@@ -91,7 +91,7 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const semantics::DeclTypeSpec &);
 
-  template<typename A>
+  template <typename A>
   static std::optional<TypeAndShape> Characterize(
       const A &x, FoldingContext &context) {
     if (const auto *symbol{UnwrapWholeSymbolDataRef(x)}) {
@@ -197,9 +197,9 @@ struct AlternateReturn {
 struct DummyArgument {
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(DummyArgument)
   DummyArgument(std::string &&name, DummyDataObject &&x)
-    : name{std::move(name)}, u{std::move(x)} {}
+      : name{std::move(name)}, u{std::move(x)} {}
   DummyArgument(std::string &&name, DummyProcedure &&x)
-    : name{std::move(name)}, u{std::move(x)} {}
+      : name{std::move(name)}, u{std::move(x)} {}
   explicit DummyArgument(AlternateReturn &&x) : u{std::move(x)} {}
   ~DummyArgument();
   bool operator==(const DummyArgument &) const;
@@ -215,7 +215,7 @@ struct DummyArgument {
   // name and pass are not characteristics and so does not participate in
   // operator== but are needed to determine if procedures are distinguishable
   std::string name;
-  bool pass{false};  // is this the PASS argument of its procedure
+  bool pass{false}; // is this the PASS argument of its procedure
   std::variant<DummyDataObject, DummyProcedure, AlternateReturn> u;
 };
 
@@ -262,7 +262,7 @@ struct Procedure {
       Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);
-  Procedure(DummyArguments &&, Attrs);  // for subroutines and NULL()
+  Procedure(DummyArguments &&, Attrs); // for subroutines and NULL()
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(Procedure)
   ~Procedure();
   bool operator==(const Procedure &) const;
@@ -301,5 +301,5 @@ private:
   Procedure() {}
 };
 
-}
-#endif  // FORTRAN_EVALUATE_CHARACTERISTICS_H_
+} // namespace Fortran::evaluate::characteristics
+#endif // FORTRAN_EVALUATE_CHARACTERISTICS_H_

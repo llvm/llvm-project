@@ -21,7 +21,7 @@
 
 namespace Fortran::common {
 
-template<int BITS> class BitSet {
+template <int BITS> class BitSet {
   static_assert(BITS > 0 && BITS <= 64);
   static constexpr bool partialWord{BITS != 32 && BITS != 64};
   using Word = std::conditional_t<(BITS > 32), std::uint64_t, std::uint32_t>;
@@ -143,5 +143,5 @@ public:
 private:
   Word bits_{0};
 };
-}
-#endif  // FORTRAN_COMMON_CONSTEXPR_BITSET_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_CONSTEXPR_BITSET_H_

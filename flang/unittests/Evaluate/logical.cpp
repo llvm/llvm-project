@@ -2,7 +2,7 @@
 #include "flang/Evaluate/type.h"
 #include <cstdio>
 
-template<int KIND> void testKind() {
+template <int KIND> void testKind() {
   using Type =
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Logical, KIND>;
   TEST(Fortran::evaluate::IsSpecificIntrinsicType<Type>);

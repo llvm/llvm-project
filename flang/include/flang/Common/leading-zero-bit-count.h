@@ -40,7 +40,7 @@ static constexpr std::uint8_t mapping[64]{63, 0, 58, 1, 59, 47, 53, 2, 60, 39,
     48, 27, 54, 33, 42, 3, 61, 51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43,
     14, 22, 4, 62, 57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21,
     56, 45, 25, 31, 35, 16, 9, 12, 44, 24, 15, 8, 23, 7, 6, 5};
-}
+} // namespace
 
 inline constexpr int LeadingZeroBitCount(std::uint64_t x) {
   if (x == 0) {
@@ -53,13 +53,13 @@ inline constexpr int LeadingZeroBitCount(std::uint64_t x) {
     x |= x >> 16;
     x |= x >> 32;
     // All of the bits below the uppermost set bit are now also set.
-    x -= x >> 1;  // All of the bits below the uppermost are now clear.
+    x -= x >> 1; // All of the bits below the uppermost are now clear.
     // x now has exactly one bit set, so it is a power of two, so
     // multiplication by x is equivalent to a left shift by its
     // base-2 logarithm.  We calculate that unknown base-2 logarithm
     // by shifting the deBruijn sequence and mapping the framed value.
     int base2Log{mapping[(x * deBruijn) >> 58]};
-    return 63 - base2Log;  // convert to leading zero count
+    return 63 - base2Log; // convert to leading zero count
   }
 }
 
@@ -89,8 +89,8 @@ inline constexpr int LeadingZeroBitCount(std::uint8_t x) {
   return eightBitLeadingZeroBitCount[x];
 }
 
-template<typename A> inline constexpr int BitsNeededFor(A x) {
+template <typename A> inline constexpr int BitsNeededFor(A x) {
   return 8 * sizeof x - LeadingZeroBitCount(x);
 }
-}
-#endif  // FORTRAN_COMMON_LEADING_ZERO_BIT_COUNT_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_LEADING_ZERO_BIT_COUNT_H_

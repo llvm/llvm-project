@@ -67,12 +67,18 @@ IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultLogicalKind(
 
 int IntrinsicTypeDefaultKinds::GetDefaultKind(TypeCategory category) const {
   switch (category) {
-  case TypeCategory::Integer: return defaultIntegerKind_;
+  case TypeCategory::Integer:
+    return defaultIntegerKind_;
   case TypeCategory::Real:
-  case TypeCategory::Complex: return defaultRealKind_;
-  case TypeCategory::Character: return defaultCharacterKind_;
-  case TypeCategory::Logical: return defaultLogicalKind_;
-  default: CRASH_NO_CASE; return 0;
+  case TypeCategory::Complex:
+    return defaultRealKind_;
+  case TypeCategory::Character:
+    return defaultCharacterKind_;
+  case TypeCategory::Logical:
+    return defaultLogicalKind_;
+  default:
+    CRASH_NO_CASE;
+    return 0;
   }
 }
-}
+} // namespace Fortran::common

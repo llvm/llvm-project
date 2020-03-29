@@ -26,7 +26,7 @@ void FlushOutputOnCrash(const Terminator &terminator) {
   CriticalSection critical{unitMapLock};
   if (defaultOutput) {
     IoErrorHandler handler{terminator};
-    handler.HasIoStat();  // prevent nested crash if flush has error
+    handler.HasIoStat(); // prevent nested crash if flush has error
     defaultOutput->Flush(handler);
   }
 }
@@ -83,7 +83,7 @@ void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::DestroyClosed() {
-  GetUnitMap().DestroyClosed(*this);  // destroys *this
+  GetUnitMap().DestroyClosed(*this); // destroys *this
 }
 
 UnitMap &ExternalFileUnit::GetUnitMap() {
@@ -137,12 +137,12 @@ bool ExternalFileUnit::Emit(
 
 std::optional<char32_t> ExternalFileUnit::GetCurrentChar(
     IoErrorHandler &handler) {
-  isReading_ = true;  // TODO: manage read/write transitions
+  isReading_ = true; // TODO: manage read/write transitions
   if (isUnformatted) {
     handler.Crash("GetCurrentChar() called for unformatted input");
     return std::nullopt;
   }
-  std::size_t chunk{256};  // for stream input
+  std::size_t chunk{256}; // for stream input
   if (recordLength.has_value()) {
     if (positionInRecord >= *recordLength) {
       return std::nullopt;
@@ -190,7 +190,7 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
       }
     } else {
       positionInRecord = furthestPositionInRecord + 1;
-      ok &= Emit("\n", 1, handler);  // TODO: Windows CR+LF
+      ok &= Emit("\n", 1, handler); // TODO: Windows CR+LF
       frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
       recordOffsetInFrame_ = 0;
     }
@@ -240,7 +240,7 @@ void ExternalFileUnit::NextSequentialUnformattedInputRecord(
   std::int32_t header{0}, footer{0};
   // Retain previous footer (if any) in frame for more efficient BACKSPACE
   std::size_t retain{sizeof header};
-  if (recordLength) {  // not first record - advance to next
+  if (recordLength) { // not first record - advance to next
     ++currentRecordNumber;
     if (endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber) {
       handler.SignalEnd();
@@ -379,7 +379,7 @@ void ExternalFileUnit::BackspaceSequentialFormattedRecord(
     ReadFrame(0, *recordLength + 1, handler);
   } else {
     RUNTIME_CHECK(handler, start > 1);
-    std::int64_t at{start - 2};  // byte before previous record's newline
+    std::int64_t at{start - 2}; // byte before previous record's newline
     while (true) {
       if (const char *p{
               FindLastNewline(Frame(), at - frameOffsetInFile_ + 1)}) {
@@ -410,4 +410,4 @@ void ExternalFileUnit::BackspaceSequentialFormattedRecord(
     --*recordLength;
   }
 }
-}
+} // namespace Fortran::runtime::io

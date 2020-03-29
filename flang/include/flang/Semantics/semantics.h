@@ -43,7 +43,7 @@ struct SelectRankConstruct;
 struct SelectTypeConstruct;
 struct Variable;
 struct WhereConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -133,18 +133,18 @@ public:
   bool HasError(const parser::Name &);
   void SetError(Symbol &, bool = true);
 
-  template<typename... A> parser::Message &Say(A &&... args) {
+  template <typename... A> parser::Message &Say(A &&... args) {
     CHECK(location_);
     return messages_.Say(*location_, std::forward<A>(args)...);
   }
-  template<typename... A>
+  template <typename... A>
   parser::Message &Say(parser::CharBlock at, A &&... args) {
     return messages_.Say(at, std::forward<A>(args)...);
   }
   parser::Message &Say(parser::Message &&msg) {
     return messages_.Say(std::move(msg));
   }
-  template<typename... A>
+  template <typename... A>
   void SayWithDecl(const Symbol &symbol, const parser::CharBlock &at,
       parser::MessageFixedText &&msg, A &&... args) {
     auto &message{Say(at, std::move(msg), args...)};
@@ -155,7 +155,7 @@ public:
   Scope &FindScope(parser::CharBlock);
 
   const ConstructStack &constructStack() const { return constructStack_; }
-  template<typename N> void PushConstruct(const N &node) {
+  template <typename N> void PushConstruct(const N &node) {
     constructStack_.emplace_back(&node);
   }
   void PopConstruct();
@@ -202,7 +202,7 @@ class Semantics {
 public:
   explicit Semantics(SemanticsContext &context, parser::Program &program,
       parser::CookedSource &cooked, bool debugModuleWriter = false)
-    : context_{context}, program_{program}, cooked_{cooked} {
+      : context_{context}, program_{program}, cooked_{cooked} {
     context.set_debugModuleWriter(debugModuleWriter);
     context.globalScope().AddSourceRange(parser::CharBlock{cooked.data()});
   }
@@ -225,8 +225,8 @@ private:
 
 // Base class for semantics checkers.
 struct BaseChecker {
-  template<typename N> void Enter(const N &) {}
-  template<typename N> void Leave(const N &) {}
+  template <typename N> void Enter(const N &) {}
+  template <typename N> void Leave(const N &) {}
 };
-}
+} // namespace Fortran::semantics
 #endif

@@ -16,26 +16,26 @@
 
 namespace Fortran::evaluate::value {
 
-template<typename W, int P> Relation Real<W, P>::Compare(const Real &y) const {
-  if (IsNotANumber() || y.IsNotANumber()) {  // NaN vs x, x vs NaN
+template <typename W, int P> Relation Real<W, P>::Compare(const Real &y) const {
+  if (IsNotANumber() || y.IsNotANumber()) { // NaN vs x, x vs NaN
     return Relation::Unordered;
   } else if (IsInfinite()) {
     if (y.IsInfinite()) {
-      if (IsNegative()) {  // -Inf vs +/-Inf
+      if (IsNegative()) { // -Inf vs +/-Inf
         return y.IsNegative() ? Relation::Equal : Relation::Less;
-      } else {  // +Inf vs +/-Inf
+      } else { // +Inf vs +/-Inf
         return y.IsNegative() ? Relation::Greater : Relation::Equal;
       }
-    } else {  // +/-Inf vs finite
+    } else { // +/-Inf vs finite
       return IsNegative() ? Relation::Less : Relation::Greater;
     }
-  } else if (y.IsInfinite()) {  // finite vs +/-Inf
+  } else if (y.IsInfinite()) { // finite vs +/-Inf
     return y.IsNegative() ? Relation::Greater : Relation::Less;
-  } else {  // two finite numbers
+  } else { // two finite numbers
     bool isNegative{IsNegative()};
     if (isNegative != y.IsNegative()) {
       if (word_.IOR(y.word_).IBCLR(bits - 1).IsZero()) {
-        return Relation::Equal;  // +/-0.0 == -/+0.0
+        return Relation::Equal; // +/-0.0 == -/+0.0
       } else {
         return isNegative ? Relation::Less : Relation::Greater;
       }
@@ -53,12 +53,12 @@ template<typename W, int P> Relation Real<W, P>::Compare(const Real &y) const {
   }
 }
 
-template<typename W, int P>
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
   if (IsNotANumber() || y.IsNotANumber()) {
-    result.value = NotANumber();  // NaN + x -> NaN
+    result.value = NotANumber(); // NaN + x -> NaN
     if (IsSignalingNaN() || y.IsSignalingNaN()) {
       result.flags.set(RealFlag::InvalidArgument);
     }
@@ -69,18 +69,18 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
   if (IsInfinite()) {
     if (y.IsInfinite()) {
       if (isNegative == yIsNegative) {
-        result.value = *this;  // +/-Inf + +/-Inf -> +/-Inf
+        result.value = *this; // +/-Inf + +/-Inf -> +/-Inf
       } else {
-        result.value = NotANumber();  // +/-Inf + -/+Inf -> NaN
+        result.value = NotANumber(); // +/-Inf + -/+Inf -> NaN
         result.flags.set(RealFlag::InvalidArgument);
       }
     } else {
-      result.value = *this;  // +/-Inf + x -> +/-Inf
+      result.value = *this; // +/-Inf + x -> +/-Inf
     }
     return result;
   }
   if (y.IsInfinite()) {
-    result.value = y;  // x + +/-Inf -> +/-Inf
+    result.value = y; // x + +/-Inf -> +/-Inf
     return result;
   }
   int exponent{Exponent()};
@@ -98,7 +98,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
     if (order == Ordering::Equal) {
       // x + (-x) -> +0.0 unless rounding is directed downwards
       if (rounding.mode == common::RoundingMode::Down) {
-        result.value.word_ = result.value.word_.IBSET(bits - 1);  // -0.0
+        result.value.word_ = result.value.word_.IBSET(bits - 1); // -0.0
       }
       return result;
     }
@@ -110,7 +110,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
   Fraction yFraction{y.GetFraction()};
   int rshift = exponent - yExponent;
   if (exponent > 0 && yExponent == 0) {
-    --rshift;  // correct overshift when only y is subnormal
+    --rshift; // correct overshift when only y is subnormal
   }
   RoundingBits roundingBits{yFraction, rshift};
   yFraction = yFraction.SHIFTR(rshift);
@@ -133,12 +133,12 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
   return result;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::Multiply(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
   if (IsNotANumber() || y.IsNotANumber()) {
-    result.value = NotANumber();  // NaN * x -> NaN
+    result.value = NotANumber(); // NaN * x -> NaN
     if (IsSignalingNaN() || y.IsSignalingNaN()) {
       result.flags.set(RealFlag::InvalidArgument);
     }
@@ -146,7 +146,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Multiply(
     bool isNegative{IsNegative() != y.IsNegative()};
     if (IsInfinite() || y.IsInfinite()) {
       if (IsZero() || y.IsZero()) {
-        result.value = NotANumber();  // 0 * Inf -> NaN
+        result.value = NotANumber(); // 0 * Inf -> NaN
         result.flags.set(RealFlag::InvalidArgument);
       } else {
         result.value = Infinity(isNegative);
@@ -193,12 +193,12 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Multiply(
   return result;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
   if (IsNotANumber() || y.IsNotANumber()) {
-    result.value = NotANumber();  // NaN / x -> NaN, x / NaN -> NaN
+    result.value = NotANumber(); // NaN / x -> NaN, x / NaN -> NaN
     if (IsSignalingNaN() || y.IsSignalingNaN()) {
       result.flags.set(RealFlag::InvalidArgument);
     }
@@ -206,20 +206,20 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
     bool isNegative{IsNegative() != y.IsNegative()};
     if (IsInfinite()) {
       if (y.IsInfinite()) {
-        result.value = NotANumber();  // Inf/Inf -> NaN
+        result.value = NotANumber(); // Inf/Inf -> NaN
         result.flags.set(RealFlag::InvalidArgument);
-      } else {  // Inf/x -> Inf,  Inf/0 -> Inf
+      } else { // Inf/x -> Inf,  Inf/0 -> Inf
         result.value = Infinity(isNegative);
       }
     } else if (y.IsZero()) {
-      if (IsZero()) {  // 0/0 -> NaN
+      if (IsZero()) { // 0/0 -> NaN
         result.value = NotANumber();
         result.flags.set(RealFlag::InvalidArgument);
-      } else {  // x/0 -> Inf, Inf/0 -> Inf
+      } else { // x/0 -> Inf, Inf/0 -> Inf
         result.value = Infinity(isNegative);
         result.flags.set(RealFlag::DivideByZero);
       }
-    } else if (IsZero() || y.IsInfinite()) {  // 0/x, x/Inf -> 0
+    } else if (IsZero() || y.IsInfinite()) { // 0/x, x/Inf -> 0
       if (isNegative) {
         result.value.word_ = result.value.word_.IBSET(bits - 1);
       }
@@ -261,7 +261,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
   return result;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
     common::RoundingMode mode) const {
   ValueWithRealFlags<Real> result{*this};
@@ -273,11 +273,11 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
   } else {
     constexpr int noClipExponent{exponentBias + binaryPrecision - 1};
     if (Exponent() < noClipExponent) {
-      Real adjust;  // ABS(EPSILON(adjust)) == 0.5
+      Real adjust; // ABS(EPSILON(adjust)) == 0.5
       adjust.Normalize(IsSignBitSet(), noClipExponent, Fraction::MASKL(1));
       // Compute ival=(*this + adjust), losing any fractional bits; keep flags
       result = Add(adjust, Rounding{mode});
-      result.flags.reset(RealFlag::Inexact);  // result *is* exact
+      result.flags.reset(RealFlag::Inexact); // result *is* exact
       // Return (ival-adjust) with original sign in case we've generated a zero.
       result.value =
           result.value.Subtract(adjust, Rounding{common::RoundingMode::ToZero})
@@ -287,7 +287,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
   return result;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 RealFlags Real<W, P>::Normalize(bool negative, int exponent,
     const Fraction &fraction, Rounding rounding, RoundingBits *roundingBits) {
   int lshift{fraction.LEADZ()};
@@ -311,7 +311,7 @@ RealFlags Real<W, P>::Normalize(bool negative, int exponent,
         rounding.mode == common::RoundingMode::TiesAwayFromZero ||
         (rounding.mode == common::RoundingMode::Up && !negative) ||
         (rounding.mode == common::RoundingMode::Down && negative)) {
-      word_ = Word{maxExponent}.SHIFTL(significandBits);  // Inf
+      word_ = Word{maxExponent}.SHIFTL(significandBits); // Inf
     } else {
       // directed rounding: round to largest finite value rather than infinity
       // (x86 does this, not sure whether it's standard behavior)
@@ -347,7 +347,7 @@ RealFlags Real<W, P>::Normalize(bool negative, int exponent,
   return {};
 }
 
-template<typename W, int P>
+template <typename W, int P>
 RealFlags Real<W, P>::Round(
     Rounding rounding, const RoundingBits &bits, bool multiply) {
   int origExponent{Exponent()};
@@ -365,7 +365,7 @@ RealFlags Real<W, P>::Round(
       // The fraction was all ones before rounding; sum.value is now zero
       sum.value = sum.value.IBSET(binaryPrecision - 1);
       if (++newExponent >= maxExponent) {
-        flags.set(RealFlag::Overflow);  // rounded away to an infinity
+        flags.set(RealFlag::Overflow); // rounded away to an infinity
       }
     }
     flags |= Normalize(IsNegative(), newExponent, sum.value);
@@ -388,7 +388,7 @@ RealFlags Real<W, P>::Round(
   return flags;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 void Real<W, P>::NormalizeAndRound(ValueWithRealFlags<Real> &result,
     bool isNegative, int exponent, const Fraction &fraction, Rounding rounding,
     RoundingBits roundingBits, bool multiply) {
@@ -400,13 +400,18 @@ void Real<W, P>::NormalizeAndRound(ValueWithRealFlags<Real> &result,
 inline enum decimal::FortranRounding MapRoundingMode(
     common::RoundingMode rounding) {
   switch (rounding) {
-  case common::RoundingMode::TiesToEven: break;
-  case common::RoundingMode::ToZero: return decimal::RoundToZero;
-  case common::RoundingMode::Down: return decimal::RoundDown;
-  case common::RoundingMode::Up: return decimal::RoundUp;
-  case common::RoundingMode::TiesAwayFromZero: return decimal::RoundCompatible;
+  case common::RoundingMode::TiesToEven:
+    break;
+  case common::RoundingMode::ToZero:
+    return decimal::RoundToZero;
+  case common::RoundingMode::Down:
+    return decimal::RoundDown;
+  case common::RoundingMode::Up:
+    return decimal::RoundUp;
+  case common::RoundingMode::TiesAwayFromZero:
+    return decimal::RoundCompatible;
   }
-  return decimal::RoundNearest;  // dodge gcc warning about lack of result
+  return decimal::RoundNearest; // dodge gcc warning about lack of result
 }
 
 inline RealFlags MapFlags(decimal::ConversionResultFlags flags) {
@@ -423,7 +428,7 @@ inline RealFlags MapFlags(decimal::ConversionResultFlags flags) {
   return result;
 }
 
-template<typename W, int P>
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
     const char *&p, Rounding rounding) {
   auto converted{
@@ -432,7 +437,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
   return {*value, MapFlags(converted.flags)};
 }
 
-template<typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
+template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
   if (IsNotANumber()) {
     return "NaN 0x"s + word_.Hexadecimal();
   } else if (IsNegative()) {
@@ -478,7 +483,7 @@ template<typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
   }
 }
 
-template<typename W, int P>
+template <typename W, int P>
 llvm::raw_ostream &Real<W, P>::AsFortran(
     llvm::raw_ostream &o, int kind, bool minimal) const {
   if (IsNotANumber()) {
@@ -492,8 +497,8 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
   } else {
     using B = decimal::BinaryFloatingPointNumber<P>;
     const auto *value{reinterpret_cast<const B *>(this)};
-    char buffer[24000];  // accommodate real*16
-    decimal::DecimalConversionFlags flags{};  // default: exact representation
+    char buffer[24000]; // accommodate real*16
+    decimal::DecimalConversionFlags flags{}; // default: exact representation
     if (minimal) {
       flags = decimal::Minimize;
     }
@@ -522,4 +527,4 @@ template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
 template class Real<Integer<80>, 64>;
 template class Real<Integer<128>, 113>;
-}
+} // namespace Fortran::evaluate::value

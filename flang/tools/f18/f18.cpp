@@ -47,8 +47,8 @@ static std::list<std::string> argList(int argc, char *const argv[]) {
 }
 
 struct MeasurementVisitor {
-  template<typename A> bool Pre(const A &) { return true; }
-  template<typename A> void Post(const A &) {
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {
     ++objects;
     bytes += sizeof(A);
   }
@@ -79,15 +79,15 @@ struct GetDefinitionArgs {
 
 struct DriverOptions {
   DriverOptions() {}
-  bool verbose{false};  // -v
-  bool compileOnly{false};  // -c
-  std::string outputPath;  // -o path
-  std::vector<std::string> searchDirectories{"."s};  // -I dir
-  std::string moduleDirectory{"."s};  // -module dir
-  std::string moduleFileSuffix{".mod"};  // -moduleSuffix suff
-  bool forcedForm{false};  // -Mfixed or -Mfree appeared
-  bool warnOnNonstandardUsage{false};  // -Mstandard
-  bool warningsAreErrors{false};  // -Werror
+  bool verbose{false}; // -v
+  bool compileOnly{false}; // -c
+  std::string outputPath; // -o path
+  std::vector<std::string> searchDirectories{"."s}; // -I dir
+  std::string moduleDirectory{"."s}; // -module dir
+  std::string moduleFileSuffix{".mod"}; // -moduleSuffix suff
+  bool forcedForm{false}; // -Mfixed or -Mfree appeared
+  bool warnOnNonstandardUsage{false}; // -Mstandard
+  bool warningsAreErrors{false}; // -Werror
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool parseOnly{false};
   bool dumpProvenance{false};
@@ -111,7 +111,7 @@ struct DriverOptions {
 
 bool ParentProcess() {
   if (fork() == 0) {
-    return false;  // in child process
+    return false; // in child process
   }
   int childStat{0};
   wait(&childStat);
@@ -640,7 +640,7 @@ int main(int argc, char *const argv[]) {
     if (!options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
       driver.pgf90Args.push_back(
-          "-Mbackslash");  // yes, this *disables* them in pgf90
+          "-Mbackslash"); // yes, this *disables* them in pgf90
     }
     Fortran::parser::useHexadecimalEscapeSequences = false;
   } else {

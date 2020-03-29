@@ -594,7 +594,7 @@ TYPE_PARSER(recovery("END ENUM"_tok, "END" >> SkipPast<'\n'>{}) >>
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
 constexpr auto entityDeclWithoutEqInit{construct<EntityDecl>(name,
     maybe(arraySpec), maybe(coarraySpec), maybe("*" >> charLength),
-    !"="_tok >> maybe(initialization))};  // old-style REAL A/0/ still works
+    !"="_tok >> maybe(initialization))}; // old-style REAL A/0/ still works
 TYPE_PARSER(
     construct<TypeDeclarationStmt>(declarationTypeSpec,
         defaulted("," >> nonemptyList(Parser<AttrSpec>{})) / "::",
@@ -738,7 +738,7 @@ TYPE_PARSER(construct<AccessStmt>(accessSpec,
 
 // R828 access-id -> access-name | generic-spec
 TYPE_PARSER(construct<AccessId>(indirect(genericSpec)) ||
-    construct<AccessId>(name))  // initially ambiguous with genericSpec
+    construct<AccessId>(name)) // initially ambiguous with genericSpec
 
 // R829 allocatable-stmt -> ALLOCATABLE [::] allocatable-decl-list
 TYPE_PARSER(construct<AllocatableStmt>("ALLOCATABLE" >> maybe("::"_tok) >>
@@ -1254,4 +1254,4 @@ TYPE_CONTEXT_PARSER("PAUSE statement"_en_US,
 //     is not used because parsing is not sensitive to rank
 //   R1030 default-char-constant-expr -> default-char-expr
 //     is only used via scalar-default-char-constant-expr
-}
+} // namespace Fortran::parser

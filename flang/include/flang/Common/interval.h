@@ -19,13 +19,13 @@
 
 namespace Fortran::common {
 
-template<typename A> class Interval {
+template <typename A> class Interval {
 public:
   using type = A;
   constexpr Interval() {}
   constexpr Interval(const A &s, std::size_t n = 1) : start_{s}, size_{n} {}
   constexpr Interval(A &&s, std::size_t n = 1)
-    : start_{std::move(s)}, size_{n} {}
+      : start_{std::move(s)}, size_{n} {}
   constexpr Interval(const Interval &) = default;
   constexpr Interval(Interval &&) = default;
   constexpr Interval &operator=(const Interval &) = default;
@@ -111,5 +111,5 @@ private:
   A start_;
   std::size_t size_{0};
 };
-}
-#endif  // FORTRAN_COMMON_INTERVAL_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_INTERVAL_H_

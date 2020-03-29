@@ -26,7 +26,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               } else if (!IsVariableName(*symbol)) {
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must be a variable name"_err_en_US);
-              } else if (!IsAllocatableOrPointer(*symbol)) {  // C932
+              } else if (!IsAllocatableOrPointer(*symbol)) { // C932
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
               } else {
@@ -37,7 +37,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               evaluate::ExpressionAnalyzer analyzer{context_};
               if (MaybeExpr checked{analyzer.Analyze(structureComponent)}) {
                 if (!IsAllocatableOrPointer(
-                        *structureComponent.component.symbol)) {  // C932
+                        *structureComponent.component.symbol)) { // C932
                   context_.Say(structureComponent.component.source,
                       "component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
                 }
@@ -69,4 +69,4 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
         deallocOpt.u);
   }
 }
-}  // namespace Fortran::semantics
+} // namespace Fortran::semantics

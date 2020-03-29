@@ -15,7 +15,7 @@
 
 namespace Fortran::evaluate {
 
-template<typename REAL, typename INT>
+template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     const INT &power, Rounding rounding = defaultRounding) {
   ValueWithRealFlags<REAL> result{factor};
@@ -48,11 +48,11 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
   return result;
 }
 
-template<typename REAL, typename INT>
+template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(
     const REAL &base, const INT &power, Rounding rounding = defaultRounding) {
   REAL one{REAL::FromInteger(INT{1}).value};
   return TimesIntPowerOf(one, base, power, rounding);
 }
-}
-#endif  // FORTRAN_EVALUATE_INT_POWER_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_INT_POWER_H_

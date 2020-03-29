@@ -29,8 +29,8 @@ namespace Fortran::evaluate {
 // Define meaningful types for the runtime
 using RuntimeTypes = evaluate::AllIntrinsicTypes;
 
-template<typename T, typename... TT> struct IndexInTupleHelper {};
-template<typename T, typename... TT>
+template <typename T, typename... TT> struct IndexInTupleHelper {};
+template <typename T, typename... TT>
 struct IndexInTupleHelper<T, std::tuple<TT...>> {
   static constexpr TypeCode value{common::TypeIndex<T, TT...>};
 };
@@ -38,36 +38,36 @@ struct IndexInTupleHelper<T, std::tuple<TT...>> {
 static_assert(
     std::tuple_size_v<RuntimeTypes> < std::numeric_limits<TypeCode>::max(),
     "TypeCode is too small");
-template<typename T>
+template <typename T>
 inline constexpr TypeCode typeCodeOf{
     IndexInTupleHelper<T, RuntimeTypes>::value};
 
-template<TypeCode n>
+template <TypeCode n>
 using RuntimeTypeOf = typename std::tuple_element_t<n, RuntimeTypes>;
 
-template<typename TA, PassBy Pass>
+template <typename TA, PassBy Pass>
 using HostArgType = std::conditional_t<Pass == PassBy::Ref,
     std::add_lvalue_reference_t<std::add_const_t<host::HostType<TA>>>,
     host::HostType<TA>>;
 
-template<typename TR, typename... ArgInfo>
+template <typename TR, typename... ArgInfo>
 using HostFuncPointer = FuncPointer<host::HostType<TR>,
     HostArgType<typename ArgInfo::Type, ArgInfo::pass>...>;
 
 // Software Subnormal Flushing helper.
-template<typename T> struct Flusher {
+template <typename T> struct Flusher {
   // Only flush floating-points. Forward other scalars untouched.
   static constexpr inline const Scalar<T> &FlushSubnormals(const Scalar<T> &x) {
     return x;
   }
 };
-template<int Kind> struct Flusher<Type<TypeCategory::Real, Kind>> {
+template <int Kind> struct Flusher<Type<TypeCategory::Real, Kind>> {
   using T = Type<TypeCategory::Real, Kind>;
   static constexpr inline Scalar<T> FlushSubnormals(const Scalar<T> &x) {
     return x.FlushSubnormalToZero();
   }
 };
-template<int Kind> struct Flusher<Type<TypeCategory::Complex, Kind>> {
+template <int Kind> struct Flusher<Type<TypeCategory::Complex, Kind>> {
   using T = Type<TypeCategory::Complex, Kind>;
   static constexpr inline Scalar<T> FlushSubnormals(const Scalar<T> &x) {
     return x.FlushSubnormalToZero();
@@ -75,7 +75,7 @@ template<int Kind> struct Flusher<Type<TypeCategory::Complex, Kind>> {
 };
 
 // Callable factory
-template<typename TR, typename... ArgInfo> struct CallableHostWrapper {
+template <typename TR, typename... ArgInfo> struct CallableHostWrapper {
   static Scalar<TR> scalarCallable(FoldingContext &context,
       HostFuncPointer<TR, ArgInfo...> func,
       const Scalar<typename ArgInfo::Type> &... x) {
@@ -120,28 +120,28 @@ template<typename TR, typename... ArgInfo> struct CallableHostWrapper {
   }
 };
 
-template<typename TR, typename... TA>
+template <typename TR, typename... TA>
 inline GenericFunctionPointer ToGenericFunctionPointer(
     FuncPointer<TR, TA...> f) {
   return reinterpret_cast<GenericFunctionPointer>(f);
 }
 
-template<typename TR, typename... TA>
+template <typename TR, typename... TA>
 inline FuncPointer<TR, TA...> FromGenericFunctionPointer(
     GenericFunctionPointer g) {
   return reinterpret_cast<FuncPointer<TR, TA...>>(g);
 }
 
-template<typename TR, typename... ArgInfo>
+template <typename TR, typename... ArgInfo>
 IntrinsicProcedureRuntimeDescription::IntrinsicProcedureRuntimeDescription(
     const Signature<TR, ArgInfo...> &signature, bool isElemental)
-  : name{signature.name}, returnType{typeCodeOf<TR>},
-    argumentsType{typeCodeOf<typename ArgInfo::Type>...},
-    argumentsPassedBy{ArgInfo::pass...}, isElemental{isElemental},
-    callable{ToGenericFunctionPointer(
-        CallableHostWrapper<TR, ArgInfo...>::MakeScalarCallable())} {}
+    : name{signature.name}, returnType{typeCodeOf<TR>},
+      argumentsType{typeCodeOf<typename ArgInfo::Type>...},
+      argumentsPassedBy{ArgInfo::pass...}, isElemental{isElemental},
+      callable{ToGenericFunctionPointer(
+          CallableHostWrapper<TR, ArgInfo...>::MakeScalarCallable())} {}
 
-template<typename HostTA> static constexpr inline PassBy PassByMethod() {
+template <typename HostTA> static constexpr inline PassBy PassByMethod() {
   if constexpr (std::is_pointer_v<std::decay_t<HostTA>> ||
       std::is_lvalue_reference_v<HostTA>) {
     return PassBy::Ref;
@@ -149,24 +149,24 @@ template<typename HostTA> static constexpr inline PassBy PassByMethod() {
   return PassBy::Val;
 }
 
-template<typename HostTA>
+template <typename HostTA>
 using ArgInfoFromHostType =
     ArgumentInfo<host::FortranType<std::remove_pointer_t<std::decay_t<HostTA>>>,
         PassByMethod<HostTA>()>;
 
-template<typename HostTR, typename... HostTA>
+template <typename HostTR, typename... HostTA>
 using SignatureFromHostFuncPointer =
     Signature<host::FortranType<HostTR>, ArgInfoFromHostType<HostTA>...>;
 
-template<typename HostTR, typename... HostTA>
+template <typename HostTR, typename... HostTA>
 HostRuntimeIntrinsicProcedure::HostRuntimeIntrinsicProcedure(
     const std::string &name, FuncPointer<HostTR, HostTA...> func,
     bool isElemental)
-  : IntrinsicProcedureRuntimeDescription(
-        SignatureFromHostFuncPointer<HostTR, HostTA...>{name}, isElemental),
-    handle{ToGenericFunctionPointer(func)} {}
+    : IntrinsicProcedureRuntimeDescription(
+          SignatureFromHostFuncPointer<HostTR, HostTA...>{name}, isElemental),
+      handle{ToGenericFunctionPointer(func)} {}
 
-template<template<typename> typename ConstantContainer, typename TR,
+template <template <typename> typename ConstantContainer, typename TR,
     typename... TA>
 std::optional<HostProcedureWrapper<ConstantContainer, TR, TA...>>
 HostIntrinsicProceduresLibrary::GetHostProcedureWrapper(
@@ -205,5 +205,5 @@ HostIntrinsicProceduresLibrary::GetHostProcedureWrapper(
   return std::nullopt;
 }
 
-}
-#endif  // FORTRAN_EVALUATE_INTRINSICS_LIBRARY_TEMPLATES_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_INTRINSICS_LIBRARY_TEMPLATES_H_

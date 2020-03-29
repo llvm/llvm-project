@@ -34,6 +34,6 @@ void CheckPointerAssignment(evaluate::FoldingContext &,
     parser::CharBlock source, const std::string &description,
     const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs);
 
-}
+} // namespace Fortran::semantics
 
-#endif  // FORTRAN_SEMANTICS_POINTER_ASSIGNMENT_H_
+#endif // FORTRAN_SEMANTICS_POINTER_ASSIGNMENT_H_

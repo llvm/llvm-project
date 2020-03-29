@@ -9,7 +9,7 @@ namespace testing {
 namespace {
 int passes{0};
 int failures{0};
-}
+} // namespace
 
 static void BitBucket(const char *, ...) {}
 
@@ -124,4 +124,4 @@ int Complete() {
     return EXIT_FAILURE;
   }
 }
-}
+} // namespace testing

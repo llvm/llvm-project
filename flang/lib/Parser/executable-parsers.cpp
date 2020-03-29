@@ -121,7 +121,7 @@ TYPE_PARSER(first(construct<ActionStmt>(indirect(Parser<AllocateStmt>{})),
     construct<ActionStmt>(indirect(Parser<ReadStmt>{})),
     construct<ActionStmt>(indirect(Parser<ReturnStmt>{})),
     construct<ActionStmt>(indirect(Parser<RewindStmt>{})),
-    construct<ActionStmt>(indirect(Parser<StopStmt>{})),  // & error-stop-stmt
+    construct<ActionStmt>(indirect(Parser<StopStmt>{})), // & error-stop-stmt
     construct<ActionStmt>(indirect(Parser<SyncAllStmt>{})),
     construct<ActionStmt>(indirect(Parser<SyncImagesStmt>{})),
     construct<ActionStmt>(indirect(Parser<SyncMemoryStmt>{})),
@@ -163,7 +163,7 @@ TYPE_PARSER(construct<EndAssociateStmt>(
 //         block-stmt [block-specification-part] block end-block-stmt
 TYPE_CONTEXT_PARSER("BLOCK construct"_en_US,
     construct<BlockConstruct>(statement(Parser<BlockStmt>{}),
-        Parser<BlockSpecificationPart>{},  // can be empty
+        Parser<BlockSpecificationPart>{}, // can be empty
         block, statement(Parser<EndBlockStmt>{})))
 
 // R1108 block-stmt -> [block-construct-name :] BLOCK
@@ -522,4 +522,4 @@ TYPE_CONTEXT_PARSER("UNLOCK statement"_en_US,
     construct<UnlockStmt>("UNLOCK (" >> lockVariable,
         defaulted("," >> nonemptyList(statOrErrmsg)) / ")"))
 
-}
+} // namespace Fortran::parser

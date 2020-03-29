@@ -44,7 +44,7 @@ using SymbolVector = std::vector<SymbolRef>;
 
 // Forward declarations
 struct DataRef;
-template<typename T> struct Variable;
+template <typename T> struct Variable;
 
 // Reference a base object in memory.  This can be a Fortran symbol,
 // static data (e.g., CHARACTER literal), or compiler-created temporary.
@@ -76,7 +76,7 @@ public:
   Component(const DataRef &b, const Symbol &c) : base_{b}, symbol_{c} {}
   Component(DataRef &&b, const Symbol &c) : base_{std::move(b)}, symbol_{c} {}
   Component(common::CopyableIndirection<DataRef> &&b, const Symbol &c)
-    : base_{std::move(b)}, symbol_{c} {}
+      : base_{std::move(b)}, symbol_{c} {}
 
   const DataRef &base() const { return base_.value(); }
   DataRef &base() { return base_.value(); }
@@ -107,7 +107,7 @@ public:
   const Symbol &GetLastSymbol() const;
   const Component &GetComponent() const { return std::get<Component>(u_); }
   Component &GetComponent() { return std::get<Component>(u_); }
-  const Component *UnwrapComponent() const;  // null if just a Symbol
+  const Component *UnwrapComponent() const; // null if just a Symbol
   Component *UnwrapComponent();
 
   int Rank() const;
@@ -128,20 +128,20 @@ private:
 // KIND(x), which is then folded to a constant value.
 // "Bare" type parameter references within a derived type definition do
 // not have base objects.
-template<int KIND> class TypeParamInquiry {
+template <int KIND> class TypeParamInquiry {
 public:
   using Result = Type<TypeCategory::Integer, KIND>;
   CLASS_BOILERPLATE(TypeParamInquiry)
   TypeParamInquiry(NamedEntity &&x, const Symbol &param)
-    : base_{std::move(x)}, parameter_{param} {}
+      : base_{std::move(x)}, parameter_{param} {}
   TypeParamInquiry(std::optional<NamedEntity> &&x, const Symbol &param)
-    : base_{std::move(x)}, parameter_{param} {}
+      : base_{std::move(x)}, parameter_{param} {}
 
   const std::optional<NamedEntity> &base() const { return base_; }
   std::optional<NamedEntity> &base() { return base_; }
   const Symbol &parameter() const { return parameter_; }
 
-  static constexpr int Rank() { return 0; }  // always scalar
+  static constexpr int Rank() { return 0; } // always scalar
   bool operator==(const TypeParamInquiry &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -166,7 +166,7 @@ public:
   Triplet &set_lower(Expr<SubscriptInteger> &&);
   std::optional<Expr<SubscriptInteger>> upper() const;
   Triplet &set_upper(Expr<SubscriptInteger> &&);
-  Expr<SubscriptInteger> stride() const;  // N.B. result is not optional<>
+  Expr<SubscriptInteger> stride() const; // N.B. result is not optional<>
   Triplet &set_stride(Expr<SubscriptInteger> &&);
 
   bool operator==(const Triplet &) const;
@@ -182,7 +182,7 @@ private:
 struct Subscript {
   EVALUATE_UNION_CLASS_BOILERPLATE(Subscript)
   explicit Subscript(Expr<SubscriptInteger> &&s)
-    : u{IndirectSubscriptIntegerExpr::Make(std::move(s))} {}
+      : u{IndirectSubscriptIntegerExpr::Make(std::move(s))} {}
   int Rank() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   std::variant<IndirectSubscriptIntegerExpr, Triplet> u;
@@ -197,11 +197,11 @@ class ArrayRef {
 public:
   CLASS_BOILERPLATE(ArrayRef)
   ArrayRef(const Symbol &symbol, std::vector<Subscript> &&ss)
-    : base_{symbol}, subscript_(std::move(ss)) {}
+      : base_{symbol}, subscript_(std::move(ss)) {}
   ArrayRef(Component &&c, std::vector<Subscript> &&ss)
-    : base_{std::move(c)}, subscript_(std::move(ss)) {}
+      : base_{std::move(c)}, subscript_(std::move(ss)) {}
   ArrayRef(NamedEntity &&base, std::vector<Subscript> &&ss)
-    : base_{std::move(base)}, subscript_(std::move(ss)) {}
+      : base_{std::move(base)}, subscript_(std::move(ss)) {}
 
   NamedEntity &base() { return base_; }
   const NamedEntity &base() const { return base_; }
@@ -211,7 +211,7 @@ public:
   int size() const { return static_cast<int>(subscript_.size()); }
   Subscript &at(int n) { return subscript_.at(n); }
   const Subscript &at(int n) const { return subscript_.at(n); }
-  template<typename A> common::IfNoLvalue<Subscript &, A> emplace_back(A &&x) {
+  template <typename A> common::IfNoLvalue<Subscript &, A> emplace_back(A &&x) {
     return subscript_.emplace_back(std::move(x));
   }
 
@@ -275,7 +275,7 @@ private:
   std::vector<Subscript> subscript_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
   std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_, team_;
-  bool teamIsTeamNumber_{false};  // false: TEAM=, true: TEAM_NUMBER=
+  bool teamIsTeamNumber_{false}; // false: TEAM=, true: TEAM_NUMBER=
 };
 
 // R911 data-ref is defined syntactically as a series of part-refs, which
@@ -305,13 +305,13 @@ public:
   CLASS_BOILERPLATE(Substring)
   Substring(DataRef &&parent, std::optional<Expr<SubscriptInteger>> &&lower,
       std::optional<Expr<SubscriptInteger>> &&upper)
-    : parent_{std::move(parent)} {
+      : parent_{std::move(parent)} {
     SetBounds(lower, upper);
   }
   Substring(StaticDataObject::Pointer &&parent,
       std::optional<Expr<SubscriptInteger>> &&lower,
       std::optional<Expr<SubscriptInteger>> &&upper)
-    : parent_{std::move(parent)} {
+      : parent_{std::move(parent)} {
     SetBounds(lower, upper);
   }
 
@@ -323,7 +323,7 @@ public:
   Parent &parent() { return parent_; }
 
   int Rank() const;
-  template<typename A> const A *GetParentIf() const {
+  template <typename A> const A *GetParentIf() const {
     return std::get_if<A>(&parent_);
   }
   BaseObject GetBaseObject() const;
@@ -366,7 +366,7 @@ private:
 // calls to pointer-valued functions.  Its variant holds everything that
 // a DataRef can, and possibly also a substring reference or a
 // complex component (%RE/%IM) reference.
-template<typename T> class Designator {
+template <typename T> class Designator {
   using DataRefs = std::decay_t<decltype(DataRef::u)>;
   using MaybeSubstring =
       std::conditional_t<T::category == TypeCategory::Character,
@@ -383,7 +383,7 @@ public:
   EVALUATE_UNION_CLASS_BOILERPLATE(Designator)
   Designator(const DataRef &that) : u{common::CopyVariant<Variant>(that.u)} {}
   Designator(DataRef &&that)
-    : u{common::MoveVariant<Variant>(std::move(that.u))} {}
+      : u{common::MoveVariant<Variant>(std::move(that.u))} {}
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
@@ -397,7 +397,7 @@ public:
 
 FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 
-template<typename T> struct Variable {
+template <typename T> struct Variable {
   using Result = T;
   static_assert(IsSpecificIntrinsicType<Result> ||
       std::is_same_v<Result, SomeKind<TypeCategory::Derived>>);
@@ -429,19 +429,19 @@ public:
   Field field() const { return field_; }
   int dimension() const { return dimension_; }
 
-  static constexpr int Rank() { return 0; }  // always scalar
+  static constexpr int Rank() { return 0; } // always scalar
   bool operator==(const DescriptorInquiry &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   NamedEntity base_;
   Field field_;
-  int dimension_{0};  // zero-based
+  int dimension_{0}; // zero-based
 };
 
 #define INSTANTIATE_VARIABLE_TEMPLATES \
   EXPAND_FOR_EACH_INTEGER_KIND( \
       TEMPLATE_INSTANTIATION, template class TypeParamInquiry, ) \
   FOR_EACH_SPECIFIC_TYPE(template class Designator, )
-}
-#endif  // FORTRAN_EVALUATE_VARIABLE_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_VARIABLE_H_

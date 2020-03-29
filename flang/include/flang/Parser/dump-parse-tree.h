@@ -23,9 +23,9 @@ namespace Fortran::parser {
 
 // When SHOW_ALL_SOURCE_MEMBERS is defined, HasSource<T>::value is true if T has
 // a member named source
-template<typename T, typename = int> struct HasSource : std::false_type {};
+template <typename T, typename = int> struct HasSource : std::false_type {};
 #ifdef SHOW_ALL_SOURCE_MEMBERS
-template<typename T>
+template <typename T>
 struct HasSource<T, decltype((void)T::source, 0)> : std::true_type {};
 #endif
 
@@ -35,9 +35,9 @@ struct HasSource<T, decltype((void)T::source, 0)> : std::true_type {};
 
 class ParseTreeDumper {
 public:
-  explicit ParseTreeDumper(
-      llvm::raw_ostream &out, const AnalyzedObjectsAsFortran *asFortran = nullptr)
-    : out_(out), asFortran_{asFortran} {}
+  explicit ParseTreeDumper(llvm::raw_ostream &out,
+      const AnalyzedObjectsAsFortran *asFortran = nullptr)
+      : out_(out), asFortran_{asFortran} {}
 
   static constexpr const char *GetNodeName(const char *) { return "char *"; }
 #define NODE_NAME(T, N) \
@@ -682,7 +682,7 @@ public:
 #undef NODE
 #undef NODE_NAME
 
-  template<typename T> bool Pre(const T &x) {
+  template <typename T> bool Pre(const T &x) {
     std::string fortran{AsFortran<T>(x)};
     if (fortran.empty() && (UnionTrait<T> || WrapperTrait<T>)) {
       Prefix(GetNodeName(x));
@@ -698,7 +698,7 @@ public:
     return true;
   }
 
-  template<typename T> void Post(const T &x) {
+  template <typename T> void Post(const T &x) {
     if (AsFortran<T>(x).empty() && (UnionTrait<T> || WrapperTrait<T>)) {
       EndLineIfNonempty();
     } else {
@@ -711,55 +711,57 @@ public:
   bool Pre(const CharBlock &) { return true; }
   void Post(const CharBlock &) {}
 
-  template<typename T> bool Pre(const Statement<T> &) { return true; }
-  template<typename T> void Post(const Statement<T> &) {}
-  template<typename T> bool Pre(const UnlabeledStatement<T> &) { return true; }
-  template<typename T> void Post(const UnlabeledStatement<T> &) {}
+  template <typename T> bool Pre(const Statement<T> &) { return true; }
+  template <typename T> void Post(const Statement<T> &) {}
+  template <typename T> bool Pre(const UnlabeledStatement<T> &) { return true; }
+  template <typename T> void Post(const UnlabeledStatement<T> &) {}
 
-  template<typename T> bool Pre(const common::Indirection<T> &) { return true; }
-  template<typename T> void Post(const common::Indirection<T> &) {}
+  template <typename T> bool Pre(const common::Indirection<T> &) {
+    return true;
+  }
+  template <typename T> void Post(const common::Indirection<T> &) {}
 
-  template<typename A> bool Pre(const Scalar<A> &) {
+  template <typename A> bool Pre(const Scalar<A> &) {
     Prefix("Scalar");
     return true;
   }
-  template<typename A> void Post(const Scalar<A> &) { EndLineIfNonempty(); }
+  template <typename A> void Post(const Scalar<A> &) { EndLineIfNonempty(); }
 
-  template<typename A> bool Pre(const Constant<A> &) {
+  template <typename A> bool Pre(const Constant<A> &) {
     Prefix("Constant");
     return true;
   }
-  template<typename A> void Post(const Constant<A> &) { EndLineIfNonempty(); }
+  template <typename A> void Post(const Constant<A> &) { EndLineIfNonempty(); }
 
-  template<typename A> bool Pre(const Integer<A> &) {
+  template <typename A> bool Pre(const Integer<A> &) {
     Prefix("Integer");
     return true;
   }
-  template<typename A> void Post(const Integer<A> &) { EndLineIfNonempty(); }
+  template <typename A> void Post(const Integer<A> &) { EndLineIfNonempty(); }
 
-  template<typename A> bool Pre(const Logical<A> &) {
+  template <typename A> bool Pre(const Logical<A> &) {
     Prefix("Logical");
     return true;
   }
-  template<typename A> void Post(const Logical<A> &) { EndLineIfNonempty(); }
+  template <typename A> void Post(const Logical<A> &) { EndLineIfNonempty(); }
 
-  template<typename A> bool Pre(const DefaultChar<A> &) {
+  template <typename A> bool Pre(const DefaultChar<A> &) {
     Prefix("DefaultChar");
     return true;
   }
-  template<typename A> void Post(const DefaultChar<A> &) {
+  template <typename A> void Post(const DefaultChar<A> &) {
     EndLineIfNonempty();
   }
 
-  template<typename... A> bool Pre(const std::tuple<A...> &) { return true; }
-  template<typename... A> void Post(const std::tuple<A...> &) {}
+  template <typename... A> bool Pre(const std::tuple<A...> &) { return true; }
+  template <typename... A> void Post(const std::tuple<A...> &) {}
 
-  template<typename... A> bool Pre(const std::variant<A...> &) { return true; }
-  template<typename... A> void Post(const std::variant<A...> &) {}
+  template <typename... A> bool Pre(const std::variant<A...> &) { return true; }
+  template <typename... A> void Post(const std::variant<A...> &) {}
 
 protected:
   // Return a Fortran representation of this node to include in the dump
-  template<typename T> std::string AsFortran(const T &x) {
+  template <typename T> std::string AsFortran(const T &x) {
     std::string buf;
     llvm::raw_string_ostream ss{buf};
     if constexpr (std::is_same_v<T, Expr>) {
@@ -835,12 +837,12 @@ private:
   bool emptyline_{false};
 };
 
-template<typename T>
+template <typename T>
 void DumpTree(llvm::raw_ostream &out, const T &x,
     const AnalyzedObjectsAsFortran *asFortran = nullptr) {
   ParseTreeDumper dumper{out, asFortran};
   Walk(x, dumper);
 }
 
-}
-#endif  // FORTRAN_PARSER_DUMP_PARSE_TREE_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_DUMP_PARSE_TREE_H_

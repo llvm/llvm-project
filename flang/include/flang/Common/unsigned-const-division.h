@@ -22,7 +22,7 @@
 
 namespace Fortran::common {
 
-template<typename UINT> class FixedPointReciprocal {
+template <typename UINT> class FixedPointReciprocal {
 public:
   using type = UINT;
 
@@ -36,7 +36,7 @@ public:
   static constexpr FixedPointReciprocal For(type n) {
     if (n == 0) {
       return {0, 0};
-    } else if ((n & (n - 1)) == 0) {  // n is a power of two
+    } else if ((n & (n - 1)) == 0) { // n is a power of two
       return {TrailingZeroBitCount(n), 1};
     } else {
       int shift{bits - 1 + BitsNeededFor(n)};
@@ -60,7 +60,7 @@ static_assert(FixedPointReciprocal<std::uint32_t>::For(5).Divide(2000000000u) ==
 static_assert(FixedPointReciprocal<std::uint64_t>::For(10).Divide(
                   10000000000000000u) == 1000000000000000u);
 
-template<typename UINT, std::uint64_t DENOM>
+template <typename UINT, std::uint64_t DENOM>
 inline constexpr UINT DivideUnsignedBy(UINT n) {
   if constexpr (std::is_same_v<UINT, uint128_t>) {
     return n / static_cast<UINT>(DENOM);
@@ -73,5 +73,5 @@ inline constexpr UINT DivideUnsignedBy(UINT n) {
     return recip.Divide(n);
   }
 }
-}
+} // namespace Fortran::common
 #endif

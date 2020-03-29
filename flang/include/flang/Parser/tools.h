@@ -34,7 +34,7 @@ const Name &GetLastName(const AllocateObject &);
 // wrapped in a struct to avoid prototypes.
 struct UnwrapperHelper {
 
-  template<typename A, typename B> static const A *Unwrap(B *p) {
+  template <typename A, typename B> static const A *Unwrap(B *p) {
     if (p) {
       return Unwrap<A>(*p);
     } else {
@@ -42,17 +42,17 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B, bool COPY>
+  template <typename A, typename B, bool COPY>
   static const A *Unwrap(const common::Indirection<B, COPY> &x) {
     return Unwrap<A>(x.value());
   }
 
-  template<typename A, typename... Bs>
+  template <typename A, typename... Bs>
   static const A *Unwrap(const std::variant<Bs...> &x) {
     return std::visit([](const auto &y) { return Unwrap<A>(y); }, x);
   }
 
-  template<typename A, typename B>
+  template <typename A, typename B>
   static const A *Unwrap(const std::optional<B> &o) {
     if (o) {
       return Unwrap<A>(*o);
@@ -61,7 +61,7 @@ struct UnwrapperHelper {
     }
   }
 
-  template<typename A, typename B> static const A *Unwrap(B &x) {
+  template <typename A, typename B> static const A *Unwrap(B &x) {
     if constexpr (std::is_same_v<std::decay_t<A>, std::decay_t<B>>) {
       return &x;
     } else if constexpr (ConstraintTrait<B>) {
@@ -76,10 +76,10 @@ struct UnwrapperHelper {
   }
 };
 
-template<typename A, typename B> const A *Unwrap(const B &x) {
+template <typename A, typename B> const A *Unwrap(const B &x) {
   return UnwrapperHelper::Unwrap<A>(x);
 }
-template<typename A, typename B> A *Unwrap(B &x) {
+template <typename A, typename B> A *Unwrap(B &x) {
   return const_cast<A *>(Unwrap<A, B>(const_cast<const B &>(x)));
 }
 
@@ -87,5 +87,5 @@ template<typename A, typename B> A *Unwrap(B &x) {
 const CoindexedNamedObject *GetCoindexedNamedObject(const AllocateObject &);
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &);
 
-}
-#endif  // FORTRAN_PARSER_TOOLS_H_
+} // namespace Fortran::parser
+#endif // FORTRAN_PARSER_TOOLS_H_

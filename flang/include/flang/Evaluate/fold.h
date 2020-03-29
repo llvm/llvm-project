@@ -28,11 +28,11 @@ using namespace Fortran::parser::literals;
 // be able to extract it.
 // Note the rvalue reference argument: the rewrites are performed in place
 // for efficiency.
-template<typename T> Expr<T> Fold(FoldingContext &context, Expr<T> &&expr) {
+template <typename T> Expr<T> Fold(FoldingContext &context, Expr<T> &&expr) {
   return Expr<T>::Rewrite(context, std::move(expr));
 }
 
-template<typename T>
+template <typename T>
 std::optional<Expr<T>> Fold(
     FoldingContext &context, std::optional<Expr<T>> &&expr) {
   if (expr) {
@@ -46,7 +46,7 @@ std::optional<Expr<T>> Fold(
 // an expression, if it has one.  It returns a pointer, which is
 // const-qualified when the expression is so.  The value can be
 // parenthesized.
-template<typename T, typename EXPR>
+template <typename T, typename EXPR>
 auto UnwrapConstantValue(EXPR &expr) -> common::Constify<Constant<T>, EXPR> * {
   if (auto *c{UnwrapExpr<Constant<T>>(expr)}) {
     return c;
@@ -62,7 +62,7 @@ auto UnwrapConstantValue(EXPR &expr) -> common::Constify<Constant<T>, EXPR> * {
 
 // GetScalarConstantValue() extracts the known scalar constant value of
 // an expression, if it has one.  The value can be parenthesized.
-template<typename T, typename EXPR>
+template <typename T, typename EXPR>
 auto GetScalarConstantValue(const EXPR &expr) -> std::optional<Scalar<T>> {
   if (const Constant<T> *constant{UnwrapConstantValue<T>(expr)}) {
     return constant->GetScalarValue();
@@ -74,7 +74,7 @@ auto GetScalarConstantValue(const EXPR &expr) -> std::optional<Scalar<T>> {
 // When an expression is a constant integer, ToInt64() extracts its value.
 // Ensure that the expression has been folded beforehand when folding might
 // be required.
-template<int KIND>
+template <int KIND>
 std::optional<std::int64_t> ToInt64(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   if (auto scalar{
@@ -88,7 +88,7 @@ std::optional<std::int64_t> ToInt64(
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &);
 std::optional<std::int64_t> ToInt64(const Expr<SomeType> &);
 
-template<typename A>
+template <typename A>
 std::optional<std::int64_t> ToInt64(const std::optional<A> &x) {
   if (x) {
     return ToInt64(*x);
@@ -96,5 +96,5 @@ std::optional<std::int64_t> ToInt64(const std::optional<A> &x) {
     return std::nullopt;
   }
 }
-}
-#endif  // FORTRAN_EVALUATE_FOLD_H_
+} // namespace Fortran::evaluate
+#endif // FORTRAN_EVALUATE_FOLD_H_

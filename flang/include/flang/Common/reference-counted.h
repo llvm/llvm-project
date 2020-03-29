@@ -16,7 +16,7 @@
 namespace Fortran::common {
 
 // A base class for reference-counted objects.  Must be public.
-template<typename A> class ReferenceCounted {
+template <typename A> class ReferenceCounted {
 public:
   ReferenceCounted() {}
   void TakeReference() { ++references_; }
@@ -31,7 +31,7 @@ private:
 };
 
 // A reference to a reference-counted object.
-template<typename A> class CountedReference {
+template <typename A> class CountedReference {
 public:
   using type = A;
   CountedReference() {}
@@ -72,5 +72,5 @@ private:
 
   type *p_{nullptr};
 };
-}
-#endif  // FORTRAN_COMMON_REFERENCE_COUNTED_H_
+} // namespace Fortran::common
+#endif // FORTRAN_COMMON_REFERENCE_COUNTED_H_

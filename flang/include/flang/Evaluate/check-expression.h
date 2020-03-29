@@ -28,7 +28,7 @@ class IntrinsicProcTable;
 // Predicate: true when an expression is a constant expression (in the
 // strict sense of the Fortran standard); it may not (yet) be a hard
 // constant value.
-template<typename A> bool IsConstantExpr(const A &);
+template <typename A> bool IsConstantExpr(const A &);
 extern template bool IsConstantExpr(const Expr<SomeType> &);
 extern template bool IsConstantExpr(const Expr<SomeInteger> &);
 extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
@@ -40,7 +40,7 @@ bool IsInitialDataTarget(const Expr<SomeType> &, parser::ContextualMessages &);
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid
 // specification expressions.
-template<typename A>
+template <typename A>
 void CheckSpecificationExpr(
     const A &, parser::ContextualMessages &, const semantics::Scope &);
 extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
@@ -60,10 +60,10 @@ extern template void CheckSpecificationExpr(
     parser::ContextualMessages &, const semantics::Scope &);
 
 // Simple contiguity (9.5.4)
-template<typename A>
+template <typename A>
 bool IsSimplyContiguous(const A &, const IntrinsicProcTable &);
 extern template bool IsSimplyContiguous(
     const Expr<SomeType> &, const IntrinsicProcTable &);
 
-}
+} // namespace Fortran::evaluate
 #endif

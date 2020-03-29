@@ -281,24 +281,23 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 const SourceFile *AllSources::GetSourceFile(
     Provenance at, std::size_t *offset) const {
   const Origin &origin{MapToOrigin(at)};
-  return std::visit(
-      common::visitors{
-          [&](const Inclusion &inc) {
-            if (offset) {
-              *offset = origin.covers.MemberOffset(at);
-            }
-            return &inc.source;
-          },
-          [&](const Macro &) {
-            return GetSourceFile(origin.replaces.start(), offset);
-          },
-          [offset](const CompilerInsertion &) {
-            if (offset) {
-              *offset = 0;
-            }
-            return static_cast<const SourceFile *>(nullptr);
-          },
-      },
+  return std::visit(common::visitors{
+                        [&](const Inclusion &inc) {
+                          if (offset) {
+                            *offset = origin.covers.MemberOffset(at);
+                          }
+                          return &inc.source;
+                        },
+                        [&](const Macro &) {
+                          return GetSourceFile(origin.replaces.start(), offset);
+                        },
+                        [offset](const CompilerInsertion &) {
+                          if (offset) {
+                            *offset = 0;
+                          }
+                          return static_cast<const SourceFile *>(nullptr);
+                        },
+                    },
       origin.u);
 }
 
@@ -361,15 +360,15 @@ ProvenanceRange AllSources::IntersectionWithSourceFiles(
 }
 
 AllSources::Origin::Origin(ProvenanceRange r, const SourceFile &source)
-  : u{Inclusion{source}}, covers{r} {}
+    : u{Inclusion{source}}, covers{r} {}
 AllSources::Origin::Origin(ProvenanceRange r, const SourceFile &included,
     ProvenanceRange from, bool isModule)
-  : u{Inclusion{included, isModule}}, covers{r}, replaces{from} {}
+    : u{Inclusion{included, isModule}}, covers{r}, replaces{from} {}
 AllSources::Origin::Origin(ProvenanceRange r, ProvenanceRange def,
     ProvenanceRange use, const std::string &expansion)
-  : u{Macro{def, expansion}}, covers{r}, replaces{use} {}
+    : u{Macro{def, expansion}}, covers{r}, replaces{use} {}
 AllSources::Origin::Origin(ProvenanceRange r, const std::string &text)
-  : u{CompilerInsertion{text}}, covers{r} {}
+    : u{CompilerInsertion{text}}, covers{r} {}
 
 const char &AllSources::Origin::operator[](std::size_t n) const {
   return std::visit(
@@ -507,24 +506,23 @@ llvm::raw_ostream &AllSources::Dump(llvm::raw_ostream &o) const {
     o << "   ";
     DumpRange(o, m.covers);
     o << " -> ";
-    std::visit(
-        common::visitors{
-            [&](const Inclusion &inc) {
-              if (inc.isModule) {
-                o << "module ";
-              }
-              o << "file " << inc.source.path();
-            },
-            [&](const Macro &mac) { o << "macro " << mac.expansion; },
-            [&](const CompilerInsertion &ins) {
-              o << "compiler '" << ins.text << '\'';
-              if (ins.text.length() == 1) {
-                int ch = ins.text[0];
-                o << "(0x";
-                o.write_hex(ch & 0xff) << ")";
-              }
-            },
-        },
+    std::visit(common::visitors{
+                   [&](const Inclusion &inc) {
+                     if (inc.isModule) {
+                       o << "module ";
+                     }
+                     o << "file " << inc.source.path();
+                   },
+                   [&](const Macro &mac) { o << "macro " << mac.expansion; },
+                   [&](const CompilerInsertion &ins) {
+                     o << "compiler '" << ins.text << '\'';
+                     if (ins.text.length() == 1) {
+                       int ch = ins.text[0];
+                       o << "(0x";
+                       o.write_hex(ch & 0xff) << ")";
+                     }
+                   },
+               },
         m.u);
     if (IsValid(m.replaces)) {
       o << " replaces ";
@@ -544,4 +542,4 @@ llvm::raw_ostream &CookedSource::Dump(llvm::raw_ostream &o) const {
   invertedMap_.Dump(o);
   return o;
 }
-}
+} // namespace Fortran::parser

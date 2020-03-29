@@ -112,14 +112,13 @@ std::string MessageExpectedText::ToString() const {
 }
 
 bool MessageExpectedText::Merge(const MessageExpectedText &that) {
-  return std::visit(
-      common::visitors{
-          [](SetOfChars &s1, const SetOfChars &s2) {
-            s1 = s1.Union(s2);
-            return true;
-          },
-          [](const auto &, const auto &) { return false; },
-      },
+  return std::visit(common::visitors{
+                        [](SetOfChars &s1, const SetOfChars &s2) {
+                          s1 = s1.Union(s2);
+                          return true;
+                        },
+                        [](const auto &, const auto &) { return false; },
+                    },
       u_, that.u_);
 }
 
@@ -335,4 +334,4 @@ bool Messages::AnyFatalError() const {
   }
   return false;
 }
-}
+} // namespace Fortran::parser

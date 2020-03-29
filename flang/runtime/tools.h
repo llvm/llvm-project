@@ -31,5 +31,5 @@ int IdentifyValue(
 // Truncates or pads as necessary
 void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from);
-}
-#endif  // FORTRAN_RUNTIME_TOOLS_H_
+} // namespace Fortran::runtime
+#endif // FORTRAN_RUNTIME_TOOLS_H_

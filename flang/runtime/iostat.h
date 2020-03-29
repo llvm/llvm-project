@@ -22,11 +22,11 @@ namespace Fortran::runtime::io {
 // they're actually defined in another magic-numbers.h header file
 // so that they can be included both here and there.)
 enum Iostat {
-  IostatOk = 0,  // no error, EOF, or EOR condition
+  IostatOk = 0, // no error, EOF, or EOR condition
 
   // These error codes are required by Fortran (see 12.10.2.16-17) to be
   // negative integer values
-  IostatEnd = FORTRAN_RUNTIME_IOSTAT_END,  // end-of-file on input & no error
+  IostatEnd = FORTRAN_RUNTIME_IOSTAT_END, // end-of-file on input & no error
   // End-of-record on non-advancing input, no EOF or error
   IostatEor = FORTRAN_RUNTIME_IOSTAT_EOR,
 
@@ -39,7 +39,7 @@ enum Iostat {
   IostatInquireInternalUnit = FORTRAN_RUNTIME_IOSTAT_INQUIRE_INTERNAL_UNIT,
 
   // The remaining error codes are not exported.
-  IostatGenericError = 1001,  // see IOMSG= for details
+  IostatGenericError = 1001, // see IOMSG= for details
   IostatRecordWriteOverrun,
   IostatRecordReadOverrun,
   IostatInternalWriteOverrun,
@@ -49,5 +49,5 @@ enum Iostat {
 
 const char *IostatErrorString(int);
 
-}
-#endif  // FORTRAN_RUNTIME_IOSTAT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_IOSTAT_H_

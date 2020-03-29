@@ -14,6 +14,6 @@
 namespace Fortran::parser {
 struct Program;
 bool CanonicalizeDo(Program &program);
-}
+} // namespace Fortran::parser
 
-#endif  // FORTRAN_SEMANTICS_CANONICALIZE_DO_H_
+#endif // FORTRAN_SEMANTICS_CANONICALIZE_DO_H_

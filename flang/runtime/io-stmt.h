@@ -29,18 +29,18 @@ class OpenStatementState;
 class CloseStatementState;
 class NoopCloseStatementState;
 
-template<Direction, typename CHAR = char>
+template <Direction, typename CHAR = char>
 class InternalFormattedIoStatementState;
-template<Direction, typename CHAR = char> class InternalListIoStatementState;
-template<Direction, typename CHAR = char>
+template <Direction, typename CHAR = char> class InternalListIoStatementState;
+template <Direction, typename CHAR = char>
 class ExternalFormattedIoStatementState;
-template<Direction> class ExternalListIoStatementState;
-template<Direction> class UnformattedIoStatementState;
+template <Direction> class ExternalListIoStatementState;
+template <Direction> class UnformattedIoStatementState;
 
 // The Cookie type in the I/O API is a pointer (for C) to this class.
 class IoStatementState {
 public:
-  template<typename A> explicit IoStatementState(A &x) : u_{x} {}
+  template <typename A> explicit IoStatementState(A &x) : u_{x} {}
 
   // These member functions each project themselves into the active alternative.
   // They're used by per-data-item routines in the I/O API (e.g., OutputReal64)
@@ -49,18 +49,18 @@ public:
   // which may not have good support in some runtime environments.
   std::optional<DataEdit> GetNextDataEdit(int = 1);
   bool Emit(const char *, std::size_t);
-  std::optional<char32_t> GetCurrentChar();  // vacant after end of record
+  std::optional<char32_t> GetCurrentChar(); // vacant after end of record
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   int EndIoStatement();
   ConnectionState &GetConnectionState();
   IoErrorHandler &GetIoErrorHandler() const;
-  ExternalFileUnit *GetExternalFileUnit() const;  // null if internal unit
+  ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   MutableModes &mutableModes();
 
   // N.B.: this also works with base classes
-  template<typename A> A *get_if() const {
+  template <typename A> A *get_if() const {
     return std::visit(
         [](auto &x) -> A * {
           if constexpr (std::is_convertible_v<decltype(x.get()), A &>) {
@@ -75,7 +75,7 @@ public:
   bool EmitField(const char *, std::size_t length, std::size_t width);
   void SkipSpaces(std::optional<int> &remaining);
   std::optional<char32_t> NextInField(std::optional<int> &remaining);
-  std::optional<char32_t> GetNextNonBlank();  // can advance record
+  std::optional<char32_t> GetNextNonBlank(); // can advance record
 
 private:
   std::variant<std::reference_wrapper<OpenStatementState>,
@@ -109,15 +109,15 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
 
 struct InputStatementState {};
 struct OutputStatementState {};
-template<Direction D>
+template <Direction D>
 using IoDirectionState = std::conditional_t<D == Direction::Input,
     InputStatementState, OutputStatementState>;
 
 struct FormattedStatementState {};
 
 // Common state for list-directed internal & external I/O
-template<Direction> struct ListDirectedStatementState {};
-template<> struct ListDirectedStatementState<Direction::Output> {
+template <Direction> struct ListDirectedStatementState {};
+template <> struct ListDirectedStatementState<Direction::Output> {
   static std::size_t RemainingSpaceInRecord(const ConnectionState &);
   bool NeedAdvance(const ConnectionState &, std::size_t) const;
   bool EmitLeadingSpaceOrAdvance(
@@ -126,7 +126,7 @@ template<> struct ListDirectedStatementState<Direction::Output> {
       IoStatementState &, int maxRepeat = 1);
   bool lastWasUndelimitedCharacter{false};
 };
-template<> class ListDirectedStatementState<Direction::Input> {
+template <> class ListDirectedStatementState<Direction::Input> {
 public:
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
@@ -135,16 +135,16 @@ public:
       IoStatementState &, int maxRepeat = 1);
 
 private:
-  int remaining_{0};  // for "r*" repetition
+  int remaining_{0}; // for "r*" repetition
   std::int64_t initialRecordNumber_;
   std::int64_t initialPositionInRecord_;
-  bool isFirstItem_{true};  // leading separator implies null first item
-  bool hitSlash_{false};  // once '/' is seen, nullify further items
+  bool isFirstItem_{true}; // leading separator implies null first item
+  bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
 };
 
-template<Direction DIR, typename CHAR = char>
+template <Direction DIR, typename CHAR = char>
 class InternalIoStatementState : public IoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
@@ -170,10 +170,10 @@ protected:
   InternalDescriptorUnit<DIR> unit_;
 };
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 class InternalFormattedIoStatementState
-  : public InternalIoStatementState<DIR, CHAR>,
-    public FormattedStatementState {
+    : public InternalIoStatementState<DIR, CHAR>,
+      public FormattedStatementState {
 public:
   using CharType = CHAR;
   using typename InternalIoStatementState<DIR, CharType>::Buffer;
@@ -191,13 +191,13 @@ public:
   }
 
 private:
-  IoStatementState ioStatementState_;  // points to *this
+  IoStatementState ioStatementState_; // points to *this
   using InternalIoStatementState<DIR, CharType>::unit_;
   // format_ *must* be last; it may be partial someday
   FormatControl<InternalFormattedIoStatementState> format_;
 };
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 class InternalListIoStatementState : public InternalIoStatementState<DIR, CHAR>,
                                      public ListDirectedStatementState<DIR> {
 public:
@@ -211,7 +211,7 @@ public:
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
 
 private:
-  IoStatementState ioStatementState_;  // points to *this
+  IoStatementState ioStatementState_; // points to *this
   using InternalIoStatementState<DIR, CharType>::unit_;
 };
 
@@ -229,7 +229,7 @@ private:
   ExternalFileUnit &unit_;
 };
 
-template<Direction DIR>
+template <Direction DIR>
 class ExternalIoStatementState : public ExternalIoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
@@ -245,7 +245,7 @@ public:
   void HandleAbsolutePosition(std::int64_t);
 };
 
-template<Direction DIR, typename CHAR>
+template <Direction DIR, typename CHAR>
 class ExternalFormattedIoStatementState : public ExternalIoStatementState<DIR>,
                                           public FormattedStatementState {
 public:
@@ -268,7 +268,7 @@ private:
   FormatControl<ExternalFormattedIoStatementState> format_;
 };
 
-template<Direction DIR>
+template <Direction DIR>
 class ExternalListIoStatementState : public ExternalIoStatementState<DIR>,
                                      public ListDirectedStatementState<DIR> {
 public:
@@ -276,7 +276,7 @@ public:
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
 };
 
-template<Direction DIR>
+template <Direction DIR>
 class UnformattedIoStatementState : public ExternalIoStatementState<DIR> {
 public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
@@ -287,12 +287,12 @@ class OpenStatementState : public ExternalIoStatementBase {
 public:
   OpenStatementState(ExternalFileUnit &unit, bool wasExtant,
       const char *sourceFile = nullptr, int sourceLine = 0)
-    : ExternalIoStatementBase{unit, sourceFile, sourceLine}, wasExtant_{
-                                                                 wasExtant} {}
+      : ExternalIoStatementBase{unit, sourceFile, sourceLine}, wasExtant_{
+                                                                   wasExtant} {}
   bool wasExtant() const { return wasExtant_; }
   void set_status(OpenStatus status) { status_ = status; }
-  void set_path(const char *, std::size_t, int kind);  // FILE=
-  void set_position(Position position) { position_ = position; }  // POSITION=
+  void set_path(const char *, std::size_t, int kind); // FILE=
+  void set_position(Position position) { position_ = position; } // POSITION=
   int EndIoStatement();
 
 private:
@@ -307,7 +307,7 @@ class CloseStatementState : public ExternalIoStatementBase {
 public:
   CloseStatementState(ExternalFileUnit &unit, const char *sourceFile = nullptr,
       int sourceLine = 0)
-    : ExternalIoStatementBase{unit, sourceFile, sourceLine} {}
+      : ExternalIoStatementBase{unit, sourceFile, sourceLine} {}
   void set_status(CloseStatus status) { status_ = status; }
   int EndIoStatement();
 
@@ -318,15 +318,15 @@ private:
 class NoopCloseStatementState : public IoStatementBase {
 public:
   NoopCloseStatementState(const char *sourceFile, int sourceLine)
-    : IoStatementBase{sourceFile, sourceLine}, ioStatementState_{*this} {}
+      : IoStatementBase{sourceFile, sourceLine}, ioStatementState_{*this} {}
   IoStatementState &ioStatementState() { return ioStatementState_; }
-  void set_status(CloseStatus) {}  // discards
+  void set_status(CloseStatus) {} // discards
   MutableModes &mutableModes() { return connection_.modes; }
   ConnectionState &GetConnectionState() { return connection_; }
   int EndIoStatement();
 
 private:
-  IoStatementState ioStatementState_;  // points to *this
+  IoStatementState ioStatementState_; // points to *this
   ConnectionState connection_;
 };
 
@@ -353,5 +353,5 @@ extern template class FormatControl<
 extern template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Input>>;
 
-}
-#endif  // FORTRAN_RUNTIME_IO_STMT_H_
+} // namespace Fortran::runtime::io
+#endif // FORTRAN_RUNTIME_IO_STMT_H_

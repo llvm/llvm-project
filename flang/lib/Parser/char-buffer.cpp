@@ -87,4 +87,4 @@ std::string CharBuffer::MarshalNormalized() const {
   result.shrink_to_fit();
   return result;
 }
-}
+} // namespace Fortran::parser
