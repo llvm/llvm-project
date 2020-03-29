@@ -636,7 +636,11 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
 
   struct BankStall {
     BankStall(unsigned b, unsigned s) : Bank(b), Stalls(s) {};
-    bool operator< (const BankStall &RHS) const { return Stalls > RHS.Stalls; }
+    bool operator<(const BankStall &RHS) const {
+      if (Stalls == RHS.Stalls)
+        return Bank < RHS.Bank;
+      return Stalls > RHS.Stalls;
+    }
     unsigned Bank;
     unsigned Stalls;
   };
@@ -653,7 +657,7 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
       }
     }
   }
-  std::sort(BankStalls.begin(), BankStalls.end());
+  llvm::sort(BankStalls);
 
   Register OrigReg = VRM->getPhys(C.Reg);
   LRM->unassign(LI);

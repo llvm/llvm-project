@@ -42,9 +42,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
 // DataLayout: little or big endian
 static std::string computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::bpfeb)
-    return "E-m:e-p:64:64-i64:64-n32:64-S128";
+    return "E-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
   else
-    return "e-m:e-p:64:64-i64:64-n32:64-S128";
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {

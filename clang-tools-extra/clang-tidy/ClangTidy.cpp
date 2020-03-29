@@ -454,7 +454,7 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
     CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
 #endif // CLANG_ENABLE_STATIC_ANALYZER
 
-  std::sort(CheckNames.begin(), CheckNames.end());
+  llvm::sort(CheckNames);
   return CheckNames;
 }
 

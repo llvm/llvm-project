@@ -2,43 +2,38 @@
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=0 -S | FileCheck %s --check-prefix=ZERO
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=1 -S | FileCheck %s --check-prefix=ONE
 ; RUN: opt < %s -instcombine -S | FileCheck %s --check-prefix=FIXPOINT
-; RUN: not --crash opt < %s -instcombine -S --instcombine-infinite-loop-threshold=3 2>&1 | FileCheck %s --check-prefix=LOOP
+; RUN: not --crash opt < %s -instcombine -S --instcombine-infinite-loop-threshold=2 2>&1 | FileCheck %s --check-prefix=LOOP
 
-; Based on xor-of-icmps-with-extra-uses.ll. This requires multiple iterations of
+; Based on builtin-dynamic-object-size.ll. This requires multiple iterations of
 ; InstCombine to reach a fixpoint.
 
-define i1 @v0_select_of_consts(i32 %X, i32* %selected) {
-; ZERO-LABEL: @v0_select_of_consts(
-; ZERO-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; ZERO-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; ZERO-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 32767, i32 -32768
-; ZERO-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]]
-; ZERO-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; ZERO-NEXT:    ret i1 [[RES]]
-
-; ONE-LABEL: @v0_select_of_consts(
-; ONE-NEXT:    [[COND0:%.*]] = icmp sle i32 [[X:%.*]], 32767
-; ONE-NEXT:    [[COND0_NOT:%.*]] = xor i1 [[COND0]], true
-; ONE-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; ONE-NEXT:    [[SELECT:%.*]] = select i1 [[COND0_NOT]], i32 32767, i32 -32768
-; ONE-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; ONE-NEXT:    [[TMP1:%.*]] = and i1 [[COND0]], [[COND1]]
-; ONE-NEXT:    ret i1 [[TMP1]]
-
-; FIXPOINT-LABEL: @v0_select_of_consts(
-; FIXPOINT-NEXT:    [[COND0_INV:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; FIXPOINT-NEXT:    [[SELECT:%.*]] = select i1 [[COND0_INV]], i32 32767, i32 -32768
-; FIXPOINT-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; FIXPOINT-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
-; FIXPOINT-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
-; FIXPOINT-NEXT:    ret i1 [[TMP1]]
-
-; LOOP: LLVM ERROR: Instruction Combining seems stuck in an infinite loop after 3 iterations.
-
-  %cond0 = icmp sgt i32 %X, 32767
-  %cond1 = icmp sgt i32 %X, -32768
-  %select = select i1 %cond0, i32 32767, i32 -32768
-  store i32 %select, i32* %selected
-  %res = xor i1 %cond0, %cond1
-  ret i1 %res
+define i64 @weird_identity_but_ok(i64 %sz) {
+; ZERO-LABEL: @weird_identity_but_ok(
+; ZERO-NEXT:  entry:
+; ZERO-NEXT:    [[CALL:%.*]] = tail call i8* @malloc(i64 [[SZ:%.*]])
+; ZERO-NEXT:    [[CALC_SIZE:%.*]] = tail call i64 @llvm.objectsize.i64.p0i8(i8* [[CALL]], i1 false, i1 true, i1 true)
+; ZERO-NEXT:    tail call void @free(i8* [[CALL]])
+; ZERO-NEXT:    ret i64 [[CALC_SIZE]]
+;
+; ONE-LABEL: @weird_identity_but_ok(
+; ONE-NEXT:  entry:
+; ONE-NEXT:    [[TMP0:%.*]] = sub i64 [[SZ:%.*]], 0
+; ONE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[SZ]], 0
+; ONE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP0]]
+; ONE-NEXT:    ret i64 [[TMP2]]
+;
+; FIXPOINT-LABEL: @weird_identity_but_ok(
+; FIXPOINT-NEXT:  entry:
+; FIXPOINT-NEXT:    ret i64 [[SZ:%.*]]
+;
+; LOOP: LLVM ERROR: Instruction Combining seems stuck in an infinite loop after 2 iterations.
+entry:
+  %call = tail call i8* @malloc(i64 %sz)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0i8(i8* %call, i1 false, i1 true, i1 true)
+  tail call void @free(i8* %call)
+  ret i64 %calc_size
 }
+
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1)
+declare i8* @malloc(i64)
+declare void @free(i8*)

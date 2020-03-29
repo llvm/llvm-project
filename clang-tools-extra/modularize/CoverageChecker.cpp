@@ -338,7 +338,7 @@ bool CoverageChecker::collectFileSystemHeaders() {
   }
 
   // Sort it, because different file systems might order the file differently.
-  std::sort(FileSystemHeaders.begin(), FileSystemHeaders.end());
+  llvm::sort(FileSystemHeaders);
 
   return true;
 }
