@@ -322,9 +322,10 @@ protected:
   /// symbol that can be hidden (unexported).  Defaults to false.
   bool HasWeakDefCanBeHiddenDirective = false;
 
-  /// True if we have a .linkonce directive.  This is used on cygwin/mingw.
+  /// True if we should mark symbols as global instead of weak, for
+  /// weak*/linkonce*, if the symbol has a comdat.
   /// Defaults to false.
-  bool HasLinkOnceDirective = false;
+  bool AvoidWeakIfComdat = false;
 
   /// True if we have a .lglobl directive, which is used to emit the information
   /// of a static symbol into the symbol table. Defaults to false.
@@ -590,7 +591,7 @@ public:
     return HasWeakDefCanBeHiddenDirective;
   }
 
-  bool hasLinkOnceDirective() const { return HasLinkOnceDirective; }
+  bool avoidWeakIfComdat() const { return AvoidWeakIfComdat; }
 
   bool hasDotLGloblDirective() const { return HasDotLGloblDirective; }
 
