@@ -1095,6 +1095,61 @@ If you are having problems building or using LLVM, or if you have any other
 general questions about LLVM, please consult the `Frequently Asked
 Questions <FAQ.html>`_ page.
 
+If you are having problems with limited memory and build time, please try
+building with ninja instead of make. Please consider configuring the
+following options with cmake:
+
+ * -G Ninja
+   Setting this option will allow you to build with ninja instead of make.
+   Building with ninja significantly improves your build time, especially with
+   incremental builds, and improves your memory usage.
+
+ * -DLLVM_USE_LINKER
+   Setting this option to either gold or lld will significantly improve
+   performance. In the case that you are compiling lld, you may wish to use the
+   gold linker as a faster alternative.
+
+ * -DCMAKE_BUILD_TYPE
+   This option defaults to Debug; however, this may consume more memory during
+   the linking phase. So, you may wish to use the build type Release. Another
+   build type you may wish to consider is release-with-asserts which compiles at
+   nearly the same rate as the Release build; however, it may not be as easy
+   to debug. MinSizeRel is another build type you may wish to consider, if you
+   are still having problems with slow build time.
+
+ * -DLLVM_PARALLEL_LINK_JOBS
+   Set this equal to number of jobs you wish to run simultaneously. This is
+   similar to the -j option used with make, but only for link jobs. This option
+   is of course only meaningful if you plan to build with ninja. You may wish to
+   use a very low number of jobs, as this will greatly reduce the amount memory
+   used during the build process. If you have limited memory, you may wish to
+   set this to 1.
+
+ * -DLLVM_TARGETS_TO_BUILD
+   Set this equal to the target you wish to build. You may wish to set this to
+   X86; however, you will find a full list of targets within the
+   llvm-project/llvm/lib/Target directory.
+
+ * -DLLVM_OPTIMIZED_TABLEGEN
+   Set this to ON to generate a fully optimized tablegen during build. This will
+   significantly improve your build time.
+
+ * -DLLVM_ENABLE_PROJECTS
+   Set this equal to the projects you wish to compile (e.g. clang, lld, etc.) If
+   compiling more than one project, deliniate the list with a semicolon. Should
+   you run into issues with the semicolon, try surrounding it with single quotes.
+
+ * -DCLANG_ENABLE_STATIC_ANALYZER
+   Set this option to OFF if you do not require the clang static analyzer. This
+   should improve your build time significantly.
+
+ * -DLLVM_USE_SPLIT_DWARF
+   Consider setting this to ON if you require a debug build, as this will ease
+   memory pressure on the linker. This will make linking much faster, as the
+   binaries will not contain any of the debug information; however, this will
+   generate the debug information in the form of a DWARF object file (with the
+   extension .dwo).
+
 .. _links:
 
 Links
