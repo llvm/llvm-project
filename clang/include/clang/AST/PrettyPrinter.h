@@ -184,7 +184,8 @@ struct PrintingPolicy {
   /// with zero parameters.
   unsigned UseVoidForZeroParams : 1;
 
-  /// Whether nested templates must be closed like a<b<c> > rather than a<b<c>>.
+  /// Whether nested templates must be closed like 'a<b<c> >' rather than
+  /// 'a<b<c>>'.
   unsigned SplitTemplateClosers : 1;
 
   /// Provide a 'terse' output.
