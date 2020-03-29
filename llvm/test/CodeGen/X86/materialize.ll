@@ -2,6 +2,13 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+cmov %s -o - | FileCheck %s --check-prefix=CHECK64
 ; RUN: llc -mtriple=x86_64-pc-win32 -mattr=+cmov %s -o - | FileCheck %s --check-prefix=CHECKWIN64
 
+; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+cmov %s -o /dev/null \
+; RUN:     -print-after postrapseudos -filter-print-funcs pr26023 2>&1 \
+; RUN:    | FileCheck %s --check-prefix=OPERAND32
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+cmov %s -o /dev/null \
+; RUN:     -print-after postrapseudos -filter-print-funcs one64_minsize 2>&1 \
+; RUN:    | FileCheck %s --check-prefix=OPERAND64
+
 define i32 @one32_nooptsize() {
 entry:
   ret i32 1
@@ -92,6 +99,12 @@ entry:
 ; CHECK32:       pushl $5
 ; CHECK32:       popl %ecx
 ; CHECK32:       retl
+
+; Check push/pop have implicit def/use of $esp
+; OPERAND32:      PUSH32i8 5, implicit-def $esp, implicit $esp
+; OPERAND32-NEXT: CFI_INSTRUCTION adjust_cfa_offset 4
+; OPERAND32-NEXT: renamable $ecx = POP32r implicit-def $esp, implicit $esp
+; OPERAND32-NEXT: CFI_INSTRUCTION adjust_cfa_offset -4
 }
 
 
@@ -110,6 +123,13 @@ entry:
 ; CHECKWIN64-LABEL: one64_minsize:
 ; CHECKWIN64:       movl $1, %eax
 ; CHECKWIN64-NEXT:  retq
+
+; Check push/pop have implicit def/use of $rsp
+; OPERAND64:      PUSH64i8 1, implicit-def $rsp, implicit $rsp
+; OPERAND64-NEXT: CFI_INSTRUCTION adjust_cfa_offset 8
+; OPERAND64-NEXT: $rax = POP64r implicit-def $rsp, implicit $rsp
+; OPERAND64-NEXT: CFI_INSTRUCTION adjust_cfa_offset -8
+; OPERAND64-NEXT: RET 0, $rax
 }
 
 define i32 @minus_one32() optsize {
