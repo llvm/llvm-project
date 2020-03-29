@@ -7,6 +7,8 @@
 # RUN: ld.lld -T %t.lds %t.o -o %t
 # RUN: llvm-readelf -S -x .rodata -x .text %t | FileCheck %s
 
+# CHECK:      [ 1] .rodata   {{.*}} AL 3
+# CHECK:      [ 3] .text     {{.*}} AX 0
 # CHECK:      Hex dump of section '.rodata':
 # CHECK-NEXT: 00020103
 # CHECK:      Hex dump of section '.text':
@@ -17,6 +19,8 @@
 # RUN: ld.lld -T %t1.lds %t.o -o %t1
 # RUN: llvm-readelf -S -x .rodata -x .text %t1 | FileCheck --check-prefix=CHECK1 %s
 
+# CHECK1:      [ 1] .rodata   {{.*}} AL 3
+# CHECK1:      [ 3] .text     {{.*}} AX 0
 # CHECK1:      Hex dump of section '.rodata':
 # CHECK1-NEXT: 00010203
 # CHECK1:      Hex dump of section '.text':
@@ -35,7 +39,7 @@
 
 ## Non-contiguous SHF_LINK_ORDER sections, separated by a BYTE.
 # RUN: echo 'SECTIONS { .rodata : {*(.rodata.foo) BYTE(0) *(.rodata.bar)} }' > %terr1.lds
-# RUN: ld.lld -T %terr1.lds %t.o -o /dev/null
+# RUN: not ld.lld -T %terr1.lds %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
 ## Non-contiguous SHF_LINK_ORDER sections, separated by a non-SHF_LINK_ORDER section.
 # RUN: echo 'SECTIONS { .rodata : {*(.rodata.foo) *(.text) *(.rodata.bar)} }' > %terr2.lds
@@ -43,9 +47,9 @@
 
 ## Non-contiguous SHF_LINK_ORDER sections, separated by a symbol assignment.
 # RUN: echo 'SECTIONS { .rodata : {*(.rodata.foo) a = .; *(.rodata.bar)} }' > %terr3.lds
-# RUN: ld.lld -T %terr3.lds %t.o -o /dev/null
+# RUN: not ld.lld -T %terr3.lds %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
-# ERR: error: incompatible section flags for .rodata
+# ERR: error: {{.*}}.o:(.rodata.bar): SHF_LINK_ORDER sections in .rodata are not contiguous
 
 .global _start
 _start:
