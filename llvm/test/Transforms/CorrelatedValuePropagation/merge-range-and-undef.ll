@@ -3,6 +3,8 @@
 
 ; Test case for PR44949.
 
+declare void @use(i1)
+
 ; We can remove `%res = and i64 %p, 255`, because %r = 0 and we can eliminate
 ; %p as well.
 define i64 @constant_and_undef(i1 %c1, i64 %a) {
@@ -15,6 +17,8 @@ define i64 @constant_and_undef(i1 %c1, i64 %a) {
 ; CHECK-NEXT:    [[R:%.*]] = and i64 [[A:%.*]], 0
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
@@ -30,12 +34,15 @@ bb2:
 bb3:
   %p = phi i64 [ undef, %bb1 ], [ %r, %bb2 ]
   %res = and i64 %p, 255
+  %f.1 = icmp eq i64 %p, 1
+  call void @use(i1 %f.1)
+  %t.1 = icmp eq i64 %p, 0
+  call void @use(i1 %t.1)
   ret i64 %res
 }
 
 ; Check that we go to overdefined when merging a constant range with undef. We
 ; cannot remove '%res = and i64 %p, 255'.
-; FIXME: should not remove '%res = and i64 %p, 255'
 define i64 @constant_range_and_undef(i1 %cond, i64 %a) {
 ; CHECK-LABEL: @constant_range_and_undef(
 ; CHECK-NEXT:  entry:
@@ -48,6 +55,12 @@ define i64 @constant_range_and_undef(i1 %cond, i64 %a) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ [[R]], [[BB2]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -63,6 +76,13 @@ bb2:
 bb3:
   %p = phi i64 [ undef, %bb1 ], [ %r, %bb2 ]
   %res = and i64 %p, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
 
@@ -87,6 +107,12 @@ define i64 @constant_range_and_undef2(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[P2:%.*]] = phi i64 [ [[P]], [[BB4]] ], [ [[V3]], [[BB5]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P2]], 255
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -114,6 +140,13 @@ bb5:
 bb6:
   %p2 = phi i64 [ %p, %bb4 ], [ %v3, %bb5 ]
   %res = and i64 %p2, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
 
@@ -128,7 +161,13 @@ define i1 @constant_range_and_undef_3(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ [[R]], [[BB2]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[P]], 256
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 entry:
@@ -143,7 +182,14 @@ bb2:
 
 bb3:
   %p = phi i64 [ undef, %bb1 ], [ %r, %bb2 ]
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
   %c = icmp ult i64 %p, 256
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i1 %c
 }
 
@@ -163,6 +209,12 @@ define i64 @constant_range_and_undef_3_incoming_v1(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ 10, [[BB2]] ], [ undef, [[BB3]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -181,6 +233,13 @@ bb3:
 bb4:
   %p = phi i64 [ %r, %bb1 ], [ 10, %bb2], [ undef, %bb3 ]
   %res = and i64 %p, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
 
@@ -200,6 +259,12 @@ define i64 @constant_range_and_undef_3_incoming_v2(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ 10, [[BB2]] ], [ [[R]], [[BB3]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -218,6 +283,13 @@ bb3:
 bb4:
   %p = phi i64 [ undef, %bb1 ], [ 10, %bb2], [ %r, %bb3 ]
   %res = and i64 %p, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
 
@@ -237,6 +309,12 @@ define i64 @constant_range_and_undef_3_incoming_v3(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ undef, [[BB2]] ], [ 10, [[BB3]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -255,9 +333,15 @@ bb3:
 bb4:
   %p = phi i64 [ %r, %bb1 ], [ undef, %bb2], [ 10, %bb3 ]
   %res = and i64 %p, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
-
 
 define i64 @constant_range_and_phi_constant_undef(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-LABEL: @constant_range_and_phi_constant_undef(
@@ -274,6 +358,10 @@ define i64 @constant_range_and_phi_constant_undef(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ 10, [[BB4]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -296,5 +384,12 @@ bb4:
 bb5:
   %p = phi i64 [ %r, %bb1 ], [ %p.1, %bb4]
   %res = and i64 %p, 255
+  br label %exit
+
+exit: ; CVP only simplifies based on ranges for non-local conditions.
+  %f.1 = icmp eq i64 %p, 256
+  call void @use(i1 %f.1)
+  %t.1 = icmp ne i64 %p, 256
+  call void @use(i1 %t.1)
   ret i64 %res
 }
