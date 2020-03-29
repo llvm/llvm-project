@@ -653,7 +653,7 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
       }
     }
   }
-  std::sort(BankStalls.begin(), BankStalls.end());
+  llvm::sort(BankStalls);
 
   Register OrigReg = VRM->getPhys(C.Reg);
   LRM->unassign(LI);

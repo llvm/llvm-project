@@ -216,7 +216,7 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
     auto SI = SII.getInstructionIndex(*I);
     Indexes.push_back(After ? SI.getDeadSlot() : SI.getBaseIndex());
   }
-  std::sort(Indexes.begin(), Indexes.end());
+  llvm::sort(Indexes);
 
   auto &MRI = (*R.begin())->getParent()->getParent()->getRegInfo();
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
