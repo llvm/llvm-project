@@ -4573,7 +4573,7 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
          I != E; ++I, ++ix) {
       CastInst *CI = dyn_cast<CastInst>(*I);
       if (CI && isSafeToEliminateVarargsCast(Call, DL, CI, ix)) {
-        *I = CI->getOperand(0);
+        replaceUse(*I, CI->getOperand(0));
 
         // Update the byval type to match the argument type.
         if (Call.isByValArgument(ix)) {
