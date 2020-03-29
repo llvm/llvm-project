@@ -192,7 +192,6 @@ define <8 x double> @shuffle_v8f64_00001111(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_81a3c5e7(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_81a3c5e7:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vshufpd {{.*#+}} zmm0 = zmm1[0],zmm0[1],zmm1[2],zmm0[3],zmm1[4],zmm0[5],zmm1[6],zmm0[7]
@@ -202,7 +201,6 @@ define <8 x double> @shuffle_v8f64_81a3c5e7(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_08080808(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_08080808:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
@@ -221,7 +219,6 @@ define <8 x double> @shuffle_v8f64_08080808(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_08084c4c(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_08084c4c:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [0,8,0,8,4,12,4,12]
@@ -238,7 +235,6 @@ define <8 x double> @shuffle_v8f64_08084c4c(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_8823cc67(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_8823cc67:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [0,0,10,11,4,4,14,15]
@@ -257,7 +253,6 @@ define <8 x double> @shuffle_v8f64_8823cc67(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_9832dc76(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_9832dc76:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [1,0,11,10,5,4,15,14]
@@ -276,7 +271,6 @@ define <8 x double> @shuffle_v8f64_9832dc76(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_9810dc54(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_9810dc54:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [1,0,9,8,5,4,13,12]
@@ -295,7 +289,6 @@ define <8 x double> @shuffle_v8f64_9810dc54(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_08194c5d(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_08194c5d:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [0,8,1,9,4,12,5,13]
@@ -312,7 +305,6 @@ define <8 x double> @shuffle_v8f64_08194c5d(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_2a3b6e7f(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_2a3b6e7f:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [2,10,3,11,6,14,7,15]
@@ -329,7 +321,6 @@ define <8 x double> @shuffle_v8f64_2a3b6e7f(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_08192a3b(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_08192a3b:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [0,8,1,9,2,10,3,11]
@@ -346,7 +337,6 @@ define <8 x double> @shuffle_v8f64_08192a3b(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_08991abb(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_08991abb:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [8,0,1,1,9,2,3,3]
@@ -365,7 +355,6 @@ define <8 x double> @shuffle_v8f64_08991abb(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_091b2d3f(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_091b2d3f:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [0,9,1,11,2,13,3,15]
@@ -382,7 +371,6 @@ define <8 x double> @shuffle_v8f64_091b2d3f(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_09ab1def(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_09ab1def:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [8,1,2,3,9,5,6,7]
@@ -401,7 +389,6 @@ define <8 x double> @shuffle_v8f64_09ab1def(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00014445(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_00014445:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,1,4,4,4,5]
@@ -411,7 +398,6 @@ define <8 x double> @shuffle_v8f64_00014445(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00204464(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_00204464:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,2,0,4,4,6,4]
@@ -421,7 +407,6 @@ define <8 x double> @shuffle_v8f64_00204464(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_03004744(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_03004744:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,3,0,0,4,7,4,4]
@@ -431,7 +416,6 @@ define <8 x double> @shuffle_v8f64_03004744(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10005444(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_10005444:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[1,0,0,0,5,4,4,4]
@@ -441,7 +425,6 @@ define <8 x double> @shuffle_v8f64_10005444(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_22006644(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_22006644:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[2,2,0,0,6,6,4,4]
@@ -451,7 +434,6 @@ define <8 x double> @shuffle_v8f64_22006644(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_33307774(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_33307774:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,3,3,0,7,7,7,4]
@@ -461,7 +443,6 @@ define <8 x double> @shuffle_v8f64_33307774(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_32107654(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_32107654:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
@@ -471,7 +452,6 @@ define <8 x double> @shuffle_v8f64_32107654(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00234467(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_00234467:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,0,2,3,4,4,6,7]
@@ -481,7 +461,6 @@ define <8 x double> @shuffle_v8f64_00234467(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00224466(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_00224466:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovddup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6]
@@ -491,7 +470,6 @@ define <8 x double> @shuffle_v8f64_00224466(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10325476(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_10325476:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
@@ -501,7 +479,6 @@ define <8 x double> @shuffle_v8f64_10325476(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_11335577(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_11335577:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7]
@@ -511,7 +488,6 @@ define <8 x double> @shuffle_v8f64_11335577(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10235467(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_10235467:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,0,2,3,5,4,6,7]
@@ -521,7 +497,6 @@ define <8 x double> @shuffle_v8f64_10235467(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10225466(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_10225466:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,0,2,2,5,4,6,6]
@@ -531,7 +506,6 @@ define <8 x double> @shuffle_v8f64_10225466(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00015444(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_00015444:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,1,5,4,4,4]
@@ -548,7 +522,6 @@ define <8 x double> @shuffle_v8f64_00015444(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00204644(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_00204644:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,0,4,6,4,4]
@@ -565,7 +538,6 @@ define <8 x double> @shuffle_v8f64_00204644(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_03004474(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_03004474:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,3,0,0,4,4,7,4]
@@ -582,7 +554,6 @@ define <8 x double> @shuffle_v8f64_03004474(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10004444(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_10004444:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [1,0,0,0,4,4,4,4]
@@ -599,7 +570,6 @@ define <8 x double> @shuffle_v8f64_10004444(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_22006446(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_22006446:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [2,2,0,0,6,4,4,6]
@@ -616,7 +586,6 @@ define <8 x double> @shuffle_v8f64_22006446(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_33307474(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_33307474:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [3,3,3,0,7,4,7,4]
@@ -633,7 +602,6 @@ define <8 x double> @shuffle_v8f64_33307474(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_32104567(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_32104567:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [3,2,1,0,4,5,6,7]
@@ -650,7 +618,6 @@ define <8 x double> @shuffle_v8f64_32104567(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00236744(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_00236744:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,3,6,7,4,4]
@@ -667,7 +634,6 @@ define <8 x double> @shuffle_v8f64_00236744(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00226644(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_00226644:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,2,6,6,4,4]
@@ -684,7 +650,6 @@ define <8 x double> @shuffle_v8f64_00226644(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_10324567(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_10324567:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7]
@@ -694,7 +659,6 @@ define <8 x double> @shuffle_v8f64_10324567(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_11334567(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_11334567:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,1,3,3,4,5,6,7]
@@ -704,7 +668,6 @@ define <8 x double> @shuffle_v8f64_11334567(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_01235467(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_01235467:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,1,2,3,5,4,6,7]
@@ -714,7 +677,6 @@ define <8 x double> @shuffle_v8f64_01235467(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_01235466(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_01235466:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,1,2,3,5,4,6,6]
@@ -724,7 +686,6 @@ define <8 x double> @shuffle_v8f64_01235466(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_002u6u44(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_002u6u44:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <0,0,2,u,6,u,4,4>
@@ -741,7 +702,6 @@ define <8 x double> @shuffle_v8f64_002u6u44(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_00uu66uu(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_00uu66uu:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <0,0,u,u,6,6,u,u>
@@ -758,7 +718,6 @@ define <8 x double> @shuffle_v8f64_00uu66uu(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_103245uu(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_103245uu:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,6]
@@ -768,7 +727,6 @@ define <8 x double> @shuffle_v8f64_103245uu(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_1133uu67(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_1133uu67:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[1,1,3,3,4,4,6,7]
@@ -778,7 +736,6 @@ define <8 x double> @shuffle_v8f64_1133uu67(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_0uu354uu(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_0uu354uu:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,0,2,3,5,4,6,6]
@@ -788,7 +745,6 @@ define <8 x double> @shuffle_v8f64_0uu354uu(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_uuu3uu66(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_uuu3uu66:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,0,2,3,4,4,6,6]
@@ -798,7 +754,6 @@ define <8 x double> @shuffle_v8f64_uuu3uu66(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_c348cda0(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_c348cda0:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [4,11,12,0,4,5,2,8]
@@ -817,7 +772,6 @@ define <8 x double> @shuffle_v8f64_c348cda0(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_f511235a(<8 x double> %a, <8 x double> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8f64_f511235a:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovapd {{.*#+}} zmm2 = [15,5,1,1,2,3,5,10]
@@ -844,7 +798,6 @@ define <8 x double> @shuffle_v8f64_1z2z5z6z(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00000000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_00000000:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
@@ -874,7 +827,6 @@ define <8 x i64> @shuffle_v8i64_66666666(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00000010(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00000010:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,0,0,1,0]
@@ -891,7 +843,6 @@ define <8 x i64> @shuffle_v8i64_00000010(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00000200(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00000200:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,0,2,0,0]
@@ -908,7 +859,6 @@ define <8 x i64> @shuffle_v8i64_00000200(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00003000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00003000:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,3,0,0,0]
@@ -925,7 +875,6 @@ define <8 x i64> @shuffle_v8i64_00003000(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00040000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00040000:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,4,0,0,0,0]
@@ -942,7 +891,6 @@ define <8 x i64> @shuffle_v8i64_00040000(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00500000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00500000:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,5,0,0,0,0,0]
@@ -959,7 +907,6 @@ define <8 x i64> @shuffle_v8i64_00500000(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_06000000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_06000000:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,6,0,0,0,0,0,0]
@@ -976,7 +923,6 @@ define <8 x i64> @shuffle_v8i64_06000000(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_70000000(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_70000000:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movl $7, %eax
@@ -1015,7 +961,6 @@ define <8 x i64> @shuffle_v8i64_01014545_mem(<8 x i64>* %ptr, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00112233(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00112233:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
@@ -1032,7 +977,6 @@ define <8 x i64> @shuffle_v8i64_00112233(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00001111(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00001111:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,1,1,1,1]
@@ -1049,7 +993,6 @@ define <8 x i64> @shuffle_v8i64_00001111(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_81a3c5e7(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_81a3c5e7:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movb $-86, %al
@@ -1061,7 +1004,6 @@ define <8 x i64> @shuffle_v8i64_81a3c5e7(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08080808(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_08080808:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
@@ -1080,7 +1022,6 @@ define <8 x i64> @shuffle_v8i64_08080808(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08084c4c(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_08084c4c:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,0,8,4,12,4,12]
@@ -1097,7 +1038,6 @@ define <8 x i64> @shuffle_v8i64_08084c4c(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_8823cc67(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_8823cc67:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,10,11,4,4,14,15]
@@ -1116,7 +1056,6 @@ define <8 x i64> @shuffle_v8i64_8823cc67(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_9832dc76(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_9832dc76:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,11,10,5,4,15,14]
@@ -1135,7 +1074,6 @@ define <8 x i64> @shuffle_v8i64_9832dc76(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_9810dc54(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_9810dc54:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,9,8,5,4,13,12]
@@ -1154,7 +1092,6 @@ define <8 x i64> @shuffle_v8i64_9810dc54(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08194c5d(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_08194c5d:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,1,9,4,12,5,13]
@@ -1171,7 +1108,6 @@ define <8 x i64> @shuffle_v8i64_08194c5d(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_2a3b6e7f(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_2a3b6e7f:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,10,3,11,6,14,7,15]
@@ -1188,7 +1124,6 @@ define <8 x i64> @shuffle_v8i64_2a3b6e7f(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08192a3b(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_08192a3b:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,1,9,2,10,3,11]
@@ -1205,7 +1140,6 @@ define <8 x i64> @shuffle_v8i64_08192a3b(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08991abb(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_08991abb:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [8,0,1,1,9,2,3,3]
@@ -1224,7 +1158,6 @@ define <8 x i64> @shuffle_v8i64_08991abb(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_091b2d3f(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_091b2d3f:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,9,1,11,2,13,3,15]
@@ -1241,7 +1174,6 @@ define <8 x i64> @shuffle_v8i64_091b2d3f(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_09ab1def(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_09ab1def:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [8,1,2,3,9,5,6,7]
@@ -1260,7 +1192,6 @@ define <8 x i64> @shuffle_v8i64_09ab1def(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00014445(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_00014445:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,1,4,4,4,5]
@@ -1270,7 +1201,6 @@ define <8 x i64> @shuffle_v8i64_00014445(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00204464(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_00204464:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,2,0,4,4,6,4]
@@ -1280,7 +1210,6 @@ define <8 x i64> @shuffle_v8i64_00204464(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_03004744(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_03004744:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,3,0,0,4,7,4,4]
@@ -1290,7 +1219,6 @@ define <8 x i64> @shuffle_v8i64_03004744(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10005444(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_10005444:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[1,0,0,0,5,4,4,4]
@@ -1300,7 +1228,6 @@ define <8 x i64> @shuffle_v8i64_10005444(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_22006644(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_22006644:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[2,2,0,0,6,6,4,4]
@@ -1310,7 +1237,6 @@ define <8 x i64> @shuffle_v8i64_22006644(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_33307774(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_33307774:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,3,3,0,7,7,7,4]
@@ -1320,7 +1246,6 @@ define <8 x i64> @shuffle_v8i64_33307774(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_32107654(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_32107654:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
@@ -1330,7 +1255,6 @@ define <8 x i64> @shuffle_v8i64_32107654(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00234467(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_00234467:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,2,3,4,4,6,7]
@@ -1340,7 +1264,6 @@ define <8 x i64> @shuffle_v8i64_00234467(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00224466(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_00224466:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
@@ -1350,7 +1273,6 @@ define <8 x i64> @shuffle_v8i64_00224466(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10325476(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_10325476:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
@@ -1360,7 +1282,6 @@ define <8 x i64> @shuffle_v8i64_10325476(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_11335577(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_11335577:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
@@ -1370,7 +1291,6 @@ define <8 x i64> @shuffle_v8i64_11335577(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10235467(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_10235467:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[1,0,2,3,5,4,6,7]
@@ -1380,7 +1300,6 @@ define <8 x i64> @shuffle_v8i64_10235467(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10225466(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_10225466:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[1,0,2,2,5,4,6,6]
@@ -1390,7 +1309,6 @@ define <8 x i64> @shuffle_v8i64_10225466(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00015444(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00015444:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,1,5,4,4,4]
@@ -1407,7 +1325,6 @@ define <8 x i64> @shuffle_v8i64_00015444(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00204644(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00204644:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,0,4,6,4,4]
@@ -1424,7 +1341,6 @@ define <8 x i64> @shuffle_v8i64_00204644(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_03004474(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_03004474:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,3,0,0,4,4,7,4]
@@ -1441,7 +1357,6 @@ define <8 x i64> @shuffle_v8i64_03004474(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10004444(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_10004444:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [1,0,0,0,4,4,4,4]
@@ -1458,7 +1373,6 @@ define <8 x i64> @shuffle_v8i64_10004444(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_22006446(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_22006446:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [2,2,0,0,6,4,4,6]
@@ -1475,7 +1389,6 @@ define <8 x i64> @shuffle_v8i64_22006446(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_33307474(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_33307474:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [3,3,3,0,7,4,7,4]
@@ -1492,7 +1405,6 @@ define <8 x i64> @shuffle_v8i64_33307474(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_32104567(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_32104567:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [3,2,1,0,4,5,6,7]
@@ -1509,7 +1421,6 @@ define <8 x i64> @shuffle_v8i64_32104567(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00236744(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00236744:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,3,6,7,4,4]
@@ -1526,7 +1437,6 @@ define <8 x i64> @shuffle_v8i64_00236744(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00226644(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00226644:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,2,2,6,6,4,4]
@@ -1543,7 +1453,6 @@ define <8 x i64> @shuffle_v8i64_00226644(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_10324567(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_10324567:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [1,0,3,2,4,5,6,7]
@@ -1560,7 +1469,6 @@ define <8 x i64> @shuffle_v8i64_10324567(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_11334567(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_11334567:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [1,1,3,3,4,5,6,7]
@@ -1577,7 +1485,6 @@ define <8 x i64> @shuffle_v8i64_11334567(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_01235467(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_01235467:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,1,2,3,5,4,6,7]
@@ -1594,7 +1501,6 @@ define <8 x i64> @shuffle_v8i64_01235467(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_01235466(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_01235466:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,1,2,3,5,4,6,6]
@@ -1611,7 +1517,6 @@ define <8 x i64> @shuffle_v8i64_01235466(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_002u6u44(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_002u6u44:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <0,0,2,u,6,u,4,4>
@@ -1628,7 +1533,6 @@ define <8 x i64> @shuffle_v8i64_002u6u44(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_00uu66uu(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_00uu66uu:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <0,0,u,u,6,6,u,u>
@@ -1645,7 +1549,6 @@ define <8 x i64> @shuffle_v8i64_00uu66uu(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_103245uu(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_103245uu:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <1,0,3,2,4,5,u,u>
@@ -1662,7 +1565,6 @@ define <8 x i64> @shuffle_v8i64_103245uu(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_1133uu67(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_1133uu67:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <1,1,3,3,u,u,6,7>
@@ -1679,7 +1581,6 @@ define <8 x i64> @shuffle_v8i64_1133uu67(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_0uu354uu(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_0uu354uu:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <0,u,u,3,5,4,u,u>
@@ -1696,7 +1597,6 @@ define <8 x i64> @shuffle_v8i64_0uu354uu(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_uuu3uu66(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_uuu3uu66:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = <u,u,u,3,u,u,6,6>
@@ -1713,7 +1613,6 @@ define <8 x i64> @shuffle_v8i64_uuu3uu66(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_6caa87e5(<8 x i64> %a, <8 x i64> %b) {
-;
 ; AVX512F-LABEL: shuffle_v8i64_6caa87e5:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,4,2,2,0,15,6,13]
@@ -1732,7 +1631,6 @@ define <8 x i64> @shuffle_v8i64_6caa87e5(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_082a4c6e(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_082a4c6e:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
@@ -1742,7 +1640,6 @@ define <8 x double> @shuffle_v8f64_082a4c6e(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_0z2z4z6z(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_0z2z4z6z:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
@@ -1753,7 +1650,6 @@ define <8 x double> @shuffle_v8f64_0z2z4z6z(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_082a4c6e(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_082a4c6e:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
@@ -1763,7 +1659,6 @@ define <8 x i64> @shuffle_v8i64_082a4c6e(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_z8zazcze(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_z8zazcze:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -1774,7 +1669,6 @@ define <8 x i64> @shuffle_v8i64_z8zazcze(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_193b5d7f(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_193b5d7f:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
@@ -1784,7 +1678,6 @@ define <8 x double> @shuffle_v8f64_193b5d7f(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @shuffle_v8f64_z9zbzdzf(<8 x double> %a, <8 x double> %b) {
-;
 ; ALL-LABEL: shuffle_v8f64_z9zbzdzf:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
@@ -1795,7 +1688,6 @@ define <8 x double> @shuffle_v8f64_z9zbzdzf(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_193b5d7f(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_193b5d7f:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
@@ -1805,7 +1697,6 @@ define <8 x i64> @shuffle_v8i64_193b5d7f(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_1z3z5z7z(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_1z3z5z7z:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -1967,7 +1858,6 @@ define <8 x double> @shuffle_v8f64_0zzzzzzz(<8 x double> %a) {
 }
 
 define <8 x i64> @shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b) {
-;
 ; ALL-LABEL: shuffle_v8i64_12345678:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7],zmm1[0]
@@ -1977,7 +1867,6 @@ define <8 x i64> @shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_12345670(<8 x i64> %a) {
-;
 ; ALL-LABEL: shuffle_v8i64_12345670:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7,0]
@@ -1987,7 +1876,6 @@ define <8 x i64> @shuffle_v8i64_12345670(<8 x i64> %a) {
 }
 
 define <8 x i64> @mask_shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b, <8 x i64> %passthru, i8 %mask) {
-;
 ; AVX512F-LABEL: mask_shuffle_v8i64_12345678:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
@@ -2009,7 +1897,6 @@ define <8 x i64> @mask_shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b, <8 x i
 }
 
 define <8 x i64> @mask_shuffle_v8i64_12345670(<8 x i64> %a, <8 x i64> %passthru, i8 %mask) {
-;
 ; AVX512F-LABEL: mask_shuffle_v8i64_12345670:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
@@ -2031,7 +1918,6 @@ define <8 x i64> @mask_shuffle_v8i64_12345670(<8 x i64> %a, <8 x i64> %passthru,
 }
 
 define <8 x i64> @maskz_shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
-;
 ; AVX512F-LABEL: maskz_shuffle_v8i64_12345678:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
@@ -2051,7 +1937,6 @@ define <8 x i64> @maskz_shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b, i8 %m
 }
 
 define <8 x i64> @maskz_shuffle_v8i64_12345670(<8 x i64> %a, i8 %mask) {
-;
 ; AVX512F-LABEL: maskz_shuffle_v8i64_12345670:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
