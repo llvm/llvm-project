@@ -61,9 +61,7 @@ MATCHER_P3(Fix, Range, Replacement, Message,
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
 
-MATCHER_P(FixMessage, Message, "") {
-  return arg.Message == Message;
-}
+MATCHER_P(FixMessage, Message, "") { return arg.Message == Message; }
 
 MATCHER_P(EqualToLSPDiag, LSPDiag,
           "LSP diagnostic " + llvm::to_string(LSPDiag)) {
@@ -258,13 +256,13 @@ TEST(DiagnosticsTest, ClangTidy) {
           Diag(Test.range("macroarg"),
                "multiple unsequenced modifications to 'y'"),
           AllOf(
-            Diag(Test.range("main"),
-                 "use a trailing return type for this function"),
-            DiagSource(Diag::ClangTidy),
-            DiagName("modernize-use-trailing-return-type"),
-            // Verify that we don't have "[check-name]" suffix in the message.
-            WithFix(FixMessage("use a trailing return type for this function")))
-          ));
+              Diag(Test.range("main"),
+                   "use a trailing return type for this function"),
+              DiagSource(Diag::ClangTidy),
+              DiagName("modernize-use-trailing-return-type"),
+              // Verify that we don't have "[check-name]" suffix in the message.
+              WithFix(FixMessage(
+                  "use a trailing return type for this function")))));
 }
 
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
@@ -836,8 +834,9 @@ TEST(IncludeFixerTest, NoCrashOnTemplateInstantiations) {
   auto Index = buildIndexWithSymbol({});
   TU.ExternalIndex = Index.get();
 
-  EXPECT_THAT(TU.build().getDiagnostics(),
-              ElementsAre(Diag(Test.range(), "use of undeclared identifier 'a'")));
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(Diag(Test.range(), "use of undeclared identifier 'a'")));
 }
 
 TEST(DiagsInHeaders, DiagInsideHeader) {
