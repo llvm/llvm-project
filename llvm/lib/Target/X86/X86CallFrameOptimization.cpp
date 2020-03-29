@@ -549,7 +549,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
       // push into the instruction.
-      bool SlowPUSHrmm = STI->isAtom() || STI->isSLM();
+      bool SlowPUSHrmm = STI->slowTwoMemOps();
 
       // Check that this is legal to fold. Right now, we're extremely
       // conservative about that.
