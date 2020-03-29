@@ -1036,7 +1036,7 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
 /// Canonicalize all these variants to 1 pattern.
 /// This makes CSE more likely.
 static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
-                                        InstCombiner::BuilderTy &Builder) {
+                                        InstCombiner &IC) {
   if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)))
     return nullptr;
 
@@ -1085,12 +1085,14 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   // Create the canonical RHS: RHS = sub (0, LHS).
   if (!RHSCanonicalized) {
     assert(RHS->hasOneUse() && "RHS use number is not right");
-    RHS = Builder.CreateNeg(LHS);
+    RHS = IC.Builder.CreateNeg(LHS);
     if (TVal == LHS) {
-      Sel.setFalseValue(RHS);
+      // Replace false value.
+      IC.replaceOperand(Sel, 2, RHS);
       FVal = RHS;
     } else {
-      Sel.setTrueValue(RHS);
+      // Replace true value.
+      IC.replaceOperand(Sel, 1, RHS);
       TVal = RHS;
     }
   }
@@ -1398,7 +1400,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
     return NewSel;
 
-  if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, Builder))
+  if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, *this))
     return NewAbs;
 
   if (Instruction *NewAbs = canonicalizeClampLike(SI, *ICI, Builder))
