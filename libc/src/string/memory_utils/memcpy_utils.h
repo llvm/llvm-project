@@ -14,8 +14,10 @@
 
 // __builtin_memcpy_inline guarantees to never call external functions.
 // Unfortunately it is not widely available.
-#if defined(__clang__) && __has_builtin(__builtin_memcpy_inline)
+#ifdef __clang__
+#if __has_builtin(__builtin_memcpy_inline)
 #define USE_BUILTIN_MEMCPY_INLINE
+#endif
 #elif defined(__GNUC__)
 #define USE_BUILTIN_MEMCPY
 #endif
