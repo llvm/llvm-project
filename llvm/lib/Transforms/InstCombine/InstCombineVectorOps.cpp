@@ -345,10 +345,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
         APInt DemandedElts(NumElts, 0);
         DemandedElts.setBit(IndexC->getZExtValue());
         if (Value *V =
-                SimplifyDemandedVectorElts(SrcVec, DemandedElts, UndefElts)) {
-          EI.setOperand(0, V);
-          return &EI;
-        }
+                SimplifyDemandedVectorElts(SrcVec, DemandedElts, UndefElts))
+          return replaceOperand(EI, 0, V);
       } else {
         // If the input vector has multiple uses, simplify it based on a union
         // of all elements used.
