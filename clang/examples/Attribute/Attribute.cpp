@@ -28,9 +28,10 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
     OptArgs = 1;
     // GNU-style __attribute__(("example")) and C++-style [[example]] and
     // [[plugin::example]] supported.
-    Spellings.push_back({ParsedAttr::AS_GNU, "example"});
-    Spellings.push_back({ParsedAttr::AS_CXX11, "example"});
-    Spellings.push_back({ParsedAttr::AS_CXX11, "plugin::example"});
+    static constexpr Spelling S[] = {{ParsedAttr::AS_GNU, "example"},
+                                     {ParsedAttr::AS_CXX11, "example"},
+                                     {ParsedAttr::AS_CXX11, "plugin::example"}};
+    Spellings = S;
   }
 
   bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
