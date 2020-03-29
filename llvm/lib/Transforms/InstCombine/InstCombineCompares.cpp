@@ -5618,6 +5618,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
           OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, A, B, *AddI,
                                 Result, Overflow)) {
         replaceInstUsesWith(*AddI, Result);
+        eraseInstFromFunction(*AddI);
         return replaceInstUsesWith(I, Overflow);
       }
     }
