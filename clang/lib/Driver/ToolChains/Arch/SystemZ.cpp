@@ -47,7 +47,7 @@ std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
 
     return std::string(CPUName);
   }
-  return "z10";
+  return CLANG_SYSTEMZ_DEFAULT_ARCH;
 }
 
 void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
