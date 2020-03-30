@@ -5648,6 +5648,22 @@ namespace ReturnScopedLockable {
     auto ptr = get();
     return ptr->f();
   }
+  void use_constructor() {
+    auto ptr = ReadLockedPtr<Object>(nullptr);
+    ptr->f();
+    auto ptr2 = ReadLockedPtr<Object>{nullptr};
+    ptr2->f();
+    auto ptr3 = (ReadLockedPtr<Object>{nullptr});
+    ptr3->f();
+  }
+  struct Convertible {
+    Convertible();
+    operator ReadLockedPtr<Object>();
+  };
+  void use_conversion() {
+    ReadLockedPtr<Object> ptr = Convertible();
+    ptr->f();
+  }
 }
 
 namespace PR38640 {

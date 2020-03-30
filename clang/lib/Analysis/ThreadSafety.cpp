@@ -2139,12 +2139,14 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
 
       // handle constructors that involve temporaries
       if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
-        E = EWC->getSubExpr();
-      if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-        if (ICE->getCastKind() == CK_NoOp)
-          E = ICE->getSubExpr();
+        E = EWC->getSubExpr()->IgnoreParens();
+      if (auto *CE = dyn_cast<CastExpr>(E))
+        if (CE->getCastKind() == CK_NoOp ||
+            CE->getCastKind() == CK_ConstructorConversion ||
+            CE->getCastKind() == CK_UserDefinedConversion)
+          E = CE->getSubExpr()->IgnoreParens();
       if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-        E = BTE->getSubExpr();
+        E = BTE->getSubExpr()->IgnoreParens();
 
       if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
         const auto *CtorD = dyn_cast_or_null<NamedDecl>(CE->getConstructor());
