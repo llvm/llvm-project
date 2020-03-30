@@ -1,4 +1,4 @@
-# `std` Dialect
+# 'std' Dialect
 
 This dialect provides documentation for operations within the Standard dialect.
 
