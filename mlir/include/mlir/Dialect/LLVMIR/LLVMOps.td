@@ -663,7 +663,8 @@ def LLVM_LLVMFuncOp
     : LLVM_ZeroResultOp<"func", [IsolatedFromAbove, FunctionLike, Symbol]>,
       Arguments<(ins DefaultValuedAttr<Linkage,
                                        "Linkage::External">:$linkage,
-                     OptionalAttr<FlatSymbolRefAttr>:$personality)> {
+                     OptionalAttr<FlatSymbolRefAttr>:$personality,
+                     OptionalAttr<ArrayAttr>:$passthrough)> {
   let summary = "LLVM dialect function, has wrapped LLVM IR function type";
 
   let regions = (region AnyRegion:$body);
