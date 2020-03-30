@@ -166,7 +166,7 @@ libc++ specific options
 
 .. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
 
-  **Default**: ``ON``
+  **Default**: ``OFF``
 
   Build libc++ with assertions enabled.
 
