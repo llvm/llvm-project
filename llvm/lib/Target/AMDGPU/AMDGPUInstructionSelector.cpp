@@ -1245,7 +1245,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   const LLT AddrTy = MRI->getType(MI.getOperand(VAddrIdx).getReg());
   const bool IsA16 = AddrTy.getScalarType() == S16;
 
-  Register VData;
+  Register VDataIn, VDataOut;
   LLT VDataTy;
   int NumVDataDwords = -1;
   bool IsD16 = false;
@@ -1271,7 +1271,24 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned DMaskLanes = 0;
 
   if (BaseOpcode->Atomic) {
-    return false; // TODO
+    VDataOut = MI.getOperand(0).getReg();
+    VDataIn = MI.getOperand(2).getReg();
+    LLT Ty = MRI->getType(VDataIn);
+
+    // Be careful to allow atomic swap on 16-bit element vectors.
+    const bool Is64Bit = BaseOpcode->AtomicX2 ?
+      Ty.getSizeInBits() == 128 :
+      Ty.getSizeInBits() == 64;
+
+    if (BaseOpcode->AtomicX2) {
+      assert(MI.getOperand(3).getReg() == AMDGPU::NoRegister);
+
+      DMask = Is64Bit ? 0xf : 0x3;
+      NumVDataDwords = Is64Bit ? 4 : 2;
+    } else {
+      DMask = Is64Bit ? 0x3 : 0x1;
+      NumVDataDwords = Is64Bit ? 2 : 1;
+    }
   } else {
     const int DMaskIdx = 2; // Input/output + intrinsic ID.
 
@@ -1279,12 +1296,12 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
 
     if (BaseOpcode->Store) {
-      VData = MI.getOperand(1).getReg();
-      VDataTy = MRI->getType(VData);
+      VDataIn = MI.getOperand(1).getReg();
+      VDataTy = MRI->getType(VDataIn);
       NumVDataDwords = (VDataTy.getSizeInBits() + 31) / 32;
     } else {
-      VData = MI.getOperand(0).getReg();
-      VDataTy = MRI->getType(VData);
+      VDataOut = MI.getOperand(0).getReg();
+      VDataTy = MRI->getType(VDataOut);
       NumVDataDwords = DMaskLanes;
 
       // One memoperand is mandatory, except for getresinfo.
@@ -1386,11 +1403,25 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opcode))
     .cloneMemRefs(MI);
 
-  if (!BaseOpcode->Store || BaseOpcode->Atomic)
-    MIB.addDef(VData); // vdata output
+  if (VDataOut) {
+    if (BaseOpcode->AtomicX2) {
+      const bool Is64 = MRI->getType(VDataOut).getSizeInBits() == 64;
 
-  if (BaseOpcode->Store || BaseOpcode->Atomic)
-    MIB.addReg(VData); // vdata input
+      Register TmpReg = MRI->createVirtualRegister(
+        Is64 ? &AMDGPU::VReg_128RegClass : &AMDGPU::VReg_64RegClass);
+      unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
+
+      MIB.addDef(TmpReg);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
+        .addReg(TmpReg, RegState::Kill, SubReg);
+
+    } else {
+      MIB.addDef(VDataOut); // vdata output
+    }
+  }
+
+  if (VDataIn)
+    MIB.addReg(VDataIn); // vdata input
 
   for (int i = 0; i != NumVAddrRegs; ++i) {
     MachineOperand &SrcOp = MI.getOperand(VAddrIdx + i);
