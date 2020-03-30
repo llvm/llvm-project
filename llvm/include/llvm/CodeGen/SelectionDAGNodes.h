@@ -1292,7 +1292,13 @@ public:
   bool writeMem() const { return MMO->isStore(); }
 
   /// Returns alignment and volatility of the memory access
-  unsigned getOriginalAlignment() const { return MMO->getBaseAlign().value(); }
+  Align getOriginalAlign() const { return MMO->getBaseAlign(); }
+  Align getAlign() const { return MMO->getAlign(); }
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getOriginalAlignment() const,
+                            "Use getOriginalAlign() instead") {
+    return MMO->getBaseAlign().value();
+  }
+  // FIXME: Remove once transition to getAlign is over.
   unsigned getAlignment() const { return MMO->getAlign().value(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an
