@@ -113,3 +113,18 @@
 // CHECK-LINUX: #define __unix__ 1
 // CHECK-LINUX: #define linux 1
 // CHECK-LINUX: #define unix 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-linux-musl \
+// RUN: -target-cpu hexagonv67 -target-feature +hvxv67 \
+// RUN: -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-ATOMIC
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// CHECK-ATOMIC: #define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
