@@ -1387,6 +1387,24 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
            "Expected shuffle operands to have same type");
     unsigned OpWidth =
         Shuffle->getOperand(0)->getType()->getVectorNumElements();
+    // Handle trivial case of a splat. Only check the first element of LHS
+    // operand.
+    if (isa<ConstantAggregateZero>(Shuffle->getMask()) &&
+        DemandedElts.isAllOnesValue()) {
+      if (!isa<UndefValue>(I->getOperand(1))) {
+        I->setOperand(1, UndefValue::get(I->getOperand(1)->getType()));
+        MadeChange = true;
+      }
+      APInt LeftDemanded(OpWidth, 1);
+      APInt LHSUndefElts(OpWidth, 0);
+      simplifyAndSetOp(I, 0, LeftDemanded, LHSUndefElts);
+      if (LHSUndefElts[0])
+        UndefElts = EltMask;
+      else
+        UndefElts.clearAllBits();
+      break;
+    }
+
     APInt LeftDemanded(OpWidth, 0), RightDemanded(OpWidth, 0);
     for (unsigned i = 0; i < VWidth; i++) {
       if (DemandedElts[i]) {
