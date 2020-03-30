@@ -363,6 +363,15 @@ ExprDependence clang::computeDependence(OMPArraySectionExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(OMPArrayShapingExpr *E) {
+  auto D = E->getBase()->getDependence() |
+           toExprDependence(E->getType()->getDependence());
+  for (Expr *Dim: E->getDimensions())
+    if (Dim)
+      D |= Dim->getDependence();
+  return D;
+}
+
 /// Compute the type-, value-, and instantiation-dependence of a
 /// declaration reference
 /// based on the declaration being referenced.
