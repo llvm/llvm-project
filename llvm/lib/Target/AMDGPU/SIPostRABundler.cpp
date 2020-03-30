@@ -76,7 +76,7 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
     if (!Op.isReg())
       continue;
     Register Reg = Op.getReg();
-    for (const Register Def : Defs)
+    for (Register Def : Defs)
       if (TRI->regsOverlap(Reg, Def))
         return true;
   }
