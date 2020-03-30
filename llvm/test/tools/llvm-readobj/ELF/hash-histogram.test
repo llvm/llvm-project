@@ -1,20 +1,30 @@
 ## Here we test the --elf-hash-histogram command line option.
 
-## This test case checks how we built a histogram for a GNU hash section.
-## We check both 32-bit and 64-bit inputs.
+## This test case checks how we built histograms for hash sections.
 
 # RUN: yaml2obj --docnum=1 -D BITS=32 %s -o %t1-32.o
-# RUN: llvm-readelf --elf-hash-histogram %t1-32.o | FileCheck %s --check-prefix=GNU-HASH
+# RUN: llvm-readelf --elf-hash-histogram %t1-32.o | FileCheck %s --check-prefix=HIST
+
+## Test --histogram and -I aliases.
+# RUN: llvm-readelf --histogram %t1-32.o | FileCheck %s --check-prefix=HIST
+# RUN: llvm-readelf -I %t1-32.o | FileCheck %s --check-prefix=HIST
 
 # RUN: yaml2obj --docnum=1 -D BITS=64 %s -o %t1-64.o
-# RUN: llvm-readelf --elf-hash-histogram %t1-64.o | FileCheck %s --check-prefix=GNU-HASH
+# RUN: llvm-readelf --elf-hash-histogram %t1-64.o | FileCheck %s --check-prefix=HIST
 
-# GNU-HASH:      Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
-# GNU-HASH-NEXT:  Length  Number     % of total  Coverage
-# GNU-HASH-NEXT:       0  1          ( 33.3%)       0.0%
-# GNU-HASH-NEXT:       1  1          ( 33.3%)      25.0%
-# GNU-HASH-NEXT:       2  0          (  0.0%)      25.0%
-# GNU-HASH-NEXT:       3  1          ( 33.3%)     100.0%
+# HIST:      Histogram for bucket list length (total of 3 buckets)
+# HIST-NEXT:  Length  Number     % of total  Coverage
+# HIST-NEXT:       0  2          ( 66.7%)       0.0%
+# HIST-NEXT:       1  0          (  0.0%)       0.0%
+# HIST-NEXT:       2  0          (  0.0%)       0.0%
+# HIST-NEXT:       3  1          ( 33.3%)     100.0%
+# HIST-NEXT: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+# HIST-NEXT:  Length  Number     % of total  Coverage
+# HIST-NEXT:       0  1          ( 33.3%)       0.0%
+# HIST-NEXT:       1  1          ( 33.3%)      25.0%
+# HIST-NEXT:       2  0          (  0.0%)      25.0%
+# HIST-NEXT:       3  1          ( 33.3%)     100.0%
+# HIST-NOT:  {{.}}
 
 --- !ELF
 FileHeader:
@@ -23,6 +33,11 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_386
 Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 6, 4, 5 ]
+    Chain:  [ 0, 0, 1, 0, 2 ]
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
     Flags: [ SHF_ALLOC ]
@@ -36,8 +51,11 @@ Sections:
     Type:  SHT_DYNAMIC
     Flags: [ SHF_WRITE, SHF_ALLOC ]
     Entries:
-      - Tag:   DT_GNU_HASH
+      - Tag:   DT_HASH
         Value: 0x0
+      - Tag:   DT_GNU_HASH
+## sizeof(.hash) == 0x28.
+        Value: 0x28
       - Tag:   DT_NULL
         Value: 0x0
 DynamicSymbols:
@@ -48,6 +66,7 @@ DynamicSymbols:
 ProgramHeaders:
   - Type:  PT_LOAD
     Sections:
+      - Section: .hash
       - Section: .gnu.hash
       - Section: .dynamic
 
