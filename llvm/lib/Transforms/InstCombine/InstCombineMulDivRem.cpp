@@ -72,7 +72,7 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
-      I->setOperand(0, V2);
+      IC.replaceOperand(*I, 0, V2);
       MadeChange = true;
     }
 
@@ -591,7 +591,7 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
     return false;
 
   // Change the div/rem to use 'Y' instead of the select.
-  I.setOperand(1, SI->getOperand(NonNullOperand));
+  replaceOperand(I, 1, SI->getOperand(NonNullOperand));
 
   // Okay, we know we replace the operand of the div/rem with 'Y' with no
   // problem.  However, the select, or the condition of the select may have
@@ -619,11 +619,11 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
     for (Instruction::op_iterator I = BBI->op_begin(), E = BBI->op_end();
          I != E; ++I) {
       if (*I == SI) {
-        *I = SI->getOperand(NonNullOperand);
+        replaceUse(*I, SI->getOperand(NonNullOperand));
         Worklist.push(&*BBI);
       } else if (*I == SelectCond) {
-        *I = NonNullOperand == 1 ? ConstantInt::getTrue(CondTy)
-                                 : ConstantInt::getFalse(CondTy);
+        replaceUse(*I, NonNullOperand == 1 ? ConstantInt::getTrue(CondTy)
+                                           : ConstantInt::getFalse(CondTy));
         Worklist.push(&*BBI);
       }
     }
