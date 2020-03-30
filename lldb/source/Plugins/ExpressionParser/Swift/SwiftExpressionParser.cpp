@@ -1323,7 +1323,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     stack_frame_sp.reset();
   }
 
-  swift::performNameBinding(*source_file);
+  swift::performImportResolution(*source_file);
 
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
