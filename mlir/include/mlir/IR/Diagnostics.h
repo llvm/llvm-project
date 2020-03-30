@@ -547,7 +547,8 @@ public:
   ~SourceMgrDiagnosticHandler();
 
   /// Emit the given diagnostic information with the held source manager.
-  void emitDiagnostic(Location loc, Twine message, DiagnosticSeverity kind);
+  void emitDiagnostic(Location loc, Twine message, DiagnosticSeverity kind,
+                      bool displaySourceLine = true);
 
 protected:
   /// Emit the given diagnostic with the held source manager.
