@@ -23,7 +23,6 @@ class ExprCommandWithFixits(TestBase):
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "The expression was successful.")
         self.assertTrue("Fix-it applied" in ret_val.GetError(), "Found the applied FixIt.")
 
-    @skipUnlessDarwin
     def test_with_target(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
