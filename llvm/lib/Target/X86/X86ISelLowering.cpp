@@ -16861,13 +16861,14 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
   assert(VT.is512BitVector() && "Unexpected vector size for 512bit shuffle.");
 
   // TODO - use Zeroable like we do for lowerV2X128VectorShuffle?
-  SmallVector<int, 4> WidenedMask;
-  if (!canWidenShuffleElements(Mask, WidenedMask))
+  SmallVector<int, 4> Widened128Mask;
+  if (!canWidenShuffleElements(Mask, Widened128Mask))
     return SDValue();
+  assert(Widened128Mask.size() == 4 && "Shuffle widening mismatch");
 
   // Try to use an insert into a zero vector.
-  if (WidenedMask[0] == 0 && (Zeroable & 0xf0) == 0xf0 &&
-      (WidenedMask[1] == 1 || (Zeroable & 0x0c) == 0x0c)) {
+  if (Widened128Mask[0] == 0 && (Zeroable & 0xf0) == 0xf0 &&
+      (Widened128Mask[1] == 1 || (Zeroable & 0x0c) == 0x0c)) {
     unsigned NumElts = ((Zeroable & 0x0c) == 0x0c) ? 2 : 4;
     MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(), NumElts);
     SDValue LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, V1,
@@ -16879,37 +16880,34 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
 
   // Check for patterns which can be matched with a single insert of a 256-bit
   // subvector.
-  bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask,
-                                        {0, 1, 2, 3, 0, 1, 2, 3});
-  if (OnlyUsesV1 || isShuffleEquivalent(V1, V2, Mask,
-                                        {0, 1, 2, 3, 8, 9, 10, 11})) {
+  bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 2, 3, 0, 1, 2, 3});
+  if (OnlyUsesV1 ||
+      isShuffleEquivalent(V1, V2, Mask, {0, 1, 2, 3, 8, 9, 10, 11})) {
     MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(), 4);
-    SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT,
-                                 OnlyUsesV1 ? V1 : V2,
-                              DAG.getIntPtrConstant(0, DL));
+    SDValue SubVec =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, OnlyUsesV1 ? V1 : V2,
+                    DAG.getIntPtrConstant(0, DL));
     return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, V1, SubVec,
                        DAG.getIntPtrConstant(4, DL));
   }
-
-  assert(WidenedMask.size() == 4);
 
   // See if this is an insertion of the lower 128-bits of V2 into V1.
   bool IsInsert = true;
   int V2Index = -1;
   for (int i = 0; i < 4; ++i) {
-    assert(WidenedMask[i] >= -1);
-    if (WidenedMask[i] < 0)
+    assert(Widened128Mask[i] >= -1 && "Illegal shuffle sentinel value");
+    if (Widened128Mask[i] < 0)
       continue;
 
     // Make sure all V1 subvectors are in place.
-    if (WidenedMask[i] < 4) {
-      if (WidenedMask[i] != i) {
+    if (Widened128Mask[i] < 4) {
+      if (Widened128Mask[i] != i) {
         IsInsert = false;
         break;
       }
     } else {
       // Make sure we only have a single V2 index and its the lowest 128-bits.
-      if (V2Index >= 0 || WidenedMask[i] != 4) {
+      if (V2Index >= 0 || Widened128Mask[i] != 4) {
         IsInsert = false;
         break;
       }
@@ -16923,16 +16921,26 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
     return insert128BitVector(V1, Subvec, V2Index * 2, DAG, DL);
   }
 
+  // See if we can widen to a 256-bit lane shuffle, we're going to lose 128-lane
+  // UNDEF info by lowering to X86ISD::SHUF128 anyway, so by widening where
+  // possible we at least ensure the lanes stay sequential to help later
+  // combines.
+  SmallVector<int, 2> Widened256Mask;
+  if (canWidenShuffleElements(Widened128Mask, Widened256Mask)) {
+    Widened128Mask.clear();
+    llvm::scaleShuffleMask<int>(2, Widened256Mask, Widened128Mask);
+  }
+
   // Try to lower to vshuf64x2/vshuf32x4.
   SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
   unsigned PermMask = 0;
   // Insure elements came from the same Op.
   for (int i = 0; i < 4; ++i) {
-    assert(WidenedMask[i] >= -1);
-    if (WidenedMask[i] < 0)
+    assert(Widened128Mask[i] >= -1 && "Illegal shuffle sentinel value");
+    if (Widened128Mask[i] < 0)
       continue;
 
-    SDValue Op = WidenedMask[i] >= 4 ? V2 : V1;
+    SDValue Op = Widened128Mask[i] >= 4 ? V2 : V1;
     unsigned OpIndex = i / 2;
     if (Ops[OpIndex].isUndef())
       Ops[OpIndex] = Op;
@@ -16941,7 +16949,7 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
 
     // Convert the 128-bit shuffle mask selection values into 128-bit selection
     // bits defined by a vshuf64x2 instruction's immediate control byte.
-    PermMask |= (WidenedMask[i] % 4) << (i * 2);
+    PermMask |= (Widened128Mask[i] % 4) << (i * 2);
   }
 
   return DAG.getNode(X86ISD::SHUF128, DL, VT, Ops[0], Ops[1],
