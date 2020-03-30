@@ -1766,11 +1766,23 @@ bool AMDGPUDAGToDAGISel::SelectFlatAtomicSigned(SDNode *N,
 
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
                                           SDValue &Offset, bool &Imm) const {
-
-  // FIXME: Handle non-constant offsets.
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
-  if (!C)
+  if (!C) {
+    if (ByteOffsetNode.getValueType().isScalarInteger() &&
+        ByteOffsetNode.getValueType().getSizeInBits() == 32) {
+      Offset = ByteOffsetNode;
+      Imm = false;
+      return true;
+    }
+    if (ByteOffsetNode.getOpcode() == ISD::ZERO_EXTEND) {
+      if (ByteOffsetNode.getOperand(0).getValueType().getSizeInBits() == 32) {
+        Offset = ByteOffsetNode.getOperand(0);
+        Imm = false;
+        return true;
+      }
+    }
     return false;
+  }
 
   SDLoc SL(ByteOffsetNode);
   GCNSubtarget::Generation Gen = Subtarget->getGeneration();
@@ -1835,7 +1847,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
   // wraparound, because s_load instructions perform the addition in 64 bits.
   if ((Addr.getValueType() != MVT::i32 ||
        Addr->getFlags().hasNoUnsignedWrap()) &&
-      CurDAG->isBaseWithConstantOffset(Addr)) {
+      (CurDAG->isBaseWithConstantOffset(Addr) ||
+       Addr.getOpcode() == ISD::ADD)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
 
