@@ -415,8 +415,21 @@ bool TypeSystemSwiftTypeRef::IsFloatingPointType(void *type, uint32_t &count,
                                                   is_complex);
 }
 bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
-  return m_swift_ast_context->IsFunctionType(ReconstructType(type),
-                                             is_variadic_ptr);
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node =
+        GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
+    if (!node || node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::Global)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Function)
+      return false;
+    return true;
+  };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsFunctionType(
+                                ReconstructType(type), nullptr));
 }
 size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
   return m_swift_ast_context->GetNumberOfFunctionArguments(
