@@ -5363,11 +5363,29 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       if (Dependencies[I].first == OMPC_DEPEND_depobj)
         continue;
       const Expr *E = Dependencies[I].second;
-      LValue Addr = CGF.EmitLValue(E);
+      const auto *OASE = dyn_cast<OMPArrayShapingExpr>(E);
+      LValue Addr;
+      if (OASE) {
+        const Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
+        Addr =
+            CGF.EmitLoadOfPointerLValue(CGF.EmitLValue(Base).getAddress(CGF),
+                                        Base->getType()->castAs<PointerType>());
+      } else {
+        Addr = CGF.EmitLValue(E);
+      }
       llvm::Value *Size;
       QualType Ty = E->getType();
-      if (const auto *ASE =
-              dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
+      if (OASE) {
+        Size = llvm::ConstantInt::get(CGF.SizeTy,/*V=*/1);
+        for (const Expr *SE : OASE->getDimensions()) {
+           llvm::Value *Sz = CGF.EmitScalarExpr(SE);
+           Sz = CGF.EmitScalarConversion(Sz, SE->getType(),
+                                    CGF.getContext().getSizeType(),
+                                    SE->getExprLoc());
+           Size = CGF.Builder.CreateNUWMul(Size, Sz);
+        }
+      } else if (const auto *ASE =
+                     dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
         LValue UpAddrLVal =
             CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
         llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
