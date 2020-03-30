@@ -3597,8 +3597,18 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
     }
   }
 
-  if (AddrRegs.size() != 1) {
-    auto VAddr = B.buildBuildVector(LLT::vector(AddrRegs.size(), 32), AddrRegs);
+  int NumAddrRegs = AddrRegs.size();
+  if (NumAddrRegs != 1) {
+    // Round up to 8 elements for v5-v7
+    // FIXME: Missing intermediate sized register classes and instructions.
+    if (NumAddrRegs > 4 && !isPowerOf2_32(NumAddrRegs)) {
+      const int RoundedNumRegs = NextPowerOf2(NumAddrRegs);
+      auto Undef = B.buildUndef(S32);
+      AddrRegs.append(RoundedNumRegs - NumAddrRegs, Undef.getReg(0));
+      NumAddrRegs = RoundedNumRegs;
+    }
+
+    auto VAddr = B.buildBuildVector(LLT::vector(NumAddrRegs, 32), AddrRegs);
     MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
   }
 
