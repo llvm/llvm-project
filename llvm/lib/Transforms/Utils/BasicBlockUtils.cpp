@@ -1102,3 +1102,223 @@ Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
   }
   return BI->getCondition();
 }
+
+// After creating a control flow hub, the operands of PHINodes in an outgoing
+// block Out no longer match the predecessors of that block. Predecessors of Out
+// that are incoming blocks to the hub are now replaced by just one edge from
+// the hub. To match this new control flow, the corresponding values from each
+// PHINode must now be moved a new PHINode in the first guard block of the hub.
+//
+// This operation cannot be performed with SSAUpdater, because it involves one
+// new use: If the block Out is in the list of Incoming blocks, then the newly
+// created PHI in the Hub will use itself along that edge from Out to Hub.
+static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
+                          const SetVector<BasicBlock *> &Incoming,
+                          BasicBlock *FirstGuardBlock) {
+  auto I = Out->begin();
+  while (I != Out->end() && isa<PHINode>(I)) {
+    auto Phi = cast<PHINode>(I);
+    auto NewPhi =
+        PHINode::Create(Phi->getType(), Incoming.size(),
+                        Phi->getName() + ".moved", &FirstGuardBlock->back());
+    for (auto In : Incoming) {
+      Value *V = UndefValue::get(Phi->getType());
+      if (In == Out) {
+        V = NewPhi;
+      } else if (Phi->getBasicBlockIndex(In) != -1) {
+        V = Phi->removeIncomingValue(In, false);
+      }
+      NewPhi->addIncoming(V, In);
+    }
+    assert(NewPhi->getNumIncomingValues() == Incoming.size());
+    if (Phi->getNumOperands() == 0) {
+      Phi->replaceAllUsesWith(NewPhi);
+      I = Phi->eraseFromParent();
+      continue;
+    }
+    Phi->addIncoming(NewPhi, GuardBlock);
+    ++I;
+  }
+}
+
+using BBPredicates = DenseMap<BasicBlock *, PHINode *>;
+using BBSetVector = SetVector<BasicBlock *>;
+
+// Collect predicates for each outgoing block. If control reaches the
+// Hub from an incoming block InBB, then the predicate for each
+// outgoing block OutBB decides whether control is forwarded to OutBB.
+//
+// These predicates are not orthogonal. The Hub evaluates them in the
+// same order as the Outgoing set-vector, and control branches to the
+// first outgoing block whose predicate evaluates to true.
+static void createGuardPredicates(BasicBlock *FirstGuardBlock,
+                                  BBPredicates &GuardPredicates,
+                                  SmallVectorImpl<WeakVH> &DeletionCandidates,
+                                  const BBSetVector &Incoming,
+                                  const BBSetVector &Outgoing) {
+  auto &Context = Incoming.front()->getContext();
+  auto BoolTrue = ConstantInt::getTrue(Context);
+  auto BoolFalse = ConstantInt::getFalse(Context);
+
+  // The predicate for the last outgoing is trivially true, and so we
+  // process only the first N-1 successors.
+  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
+    auto Out = Outgoing[i];
+    LLVM_DEBUG(dbgs() << "Creating guard for " << Out->getName() << "\n");
+    auto Phi =
+        PHINode::Create(Type::getInt1Ty(Context), Incoming.size(),
+                        StringRef("Guard.") + Out->getName(), FirstGuardBlock);
+    GuardPredicates[Out] = Phi;
+  }
+
+  for (auto In : Incoming) {
+    auto Branch = cast<BranchInst>(In->getTerminator());
+    BasicBlock *Succ0 = Branch->getSuccessor(0);
+    BasicBlock *Succ1 = nullptr;
+
+    Succ0 = Outgoing.count(Succ0) ? Succ0 : nullptr;
+
+    if (Branch->isUnconditional()) {
+      Branch->setSuccessor(0, FirstGuardBlock);
+      assert(Succ0);
+    } else {
+      Succ1 = Branch->getSuccessor(1);
+      Succ1 = Outgoing.count(Succ1) ? Succ1 : nullptr;
+      assert(Succ0 || Succ1);
+      if (Succ0 && !Succ1) {
+        Branch->setSuccessor(0, FirstGuardBlock);
+      } else if (Succ1 && !Succ0) {
+        Branch->setSuccessor(1, FirstGuardBlock);
+      } else {
+        Branch->eraseFromParent();
+        BranchInst::Create(FirstGuardBlock, In);
+      }
+    }
+
+    assert(Succ0 || Succ1);
+
+    // Optimization: Consider an incoming block A with both successors
+    // Succ0 and Succ1 in the set of outgoing blocks. The predicates
+    // for Succ0 and Succ1 complement each other. If Succ0 is visited
+    // first in the loop below, control will branch to Succ0 using the
+    // corresponding predicate. But if that branch is not taken, then
+    // control must reach Succ1, which means that the predicate for
+    // Succ1 is always true.
+    bool OneSuccessorDone = false;
+    auto Condition = Branch->getCondition();
+    for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
+      auto Out = Outgoing[i];
+      auto Phi = GuardPredicates[Out];
+      if (Out != Succ0 && Out != Succ1) {
+        Phi->addIncoming(BoolFalse, In);
+        continue;
+      }
+      // Optimization: When only one successor is an outgoing block,
+      // the predicate is always true.
+      if (!Succ0 || !Succ1 || OneSuccessorDone) {
+        Phi->addIncoming(BoolTrue, In);
+        continue;
+      }
+      assert(Succ0 && Succ1);
+      OneSuccessorDone = true;
+      if (Out == Succ0) {
+        Phi->addIncoming(Condition, In);
+        continue;
+      }
+      auto Inverted = invertCondition(Condition);
+      DeletionCandidates.push_back(Condition);
+      Phi->addIncoming(Inverted, In);
+    }
+  }
+}
+
+// For each outgoing block OutBB, create a guard block in the Hub. The
+// first guard block was already created outside, and available as the
+// first element in the vector of guard blocks.
+//
+// Each guard block terminates in a conditional branch that transfers
+// control to the corresponding outgoing block or the next guard
+// block. The last guard block has two outgoing blocks as successors
+// since the condition for the final outgoing block is trivially
+// true. So we create one less block (including the first guard block)
+// than the number of outgoing blocks.
+static void createGuardBlocks(SmallVectorImpl<BasicBlock *> &GuardBlocks,
+                              Function *F, const BBSetVector &Outgoing,
+                              BBPredicates &GuardPredicates, StringRef Prefix) {
+  for (int i = 0, e = Outgoing.size() - 2; i != e; ++i) {
+    GuardBlocks.push_back(
+        BasicBlock::Create(F->getContext(), Prefix + ".guard", F));
+  }
+  assert(GuardBlocks.size() == GuardPredicates.size());
+
+  // To help keep the loop simple, temporarily append the last
+  // outgoing block to the list of guard blocks.
+  GuardBlocks.push_back(Outgoing.back());
+
+  for (int i = 0, e = GuardBlocks.size() - 1; i != e; ++i) {
+    auto Out = Outgoing[i];
+    assert(GuardPredicates.count(Out));
+    BranchInst::Create(Out, GuardBlocks[i + 1], GuardPredicates[Out],
+                       GuardBlocks[i]);
+  }
+
+  // Remove the last block from the guard list.
+  GuardBlocks.pop_back();
+}
+
+BasicBlock *llvm::CreateControlFlowHub(
+    DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
+    const BBSetVector &Incoming, const BBSetVector &Outgoing,
+    const StringRef Prefix) {
+  auto F = Incoming.front()->getParent();
+  auto FirstGuardBlock =
+      BasicBlock::Create(F->getContext(), Prefix + ".guard", F);
+
+  SmallVector<DominatorTree::UpdateType, 16> Updates;
+  if (DTU) {
+    for (auto In : Incoming) {
+      for (auto Succ : successors(In)) {
+        if (Outgoing.count(Succ))
+          Updates.push_back({DominatorTree::Delete, In, Succ});
+      }
+      Updates.push_back({DominatorTree::Insert, In, FirstGuardBlock});
+    }
+  }
+
+  BBPredicates GuardPredicates;
+  SmallVector<WeakVH, 8> DeletionCandidates;
+  createGuardPredicates(FirstGuardBlock, GuardPredicates, DeletionCandidates,
+                        Incoming, Outgoing);
+
+  GuardBlocks.push_back(FirstGuardBlock);
+  createGuardBlocks(GuardBlocks, F, Outgoing, GuardPredicates, Prefix);
+
+  // Update the PHINodes in each outgoing block to match the new control flow.
+  for (int i = 0, e = GuardBlocks.size(); i != e; ++i) {
+    reconnectPhis(Outgoing[i], GuardBlocks[i], Incoming, FirstGuardBlock);
+  }
+  reconnectPhis(Outgoing.back(), GuardBlocks.back(), Incoming, FirstGuardBlock);
+
+  if (DTU) {
+    int NumGuards = GuardBlocks.size();
+    assert((int)Outgoing.size() == NumGuards + 1);
+    for (int i = 0; i != NumGuards - 1; ++i) {
+      Updates.push_back({DominatorTree::Insert, GuardBlocks[i], Outgoing[i]});
+      Updates.push_back(
+          {DominatorTree::Insert, GuardBlocks[i], GuardBlocks[i + 1]});
+    }
+    Updates.push_back({DominatorTree::Insert, GuardBlocks[NumGuards - 1],
+                       Outgoing[NumGuards - 1]});
+    Updates.push_back({DominatorTree::Insert, GuardBlocks[NumGuards - 1],
+                       Outgoing[NumGuards]});
+    DTU->applyUpdates(Updates);
+  }
+
+  for (auto I : DeletionCandidates) {
+    if (I->use_empty())
+      if (auto Inst = dyn_cast_or_null<Instruction>(I))
+        Inst->eraseFromParent();
+  }
+
+  return FirstGuardBlock;
+}

@@ -319,6 +319,7 @@ int main(int argc, char **argv) {
   initializeScalarizeMaskedMemIntrinPass(*Registry);
   initializeExpandReductionsPass(*Registry);
   initializeHardwareLoopsPass(*Registry);
+  initializeTransformUtils(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);

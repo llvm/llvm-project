@@ -126,6 +126,14 @@ FunctionPass *createControlHeightReductionLegacyPass();
 // scalar-to-vector mappings from the TargetLibraryInfo.
 //
 FunctionPass *createInjectTLIMappingsLegacyPass();
+
+//===----------------------------------------------------------------------===//
+//
+// UnifyLoopExits - For each loop, creates a new block N such that all exiting
+// blocks branch to N, and then N distributes control flow to all the original
+// exit blocks.
+//
+FunctionPass *createUnifyLoopExitsPass();
 }
 
 #endif

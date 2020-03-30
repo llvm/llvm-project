@@ -533,6 +533,13 @@ void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
 /// value?
 bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
+//===----------------------------------------------------------------------===//
+//  Value helper functions
+//
+
+/// Invert the given true/false value, possibly reusing an existing copy.
+Value *invertCondition(Value *Condition);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOCAL_H
