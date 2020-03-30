@@ -69,6 +69,7 @@ static_library("Utils") {
     "StripNonLineTableDebugInfo.cpp",
     "SymbolRewriter.cpp",
     "UnifyFunctionExitNodes.cpp",
+    "UnifyLoopExits.cpp",
     "Utils.cpp",
     "VNCoercion.cpp",
     "ValueMapper.cpp",
