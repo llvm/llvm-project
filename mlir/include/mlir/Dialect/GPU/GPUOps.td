@@ -36,10 +36,54 @@ class GPU_IndexOp<string mnemonic, list<OpTrait> traits = []> :
   let verifier = [{ return ::verifyIndexOp(*this); }];
 }
 
-def GPU_BlockDimOp : GPU_IndexOp<"block_dim">;
-def GPU_BlockIdOp : GPU_IndexOp<"block_id">;
-def GPU_GridDimOp : GPU_IndexOp<"grid_dim">;
-def GPU_ThreadIdOp : GPU_IndexOp<"thread_id">;
+def GPU_BlockDimOp : GPU_IndexOp<"block_dim"> {
+  let description = [{
+    Returns the number of threads in the thread block (aka the block size) along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
+    ```
+  }];
+}
+def GPU_BlockIdOp : GPU_IndexOp<"block_id"> {
+  let description = [{
+    Returns the block id, i.e. the index of the current block within the grid
+    along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %bIdY = "gpu.block_id"() {dimension = "y"} : () -> (index)
+    ```
+  }];
+}
+def GPU_GridDimOp : GPU_IndexOp<"grid_dim"> {
+  let description = [{
+    Returns the number of thread blocks in the grid along the x, y, or z
+    `dimension`.
+
+    Example:
+
+    ```mlir
+    %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
+    ```
+  }];
+}
+def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
+  let description = [{
+    Returns the thread id, i.e. the index of the current thread within the block
+    along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
+    ```
+  }];
+}
 
 def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
   let summary = "Function executable on a GPU";
@@ -471,13 +515,14 @@ def GPU_YieldOp : GPU_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
-    "gpu.yield" is a special terminator operation for blocks inside regions
+    gpu.yield` is a special terminator operation for blocks inside regions
     in gpu ops. It returns values to the immediately enclosing gpu op.
 
     Example:
 
-       ```gpu.yield %f0, %f1 : f32, f32
-       ```
+    ```mlir
+    gpu.yield %f0, %f1 : f32, f32
+    ```
   }];
 }
 
@@ -509,18 +554,20 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     Results<(outs AnyType)> {
   let summary = "Reduce values among workgroup.";
   let description = [{
-    The "all_reduce" op reduces the value of every work item across a local
+    The `all_reduce` op reduces the value of every work item across a local
     workgroup. The result is equal for all work items of a workgroup.
 
     For example, both
+
+    ```mlir
+    %1 = "gpu.all_reduce"(%0) ({}) { op = "add" } : (f32) -> (f32)
+    %2 = "gpu.all_reduce"(%0) ({
+    ^bb(%lhs : f32, %rhs : f32):
+      %sum = addf %lhs, %rhs : f32
+      "gpu.yield"(%sum) : (f32) -> ()
+    }) : (f32) -> (f32)
     ```
-      %1 = "gpu.all_reduce"(%0) ({}) { op = "add" } : (f32) -> (f32)
-      %2 = "gpu.all_reduce"(%0) ({
-      ^bb(%lhs : f32, %rhs : f32):
-        %sum = addf %lhs, %rhs : f32
-        "gpu.yield"(%sum) : (f32) -> ()
-      }) : (f32) -> (f32)
-    ```
+
     compute the sum of each work item's %0 value. The first version specifies
     the accumulation as operation, whereas the second version specifies the
     accumulation as code region. The accumulation operation must be one of:
@@ -550,11 +597,13 @@ def GPU_ShuffleOp : GPU_Op<"shuffle", [NoSideEffect]>,
     The "shuffle" op moves values to a different invocation within the same
     subgroup.
 
-    For example
+    Example:
+
+    ```mlir
+    %1, %2 = gpu.shuffle %0, %offset, %width xor : f32
     ```
-      %1, %2 = gpu.shuffle %0, %offset, %width xor : f32
-    ```
-    for lane k returns the value from lane `k ^ offset` and `true` if that lane
+
+    For lane k returns the value from lane `k ^ offset` and `true` if that lane
     is smaller than %width. Otherwise it returns an unspecified value and
     `false`. A lane is the index of an invocation relative to its subgroup.
 
@@ -574,9 +623,10 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     The "barrier" op synchronizes all work items of a workgroup. It is used
     to coordinate communication between the work items of the workgroup.
 
+    ```mlir
+    gpu.barrier
     ```
-      gpu.barrier
-    ```
+
     waits until all work items in the workgroup have reached this point
     and all memory accesses made by these work items prior to the op are
     visible to all work items in the workgroup. Data hazards between work items

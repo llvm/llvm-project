@@ -1,4 +1,4 @@
-# Affine Dialect
+# `affine` Dialect
 
 This dialect provides a powerful abstraction for affine operations and analyses.
 
@@ -295,140 +295,9 @@ affine.if #set42(%i, %j)[%M, %N] {
 
 ## Operations
 
-#### 'affine.apply' operation
+[include "Dialects/AffineOps.md"]
 
-Syntax:
-
-```
-operation ::= ssa-id `=` `affine.apply` affine-map-attribute dim-and-symbol-use-list
-```
-
-The `affine.apply` operation applies an
-[affine mapping](#affine-expressions) to a list of SSA values,
-yielding a single SSA value. The number of dimension and symbol arguments to
-affine.apply must be equal to the respective number of dimensional and symbolic
-inputs to the affine mapping; the `affine.apply` operation always returns one
-value. The input operands and result must all have 'index' type.
-
-Example:
-
-```mlir
-#map10 = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
-...
-%1 = affine.apply #map10 (%s, %t)
-
-// Inline example.
-%2 = affine.apply affine_map<(i)[s0] -> (i+s0)> (%42)[%n]
-```
-
-#### 'affine.for' operation
-
-Syntax:
-
-```
-operation   ::= `affine.for` ssa-id `=` lower-bound `to` upper-bound
-                      (`step` integer-literal)? `{` op* `}`
-
-lower-bound ::= `max`? affine-map-attribute dim-and-symbol-use-list | shorthand-bound
-upper-bound ::= `min`? affine-map-attribute dim-and-symbol-use-list | shorthand-bound
-shorthand-bound ::= ssa-id | `-`? integer-literal
-```
-
-The `affine.for` operation represents an affine loop nest. It has one region
-containing its body. This region must contain one block that terminates with
-[`affine.terminator`](#affineterminator-operation). *Note:* when `affine.for` is
-printed in custom format, the terminator is omitted. The block has one argument
-of [`index`](../LangRef.md#index-type) type that represents the induction
-variable of the loop.
-
-The `affine.for` operation executes its body a number of times iterating from a
-lower bound to an upper bound by a stride. The stride, represented by `step`, is
-a positive constant integer which defaults to "1" if not present. The lower and
-upper bounds specify a half-open range: the range includes the lower bound but
-does not include the upper bound.
-
-The lower and upper bounds of a `affine.for` operation are represented as an
-application of an affine mapping to a list of SSA values passed to the map. The
-[same restrictions](#restrictions-on-dimensions-and-symbols) hold for these SSA
-values as for all bindings of SSA values to dimensions and symbols.
-
-The affine mappings for the bounds may return multiple results, in which case
-the `max`/`min` keywords are required (for the lower/upper bound respectively),
-and the bound is the maximum/minimum of the returned values. There is no
-semantic ambiguity, but MLIR syntax requires the use of these keywords to make
-things more obvious to human readers.
-
-Many upper and lower bounds are simple, so MLIR accepts two custom form
-syntaxes: the form that accepts a single 'ssa-id' (e.g. `%N`) is shorthand for
-applying that SSA value to a function that maps a single symbol to itself, e.g.,
-`()[s]->(s)()[%N]`. The integer literal form (e.g. `-42`) is shorthand for a
-nullary mapping function that returns the constant value (e.g. `()->(-42)()`).
-
-Example showing reverse iteration of the inner loop:
-
-```mlir
-#map57 = affine_map<(d0)[s0] -> (s0 - d0 - 1)>
-
-func @simple_example(%A: memref<?x?xf32>, %B: memref<?x?xf32>) {
-  %N = dim %A, 0 : memref<?x?xf32>
-  affine.for %i = 0 to %N step 1 {
-    affine.for %j = 0 to %N {   // implicitly steps by 1
-      %0 = affine.apply #map57(%j)[%N]
-      %tmp = call @F1(%A, %i, %0) : (memref<?x?xf32>, index, index)->(f32)
-      call @F2(%tmp, %B, %i, %0) : (f32, memref<?x?xf32>, index, index)->()
-    }
-  }
-  return
-}
-```
-
-#### 'affine.if' operation
-
-Syntax:
-
-```
-operation    ::= `affine.if` if-op-cond `{` op* `}` (`else` `{` op* `}`)?
-if-op-cond ::= integer-set-attr dim-and-symbol-use-list
-```
-
-The `affine.if` operation restricts execution to a subset of the loop iteration
-space defined by an integer set (a conjunction of affine constraints). A single
-`affine.if` may end with an optional `else` clause.
-
-The condition of the `affine.if` is represented by an
-[integer set](#integer-sets) (a conjunction of affine constraints),
-and the SSA values bound to the dimensions and symbols in the integer set. The
-[same restrictions](#restrictions-on-dimensions-and-symbols) hold for these SSA
-values as for all bindings of SSA values to dimensions and symbols.
-
-The `affine.if` operation contains two regions for the "then" and "else"
-clauses. The latter may be empty (i.e. contain no blocks), meaning the absence
-of the else clause. When non-empty, both regions must contain exactly one block
-terminating with [`affine.terminator`](#affineterminator-operation). *Note:*
-when `affine.if` is printed in custom format, the terminator is omitted. These
-blocks must not have any arguments.
-
-Example:
-
-```mlir
-#set = affine_set<(d0, d1)[s0]: (d0 - 10 >= 0, s0 - d0 - 9 >= 0,
-                                 d1 - 10 >= 0, s0 - d1 - 9 >= 0)>
-func @reduced_domain_example(%A, %X, %N) : (memref<10xi32>, i32, i32) {
-  affine.for %i = 0 to %N {
-     affine.for %j = 0 to %N {
-       %0 = affine.apply #map42(%j)
-       %tmp = call @S1(%X, %i, %0)
-       affine.if #set(%i, %j)[%N] {
-          %1 = affine.apply #map43(%i, %j)
-          call @S2(%tmp, %A, %i, %1)
-       }
-    }
-  }
-  return
-}
-```
-
-#### 'affine.load' operation
+### 'affine.load' operation
 
 Syntax:
 
@@ -458,7 +327,7 @@ Example:
 
 ```
 
-#### 'affine.store' operation
+### 'affine.store' operation
 
 Syntax:
 
@@ -488,7 +357,7 @@ Example:
 
 ```
 
-#### 'affine.dma_start' operation
+### 'affine.dma_start' operation
 
 Syntax:
 
@@ -519,7 +388,6 @@ specified. The value of 'num_elements' must be a multiple of
 Example:
 
 ```mlir
-
 For example, a DmaStartOp operation that transfers 256 elements of a memref
 '%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in memory
 space 1 at indices [%k + 7, %l], would be specified as follows:
@@ -537,10 +405,9 @@ space 1 at indices [%k + 7, %l], would be specified as follows:
 
   affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%idx], %num_elements,
     %stride, %num_elt_per_stride : ...
-
 ```
 
-#### 'affine.dma_wait' operation
+### 'affine.dma_wait' operation
 
 Syntax:
 
@@ -558,54 +425,9 @@ associated with the DMA operation. For example:
 Example:
 
 ```mlir
-
-  affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%index], %num_elements :
-    memref<2048xf32, 0>, memref<256xf32, 1>, memref<1xi32, 2>
-  ...
-  ...
-  affine.dma_wait %tag[%index], %num_elements : memref<1xi32, 2>
-
+affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%index], %num_elements :
+  memref<2048xf32, 0>, memref<256xf32, 1>, memref<1xi32, 2>
+...
+...
+affine.dma_wait %tag[%index], %num_elements : memref<1xi32, 2>
 ```
-
-#### 'affine.min' operation
-
-Syntax:
-
-```
-operation ::= ssa-id `=` `affine.min` affine-map-attribute dim-and-symbol-use-list
-```
-
-The `affine.min` operation applies an
-[affine mapping](#affine-expressions) to a list of SSA values, and returns the
-minimum value of all result expressions. The number of dimension and symbol
-arguments to affine.min must be equal to the respective number of dimensional
-and symbolic inputs to the affine mapping; the `affine.min` operation always
-returns one value. The input operands and result must all have 'index' type.
-
-Example:
-
-```mlir
-
-%0 = affine.min affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
-
-```
-
-#### `affine.terminator` operation
-
-Syntax:
-
-```
-operation ::= `"affine.terminator"() : () -> ()`
-```
-
-Affine terminator is a special terminator operation for blocks inside affine
-loops ([`affine.for`](#affinefor-operation)) and branches
-([`affine.if`](#affineif-operation)). It unconditionally transmits the control
-flow to the successor of the operation enclosing the region.
-
-*Rationale*: bodies of affine operations are [blocks](../LangRef.md#blocks) that
-must have terminators. Loops and branches represent structured control flow and
-should not accept arbitrary branches as terminators.
-
-This operation does _not_ have a custom syntax. However, affine control
-operations omit the terminator in their custom syntax for brevity.
