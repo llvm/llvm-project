@@ -35,7 +35,7 @@ def ShapeDialect : Dialect {
     shapes as input, return the invalid shape if one of its operands is an
     invalid shape. This avoids flagging multiple errors for one verification
     failure. The dialect itself does not specify how errors should be combined
-    (there are multiple different options, from always chosing first operand,
+    (there are multiple different options, from always choosing first operand,
     concatting etc. on how to combine them).
   }];
 

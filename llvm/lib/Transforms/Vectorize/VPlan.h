@@ -757,21 +757,16 @@ public:
   }
 };
 
-/// VPWidenRecipe is a recipe for producing a copy of vector type for each
-/// Instruction in its ingredients independently, in order. This recipe covers
-/// most of the traditional vectorization cases where each ingredient transforms
-/// into a vectorized version of itself.
+/// VPWidenRecipe is a recipe for producing a copy of vector type its
+/// ingredient. This recipe covers most of the traditional vectorization cases
+/// where each ingredient transforms into a vectorized version of itself.
 class VPWidenRecipe : public VPRecipeBase {
 private:
-  /// Hold the ingredients by pointing to their original BasicBlock location.
-  BasicBlock::iterator Begin;
-  BasicBlock::iterator End;
+  /// Hold the instruction to be widened.
+  Instruction &Ingredient;
 
 public:
-  VPWidenRecipe(Instruction *I) : VPRecipeBase(VPWidenSC) {
-    End = I->getIterator();
-    Begin = End++;
-  }
+  VPWidenRecipe(Instruction &I) : VPRecipeBase(VPWidenSC), Ingredient(I) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -782,14 +777,6 @@ public:
 
   /// Produce widened copies of all Ingredients.
   void execute(VPTransformState &State) override;
-
-  /// Augment the recipe to include Instr, if it lies at its End.
-  bool appendInstruction(Instruction *Instr) {
-    if (End != Instr->getIterator())
-      return false;
-    End++;
-    return true;
-  }
 
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,

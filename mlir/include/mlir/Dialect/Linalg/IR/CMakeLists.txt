@@ -1,5 +1,6 @@
 add_mlir_dialect(LinalgOps linalg)
-add_mlir_doc(LinalgDoc -gen-dialect-doc LinalgDialect Dialects/)
+add_mlir_doc(LinalgDoc -gen-op-doc LinalgOps Dialects/)
+
 set(LLVM_TARGET_DEFINITIONS LinalgStructuredOps.td)
 mlir_tablegen(LinalgStructuredOps.h.inc -gen-op-decls)
 mlir_tablegen(LinalgStructuredOps.cpp.inc -gen-op-defs)

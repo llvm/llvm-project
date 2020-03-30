@@ -4752,6 +4752,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::INSERTPS:
   case X86ISD::EXTRQI:
   case X86ISD::INSERTQI:
+  case X86ISD::VALIGN:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:
@@ -5432,6 +5433,11 @@ static bool isInRange(int Val, int Low, int Hi) {
 /// range (L, H].
 static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
   return llvm::any_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
+}
+
+/// Return true if the value of any element in Mask is the zero sentinel value.
+static bool isAnyZero(ArrayRef<int> Mask) {
+  return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
 }
 
 /// Return true if Val is undef or if its value falls within the
@@ -6731,6 +6737,17 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeMOVLHPSMask(NumElems, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    break;
+  case X86ISD::VALIGN:
+    assert((VT.getScalarType() == MVT::i32 || VT.getScalarType() == MVT::i64) &&
+           "Only 32-bit and 64-bit elements are supported!");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
+    ImmN = N->getConstantOperandVal(N->getNumOperands() - 1);
+    DecodeVALIGNMask(NumElems, ImmN, Mask);
+    IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(0));
     break;
   case X86ISD::PALIGNR:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
@@ -11902,11 +11919,11 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   return DAG.getBitcast(VT, Rot);
 }
 
-/// Try to lower a vector shuffle as a byte rotation.
+/// Try to match a vector shuffle as an element rotation.
 ///
 /// This is used for support PALIGNR for SSSE3 or VALIGND/Q for AVX512.
-static int matchShuffleAsByteRotate(SDValue &V1, SDValue &V2,
-                                    ArrayRef<int> Mask) {
+static int matchShuffleAsElementRotate(SDValue &V1, SDValue &V2,
+                                       ArrayRef<int> Mask) {
   int NumElts = Mask.size();
 
   // We need to detect various ways of spelling a rotation:
@@ -12001,7 +12018,7 @@ static int matchShuffleAsByteRotate(MVT VT, SDValue &V1, SDValue &V2,
   if (!is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask))
     return -1;
 
-  int Rotation = matchShuffleAsByteRotate(V1, V2, RepeatedMask);
+  int Rotation = matchShuffleAsElementRotate(V1, V2, RepeatedMask);
   if (Rotation <= 0)
     return -1;
 
@@ -12081,7 +12098,7 @@ static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
          && "VLX required for 128/256-bit vectors");
 
   SDValue Lo = V1, Hi = V2;
-  int Rotation = matchShuffleAsByteRotate(Lo, Hi, Mask);
+  int Rotation = matchShuffleAsElementRotate(Lo, Hi, Mask);
   if (Rotation <= 0)
     return SDValue();
 
@@ -33947,13 +33964,50 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
-  // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
+  // Handle 128/256-bit lane shuffles of 512-bit vectors.
+  if (RootVT.is512BitVector() &&
+      (NumBaseMaskElts == 2 || NumBaseMaskElts == 4)) {
+    MVT ShuffleVT = (FloatDomain ? MVT::v8f64 : MVT::v8i64);
+
+    // If the upper subvectors are zeroable, then an extract+insert is more
+    // optimal than using X86ISD::SHUF128. The insertion is free, even if it has
+    // to zero the upper subvectors.
+    if (isUndefOrZeroInRange(BaseMask, 1, NumBaseMaskElts - 1)) {
+      if (Depth == 0 && Root.getOpcode() == ISD::INSERT_SUBVECTOR)
+        return SDValue(); // Nothing to do!
+      assert(isInRange(BaseMask[0], 0, NumBaseMaskElts) &&
+             "Unexpected lane shuffle");
+      Res = DAG.getBitcast(ShuffleVT, V1);
+      unsigned SubIdx = BaseMask[0] * (8 / NumBaseMaskElts);
+      bool UseZero = isAnyZero(BaseMask);
+      Res = extractSubVector(Res, SubIdx, DAG, DL, BaseMaskEltSizeInBits);
+      Res = widenSubVector(Res, UseZero, Subtarget, DAG, DL, RootSizeInBits);
+      return DAG.getBitcast(RootVT, Res);
+    }
+
+    // TODO - handle AVX512 cases with X86ISD::SHUF128.
+  }
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
   if (RootVT.is256BitVector() && NumBaseMaskElts == 2) {
+    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
+
+    // If the upper half is zeroable, then an extract+insert is more optimal
+    // than using X86ISD::VPERM2X128. The insertion is free, even if it has to
+    // zero the upper half.
+    if (isUndefOrZero(BaseMask[1])) {
+      if (Depth == 0 && Root.getOpcode() == ISD::INSERT_SUBVECTOR)
+        return SDValue(); // Nothing to do!
+      assert(isInRange(BaseMask[0], 0, 2) && "Unexpected lane shuffle");
+      Res = DAG.getBitcast(ShuffleVT, V1);
+      Res = extract128BitVector(Res, BaseMask[0] * 2, DAG, DL);
+      Res = widenSubVector(Res, BaseMask[1] == SM_SentinelZero, Subtarget, DAG,
+                           DL, 256);
+      return DAG.getBitcast(RootVT, Res);
+    }
+
     if (Depth == 0 && Root.getOpcode() == X86ISD::VPERM2X128)
       return SDValue(); // Nothing to do!
-    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
 
     // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
     // we need to use the zeroing feature.
@@ -34204,8 +34258,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 1 : 2;
   AllowVariableMask &= (Depth >= VariableShuffleDepth) || HasVariableMask;
 
-  bool MaskContainsZeros =
-      any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+  bool MaskContainsZeros = isAnyZero(Mask);
 
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
     // If we have a single input lane-crossing shuffle then lower to VPERMV.
@@ -46576,7 +46629,8 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   // if the insert or extract can be represented with a subregister operation.
   if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
-      (IdxVal != 0 || !Vec.isUndef())) {
+      (IdxVal != 0 ||
+       !(Vec.isUndef() || ISD::isBuildVectorAllZeros(Vec.getNode())))) {
     int ExtIdxVal = SubVec.getConstantOperandVal(1);
     if (ExtIdxVal != 0) {
       int VecNumElts = OpVT.getVectorNumElements();
@@ -47251,6 +47305,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::INSERTPS:
   case X86ISD::EXTRQI:
   case X86ISD::INSERTQI:
+  case X86ISD::VALIGN:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:

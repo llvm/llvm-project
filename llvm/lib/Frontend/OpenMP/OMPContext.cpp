@@ -79,8 +79,8 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   LLVM_DEBUG({
     dbgs() << "[" << DEBUG_TYPE
            << "] New OpenMP context with the following properties:\n";
-    for (const auto &SetBitsIt : ActiveTraits.set_bits()) {
-      TraitProperty Property = TraitProperty(SetBitsIt);
+    for (unsigned Bit : ActiveTraits.set_bits()) {
+      TraitProperty Property = TraitProperty(Bit);
       dbgs() << "\t " << getOpenMPContextTraitPropertyFullName(Property)
              << "\n";
     }
@@ -127,8 +127,8 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   // relation is not required to be strict.
   if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
     return false;
-  for (const auto &SetBitsIt : VMI0.RequiredTraits.set_bits())
-    if (!VMI1.RequiredTraits.test(SetBitsIt))
+  for (unsigned Bit : VMI0.RequiredTraits.set_bits())
+    if (!VMI1.RequiredTraits.test(Bit))
       return false;
   if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
     return false;
@@ -139,8 +139,8 @@ static int isVariantApplicableInContextHelper(
     const VariantMatchInfo &VMI, const OMPContext &Ctx,
     SmallVectorImpl<unsigned> *ConstructMatches) {
 
-  for (const auto &SetBitsIt : VMI.RequiredTraits.set_bits()) {
-    TraitProperty Property = TraitProperty(SetBitsIt);
+  for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(Bit);
 
     bool IsActiveTrait = Ctx.ActiveTraits.test(unsigned(Property));
     if (!IsActiveTrait) {
@@ -191,8 +191,8 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   APInt Score(64, 1);
 
   unsigned NoConstructTraits = VMI.ConstructTraits.size();
-  for (const auto &SetBitsIt : VMI.RequiredTraits.set_bits()) {
-    TraitProperty Property = TraitProperty(SetBitsIt);
+  for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(Bit);
     // If there is a user score attached, use it.
     if (VMI.ScoreMap.count(Property)) {
       const APInt &UserScore = VMI.ScoreMap.lookup(Property);

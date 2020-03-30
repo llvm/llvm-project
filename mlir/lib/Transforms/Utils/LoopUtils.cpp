@@ -700,19 +700,48 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
 }
 
-/// Performs a sequence of loop interchanges of loops in perfectly nested
-/// sequence of loops in 'loops', as specified by permutation in 'loopPermMap'.
-unsigned mlir::interchangeLoops(ArrayRef<AffineForOp> loops,
-                                ArrayRef<unsigned> loopPermMap) {
+/// Return true if `loops` is a perfect nest.
+static bool isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+  auto outerLoop = loops.front();
+  for (auto loop : loops.drop_front()) {
+    auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
+    // parentForOp's body should be just this loop and the terminator.
+    if (parentForOp != outerLoop ||
+        parentForOp.getBody()->getOperations().size() != 2)
+      return false;
+    outerLoop = loop;
+  }
+  return true;
+}
+
+// input[i] should move from position i -> permMap[i]. Returns the position in
+// `input` that becomes the new outermost loop.
+unsigned mlir::permuteLoops(ArrayRef<AffineForOp> input,
+                            ArrayRef<unsigned> permMap) {
+  assert(input.size() == permMap.size() && "invalid permutation map size");
+  // Check whether the permutation spec is valid. This is a small vector - we'll
+  // just sort and check if it's iota.
+  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  llvm::sort(checkPermMap);
+  if (llvm::any_of(llvm::enumerate(checkPermMap),
+                   [](const auto &en) { return en.value() != en.index(); }))
+    assert(false && "invalid permutation map");
+
+  // Nothing to do.
+  if (input.size() < 2)
+    return 0;
+
+  assert(isPerfectlyNested(input) && "input not perfectly nested");
+
   Optional<unsigned> loopNestRootIndex;
-  for (int i = loops.size() - 1; i >= 0; --i) {
-    int permIndex = static_cast<int>(loopPermMap[i]);
+  for (int i = input.size() - 1; i >= 0; --i) {
+    int permIndex = static_cast<int>(permMap[i]);
     // Store the index of the for loop which will be the new loop nest root.
     if (permIndex == 0)
       loopNestRootIndex = i;
     if (permIndex > i) {
       // Sink loop 'i' by 'permIndex - i' levels deeper into the loop nest.
-      sinkLoop(loops[i], permIndex - i);
+      sinkLoop(input[i], permIndex - i);
     }
   }
   assert(loopNestRootIndex.hasValue());
@@ -770,7 +799,7 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
   if (!checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap))
     return forOp;
   // Perform loop interchange according to permutation 'loopPermMap'.
-  unsigned loopNestRootIndex = interchangeLoops(loops, loopPermMap);
+  unsigned loopNestRootIndex = permuteLoops(loops, loopPermMap);
   return loops[loopNestRootIndex];
 }
 

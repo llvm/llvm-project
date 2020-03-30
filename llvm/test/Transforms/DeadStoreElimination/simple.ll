@@ -259,6 +259,8 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 
 declare noalias i8* @malloc(i32)
 declare noalias i8* @calloc(i32, i32)
+declare noalias i8* @aligned_alloc(i32, i32)
+declare void @free(i8*)
 
 
 define void @test14(i32* %Q) {
@@ -272,6 +274,17 @@ define void @test14(i32* %Q) {
 
 }
 
+; Dead store on an aligned_alloc: should know that %M doesn't alias with %A.
+define i32 @test14a(i8* %M, i8 %value) {
+; CHECK-LABEL: @test14a(
+; CHECK-NOT: store
+; CHECK:     ret i32 0
+;
+  %A = tail call i8* @aligned_alloc(i32 32, i32 1024)
+  store i8 %value, i8* %A
+  tail call void @free(i8* %A)
+  ret i32 0
+}
 
 ; PR8701
 

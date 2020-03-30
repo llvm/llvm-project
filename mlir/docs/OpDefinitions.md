@@ -710,7 +710,7 @@ to:
    -  Note that `attr-dict` does not overlap with individual attributes. These
       attributes will simply be elided when printing the attribute dictionary.
 
-##### Type Inferrence
+##### Type Inference
 
 One requirement of the format is that the types of operands and results must
 always be present. In certain instances, the type of a variable may be deduced

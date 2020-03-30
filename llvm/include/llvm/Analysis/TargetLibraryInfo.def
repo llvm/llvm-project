@@ -481,6 +481,9 @@ TLI_DEFINE_STRING_INTERNAL("acoshl")
 /// long double acosl(long double x);
 TLI_DEFINE_ENUM_INTERNAL(acosl)
 TLI_DEFINE_STRING_INTERNAL("acosl")
+/// void *aligned_alloc(size_t alignment, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(aligned_alloc)
+TLI_DEFINE_STRING_INTERNAL("aligned_alloc")
 /// double asin(double x);
 TLI_DEFINE_ENUM_INTERNAL(asin)
 TLI_DEFINE_STRING_INTERNAL("asin")

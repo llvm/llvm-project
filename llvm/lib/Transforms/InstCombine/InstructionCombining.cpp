@@ -264,7 +264,7 @@ static void ClearSubclassDataAfterReassociation(BinaryOperator &I) {
 /// cast to eliminate one of the associative operations:
 /// (op (cast (op X, C2)), C1) --> (cast (op X, op (C1, C2)))
 /// (op (cast (op X, C2)), C1) --> (op (cast X), op (C1, C2))
-static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
+static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1, InstCombiner &IC) {
   auto *Cast = dyn_cast<CastInst>(BinOp1->getOperand(0));
   if (!Cast || !Cast->hasOneUse())
     return false;
@@ -297,8 +297,8 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
   Type *DestTy = C1->getType();
   Constant *CastC2 = ConstantExpr::getCast(CastOpcode, C2, DestTy);
   Constant *FoldedC = ConstantExpr::get(AssocOpcode, C1, CastC2);
-  Cast->setOperand(0, BinOp2->getOperand(0));
-  BinOp1->setOperand(1, FoldedC);
+  IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
+  IC.replaceOperand(*BinOp1, 1, FoldedC);
   return true;
 }
 
@@ -393,7 +393,7 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
     }
 
     if (I.isAssociative() && I.isCommutative()) {
-      if (simplifyAssocCastAssoc(&I)) {
+      if (simplifyAssocCastAssoc(&I, *this)) {
         Changed = true;
         ++NumReassoc;
         continue;

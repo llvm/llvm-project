@@ -205,7 +205,8 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
                          MemberOfUnknownSpecialization, SourceLocation(),
-                         &AssumedTemplate, Disambiguation))
+                         &AssumedTemplate,
+                         /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
@@ -371,9 +372,9 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                               QualType ObjectType,
                               bool EnteringContext,
                               bool &MemberOfUnknownSpecialization,
-                              SourceLocation TemplateKWLoc,
+                              RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
-                              bool Disambiguation) {
+                              bool AllowTypoCorrection) {
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -473,7 +474,8 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   if (Found.isAmbiguous())
     return false;
 
-  if (ATK && SS.isEmpty() && ObjectType.isNull() && TemplateKWLoc.isInvalid()) {
+  if (ATK && SS.isEmpty() && ObjectType.isNull() &&
+      !RequiredTemplate.hasTemplateKeyword()) {
     // C++2a [temp.names]p2:
     //   A name is also considered to refer to a template if it is an
     //   unqualified-id followed by a < and name lookup finds either one or more
@@ -499,7 +501,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     }
   }
 
-  if (Found.empty() && !IsDependent && !Disambiguation) {
+  if (Found.empty() && !IsDependent && AllowTypoCorrection) {
     // If we did not find any names, and this is not a disambiguation, attempt
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
@@ -545,9 +547,11 @@ bool Sema::LookupTemplateName(LookupResult &Found,
 
     // If a 'template' keyword was used, a lookup that finds only non-template
     // names is an error.
-    if (ExampleLookupResult && TemplateKWLoc.isValid()) {
+    if (ExampleLookupResult && RequiredTemplate) {
       Diag(Found.getNameLoc(), diag::err_template_kw_refers_to_non_template)
-        << Found.getLookupName() << SS.getRange();
+          << Found.getLookupName() << SS.getRange()
+          << RequiredTemplate.hasTemplateKeyword()
+          << RequiredTemplate.getTemplateKeywordLoc();
       Diag(ExampleLookupResult->getUnderlyingDecl()->getLocation(),
            diag::note_template_kw_refers_to_non_template)
           << Found.getLookupName();
@@ -4722,10 +4726,14 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
     LookupResult R(*this, DNI.getName(), Name.getBeginLoc(),
                    LookupOrdinaryName);
     bool MOUS;
-    // FIXME: If LookupTemplateName fails here, we'll have produced its
-    // diagnostics twice.
-    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext,
-                            MOUS, TemplateKWLoc) && !R.isAmbiguous()) {
+    // Tell LookupTemplateName that we require a template so that it diagnoses
+    // cases where it finds a non-template.
+    RequiredTemplateKind RTK = TemplateKWLoc.isValid()
+                                   ? RequiredTemplateKind(TemplateKWLoc)
+                                   : TemplateNameIsRequired;
+    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, MOUS,
+                            RTK, nullptr, /*AllowTypoCorrection=*/false) &&
+        !R.isAmbiguous()) {
       if (LookupCtx)
         Diag(Name.getBeginLoc(), diag::err_no_member)
             << DNI.getName() << LookupCtx << SS.getRange();

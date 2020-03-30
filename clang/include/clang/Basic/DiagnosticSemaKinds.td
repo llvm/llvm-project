@@ -4916,7 +4916,8 @@ def note_using_value_decl_missing_typename : Note<
   "add 'typename' to treat this using declaration as a type">;
 
 def err_template_kw_refers_to_non_template : Error<
-  "%0 following the 'template' keyword does not refer to a template">;
+  "%0%select{| following the 'template' keyword}1 "
+  "does not refer to a template">;
 def note_template_kw_refers_to_non_template : Note<
   "declared as a non-template here">;
 def err_template_kw_refers_to_dependent_non_template : Error<

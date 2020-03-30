@@ -1,5 +1,5 @@
-add_mlir_dialect(GPUOps gpu GPUOps)
-add_mlir_doc(GPUOps -gen-dialect-doc GPUDialect Dialects/)
+add_mlir_dialect(GPUOps gpu)
+add_mlir_doc(GPUOps -gen-op-doc GPUOps Dialects/)
 
 set(LLVM_TARGET_DEFINITIONS ParallelLoopMapperAttr.td)
 mlir_tablegen(ParallelLoopMapperAttr.h.inc -gen-struct-attr-decls)
