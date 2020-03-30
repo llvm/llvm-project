@@ -33,10 +33,6 @@ class ExprCommandWithFixits(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(True)
 
-        top_level_options = lldb.SBExpressionOptions()
-        top_level_options.SetAutoApplyFixIts(True)
-        top_level_options.SetTopLevel(True)
-
         frame = self.thread.GetFrameAtIndex(0)
 
         # Try with one error:
@@ -44,15 +40,6 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Success())
         self.assertEquals(value.GetValueAsUnsigned(), 10)
-
-        # Try with one error in a top-level expression.
-        # The Fix-It changes "ptr.m" to "ptr->m".
-        expr = "struct X { int m; }; X x; X *ptr = &x; int m = ptr.m;"
-        value = frame.EvaluateExpression(expr, top_level_options)
-        # A successfully parsed top-level expression will yield an error
-        # that there is 'no value'. If a parsing error would have happened we
-        # would get a different error kind, so let's check the error kind here.
-        self.assertEquals(value.GetError().GetCString(), "error: No value")
 
         # Try with two errors:
         two_error_expression = "my_pointer.second->a"
