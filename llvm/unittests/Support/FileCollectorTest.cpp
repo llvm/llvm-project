@@ -120,6 +120,41 @@ TEST(FileCollectorTest, addFile) {
   EXPECT_FALSE(FileCollector.hasSeen("/path/to/d"));
 }
 
+TEST(FileCollectorTest, addDirectory) {
+  ScopedDir file_root("file_root", true);
+
+  llvm::SmallString<128> aaa = file_root.Path;
+  llvm::sys::path::append(aaa, "aaa");
+  ScopedFile a(aaa.str());
+
+  llvm::SmallString<128> bbb = file_root.Path;
+  llvm::sys::path::append(bbb, "bbb");
+  ScopedFile b(bbb.str());
+
+  llvm::SmallString<128> ccc = file_root.Path;
+  llvm::sys::path::append(ccc, "ccc");
+  ScopedFile c(ccc.str());
+
+  std::string root_fs = std::string(file_root.Path.str());
+  TestingFileCollector FileCollector(root_fs, root_fs);
+
+  FileCollector.addDirectory(file_root.Path);
+
+  // Make sure the root is correct.
+  EXPECT_EQ(FileCollector.Root, root_fs);
+
+  // Make sure we've seen all the added files.
+  EXPECT_TRUE(FileCollector.hasSeen(a.Path));
+  EXPECT_TRUE(FileCollector.hasSeen(b.Path));
+  EXPECT_TRUE(FileCollector.hasSeen(c.Path));
+
+  // Make sure we've only seen the added files.
+  llvm::SmallString<128> ddd = file_root.Path;
+  llvm::sys::path::append(ddd, "ddd");
+  ScopedFile d(ddd.str());
+  EXPECT_FALSE(FileCollector.hasSeen(d.Path));
+}
+
 TEST(FileCollectorTest, copyFiles) {
   ScopedDir file_root("file_root", true);
   ScopedFile a(file_root + "/aaa");

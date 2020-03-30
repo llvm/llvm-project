@@ -61,11 +61,17 @@ bool FileCollector::getRealPath(StringRef SrcPath,
   return true;
 }
 
-void FileCollector::addFile(const Twine &file) {
+void FileCollector::addFile(const Twine &File) {
   std::lock_guard<std::mutex> lock(Mutex);
-  std::string FileStr = file.str();
+  std::string FileStr = File.str();
   if (markAsSeen(FileStr))
     addFileImpl(FileStr);
+}
+
+void FileCollector::addDirectory(const Twine &Dir) {
+  assert(sys::fs::is_directory(Dir));
+  std::error_code EC;
+  addDirectoryImpl(Dir, vfs::getRealFileSystem(), EC);
 }
 
 void FileCollector::addFileImpl(StringRef SrcPath) {
@@ -99,6 +105,27 @@ void FileCollector::addFileImpl(StringRef SrcPath) {
   // needed for correctness, not doing that can lead to module redefinition
   // errors.
   addFileToMapping(VirtualPath, DstPath);
+}
+
+llvm::vfs::directory_iterator
+FileCollector::addDirectoryImpl(const llvm::Twine &Dir,
+                                IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                                std::error_code &EC) {
+  auto It = FS->dir_begin(Dir, EC);
+  if (EC)
+    return It;
+  addFile(Dir);
+  for (; !EC && It != llvm::vfs::directory_iterator(); It.increment(EC)) {
+    if (It->type() == sys::fs::file_type::regular_file ||
+        It->type() == sys::fs::file_type::directory_file ||
+        It->type() == sys::fs::file_type::symlink_file) {
+      addFile(It->path());
+    }
+  }
+  if (EC)
+    return It;
+  // Return a new iterator.
+  return FS->dir_begin(Dir, EC);
 }
 
 /// Set the access and modification time for the given file from the given
@@ -171,7 +198,7 @@ std::error_code FileCollector::copyFiles(bool StopOnError) {
   return {};
 }
 
-std::error_code FileCollector::writeMapping(StringRef mapping_file) {
+std::error_code FileCollector::writeMapping(StringRef MappingFile) {
   std::lock_guard<std::mutex> lock(Mutex);
 
   VFSWriter.setOverlayDir(OverlayRoot);
@@ -179,7 +206,7 @@ std::error_code FileCollector::writeMapping(StringRef mapping_file) {
   VFSWriter.setUseExternalNames(false);
 
   std::error_code EC;
-  raw_fd_ostream os(mapping_file, EC, sys::fs::OF_Text);
+  raw_fd_ostream os(MappingFile, EC, sys::fs::OF_Text);
   if (EC)
     return EC;
 
@@ -188,7 +215,7 @@ std::error_code FileCollector::writeMapping(StringRef mapping_file) {
   return {};
 }
 
-namespace {
+namespace llvm {
 
 class FileCollectorFileSystem : public vfs::FileSystem {
 public:
@@ -213,22 +240,7 @@ public:
 
   llvm::vfs::directory_iterator dir_begin(const llvm::Twine &Dir,
                                           std::error_code &EC) override {
-    auto It = FS->dir_begin(Dir, EC);
-    if (EC)
-      return It;
-    // Collect everything that's listed in case the user needs it.
-    Collector->addFile(Dir);
-    for (; !EC && It != llvm::vfs::directory_iterator(); It.increment(EC)) {
-      if (It->type() == sys::fs::file_type::regular_file ||
-          It->type() == sys::fs::file_type::directory_file ||
-          It->type() == sys::fs::file_type::symlink_file) {
-        Collector->addFile(It->path());
-      }
-    }
-    if (EC)
-      return It;
-    // Return a new iterator.
-    return FS->dir_begin(Dir, EC);
+    return Collector->addDirectoryImpl(Dir, FS, EC);
   }
 
   std::error_code getRealPath(const Twine &Path,
@@ -259,7 +271,7 @@ private:
   std::shared_ptr<FileCollector> Collector;
 };
 
-} // end anonymous namespace
+} // namespace llvm
 
 IntrusiveRefCntPtr<vfs::FileSystem>
 FileCollector::createCollectorVFS(IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
