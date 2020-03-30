@@ -280,6 +280,9 @@ public:
   /// This method erases an operation that is known to have no uses.
   virtual void eraseOp(Operation *op);
 
+  /// This method erases all operations in a block.
+  virtual void eraseBlock(Block *block);
+
   /// Merge the operations of block 'source' into the end of block 'dest'.
   /// 'source's predecessors must either be empty or only contain 'dest`.
   /// 'argValues' is used to replace the block arguments of 'source' after
