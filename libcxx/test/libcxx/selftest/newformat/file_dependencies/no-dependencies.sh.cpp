@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: objective-c++
+// Make sure that %{file_dependencies} is empty when no FILE_DEPENDENCIES
+// line appears. Amongst other things, this makes sure that we don't share
+// file dependencies across unrelated Lit tests.
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
-
-int main(int, char**) { return 0; }
+// RUN: test -z "%{file_dependencies}"
