@@ -60,6 +60,16 @@ int main(int argc, char const *argv[]) {
     } 
   } clang_example;
 
+  class B {
+  public:
+    uint32_t b_a;
+  };
+
+  class D : public B {
+  public:
+    uint32_t d_a : 1;
+  } derived;
+
   lba.a = 2;
 
   lbb.a = 1;
@@ -76,6 +86,8 @@ int main(int argc, char const *argv[]) {
   lbd.arr[2] = '\0';
   lbd.a = 5;
 
+  derived.b_a = 2;
+  derived.d_a = 1;
 
   return 0; // Set break point at this line.
 }
