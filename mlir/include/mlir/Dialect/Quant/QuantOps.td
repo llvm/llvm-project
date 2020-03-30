@@ -92,7 +92,7 @@ def quant_QuantizeRegionOp : quant_Op<"region", [
     IsolatedFromAbove,
     SingleBlockImplicitTerminator<"ReturnOp">]> {
   let summary = [{
-    The `region operation wraps high-precision ops as a logical low-precision
+    The `region` operation wraps high-precision ops as a logical low-precision
     quantized kernel.
   }];
 
@@ -119,8 +119,9 @@ def quant_ReturnOp : quant_Op<"return", [Terminator]> {
 
 def quant_ConstFakeQuant : quant_Op<"const_fake_quant",
                                     [SameOperandsAndResultType, NoSideEffect]> {
-  let summary =
-      "Simulates the effect of uniform quantization with const range.";
+  let summary = [{
+    Simulates the effect of uniform quantization with const range.
+  }];
 
   let description = [{
     Given a const min, max, num_bits and narrow_range attribute, applies the
@@ -148,8 +149,9 @@ def quant_ConstFakeQuant : quant_Op<"const_fake_quant",
 
 def quant_ConstFakeQuantPerAxis : quant_Op<"const_fake_quant_per_axis",
                                     [SameOperandsAndResultType, NoSideEffect]> {
-  let summary =
-      "Simulates the effect of per axis uniform quantization with const range.";
+  let summary = [{
+    Simulates the effect of per axis uniform quantization with const range.
+  }];
 
   let description = [{
     Given a const min, max, num_bits and narrow_range attribute, applies the
@@ -179,8 +181,7 @@ def quant_ConstFakeQuantPerAxis : quant_Op<"const_fake_quant_per_axis",
 }
 
 def quant_StatisticsRefOp : quant_Op<"stats_ref", [SameOperandsAndResultType]> {
-  let summary =
-      "Indicates that statistics are resolved by reference.";
+  let summary = "Indicates that statistics are resolved by reference.";
 
   let description = [{
     This op acts as an identity that, when encountered at runtime, should result
@@ -198,8 +199,7 @@ def quant_StatisticsRefOp : quant_Op<"stats_ref", [SameOperandsAndResultType]> {
 }
 
 def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
-  let summary =
-      "Identity op which associates statistics with the value.";
+  let summary = "Identity op which associates statistics with the value.";
 
   let description = [{
     Associates statistics about the runtime ranges of values observed for
@@ -213,8 +213,11 @@ def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
     `layerStats` must be a rank 1 tensor: [2]
     `axisStats` must be a rank 2 tensor: [N, 2], where N=the slice size
       splitted by the `axis` dimension. For example:
-      <?x?x3x2>, axis=3 => N=2
-      <?x?x3x2>, axis=2 => N=6
+
+    ```
+    <?x?x3x2>, axis=3 => N=2
+    <?x?x3x2>, axis=2 => N=6
+    ```
   }];
 
   let arguments = (ins
@@ -263,8 +266,9 @@ def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
 }
 
 def quant_CoupledRefOp : quant_Op<"coupled_ref", [SameOperandsAndResultType]> {
-  let summary =
-      "Indicates that one point of the computation is coupled to another.";
+  let summary = [{
+    Indicates that one point of the computation is coupled to another.
+  }];
 
   let description = [{
     Ordinarily, relationships between ops for the purposes of determining

@@ -1,4 +1,4 @@
-# Linalg Dialect
+# `linalg` Dialect
 
 [TOC]
 
@@ -469,3 +469,7 @@ These key questions (and much more) should be really thought of in the general
 context of MLIR in which different levels of IR interoperate seamlessly. In
 practice, it is not necessary (or beneficial) to try and solve all problems in the
 same IR.
+
+## Operations
+
+[include "Dialects/LinalgOps.md"]
