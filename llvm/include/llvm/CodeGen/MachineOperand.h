@@ -698,6 +698,11 @@ public:
     Contents.RegMask = RegMaskPtr;
   }
 
+  void setIntrinsicID(Intrinsic::ID IID) {
+    assert(isIntrinsicID() && "Wrong MachineOperand mutator");
+    Contents.IntrinsicID = IID;
+  }
+
   void setPredicate(unsigned Predicate) {
     assert(isPredicate() && "Wrong MachineOperand mutator");
     Contents.Pred = Predicate;
