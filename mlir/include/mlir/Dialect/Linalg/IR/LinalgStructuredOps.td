@@ -61,44 +61,48 @@ def CopyOp : LinalgStructured_Op<"copy", [NInputs<1>, NOutputs<1>]> {
     Copies the data in the input view into the output view.
 
     Usage:
-      ```mlir
-      linalg.copy(%arg0, %arg1) : memref<?xf32, stride_specification>,
-                                  memref<?xf32, stride_specification>
-      ```
+
+    ```mlir
+    linalg.copy(%arg0, %arg1) : memref<?xf32, stride_specification>,
+                                memref<?xf32, stride_specification>
+    ```
 
     One possible lowering to loop form is:
-      ```mlir
-      %0 = linalg.dim %arg0, 0 : index
-      loop.for %i0 = %c0 to %0 step %c1 {
-        %1 = load %arg0[%i0] : memref<?xf32, stride_specification>
-        store %1, %arg1[%i0] : memref<?xf32, stride_specification>
-      }
-      ```
+
+    ```mlir
+    %0 = linalg.dim %arg0, 0 : index
+    loop.for %i0 = %c0 to %0 step %c1 {
+      %1 = load %arg0[%i0] : memref<?xf32, stride_specification>
+      store %1, %arg1[%i0] : memref<?xf32, stride_specification>
+    }
+    ```
 
     Optionally, can take `input_permutation` and `output_permutation` attributes
     to reorder the dimensions of the input and output views.
 
     Usage:
-      ```mlir
-      linalg.copy(%arg0, %arg1) {inputPermutation : (i, j, k) -> (i, k, j),
-                                 outputPermutation : (i, j, k) -> (k, j, i)} :
-        memref<?x?x?xf32, stride_specification>,
-        memref<?x?x?xf32, stride_specification>
-     ```
+
+    ```mlir
+    linalg.copy(%arg0, %arg1) {inputPermutation : (i, j, k) -> (i, k, j),
+                               outputPermutation : (i, j, k) -> (k, j, i)} :
+      memref<?x?x?xf32, stride_specification>,
+      memref<?x?x?xf32, stride_specification>
+    ```
 
     One possible lowering to loop form is:
-      ```mlir
-      %0 = linalg.dim %arg0, 0
-      %1 = linalg.dim %arg0, 1
-      %2 = linalg.dim %arg0, 2
-      loop.for %i0 = %c0 to %{{.*}} step %c1 {
-        loop.for %i1 = %c0 to %{{.*}} step %c1 {
-          loop.for %i2 = %c0 to %{{.*}} step %c1 {
-            %3 = load %arg0[%i0, %i2, %i1] :
-                    memref<?x?x?xf32, stride_specification>
-            store %3, %arg1[%i2, %i1, %i0] :
-                    memref<?x?x?xf32, stride_specification>
-      ```
+
+    ```mlir
+    %0 = linalg.dim %arg0, 0
+    %1 = linalg.dim %arg0, 1
+    %2 = linalg.dim %arg0, 2
+    loop.for %i0 = %c0 to %{{.*}} step %c1 {
+      loop.for %i1 = %c0 to %{{.*}} step %c1 {
+        loop.for %i2 = %c0 to %{{.*}} step %c1 {
+          %3 = load %arg0[%i0, %i2, %i1] :
+                  memref<?x?x?xf32, stride_specification>
+          store %3, %arg1[%i2, %i1, %i0] :
+                  memref<?x?x?xf32, stride_specification>
+    ```
 
     The views are expected to be compatible for correctness but this is not
     enforced at the moment.
@@ -441,10 +445,10 @@ def GenericOp : GenericOpBase<"generic"> {
     specified as attributes. In pretty form, a linalg.generic op is written as:
 
       ```mlir
-        linalg.generic #trait_attribute %A, %B, %C {other-attributes} :
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>
+      linalg.generic #trait_attribute %A, %B, %C {other-attributes} :
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>
       ```
 
     Where #trait_attributes is an alias of a dictionary attribute containing:
@@ -474,41 +478,41 @@ def GenericOp : GenericOpBase<"generic"> {
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
-        func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
-          %d = mulf %a, %b: f32
-          %e = addf %c, %d: f32
-          return %e: f32
-        }
-        #matmul_accesses = [
-          (m, n, k) -> (m, k),
-          (m, n, k) -> (k, n),
-          (m, n, k) -> (m, n)
-        ]
-        #matmul_trait = {
-          doc = "C(m, n) += A(m, k) * B(k, n)",
-          fun = @fma,
-          indexing_maps = #matmul_accesses,
-          library_call = "linalg_matmul",
-          n_views = [2, 1],
-          iterator_types = ["parallel", "parallel", "reduction"]
-        }
+      func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
+        %d = mulf %a, %b: f32
+        %e = addf %c, %d: f32
+        return %e: f32
+      }
+      #matmul_accesses = [
+        (m, n, k) -> (m, k),
+        (m, n, k) -> (k, n),
+        (m, n, k) -> (m, n)
+      ]
+      #matmul_trait = {
+        doc = "C(m, n) += A(m, k) * B(k, n)",
+        fun = @fma,
+        indexing_maps = #matmul_accesses,
+        library_call = "linalg_matmul",
+        n_views = [2, 1],
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
       ```
 
     And can be reused in multiple places as:
       ```mlir
-        linalg.generic #matmul_trait %A, %B, %C [other-attributes] :
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>
+      linalg.generic #matmul_trait %A, %B, %C [other-attributes] :
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>
       ```
 
     This may lower to either:
       ```mlir
-        call @linalg_matmul(%A, %B, %C) :
-          (memref<?x?xf32, stride_specification>,
-           memref<?x?xf32, stride_specification>,
-           memref<?x?xf32, stride_specification>)
-          -> ()
+      call @linalg_matmul(%A, %B, %C) :
+        (memref<?x?xf32, stride_specification>,
+         memref<?x?xf32, stride_specification>,
+         memref<?x?xf32, stride_specification>)
+        -> ()
       ```
 
     or IR resembling:
@@ -532,10 +536,10 @@ def GenericOp : GenericOpBase<"generic"> {
     mixing input and output ranked tensor values with input and output memrefs.
 
     ```mlir
-      %C = linalg.generic #trait_attribute %A, %B {other-attributes} :
-        tensor<?x?xf32>,
-        memref<?x?xf32, stride_specification>
-        -> (tensor<?x?xf32>)
+    %C = linalg.generic #trait_attribute %A, %B {other-attributes} :
+      tensor<?x?xf32>,
+      memref<?x?xf32, stride_specification>
+      -> (tensor<?x?xf32>)
     ```
 
     In this case, the number of outputs (args_out) must match the sum of (1) the
@@ -568,10 +572,10 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     written as:
 
       ```mlir
-        linalg.indexed_generic #trait_attribute %A, %B, %C {other-attributes} :
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>
+      linalg.indexed_generic #trait_attribute %A, %B, %C {other-attributes} :
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>
       ```
 
     Where #trait_attributes is an alias of a dictionary attribute containing:
@@ -600,49 +604,53 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
-      ```mlir
-        func @fma(%offset_m: index, %offset_n: index, %offset_k: index,
-                  %a: f32, %b: f32, %c: f32)
-          -> f32
-        {
-          "some_optional_condition"(%offset_m, %offset_n, %offset_k)
-          %d = mulf %a, %b: f32
-          %e = addf %c, %d: f32
-          return %e: f32
-        }
-        #matmul_accesses = [
-          (m, n, k) -> (m, k),
-          (m, n, k) -> (k, n),
-          (m, n, k) -> (m, n)
-        ]
-        #matmul_trait = {
-          doc = "C(m, n) += A(m, k) * B(k, n)",
-          fun = @fma,
-          indexing_maps = #matmul_accesses,
-          library_call = "linalg_matmul",
-          n_views = [2, 1],
-          iterator_types = ["parallel", "parallel", "reduction"]
-        }
-      ```
+
+    ```mlir
+    func @fma(%offset_m: index, %offset_n: index, %offset_k: index,
+              %a: f32, %b: f32, %c: f32)
+      -> f32
+    {
+      "some_optional_condition"(%offset_m, %offset_n, %offset_k)
+      %d = mulf %a, %b: f32
+      %e = addf %c, %d: f32
+      return %e: f32
+    }
+    #matmul_accesses = [
+      (m, n, k) -> (m, k),
+      (m, n, k) -> (k, n),
+      (m, n, k) -> (m, n)
+    ]
+    #matmul_trait = {
+      doc = "C(m, n) += A(m, k) * B(k, n)",
+      fun = @fma,
+      indexing_maps = #matmul_accesses,
+      library_call = "linalg_matmul",
+      n_views = [2, 1],
+      iterator_types = ["parallel", "parallel", "reduction"]
+    }
+    ```
 
     And can be reused in multiple places as:
-      ```mlir
-        linalg.indexed_generic #matmul_trait %A, %B, %C [other-attributes] :
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>
-      ```
+
+    ```mlir
+    linalg.indexed_generic #matmul_trait %A, %B, %C [other-attributes] :
+      memref<?x?xf32, stride_specification>,
+      memref<?x?xf32, stride_specification>,
+      memref<?x?xf32, stride_specification>
+    ```
 
     This may lower to either:
-      ```mlir
-        call @linalg_matmul(%offset_m, %offset_n, %offset_k, %A, %B, %C) :
-          (memref<?x?xf32, stride_specification>,
-           memref<?x?xf32, stride_specification>,
-           memref<?x?xf32, stride_specification>)
-          -> ()
-      ```
+
+    ```mlir
+    call @linalg_matmul(%offset_m, %offset_n, %offset_k, %A, %B, %C) :
+      (memref<?x?xf32, stride_specification>,
+       memref<?x?xf32, stride_specification>,
+       memref<?x?xf32, stride_specification>)
+      -> ()
+    ```
 
     or IR resembling:
+
     ```mlir
     loop.for %m = %c0 to %M step %c1 {
       loop.for %n = %c0 to %N step %c1 {
@@ -664,10 +672,10 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     memrefs.
 
     ```mlir
-      %C = linalg.indexed_generic #trait_attribute %A, %B {other-attributes}
-      : tensor<?x?xf32>,
-        memref<?x?xf32, stride_specification>
-        -> (tensor<?x?xf32>)
+    %C = linalg.indexed_generic #trait_attribute %A, %B {other-attributes}
+    : tensor<?x?xf32>,
+      memref<?x?xf32, stride_specification>
+      -> (tensor<?x?xf32>)
     ```
 
     In this case, the number of outputs (args_out) must match the sum of (1) the
