@@ -766,7 +766,12 @@ class ConstantDataVector final : public ConstantDataSequential {
   friend class ConstantDataSequential;
 
   explicit ConstantDataVector(Type *ty, const char *Data)
-      : ConstantDataSequential(ty, ConstantDataVectorVal, Data) {}
+      : ConstantDataSequential(ty, ConstantDataVectorVal, Data),
+        IsSplatSet(false) {}
+  // Cache whether or not the constant is a splat.
+  mutable bool IsSplatSet : 1;
+  mutable bool IsSplat : 1;
+  bool isSplatData() const;
 
 public:
   ConstantDataVector(const ConstantDataVector &) = delete;
