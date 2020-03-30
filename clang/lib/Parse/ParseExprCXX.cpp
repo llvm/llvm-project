@@ -3105,10 +3105,14 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
       auto RunSignatureHelp = [&]() {
         ParsedType TypeRep =
             Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
-        assert(TypeRep && "invalid types should be handled before");
-        QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-            getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-            DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
+        QualType PreferredType;
+        // ActOnTypeName might adjust DeclaratorInfo and return a null type even
+        // the passing DeclaratorInfo is valid, e.g. running SignatureHelp on
+        // `new decltype(invalid) (^)`.
+        if (TypeRep)
+          PreferredType = Actions.ProduceConstructorSignatureHelp(
+              getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
         CalledSignatureHelp = true;
         return PreferredType;
       };
