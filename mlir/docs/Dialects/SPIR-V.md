@@ -1,4 +1,4 @@
-# SPIR-V Dialect
+# 'spv' Dialect
 
 This document describes the design of the SPIR-V dialect in MLIR. It lists
 various design choices we made for modeling different SPIR-V mechanisms, and

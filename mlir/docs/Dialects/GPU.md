@@ -1,4 +1,4 @@
-# `gpu` Dialect
+# 'gpu' Dialect
 
 Note: this dialect is more likely to change than others in the near future; use
 with caution.
