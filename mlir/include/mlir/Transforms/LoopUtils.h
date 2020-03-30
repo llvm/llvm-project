@@ -115,7 +115,7 @@ bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// to inner. Returns the position in `inputNest` of the AffineForOp that
 /// becomes the new outermost loop of this nest. This method always succeeds,
 /// asserts out on invalid input / specifications.
-unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
+unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
                       ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -123,11 +123,6 @@ unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
 // outermost (while again preserving relative order among them).
 // Returns AffineForOp of the root of the new loop nest after loop interchanges.
 AffineForOp sinkSequentialLoops(AffineForOp forOp);
-
-/// Sinks 'forOp' by 'loopDepth' levels by performing a series of loop
-/// interchanges. Requires that 'forOp' is part of a perfect nest with
-/// 'loopDepth' AffineForOps consecutively nested under it.
-void sinkLoop(AffineForOp forOp, unsigned loopDepth);
 
 /// Performs tiling fo imperfectly nested loops (with interchange) by
 /// strip-mining the `forOps` by `sizes` and sinking them, in their order of
