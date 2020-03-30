@@ -2529,11 +2529,176 @@ bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
   return true;
 }
 
+// Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
+//
+// Return lo, hi of result
+//
+// %cvt.lo = G_UITOFP Val.lo
+// %cvt.hi = G_UITOFP Val.hi
+// %mad = G_FMAD %cvt.hi, 2**32, %cvt.lo
+// %rcp = G_AMDGPU_RCP_IFLAG %mad
+// %mul1 = G_FMUL %rcp, 0x5f7ffffc
+// %mul2 = G_FMUL %mul1, 2**(-32)
+// %trunc = G_INTRINSIC_TRUNC %mul2
+// %mad2 = G_FMAD %trunc, -(2**32), %mul1
+// return {G_FPTOUI %mad2, G_FPTOUI %trunc}
+static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
+                                                       Register Val) {
+  const LLT S32 = LLT::scalar(32);
+  auto Unmerge = B.buildUnmerge(S32, Val);
+
+  auto CvtLo = B.buildUITOFP(S32, Unmerge.getReg(0));
+  auto CvtHi = B.buildUITOFP(S32, Unmerge.getReg(1));
+
+  auto Mad = B.buildFMAD(S32, CvtHi, // 2**32
+                         B.buildFConstant(S32, BitsToFloat(0x4f800000)), CvtLo);
+
+  auto Rcp = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Mad});
+  auto Mul1 =
+      B.buildFMul(S32, Rcp, B.buildFConstant(S32, BitsToFloat(0x5f7ffffc)));
+
+  // 2**(-32)
+  auto Mul2 =
+      B.buildFMul(S32, Mul1, B.buildFConstant(S32, BitsToFloat(0x2f800000)));
+  auto Trunc = B.buildIntrinsicTrunc(S32, Mul2);
+
+  // -(2**32)
+  auto Mad2 = B.buildFMAD(S32, Trunc,
+                          B.buildFConstant(S32, BitsToFloat(0xcf800000)), Mul1);
+
+  auto ResultLo = B.buildFPTOUI(S32, Mad2);
+  auto ResultHi = B.buildFPTOUI(S32, Trunc);
+
+  return {ResultLo.getReg(0), ResultHi.getReg(0)};
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM64(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  const bool IsDiv = MI.getOpcode() == TargetOpcode::G_UDIV;
+  const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
+  const LLT S1 = LLT::scalar(1);
+  Register Numer = MI.getOperand(1).getReg();
+  Register Denom = MI.getOperand(2).getReg();
+  Register RcpLo, RcpHi;
+
+  std::tie(RcpLo, RcpHi) = emitReciprocalU64(B, Denom);
+
+  auto Rcp = B.buildMerge(S64, {RcpLo, RcpHi});
+
+  auto Zero64 = B.buildConstant(S64, 0);
+  auto NegDenom = B.buildSub(S64, Zero64, Denom);
+
+  auto MulLo1 = B.buildMul(S64, NegDenom, Rcp);
+  auto MulHi1 = B.buildUMulH(S64, Rcp, MulLo1);
+
+  auto UnmergeMulHi1 = B.buildUnmerge(S32, MulHi1);
+  Register MulHi1_Lo = UnmergeMulHi1.getReg(0);
+  Register MulHi1_Hi = UnmergeMulHi1.getReg(1);
+
+  auto Add1_Lo = B.buildUAddo(S32, S1, RcpLo, MulHi1_Lo);
+  auto Add1_Hi = B.buildUAdde(S32, S1, RcpHi, MulHi1_Hi, Add1_Lo.getReg(1));
+  auto Add1_HiNc = B.buildAdd(S32, RcpHi, MulHi1_Hi);
+  auto Add1 = B.buildMerge(S64, {Add1_Lo, Add1_Hi});
+
+  auto MulLo2 = B.buildMul(S64, NegDenom, Add1);
+  auto MulHi2 = B.buildUMulH(S64, Add1, MulLo2);
+  auto UnmergeMulHi2 = B.buildUnmerge(S32, MulHi2);
+  Register MulHi2_Lo = UnmergeMulHi2.getReg(0);
+  Register MulHi2_Hi = UnmergeMulHi2.getReg(1);
+
+  auto Zero32 = B.buildConstant(S32, 0);
+  auto Add2_Lo = B.buildUAddo(S32, S1, Add1_Lo, MulHi2_Lo);
+  auto Add2_HiC =
+      B.buildUAdde(S32, S1, Add1_HiNc, MulHi2_Hi, Add1_Lo.getReg(1));
+  auto Add2_Hi = B.buildUAdde(S32, S1, Add2_HiC, Zero32, Add2_Lo.getReg(1));
+  auto Add2 = B.buildMerge(S64, {Add2_Lo, Add2_Hi});
+
+  auto UnmergeNumer = B.buildUnmerge(S32, Numer);
+  Register NumerLo = UnmergeNumer.getReg(0);
+  Register NumerHi = UnmergeNumer.getReg(1);
+
+  auto MulHi3 = B.buildUMulH(S64, Numer, Add2);
+  auto Mul3 = B.buildMul(S64, Denom, MulHi3);
+  auto UnmergeMul3 = B.buildUnmerge(S32, Mul3);
+  Register Mul3_Lo = UnmergeMul3.getReg(0);
+  Register Mul3_Hi = UnmergeMul3.getReg(1);
+  auto Sub1_Lo = B.buildUSubo(S32, S1, NumerLo, Mul3_Lo);
+  auto Sub1_Hi = B.buildUSube(S32, S1, NumerHi, Mul3_Hi, Sub1_Lo.getReg(1));
+  auto Sub1_Mi = B.buildSub(S32, NumerHi, Mul3_Hi);
+  auto Sub1 = B.buildMerge(S64, {Sub1_Lo, Sub1_Hi});
+
+  auto UnmergeDenom = B.buildUnmerge(S32, Denom);
+  Register DenomLo = UnmergeDenom.getReg(0);
+  Register DenomHi = UnmergeDenom.getReg(1);
+
+  auto CmpHi = B.buildICmp(CmpInst::ICMP_UGE, S1, Sub1_Hi, DenomHi);
+  auto C1 = B.buildSExt(S32, CmpHi);
+
+  auto CmpLo = B.buildICmp(CmpInst::ICMP_UGE, S1, Sub1_Lo, DenomLo);
+  auto C2 = B.buildSExt(S32, CmpLo);
+
+  auto CmpEq = B.buildICmp(CmpInst::ICMP_EQ, S1, Sub1_Hi, DenomHi);
+  auto C3 = B.buildSelect(S32, CmpEq, C2, C1);
+
+  // TODO: Here and below portions of the code can be enclosed into if/endif.
+  // Currently control flow is unconditional and we have 4 selects after
+  // potential endif to substitute PHIs.
+
+  // if C3 != 0 ...
+  auto Sub2_Lo = B.buildUSubo(S32, S1, Sub1_Lo, DenomLo);
+  auto Sub2_Mi = B.buildUSube(S32, S1, Sub1_Mi, DenomHi, Sub1_Lo.getReg(1));
+  auto Sub2_Hi = B.buildUSube(S32, S1, Sub2_Mi, Zero32, Sub2_Lo.getReg(1));
+  auto Sub2 = B.buildMerge(S64, {Sub2_Lo, Sub2_Hi});
+
+  auto One64 = B.buildConstant(S64, 1);
+  auto Add3 = B.buildAdd(S64, MulHi3, One64);
+
+  auto C4 =
+      B.buildSExt(S32, B.buildICmp(CmpInst::ICMP_UGE, S1, Sub2_Hi, DenomHi));
+  auto C5 =
+      B.buildSExt(S32, B.buildICmp(CmpInst::ICMP_UGE, S1, Sub2_Lo, DenomLo));
+  auto C6 = B.buildSelect(
+      S32, B.buildICmp(CmpInst::ICMP_EQ, S1, Sub2_Hi, DenomHi), C5, C4);
+
+  // if (C6 != 0)
+  auto Add4 = B.buildAdd(S64, Add3, One64);
+  auto Sub3_Lo = B.buildUSubo(S32, S1, Sub2_Lo, DenomLo);
+
+  auto Sub3_Mi = B.buildUSube(S32, S1, Sub2_Mi, DenomHi, Sub2_Lo.getReg(1));
+  auto Sub3_Hi = B.buildUSube(S32, S1, Sub3_Mi, Zero32, Sub3_Lo.getReg(1));
+  auto Sub3 = B.buildMerge(S64, {Sub3_Lo, Sub3_Hi});
+
+  // endif C6
+  // endif C3
+
+  if (IsDiv) {
+    auto Sel1 = B.buildSelect(
+        S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Add4, Add3);
+    B.buildSelect(MI.getOperand(0),
+                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel1, MulHi3);
+  } else {
+    auto Sel2 = B.buildSelect(
+        S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Sub3, Sub2);
+    B.buildSelect(MI.getOperand(0),
+                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel2, Sub1);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
-  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty == LLT::scalar(32))
     return legalizeUDIV_UREM32(MI, MRI, B);
+  if (Ty == LLT::scalar(64))
+    return legalizeUDIV_UREM64(MI, MRI, B);
   return false;
 }
 

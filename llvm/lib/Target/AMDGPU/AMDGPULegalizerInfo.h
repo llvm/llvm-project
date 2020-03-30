@@ -111,8 +111,10 @@ public:
                                bool IsRem) const;
   bool legalizeUDIV_UREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
-
   bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+
+  bool legalizeUDIV_UREM64(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
   bool legalizeSDIV_SREM(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
