@@ -202,7 +202,7 @@ define half @v_uitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_i32_to_f16_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_u32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %masked = and i32 %arg0, 255
@@ -222,7 +222,7 @@ define half @v_sitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_sitofp_i32_to_f16_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_i32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %masked = and i32 %arg0, 255
@@ -242,7 +242,7 @@ define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_to_f16_lshr8_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_u32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
@@ -263,7 +263,7 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_to_f16_lshr16_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_u32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
+; VI-NEXT:    v_cvt_f32_ubyte2_e32 v0, v0
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 16
@@ -284,7 +284,7 @@ define half @v_uitofp_to_f16_lshr24_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_to_f16_lshr24_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_u32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; VI-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 24
