@@ -407,7 +407,7 @@ def : Pat<(OneAttrOp $attr),
 ```
 
 In the above, `$_self` is substituted by the attribute bound by `$attr`, which
-is `OnAttrOp`'s array attribute.
+is `OneAttrOp`'s array attribute.
 
 Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :
@@ -469,7 +469,7 @@ value. Instead we can use multiple result patterns:
 
 ```tablegen
 def : Pattern<(AddIOp $lhs, $rhs),
-              [(StoreOp (AllocOp:$mem (ShapeOp %lhs)), (AddIOp $lhs, $rhs)),
+              [(StoreOp (AllocOp:$mem (ShapeOp $lhs)), (AddIOp $lhs, $rhs)),
                (LoadOp $mem)];
 ```
 
