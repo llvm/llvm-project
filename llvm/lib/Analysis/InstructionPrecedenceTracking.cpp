@@ -126,26 +126,7 @@ bool ImplicitControlFlowTracking::isSpecialInstruction(
   // to avoid wrong assumptions of sort "if A is executed and B post-dominates
   // A, then B is also executed". This is not true is there is an implicit
   // control flow instruction (e.g. a guard) between them.
-  //
-  // TODO: Currently, isGuaranteedToTransferExecutionToSuccessor returns false
-  // for volatile stores and loads because they can trap. The discussion on
-  // whether or not it is correct is still ongoing. We might want to get rid
-  // of this logic in the future. Anyways, trapping instructions shouldn't
-  // introduce implicit control flow, so we explicitly allow them here. This
-  // must be removed once isGuaranteedToTransferExecutionToSuccessor is fixed.
-  if (isGuaranteedToTransferExecutionToSuccessor(Insn))
-    return false;
-  if (isa<LoadInst>(Insn)) {
-    assert(cast<LoadInst>(Insn)->isVolatile() &&
-           "Non-volatile load should transfer execution to successor!");
-    return false;
-  }
-  if (isa<StoreInst>(Insn)) {
-    assert(cast<StoreInst>(Insn)->isVolatile() &&
-           "Non-volatile store should transfer execution to successor!");
-    return false;
-  }
-  return true;
+  return !isGuaranteedToTransferExecutionToSuccessor(Insn);
 }
 
 bool MemoryWriteTracking::isSpecialInstruction(
