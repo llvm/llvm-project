@@ -35,7 +35,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
                              Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
-  auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -62,17 +62,17 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
   if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CS);
 
+  MachineFunction &MF = MIRBuilder.getMF();
   Info.KnownCallees =
       CS.getInstruction()->getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CS.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
   Info.IsMustTailCall = CS.isMustTailCall();
   Info.IsTailCall = CS.isTailCall() &&
-                    isInTailCallPosition(CS, MIRBuilder.getMF().getTarget()) &&
-                    (MIRBuilder.getMF()
-                         .getFunction()
-                         .getFnAttribute("disable-tail-calls")
-                         .getValueAsString() != "true");
+                    isInTailCallPosition(CS, MF.getTarget()) &&
+                    (MF.getFunction()
+                       .getFnAttribute("disable-tail-calls")
+                       .getValueAsString() != "true");
   Info.IsVarArg = CS.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
@@ -160,7 +160,7 @@ void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
                               MachineIRBuilder &MIRBuilder) const {
   assert(DstRegs.size() > 1 && "Nothing to unpack");
 
-  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
 
   SmallVector<LLT, 8> LLTs;
   SmallVector<uint64_t, 8> Offsets;
