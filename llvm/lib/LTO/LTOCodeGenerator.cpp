@@ -109,10 +109,6 @@ cl::opt<std::string> LTOStatsFile(
     cl::Hidden);
 }
 
-cl::opt<bool> LTONoUnrollLoops("lto-no-unroll-loops",
-                               cl::desc("Disable unrolling during LTO."),
-                               cl::Hidden, cl::init(false));
-
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
       TheLinker(new Linker(*MergedModule)) {
@@ -574,7 +570,6 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
 
   Triple TargetTriple(TargetMach->getTargetTriple());
   PassManagerBuilder PMB;
-  PMB.DisableUnrollLoops = LTONoUnrollLoops;
   PMB.DisableGVNLoadPRE = DisableGVNLoadPRE;
   PMB.LoopVectorize = !DisableVectorization;
   PMB.SLPVectorize = !DisableVectorization;
