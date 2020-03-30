@@ -314,9 +314,9 @@ static MachineMemOperand* getMachineMemOperand(MachineFunction &MF,
   auto MMOFlags = MachineMemOperand::MOStore |
     MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
   auto &MFI = MF.getFrameInfo();
-  return MF.getMachineMemOperand(PtrInfo, MMOFlags, 
+  return MF.getMachineMemOperand(PtrInfo, MMOFlags,
                                  MFI.getObjectSize(FI.getIndex()),
-                                 MFI.getObjectAlignment(FI.getIndex()));
+                                 MFI.getObjectAlign(FI.getIndex()));
 }
 
 /// Spill a value incoming to the statepoint. It might be either part of
@@ -354,10 +354,9 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // slots with preferred alignments larger than frame alignment..
     auto &MF = Builder.DAG.getMachineFunction();
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
-    auto *StoreMMO =
-      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 
-                              MFI.getObjectSize(Index),
-                              MFI.getObjectAlignment(Index));
+    auto *StoreMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, MFI.getObjectSize(Index),
+        MFI.getObjectAlign(Index));
     Chain = Builder.DAG.getStore(Chain, Builder.getCurSDLoc(), Incoming, Loc,
                                  StoreMMO);
 
@@ -1002,10 +1001,9 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   auto &MF = DAG.getMachineFunction();
   auto &MFI = MF.getFrameInfo();
   auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
-  auto *LoadMMO =
-    MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 
-                            MFI.getObjectSize(Index),
-                            MFI.getObjectAlignment(Index));
+  auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                          MFI.getObjectSize(Index),
+                                          MFI.getObjectAlign(Index));
 
   auto LoadVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                          Relocate.getType());

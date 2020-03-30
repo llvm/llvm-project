@@ -73,7 +73,7 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlignment(FrameIdx));
+      MFI.getObjectAlign(FrameIdx));
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16rm))

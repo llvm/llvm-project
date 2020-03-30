@@ -180,8 +180,8 @@ Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
 
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
   Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
-  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
-                                Alignment.value());
+  MMO =
+      MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Alignment);
 
   return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }
