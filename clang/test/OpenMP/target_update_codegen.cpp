@@ -985,4 +985,79 @@ void lvalue_find_base(float **f, SSA *sa) {
 }
 
 #endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK18 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK18 --check-prefix CK18-64
+// RUN: %clang_cc1 -DCK18 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK18 --check-prefix CK18-64
+// RUN: %clang_cc1 -DCK18 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK18 --check-prefix CK18-32
+// RUN: %clang_cc1 -DCK18 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK18 --check-prefix CK18-32
+
+// RUN: %clang_cc1 -DCK18 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -DCK18 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -DCK18 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -DCK18 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY18 %s
+// SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
+#ifdef CK18
+
+// CK18-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK18-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+
+//CK18-LABEL: array_shaping
+void array_shaping(float *f, int sa) {
+
+  // CK18-DAG: call void @__tgt_target_data_update(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE_TO]]{{.+}})
+  // CK18-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK18-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK18-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK18-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK18-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK18-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+
+  // CK18-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK18-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
+
+  // CK18-DAG: store float* [[F1:%.+]], float** [[BPC0]],
+  // CK18-DAG: store float* [[F2:%.+]], float** [[PC0]],
+  // CK18-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
+
+  // CK18-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
+  // CK18-DAG: [[F2]] = load float*, float** [[F_ADDR]],
+  // CK18-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 4
+  // CK18-64-DAG: [[SZ1]] = mul nuw i64 12, %{{.+}}
+  // CK18-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
+  // CK18-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 4
+  // CK18-32-DAG: [[SZ2]] = mul nuw i32 12, %{{.+}}
+  #pragma omp target update to(([3][sa][4])f)
+  sa = 1;
+  // CK18-DAG: call void @__tgt_target_data_update(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE_FROM]]{{.+}})
+  // CK18-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK18-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK18-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK18-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK18-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK18-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+
+  // CK18-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK18-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
+
+  // CK18-DAG: store float* [[F1:%.+]], float** [[BPC0]],
+  // CK18-DAG: store float* [[F2:%.+]], float** [[PC0]],
+  // CK18-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
+
+  // CK18-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
+  // CK18-DAG: [[F2]] = load float*, float** [[F_ADDR]],
+  // CK18-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 5
+  // CK18-64-DAG: [[SZ1]] = mul nuw i64 4, %{{.+}}
+  // CK18-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
+  // CK18-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 5
+  // CK18-32-DAG: [[SZ2]] = mul nuw i32 4, %{{.+}}
+  #pragma omp target update from(([sa][5])f)
+}
+
+#endif
 #endif
