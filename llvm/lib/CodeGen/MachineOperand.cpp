@@ -1004,7 +1004,7 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     uint64_t s, uint64_t a,
+                                     uint64_t s, Align a,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
