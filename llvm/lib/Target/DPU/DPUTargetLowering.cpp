@@ -1840,7 +1840,6 @@ static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {
 SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
-  const EVT &evt = Op.getValueType();
   SDValue incValue = Op.getOperand(3);
   SDValue pageSizeValue = Op.getOperand(5);
   uint64_t pageSize, pageSizeLog2, inc;
