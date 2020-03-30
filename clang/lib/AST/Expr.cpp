@@ -3398,6 +3398,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ParenExprClass:
   case ArraySubscriptExprClass:
   case OMPArraySectionExprClass:
+  case OMPArrayShapingExprClass:
   case MemberExprClass:
   case ConditionalOperatorClass:
   case BinaryConditionalOperatorClass:
@@ -4568,4 +4569,51 @@ RecoveryExpr *RecoveryExpr::CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumSubExprs),
                            alignof(RecoveryExpr));
   return new (Mem) RecoveryExpr(EmptyShell());
+}
+
+void OMPArrayShapingExpr::setDimensions(ArrayRef<Expr *> Dims) {
+  assert(
+      NumDims == Dims.size() &&
+      "Preallocated number of dimensions is different from the provided one.");
+  llvm::copy(Dims, getTrailingObjects<Expr *>());
+}
+
+void OMPArrayShapingExpr::setBracketsRanges(ArrayRef<SourceRange> BR) {
+  assert(
+      NumDims == BR.size() &&
+      "Preallocated number of dimensions is different from the provided one.");
+  llvm::copy(BR, getTrailingObjects<SourceRange>());
+}
+
+OMPArrayShapingExpr::OMPArrayShapingExpr(QualType ExprTy, Expr *Op,
+                                         SourceLocation L, SourceLocation R,
+                                         ArrayRef<Expr *> Dims)
+    : Expr(OMPArrayShapingExprClass, ExprTy, VK_LValue, OK_Ordinary), LPLoc(L),
+      RPLoc(R), NumDims(Dims.size()) {
+  setBase(Op);
+  setDimensions(Dims);
+  setDependence(computeDependence(this));
+}
+
+OMPArrayShapingExpr *
+OMPArrayShapingExpr::Create(const ASTContext &Context, QualType T, Expr *Op,
+                            SourceLocation L, SourceLocation R,
+                            ArrayRef<Expr *> Dims,
+                            ArrayRef<SourceRange> BracketRanges) {
+  assert(Dims.size() == BracketRanges.size() &&
+         "Different number of dimensions and brackets ranges.");
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Expr *, SourceRange>(Dims.size() + 1, Dims.size()),
+      alignof(OMPArrayShapingExpr));
+  auto *E = new (Mem) OMPArrayShapingExpr(T, Op, L, R, Dims);
+  E->setBracketsRanges(BracketRanges);
+  return E;
+}
+
+OMPArrayShapingExpr *OMPArrayShapingExpr::CreateEmpty(const ASTContext &Context,
+                                                      unsigned NumDims) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Expr *, SourceRange>(NumDims + 1, NumDims),
+      alignof(OMPArrayShapingExpr));
+  return new (Mem) OMPArrayShapingExpr(EmptyShell(), NumDims);
 }
