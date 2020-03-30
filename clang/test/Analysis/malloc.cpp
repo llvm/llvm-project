@@ -164,3 +164,11 @@ void test(A a) {
   (void)a.getName();
 }
 } // namespace argument_leak
+
+#define ZERO_SIZE_PTR ((void *)16)
+
+void test_delete_ZERO_SIZE_PTR() {
+  int *Ptr = (int *)ZERO_SIZE_PTR;
+  // ZERO_SIZE_PTR is specially handled but only for malloc family
+  delete Ptr; // expected-warning{{Argument to 'delete' is a constant address (16)}}
+}

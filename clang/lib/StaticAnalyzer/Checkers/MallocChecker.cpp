@@ -58,6 +58,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -389,6 +390,13 @@ private:
   // TODO: Remove mutable by moving the initializtaion to the registry function.
   mutable Optional<uint64_t> KernelZeroFlagVal;
 
+  using KernelZeroSizePtrValueTy = Optional<int>;
+  /// Store the value of macro called `ZERO_SIZE_PTR`.
+  /// The value is initialized at first use, before first use the outer
+  /// Optional is empty, afterwards it contains another Optional that indicates
+  /// if the macro value could be determined, and if yes the value itself.
+  mutable Optional<KernelZeroSizePtrValueTy> KernelZeroSizePtrValue;
+
   /// Process C++ operator new()'s allocation, which is the part of C++
   /// new-expression that goes before the constructor.
   void processNewAllocation(const CXXNewExpr *NE, CheckerContext &C,
@@ -658,6 +666,10 @@ private:
                                     CheckerContext &C);
 
   void reportLeak(SymbolRef Sym, ExplodedNode *N, CheckerContext &C) const;
+
+  /// Test if value in ArgVal equals to value in macro `ZERO_SIZE_PTR`.
+  bool isArgZERO_SIZE_PTR(ProgramStateRef State, CheckerContext &C,
+                          SVal ArgVal) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1677,7 +1689,13 @@ ProgramStateRef MallocChecker::FreeMemAux(
   // Nonlocs can't be freed, of course.
   // Non-region locations (labels and fixed addresses) also shouldn't be freed.
   if (!R) {
-    ReportBadFree(C, ArgVal, ArgExpr->getSourceRange(), ParentExpr, Family);
+    // Exception:
+    // If the macro ZERO_SIZE_PTR is defined, this could be a kernel source
+    // code. In that case, the ZERO_SIZE_PTR defines a special value used for a
+    // zero-sized memory block which is allowed to be freed, despite not being a
+    // null pointer.
+    if (Family != AF_Malloc || !isArgZERO_SIZE_PTR(State, C, ArgVal))
+      ReportBadFree(C, ArgVal, ArgExpr->getSourceRange(), ParentExpr, Family);
     return nullptr;
   }
 
@@ -3021,6 +3039,18 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
   return State;
+}
+
+bool MallocChecker::isArgZERO_SIZE_PTR(ProgramStateRef State, CheckerContext &C,
+                                       SVal ArgVal) const {
+  if (!KernelZeroSizePtrValue)
+    KernelZeroSizePtrValue =
+        tryExpandAsInteger("ZERO_SIZE_PTR", C.getPreprocessor());
+
+  const llvm::APSInt *ArgValKnown =
+      C.getSValBuilder().getKnownValue(State, ArgVal);
+  return ArgValKnown && *KernelZeroSizePtrValue &&
+         ArgValKnown->getSExtValue() == **KernelZeroSizePtrValue;
 }
 
 static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
