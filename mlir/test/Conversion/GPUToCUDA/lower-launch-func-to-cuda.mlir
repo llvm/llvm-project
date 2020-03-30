@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --launch-func-to-cuda | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s --launch-func-to-cuda | FileCheck %s
 
 module attributes {gpu.container_module} {
 

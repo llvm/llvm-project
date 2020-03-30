@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-std-to-llvm -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -convert-std-to-llvm -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func @address_space(
 // CHECK-SAME:    !llvm<"float addrspace(7)*">

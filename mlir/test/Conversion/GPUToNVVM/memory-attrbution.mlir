@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-gpu-to-nvvm --split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect --convert-gpu-to-nvvm --split-input-file %s | FileCheck %s
 
 gpu.module @kernel {
   // CHECK-LABEL:  llvm.func @private

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize)' | FileCheck %s
 
 // CHECK-LABEL:   func @collapse_to_single() {
 func @collapse_to_single() {

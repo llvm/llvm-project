@@ -198,9 +198,18 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
       it = dialectAllowsUnknownOps
                .try_emplace(dialectPrefix, dialect->allowsUnknownOperations())
                .first;
-    // Otherwise, conservatively allow unknown operations.
-    else
+    // Otherwise, unregistered dialects (when allowed by the context)
+    // conservatively allow unknown operations.
+    else {
+      if (!op.getContext()->allowsUnregisteredDialects() && !op.getDialect())
+        return op.emitOpError()
+               << "created with unregistered dialect. If this is "
+                  "intended, please call allowUnregisteredDialects() on the "
+                  "MLIRContext, or use -allow-unregistered-dialect with "
+                  "mlir-opt";
+
       it = dialectAllowsUnknownOps.try_emplace(dialectPrefix, true).first;
+    }
   }
 
   if (!it->second) {

@@ -162,6 +162,15 @@ public:
   DiagnosticEngine diagEngine;
 
   //===--------------------------------------------------------------------===//
+  // Options
+  //===--------------------------------------------------------------------===//
+
+  /// In most cases, creating operation in unregistered dialect is not desired
+  /// and indicate a misconfiguration of the compiler. This option enables to
+  /// detect such use cases
+  bool allowUnregisteredDialects = false;
+
+  //===--------------------------------------------------------------------===//
   // Other
   //===--------------------------------------------------------------------===//
 
@@ -347,6 +356,14 @@ void Dialect::registerDialect(MLIRContext *context) {
                              "' has already been registered");
   }
   impl.dialects.insert(insertPt, std::move(dialect));
+}
+
+bool MLIRContext::allowsUnregisteredDialects() {
+  return impl->allowUnregisteredDialects;
+}
+
+void MLIRContext::allowUnregisteredDialects(bool allowing) {
+  impl->allowUnregisteredDialects = allowing;
 }
 
 /// Return information about all registered operations.  This isn't very

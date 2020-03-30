@@ -49,6 +49,12 @@ public:
     return static_cast<T *>(getRegisteredDialect(T::getDialectNamespace()));
   }
 
+  /// Return true if we allow to create operation for unregistered dialects.
+  bool allowsUnregisteredDialects();
+
+  /// Enables creating operations in unregistered dialects.
+  void allowUnregisteredDialects(bool allow = true);
+
   /// Return information about all registered operations.  This isn't very
   /// efficient: typically you should ask the operations about their properties
   /// directly.
