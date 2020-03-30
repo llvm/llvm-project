@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=1,2,0" | FileCheck %s --check-prefix=CHECK-120
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=1,0,2" | FileCheck %s --check-prefix=CHECK-102
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=0,1,2" | FileCheck %s --check-prefix=CHECK-012
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=0,2,1" | FileCheck %s --check-prefix=CHECK-021
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=2,0,1" | FileCheck %s --check-prefix=CHECK-201
-// RUN: mlir-opt %s -test-loop-permutation="permutation-map=2,1,0" | FileCheck %s --check-prefix=CHECK-210
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=1,2,0" | FileCheck %s --check-prefix=CHECK-120
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=1,0,2" | FileCheck %s --check-prefix=CHECK-102
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=0,1,2" | FileCheck %s --check-prefix=CHECK-012
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=0,2,1" | FileCheck %s --check-prefix=CHECK-021
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=2,0,1" | FileCheck %s --check-prefix=CHECK-201
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-permutation="permutation-map=2,1,0" | FileCheck %s --check-prefix=CHECK-210
 
 // CHECK-120-LABEL: func @permute
 func @permute(%U0 : index, %U1 : index, %U2 : index) {
