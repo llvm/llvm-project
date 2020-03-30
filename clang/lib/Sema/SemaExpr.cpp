@@ -4806,6 +4806,9 @@ ExprResult Sema::ActOnOMPArrayShapingExpr(Expr *Base, SourceLocation LParenLoc,
     ExprResult Result = CheckPlaceholderExpr(Base);
     if (Result.isInvalid())
       return ExprError();
+    Result = DefaultLvalueConversion(Result.get());
+    if (Result.isInvalid())
+      return ExprError();
     Base = Result.get();
   }
   QualType BaseTy = Base->getType();
