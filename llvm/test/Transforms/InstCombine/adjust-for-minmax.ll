@@ -265,9 +265,9 @@ define <2 x i32> @umin4_vec(<2 x i32> %n) {
 
 define i64 @smax_sext(i32 %a) {
 ; CHECK-LABEL: @smax_sext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[A_EXT]], 0
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 0
+; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64
@@ -278,9 +278,9 @@ define i64 @smax_sext(i32 %a) {
 
 define <2 x i64> @smax_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @smax_sext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i64> [[A_EXT]], zeroinitializer
-; CHECK-NEXT:    [[MAX:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MAX:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -291,9 +291,9 @@ define <2 x i64> @smax_sext_vec(<2 x i32> %a) {
 
 define i64 @smin_sext(i32 %a) {
 ; CHECK-LABEL: @smin_sext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A_EXT]], 0
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 0
+; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -304,9 +304,9 @@ define i64 @smin_sext(i32 %a) {
 
 define <2 x i64>@smin_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @smin_sext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i64> [[A_EXT]], zeroinitializer
-; CHECK-NEXT:    [[MIN:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -317,9 +317,9 @@ define <2 x i64>@smin_sext_vec(<2 x i32> %a) {
 
 define i64 @umax_sext(i32 %a) {
 ; CHECK-LABEL: @umax_sext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[A_EXT]], 3
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 3
+; CHECK-NEXT:    [[MAX:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64
@@ -330,9 +330,9 @@ define i64 @umax_sext(i32 %a) {
 
 define <2 x i64> @umax_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_sext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i64> [[A_EXT]], <i64 3, i64 3>
-; CHECK-NEXT:    [[MAX:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> <i32 3, i32 3>
+; CHECK-NEXT:    [[MAX:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -343,9 +343,9 @@ define <2 x i64> @umax_sext_vec(<2 x i32> %a) {
 
 define i64 @umin_sext(i32 %a) {
 ; CHECK-LABEL: @umin_sext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[A_EXT]], 2
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 2
+; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -356,9 +356,9 @@ define i64 @umin_sext(i32 %a) {
 
 define <2 x i64> @umin_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_sext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[A_EXT]], <i64 2, i64 2>
-; CHECK-NEXT:    [[MIN:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -369,9 +369,9 @@ define <2 x i64> @umin_sext_vec(<2 x i32> %a) {
 
 define i64 @umax_sext2(i32 %a) {
 ; CHECK-LABEL: @umax_sext2(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A_EXT]], 2
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i64 [[A_EXT]], i64 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CMP]], i32 [[A]], i32 2
+; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -382,9 +382,9 @@ define i64 @umax_sext2(i32 %a) {
 
 define <2 x i64> @umax_sext2_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_sext2_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i64> [[A_EXT]], <i64 2, i64 2>
-; CHECK-NEXT:    [[MIN:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[A_EXT]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[A]], <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -395,9 +395,9 @@ define <2 x i64> @umax_sext2_vec(<2 x i32> %a) {
 
 define i64 @umin_sext2(i32 %a) {
 ; CHECK-LABEL: @umin_sext2(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A_EXT]], 3
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i64 [[A_EXT]], i64 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CMP]], i32 [[A]], i32 3
+; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -408,9 +408,9 @@ define i64 @umin_sext2(i32 %a) {
 
 define <2 x i64> @umin_sext2_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_sext2_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[A_EXT]], <i64 3, i64 3>
-; CHECK-NEXT:    [[MIN:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[A_EXT]], <2 x i64> <i64 3, i64 3>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[A]], <2 x i32> <i32 3, i32 3>
+; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -421,9 +421,9 @@ define <2 x i64> @umin_sext2_vec(<2 x i32> %a) {
 
 define i64 @umax_zext(i32 %a) {
 ; CHECK-LABEL: @umax_zext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[A_EXT]], 3
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 3
+; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = zext i32 %a to i64
@@ -434,9 +434,9 @@ define i64 @umax_zext(i32 %a) {
 
 define <2 x i64> @umax_zext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_zext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i64> [[A_EXT]], <i64 3, i64 3>
-; CHECK-NEXT:    [[MAX:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> <i64 3, i64 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> <i32 3, i32 3>
+; CHECK-NEXT:    [[MAX:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = zext <2 x i32> %a to <2 x i64>
@@ -447,9 +447,9 @@ define <2 x i64> @umax_zext_vec(<2 x i32> %a) {
 
 define i64 @umin_zext(i32 %a) {
 ; CHECK-LABEL: @umin_zext(
-; CHECK-NEXT:    [[A_EXT:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[A_EXT]], 2
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP1]], i64 [[A_EXT]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 2
+; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = zext i32 %a to i64
@@ -460,9 +460,9 @@ define i64 @umin_zext(i32 %a) {
 
 define <2 x i64> @umin_zext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_zext_vec(
-; CHECK-NEXT:    [[A_EXT:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[A_EXT]], <i64 2, i64 2>
-; CHECK-NEXT:    [[MIN:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[A_EXT]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[A]], <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = zext <2 x i32> %a to <2 x i64>
