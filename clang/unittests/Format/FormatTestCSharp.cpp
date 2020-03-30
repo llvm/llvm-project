@@ -709,6 +709,14 @@ class ItemFactory<T>
               IAnotherInterface<T>,
               IAnotherInterfaceStill<T> {})",
                Style);
+
+  // In other languages `where` can be used as a normal identifier.
+  // This example is in C++!
+  verifyFormat(R"(//
+class A {
+  int f(int where) {}
+};)",
+               getGoogleStyle(FormatStyle::LK_Cpp));
 }
 
 } // namespace format
