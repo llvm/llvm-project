@@ -17,17 +17,20 @@ void foo() {}
 template <class T>
 T tmain(T argc) {
   static T a;
-#pragma omp depobj(a) depend(in:argc)
+  int *b;
+#pragma omp depobj(a) depend(in:argc, ([4][*b][4])b)
 #pragma omp depobj(argc) destroy
 #pragma omp depobj(argc) update(inout)
   return argc;
 }
 // CHECK:      static T a;
-// CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
+// CHECK-NEXT: int *b;
+// CHECK-NEXT: #pragma omp depobj (a) depend(in : argc,([4][*b][4])b){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 // CHECK:      static void *a;
-// CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
+// CHECK-NEXT: int *b;
+// CHECK-NEXT: #pragma omp depobj (a) depend(in : argc,([4][*b][4])b){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 
