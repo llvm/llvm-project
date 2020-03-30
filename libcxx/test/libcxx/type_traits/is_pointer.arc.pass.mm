@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: c++98, c++03
 
+// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
+
 // <type_traits>
 
 // std::is_pointer
