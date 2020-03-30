@@ -934,7 +934,8 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   BasicBlock *UnconditionalSucc = nullptr;
 
   Instruction *I = InitialInst;
-  while (I->isTerminator()) {
+  while (I->isTerminator() ||
+         (isa<CmpInst>(I) && I->getNextNode()->isTerminator())) {
     if (isa<ReturnInst>(I)) {
       if (I != InitialInst) {
         // If InitialInst is an unconditional branch,
@@ -957,6 +958,29 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
         scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
         I = BB->getFirstNonPHIOrDbgOrLifetime();
         continue;
+      }
+    } else if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
+      auto *BR = dyn_cast<BranchInst>(I->getNextNode());
+      if (BR && BR->isConditional() && CondCmp == BR->getCondition()) {
+        // If the case number of suspended switch instruction is reduced to
+        // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
+        // And the comparsion looks like : %cond = icmp eq i8 %V, constant.
+        ConstantInt *CondConst = dyn_cast<ConstantInt>(CondCmp->getOperand(1));
+        if (CondConst && CondCmp->getPredicate() == CmpInst::ICMP_EQ) {
+          Value *V = CondCmp->getOperand(0);
+          auto it = ResolvedValues.find(V);
+          if (it != ResolvedValues.end())
+            V = it->second;
+
+          if (ConstantInt *Cond0 = dyn_cast<ConstantInt>(V)) {
+            BasicBlock *BB = Cond0->equalsInt(CondConst->getZExtValue())
+                                 ? BR->getSuccessor(0)
+                                 : BR->getSuccessor(1);
+            scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
+            I = BB->getFirstNonPHIOrDbgOrLifetime();
+            continue;
+          }
+        }
       }
     } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
       Value *V = SI->getCondition();
