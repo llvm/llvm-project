@@ -19232,7 +19232,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
 
 std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
     EVT DstVT, EVT SrcVT, const SDLoc &DL, SDValue Chain, SDValue Pointer,
-    MachinePointerInfo PtrInfo, unsigned Align, SelectionDAG &DAG) const {
+    MachinePointerInfo PtrInfo, unsigned Alignment, SelectionDAG &DAG) const {
   // Build the FILD
   SDVTList Tys;
   bool useSSE = isScalarFPTypeInSSEReg(DstVT);
@@ -19244,7 +19244,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
   SDValue FILDOps[] = {Chain, Pointer};
   SDValue Result =
       DAG.getMemIntrinsicNode(X86ISD::FILD, DL, Tys, FILDOps, SrcVT, PtrInfo,
-                              Align, MachineMemOperand::MOLoad);
+                              Alignment, MachineMemOperand::MOLoad);
   Chain = Result.getValue(1);
 
   if (useSSE) {
@@ -19257,7 +19257,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
     SDValue FSTOps[] = {Chain, Result, StackSlot};
     MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
-        MachineMemOperand::MOStore, SSFISize, SSFISize);
+        MachineMemOperand::MOStore, SSFISize, Align(SSFISize));
 
     Chain =
         DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps, DstVT, StoreMMO);
@@ -19900,14 +19900,14 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     unsigned FLDSize = TheVT.getStoreSize();
     assert(FLDSize <= MemSize && "Stack slot not big enough");
     MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MPI, MachineMemOperand::MOLoad, FLDSize, FLDSize);
+        MPI, MachineMemOperand::MOLoad, FLDSize, Align(FLDSize));
     Value = DAG.getMemIntrinsicNode(X86ISD::FLD, DL, Tys, Ops, TheVT, MMO);
     Chain = Value.getValue(1);
   }
 
   // Build the FP_TO_INT*_IN_MEM
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, MemSize, MemSize);
+      MPI, MachineMemOperand::MOStore, MemSize, Align(MemSize));
   SDValue Ops[] = { Chain, Value, StackSlot };
   SDValue FIST = DAG.getMemIntrinsicNode(X86ISD::FP_TO_INT_IN_MEM, DL,
                                          DAG.getVTList(MVT::Other),
@@ -31069,7 +31069,7 @@ MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
     MachineMemOperand *MMO = F->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*F, RegSaveFrameIndex, Offset),
         MachineMemOperand::MOStore,
-        /*Size=*/16, /*Align=*/16);
+        /*Size=*/16, Align(16));
     BuildMI(XMMSaveMBB, DL, TII->get(MOVOpc))
         .addFrameIndex(RegSaveFrameIndex)
         .addImm(/*Scale=*/1)

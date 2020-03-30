@@ -148,11 +148,11 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     Register ExtReg = extendRegister(ValVReg, VA);
-    unsigned Align = inferAlignmentFromPtrInfo(MF, MPO);
+    unsigned Alignment = inferAlignmentFromPtrInfo(MF, MPO);
 
-    auto MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        Align);
+    auto MMO =
+        MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore,
+                                VA.getLocVT().getStoreSize(), Align(Alignment));
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 

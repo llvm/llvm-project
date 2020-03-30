@@ -302,11 +302,10 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
-  MachineMemOperand *MMO =
-    MF->getMachineMemOperand(
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
-      8, 8, AAMDNodes(), nullptr, SyncScope::System, AtomicOrdering::Unordered);
+      MachineMemOperand::MOLoad | MachineMemOperand::MOStore, 8, Align(8),
+      AAMDNodes(), nullptr, SyncScope::System, AtomicOrdering::Unordered);
 
   auto Ptr = B.buildUndef(P0);
   B.buildAtomicRMWFAdd(S64, Ptr, Copies[0], *MMO);
