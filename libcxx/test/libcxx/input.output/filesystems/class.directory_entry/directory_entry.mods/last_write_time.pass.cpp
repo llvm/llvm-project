@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// ADDITIONAL_COMPILE_FLAGS: -I%{libcxx_src_root}/src/filesystem
 
 // <filesystem>
 
 // class directory_entry
-
-// RUN: %{build} -I%{libcxx_src_root}/src/filesystem
-// RUN: %{run}
 
 #include "filesystem_include.h"
 #include <type_traits>
