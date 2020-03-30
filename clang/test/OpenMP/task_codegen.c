@@ -56,7 +56,6 @@ int main() {
   // CHECK: store i64 4, i64* [[SIZE_ADDR]],
   // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 2
   // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
-  // CHECK: [[B_ADDR:%.+]] = load i32*, i32** %{{.+}},
   // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]],
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
   // CHECK: [[SZ1:%.+]] = mul nuw i64 3, [[A_CAST]]
@@ -65,7 +64,7 @@ int main() {
   // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], [[A_CAST]]
   // CHECK: [[VLA1:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 1
   // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[B_ADDR_CAST:%.+]] = ptrtoint i32* [[B_ADDR]] to i64
+  // CHECK: [[B_ADDR_CAST:%.+]] = ptrtoint i32** %{{.+}} to i64
   // CHECK: store i64 [[B_ADDR_CAST]], i64* [[BASE_ADDR]],
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 1
   // CHECK: store i64 [[SZ]], i64* [[SIZE_ADDR]],
@@ -85,7 +84,7 @@ int main() {
   // CHECK: call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]], i32 [[SIZE32]], i8* [[BC]], i32 0, i8* null)
   // CHECK: [[SV:%.+]] = load i8*, i8** [[SV_ADDR]],
   // CHECK: call void @llvm.stackrestore(i8* [[SV]])
-#pragma omp task depend(in: a, ([3][a][a])b) depend(depobj: d, x) detach(evt)
+#pragma omp task depend(in: a, ([3][a][a])&b) depend(depobj: d, x) detach(evt)
   {
 #pragma omp taskgroup
     {

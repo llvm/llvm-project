@@ -5364,14 +5364,12 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
         continue;
       const Expr *E = Dependencies[I].second;
       const auto *OASE = dyn_cast<OMPArrayShapingExpr>(E);
-      LValue Addr;
+      llvm::Value *Addr;
       if (OASE) {
-        const Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
-        Addr =
-            CGF.EmitLoadOfPointerLValue(CGF.EmitLValue(Base).getAddress(CGF),
-                                        Base->getType()->castAs<PointerType>());
+        const Expr *Base = OASE->getBase();
+        Addr = CGF.EmitScalarExpr(Base);
       } else {
-        Addr = CGF.EmitLValue(E);
+        Addr = CGF.EmitLValue(E).getPointer(CGF);
       }
       llvm::Value *Size;
       QualType Ty = E->getType();
@@ -5390,8 +5388,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
             CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
         llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
             UpAddrLVal.getPointer(CGF), /*Idx0=*/1);
-        llvm::Value *LowIntPtr =
-            CGF.Builder.CreatePtrToInt(Addr.getPointer(CGF), CGM.SizeTy);
+        llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGM.SizeTy);
         llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGM.SizeTy);
         Size = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
       } else {
@@ -5410,9 +5407,8 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       // deps[i].base_addr = &<Dependencies[i].second>;
       LValue BaseAddrLVal = CGF.EmitLValueForField(
           Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      CGF.EmitStoreOfScalar(
-          CGF.Builder.CreatePtrToInt(Addr.getPointer(CGF), CGF.IntPtrTy),
-          BaseAddrLVal);
+      CGF.EmitStoreOfScalar(CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy),
+                            BaseAddrLVal);
       // deps[i].len = sizeof(<Dependencies[i].second>);
       LValue LenLVal = CGF.EmitLValueForField(
           Base, *std::next(KmpDependInfoRD->field_begin(), Len));
