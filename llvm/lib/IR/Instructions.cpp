@@ -1958,7 +1958,11 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
   assert(!Mask->getType()->getVectorElementCount().Scalable &&
     "Length of scalable vectors unknown at compile time");
   unsigned NumElts = Mask->getType()->getVectorNumElements();
-
+  if (isa<ConstantAggregateZero>(Mask)) {
+    Result.resize(NumElts, 0);
+    return;
+  }
+  Result.reserve(NumElts);
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     for (unsigned i = 0; i != NumElts; ++i)
       Result.push_back(CDS->getElementAsInteger(i));

@@ -174,7 +174,13 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
   int NumElts = Shuf->getOperand(0)->getType()->getVectorNumElements();
   int NumMaskElts = Shuf->getMask()->getType()->getVectorNumElements();
   DemandedLHS = DemandedRHS = APInt::getNullValue(NumElts);
-
+  if (DemandedElts.isNullValue())
+    return true;
+  // Simple case of a shuffle with zeroinitializer.
+  if (isa<ConstantAggregateZero>(Shuf->getMask())) {
+    DemandedLHS.setBit(0);
+    return true;
+  }
   for (int i = 0; i != NumMaskElts; ++i) {
     if (!DemandedElts[i])
       continue;
