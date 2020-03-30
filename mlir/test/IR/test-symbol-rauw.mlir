@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-symbol-rauw -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-symbol-rauw -split-input-file | FileCheck %s
 
 // Symbol references to the module itself don't affect uses of symbols within
 // its table.

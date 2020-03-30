@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 // Identity maps used in trivial compositions in MemRefs are optimized away.
 // CHECK-NOT: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0, d1)>

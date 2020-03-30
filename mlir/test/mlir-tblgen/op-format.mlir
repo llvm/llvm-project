@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -verify-diagnostics | FileCheck %s
 
 // CHECK: %[[I64:.*]] =
 %i64 = "foo.op"() : () -> (i64)

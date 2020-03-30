@@ -14,15 +14,16 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-namespace {
-Operation *createOp(MLIRContext *context, bool resizableOperands,
-                    ArrayRef<Value> operands = llvm::None,
-                    ArrayRef<Type> resultTypes = llvm::None) {
+static Operation *createOp(MLIRContext *context, bool resizableOperands,
+                           ArrayRef<Value> operands = llvm::None,
+                           ArrayRef<Type> resultTypes = llvm::None) {
+  context->allowUnregisteredDialects();
   return Operation::create(
       UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
       operands, llvm::None, llvm::None, 0, resizableOperands);
 }
 
+namespace {
 TEST(OperandStorageTest, NonResizable) {
   MLIRContext context;
   Builder builder(&context);

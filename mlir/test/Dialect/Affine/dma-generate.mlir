@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate -affine-data-copy-generate-dma -affine-data-copy-generate-fast-mem-space=2 -affine-data-copy-generate-skip-non-unit-stride-loops -verify-diagnostics | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate -affine-data-copy-generate-dma -affine-data-copy-generate-fast-mem-capacity=16 -affine-data-copy-generate-fast-mem-space=2 | FileCheck %s --check-prefix FAST-MEM-16KB
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -affine-data-copy-generate -affine-data-copy-generate-dma -affine-data-copy-generate-fast-mem-space=2 -affine-data-copy-generate-skip-non-unit-stride-loops -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -affine-data-copy-generate -affine-data-copy-generate-dma -affine-data-copy-generate-fast-mem-capacity=16 -affine-data-copy-generate-fast-mem-space=2 | FileCheck %s --check-prefix FAST-MEM-16KB
 
 // We run most test cases with -copy-skip-non-unit-stride-loops to allow testing
 // DMA generation at inner levels easily - since the DMA generation would

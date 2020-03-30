@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 module attributes {gpu.container_module} {
 
