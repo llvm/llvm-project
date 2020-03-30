@@ -126,9 +126,6 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
     if (!T.isOneOf(tok::l_paren, tok::r_paren))
       FilteredTokens.push_back(T);
 
-  if (FilteredTokens.size() > 2)
-    return llvm::None;
-
   // Parse an integer at the end of the macro definition.
   const Token &T = FilteredTokens.back();
   if (!T.isLiteral())
@@ -140,11 +137,10 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
     return llvm::None;
 
   // Parse an optional minus sign.
-  if (FilteredTokens.size() == 2) {
-    if (FilteredTokens.front().is(tok::minus))
+  size_t Size = FilteredTokens.size();
+  if (Size >= 2) {
+    if (FilteredTokens[Size - 2].is(tok::minus))
       IntValue = -IntValue;
-    else
-      return llvm::None;
   }
 
   return IntValue.getSExtValue();
