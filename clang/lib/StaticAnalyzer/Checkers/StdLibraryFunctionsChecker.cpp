@@ -190,6 +190,9 @@ class StdLibraryFunctionsChecker
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary) const override {
       SVal V = getArgSVal(Call, getArgNo());
+      if (V.isUndef())
+        return State;
+
       DefinedOrUnknownSVal L = V.castAs<DefinedOrUnknownSVal>();
       if (!L.getAs<Loc>())
         return State;
