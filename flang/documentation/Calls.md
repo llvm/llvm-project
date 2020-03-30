@@ -1,9 +1,9 @@
-<!--===- documentation/Calls.md 
-  
+<!--===- documentation/Calls.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 ## Procedure reference implementation protocol
@@ -182,6 +182,7 @@ some design alternatives that are explored further below.
    discretionary `VALUE` arguments) into registers.
 1. Marshal `CHARACTER` argument lengths in additional value arguments for
    `CHARACTER` effective arguments not passed via descriptors.
+   These lengths must be 64-bit integers.
 1. Marshal an extra argument for the length of a `CHARACTER` function
    result if the function is F77ish.
 1. Marshal an extra argument for the function result's descriptor,

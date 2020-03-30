@@ -26,7 +26,7 @@ extern "C" {
 // a change of type, rank, or corank.
 void RTNAME(AllocatableInitIntrinsic)(
     Descriptor &, TypeCategory, int kind, int rank = 0, int corank = 0);
-void RTNAME(AllocatableInitCharacter)(Descriptor &, SubscriptValue length,
+void RTNAME(AllocatableInitCharacter)(Descriptor &, SubscriptValue length = 0,
     int kind = 1, int rank = 0, int corank = 0);
 void RTNAME(AllocatableInitDerived)(
     Descriptor &, const DerivedType &, int rank = 0, int corank = 0);
@@ -94,7 +94,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
 // TODO: Consider renaming to a more general name that will work for
 // assignments to pointers, dummy arguments, and anything else with a
 // descriptor.
-void RTNAME(AllocatableAssignment)(Descriptor &to, const Descriptor &from);
+void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor &from);
 
 // Implements the intrinsic subroutine MOVE_ALLOC (16.9.137 in F'2018,
 // but note the order of first two arguments is reversed for consistency

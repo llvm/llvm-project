@@ -28,7 +28,9 @@ configure_file(config.h.cmake config.h)
 
 add_library(FortranRuntime
   ISO_Fortran_binding.cpp
+  allocatable.cpp
   buffer.cpp
+  character.cpp
   connection.cpp
   derived-type.cpp
   descriptor.cpp
