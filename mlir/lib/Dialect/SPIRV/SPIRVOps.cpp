@@ -2076,7 +2076,7 @@ void spirv::LoopOp::addEntryAndMergeBlock() {
   body().push_back(new Block());
   auto *mergeBlock = new Block();
   body().push_back(mergeBlock);
-  OpBuilder builder(mergeBlock);
+  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
 
   // Add a spv._merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -2373,7 +2373,7 @@ void spirv::SelectionOp::addMergeBlock() {
   assert(body().empty() && "entry and merge block already exist");
   auto *mergeBlock = new Block();
   body().push_back(mergeBlock);
-  OpBuilder builder(mergeBlock);
+  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
 
   // Add a spv._merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
