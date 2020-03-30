@@ -3619,34 +3619,6 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
   }
 }
 
-/// Return number of address arguments, and the number of gradients
-static std::pair<int, int>
-getImageNumVAddr(const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
-                 const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode) {
-  const AMDGPU::MIMGDimInfo *DimInfo
-    = AMDGPU::getMIMGDimInfo(ImageDimIntr->Dim);
-
-  int NumGradients = BaseOpcode->Gradients ? DimInfo->NumGradients : 0;
-  int NumCoords = BaseOpcode->Coordinates ? DimInfo->NumCoords : 0;
-  int NumLCM = BaseOpcode->LodOrClampOrMip ? 1 : 0;
-  int NumVAddr = BaseOpcode->NumExtraArgs + NumGradients + NumCoords + NumLCM;
-  return {NumVAddr, NumGradients};
-}
-
-static int getDMaskIdx(const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode,
-                       int NumDefs) {
-  assert(!BaseOpcode->Atomic);
-  return NumDefs + 1 + (BaseOpcode->Store ? 1 : 0);
-}
-
-/// Return first address operand index in an image intrinsic.
-static int getImageVAddrIdxBegin(const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode,
-                                 int NumDefs) {
-  if (BaseOpcode->Atomic)
-    return NumDefs + 1 + (BaseOpcode->AtomicX2 ? 2 : 1);
-  return getDMaskIdx(BaseOpcode, NumDefs) + 1;
-}
-
 /// Rewrite image intrinsics to use register layouts expected by the subtarget.
 ///
 /// Depending on the subtarget, load/store with 16-bit element data need to be
@@ -3772,8 +3744,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   //
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
-  const bool UseNSA = CorrectedNumVAddrs >= 3 &&
-                      ST.hasFeature(AMDGPU::FeatureNSAEncoding);
+  const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
 
   // Rewrite the addressing register layout before doing anything else.
   if (IsA16) {
