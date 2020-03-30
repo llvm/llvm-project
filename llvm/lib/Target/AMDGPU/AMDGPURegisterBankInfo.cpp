@@ -2920,6 +2920,10 @@ AMDGPURegisterBankInfo::getImageMapping(const MachineRegisterInfo &MRI,
       continue;
 
     Register OpReg = MI.getOperand(I).getReg();
+    // We replace some dead address operands with $noreg
+    if (!OpReg)
+      continue;
+
     unsigned Size = getSizeInBits(OpReg, MRI, *TRI);
 
     // FIXME: Probably need a new intrinsic register bank searchable table to
