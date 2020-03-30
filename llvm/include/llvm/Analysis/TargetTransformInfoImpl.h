@@ -132,21 +132,6 @@ public:
     return TTI::TCC_Basic;
   }
 
-  unsigned getCallCost(FunctionType *FTy, int NumArgs, const User *U) {
-    assert(FTy && "FunctionType must be provided to this routine.");
-
-    // The target-independent implementation just measures the size of the
-    // function by approximating that each argument will take on average one
-    // instruction to prepare.
-
-    if (NumArgs < 0)
-      // Set the argument number to the number of explicit arguments in the
-      // function.
-      NumArgs = FTy->getNumParams();
-
-    return TTI::TCC_Basic * (NumArgs + 1);
-  }
-
   unsigned getInliningThresholdMultiplier() { return 1; }
 
   int getInlinerVectorBonusPercent() { return 150; }
@@ -726,37 +711,6 @@ protected:
   explicit TargetTransformInfoImplCRTPBase(const DataLayout &DL) : BaseT(DL) {}
 
 public:
-  using BaseT::getCallCost;
-
-  unsigned getCallCost(const Function *F, int NumArgs, const User *U) {
-    assert(F && "A concrete function must be provided to this routine.");
-
-    if (NumArgs < 0)
-      // Set the argument number to the number of explicit arguments in the
-      // function.
-      NumArgs = F->arg_size();
-
-    if (Intrinsic::ID IID = F->getIntrinsicID()) {
-      FunctionType *FTy = F->getFunctionType();
-      SmallVector<Type *, 8> ParamTys(FTy->param_begin(), FTy->param_end());
-      return static_cast<T *>(this)
-          ->getIntrinsicCost(IID, FTy->getReturnType(), ParamTys, U);
-    }
-
-    if (!static_cast<T *>(this)->isLoweredToCall(F))
-      return TTI::TCC_Basic; // Give a basic cost if it will be lowered
-                             // directly.
-
-    return static_cast<T *>(this)->getCallCost(F->getFunctionType(), NumArgs, U);
-  }
-
-  unsigned getCallCost(const Function *F, ArrayRef<const Value *> Arguments,
-                       const User *U) {
-    // Simply delegate to generic handling of the call.
-    // FIXME: We should use instsimplify or something else to catch calls which
-    // will constant fold with these arguments.
-    return static_cast<T *>(this)->getCallCost(F, Arguments.size(), U);
-  }
 
   using BaseT::getGEPCost;
 
@@ -898,15 +852,19 @@ public:
 
     if (auto CS = ImmutableCallSite(U)) {
       const Function *F = CS.getCalledFunction();
-      if (!F) {
-        // Just use the called value type.
-        Type *FTy = CS.getCalledValue()->getType()->getPointerElementType();
-        return TargetTTI->getCallCost(cast<FunctionType>(FTy),
-                                      CS.arg_size(), U);
-      }
+      if (F) {
+        FunctionType *FTy = F->getFunctionType();
+        if (Intrinsic::ID IID = F->getIntrinsicID()) {
+          SmallVector<Type *, 8> ParamTys(FTy->param_begin(), FTy->param_end());
+          return TargetTTI->getIntrinsicCost(IID, FTy->getReturnType(), ParamTys, U);
+        }
 
-      SmallVector<const Value *, 8> Arguments(CS.arg_begin(), CS.arg_end());
-      return TargetTTI->getCallCost(F, Arguments, U);
+        if (!TargetTTI->isLoweredToCall(F))
+          return TTI::TCC_Basic; // Give a basic cost if it will be lowered
+
+        return TTI::TCC_Basic * (FTy->getNumParams() + 1);
+      }
+      return TTI::TCC_Basic * (CS.arg_size() + 1);
     }
 
     if (isa<SExtInst>(U) || isa<ZExtInst>(U) || isa<FPExtInst>(U))
