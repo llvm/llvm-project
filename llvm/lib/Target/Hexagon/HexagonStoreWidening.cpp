@@ -416,9 +416,9 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
   MachineInstr *FirstSt = OG.front();
   DebugLoc DL = OG.back()->getDebugLoc();
   const MachineMemOperand &OldM = getStoreTarget(FirstSt);
-  MachineMemOperand *NewM = MF->getMachineMemOperand(
-      OldM.getPointerInfo(), OldM.getFlags(), TotalSize,
-      OldM.getAlign().value(), OldM.getAAInfo());
+  MachineMemOperand *NewM =
+      MF->getMachineMemOperand(OldM.getPointerInfo(), OldM.getFlags(),
+                               TotalSize, OldM.getAlign(), OldM.getAAInfo());
 
   if (Acc < 0x10000) {
     // Create mem[hw] = #Acc

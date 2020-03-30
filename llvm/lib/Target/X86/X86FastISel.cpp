@@ -3423,7 +3423,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       AM.Base.Reg = RegInfo->getStackRegister();
       AM.Disp = LocMemOffset;
       ISD::ArgFlagsTy Flags = OutFlags[VA.getValNo()];
-      unsigned Alignment = DL.getABITypeAlignment(ArgVal->getType());
+      Align Alignment = DL.getABITypeAlign(ArgVal->getType());
       MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
           MachinePointerInfo::getStack(*FuncInfo.MF, LocMemOffset),
           MachineMemOperand::MOStore, ArgVT.getStoreSize(), Alignment);
@@ -3775,11 +3775,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   }
 
   // MachineConstantPool wants an explicit alignment.
-  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
-  if (Align == 0) {
-    // Alignment of vector types. FIXME!
-    Align = DL.getTypeAllocSize(CFP->getType());
-  }
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
 
   // x86-32 PIC requires a PIC base register for constant pools.
   unsigned PICBase = 0;
@@ -3792,7 +3788,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     PICBase = X86::RIP;
 
   // Create the load from the constant pool.
-  unsigned CPI = MCP.getConstantPoolIndex(CFP, Align);
+  unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment.value());
   unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT.SimpleTy));
 
   if (CM == CodeModel::Large) {
@@ -3805,7 +3801,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     addDirectMem(MIB, AddrReg);
     MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getConstantPool(*FuncInfo.MF),
-        MachineMemOperand::MOLoad, DL.getPointerSize(), Align);
+        MachineMemOperand::MOLoad, DL.getPointerSize(), Alignment);
     MIB->addMemOperand(*FuncInfo.MF, MMO);
     return ResultReg;
   }

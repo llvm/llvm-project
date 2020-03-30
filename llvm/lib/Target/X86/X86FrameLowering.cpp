@@ -1514,17 +1514,17 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), Establisher),
                    Establisher, false, PSPSlotOffset)
           .addMemOperand(MF.getMachineMemOperand(
-              NoInfo, MachineMemOperand::MOLoad, SlotSize, SlotSize));
+              NoInfo, MachineMemOperand::MOLoad, SlotSize, Align(SlotSize)));
       ;
       // Save the root establisher back into the current funclet's (mostly
       // empty) frame, in case a sub-funclet or the GC needs it.
       addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64mr)), StackPtr,
                    false, PSPSlotOffset)
           .addReg(Establisher)
-          .addMemOperand(
-              MF.getMachineMemOperand(NoInfo, MachineMemOperand::MOStore |
-                                                  MachineMemOperand::MOVolatile,
-                                      SlotSize, SlotSize));
+          .addMemOperand(MF.getMachineMemOperand(
+              NoInfo,
+              MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
+              SlotSize, Align(SlotSize)));
     }
     SPOrEstablisher = Establisher;
   } else {
@@ -1614,7 +1614,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(StackPtr)
         .addMemOperand(MF.getMachineMemOperand(
             PSPInfo, MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
-            SlotSize, SlotSize));
+            SlotSize, Align(SlotSize)));
   }
 
   // Realign stack after we spilled callee-saved registers (so that we'll be

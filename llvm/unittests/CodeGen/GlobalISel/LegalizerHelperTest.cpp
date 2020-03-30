@@ -2578,7 +2578,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
   DefineLegalizerInfo(A, {});
 
   MachineMemOperand *MMO = B.getMF().getMachineMemOperand(
-    MachinePointerInfo(), MachineMemOperand::MOLoad, 4, 4);
+      MachinePointerInfo(), MachineMemOperand::MOLoad, 4, Align(4));
   auto Load = B.buildLoad(V4S8, Ptr, *MMO);
 
   AInfo Info(MF->getSubtarget());
@@ -2611,7 +2611,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
   DefineLegalizerInfo(A, {});
 
   MachineMemOperand *MMO = B.getMF().getMachineMemOperand(
-    MachinePointerInfo(), MachineMemOperand::MOStore, 4, 4);
+      MachinePointerInfo(), MachineMemOperand::MOStore, 4, Align(4));
   auto Val = B.buildUndef(V4S8);
   auto Store = B.buildStore(Val, Ptr, *MMO);
 
