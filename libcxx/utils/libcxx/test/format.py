@@ -46,7 +46,9 @@ class LibcxxTestFormat(object):
             IntegratedTestKeywordParser('MODULES_DEFINES:', ParserKind.LIST,
                                         initial_value=[]),
             IntegratedTestKeywordParser('FILE_DEPENDENCIES:', ParserKind.LIST,
-                                        initial_value=test.file_dependencies)
+                                        initial_value=test.file_dependencies),
+            IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:', ParserKind.LIST,
+                                        initial_value=[])
         ]
 
     @staticmethod
@@ -89,8 +91,6 @@ class LibcxxTestFormat(object):
         is_pass_test = name.endswith('.pass.cpp') or name.endswith('.pass.mm')
         is_fail_test = name.endswith('.fail.cpp') or name.endswith('.fail.mm')
         is_objcxx_test = name.endswith('.mm')
-        is_objcxx_arc_test = name.endswith('.arc.pass.mm') or \
-                             name.endswith('.arc.fail.mm')
         assert is_sh_test or name_ext == '.cpp' or name_ext == '.mm', \
             'non-cpp file must be sh test'
 
@@ -145,12 +145,14 @@ class LibcxxTestFormat(object):
                 if b'#define _LIBCPP_ASSERT' in contents:
                     test_cxx.useModules(False)
 
+        # Handle ADDITIONAL_COMPILE_FLAGS keywords by adding those compilation
+        # flags, but first perform substitutions in those flags.
+        extra_compile_flags = self._get_parser('ADDITIONAL_COMPILE_FLAGS:', parsers).getValue()
+        extra_compile_flags = lit.TestRunner.applySubstitutions(extra_compile_flags, substitutions)
+        test_cxx.compile_flags.extend(extra_compile_flags)
+
         if is_objcxx_test:
             test_cxx.source_lang = 'objective-c++'
-            if is_objcxx_arc_test:
-                test_cxx.compile_flags += ['-fobjc-arc']
-            else:
-                test_cxx.compile_flags += ['-fno-objc-arc']
             test_cxx.link_flags += ['-framework', 'Foundation']
 
         # Dispatch the test based on its suffix.
