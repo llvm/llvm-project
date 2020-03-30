@@ -2142,6 +2142,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
   // larger (and resp. smaller) than any other lower (or upper bound).
   SmallVector<int64_t, 8> fullTileLb, fullTileUb;
   for (auto loop : loops) {
+    (void) loop;
     // TODO: Non-unit stride is not an issue to generalize to.
     assert(loop.getStep() == 1 && "point loop step expected to be one");
     // Mark everything symbols for the purpose of finding a constant diff pair.
