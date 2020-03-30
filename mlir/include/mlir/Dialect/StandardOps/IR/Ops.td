@@ -133,8 +133,20 @@ def AbsFOp : FloatUnaryOp<"absf"> {
   let description = [{
     The `absf` operation computes the absolute value. It takes one operand and
     returns one result of the same type. This type may be a float scalar type,
-    a vector whose element type is float, or a tensor of floats. It has no
-    standard attributes.
+    a vector whose element type is float, or a tensor of floats.
+
+    Example:
+
+    ```mlir
+    // Scalar absolute value.
+    %a = absf %b : f64
+
+    // SIMD vector element-wise absolute value.
+    %f = absf %g : vector<4xf32>
+
+    // Tensor element-wise absolute value.
+    %x = absf %y : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -144,6 +156,34 @@ def AbsFOp : FloatUnaryOp<"absf"> {
 
 def AddFOp : FloatArithmeticOp<"addf"> {
   let summary = "floating point addition operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.addf` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `addf` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
+
+    Example:
+
+    ```mlir
+    // Scalar addition.
+    %a = addf %b, %c : f64
+
+    // SIMD vector addition, e.g. for Intel SSE.
+    %f = addf %g, %h : vector<4xf32>
+
+    // Tensor addition.
+    %x = addf %y, %z : tensor<4x?xbf16>
+    ```
+
+    TODO: In the distant future, this will accept optional attributes for fast
+    math, contraction, rounding mode, and other controls.
+  }];
   let hasFolder = 1;
 }
 
@@ -153,6 +193,31 @@ def AddFOp : FloatArithmeticOp<"addf"> {
 
 def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
   let summary = "integer addition operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.addi` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `addi` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar
+    type, a vector whose element type is integer, or a tensor of integers. It
+    has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar addition.
+    %a = addi %b, %c : i64
+
+    // SIMD vector element-wise addition, e.g. for Intel SSE.
+    %f = addi %g, %h : vector<4xi32>
+
+    // Tensor element-wise addition.
+    %x = addi %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -163,32 +228,42 @@ def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
 def AllocOp : Std_Op<"alloc"> {
   let summary = "memory allocation operation";
   let description = [{
-    The "alloc" operation allocates a region of memory, as specified by its
-    memref type. For example:
+    The `alloc` operation allocates a region of memory, as specified by its
+    memref type.
 
-      %0 = alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    Example:
+
+    ```mlir
+    %0 = alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    ```
 
     The optional list of dimension operands are bound to the dynamic dimensions
     specified in its memref type. In the example below, the ssa value '%d' is
     bound to the second dimension of the memref (which is dynamic).
 
-      %0 = alloc(%d) : memref<8x?xf32, (d0, d1) -> (d0, d1), 1>
+    ```mlir
+    %0 = alloc(%d) : memref<8x?xf32, (d0, d1) -> (d0, d1), 1>
+    ```
 
     The optional list of symbol operands are bound to the symbols of the
     memrefs affine map. In the example below, the ssa value '%s' is bound to
     the symbol 's0' in the affine map specified in the allocs memref type.
 
-      %0 = alloc()[%s] : memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+    ```mlir
+    %0 = alloc()[%s] : memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+    ```
 
     This operation returns a single ssa value of memref type, which can be used
     by subsequent load and store operations.
 
     The optional `alignment` attribute may be specified to ensure that the
     region of memory that will be indexed is aligned at the specified byte
-    boundary. TODO(b/144281289) optional alignment attribute to MemRefType.
+    boundary.
 
-      %0 = alloc()[%s] {alignment = 8} :
-        memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+    ```mlir
+    %0 = alloc()[%s] {alignment = 8} :
+      memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+    ```
   }];
 
   let arguments = (ins Variadic<Index>:$value,
@@ -238,6 +313,31 @@ def AllocOp : Std_Op<"alloc"> {
 
 def AndOp : IntArithmeticOp<"and", [Commutative]> {
   let summary = "integer binary and";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.and` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `and` operation takes two operands and returns one result, each of these
+    is required to be the same type. This type may be an integer scalar type, a
+    vector whose element type is integer, or a tensor of integers. It has no
+    standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar integer bitwise and.
+    %a = and %b, %c : i64
+
+    // SIMD vector element-wise bitwise integer and.
+    %f = and %g, %h : vector<4xi32>
+
+    // Tensor element-wise bitwise integer and.
+    %x = and %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -249,7 +349,7 @@ def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
   let summary =
       "assertion that gives alignment information to the input memref";
   let description = [{
-    The assume alignment operation takes a memref and a integer of alignment
+    The `assume_alignment` operation takes a memref and a integer of alignment
     value, and internally annotates the buffer with the given alignment. If
     the buffer isn't aligned to the given alignment, the behavior is undefined.
 
@@ -296,7 +396,7 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
     ]> {
   let summary = "atomic read-modify-write operation";
   let description = [{
-    The "atomic_rmw" operation provides a way to perform a read-modify-write
+    The `atomic_rmw` operation provides a way to perform a read-modify-write
     sequence that is free from data races. The kind enumeration specifies the
     modification to perform. The value operand represents the new value to be
     applied during the modification. The memref operand represents the buffer
@@ -307,7 +407,7 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
     Example:
 
     ```mlir
-      %x = atomic_rmw "addf" %value, %I[%i] : (f32, memref<10xf32>) -> f32
+    %x = atomic_rmw "addf" %value, %I[%i] : (f32, memref<10xf32>) -> f32
     ```
   }];
 
@@ -338,15 +438,19 @@ def BranchOp : Std_Op<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, NoSideEffect, Terminator]> {
   let summary = "branch operation";
   let description = [{
-    The "br" operation represents a branch operation in a function.
+    The `br` operation represents a branch operation in a function.
     The operation takes variable number of operands and produces no results.
     The operand number and types for each successor must match the arguments of
-    the block successor. For example:
+    the block successor.
 
-      ^bb2:
-        %2 = call @someFn()
-        br ^bb3(%2 : tensor<*xf32>)
-      ^bb3(%3: tensor<*xf32>):
+    Example:
+
+    ```mlir
+    ^bb2:
+      %2 = call @someFn()
+      br ^bb3(%2 : tensor<*xf32>)
+    ^bb3(%3: tensor<*xf32>):
+    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$destOperands);
@@ -382,12 +486,16 @@ def BranchOp : Std_Op<"br",
 def CallOp : Std_Op<"call", [CallOpInterface]> {
   let summary = "call operation";
   let description = [{
-    The "call" operation represents a direct call to a function that is within
-    the same symbol scope as the call.  The operands and result types of the
+    The `call` operation represents a direct call to a function that is within
+    the same symbol scope as the call. The operands and result types of the
     call must match the specified function type. The callee is encoded as a
-    function attribute named "callee".
+    symbol reference attribute named "callee".
 
-      %2 = call @my_add(%0, %1) : (f32, f32) -> f32
+    Example:
+
+    ```mlir
+    %2 = call @my_add(%0, %1) : (f32, f32) -> f32
+    ```
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
@@ -450,12 +558,20 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     ]> {
   let summary = "indirect call operation";
   let description = [{
-    The "call_indirect" operation represents an indirect call to a value of
-    function type.  Functions are first class types in MLIR, and may be passed
-    as arguments and merged together with block arguments.  The operands
-    and result types of the call must match the specified function type.
+    The `call_indirect` operation represents an indirect call to a value of
+    function type. Functions are first class types in MLIR, and may be passed as
+    arguments and merged together with block arguments. The operands and result
+    types of the call must match the specified function type.
 
-      %3 = call_indirect %2(%0, %1) : (f32, f32) -> f32
+    Function values can be created with the
+    [`constant` operation](#constant-operation).
+
+    Example:
+
+    ```mlir
+    %31 = call_indirect %15(%0, %1)
+            : (tensor<16xf32>, tensor<16xf32>) -> tensor<16xf32>
+    ```
   }];
 
   let arguments = (ins FunctionType:$callee, Variadic<AnyType>:$operands);
@@ -497,10 +613,29 @@ def CallIndirectOp : Std_Op<"call_indirect", [
 def CeilFOp : FloatUnaryOp<"ceilf"> {
   let summary = "ceiling of the specified value";
   let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.ceilf` ssa-use `:` type
+    ```
+
     The `ceilf` operation computes the ceiling of a given value. It takes one
     operand and returns one result of the same type. This type may be a float
     scalar type, a vector whose element type is float, or a tensor of floats.
     It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar ceiling value.
+    %a = ceilf %b : f64
+
+    // SIMD vector element-wise ceiling value.
+    %f = ceilf %g : vector<4xf32>
+
+    // Tensor element-wise ceiling value.
+    %x = ceilf %y : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -543,7 +678,7 @@ def CmpFOp : Std_Op<"cmpf",
        "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "floating-point comparison operation";
   let description = [{
-    The "cmpf" operation compares its two operands according to the float
+    The `cmpf` operation compares its two operands according to the float
     comparison rules and the predicate specified by the respective attribute.
     The predicate defines the type of comparison: (un)orderedness, (in)equality
     and signed less/greater than (or equal to) as well as predicates that are
@@ -559,9 +694,13 @@ def CmpFOp : Std_Op<"cmpf",
     attribute is merely a syntactic sugar and is converted to an integer
     attribute by the parser.
 
-      %r1 = cmpf "oeq" %0, %1 : f32
-      %r2 = cmpf "ult" %0, %1 : tensor<42x42xf64>
-      %r3 = "std.cmpf"(%0, %1) {predicate: 0} : (f8, f8) -> i1
+    Example:
+
+    ```mlir
+    %r1 = cmpf "oeq" %0, %1 : f32
+    %r2 = cmpf "ult" %0, %1 : tensor<42x42xf64>
+    %r3 = "std.cmpf"(%0, %1) {predicate: 0} : (f8, f8) -> i1
+    ```
   }];
 
   let arguments = (ins
@@ -623,24 +762,67 @@ def CmpIOp : Std_Op<"cmpi",
        "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "integer comparison operation";
   let description = [{
-    The "cmpi" operation compares its two operands according to the integer
-    comparison rules and the predicate specified by the respective attribute.
-    The predicate defines the type of comparison: (in)equality, (un)signed
-    less/greater than (or equal to).  The operands must have the same type, and
-    this type must be an integer type, a vector or a tensor thereof.  The result
-    is an i1, or a vector/tensor thereof having the same shape as the inputs.
-    Since integers are signless, the predicate also explicitly indicates
-    whether to interpret the operands as signed or unsigned integers for
-    less/greater than comparisons.  For the sake of readability by humans,
-    custom assembly form for the operation uses a string-typed attribute for
-    the predicate.  The value of this attribute corresponds to lower-cased name
-    of the predicate constant, e.g., "slt" means "signed less than".  The string
-    representation of the attribute is merely a syntactic sugar and is converted
-    to an integer attribute by the parser.
+    The `cmpi` operation is a generic comparison for integer-like types. Its two
+    arguments can be integers, vectors or tensors thereof as long as their types
+    match. The operation produces an i1 for the former case, a vector or a
+    tensor of i1 with the same shape as inputs in the other cases.
 
-      %r1 = cmpi "eq" %0, %1 : i32
-      %r2 = cmpi "slt" %0, %1 : tensor<42x42xi64>
-      %r3 = "std.cmpi"(%0, %1){predicate: 0} : (i8, i8) -> i1
+    Its first argument is an attribute that defines which type of comparison is
+    performed. The following comparisons are supported:
+
+    -   equal (mnemonic: `"eq"`; integer value: `0`)
+    -   not equal (mnemonic: `"ne"`; integer value: `1`)
+    -   signed less than (mnemonic: `"slt"`; integer value: `2`)
+    -   signed less than or equal (mnemonic: `"sle"`; integer value: `3`)
+    -   signed greater than (mnemonic: `"sgt"`; integer value: `4`)
+    -   signed greater than or equal (mnemonic: `"sge"`; integer value: `5`)
+    -   unsigned less than (mnemonic: `"ult"`; integer value: `6`)
+    -   unsigned less than or equal (mnemonic: `"ule"`; integer value: `7`)
+    -   unsigned greater than (mnemonic: `"ugt"`; integer value: `8`)
+    -   unsigned greater than or equal (mnemonic: `"uge"`; integer value: `9`)
+
+    The result is `1` if the comparison is true and `0` otherwise. For vector or
+    tensor operands, the comparison is performed elementwise and the element of
+    the result indicates whether the comparison is true for the operand elements
+    with the same indices as those of the result.
+
+    Note: while the custom assembly form uses strings, the actual underlying
+    attribute has integer type (or rather enum class in C++ code) as seen from
+    the generic assembly form. String literals are used to improve readability
+    of the IR by humans.
+
+    This operation only applies to integer-like operands, but not floats. The
+    main reason being that comparison operations have diverging sets of
+    attributes: integers require sign specification while floats require various
+    floating point-related particularities, e.g., `-ffast-math` behavior,
+    IEEE754 compliance, etc
+    ([rationale](../Rationale.md#splitting-floating-point-vs-integer-operations)).
+    The type of comparison is specified as attribute to avoid introducing ten
+    similar operations, taking into account that they are often implemented
+    using the same operation downstream
+    ([rationale](../Rationale.md#specifying-comparison-kind-as-attribute)). The
+    separation between signed and unsigned order comparisons is necessary
+    because of integers being signless. The comparison operation must know how
+    to interpret values with the foremost bit being set: negatives in two's
+    complement or large positives
+    ([rationale](../Rationale.md#specifying-sign-in-integer-comparison-operations)).
+
+    Example:
+
+    ```mlir
+    // Custom form of scalar "signed less than" comparison.
+    %x = cmpi "slt", %lhs, %rhs : i32
+
+    // Generic form of the same operation.
+    %x = "std.cmpi"(%lhs, %rhs) {predicate = 2 : i64} : (i32, i32) -> i1
+
+    // Custom form of vector equality comparison.
+    %x = cmpi "eq", %lhs, %rhs : vector<4xi64>
+
+    // Generic form of the same operation.
+    %x = "std.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
+        : (vector<4xi64>, vector<4xi64>) -> vector<4xi1>
+    ```
   }];
 
   let arguments = (ins
@@ -682,18 +864,30 @@ def CondBranchOp : Std_Op<"cond_br",
      NoSideEffect, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
-    The "cond_br" operation represents a conditional branch operation in a
-    function. The operation takes variable number of operands and produces
-    no results. The operand number and types for each successor must match the
-    arguments of the block successor. For example:
+    The `cond_br` terminator operation represents a conditional branch on a
+    boolean (1-bit integer) value. If the bit is set, then the first destination
+    is jumped to; if it is false, the second destination is chosen. The count
+    and types of operands must align with the arguments in the corresponding
+    target blocks.
 
-      ^bb0:
-         %0 = extract_element %arg0[] : tensor<i1>
-         cond_br %0, ^bb1, ^bb2
-      ^bb1:
-         ...
-      ^bb2:
-         ...
+    The MLIR conditional branch operation is not allowed to target the entry
+    block for a region. The two destinations of the conditional branch operation
+    are allowed to be the same.
+
+    The following example illustrates a function with a conditional branch
+    operation that targets the same block.
+
+    Example:
+
+    ```mlir
+    func @select(%a: i32, %b: i32, %flag: i1) -> i32 {
+      // Both targets are the same, operands differ
+      cond_br %flag, ^bb1(%a : i32), ^bb1(%b : i32)
+
+    ^bb1(%x : i32) :
+      return %x : i32
+    }
+    ```
   }];
 
   let arguments = (ins I1:$condition,
@@ -799,6 +993,38 @@ def CondBranchOp : Std_Op<"cond_br",
 def ConstantOp : Std_Op<"constant",
     [ConstantLike, NoSideEffect, DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
   let summary = "constant";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.constant` attribute-value `:` type
+    ```
+
+    The `constant` operation produces an SSA value equal to some constant
+    specified by an attribute. This is the way that MLIR uses to form simple
+    integer and floating point constants, as well as more exotic things like
+    references to functions and tensor/vector constants.
+
+    Example:
+
+    ```mlir
+    // Integer constant
+    %1 = constant 42 : i32
+
+    // Reference to function @myfn.
+    %3 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
+
+    // Equivalent generic forms
+    %1 = "std.constant"() {value = 42 : i32} : () -> i32
+    %3 = "std.constant"() {value = @myfn}
+       : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
+    ```
+
+    MLIR does not allow direct references to functions in SSA operands because
+    the compiler is multithreaded, and disallowing SSA values to directly
+    reference a function simplifies this
+    ([rationale](../Rationale.md#multithreading-the-compiler)).
+  }];
 
   let arguments = (ins AnyAttr:$value);
   let results = (outs AnyType);
@@ -825,11 +1051,30 @@ def ConstantOp : Std_Op<"constant",
 def CopySignOp : FloatArithmeticOp<"copysign"> {
   let summary = "A copysign operation";
   let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.copysign` ssa-use `:` type
+    ```
+
     The `copysign` returns a value with the magnitude of the first operand and
     the sign of the second operand. It takes two operands and returns one
     result of the same type. This type may be a float scalar type, a vector
     whose element type is float, or a tensor of floats. It has no standard
     attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar copysign value.
+    %a = copysign %b %c : f64
+
+    // SIMD vector element-wise copysign value.
+    %f = copysign %g %h : vector<4xf32>
+
+    // Tensor element-wise copysign value.
+    %x = copysign %y %z : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -840,10 +1085,29 @@ def CopySignOp : FloatArithmeticOp<"copysign"> {
 def CosOp : FloatUnaryOp<"cos"> {
   let summary = "cosine of the specified value";
   let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.cos` ssa-use `:` type
+    ```
+
     The `cos` operation computes the cosine of a given value. It takes one
     operand and returns one result of the same type. This type may be a float
     scalar type, a vector whose element type is float, or a tensor of floats.
     It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar cosine value.
+    %a = cos %b : f64
+
+    // SIMD vector element-wise cosine value.
+    %f = cos %g : vector<4xf32>
+
+    // Tensor element-wise cosine value.
+    %x = cos %y : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -854,14 +1118,17 @@ def CosOp : FloatUnaryOp<"cos"> {
 def DeallocOp : Std_Op<"dealloc"> {
   let summary = "memory deallocation operation";
   let description = [{
-    The "dealloc" operation frees the region of memory referenced by a memref
-    which was originally created by the "alloc" operation.
-    The "dealloc" operation should not be called on memrefs which alias an
-    alloc'd memref (i.e. memrefs returned by the "view" and "reshape"
-    operations).
+    The `dealloc` operation frees the region of memory referenced by a memref
+    which was originally created by the `alloc` operation.
+    The `dealloc` operation should not be called on memrefs which alias an
+    alloc'd memref (e.g. memrefs returned by `view` operations).
 
-      %0 = alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
-      dealloc %0 : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    Example:
+
+    ```mlir
+    %0 = alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    dealloc %0 : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    ```
   }];
 
   let arguments = (ins AnyMemRef:$memref);
@@ -878,11 +1145,32 @@ def DeallocOp : Std_Op<"dealloc"> {
 def DimOp : Std_Op<"dim", [NoSideEffect]> {
   let summary = "dimension index operation";
   let description = [{
-    The "dim" operation takes a memref or tensor operand and returns an "index".
-    It requires a single integer attribute named "index". It returns the size
-    of the specified dimension. For example:
+    Syntax:
 
-      %1 = dim %0, 2 : tensor<?x?x?xf32>
+    ```
+    operation ::= ssa-id `=` `std.dim` ssa-id `,` integer-literal `:` type
+    ```
+
+    The `dim` operation takes a memref or tensor operand and a dimension index,
+    and returns an [`index`](../LangRef.md#index-type) that is the size of that
+    dimension.
+
+    The `dim` operation is represented with a single integer attribute named
+    `index`, and the type specifies the type of the memref or tensor operand.
+
+    Example:
+
+    ```mlir
+    // Always returns 4, can be constant folded:
+    %x = dim %A, 0 : tensor<4 x ? x f32>
+
+    // Returns the dynamic dimension of %A.
+    %y = dim %A, 1 : tensor<4 x ? x f32>
+
+    // Equivalent generic form:
+    %x = "std.dim"(%A) {index = 0 : i64} : (tensor<4 x ? x f32>) -> index
+    %y = "std.dim"(%A) {index = 1 : i64} : (tensor<4 x ? x f32>) -> index
+    ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnyMemRef, AnyTensor],
@@ -921,6 +1209,30 @@ def DivFOp : FloatArithmeticOp<"divf"> {
 
 def ExpOp : FloatUnaryOp<"exp"> {
   let summary = "base-e exponential of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.exp` ssa-use `:` type
+    ```
+
+    The `exp` operation takes one operand and returns one result of the same
+    type. This type may be a float scalar type, a vector whose element type is
+    float, or a tensor of floats. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar natural exponential.
+    %a = exp %b : f64
+
+    // SIMD vector element-wise natural exponential.
+    %f = exp %g : vector<4xf32>
+
+    // Tensor element-wise natural exponential.
+    %x = exp %y : tensor<4x?xf8>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -942,14 +1254,20 @@ def ExtractElementOp : Std_Op<"extract_element",
                     "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "element extract operation";
   let description = [{
-    The "extract_element" op reads a tensor or vector and returns one element
-    from it specified by an index list. The output of extract is a new value
-    with the same type as the elements of the tensor or vector. The arity of
-    indices matches the rank of the accessed value (i.e., if a tensor is of rank
-    3, then 3 indices are required for the extract).  The indices should all be
-    of index type. For example:
+    The `extract_element` op reads a tensor or vector and returns one element
+    from it specified by an index list. The output of the 'extract_element' is a
+    new value with the same type as the elements of the tensor or vector. The
+    arity of indices matches the rank of the accessed value (i.e., if a tensor
+    is of rank 3, then 3 indices are required for the extract. The indices
+    should all be of `index` type.
 
-      %3 = extract_element %0[%1, %2] : vector<4x4xi32>
+    Example:
+
+    ```mlir
+    %3 = extract_element %v[%1, %2] : vector<4x4xi32>
+    %4 = extract_element %t[%1, %2] : tensor<4x4xi32>
+    %5 = extract_element %ut[%1, %2] : tensor<*xi32>
+    ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnyVector, AnyTensor]>:$aggregate,
@@ -1029,9 +1347,9 @@ def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
   let summary = "cast between index and integer types";
   let description = [{
-    Casts between integer scalars and 'index' scalars.  Index is an integer of
-    platform-specific bit width.  If casting to a wider integer, the value is
-    sign-extended.  If casting to a narrower integer, the value is truncated.
+    Casts between integer scalars and 'index' scalars. Index is an integer of
+    platform-specific bit width. If casting to a wider integer, the value is
+    sign-extended. If casting to a narrower integer, the value is truncated.
   }];
 
   let extraClassDeclaration = [{
@@ -1053,13 +1371,40 @@ def LoadOp : Std_Op<"load",
                      "$_self.cast<MemRefType>().getElementType()">]> {
   let summary = "load operation";
   let description = [{
-    The "load" op reads an element from a memref specified by an index list. The
+    The `load` op reads an element from a memref specified by an index list. The
     output of load is a new value with the same type as the elements of the
     memref. The arity of indices is the rank of the memref (i.e., if the memref
     loaded from is of rank 3, then 3 indices are required for the load following
-    the memref identifier). For example:
+    the memref identifier).
 
-      %3 = load %0[%1, %1] : memref<4x4xi32>
+    In an `affine.if` or `affine.for` body, the indices of a load are restricted
+    to SSA values bound to surrounding loop induction variables,
+    [symbols](../LangRef.md#dimensions-and-symbols), results of a
+    [`constant` operation](#constant-operation), or the result of an
+    `affine.apply` operation that can in turn take as arguments all of the
+    aforementioned SSA values or the recursively result of such an
+    `affine.apply` operation.
+
+    Example:
+
+    ```mlir
+    %1 = affine.apply affine_map<(d0, d1) -> (3*d0)> (%i, %j)
+    %2 = affine.apply affine_map<(d0, d1) -> (d1+1)> (%i, %j)
+    %12 = load %A[%1, %2] : memref<8x?xi32, #layout, memspace0>
+
+    // Example of an indirect load (treated as non-affine)
+    %3 = affine.apply affine_map<(d0) -> (2*d0 + 1)>(%12)
+    %13 = load %A[%3, %2] : memref<4x?xi32, #layout, memspace0>
+    ```
+
+    **Context:** The `load` and `store` operations are specifically crafted to
+    fully resolve a reference to an element of a memref, and (in affine
+    `affine.if` and `affine.for` operations) the compiler can follow use-def
+    chains (e.g. through [`affine.apply`](Affine.md#affineapply-operation)
+    operations) to precisely analyze references at compile-time using polyhedral
+    techniques. This is possible because of the
+    [restrictions on dimensions and symbols](Affine.md#restrictions-on-dimensions-and-symbols)
+    in these contexts.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1114,7 +1459,13 @@ def Log2Op : FloatUnaryOp<"log2"> {
 def MemRefCastOp : CastOp<"memref_cast"> {
   let summary = "memref cast operation";
   let description = [{
-    The "memref_cast" operation converts a memref from one type to an equivalent
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.memref_cast` ssa-use `:` type `to` type
+    ```
+
+    The `memref_cast` operation converts a memref from one type to an equivalent
     type with a compatible shape. The source and destination types are
     compatible if:
     a. both are ranked memref types with the same element type, affine mappings,
@@ -1126,30 +1477,36 @@ def MemRefCastOp : CastOp<"memref_cast"> {
     disagree with resultant destination size.
 
     Example:
-    Assert that the input dynamic shape matches the destination static shape.
-       %2 = memref_cast %1 : memref<?x?xf32> to memref<4x4xf32>
-    Erase static shape information, replacing it with dynamic information.
-       %3 = memref_cast %1 : memref<4xf32> to memref<?xf32>
 
-    The same holds true for offsets and strides.
+    ```mlir
+    // Assert that the input dynamic shape matches the destination static shape.
+    %2 = memref_cast %1 : memref<?x?xf32> to memref<4x4xf32>
+    // Erase static shape information, replacing it with dynamic information.
+    %3 = memref_cast %1 : memref<4xf32> to memref<?xf32>
 
-    Assert that the input dynamic shape matches the destination static stride.
-       %4 = memref_cast %1 : memref<12x4xf32, offset:?, strides: [?, ?]> to
-                             memref<12x4xf32, offset:5, strides: [4, 1]>
-    Erase static offset and stride information, replacing it with
-    dynamic information.
-       %5 = memref_cast %1 : memref<12x4xf32, offset:5, strides: [4, 1]> to
-                             memref<12x4xf32, offset:?, strides: [?, ?]>
+    // The same holds true for offsets and strides.
+
+    // Assert that the input dynamic shape matches the destination static stride.
+    %4 = memref_cast %1 : memref<12x4xf32, offset:?, strides: [?, ?]> to
+                          memref<12x4xf32, offset:5, strides: [4, 1]>
+    // Erase static offset and stride information, replacing it with
+    // dynamic information.
+    %5 = memref_cast %1 : memref<12x4xf32, offset:5, strides: [4, 1]> to
+                          memref<12x4xf32, offset:?, strides: [?, ?]>
+    ```
 
     b. either or both memref types are unranked with the same element type, and
     address space.
 
     Example:
+
+    ```mlir
     Cast to concrete shape.
         %4 = memref_cast %1 : memref<*xf32> to memref<4x?xf32>
 
     Erase rank information.
         %5 = memref_cast %1 : memref<4x?xf32> to memref<*xf32>
+    ```
   }];
 
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source);
@@ -1171,6 +1528,34 @@ def MemRefCastOp : CastOp<"memref_cast"> {
 
 def MulFOp : FloatArithmeticOp<"mulf"> {
   let summary = "floating point multiplication operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.mulf` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `mulf` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %a = mulf %b, %c : f64
+
+    // SIMD pointwise vector multiplication, e.g. for Intel SSE.
+    %f = mulf %g, %h : vector<4xf32>
+
+    // Tensor pointwise multiplication.
+    %x = mulf %y, %z : tensor<4x?xbf16>
+    ```
+
+    TODO: In the distant future, this will accept optional attributes for fast
+    math, contraction, rounding mode, and other controls.
+  }];
   let hasFolder = 1;
 }
 
@@ -1190,10 +1575,29 @@ def MulIOp : IntArithmeticOp<"muli", [Commutative]> {
 def NegFOp : FloatUnaryOp<"negf"> {
   let summary = "floating point negation";
   let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `negf` ssa-use `:` type
+    ```
+
     The `negf` operation computes the negation of a given value. It takes one
     operand and returns one result of the same type. This type may be a float
     scalar type, a vector whose element type is float, or a tensor of floats.
     It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar negation value.
+    %a = negf %b : f64
+
+    // SIMD vector element-wise negation value.
+    %f = negf %g : vector<4xf32>
+
+    // Tensor element-wise negation value.
+    %x = negf %y : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -1203,6 +1607,31 @@ def NegFOp : FloatUnaryOp<"negf"> {
 
 def OrOp : IntArithmeticOp<"or", [Commutative]> {
   let summary = "integer binary or";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `or` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `or` operation takes two operands and returns one result, each of these
+    is required to be the same type. This type may be an integer scalar type, a
+    vector whose element type is integer, or a tensor of integers. It has no
+    standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar integer bitwise or.
+    %a = or %b, %c : i64
+
+    // SIMD vector element-wise bitwise integer or.
+    %f = or %g, %h : vector<4xi32>
+
+    // Tensor element-wise bitwise integer or.
+    %x = or %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -1218,7 +1647,9 @@ def PrefetchOp : Std_Op<"prefetch"> {
     read/write specifier, a locality hint, and a cache type specifier as shown
     below:
 
-      prefetch %0[%i, %j], read, locality<3>, data : memref<400x400xi32>
+    ```mlir
+    prefetch %0[%i, %j], read, locality<3>, data : memref<400x400xi32>
+    ```
 
     The read/write specifier is either 'read' or 'write', the locality hint
     ranges from locality<0> (no locality) to locality<3> (extremely local keep
@@ -1266,9 +1697,13 @@ def PrefetchOp : Std_Op<"prefetch"> {
 def RankOp : Std_Op<"rank", [NoSideEffect]> {
   let summary = "rank operation";
   let description = [{
-    The "rank" operation takes a tensor operand and returns its rank.
+    The `rank` operation takes a tensor operand and returns its rank.
 
-      %1 = rank %0 : index
+    Example:
+
+    ```mlir
+    %1 = rank %0 : index
+    ```
   }];
 
   let arguments = (ins AnyTensor);
@@ -1301,14 +1736,19 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
                                  Terminator]> {
   let summary = "return operation";
   let description = [{
-    The "return" operation represents a return operation within a function.
+    The `return` operation represents a return operation within a function.
     The operation takes variable number of operands and produces no results.
     The operand number and types must match the signature of the function
-    that contains the operation. For example:
+    that contains the operation.
 
-      func @foo() : (i32, f8) {
+    Example:
+
+    ```mlir
+    func @foo() : (i32, f8) {
       ...
       return %0, %1 : i32, f8
+    }
+    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -1345,16 +1785,32 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
                      "getI1SameShape($_self)">]> {
   let summary = "select operation";
   let description = [{
-    The "select" operation chooses one value based on a binary condition
-    supplied as its first operand. If the value of the first operand is 1, the
-    second operand is chosen, otherwise the third operand is chosen. The second
-    and the third operand must have the same type. The operation applies
-    elementwise to vectors and tensors.  The shape of all arguments must be
-    identical. For example, the maximum operation is obtained by combining
-    "select" with "cmpi" as follows.
+    The `select` operation chooses one value based on a binary condition
+    supplied as its first operand. If the value of the first operand is `1`,
+    the second operand is chosen, otherwise the third operand is chosen.
+    The second and the third operand must have the same type.
 
-      %2 = cmpi "gt" %0, %1 : i32         // %2 is i1
-      %3 = select %2, %0, %1 : i32
+    The operation applies to vectors and tensors elementwise given the _shape_
+    of all operands is identical. The choice is made for each element
+    individually based on the value at the same position as the element in the
+    condition operand.
+
+    The `select` operation combined with [`cmpi`](#std-cmpi) can be used
+    to implement `min` and `max` with signed or unsigned comparison semantics.
+
+    Example:
+
+    ```mlir
+    // Custom form of scalar selection.
+    %x = select %cond, %true, %false : i32
+
+    // Generic form of the same operation.
+    %x = "std.select"(%cond, %true, %false) : (i1, i32, i32) -> i32
+
+    // Vector selection is element-wise
+    %vx = "std.select"(%vcond, %vtrue, %vfalse)
+        : (vector<42xi1>, vector<42xf32>, vector<42xf32>) -> vector<42xf32>
+    ```
   }];
 
   let arguments = (ins BoolLike:$condition,
@@ -1393,9 +1849,13 @@ def ShiftLeftOp : IntArithmeticOp<"shift_left"> {
     The shift_left operation shifts an integer value to the left by a variable
     amount. The low order bits are filled with zeros.
 
-      %1 = constant 5 : i8                       // %1 is 0b00000101
-      %2 = constant 3 : i8
-      %3 = shift_left %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
+    Example:
+
+    ```mlir
+    %1 = constant 5 : i8                       // %1 is 0b00000101
+    %2 = constant 3 : i8
+    %3 = shift_left %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
+    ```
   }];
 }
 
@@ -1405,6 +1865,32 @@ def ShiftLeftOp : IntArithmeticOp<"shift_left"> {
 
 def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
   let summary = "signed integer division operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `divi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division. Rounds towards zero. Treats the leading bit as
+    sign, i.e. `6 / -2 = -3`.
+
+    Note: the semantics of division by zero or signed division overflow (minimum
+    value divided by -1) is TBD; do NOT assume any specific behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division.
+    %a = divis %b, %c : i64
+
+    // SIMD vector element-wise division.
+    %f = divis %g, %h : vector<4xi32>
+
+    // Tensor element-wise integer division.
+    %x = divis %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -1414,6 +1900,32 @@ def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
 
 def SignedRemIOp : IntArithmeticOp<"remi_signed"> {
   let summary = "signed integer division remainder operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.remi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division remainder. Treats the leading bit as sign, i.e. `6 %
+    -2 = 0`.
+
+    Note: the semantics of division by zero is TBD; do NOT assume any specific
+    behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division remainder.
+    %a = remis %b, %c : i64
+
+    // SIMD vector element-wise division remainder.
+    %f = remis %g, %h : vector<4xi32>
+
+    // Tensor element-wise integer division remainder.
+    %x = remis %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -1429,11 +1941,15 @@ def SignedShiftRightOp : IntArithmeticOp<"shift_right_signed"> {
     bits in the output are filled with copies of the most-significant bit
     of the shifted value (which means that the sign of the value is preserved).
 
-      %1 = constant 160 : i8                             // %1 is 0b10100000
-      %2 = constant 3 : i8
-      %3 = shift_right_signed %1, %2 : (i8, i8) -> i8    // %3 is 0b11110100
-      %4 = constant 96 : i8                              // %4 is 0b01100000
-      %5 = shift_right_signed %4, %2 : (i8, i8) -> i8    // %5 is 0b00001100
+    Example:
+
+    ```mlir
+    %1 = constant 160 : i8                             // %1 is 0b10100000
+    %2 = constant 3 : i8
+    %3 = shift_right_signed %1, %2 : (i8, i8) -> i8    // %3 is 0b11110100
+    %4 = constant 96 : i8                              // %4 is 0b01100000
+    %5 = shift_right_signed %4, %2 : (i8, i8) -> i8    // %5 is 0b00001100
+    ```
   }];
 }
 
@@ -1451,12 +1967,16 @@ def SignExtendIOp : Std_Op<"sexti",
     The top-most (N - M) bits of the output are filled with copies
     of the most-significant bit of the input.
 
-      %1 = constant 5 : i3            // %1 is 0b101
-      %2 = sexti %1 : i3 to i6        // %2 is 0b111101
-      %3 = constant 2 : i3            // %3 is 0b010
-      %4 = sexti %3 : i3 to i6        // %4 is 0b000010
+    Example:
 
-      %5 = sexti %0 : vector<2 x i32> to vector<2 x i64>
+    ```mlir
+    %1 = constant 5 : i3            // %1 is 0b101
+    %2 = sexti %1 : i3 to i6        // %2 is 0b111101
+    %3 = constant 2 : i3            // %3 is 0b010
+    %4 = sexti %3 : i3 to i6        // %4 is 0b000010
+
+    %5 = sexti %0 : vector<2 x i32> to vector<2 x i64>
+    ```
   }];
 
   let arguments = (ins SignlessIntegerLike:$value);
@@ -1508,24 +2028,28 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
                     "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "splat or broadcast operation";
   let description = [{
-    The "splat" op reads a value of integer or float type and broadcasts it into
-    a vector or a tensor. The output of splat is thus a new value of either
-    vector or tensor type with elemental type being its operand's type.
-    When the result is a tensor, it has to be statically shaped.
+    Broadcast the operand to all elements of the result vector or tensor. The
+    operand has to be of either integer or float type. When the result is a
+    tensor, it has to be statically shaped.
 
-      %1 = splat %0 : vector<8xi32>
-      %2 = splat %0 : tensor<4x8xi32>
+    Example:
 
-    TODO: Extend this operation to broadcast to dynamically shaped tensors in
-    the same way dynamically shaped memrefs are handled.
+    ```mlir
+    %s = load %A[%i] : memref<128xf32>
+    %v = splat %s : vector<4xf32>
+    %t = splat %s : tensor<8x16xi32>
+    ```
 
+    TODO: This operation is easy to extend to broadcast to dynamically shaped
+    tensors in the same way dynamically shaped memrefs are handled.
+
+    ```mlir
     // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
     // to the sizes of the two dynamic dimensions.
-
-      %m = "foo"() : () -> (index)
-      %n = "bar"() : () -> (index)
-      %t = splat %s [%m, %n] : tensor<?x?xi32>
-
+    %m = "foo"() : () -> (index)
+    %n = "bar"() : () -> (index)
+    %t = splat %s [%m, %n] : tensor<?x?xi32>
+    ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, AnyFloat],
@@ -1553,6 +2077,17 @@ def SqrtOp : FloatUnaryOp<"sqrt"> {
     returns one result of the same type. This type may be a float scalar type, a
     vector whose element type is float, or a tensor of floats. It has no standard
     attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar square root value.
+    %a = sqrt %b : f64
+    // SIMD vector element-wise square root value.
+    %f = sqrt %g : vector<4xf32>
+    // Tensor element-wise square root value.
+    %x = sqrt %y : tensor<4x?xf32>
+    ```
   }];
 }
 
@@ -1566,14 +2101,32 @@ def StoreOp : Std_Op<"store",
                      "$_self.cast<MemRefType>().getElementType()">]> {
   let summary = "store operation";
   let description = [{
-    The "store" op writes an element to a memref specified by an index list.
-    The arity of indices is the rank of the memref (i.e. if the memref being
-    stored to is of rank 3, then 3 indices are required for the store following
-    the memref identifier). The store operation does not produce a result.
+    Store a value to a memref location given by indices. The value stored should
+    have the same type as the elemental type of the memref. The number of
+    arguments provided within brackets need to match the rank of the memref.
 
-    In the following example, the ssa value '%v' is stored in memref '%A' at
-    indices [%i, %j]:
-      store %v, %A[%i, %j] : memref<4x128xf32, (d0, d1) -> (d0, d1), 0>
+    In an affine context, the indices of a store are restricted to SSA values
+    bound to surrounding loop induction variables,
+    [symbols](Affine.md#restrictions-on-dimensions-and-symbols), results of a
+    [`constant` operation](#constant-operation), or the result of an
+    [`affine.apply`](Affine.md#affineapply-operation) operation that can in turn
+    take as arguments all of the aforementioned SSA values or the recursively
+    result of such an `affine.apply` operation.
+
+    Example:
+
+    ```mlir
+    store %100, %A[%1, 1023] : memref<4x?xf32, #layout, memspace0>
+    ```
+
+    **Context:** The `load` and `store` operations are specifically crafted to
+    fully resolve a reference to an element of a memref, and (in polyhedral
+    `affine.if` and `affine.for` operations) the compiler can follow use-def
+    chains (e.g. through [`affine.apply`](Affine.md#affineapply-operation)
+    operations) to precisely analyze references at compile-time using polyhedral
+    techniques. This is possible because of the
+    [restrictions on dimensions and symbols](Affine.md#restrictions-on-dimensions-and-symbols)
+    in these contexts.
   }];
 
   let arguments = (ins AnyType:$value,
@@ -1653,86 +2206,93 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
 
     Example 1:
 
-      %0 = alloc() : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1)>
+    ```mlir
+    %0 = alloc() : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1)>
 
-      // Create a sub-view of "base" memref '%0' with offset arguments '%c0',
-      // dynamic sizes for each dimension, and stride arguments '%c1'.
-      %1 = subview %0[%c0, %c0][%size0, %size1][%c1, %c1]
-        : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1) > to
-          memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
+    // Create a sub-view of "base" memref '%0' with offset arguments '%c0',
+    // dynamic sizes for each dimension, and stride arguments '%c1'.
+    %1 = subview %0[%c0, %c0][%size0, %size1][%c1, %c1]
+      : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1) > to
+        memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
+    ```
 
     Example 2:
 
-      %0 = alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
+    ```mlir
+    %0 = alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
 
-      // Create a sub-view of "base" memref '%0' with dynamic offsets, sizes,
-      // and strides.
-      // Note that dynamic offsets are represented by the linearized dynamic
-      // offset symbol 's0' in the subview memref layout map, and that the
-      // dynamic strides operands, after being applied to the base memref
-      // strides in each dimension, are represented in the view memref layout
-      // map as symbols 's1', 's2' and 's3'.
-      %1 = subview %0[%i, %j, %k][%size0, %size1, %size2][%x, %y, %z]
-        : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
-          memref<?x?x?xf32,
-            (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
+    // Create a sub-view of "base" memref '%0' with dynamic offsets, sizes,
+    // and strides.
+    // Note that dynamic offsets are represented by the linearized dynamic
+    // offset symbol 's0' in the subview memref layout map, and that the
+    // dynamic strides operands, after being applied to the base memref
+    // strides in each dimension, are represented in the view memref layout
+    // map as symbols 's1', 's2' and 's3'.
+    %1 = subview %0[%i, %j, %k][%size0, %size1, %size2][%x, %y, %z]
+      : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
+        memref<?x?x?xf32,
+          (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
+    ```
 
     Example 3:
 
-      %0 = alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
+    ```mlir
+    %0 = alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
 
-      // Subview with constant offsets, sizes and strides.
-      %1 = subview %0[][][]
-        : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
-          memref<4x4x4xf32, (d0, d1, d2) -> (d0 * 16 + d1 * 4 + d2 + 8)>
+    // Subview with constant offsets, sizes and strides.
+    %1 = subview %0[][][]
+      : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
+        memref<4x4x4xf32, (d0, d1, d2) -> (d0 * 16 + d1 * 4 + d2 + 8)>
+    ```
 
     Example 4:
 
-      %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+    ```mlir
+    %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
 
-      // Subview with constant size, but dynamic offsets and
-      // strides. The resulting memref has a static shape, but if the
-      // base memref has an affine map to describe the layout, the result
-      // memref also uses an affine map to describe the layout. The
-      // strides of the result memref is computed as follows:
-      //
-      // Let #map1 represents the layout of the base memref, and #map2
-      // represents the layout of the result memref. A #mapsubview can be
-      // constructed to map an index from the result memref to the base
-      // memref (note that the description below uses more convenient
-      // naming for symbols, while in affine maps, symbols are
-      // represented as unsigned numbers that identify that symbol in the
-      // given affine map.
-      //
-      // #mapsubview = (d0, d1)[o0, o1, t0, t1] -> (d0 * t0 + o0, d1 * t1 + o1)
-      //
-      // where, o0, o1, ... are offsets, and t0, t1, ... are strides. Then,
-      //
-      // #map2 = #map1.compose(#mapsubview)
-      //
-      // If the layout map is represented as
-      //
-      // #map1 = (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)
-      //
-      // then,
-      //
-      // #map2 = (d0, d1)[s0, s1, s2, o0, o1, t0, t1] ->
-      //              (d0 * s1 * t0 + d1 * s2 * t1 + o0 * s1 + o1 * s2 + s0)
-      //
-      // Representing this canonically
-      //
-      // #map2 = (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)
-      //
-      // where, r0 = o0 * s1 + o1 * s2 + s0, r1 = s1 * t0, r2 = s2 * t1.
-      %1 = subview %0[%i, %j][][%x, %y] :
-        : memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)> to
-          memref<4x4xf32, (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>
+    // Subview with constant size, but dynamic offsets and
+    // strides. The resulting memref has a static shape, but if the
+    // base memref has an affine map to describe the layout, the result
+    // memref also uses an affine map to describe the layout. The
+    // strides of the result memref is computed as follows:
+    //
+    // Let #map1 represents the layout of the base memref, and #map2
+    // represents the layout of the result memref. A #mapsubview can be
+    // constructed to map an index from the result memref to the base
+    // memref (note that the description below uses more convenient
+    // naming for symbols, while in affine maps, symbols are
+    // represented as unsigned numbers that identify that symbol in the
+    // given affine map.
+    //
+    // #mapsubview = (d0, d1)[o0, o1, t0, t1] -> (d0 * t0 + o0, d1 * t1 + o1)
+    //
+    // where, o0, o1, ... are offsets, and t0, t1, ... are strides. Then,
+    //
+    // #map2 = #map1.compose(#mapsubview)
+    //
+    // If the layout map is represented as
+    //
+    // #map1 = (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)
+    //
+    // then,
+    //
+    // #map2 = (d0, d1)[s0, s1, s2, o0, o1, t0, t1] ->
+    //              (d0 * s1 * t0 + d1 * s2 * t1 + o0 * s1 + o1 * s2 + s0)
+    //
+    // Representing this canonically
+    //
+    // #map2 = (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)
+    //
+    // where, r0 = o0 * s1 + o1 * s2 + s0, r1 = s1 * t0, r2 = s2 * t1.
+    %1 = subview %0[%i, %j][][%x, %y] :
+      : memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)> to
+        memref<4x4xf32, (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>
 
-      // Note that the subview op does not guarantee that the result
-      // memref is "inbounds" w.r.t to base memref. It is upto the client
-      // to ensure that the subview is accessed in a manner that is
-      // in-bounds.
-
+    // Note that the subview op does not guarantee that the result
+    // memref is "inbounds" w.r.t to base memref. It is upto the client
+    // to ensure that the subview is accessed in a manner that is
+    // in-bounds.
+    ```
     }
   }];
 
@@ -1805,10 +2365,29 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
 def TanhOp : FloatUnaryOp<"tanh"> {
   let summary = "hyperbolic tangent of the specified value";
   let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.tanh` ssa-use `:` type
+    ```
+
     The `tanh` operation computes the hyperbolic tangent. It takes one operand
     and returns one result of the same type. This type may be a float scalar
     type, a vector whose element type is float, or a tensor of floats. It has
     no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar hyperbolic tangent value.
+    %a = tanh %b : f64
+
+    // SIMD vector element-wise hyperbolic tangent value.
+    %f = tanh %g : vector<4xf32>
+
+    // Tensor element-wise hyperbolic tangent value.
+    %x = tanh %y : tensor<4x?xf8>
+    ```
   }];
 }
 
@@ -1819,14 +2398,32 @@ def TanhOp : FloatUnaryOp<"tanh"> {
 def TensorCastOp : CastOp<"tensor_cast"> {
   let summary = "tensor cast operation";
   let description = [{
-    The "tensor_cast" operation converts a tensor from one type to an equivalent
-    type without changing any data elements.  The source and destination types
-    must both be tensor types with the same element type.  If both are ranked
-    then the rank should be the same and static dimensions should match.  The
-    operation is invalid if converting to a mismatching constant dimension.
+    Syntax:
 
-    Convert from unknown rank to rank 2 with unknown dimension sizes.
-       %2 = tensor_cast %1 : tensor<*xf32> to tensor<?x?xf32>
+    ```
+    operation ::= ssa-id `=` `std.tensor_cast` ssa-use `:` type `to` type
+    ```
+
+    Convert a tensor from one type to an equivalent type without changing any
+    data elements. The source and destination types must both be tensor types
+    with the same element type. If both are ranked, then the rank should be the
+    same and static dimensions should match. The operation is invalid if
+    converting to a mismatching constant dimension.
+
+    Example:
+
+    ```mlir
+    // Convert from unknown rank to rank 2 with unknown dimension sizes.
+    %2 = "std.tensor_cast"(%1) : (tensor<*xf32>) -> tensor<?x?xf32>
+    %2 = tensor_cast %1 : tensor<*xf32> to tensor<?x?xf32>
+
+    // Convert to a type with more known dimensions.
+    %3 = "std.tensor_cast"(%2) : (tensor<?x?xf32>) -> tensor<4x?xf32>
+
+    // Discard static dimension and rank information.
+    %4 = "std.tensor_cast"(%3) : (tensor<4x?xf32>) -> tensor<?x?xf32>
+    %5 = "std.tensor_cast"(%4) : (tensor<?x?xf32>) -> tensor<*xf32>
+    ```
   }];
 
   let arguments = (ins AnyTensor);
@@ -1853,12 +2450,16 @@ def TensorLoadOp : Std_Op<"tensor_load",
                     "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor load operation";
   let description = [{
-    The "tensor_load" operation creates a tensor from a memref, making an
-    independent copy of the element data. The result value is a tensor whose
-    shape and element type match the memref operand.
+    Create a tensor from a memref, making an independent copy of the element
+    data. The result value is a tensor whose shape and element type match the
+    memref operand.
 
-    Produce a value of tensor<4x?xf32> type.
-       %12 = tensor_load %10 : memref<4x?xf32, #layout, memspace0>
+    Example:
+
+    ```mlir
+    // Produces a value of tensor<4x?xf32> type.
+    %12 = tensor_load %10 : memref<4x?xf32, #layout, memspace0>
+    ```
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1895,15 +2496,17 @@ def TensorStoreOp : Std_Op<"tensor_store",
                     "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor store operation";
   let description = [{
-    The "tensor_store" operation stores the contents of a tensor into a memref.
-    The first operand is a value of tensor type, the second operand is a value
-    of memref type. The shapes and element types of these must match, and are
-    specified by the memref type.
+    Stores the contents of a tensor into a memref. The first operand is a value
+    of tensor type, the second operand is a value of memref type. The shapes and
+    element types of these must match, and are specified by the memref type.
 
     Example:
-       %9 = dim %8, 1 : tensor<4x?xf32>
-       %10 = alloc(%9) : memref<4x?xf32, #layout, memspace0>
-       tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
+
+    ```mlir
+    %9 = dim %8, 1 : tensor<4x?xf32>
+    %10 = alloc(%9) : memref<4x?xf32, #layout, memspace0>
+    tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
+    ```
   }];
 
   let arguments = (ins AnyTensor:$tensor,
@@ -1927,11 +2530,15 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
     bit-width must be smaller than the input bit-width (N < M).
     The top-most (N - M) bits of the input are discarded.
 
+    Example:
+
+    ```mlir
       %1 = constant 21 : i5           // %1 is 0b10101
       %2 = trunci %1 : i5 to i4       // %2 is 0b0101
       %3 = trunci %1 : i5 to i3       // %3 is 0b101
 
       %5 = trunci %0 : vector<2 x i32> to vector<2 x i16>
+    ```
   }];
 
   let arguments = (ins SignlessIntegerLike:$value);
@@ -1957,6 +2564,32 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
 
 def UnsignedDivIOp : IntArithmeticOp<"divi_unsigned"> {
   let summary = "unsigned integer division operation";
+  let description = [{
+    Syntax:
+    ```
+    operation ::= ssa-id `=` `std.divi_unsigned` ssa-use `,` ssa-use `:` type
+    ```
+
+    Unsigned integer division. Rounds towards zero. Treats the leading bit as
+    the most significant, i.e. for `i16` given two's complement representation,
+    `6 / -2 = 6 / (2^16 - 2) = 0`.
+
+    Note: the semantics of division by zero is TBD; do NOT assume any specific
+    behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer division.
+    %a = diviu %b, %c : i64
+
+    // SIMD vector element-wise division.
+    %f = diviu %g, %h : vector<4xi32>
+
+    // Tensor element-wise integer division.
+    %x = diviu %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -1966,6 +2599,32 @@ def UnsignedDivIOp : IntArithmeticOp<"divi_unsigned"> {
 
 def UnsignedRemIOp : IntArithmeticOp<"remi_unsigned"> {
   let summary = "unsigned integer division remainder operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.remi_unsigned` ssa-use `,` ssa-use `:` type
+    ```
+
+    Unsigned integer division remainder. Treats the leading bit as the most
+    significant, i.e. for `i16`, `6 % -2 = 6 % (2^16 - 2) = 6`.
+
+    Note: the semantics of division by zero is TBD; do NOT assume any specific
+    behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer division remainder.
+    %a = remiu %b, %c : i64
+
+    // SIMD vector element-wise division remainder.
+    %f = remiu %g, %h : vector<4xi32>
+
+    // Tensor element-wise integer division remainder.
+    %x = remiu %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -1980,9 +2639,13 @@ def UnsignedShiftRightOp : IntArithmeticOp<"shift_right_unsigned"> {
     a variable amount. The integer is interpreted as unsigned. The high order
     bits are always filled with zeros.
 
-      %1 = constant 160 : i8                               // %1 is 0b10100000
-      %2 = constant 3 : i8
-      %3 = shift_right_unsigned %1, %2 : (i8, i8) -> i8    // %3 is 0b00010100
+    Example:
+
+    ```mlir
+    %1 = constant 160 : i8                               // %1 is 0b10100000
+    %2 = constant 3 : i8
+    %3 = shift_right_unsigned %1, %2 : (i8, i8) -> i8    // %3 is 0b00010100
+    ```
   }];
 }
 
@@ -2002,6 +2665,9 @@ def ViewOp : Std_Op<"view", [NoSideEffect]> {
     *) A dynamic size operand must be specified for each dynamic dimension
        in the resulting view memref type.
 
+    Example:
+
+    ```mlir
     // Allocate a flat 1D/i8 memref.
     %0 = alloc() : memref<2048xi8>
 
@@ -2024,6 +2690,7 @@ def ViewOp : Std_Op<"view", [NoSideEffect]> {
     %3 = view %0[%offset_1024][%size0, %size1]
       : memref<2048xi8> to memref<?x?x4xf32,
         (d0, d1, d2)[s0, s1] -> (d0 * s1 + d1 * 4 + d2 + s0)>
+    ```
   }];
 
   let arguments = (ins MemRefRankOf<[I8], [1]>:$source,
@@ -2058,6 +2725,25 @@ def ViewOp : Std_Op<"view", [NoSideEffect]> {
 
 def XOrOp : IntArithmeticOp<"xor", [Commutative]> {
   let summary = "integer binary xor";
+  let description = [{
+    The `xor` operation takes two operands and returns one result, each of these
+    is required to be the same type. This type may be an integer scalar type, a
+    vector whose element type is integer, or a tensor of integers. It has no
+    standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar integer bitwise xor.
+    %a = xor %b, %c : i64
+
+    // SIMD vector element-wise bitwise integer xor.
+    %f = xor %g, %h : vector<4xi32>
+
+    // Tensor element-wise bitwise integer xor.
+    %x = xor %y, %z : tensor<4x?xi8>
+    ```
+  }];
   let hasFolder = 1;
 }
 
@@ -2073,12 +2759,16 @@ def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> 
     bit-width must be larger than the input bit-width (N > M).
     The top-most (N - M) bits of the output are filled with zeros.
 
+    Example:
+
+    ```mlir
       %1 = constant 5 : i3            // %1 is 0b101
       %2 = zexti %1 : i3 to i6        // %2 is 0b000101
       %3 = constant 2 : i3            // %3 is 0b010
       %4 = zexti %3 : i3 to i6        // %4 is 0b000010
 
       %5 = zexti %0 : vector<2 x i32> to vector<2 x i64>
+    ```
   }];
 
   let arguments = (ins SignlessIntegerLike:$value);
