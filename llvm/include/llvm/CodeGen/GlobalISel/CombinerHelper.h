@@ -62,6 +62,10 @@ public:
                  GISelKnownBits *KB = nullptr,
                  MachineDominatorTree *MDT = nullptr);
 
+  GISelKnownBits *getKnownBits() const {
+    return KB;
+  }
+
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
 
