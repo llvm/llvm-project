@@ -975,6 +975,37 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   return false;
 }
 
+// Check whether CI obeys the rules of musttail attribute.
+static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
+  if (CI.isInlineAsm())
+    return false;
+
+  // Match prototypes and calling conventions of resume function.
+  FunctionType *CalleeTy = CI.getFunctionType();
+  if (!CalleeTy->getReturnType()->isVoidTy() || (CalleeTy->getNumParams() != 1))
+    return false;
+
+  Type *CalleeParmTy = CalleeTy->getParamType(0);
+  if (!CalleeParmTy->isPointerTy() ||
+      (CalleeParmTy->getPointerAddressSpace() != 0))
+    return false;
+
+  if (CI.getCallingConv() != F.getCallingConv())
+    return false;
+
+  // CI should not has any ABI-impacting function attributes.
+  static const Attribute::AttrKind ABIAttrs[] = {
+      Attribute::StructRet,  Attribute::ByVal,    Attribute::InAlloca,
+      Attribute::InReg,      Attribute::Returned, Attribute::SwiftSelf,
+      Attribute::SwiftError, Attribute::Alignment};
+  AttributeList Attrs = CI.getAttributes();
+  for (auto AK : ABIAttrs)
+    if (Attrs.hasParamAttribute(0, AK))
+      return false;
+
+  return true;
+}
+
 // Add musttail to any resume instructions that is immediately followed by a
 // suspend (i.e. ret). We do this even in -O0 to support guaranteed tail call
 // for symmetrical coroutine control transfer (C++ Coroutines TS extension).
@@ -987,11 +1018,8 @@ static void addMustTailToCoroResumes(Function &F) {
   SmallVector<CallInst *, 4> Resumes;
   for (auto &I : instructions(F))
     if (auto *Call = dyn_cast<CallInst>(&I))
-      if (auto *CalledValue = Call->getCalledValue())
-        // CoroEarly pass replaced coro resumes with indirect calls to an
-        // address return by CoroSubFnInst intrinsic. See if it is one of those.
-        if (isa<CoroSubFnInst>(CalledValue->stripPointerCasts()))
-          Resumes.push_back(Call);
+      if (shouldBeMustTail(*Call, F))
+        Resumes.push_back(Call);
 
   // Set musttail on those that are followed by a ret instruction.
   for (CallInst *Call : Resumes)
