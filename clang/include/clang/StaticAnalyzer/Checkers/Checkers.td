@@ -299,7 +299,7 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
   HelpText<"Check constraints of arguments of C standard library functions, "
            "such as whether the parameter of isalpha is in the range [0, 255] "
            "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
+  Dependencies<[StdCLibraryFunctionsChecker, CallAndMessageChecker]>,
   Documentation<NotDocumented>;
 
 def TrustNonnullChecker : Checker<"TrustNonnull">,
