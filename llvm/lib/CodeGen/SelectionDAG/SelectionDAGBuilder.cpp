@@ -1604,6 +1604,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
 
+  if (const MetadataAsValue *MD = dyn_cast<MetadataAsValue>(V)) {
+    return DAG.getMDNode(cast<MDNode>(MD->getMetadata()));
+  }
   llvm_unreachable("Can't get register for value!");
 }
 
