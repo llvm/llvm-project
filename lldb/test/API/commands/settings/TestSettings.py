@@ -286,6 +286,7 @@ class SettingsCommandTestCase(TestBase):
                 "Environment variable 'MY_ENV_VAR' successfully passed."])
 
     @skipIfRemote  # it doesn't make sense to send host env to remote target
+    @skipIf(oslist=["windows"])
     def test_pass_host_env_vars(self):
         """Test that the host env vars are passed to the launched process."""
         self.build()
