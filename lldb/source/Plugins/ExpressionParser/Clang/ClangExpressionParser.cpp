@@ -214,16 +214,12 @@ public:
       auto new_diagnostic = std::make_unique<ClangDiagnostic>(
           stripped_output, severity, Info.getID());
 
-      // Don't store away warning fixits, since the compiler doesn't have
-      // enough context in an expression for the warning to be useful.
       // FIXME: Should we try to filter out FixIts that apply to our generated
       // code, and not the user's expression?
-      if (severity == eDiagnosticSeverityError) {
-        for (const clang::FixItHint &fixit : Info.getFixItHints()) {
-          if (fixit.isNull())
-            continue;
-          new_diagnostic->AddFixitHint(fixit);
-        }
+      for (const clang::FixItHint &fixit : Info.getFixItHints()) {
+        if (fixit.isNull())
+          continue;
+        new_diagnostic->AddFixitHint(fixit);
       }
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
@@ -1126,6 +1122,10 @@ bool ClangExpressionParser::RewriteExpression(
     if (!diagnostic)
       continue;
     if (!diagnostic->HasFixIts())
+      continue;
+    // Don't apply warning Fix-Its, since the compiler doesn't have enough
+    // context in an expression for the warning to be useful.
+    if (diagnostic->GetSeverity() != eDiagnosticSeverityError)
       continue;
     for (const FixItHint &fixit : diagnostic->FixIts())
       ApplyFixIt(fixit, commit);
