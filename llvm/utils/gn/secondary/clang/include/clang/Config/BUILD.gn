@@ -36,6 +36,7 @@ write_cmake_config("Config") {
     "ENABLE_X86_RELAX_RELOCATIONS=",
     "ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=",
     "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
   ]
 
   if (clang_enable_arcmt) {
