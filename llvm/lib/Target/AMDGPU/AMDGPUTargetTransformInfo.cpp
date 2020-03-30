@@ -311,6 +311,76 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
+// FIXME: Really we would like to issue multiple 128-bit loads and stores per
+// iteration. Should we report a larger size and let it legalize?
+//
+// FIXME: Should we use narrower types for local/region, or account for when
+// unaligned access is legal?
+//
+// FIXME: This could use fine tuning and microbenchmarks.
+Type *GCNTTIImpl::getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                                            unsigned SrcAddrSpace,
+                                            unsigned DestAddrSpace,
+                                            unsigned SrcAlign,
+                                            unsigned DestAlign) const {
+  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+
+  // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
+  // hardware into byte accesses. If you assume all alignments are equally
+  // probable, it's more efficient on average to use short accesses for this
+  // case.
+  if (MinAlign == 2)
+    return Type::getInt16Ty(Context);
+
+  // Not all subtargets have 128-bit DS instructions, and we currently don't
+  // form them by default.
+  if (SrcAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+      SrcAddrSpace == AMDGPUAS::REGION_ADDRESS ||
+      DestAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+      DestAddrSpace == AMDGPUAS::REGION_ADDRESS) {
+    return VectorType::get(Type::getInt32Ty(Context), 2);
+  }
+
+  // Global memory works best with 16-byte accesses. Private memory will also
+  // hit this, although they'll be decomposed.
+  return VectorType::get(Type::getInt32Ty(Context), 4);
+}
+
+void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
+  SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
+  unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
+  unsigned SrcAlign, unsigned DestAlign) const {
+  assert(RemainingBytes < 16);
+
+  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+
+  if (MinAlign != 2) {
+    Type *I64Ty = Type::getInt64Ty(Context);
+    while (RemainingBytes >= 8) {
+      OpsOut.push_back(I64Ty);
+      RemainingBytes -= 8;
+    }
+
+    Type *I32Ty = Type::getInt32Ty(Context);
+    while (RemainingBytes >= 4) {
+      OpsOut.push_back(I32Ty);
+      RemainingBytes -= 4;
+    }
+  }
+
+  Type *I16Ty = Type::getInt16Ty(Context);
+  while (RemainingBytes >= 2) {
+    OpsOut.push_back(I16Ty);
+    RemainingBytes -= 2;
+  }
+
+  Type *I8Ty = Type::getInt8Ty(Context);
+  while (RemainingBytes) {
+    OpsOut.push_back(I8Ty);
+    --RemainingBytes;
+  }
+}
+
 unsigned GCNTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
