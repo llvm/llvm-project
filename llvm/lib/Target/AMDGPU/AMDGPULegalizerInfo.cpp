@@ -1313,6 +1313,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
+  getActionDefinitionsBuilder(G_FSHR)
+    .legalFor({{S32, S32}})
+    .scalarize(0)
+    .lower();
+
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
@@ -1327,7 +1332,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_SADDO, G_SSUBO,
 
        // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM
+      G_FMINIMUM, G_FMAXIMUM,
+      G_FSHL
     }).lower();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
