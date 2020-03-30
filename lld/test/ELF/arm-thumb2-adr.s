@@ -10,7 +10,7 @@
 // RUN:               } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=SYMS
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7m-none-eabi %t
+// RUN: llvm-objdump -d --triple=thumbv7m-none-eabi %t
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7m-none-eabi %t | FileCheck %s
 
 /// Test the various legal cases for the R_ARM_THM_ALU_PREL_11_0 relocation
@@ -44,32 +44,58 @@ target2:
  .thumb_func
 _start:
  nop
- adr.w r0, dat1
- adr.w r1, dat2
+///  adr.w r0, dat1
+ .inst.w 0xf2af0004
+ .reloc 2, R_ARM_THM_ALU_PREL_11_0, dat1
+/// adr.w r1, dat2
+ .inst.w 0xf2af0104
+ .reloc 6, R_ARM_THM_ALU_PREL_11_0, dat2
  nop
- adr.w r2, dat3
- adr.w r3, dat4
- .balign 4
- adr.w r0, target1
+/// adr.w r2, dat3
+ .inst.w 0xf2af0204
+ .reloc 0xc, R_ARM_THM_ALU_PREL_11_0, dat3
+/// adr.w r3, dat4
+ .inst.w 0xf2af0304
+ .reloc 0x10, R_ARM_THM_ALU_PREL_11_0, dat4
+/// adr.w r0, target1
+ .inst.w 0xf2af0004
+ .reloc 0x14, R_ARM_THM_ALU_PREL_11_0, target1
  nop
- adr.w r1, target2
-
+/// adr.w r1, target2
+ .inst.w 0xf2af0104
+ .reloc 0x1a, R_ARM_THM_ALU_PREL_11_0, target2
  .section .text.pos, "ax", %progbits
  .balign 4
  .global pos
  .thumb_func
 pos:
- adr.w r2, target3
+/// adr.w r2, target3
+ .inst.w 0xf2af0204
+ .reloc 0, R_ARM_THM_ALU_PREL_11_0, target3
  nop
- adr.w r3, target4
- .balign 4
- adr.w r0, dat5
- adr.w r1, dat6
+/// adr.w r3, target4
+ .inst.w 0xf2af0304
+ .reloc 6, R_ARM_THM_ALU_PREL_11_0, target4
  nop
- adr.w r2, dat7
- adr.w r3, dat8
+/// adr.w r0, dat5
+ .inst.w 0xf2af0004
+ .reloc 0xc, R_ARM_THM_ALU_PREL_11_0, dat5
+/// adr.w r1, dat6
+ .inst.w 0xf2af0104
+ .reloc 0x10, R_ARM_THM_ALU_PREL_11_0, dat6
+
+ nop
+/// adr.w r2, dat7
+ .inst.w 0xf2af0204
+ .reloc 0x16, R_ARM_THM_ALU_PREL_11_0, dat7
+
+/// adr.w r3, dat8
+ .inst.w 0xf2af0304
+ .reloc 0x1a, R_ARM_THM_ALU_PREL_11_0, dat8
 /// positive addend in instruction, all others are -4 (PC bias)
- adr.w r4, dat5 + 8
+/// adr.w r4, dat5 + 8
+ .inst.w 0xf20f0404
+ .reloc 0x1e, R_ARM_THM_ALU_PREL_11_0, dat5 + 8
 
  .section .text.high, "ax", %progbits
  .balign 4
