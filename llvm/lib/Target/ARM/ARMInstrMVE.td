@@ -607,6 +607,7 @@ class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
   let horizontalReduction = 1;
+  let validForTailPredication = 1;
 }
 
 def ARMVADDVs       : SDNode<"ARMISD::VADDVs", SDTVecReduce>;

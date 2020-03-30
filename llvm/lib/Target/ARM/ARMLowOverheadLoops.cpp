@@ -538,6 +538,12 @@ static bool producesDoubleWidthResult(const MachineInstr &MI) {
   return (Flags & ARMII::DoubleWidthResult) != 0;
 }
 
+static bool isHorizontalReduction(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::HorizontalReduction) != 0;
+}
+
 // Can this instruction generate a non-zero result when given only zeroed
 // operands? This allows us to know that, given operands with false bytes
 // zeroed by masked loads, that the result will also contain zeros in those
@@ -569,20 +575,24 @@ static bool canGenerateNonZeros(const MachineInstr &MI) {
 
 // Look at its register uses to see if it only can only receive zeros
 // into its false lanes which would then produce zeros. Also check that
-// the output register is also defined by an FalseLaneZeros instruction
+// the output register is also defined by an FalseLanesZero instruction
 // so that if tail-predication happens, the lanes that aren't updated will
 // still be zeros.
-static bool producesFalseLaneZeros(MachineInstr &MI,
+static bool producesFalseLanesZero(MachineInstr &MI,
                                    const TargetRegisterClass *QPRs,
                                    const ReachingDefAnalysis &RDA,
-                                   InstSet &FalseLaneZeros) {
+                                   InstSet &FalseLanesZero) {
   if (canGenerateNonZeros(MI))
     return false;
+
+  bool AllowScalars = isHorizontalReduction(MI);
   for (auto &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg())
       continue;
+    if (!isRegInClass(MO, QPRs) && AllowScalars)
+      continue;
     if (auto *OpDef = RDA.getMIOperand(&MI, MO))
-      if (FalseLaneZeros.count(OpDef))
+      if (FalseLanesZero.count(OpDef))
        continue;
     return false;
   }
@@ -613,8 +623,8 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
   // loads, stores and other predicated instructions into our Predicated
   // set and build from there.
   const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
-  SetVector<MachineInstr *> Unknown;
-  SmallPtrSet<MachineInstr *, 4> FalseLaneZeros;
+  SetVector<MachineInstr *> FalseLanesUnknown;
+  SmallPtrSet<MachineInstr *, 4> FalseLanesZero;
   SmallPtrSet<MachineInstr *, 4> Predicated;
   MachineBasicBlock *MBB = ML.getHeader();
 
@@ -624,9 +634,14 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
     if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
       continue;
 
+    if (isVCTP(&MI) || MI.getOpcode() == ARM::MVE_VPST)
+      continue;
+
+    // Predicated loads will write zeros to the falsely predicated bytes of the
+    // destination register.
     if (isVectorPredicated(&MI)) {
       if (MI.mayLoad())
-        FalseLaneZeros.insert(&MI);
+        FalseLanesZero.insert(&MI);
       Predicated.insert(&MI);
       continue;
     }
@@ -634,12 +649,16 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
     if (MI.getNumDefs() == 0)
       continue;
 
-    if (producesFalseLaneZeros(MI, QPRs, RDA, FalseLaneZeros))
-      FalseLaneZeros.insert(&MI);
-    else if (retainsPreviousHalfElement(MI))
-      return false;
-    else
-      Unknown.insert(&MI);
+    if (!producesFalseLanesZero(MI, QPRs, RDA, FalseLanesZero)) {
+      // We require retaining and horizontal operations to operate upon zero'd
+      // false lanes to ensure the conversion doesn't change the output.
+      if (retainsPreviousHalfElement(MI) || isHorizontalReduction(MI))
+        return false;
+      // Otherwise we need to evaluate this instruction later to see whether
+      // unknown false lanes will get masked away by their user(s).
+      FalseLanesUnknown.insert(&MI);
+    } else if (!isHorizontalReduction(MI))
+      FalseLanesZero.insert(&MI);
   }
 
   auto HasPredicatedUsers = [this](MachineInstr *MI, const MachineOperand &MO,
@@ -655,8 +674,9 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
 
   // Visit the unknowns in reverse so that we can start at the values being
   // stored and then we can work towards the leaves, hopefully adding more
-  // instructions to Predicated.
-  for (auto *MI : reverse(Unknown)) {
+  // instructions to Predicated. Successfully terminating the loop means that
+  // all the unknown values have to found to be masked by predicated user(s).
+  for (auto *MI : reverse(FalseLanesUnknown)) {
     for (auto &MO : MI->operands()) {
       if (!isRegInClass(MO, QPRs) || !MO.isDef())
         continue;
