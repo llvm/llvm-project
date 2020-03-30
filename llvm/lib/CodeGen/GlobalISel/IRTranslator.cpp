@@ -242,37 +242,33 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   return FI;
 }
 
-unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
-  unsigned Alignment = 0;
-  Type *ValTy = nullptr;
+Align IRTranslator::getMemOpAlign(const Instruction &I) {
   if (const StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-    Alignment = SI->getAlignment();
-    ValTy = SI->getValueOperand()->getType();
-  } else if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    Alignment = LI->getAlignment();
-    ValTy = LI->getType();
-  } else if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
-    // TODO(PR27168): This instruction has no alignment attribute, but unlike
-    // the default alignment for load/store, the default here is to assume
-    // it has NATURAL alignment, not DataLayout-specified alignment.
-    const DataLayout &DL = AI->getModule()->getDataLayout();
-    Alignment = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
-    ValTy = AI->getCompareOperand()->getType();
-  } else if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
-    // TODO(PR27168): This instruction has no alignment attribute, but unlike
-    // the default alignment for load/store, the default here is to assume
-    // it has NATURAL alignment, not DataLayout-specified alignment.
-    const DataLayout &DL = AI->getModule()->getDataLayout();
-    Alignment = DL.getTypeStoreSize(AI->getValOperand()->getType());
-    ValTy = AI->getType();
-  } else {
-    OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
-    R << "unable to translate memop: " << ore::NV("Opcode", &I);
-    reportTranslationError(*MF, *TPC, *ORE, R);
-    return 1;
+    Type *ValTy = SI->getValueOperand()->getType();
+    return SI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
   }
-
-  return Alignment ? Alignment : DL->getABITypeAlignment(ValTy);
+  if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+    Type *ValTy = LI->getType();
+    return LI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
+  }
+  if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    return Align(DL.getTypeStoreSize(AI->getCompareOperand()->getType()));
+  }
+  if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    return Align(DL.getTypeStoreSize(AI->getValOperand()->getType()));
+  }
+  OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
+  R << "unable to translate memop: " << ore::NV("Opcode", &I);
+  reportTranslationError(*MF, *TPC, *ORE, R);
+  return Align(1);
 }
 
 MachineBasicBlock &IRTranslator::getMBB(const BasicBlock &BB) {
