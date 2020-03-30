@@ -83,4 +83,7 @@
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #cmakedefine01 CLANG_SPAWN_CC1
 
+/* Default <path> to all compiler invocations for --sysroot=<path>. */
+#define CLANG_SYSTEMZ_DEFAULT_ARCH "${CLANG_SYSTEMZ_DEFAULT_ARCH}"
+
 #endif
