@@ -122,3 +122,30 @@ void test_arg_constraint_on_variadic_fun() {
   // bugpath-warning{{Function argument constraint is not satisfied}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
 }
+
+int __buf_size_arg_constraint(const void *, size_t);
+void test_buf_size_concrete() {
+  char buf[3];                       // bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint(buf, 4); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+}
+void test_buf_size_symbolic(int s) {
+  char buf[3];
+  __buf_size_arg_constraint(buf, s);
+  clang_analyzer_eval(s <= 3); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{'s' is <= 3}}
+}
+void test_buf_size_symbolic_and_offset(int s) {
+  char buf[3];
+  __buf_size_arg_constraint(buf + 1, s);
+  clang_analyzer_eval(s <= 2); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{'s' is <= 2}}
+}

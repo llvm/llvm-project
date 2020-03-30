@@ -56,6 +56,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -108,7 +109,8 @@ class StdLibraryFunctionsChecker
     /// Apply the effects of the constraint on the given program state. If null
     /// is returned then the constraint is not feasible.
     virtual ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                                  const Summary &Summary) const = 0;
+                                  const Summary &Summary,
+                                  CheckerContext &C) const = 0;
     virtual ValueConstraintPtr negate() const {
       llvm_unreachable("Not implemented");
     };
@@ -143,7 +145,8 @@ class StdLibraryFunctionsChecker
                                        const Summary &Summary) const;
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override {
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
       switch (Kind) {
       case OutOfRange:
         return applyAsOutOfRange(State, Call, Summary);
@@ -178,7 +181,8 @@ class StdLibraryFunctionsChecker
     ArgNo getOtherArgNo() const { return OtherArgN; }
     BinaryOperator::Opcode getOpcode() const { return Opcode; }
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override;
+                          const Summary &Summary,
+                          CheckerContext &C) const override;
   };
 
   class NotNullConstraint : public ValueConstraint {
@@ -188,7 +192,8 @@ class StdLibraryFunctionsChecker
 
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override {
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
       SVal V = getArgSVal(Call, getArgNo());
       if (V.isUndef())
         return State;
@@ -204,6 +209,51 @@ class StdLibraryFunctionsChecker
       NotNullConstraint Tmp(*this);
       Tmp.CannotBeNull = !this->CannotBeNull;
       return std::make_shared<NotNullConstraint>(Tmp);
+    }
+  };
+
+  // Represents a buffer argument with an additional size argument.
+  // E.g. the first two arguments here:
+  //   ctime_s(char *buffer, rsize_t bufsz, const time_t *time);
+  class BufferSizeConstraint : public ValueConstraint {
+    // The argument which holds the size of the buffer.
+    ArgNo SizeArgN;
+    // The operator we use in apply. This is negated in negate().
+    BinaryOperator::Opcode Op = BO_LE;
+
+  public:
+    BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize)
+        : ValueConstraint(Buffer), SizeArgN(BufSize) {}
+
+    ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
+      // The buffer argument.
+      SVal BufV = getArgSVal(Call, getArgNo());
+      // The size argument.
+      SVal SizeV = getArgSVal(Call, SizeArgN);
+      // The dynamic size of the buffer argument, got from the analyzer engine.
+      SVal BufDynSize = getDynamicSizeWithOffset(State, BufV);
+
+      SValBuilder &SvalBuilder = C.getSValBuilder();
+      SVal Feasible = SvalBuilder.evalBinOp(State, Op, SizeV, BufDynSize,
+                                            SvalBuilder.getContext().BoolTy);
+      if (auto F = Feasible.getAs<DefinedOrUnknownSVal>())
+        return State->assume(*F, true);
+
+      // We can get here only if the size argument or the dynamic size is
+      // undefined. But the dynamic size should never be undefined, only
+      // unknown. So, here, the size of the argument is undefined, i.e. we
+      // cannot apply the constraint. Actually, other checkers like
+      // CallAndMessage should catch this situation earlier, because we call a
+      // function with an uninitialized argument.
+      llvm_unreachable("Size argument or the dynamic size is Undefined");
+    }
+
+    ValueConstraintPtr negate() const override {
+      BufferSizeConstraint Tmp(*this);
+      Tmp.Op = BinaryOperator::negateComparisonOp(Op);
+      return std::make_shared<BufferSizeConstraint>(Tmp);
     }
   };
 
@@ -416,8 +466,8 @@ ProgramStateRef StdLibraryFunctionsChecker::RangeConstraint::applyAsWithinRange(
 }
 
 ProgramStateRef StdLibraryFunctionsChecker::ComparisonConstraint::apply(
-    ProgramStateRef State, const CallEvent &Call,
-    const Summary &Summary) const {
+    ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
+    CheckerContext &C) const {
 
   ProgramStateManager &Mgr = State->getStateManager();
   SValBuilder &SVB = Mgr.getSValBuilder();
@@ -448,8 +498,8 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
 
   ProgramStateRef NewState = State;
   for (const ValueConstraintPtr& VC : Summary.ArgConstraints) {
-    ProgramStateRef SuccessSt = VC->apply(NewState, Call, Summary);
-    ProgramStateRef FailureSt = VC->negate()->apply(NewState, Call, Summary);
+    ProgramStateRef SuccessSt = VC->apply(NewState, Call, Summary, C);
+    ProgramStateRef FailureSt = VC->negate()->apply(NewState, Call, Summary, C);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
       if (ExplodedNode *N = C.generateErrorNode(NewState))
@@ -482,7 +532,7 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
   for (const auto &VRS : Summary.CaseConstraints) {
     ProgramStateRef NewState = State;
     for (const auto &VR: VRS) {
-      NewState = VR->apply(NewState, Call, Summary);
+      NewState = VR->apply(NewState, Call, Summary, C);
       if (!NewState)
         break;
     }
@@ -693,6 +743,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto ArgumentCondition = [](ArgNo ArgN, RangeKind Kind,
                               IntRangeVector Ranges) {
     return std::make_shared<RangeConstraint>(ArgN, Kind, Ranges);
+  };
+  auto BufferSize = [](ArgNo BufArgN, ArgNo SizeArgN) {
+    return std::make_shared<BufferSizeConstraint>(BufArgN, SizeArgN);
   };
   struct {
     auto operator()(RangeKind Kind, IntRangeVector Ranges) {
@@ -929,6 +982,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                     RetType{IntTy}, EvalCallAsPure)
                                 .ArgConstraint(NotNull(ArgNo(0)))
                                 .ArgConstraint(NotNull(ArgNo(1))));
+    addToFunctionSummaryMap(
+        "__buf_size_arg_constraint",
+        Summary(ArgTypes{ConstVoidPtrTy, SizeTy}, RetType{IntTy},
+                EvalCallAsPure)
+            .ArgConstraint(
+                BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1))));
   }
 }
 
