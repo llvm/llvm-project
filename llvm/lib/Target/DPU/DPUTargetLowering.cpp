@@ -1436,7 +1436,8 @@ static bool canUseMulByConstant(SDValue firstOperand, SDValue secondOperand,
   return true;
 }
 
-static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG) {
+static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG,
+                                 CodeGenOpt::Level optLevel) {
   /*
    * Multiplications on DPU are generally slow.
    * We can still try to optimize small multiplications, and multiplications by
@@ -1465,7 +1466,7 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG) {
 
   if (canUseOptimizedMultiplication) {
     nrOfInstructions = nrOfInstructionsForMul8;
-  } else {
+  } else if (optLevel != CodeGenOpt::None) {
     canUseOptimizedMultiplication = canUseMulX(
         firstOperand, secondOperand, MVT::i16, MVT::i32, DPUISD::MUL16_SS,
         DPUISD::MUL16_SU, DPUISD::MUL16_UU, DAG, dl, LoweredMultiplication);
@@ -1504,7 +1505,7 @@ SDValue DPUTargetLowering::PerformDAGCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
   case ISD::MUL:
-    return PerformMULCombine(SDValue(N, 0), DAG);
+    return PerformMULCombine(SDValue(N, 0), DAG, optLevel);
   case ISD::SRA:
     return PerformShiftCombine(SDValue(N, 0), DAG, DPUISD::LHS_BIG);
   case ISD::SRL:
