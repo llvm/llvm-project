@@ -5503,6 +5503,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBinOp(I, Q))
     return Res;
 
+  if (Instruction *R = foldICmpWithCastOp(I))
+    return R;
+
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
@@ -5581,9 +5584,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   if (Instruction *Res = foldICmpBitCast(I, Builder))
     return Res;
-
-  if (Instruction *R = foldICmpWithCastOp(I))
-    return R;
 
   if (Instruction *Res = foldICmpWithMinMax(I))
     return Res;
