@@ -1,6 +1,16 @@
 # Test runner infrastructure for LLDB. This configures the LLDB test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
+if(LLDB_BUILT_STANDALONE)
+  # In order to run check-lldb-* we need the correct map_config directives in
+  # llvm-lit. Because this is a standalone build, LLVM doesn't know about LLDB,
+  # and the lldb mappings are missing. We build our own llvm-lit, and tell LLVM
+  # to use the llvm-lit in the lldb build directory.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    set(LLVM_EXTERNAL_LIT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvm-lit)
+  endif()
+endif()
+
 # Configure the build directory.
 set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
@@ -180,3 +190,10 @@ add_custom_target(check-lldb)
 add_dependencies(check-lldb lldb-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb misc")
 add_dependencies(check-lldb check-lldb-lit)
+
+if(LLDB_BUILT_STANDALONE)
+  # This has to happen *AFTER* add_lit_testsuite.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
+endif()
