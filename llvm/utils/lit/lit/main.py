@@ -85,8 +85,7 @@ def main(builtin_params={}):
                              'Consider decreasing the number of shards.\n')
             sys.exit(0)
 
-    if opts.max_tests:
-        filtered_tests = filtered_tests[:opts.max_tests]
+    filtered_tests = filtered_tests[:opts.max_tests]
 
     opts.workers = min(len(filtered_tests), opts.workers)
 
