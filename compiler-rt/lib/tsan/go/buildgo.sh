@@ -149,7 +149,7 @@ for F in $SRCS; do
 	cat $F >> $DIR/gotsan.cpp
 done
 
-FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++11 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS"
+FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS"
 DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
 FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
 if [ "$SUFFIX" = "linux_ppc64le" ]; then
