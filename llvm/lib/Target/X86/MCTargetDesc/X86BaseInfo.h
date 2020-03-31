@@ -346,33 +346,6 @@ namespace X86 {
     llvm_unreachable("unknown fusion type");
   }
 
-  /// \returns true if the instruction with given opcode is a prefix.
-  inline bool isPrefix(unsigned Opcode) {
-    switch (Opcode) {
-    default:
-      return false;
-      // segment override prefix
-    case X86::CS_PREFIX:
-    case X86::DS_PREFIX:
-    case X86::ES_PREFIX:
-    case X86::FS_PREFIX:
-    case X86::GS_PREFIX:
-    case X86::SS_PREFIX:
-      // operand-size override prefix
-    case X86::DATA16_PREFIX:
-      // lock and repeat prefix
-    case X86::LOCK_PREFIX:
-    case X86::REPNE_PREFIX:
-    case X86::REP_PREFIX:
-      // rex64 prefix
-    case X86::REX64_PREFIX:
-      // acquire and release prefix
-    case X86::XACQUIRE_PREFIX:
-    case X86::XRELEASE_PREFIX:
-      return true;
-    }
-  }
-
   /// Defines the possible values of the branch boundary alignment mask.
   enum AlignBranchBoundaryKind : uint8_t {
     AlignBranchNone = 0,
