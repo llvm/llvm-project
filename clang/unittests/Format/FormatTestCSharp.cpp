@@ -564,7 +564,7 @@ var myDict = new Dictionary<string, string> {
 
 TEST_F(FormatTestCSharp, CSharpArrayInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
-  
+
   verifyFormat(R"(//
 private MySet<Node>[] setPoints = {
   new Point<Node>(),
@@ -708,6 +708,15 @@ class ItemFactory<T>
               IAnInterface<T>,
               IAnotherInterface<T>,
               IAnotherInterfaceStill<T> {})",
+               Style);
+
+  Style.ColumnLimit = 50; // Force lines to be wrapped.
+  verifyFormat(R"(//
+class ItemFactory<T, U>
+    where T : new(),
+              IAnInterface<T>,
+              IAnotherInterface<T, U>,
+              IAnotherInterfaceStill<T, U> {})",
                Style);
 
   // In other languages `where` can be used as a normal identifier.
