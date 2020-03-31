@@ -1038,13 +1038,21 @@ class Configuration(object):
         # Configure exec prefix substitutions.
         # Configure run env substitution.
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
-        run_py = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
-        exec_str = '%s %s --codesign_identity "%s" --working_directory "%%S" ' \
-                   '--dependencies %%{file_dependencies} --env %s -- ' %  \
-            (pipes.quote(sys.executable), pipes.quote(run_py),
-             codesign_ident, env_vars)
-        sub.append(('%{exec}', exec_str))
+        exec_args = [
+            '--codesign_identity "{}"'.format(codesign_ident),
+            '--dependencies %{file_dependencies}',
+            '--env {}'.format(env_vars)
+        ]
+        if isinstance(self.executor, SSHExecutor):
+            exec_args.append('--host {}'.format(self.executor.user_prefix + self.executor.host))
+            executor = os.path.join(self.libcxx_src_root, 'utils', 'ssh.py')
+        else:
+            exec_args.append('--working_directory "%S"')
+            executor = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
+        sub.append(('%{exec}', '{} {} {} -- '.format(pipes.quote(sys.executable),
+                                                     pipes.quote(executor),
+                                                     ' '.join(exec_args))))
         sub.append(('%{run}', '%{exec} %t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')

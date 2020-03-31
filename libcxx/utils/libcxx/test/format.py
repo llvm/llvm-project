@@ -18,6 +18,7 @@ from lit.TestRunner import ParserKind, IntegratedTestKeywordParser  \
     # pylint: disable=import-error
 
 from libcxx.test.executor import LocalExecutor as LocalExecutor
+from libcxx.test.executor import SSHExecutor as SSHExecutor
 import libcxx.util
 
 
@@ -168,8 +169,9 @@ class LibcxxTestFormat(object):
 
         # Dispatch the test based on its suffix.
         if is_sh_test:
-            if not isinstance(self.executor, LocalExecutor):
-                # We can't run ShTest tests with a executor yet.
+            if not isinstance(self.executor, LocalExecutor) and not isinstance(self.executor, SSHExecutor):
+                # We can't run ShTest tests with other executors than
+                # LocalExecutor and SSHExecutor yet.
                 # For now, bail on trying to run them
                 return lit.Test.UNSUPPORTED, 'ShTest format not yet supported'
             test.config.environment = self.executor.merge_environments(os.environ, self.exec_env)
