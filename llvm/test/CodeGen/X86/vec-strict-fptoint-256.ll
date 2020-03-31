@@ -1250,8 +1250,7 @@ define <4 x i8> @strict_vector_fptosi_v4f64_to_v4i8(<4 x double> %a) #0 {
 ; AVX-LABEL: strict_vector_fptosi_v4f64_to_v4i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
 ;
@@ -1291,8 +1290,7 @@ define <4 x i8> @strict_vector_fptoui_v4f64_to_v4i8(<4 x double> %a) #0 {
 ; AVX-LABEL: strict_vector_fptoui_v4f64_to_v4i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
 ;
