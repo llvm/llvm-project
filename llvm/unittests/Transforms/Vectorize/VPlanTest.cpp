@@ -209,7 +209,7 @@ TEST(VPBasicBlockTest, print) {
   std::string FullDump;
   raw_string_ostream(FullDump) << Plan;
 
-  EXPECT_EQ(R"(digraph VPlan {
+  const char *ExpectedStr = R"(digraph VPlan {
 graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
@@ -227,8 +227,8 @@ compound=true
       "EMIT ret vp<%2>\l"
   ]
 }
-)",
-            FullDump);
+)";
+  EXPECT_EQ(ExpectedStr, FullDump);
 
   {
     std::string I3Dump;
