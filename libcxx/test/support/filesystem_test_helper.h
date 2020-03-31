@@ -26,13 +26,13 @@
 
 namespace StaticEnv {
 
+static const fs::path Root = TEST_STRINGIZE(LIBCXX_FILESYSTEM_STATIC_TEST_ROOT);
+
 inline fs::path makePath(fs::path const& p) {
     // env_path is expected not to contain symlinks.
-    static const fs::path env_path = LIBCXX_FILESYSTEM_STATIC_TEST_ROOT;
+    fs::path const& env_path = Root;
     return env_path / p;
 }
-
-static const fs::path Root = LIBCXX_FILESYSTEM_STATIC_TEST_ROOT;
 
 static const fs::path TestFileList[] = {
         makePath("empty_file"),
