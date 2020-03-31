@@ -331,6 +331,8 @@ The ``RegionInfo`` pass detects single entry single exit regions in a function,
 where a region is defined as any subgraph that is connected to the remaining
 graph at only two spots.  Furthermore, a hierarchical region tree is built.
 
+.. _passes-scalar-evolution:
+
 ``-scalar-evolution``: Scalar Evolution Analysis
 ------------------------------------------------
 
@@ -711,6 +713,8 @@ An example of when this can occur is code like this:
 In this case, the unconditional branch at the end of the first if can be
 revectored to the false side of the second if.
 
+.. _passes-lcssa:
+
 ``-lcssa``: Loop-Closed SSA Form Pass
 -------------------------------------
 
@@ -732,7 +736,8 @@ into the right code:
 This is still valid LLVM; the extra phi nodes are purely redundant, and will be
 trivially eliminated by ``InstCombine``.  The major benefit of this
 transformation is that it makes many other loop optimizations, such as
-``LoopUnswitch``\ ing, simpler.
+``LoopUnswitch``\ ing, simpler. You can read more in the
+:ref:`loop terminology section for the LCSSA form <loop-terminology-lcssa>`.
 
 .. _passes-licm:
 
@@ -863,6 +868,8 @@ Which can be seen as unrolling the outer loop and "jamming" (fusing) the inner
 loops into one. When variables or loads can be shared in the new inner loop, this
 can lead to significant performance improvements. It uses
 :ref:`Dependence Analysis <passes-da>` for proving the transformations are safe.
+
+.. _passes-loop-unswitch:
 
 ``-loop-unswitch``: Unswitch loops
 ----------------------------------
