@@ -1198,18 +1198,17 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // See if this is a 3-address instruction that is convertible to 2-address
   // and suitable for folding below.  Only try this with virtual registers
   // and a provided VRM (during regalloc).
-  if (SystemZ::getTwoOperandOpcode(Opcode) != -1) {
+  if (NumOps == 3 && SystemZ::getTargetMemOpcode(MemOpcode) != -1) {
     if (VRM == nullptr)
       return nullptr;
     else {
-      assert(NumOps == 3 && "Expected two source registers.");
       Register DstReg = MI.getOperand(0).getReg();
       Register DstPhys =
           (Register::isVirtualRegister(DstReg) ? VRM->getPhys(DstReg) : DstReg);
       Register SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
                                     : ((OpNum == 1 && MI.isCommutable())
                                            ? MI.getOperand(2).getReg()
-                                         : Register()));
+                                           : Register()));
       if (DstPhys && !SystemZ::GRH32BitRegClass.contains(DstPhys) && SrcReg &&
           Register::isVirtualRegister(SrcReg) &&
           DstPhys == VRM->getPhys(SrcReg))
