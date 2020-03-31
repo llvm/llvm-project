@@ -101,7 +101,7 @@ static void inlineRegionAndEmitStdStore(OpType op,
   assert(isa<YieldOp>(terminator) &&
          "expected an yield op in the end of the region");
   for (unsigned i = 0, e = terminator.getNumOperands(); i < e; ++i) {
-    std_store(map.lookup(terminator.getOperand(i)), outputBuffers[i],
+    std_store(map.lookupOrDefault(terminator.getOperand(i)), outputBuffers[i],
               indexing[i]);
   }
 }
