@@ -522,3 +522,24 @@ func @indexed_generic_op_1D_reduce(%arg0: memref<?xf32>,
 // CHECK:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
 // CHECK:   %[[e:.*]] = addf %[[a]], %[[d]]
 // CHECK:   store %[[e]], %[[ARG2]][]
+
+#trait_const_fill = {
+  args_in = 0,
+  args_out = 1,
+  indexing_maps = [affine_map<(i) -> (i)>],
+  iterator_types = ["parallel"],
+  library_call = "some_external_fn"
+}
+func @generic_const_init(%arg0: memref<?xf32>) {
+	%cst = constant 1.0 : f32
+  linalg.generic #trait_const_fill %arg0 {
+    ^bb0(%arg1: f32):   // no predecessors
+      linalg.yield %cst : f32
+    }: memref<?xf32>
+    return
+}
+// CHECK-LABEL: @generic_const_init
+// CHECK-SAME: %[[ARG0:.*]]: memref<?xf32>
+// CHECK: %[[CONST:.*]] = constant 1.000000e+00 : f32
+// CHECK: loop.for %[[i:.*]] = {{.*}}
+// CHECK:   store %[[CONST]], %[[ARG0]]
