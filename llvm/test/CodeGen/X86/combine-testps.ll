@@ -2,34 +2,34 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s
 
 ;
-; testz(~X,-1) -> testc(X,-1)
+; testz(~X,Y) -> testc(X,Y)
 ;
 
-define i32 @testpsz_128_invert(<4 x float> %c, i32 %a, i32 %b) {
+define i32 @testpsz_128_invert(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: testpsz_128_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestps %xmm1, %xmm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = bitcast <4 x float> %c to <2 x i64>
   %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
   %t2 = bitcast <2 x i64> %t1 to <4 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestz.ps(<4 x float> %t2, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
+  %t3 = call i32 @llvm.x86.avx.vtestz.ps(<4 x float> %t2, <4 x float> %d)
   %t4 = icmp ne i32 %t3, 0
   %t5 = select i1 %t4, i32 %a, i32 %b
   ret i32 %t5
 }
 
-define i32 @testpsz_256_invert(<8 x float> %c, i32 %a, i32 %b) {
+define i32 @testpsz_256_invert(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: testpsz_256_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestps %ymm1, %ymm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
@@ -37,41 +37,41 @@ define i32 @testpsz_256_invert(<8 x float> %c, i32 %a, i32 %b) {
   %t0 = bitcast <8 x float> %c to <4 x i64>
   %t1 = xor <4 x i64> %t0, <i64 -1, i64 -1, i64 -1, i64 -1>
   %t2 = bitcast <4 x i64> %t1 to <8 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %t2, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
+  %t3 = call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %t2, <8 x float> %d)
   %t4 = icmp ne i32 %t3, 0
   %t5 = select i1 %t4, i32 %a, i32 %b
   ret i32 %t5
 }
 
 ;
-; testc(~X,-1) -> testz(X,-1)
+; testc(~X,Y) -> testz(X,Y)
 ;
 
-define i32 @testpsc_128_invert(<4 x float> %c, i32 %a, i32 %b) {
+define i32 @testpsc_128_invert(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: testpsc_128_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestps %xmm1, %xmm0
 ; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = bitcast <4 x float> %c to <2 x i64>
   %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
   %t2 = bitcast <2 x i64> %t1 to <4 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestc.ps(<4 x float> %t2, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
+  %t3 = call i32 @llvm.x86.avx.vtestc.ps(<4 x float> %t2, <4 x float> %d)
   %t4 = icmp ne i32 %t3, 0
   %t5 = select i1 %t4, i32 %a, i32 %b
   ret i32 %t5
 }
 
-define i32 @testpsc_256_invert(<8 x float> %c, i32 %a, i32 %b) {
+define i32 @testpsc_256_invert(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: testpsc_256_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestps %ymm1, %ymm0
 ; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
@@ -79,49 +79,7 @@ define i32 @testpsc_256_invert(<8 x float> %c, i32 %a, i32 %b) {
   %t0 = bitcast <8 x float> %c to <4 x i64>
   %t1 = xor <4 x i64> %t0, <i64 -1, i64 -1, i64 -1, i64 -1>
   %t2 = bitcast <4 x i64> %t1 to <8 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %t2, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
-  %t4 = icmp ne i32 %t3, 0
-  %t5 = select i1 %t4, i32 %a, i32 %b
-  ret i32 %t5
-}
-
-;
-; testnzc(~X,-1) -> testnzc(X,-1)
-;
-
-define i32 @testpsnzc_128_invert(<4 x float> %c, i32 %a, i32 %b) {
-; CHECK-LABEL: testpsnzc_128_invert:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vtestps %xmm1, %xmm0
-; CHECK-NEXT:    cmovbel %esi, %eax
-; CHECK-NEXT:    retq
-  %t0 = bitcast <4 x float> %c to <2 x i64>
-  %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
-  %t2 = bitcast <2 x i64> %t1 to <4 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestnzc.ps(<4 x float> %t2, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
-  %t4 = icmp ne i32 %t3, 0
-  %t5 = select i1 %t4, i32 %a, i32 %b
-  ret i32 %t5
-}
-
-define i32 @testpsnzc_256_invert(<8 x float> %c, i32 %a, i32 %b) {
-; CHECK-LABEL: testpsnzc_256_invert:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vtestps %ymm1, %ymm0
-; CHECK-NEXT:    cmovbel %esi, %eax
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-  %t0 = bitcast <8 x float> %c to <4 x i64>
-  %t1 = xor <4 x i64> %t0, <i64 -1, i64 -1, i64 -1, i64 -1>
-  %t2 = bitcast <4 x i64> %t1 to <8 x float>
-  %t3 = call i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float> %t2, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>)
+  %t3 = call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %t2, <8 x float> %d)
   %t4 = icmp ne i32 %t3, 0
   %t5 = select i1 %t4, i32 %a, i32 %b
   ret i32 %t5
@@ -131,8 +89,8 @@ define i32 @testpsnzc_256_invert(<8 x float> %c, i32 %a, i32 %b) {
 ; testnzc(~X,Y) -> testnzc(X,Y)
 ;
 
-define i32 @testpsnzc_128_flip(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpsnzc_128_flip:
+define i32 @testpsnzc_128_invert(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpsnzc_128_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -149,8 +107,8 @@ define i32 @testpsnzc_128_flip(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) {
   ret i32 %t5
 }
 
-define i32 @testpsnzc_256_flip(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpsnzc_256_flip:
+define i32 @testpsnzc_256_invert(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpsnzc_256_invert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
