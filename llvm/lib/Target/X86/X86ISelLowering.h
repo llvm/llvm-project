@@ -1215,7 +1215,7 @@ namespace llvm {
     std::pair<SDValue, SDValue> BuildFILD(EVT DstVT, EVT SrcVT, const SDLoc &DL,
                                           SDValue Chain, SDValue Pointer,
                                           MachinePointerInfo PtrInfo,
-                                          unsigned Align,
+                                          Align Alignment,
                                           SelectionDAG &DAG) const;
 
     bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
