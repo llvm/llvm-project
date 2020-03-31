@@ -58,7 +58,7 @@ int main() {
   // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
   // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]],
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
-  // CHECK: [[SZ1:%.+]] = mul nuw i64 3, [[A_CAST]]
+  // CHECK: [[SZ1:%.+]] = mul nuw i64 24, [[A_CAST]]
   // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]],
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
   // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], [[A_CAST]]

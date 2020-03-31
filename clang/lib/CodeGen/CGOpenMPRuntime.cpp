@@ -5374,7 +5374,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       llvm::Value *Size;
       QualType Ty = E->getType();
       if (OASE) {
-        Size = llvm::ConstantInt::get(CGF.SizeTy,/*V=*/1);
+        Size = CGF.getTypeSize(OASE->getBase()->getType()->getPointeeType());
         for (const Expr *SE : OASE->getDimensions()) {
            llvm::Value *Sz = CGF.EmitScalarExpr(SE);
            Sz = CGF.EmitScalarConversion(Sz, SE->getType(),

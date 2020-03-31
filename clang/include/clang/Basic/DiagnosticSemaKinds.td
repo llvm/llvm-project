@@ -10203,7 +10203,8 @@ def warn_nested_declare_variant
               "nested context ignored">,
       InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
-  "expected pointer type expression as a base of an array shaping operation">;
+  "expected expression with a pointer to a complete type as a base of an array "
+  "shaping operation">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
