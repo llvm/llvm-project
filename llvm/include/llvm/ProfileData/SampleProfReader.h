@@ -656,7 +656,7 @@ public:
   void collectFuncsFrom(const Module &M) override;
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() {
+  virtual bool useMD5() override {
     assert(!NameTable.empty() && "NameTable should have been initialized");
     return MD5StringBuf && !MD5StringBuf->empty();
   }
@@ -695,7 +695,7 @@ public:
   void collectFuncsFrom(const Module &M) override;
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() { return true; }
+  virtual bool useMD5() override { return true; }
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;
