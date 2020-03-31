@@ -668,6 +668,13 @@ public:
                        unsigned &DiagID, ParsedType Rep,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                       unsigned &DiagID, TypeResult Rep,
+                       const PrintingPolicy &Policy) {
+    if (Rep.isInvalid())
+      return SetTypeSpecError();
+    return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Rep.get(), Policy);
+  }
+  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
                        unsigned &DiagID, Decl *Rep, bool Owned,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
