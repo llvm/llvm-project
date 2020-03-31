@@ -654,10 +654,10 @@ void test_integer(void) {
   // CHECK-ASM: vsrlb
 
   idx = vec_test_mask(vf, vui);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vd, vul);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
 
   vuc = vec_msum_u128(vul, vul, vuc, 0);
