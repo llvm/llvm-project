@@ -472,6 +472,14 @@ DeclTypeSpec::DeclTypeSpec(Category category) : category_{category} {
 bool DeclTypeSpec::IsNumeric(TypeCategory tc) const {
   return category_ == Numeric && numericTypeSpec().category() == tc;
 }
+bool DeclTypeSpec::IsSequenceType() const {
+  if (const DerivedTypeSpec * derivedType{AsDerived()}) {
+    const auto *typeDetails{
+        derivedType->typeSymbol().detailsIf<DerivedTypeDetails>()};
+    return typeDetails && typeDetails->sequence();
+  }
+  return false;
+}
 IntrinsicTypeSpec *DeclTypeSpec::AsIntrinsic() {
   return const_cast<IntrinsicTypeSpec *>(
       const_cast<const DeclTypeSpec *>(this)->AsIntrinsic());

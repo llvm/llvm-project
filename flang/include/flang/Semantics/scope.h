@@ -91,6 +91,7 @@ public:
 
   const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
+  const Scope &GetDerivedTypeBase() const;
   std::optional<SourceName> GetName() const;
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one

@@ -7,6 +7,7 @@ module m1
   end type
   type t2
     sequence
+    real :: t2Field
   end type
 contains
 

@@ -1,5 +1,7 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Derived type parameters
+! C731 The same type-param-name shall not appear more than once in a given
+! derived-type-stmt.
 
 module m
   !ERROR: Duplicate type parameter name: 'a'

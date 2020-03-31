@@ -1,4 +1,13 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! C735 If EXTENDS appears, SEQUENCE shall not appear.
+! C738 The same private-or-sequence shall not appear more than once in a
+! given derived-type-def .
+!
+! C740 If SEQUENCE appears,
+!  the type shall have at least one component,
+!  each data component shall be declared to be of an intrinsic type or of a sequence type,
+!  the derived type shall not have any type parameter,
+!  and a type-bound-procedure-part shall not appear.
 subroutine s1
   integer :: t0
   !ERROR: 't0' is not a derived type
@@ -41,6 +50,8 @@ module m4
     private
     sequence
     private  ! not a fatal error
+    sequence ! not a fatal error
+    real :: t1Field
   end type
   type :: t1a
   end type
@@ -55,6 +66,32 @@ module m4
   !ERROR: A sequence type may not have a CONTAINS statement
   contains
   end type
+  !ERROR: A sequence type must have at least one component
+  type :: emptyType
+    sequence
+  end type emptyType
+  type :: plainType
+    real :: plainField
+  end type plainType
+  type :: sequenceType
+    sequence
+    real :: sequenceField
+  end type sequenceType
+  type :: testType
+    sequence
+    !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
+    class(*), allocatable :: typeStarField
+    !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
+    type(plainType) :: testField1
+    type(sequenceType) :: testField2
+    procedure(real), nopass :: procField
+  end type testType
+  !ERROR: A sequence type may not have type parameters
+  type :: paramType(param)
+    integer, kind :: param
+    sequence
+    real :: paramField
+  end type paramType
 contains
   subroutine s3
     type :: t1

@@ -9,6 +9,7 @@
 module m1
   type :: t
     sequence
+    logical :: x
   end type
   interface operator(+)
     pure integer(8) function add_ll(x, y)
@@ -61,6 +62,7 @@ end
 !module m1
 ! type :: t
 !  sequence
+!  logical(4) :: x
 ! end type
 ! interface operator(+)
 !  procedure :: add_ll
@@ -136,6 +138,7 @@ end
 module m2
   type :: t
     sequence
+    logical :: x
   end type
   interface operator(.And.)
     pure integer(8) function and_ti(x, y)
@@ -195,6 +198,7 @@ end
 !module m2
 ! type :: t
 !  sequence
+!  logical(4) :: x
 ! end type
 ! interface operator( .and.)
 !  procedure :: and_ti
@@ -275,6 +279,7 @@ end
 module m3
   type :: t
     sequence
+    logical :: x
   end type
   interface operator(<>)
     pure integer(8) function ne_it(x, y)
@@ -317,6 +322,7 @@ end
 !module m3
 ! type :: t
 !  sequence
+!  logical(4) :: x
 ! end type
 ! interface operator(<>)
 !  procedure :: ne_it
@@ -368,6 +374,7 @@ end
 module m4
   type :: t
     sequence
+    logical :: x
   end type
   interface operator(//)
     pure integer(8) function concat_12(x, y)
@@ -395,6 +402,7 @@ end
 !module m4
 ! type :: t
 !  sequence
+!  logical(4) :: x
 ! end type
 ! interface operator(//)
 !  procedure :: concat_12

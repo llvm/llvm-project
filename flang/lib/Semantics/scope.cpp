@@ -362,6 +362,15 @@ const Scope *Scope::GetDerivedTypeParent() const {
   return nullptr;
 }
 
+const Scope &Scope::GetDerivedTypeBase() const {
+  const Scope *child{this};
+  for (const Scope *parent{GetDerivedTypeParent()}; parent != nullptr;
+       parent = child->GetDerivedTypeParent()) {
+    child = parent;
+  }
+  return *child;
+}
+
 void Scope::InstantiateDerivedTypes(SemanticsContext &context) {
   for (DeclTypeSpec &type : declTypeSpecs_) {
     if (type.category() == DeclTypeSpec::TypeDerived ||

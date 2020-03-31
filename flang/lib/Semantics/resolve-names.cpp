@@ -3682,18 +3682,40 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     }
   }
   Walk(std::get<std::list<parser::Statement<parser::PrivateOrSequence>>>(x.t));
+  const auto &componentDefs{
+      std::get<std::list<parser::Statement<parser::ComponentDefStmt>>>(x.t)};
+  Walk(componentDefs);
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
-    if (derivedTypeInfo_.extends) {
+    if (componentDefs.empty()) { // C740
       Say(stmt.source,
-          "A sequence type may not have the EXTENDS attribute"_err_en_US); // C735
+          "A sequence type must have at least one component"_err_en_US);
     }
-    if (!details.paramNames().empty()) {
+    if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
-          "A sequence type may not have type parameters"_err_en_US); // C740
+          "A sequence type may not have type parameters"_err_en_US);
+    }
+    if (derivedTypeInfo_.extends) { // C735
+      Say(stmt.source,
+          "A sequence type may not have the EXTENDS attribute"_err_en_US);
+    } else {
+      for (const auto &componentName : details.componentNames()) {
+        const Symbol *componentSymbol{scope.FindComponent(componentName)};
+        if (componentSymbol && componentSymbol->has<ObjectEntityDetails>()) {
+          const auto &componentDetails{
+              componentSymbol->get<ObjectEntityDetails>()};
+          const DeclTypeSpec *componentType{componentDetails.type()};
+          if (componentType && // C740
+              !componentType->AsIntrinsic() &&
+              !componentType->IsSequenceType()) {
+            Say(componentSymbol->name(),
+                "A sequence type data component must either be of an"
+                " intrinsic type or a derived sequence type"_err_en_US);
+          }
+        }
+      }
     }
   }
-  Walk(std::get<std::list<parser::Statement<parser::ComponentDefStmt>>>(x.t));
   Walk(std::get<std::optional<parser::TypeBoundProcedurePart>>(x.t));
   Walk(std::get<parser::Statement<parser::EndTypeStmt>>(x.t));
   derivedTypeInfo_ = {};
@@ -3783,6 +3805,10 @@ bool DeclarationVisitor::Pre(const parser::PrivateStmt &) {
   return false;
 }
 bool DeclarationVisitor::Pre(const parser::SequenceStmt &) {
+  if (derivedTypeInfo_.sequence) {
+    Say("SEQUENCE may not appear more than once in"
+        " derived type components"_en_US); // C738
+  }
   derivedTypeInfo_.sequence = true;
   return false;
 }
@@ -3796,7 +3822,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   if (!attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
     if (const auto *declType{GetDeclTypeSpec()}) {
       if (const auto *derived{declType->AsDerived()}) {
-        if (derivedTypeInfo_.type == &derived->typeSymbol()) { // C737
+        if (derivedTypeInfo_.type == &derived->typeSymbol()) { // C744
           Say("Recursive use of the derived type requires "
               "POINTER or ALLOCATABLE"_err_en_US);
         }
@@ -4648,7 +4674,7 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
       DerivedTypeDetails details;
       details.set_isForwardReferenced();
       symbol->set_details(std::move(details));
-    } else { // C883
+    } else { // C732
       Say(name, "Derived type '%s' not found"_err_en_US);
       return std::nullopt;
     }

@@ -1,6 +1,6 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
-! and C779-C785.
+! and C733, C734 and C779, C780, C781, C782, C783, C784, and C785.
 
 module m
   !ERROR: An ABSTRACT derived type must be extensible
@@ -9,6 +9,7 @@ module m
   !ERROR: An ABSTRACT derived type must be extensible
   type, abstract :: badAbstract2
     sequence
+    real :: badAbstract2Field
   end type
   type, abstract :: abstract
    contains
@@ -50,6 +51,7 @@ module m
   end type
   type :: inextensible2
     sequence
+    real :: inextensible2Field
   end type
   !ERROR: The parent type is not extensible
   type, extends(inextensible2) :: badExtends2

@@ -1,5 +1,7 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Forward references to derived types (error cases)
+! C732 A parent-type-name shall be the name of a previously defined
+! extensible type (7.5.7).
 
 !ERROR: The derived type 'undef' was forward-referenced but not defined
 type(undef) function f1()

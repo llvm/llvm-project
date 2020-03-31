@@ -679,13 +679,14 @@ void CheckHelper::CheckSubprogram(
 
 void CheckHelper::CheckDerivedType(
     const Symbol &symbol, const DerivedTypeDetails &details) {
-  if (!symbol.scope()) {
+  const Scope *scope{symbol.scope()};
+  if (!scope) {
     CHECK(details.isForwardReferenced());
     return;
   }
-  CHECK(symbol.scope()->symbol() == &symbol);
-  CHECK(symbol.scope()->IsDerivedType());
-  if (symbol.attrs().test(Attr::ABSTRACT) &&
+  CHECK(scope->symbol() == &symbol);
+  CHECK(scope->IsDerivedType());
+  if (symbol.attrs().test(Attr::ABSTRACT) && // C734
       (symbol.attrs().test(Attr::BIND_C) || details.sequence())) {
     messages_.Say("An ABSTRACT derived type must be extensible"_err_en_US);
   }
@@ -699,13 +700,33 @@ void CheckHelper::CheckDerivedType(
       ScopeComponentIterator components{*parentDerived};
       for (const Symbol &component : components) {
         if (component.attrs().test(Attr::DEFERRED)) {
-          if (symbol.scope()->FindComponent(component.name()) == &component) {
+          if (scope->FindComponent(component.name()) == &component) {
             SayWithDeclaration(component,
                 "Non-ABSTRACT extension of ABSTRACT derived type '%s' lacks a binding for DEFERRED procedure '%s'"_err_en_US,
                 parentDerived->typeSymbol().name(), component.name());
           }
         }
       }
+    }
+    DerivedTypeSpec derived{symbol.name(), symbol};
+    derived.set_scope(*scope);
+    if (FindCoarrayUltimateComponent(derived) && // C736
+        !(parentDerived && FindCoarrayUltimateComponent(*parentDerived))) {
+      messages_.Say(
+          "Type '%s' has a coarray ultimate component so the type at the base "
+          "of its type extension chain ('%s') must be a type that has a "
+          "coarray ultimate component"_err_en_US,
+          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
+    }
+    if (FindEventOrLockPotentialComponent(derived) && // C737
+        !(FindEventOrLockPotentialComponent(*parentDerived) ||
+            IsEventTypeOrLockType(parentDerived))) {
+      messages_.Say(
+          "Type '%s' has an EVENT_TYPE or LOCK_TYPE component, so the type "
+          "at the base of its type extension chain ('%s') must either have an "
+          "EVENT_TYPE or LOCK_TYPE component, or be EVENT_TYPE or "
+          "LOCK_TYPE"_err_en_US,
+          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
   if (HasIntrinsicTypeName(symbol)) { // C729
@@ -1141,7 +1162,7 @@ void CheckHelper::CheckProcBinding(
   CHECK(dtScope.kind() == Scope::Kind::DerivedType);
   if (const Symbol * dtSymbol{dtScope.symbol()}) {
     if (symbol.attrs().test(Attr::DEFERRED)) {
-      if (!dtSymbol->attrs().test(Attr::ABSTRACT)) {
+      if (!dtSymbol->attrs().test(Attr::ABSTRACT)) { // C733
         SayWithDeclaration(*dtSymbol,
             "Procedure bound to non-ABSTRACT derived type '%s' may not be DEFERRED"_err_en_US,
             dtSymbol->name());

@@ -336,6 +336,7 @@ public:
   }
   bool IsAssumedType() const { return category_ == TypeStar; }
   bool IsNumeric(TypeCategory) const;
+  bool IsSequenceType() const;
   const NumericTypeSpec &numericTypeSpec() const;
   const LogicalTypeSpec &logicalTypeSpec() const;
   const CharacterTypeSpec &characterTypeSpec() const {

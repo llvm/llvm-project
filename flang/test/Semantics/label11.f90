@@ -11,6 +11,8 @@
 ! CHECK: derived type definition name mismatch
 ! CHECK: MODULE PROCEDURE name mismatch
 ! CHECK: MODULE name mismatch
+! C739 If END TYPE is followed by a type-name, the type-name shall be the
+! same as that in the corresponding derived-type-stmt.
 
 block data t1
 end block data t2
