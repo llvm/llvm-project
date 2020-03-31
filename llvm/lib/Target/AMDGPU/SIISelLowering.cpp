@@ -4264,6 +4264,43 @@ static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
   return DAG.getZExtOrTrunc(SetCC, SL, VT);
 }
 
+static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
+                                    SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(1);
+  SDLoc SL(N);
+
+  if (Src.getOpcode() == ISD::SETCC) {
+    // (ballot (ISD::SETCC ...)) -> (AMDGPUISD::SETCC ...)
+    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Src.getOperand(0),
+                       Src.getOperand(1), Src.getOperand(2));
+  }
+  if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
+    // (ballot 0) -> 0
+    if (Arg->isNullValue())
+      return DAG.getConstant(0, SL, VT);
+
+    // (ballot 1) -> EXEC/EXEC_LO
+    if (Arg->isOne()) {
+      Register Exec;
+      if (VT.getScalarSizeInBits() == 32)
+        Exec = AMDGPU::EXEC_LO;
+      else if (VT.getScalarSizeInBits() == 64)
+        Exec = AMDGPU::EXEC;
+      else
+        return SDValue();
+
+      return DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, VT);
+    }
+  }
+
+  // (ballot (i1 $src)) -> (AMDGPUISD::SETCC (i32 (zext $src)) (i32 0)
+  // ISD::SETNE)
+  return DAG.getNode(
+      AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
+      DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+}
+
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
@@ -5982,6 +6019,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fcmp: {
     return lowerFCMPIntrinsic(*this, Op.getNode(), DAG);
   }
+  case Intrinsic::amdgcn_ballot:
+    return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
