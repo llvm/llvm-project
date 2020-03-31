@@ -28,8 +28,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -64,7 +64,7 @@ protected:
   virtual uint64_t getSectionOffset(DataRefImpl Sec) const = 0;
 
   virtual Expected<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
-  virtual Error getBuildAttributes(ARMAttributeParser &Attributes) const = 0;
+  virtual Error getBuildAttributes(ELFAttributeParser &Attributes) const = 0;
 
 public:
   using elf_symbol_iterator_range = iterator_range<elf_symbol_iterator>;
@@ -365,19 +365,20 @@ protected:
         (Visibility == ELF::STV_DEFAULT || Visibility == ELF::STV_PROTECTED));
   }
 
-  Error getBuildAttributes(ARMAttributeParser &Attributes) const override {
+  Error getBuildAttributes(ELFAttributeParser &Attributes) const override {
     auto SectionsOrErr = EF.sections();
     if (!SectionsOrErr)
       return SectionsOrErr.takeError();
 
     for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
+      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES ||
+          Sec.sh_type == ELF::SHT_RISCV_ATTRIBUTES) {
         auto ErrorOrContents = EF.getSectionContents(&Sec);
         if (!ErrorOrContents)
           return ErrorOrContents.takeError();
 
         auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
+        if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
           return Error::success();
 
         if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))

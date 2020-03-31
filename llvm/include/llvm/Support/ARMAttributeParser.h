@@ -1,4 +1,4 @@
-//===--- ARMAttributeParser.h - ARM Attribute Information Printer ---------===//
+//===- ARMAttributeParser.h - ARM Attribute Information Printer -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,36 +10,24 @@
 #define LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
 
 #include "ARMBuildAttributes.h"
+#include "ELFAttributeParser.h"
 #include "ScopedPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
-#include <map>
-
 namespace llvm {
 class StringRef;
 
-class ARMAttributeParser {
-  ScopedPrinter *sw;
-
-  std::map<unsigned, unsigned> attributes;
-  DataExtractor de{ArrayRef<uint8_t>{}, true, 0};
-  DataExtractor::Cursor cursor{0};
-
+class ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     ARMBuildAttrs::AttrType attribute;
     Error (ARMAttributeParser::*routine)(ARMBuildAttrs::AttrType);
   };
   static const DisplayHandler displayRoutines[];
 
-  Error parseAttributeList(uint32_t length);
-  void parseIndexList(SmallVectorImpl<uint8_t> &indexList);
-  Error parseSubsection(uint32_t length);
-  Error parseStringAttribute(const char *name, ARMBuildAttrs::AttrType tag,
-                             const ArrayRef<const char *> array);
-  void printAttribute(unsigned tag, unsigned value, StringRef valueDesc);
+  Error handler(uint64_t tag, bool &handled) override;
 
   Error stringAttribute(ARMBuildAttrs::AttrType tag);
 
@@ -82,20 +70,11 @@ class ARMAttributeParser {
   Error nodefaults(ARMBuildAttrs::AttrType tag);
 
 public:
-  ARMAttributeParser(ScopedPrinter *sw) : sw(sw) {}
-  ARMAttributeParser() : sw(nullptr) {}
-  ~ARMAttributeParser() { static_cast<void>(!cursor.takeError()); }
-
-  Error parse(ArrayRef<uint8_t> section, support::endianness endian);
-
-  bool hasAttribute(unsigned tag) const { return attributes.count(tag); }
-
-  unsigned getAttributeValue(unsigned tag) const {
-    return attributes.find(tag)->second;
-  }
+  ARMAttributeParser(ScopedPrinter *sw)
+      : ELFAttributeParser(sw, ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
+  ARMAttributeParser()
+      : ELFAttributeParser(ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
 };
-
 }
 
 #endif
-
