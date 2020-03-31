@@ -3001,7 +3001,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     // Match the ')'.
     T.consumeClose();
     RParenLoc = T.getCloseLocation();
-    Result = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    Result = Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
     if (ErrorFound) {
       Result = ExprError();
     } else if (!Result.isInvalid()) {
