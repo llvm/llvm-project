@@ -4,6 +4,8 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.compactbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.extbinary.afdo -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.md5extbinary.afdo -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.md5extbinary.afdo -S | FileCheck %s
 
 ; Original C++ test case
 ;
