@@ -105,6 +105,10 @@ public:
   /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
   /// the number of access is too large.
   unsigned LicmMssaNoAccForPromotionCap;
+
+  /// Tuning option to enable/disable call graph profile. Its default value is
+  /// that of the flag: `-enable-npm-call-graph-profile`.
+  bool CallGraphProfile;
 };
 
 /// This class provides access to building LLVM's passes.
