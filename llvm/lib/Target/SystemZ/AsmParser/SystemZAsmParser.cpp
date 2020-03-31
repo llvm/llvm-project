@@ -53,8 +53,6 @@ enum RegisterKind {
   GRH32Reg,
   GR64Reg,
   GR128Reg,
-  ADDR32Reg,
-  ADDR64Reg,
   FP32Reg,
   FP64Reg,
   FP128Reg,
@@ -109,7 +107,7 @@ private:
 
   // Base + Disp + Index, where Base and Index are LLVM registers or 0.
   // MemKind says what type of memory this is and RegKind says what type
-  // the base register has (ADDR32Reg or ADDR64Reg).  Length is the operand
+  // the base register has (GR32Reg or GR64Reg).  Length is the operand
   // length for D(L,B)-style operands, otherwise it is null.
   struct MemOp {
     unsigned Base : 12;
@@ -348,8 +346,8 @@ public:
   bool isGRX32() const { return false; }
   bool isGR64() const { return isReg(GR64Reg); }
   bool isGR128() const { return isReg(GR128Reg); }
-  bool isADDR32() const { return isReg(ADDR32Reg); }
-  bool isADDR64() const { return isReg(ADDR64Reg); }
+  bool isADDR32() const { return isReg(GR32Reg); }
+  bool isADDR64() const { return isReg(GR64Reg); }
   bool isADDR128() const { return false; }
   bool isFP32() const { return isReg(FP32Reg); }
   bool isFP64() const { return isReg(FP64Reg); }
@@ -361,16 +359,16 @@ public:
   bool isAR32() const { return isReg(AR32Reg); }
   bool isCR64() const { return isReg(CR64Reg); }
   bool isAnyReg() const { return (isReg() || isImm(0, 15)); }
-  bool isBDAddr32Disp12() const { return isMemDisp12(BDMem, ADDR32Reg); }
-  bool isBDAddr32Disp20() const { return isMemDisp20(BDMem, ADDR32Reg); }
-  bool isBDAddr64Disp12() const { return isMemDisp12(BDMem, ADDR64Reg); }
-  bool isBDAddr64Disp20() const { return isMemDisp20(BDMem, ADDR64Reg); }
-  bool isBDXAddr64Disp12() const { return isMemDisp12(BDXMem, ADDR64Reg); }
-  bool isBDXAddr64Disp20() const { return isMemDisp20(BDXMem, ADDR64Reg); }
-  bool isBDLAddr64Disp12Len4() const { return isMemDisp12Len4(ADDR64Reg); }
-  bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(ADDR64Reg); }
-  bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, ADDR64Reg); }
-  bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, ADDR64Reg); }
+  bool isBDAddr32Disp12() const { return isMemDisp12(BDMem, GR32Reg); }
+  bool isBDAddr32Disp20() const { return isMemDisp20(BDMem, GR32Reg); }
+  bool isBDAddr64Disp12() const { return isMemDisp12(BDMem, GR64Reg); }
+  bool isBDAddr64Disp20() const { return isMemDisp20(BDMem, GR64Reg); }
+  bool isBDXAddr64Disp12() const { return isMemDisp12(BDXMem, GR64Reg); }
+  bool isBDXAddr64Disp20() const { return isMemDisp20(BDXMem, GR64Reg); }
+  bool isBDLAddr64Disp12Len4() const { return isMemDisp12Len4(GR64Reg); }
+  bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(GR64Reg); }
+  bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, GR64Reg); }
+  bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, GR64Reg); }
   bool isU1Imm() const { return isImm(0, 1); }
   bool isU2Imm() const { return isImm(0, 3); }
   bool isU3Imm() const { return isImm(0, 7); }
@@ -407,8 +405,7 @@ private:
 
   bool parseRegister(Register &Reg, bool RestoreOnFailure = false);
 
-  bool parseRegister(Register &Reg, RegisterGroup Group, const unsigned *Regs,
-                     bool IsAddress = false);
+  bool parseRegister(Register &Reg, RegisterGroup Group, const unsigned *Regs);
 
   OperandMatchResultTy parseRegister(OperandVector &Operands,
                                      RegisterGroup Group, const unsigned *Regs,
@@ -477,10 +474,12 @@ public:
     return parseRegister(Operands, RegGR, SystemZMC::GR128Regs, GR128Reg);
   }
   OperandMatchResultTy parseADDR32(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GR32Regs, ADDR32Reg);
+    // For the AsmParser, we will accept %r0 for ADDR32 as well.
+    return parseRegister(Operands, RegGR, SystemZMC::GR32Regs, GR32Reg);
   }
   OperandMatchResultTy parseADDR64(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GR64Regs, ADDR64Reg);
+    // For the AsmParser, we will accept %r0 for ADDR64 as well.
+    return parseRegister(Operands, RegGR, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parseADDR128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
@@ -516,22 +515,22 @@ public:
     return parseAnyRegister(Operands);
   }
   OperandMatchResultTy parseBDAddr32(OperandVector &Operands) {
-    return parseAddress(Operands, BDMem, SystemZMC::GR32Regs, ADDR32Reg);
+    return parseAddress(Operands, BDMem, SystemZMC::GR32Regs, GR32Reg);
   }
   OperandMatchResultTy parseBDAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDMem, SystemZMC::GR64Regs, ADDR64Reg);
+    return parseAddress(Operands, BDMem, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parseBDXAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDXMem, SystemZMC::GR64Regs, ADDR64Reg);
+    return parseAddress(Operands, BDXMem, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parseBDLAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDLMem, SystemZMC::GR64Regs, ADDR64Reg);
+    return parseAddress(Operands, BDLMem, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parseBDRAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDRMem, SystemZMC::GR64Regs, ADDR64Reg);
+    return parseAddress(Operands, BDRMem, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parseBDVAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDVMem, SystemZMC::GR64Regs, ADDR64Reg);
+    return parseAddress(Operands, BDVMem, SystemZMC::GR64Regs, GR64Reg);
   }
   OperandMatchResultTy parsePCRel12(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 12), (1LL << 12) - 1, false);
@@ -751,20 +750,17 @@ bool SystemZAsmParser::parseRegister(Register &Reg, bool RestoreOnFailure) {
 
 // Parse a register of group Group.  If Regs is nonnull, use it to map
 // the raw register number to LLVM numbering, with zero entries
-// indicating an invalid register.  IsAddress says whether the
-// register appears in an address context. Allow FP Group if expecting
+// indicating an invalid register.  Allow FP Group if expecting
 // RegV Group, since the f-prefix yields the FP group even while used
 // with vector instructions.
 bool SystemZAsmParser::parseRegister(Register &Reg, RegisterGroup Group,
-                                     const unsigned *Regs, bool IsAddress) {
+                                     const unsigned *Regs) {
   if (parseRegister(Reg))
     return true;
   if (Reg.Group != Group && !(Reg.Group == RegFP && Group == RegV))
     return Error(Reg.StartLoc, "invalid operand for instruction");
   if (Regs && Regs[Reg.Num] == 0)
     return Error(Reg.StartLoc, "invalid register pair");
-  if (Reg.Num == 0 && IsAddress)
-    return Error(Reg.StartLoc, "%r0 used in an address");
   if (Regs)
     Reg.Num = Regs[Reg.Num];
   return false;
@@ -778,8 +774,7 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterGroup Group,
     return MatchOperand_NoMatch;
 
   Register Reg;
-  bool IsAddress = (Kind == ADDR32Reg || Kind == ADDR64Reg);
-  if (parseRegister(Reg, Group, Regs, IsAddress))
+  if (parseRegister(Reg, Group, Regs))
     return MatchOperand_ParseFail;
 
   Operands.push_back(SystemZOperand::createReg(Kind, Reg.Num,
@@ -899,9 +894,6 @@ SystemZAsmParser::parseAddressRegister(Register &Reg) {
     return true;
   } else if (Reg.Group != RegGR) {
     Error(Reg.StartLoc, "invalid address register");
-    return true;
-  } else if (Reg.Num == 0) {
-    Error(Reg.StartLoc, "%r0 used in an address");
     return true;
   }
   return false;
