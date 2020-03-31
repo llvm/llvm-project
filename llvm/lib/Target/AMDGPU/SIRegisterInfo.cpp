@@ -40,7 +40,20 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour()), ST(ST),
-      SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {}
+      SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
+
+  assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
+         getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
+         (getSubRegIndexLaneMask(AMDGPU::lo16) |
+          getSubRegIndexLaneMask(AMDGPU::hi16)).getAsInteger() ==
+           getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() &&
+         "getNumCoveredRegs() will not work with generated subreg masks!");
+
+  RegPressureIgnoredUnits.resize(getNumRegUnits());
+  RegPressureIgnoredUnits.set(*MCRegUnitIterator(AMDGPU::M0, this));
+  for (auto Reg : AMDGPU::VGPR_HI16RegClass)
+    RegPressureIgnoredUnits.set(*MCRegUnitIterator(Reg, this));
+}
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
                                            unsigned Reg) const {
@@ -1777,6 +1790,8 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
   case AMDGPU::VGPR_32RegClassID:
+  case AMDGPU::VGPR_LO16RegClassID:
+  case AMDGPU::VGPR_HI16RegClassID:
     return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
     return std::min(ST.getMaxNumSGPRs(Occupancy, true), ST.getMaxNumSGPRs(MF));
@@ -1800,8 +1815,9 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
   static const int Empty[] = { -1 };
 
-  if (hasRegUnit(AMDGPU::M0, RegUnit))
+  if (RegPressureIgnoredUnits[RegUnit])
     return Empty;
+
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 

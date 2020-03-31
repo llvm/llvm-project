@@ -32,6 +32,7 @@ private:
   const GCNSubtarget &ST;
   bool SpillSGPRToVGPR;
   bool isWave32;
+  BitVector RegPressureIgnoredUnits;
 
   void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 
@@ -269,7 +270,13 @@ public:
 
   // \returns number of 32 bit registers covered by a \p LM
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
-    return LM.getNumLanes();
+    // The assumption is that every lo16 subreg is an even bit and every hi16
+    // is an adjacent odd bit or vice versa.
+    uint64_t Mask = LM.getAsInteger();
+    uint64_t Even = Mask & 0xAAAAAAAAAAAAAAAAULL;
+    Mask = (Even >> 1) | Mask;
+    uint64_t Odd = Mask & 0x5555555555555555ULL;
+    return countPopulation(Odd);
   }
 
   // \returns a DWORD offset of a \p SubReg
