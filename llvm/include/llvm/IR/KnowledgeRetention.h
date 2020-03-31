@@ -33,7 +33,7 @@ IntrinsicInst *buildAssumeFromInst(Instruction *I);
 /// Calls BuildAssumeFromInst and if the resulting llvm.assume is valid insert
 /// if before I. This is usually what need to be done to salvage the knowledge
 /// contained in the instruction I.
-void salvageKnowledge(Instruction* I);
+void salvageKnowledge(Instruction *I);
 
 /// It is possible to have multiple Value for the argument of an attribute in
 /// the same llvm.assume on the same llvm::Value. This is rare but need to be
