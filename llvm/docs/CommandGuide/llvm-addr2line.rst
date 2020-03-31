@@ -17,17 +17,19 @@ GNU's :program:`addr2line`.
 
 Here are some of those differences:
 
--  Defaults not to print function names. Use `-f`_ to enable that.
+-  ``llvm-addr2line`` defaults not to print function names. Use `-f`_ to enable
+   that.
 
--  Defaults not to demangle function names. Use `-C`_ to switch the
-   demangling on.
+-  ``llvm-addr2line`` defaults not to demangle function names. Use `-C`_ to
+   switch the demangling on.
 
--  Defaults not to print inlined frames. Use `-i`_ to show inlined
-   frames for a source code location in an inlined function.
+-  ``llvm-addr2line`` defaults not to print inlined frames. Use `-i`_ to show
+   inlined frames for a source code location in an inlined function.
 
--  Uses `--output-style=GNU`_ by default.
+-  ``llvm-addr2line`` uses `--output-style=GNU`_ by default.
 
--  Parses options from the environment variable ``LLVM_ADDR2LINE_OPTS``.
+-  ``llvm-addr2line`` parses options from the environment variable
+   ``LLVM_ADDR2LINE_OPTS`` instead of from ``LLVM_SYMBOLIZER_OPTS``.
 
 SEE ALSO
 --------
