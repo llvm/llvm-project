@@ -627,7 +627,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   bool UseMovt = STI.useMovt();
 
   unsigned Size = TM.getPointerSize(0);
-  unsigned Alignment = 4;
+  const Align Alignment(4);
 
   auto addOpsForConstantPoolLoad = [&MF, Alignment,
                                     Size](MachineInstrBuilder &MIB,
@@ -639,10 +639,10 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     auto CPIndex =
         // For SB relative entries we need a target-specific constant pool.
         // Otherwise, just use a regular constant pool entry.
-        IsSBREL
-            ? ConstPool->getConstantPoolIndex(
-                  ARMConstantPoolConstant::Create(GV, ARMCP::SBREL), Alignment)
-            : ConstPool->getConstantPoolIndex(GV, Alignment);
+        IsSBREL ? ConstPool->getConstantPoolIndex(
+                      ARMConstantPoolConstant::Create(GV, ARMCP::SBREL),
+                      Alignment.value())
+                : ConstPool->getConstantPoolIndex(GV, Alignment.value());
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
         .addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
@@ -990,14 +990,14 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   case G_FCONSTANT: {
     // Load from constant pool
     unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() / 8;
-    unsigned Alignment = Size;
+    Align Alignment(Size);
 
     assert((Size == 4 || Size == 8) && "Unsupported FP constant type");
     auto LoadOpcode = Size == 4 ? ARM::VLDRS : ARM::VLDRD;
 
     auto ConstPool = MF.getConstantPool();
-    auto CPIndex =
-        ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(), Alignment);
+    auto CPIndex = ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(),
+                                                   Alignment.value());
     MIB->setDesc(TII.get(LoadOpcode));
     MIB->RemoveOperand(1);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)

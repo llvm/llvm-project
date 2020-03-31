@@ -4173,25 +4173,26 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
                                            bool IsCompressing) {
   SDLoc sdl = getCurSDLoc();
 
-  auto getMaskedStoreOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
-                           unsigned& Alignment) {
+  auto getMaskedStoreOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
+                               MaybeAlign &Alignment) {
     // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
     Src0 = I.getArgOperand(0);
     Ptr = I.getArgOperand(1);
-    Alignment = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    Alignment =
+        MaybeAlign(cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
     Mask = I.getArgOperand(3);
   };
-  auto getCompressingStoreOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
-                           unsigned& Alignment) {
+  auto getCompressingStoreOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
+                                    MaybeAlign &Alignment) {
     // llvm.masked.compressstore.*(Src0, Ptr, Mask)
     Src0 = I.getArgOperand(0);
     Ptr = I.getArgOperand(1);
     Mask = I.getArgOperand(2);
-    Alignment = 0;
+    Alignment = None;
   };
 
   Value  *PtrOperand, *MaskOperand, *Src0Operand;
-  unsigned Alignment;
+  MaybeAlign Alignment;
   if (IsCompressing)
     getCompressingStoreOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
   else
@@ -4204,19 +4205,16 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   EVT VT = Src0.getValueType();
   if (!Alignment)
-    Alignment = DAG.getEVTAlignment(VT);
+    Alignment = DAG.getEVTAlign(VT);
 
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
 
-  MachineMemOperand *MMO =
-    DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(PtrOperand),
-                          MachineMemOperand::MOStore,
-                          // TODO: Make MachineMemOperands aware of scalable
-                          // vectors.
-                          VT.getStoreSize().getKnownMinSize(),
-                          Alignment, AAInfo);
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      // TODO: Make MachineMemOperands aware of scalable
+      // vectors.
+      VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo);
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4316,9 +4314,9 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   SDValue Src0 = getValue(I.getArgOperand(0));
   SDValue Mask = getValue(I.getArgOperand(3));
   EVT VT = Src0.getValueType();
-  unsigned Alignment = (cast<ConstantInt>(I.getArgOperand(2)))->getZExtValue();
+  MaybeAlign Alignment(cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
   if (!Alignment)
-    Alignment = DAG.getEVTAlignment(VT);
+    Alignment = DAG.getEVTAlign(VT);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   AAMDNodes AAInfo;
@@ -4331,13 +4329,11 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this);
 
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
-  MachineMemOperand *MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(AS),
-                         MachineMemOperand::MOStore,
-                         // TODO: Make MachineMemOperands aware of scalable
-                         // vectors.
-                         MemoryLocation::UnknownSize,
-                         Alignment, AAInfo);
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(AS), MachineMemOperand::MOStore,
+      // TODO: Make MachineMemOperands aware of scalable
+      // vectors.
+      MemoryLocation::UnknownSize, *Alignment, AAInfo);
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
@@ -4354,25 +4350,26 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
 void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDLoc sdl = getCurSDLoc();
 
-  auto getMaskedLoadOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
-                           unsigned& Alignment) {
+  auto getMaskedLoadOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
+                              MaybeAlign &Alignment) {
     // @llvm.masked.load.*(Ptr, alignment, Mask, Src0)
     Ptr = I.getArgOperand(0);
-    Alignment = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    Alignment =
+        MaybeAlign(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
     Mask = I.getArgOperand(2);
     Src0 = I.getArgOperand(3);
   };
-  auto getExpandingLoadOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
-                           unsigned& Alignment) {
+  auto getExpandingLoadOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
+                                 MaybeAlign &Alignment) {
     // @llvm.masked.expandload.*(Ptr, Mask, Src0)
     Ptr = I.getArgOperand(0);
-    Alignment = 0;
+    Alignment = None;
     Mask = I.getArgOperand(1);
     Src0 = I.getArgOperand(2);
   };
 
   Value  *PtrOperand, *MaskOperand, *Src0Operand;
-  unsigned Alignment;
+  MaybeAlign Alignment;
   if (IsExpanding)
     getExpandingLoadOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
   else
@@ -4385,7 +4382,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   EVT VT = Src0.getValueType();
   if (!Alignment)
-    Alignment = DAG.getEVTAlignment(VT);
+    Alignment = DAG.getEVTAlign(VT);
 
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
@@ -4403,14 +4400,11 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
-  MachineMemOperand *MMO =
-    DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(PtrOperand),
-                          MachineMemOperand::MOLoad,
-                          // TODO: Make MachineMemOperands aware of scalable
-                          // vectors.
-                          VT.getStoreSize().getKnownMinSize(),
-                          Alignment, AAInfo, Ranges);
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      // TODO: Make MachineMemOperands aware of scalable
+      // vectors.
+      VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
@@ -4430,9 +4424,9 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-  unsigned Alignment = (cast<ConstantInt>(I.getArgOperand(1)))->getZExtValue();
+  MaybeAlign Alignment(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
   if (!Alignment)
-    Alignment = DAG.getEVTAlignment(VT);
+    Alignment = DAG.getEVTAlign(VT);
 
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
@@ -4445,14 +4439,11 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDValue Scale;
   bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this);
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
-  MachineMemOperand *MMO =
-    DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(AS),
-                         MachineMemOperand::MOLoad,
-                         // TODO: Make MachineMemOperands aware of scalable
-                         // vectors.
-                         MemoryLocation::UnknownSize,
-                         Alignment, AAInfo, Ranges);
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
+      // TODO: Make MachineMemOperands aware of scalable
+      // vectors.
+      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
 
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -4479,16 +4470,14 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   MVT MemVT = getValue(I.getCompareOperand()).getSimpleValueType();
   SDVTList VTs = DAG.getVTList(MemVT, MVT::i1, MVT::Other);
 
-  auto Alignment = DAG.getEVTAlignment(MemVT);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *MMO =
-    MF.getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
-                            Flags, MemVT.getStoreSize(), Alignment,
-                            AAMDNodes(), nullptr, SSID, SuccessOrdering,
-                            FailureOrdering);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
+      FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -4527,15 +4516,13 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   SDValue InChain = getRoot();
 
   auto MemVT = getValue(I.getValOperand()).getSimpleValueType();
-  auto Alignment = DAG.getEVTAlignment(MemVT);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *MMO =
-    MF.getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()), Flags,
-                            MemVT.getStoreSize(), Alignment, AAMDNodes(),
-                            nullptr, SSID, Ordering);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
