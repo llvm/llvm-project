@@ -140,7 +140,8 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
     MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
-  if (MtuneLowerCase == "cyclone" || MtuneLowerCase.find("apple") == 0) {
+  if (MtuneLowerCase == "cyclone" ||
+      StringRef(MtuneLowerCase).startswith("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
