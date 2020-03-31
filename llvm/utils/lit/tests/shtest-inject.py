@@ -1,5 +1,4 @@
-# Check that we can inject commands at the beginning of a ShTest using a custom
-# test format.
+# Check that we can inject commands at the beginning of a ShTest.
 
 # RUN: %{lit} -j 1 %{inputs}/shtest-inject/test-empty.txt --show-all | FileCheck --check-prefix=CHECK-TEST1 %s
 #
