@@ -710,8 +710,8 @@ std::string syntax::Token::str() const {
 }
 
 std::string syntax::Token::dumpForTests(const SourceManager &SM) const {
-  return std::string(
-      llvm::formatv("{0}   {1}", tok::getTokenName(kind()), text(SM)));
+  return std::string(llvm::formatv("Token(`{0}`, {1}, length = {2})", text(SM),
+                                   tok::getTokenName(kind()), length()));
 }
 
 std::string TokenBuffer::dumpForTests() const {
