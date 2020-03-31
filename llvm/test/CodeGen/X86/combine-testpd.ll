@@ -5,8 +5,8 @@
 ; testz(~X,Y) -> testc(X,Y)
 ;
 
-define i32 @testpdz_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdz_128_invert:
+define i32 @testpdz_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdz_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -23,8 +23,8 @@ define i32 @testpdz_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b)
   ret i32 %t5
 }
 
-define i32 @testpdz_256_invert(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdz_256_invert:
+define i32 @testpdz_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdz_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -44,11 +44,53 @@ define i32 @testpdz_256_invert(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b)
 }
 
 ;
+; testz(X,~Y) -> testc(Y,X)
+;
+
+define i32 @testpdz_128_invert1(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdz_128_invert1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vtestpd %xmm1, %xmm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t0 = bitcast <2 x double> %d to <2 x i64>
+  %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
+  %t2 = bitcast <2 x i64> %t1 to <2 x double>
+  %t3 = call i32 @llvm.x86.avx.vtestz.pd(<2 x double> %c, <2 x double> %t2)
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
+define i32 @testpdz_256_invert1(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdz_256_invert1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; CHECK-NEXT:    vtestpd %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t0 = bitcast <4 x double> %d to <4 x i64>
+  %t1 = xor <4 x i64> %t0, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %t2 = bitcast <4 x i64> %t1 to <4 x double>
+  %t3 = call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %c, <4 x double> %t2)
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
+;
 ; testc(~X,Y) -> testz(X,Y)
 ;
 
-define i32 @testpdc_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdc_128_invert:
+define i32 @testpdc_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -65,8 +107,8 @@ define i32 @testpdc_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b)
   ret i32 %t5
 }
 
-define i32 @testpdc_256_invert(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdc_256_invert:
+define i32 @testpdc_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -89,8 +131,8 @@ define i32 @testpdc_256_invert(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b)
 ; testnzc(~X,Y) -> testnzc(X,Y)
 ;
 
-define i32 @testpdnzc_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdnzc_128_invert:
+define i32 @testpdnzc_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdnzc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -107,8 +149,8 @@ define i32 @testpdnzc_128_invert(<2 x double> %c, <2 x double> %d, i32 %a, i32 %
   ret i32 %t5
 }
 
-define i32 @testpdnzc_256_invert(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpdnzc_256_invert:
+define i32 @testpdnzc_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdnzc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2

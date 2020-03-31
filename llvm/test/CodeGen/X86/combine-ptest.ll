@@ -5,8 +5,8 @@
 ; testz(~X,Y) -> testc(X,Y)
 ;
 
-define i32 @ptestz_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestz_128_invert:
+define i32 @ptestz_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -21,8 +21,8 @@ define i32 @ptestz_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
   ret i32 %t4
 }
 
-define i32 @ptestz_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestz_256_invert:
+define i32 @ptestz_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -40,11 +40,49 @@ define i32 @ptestz_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 }
 
 ;
+; testz(X,~Y) -> testc(Y,X)
+;
+
+define i32 @ptestz_128_invert1(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_invert1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vptest %xmm1, %xmm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t1 = xor <2 x i64> %d, <i64 -1, i64 -1>
+  %t2 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %c, <2 x i64> %t1)
+  %t3 = icmp ne i32 %t2, 0
+  %t4 = select i1 %t3, i32 %a, i32 %b
+  ret i32 %t4
+}
+
+define i32 @ptestz_256_invert1(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_invert1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = xor <4 x i64> %d, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %t2 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %c, <4 x i64> %t1)
+  %t3 = icmp ne i32 %t2, 0
+  %t4 = select i1 %t3, i32 %a, i32 %b
+  ret i32 %t4
+}
+
+;
 ; testc(~X,Y) -> testz(X,Y)
 ;
 
-define i32 @ptestc_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestc_128_invert:
+define i32 @ptestc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -59,8 +97,8 @@ define i32 @ptestc_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
   ret i32 %t4
 }
 
-define i32 @ptestc_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestc_256_invert:
+define i32 @ptestc_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -81,8 +119,8 @@ define i32 @ptestc_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; testnzc(~X,Y) -> testnzc(X,Y)
 ;
 
-define i32 @ptestnzc_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestnzc_128_invert:
+define i32 @ptestnzc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestnzc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -97,8 +135,8 @@ define i32 @ptestnzc_128_invert(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
   ret i32 %t4
 }
 
-define i32 @ptestnzc_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: ptestnzc_256_invert:
+define i32 @ptestnzc_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestnzc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -113,6 +151,74 @@ define i32 @ptestnzc_256_invert(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
   %t3 = icmp ne i32 %t2, 0
   %t4 = select i1 %t3, i32 %a, i32 %b
   ret i32 %t4
+}
+
+;
+; testz(-1,X) -> testz(X,X)
+;
+
+define i32 @ptestz_128_allones0(<2 x i64> %c, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_allones0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vptest %xmm0, %xmm1
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> <i64 -1, i64 -1>, <2 x i64> %c)
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 %a, i32 %b
+  ret i32 %t3
+}
+
+define i32 @ptestz_256_allones0(<4 x i64> %c, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_allones0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vptest %ymm0, %ymm1
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> %c)
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 %a, i32 %b
+  ret i32 %t3
+}
+
+;
+; testz(X,-1) -> testz(X,X)
+;
+
+define i32 @ptestz_128_allones1(<2 x i64> %c, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_allones1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vptest %xmm1, %xmm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %c, <2 x i64> <i64 -1, i64 -1>)
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 %a, i32 %b
+  ret i32 %t3
+}
+
+define i32 @ptestz_256_allones1(<4 x i64> %c, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_allones1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %c, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>)
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 %a, i32 %b
+  ret i32 %t3
 }
 
 define zeroext i1 @PR38522(<16 x i8>* %x, <16 x i8>* %y) {
