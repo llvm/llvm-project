@@ -793,8 +793,8 @@ void SCCPSolver::visitTerminator(Instruction &TI) {
 void SCCPSolver::visitCastInst(CastInst &I) {
   // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (isOverdefined(ValueState[&I]))
-    return (void)markOverdefined(&I);
+  if (ValueState[&I].isOverdefined())
+    return;
 
   ValueLatticeElement OpSt = getValueState(I.getOperand(0));
   if (Constant *OpC = getConstant(OpSt)) {
@@ -804,6 +804,13 @@ void SCCPSolver::visitCastInst(CastInst &I) {
       return;
     // Propagate constant value
     markConstant(&I, C);
+  } else if (OpSt.isConstantRange() && I.getDestTy()->isIntegerTy()) {
+    auto &LV = getValueState(&I);
+    ConstantRange OpRange = OpSt.getConstantRange();
+    Type *DestTy = I.getDestTy();
+    ConstantRange Res =
+        OpRange.castOp(I.getOpcode(), DL.getTypeSizeInBits(DestTy));
+    mergeInValue(LV, &I, ValueLatticeElement::getRange(Res));
   } else if (!OpSt.isUnknownOrUndef())
     markOverdefined(&I);
 }
