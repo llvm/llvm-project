@@ -1464,12 +1464,10 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   // TODO: can we be smarter about machine pointer info?
   MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-    PtrInfo,
-    MachineMemOperand::MOLoad |
-    MachineMemOperand::MODereferenceable |
-    MachineMemOperand::MOInvariant,
-    4,
-    MinAlign(64, StructOffset));
+      PtrInfo,
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      4, commonAlignment(Align(64), StructOffset));
 
   Register LoadAddr;
 
@@ -2028,10 +2026,10 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   Register GOTAddr = MRI.createGenericVirtualRegister(PtrTy);
 
   MachineMemOperand *GOTMMO = MF.getMachineMemOperand(
-    MachinePointerInfo::getGOT(MF),
-    MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-    MachineMemOperand::MOInvariant,
-    8 /*Size*/, 8 /*Align*/);
+      MachinePointerInfo::getGOT(MF),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      8 /*Size*/, Align(8));
 
   buildPCRelGlobalAddress(GOTAddr, PtrTy, B, GV, 0, SIInstrInfo::MO_GOTPCREL32);
 
@@ -4003,11 +4001,12 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   // FIXME: When intrinsic definition is fixed, this should have an MMO already.
   // TODO: Should this use datalayout alignment?
   const unsigned MemSize = (Size + 7) / 8;
-  const unsigned MemAlign = 4;
+  const Align MemAlign(4);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-    MachinePointerInfo(),
-    MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-    MachineMemOperand::MOInvariant, MemSize, MemAlign);
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
 
   // There are no 96-bit result scalar loads, but widening to 128-bit should

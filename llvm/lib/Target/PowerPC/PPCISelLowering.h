@@ -991,7 +991,7 @@ namespace llvm {
       MachinePointerInfo MPI;
       bool IsDereferenceable = false;
       bool IsInvariant = false;
-      unsigned Alignment = 0;
+      Align Alignment;
       AAMDNodes AAInfo;
       const MDNode *Ranges = nullptr;
 
