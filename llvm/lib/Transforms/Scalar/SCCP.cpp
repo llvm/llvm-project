@@ -965,6 +965,10 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
     return (void)markConstant(IV, &I, C);
   }
 
+  // Only use ranges for binary operators on integers.
+  if (!I.getType()->isIntegerTy())
+    return markOverdefined(&I);
+
   // Operands are either constant ranges, notconstant, overdefined or one of the
   // operands is a constant.
   ConstantRange A = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
