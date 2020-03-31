@@ -2909,10 +2909,10 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
   MachineMemOperand *WideMMO = nullptr;
   if (MachineMemOperand *MMO = LN->getMemOperand()) {
     MachineFunction &MF = DAG.getMachineFunction();
-    WideMMO = MF.getMachineMemOperand(MMO->getPointerInfo(), MMO->getFlags(),
-                    2*LoadLen, LoadLen, MMO->getAAInfo(), MMO->getRanges(),
-                    MMO->getSyncScopeID(), MMO->getOrdering(),
-                    MMO->getFailureOrdering());
+    WideMMO = MF.getMachineMemOperand(
+        MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
+        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMO->getOrdering(), MMO->getFailureOrdering());
   }
 
   SDValue Load0 = DAG.getLoad(LoadTy, dl, Chain, Base0, WideMMO);

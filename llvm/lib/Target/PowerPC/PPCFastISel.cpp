@@ -536,7 +536,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, Addr.Base.FI,
                                           Addr.Offset),
         MachineMemOperand::MOLoad, MFI.getObjectSize(Addr.Base.FI),
-        MFI.getObjectAlignment(Addr.Base.FI));
+        MFI.getObjectAlign(Addr.Base.FI));
 
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
       .addImm(Addr.Offset).addFrameIndex(Addr.Base.FI).addMemOperand(MMO);
@@ -682,7 +682,7 @@ bool PPCFastISel::PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr) {
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, Addr.Base.FI,
                                           Addr.Offset),
         MachineMemOperand::MOStore, MFI.getObjectSize(Addr.Base.FI),
-        MFI.getObjectAlignment(Addr.Base.FI));
+        MFI.getObjectAlign(Addr.Base.FI));
 
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc))
         .addReg(SrcReg)
@@ -1996,9 +1996,9 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
     return 0;
 
   // All FP constants are loaded from the constant pool.
-  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
-  assert(Align > 0 && "Unexpectedly missing alignment information!");
-  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
+  unsigned Idx =
+      MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment.value());
   const bool HasSPE = PPCSubTarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)
@@ -2011,7 +2011,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
       MachinePointerInfo::getConstantPool(*FuncInfo.MF),
-      MachineMemOperand::MOLoad, (VT == MVT::f32) ? 4 : 8, Align);
+      MachineMemOperand::MOLoad, (VT == MVT::f32) ? 4 : 8, Alignment);
 
   unsigned Opc;
 

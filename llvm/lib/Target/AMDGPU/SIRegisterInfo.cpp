@@ -673,7 +673,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t ScratchOffsetRegDelta = 0;
 
-  unsigned Align = MFI.getObjectAlignment(Index);
+  Align Alignment = MFI.getObjectAlign(Index);
   const MachinePointerInfo &BasePtrInfo = MMO->getPointerInfo();
 
   Register TmpReg =
@@ -749,9 +749,9 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       }
 
       MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(EltSize * i);
-      MachineMemOperand *NewMMO
-        = MF->getMachineMemOperand(PInfo, MMO->getFlags(),
-                                   EltSize, MinAlign(Align, EltSize * i));
+      MachineMemOperand *NewMMO =
+          MF->getMachineMemOperand(PInfo, MMO->getFlags(), EltSize,
+                                   commonAlignment(Alignment, EltSize * i));
 
       MIB = BuildMI(*MBB, MI, DL, Desc)
                 .addReg(SubReg,
@@ -877,12 +877,12 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         Mov.addReg(SuperReg, RegState::Implicit | SuperKillState);
       }
 
-      unsigned Align = FrameInfo.getObjectAlignment(Index);
+      Align Alignment = FrameInfo.getObjectAlign(Index);
       MachinePointerInfo PtrInfo
         = MachinePointerInfo::getFixedStack(*MF, Index, EltSize * i);
-      MachineMemOperand *MMO
-        = MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                   EltSize, MinAlign(Align, EltSize * i));
+      MachineMemOperand *MMO =
+          MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, EltSize,
+                                   commonAlignment(Alignment, EltSize * i));
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_V32_SAVE))
         .addReg(TmpVGPR, RegState::Kill)      // src
         .addFrameIndex(Index)                 // vaddr
@@ -951,14 +951,14 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       // FIXME: We should use S_LOAD_DWORD here for VI.
       if (!TmpVGPR.isValid())
         TmpVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
-      unsigned Align = FrameInfo.getObjectAlignment(Index);
+      Align Alignment = FrameInfo.getObjectAlign(Index);
 
       MachinePointerInfo PtrInfo
         = MachinePointerInfo::getFixedStack(*MF, Index, EltSize * i);
 
-      MachineMemOperand *MMO = MF->getMachineMemOperand(PtrInfo,
-        MachineMemOperand::MOLoad, EltSize,
-        MinAlign(Align, EltSize * i));
+      MachineMemOperand *MMO =
+          MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, EltSize,
+                                   commonAlignment(Alignment, EltSize * i));
 
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_V32_RESTORE), TmpVGPR)
         .addFrameIndex(Index)                 // vaddr

@@ -8054,7 +8054,7 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
   RLI.MPI = LD->getPointerInfo();
   RLI.IsDereferenceable = LD->isDereferenceable();
   RLI.IsInvariant = LD->isInvariant();
-  RLI.Alignment = LD->getAlignment();
+  RLI.Alignment = LD->getAlign();
   RLI.AAInfo = LD->getAAInfo();
   RLI.Ranges = LD->getRanges();
 
@@ -8380,7 +8380,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       RLI.Chain = Store;
       RLI.MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
-      RLI.Alignment = 4;
+      RLI.Alignment = Align(4);
 
       MachineMemOperand *MMO =
         MF.getMachineMemOperand(RLI.MPI, MachineMemOperand::MOLoad, 4,
@@ -8432,7 +8432,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       RLI.Chain = Store;
       RLI.MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
-      RLI.Alignment = 4;
+      RLI.Alignment = Align(4);
     }
 
     MachineMemOperand *MMO =
