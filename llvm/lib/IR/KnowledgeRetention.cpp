@@ -232,6 +232,11 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
+void llvm::salvageKnowledge(Instruction* I) {
+  if (Instruction* Intr = buildAssumeFromInst(I))
+    Intr->insertBefore(I);
+}
+
 static bool bundleHasArgument(const CallBase::BundleOpInfo &BOI,
                                unsigned Idx) {
   return BOI.End - BOI.Begin > Idx;
