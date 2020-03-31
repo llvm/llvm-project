@@ -119,6 +119,7 @@ private:
                         Callback<std::vector<SelectionRange>>);
   void onDocumentLink(const DocumentLinkParams &,
                       Callback<std::vector<DocumentLink>>);
+  void onSemanticTokens(const SemanticTokensParams &, Callback<SemanticTokens>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 

@@ -38,6 +38,16 @@
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
 # CHECK-NEXT:      "selectionRangeProvider": true,
+# CHECK-NEXT:      "semanticTokensProvider": {
+# CHECK-NEXT:        "documentProvider": true,
+# CHECK-NEXT:        "legend": {
+# CHECK-NEXT:          "tokenModifiers": [],
+# CHECK-NEXT:          "tokenTypes": [
+# CHECK-NEXT:            "variable",
+# CHECK:               ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "rangeProvider": false
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "signatureHelpProvider": {
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          "(",

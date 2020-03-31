@@ -720,6 +720,41 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   ASSERT_EQ(Counter.Count, 1);
 }
 
+TEST(SemanticHighlighting, toSemanticTokens) {
+  auto CreatePosition = [](int Line, int Character) -> Position {
+    Position Pos;
+    Pos.line = Line;
+    Pos.character = Character;
+    return Pos;
+  };
+
+  std::vector<HighlightingToken> Tokens = {
+      {HighlightingKind::Variable,
+       Range{CreatePosition(1, 1), CreatePosition(1, 5)}},
+      {HighlightingKind::Function,
+       Range{CreatePosition(3, 4), CreatePosition(3, 7)}},
+      {HighlightingKind::Variable,
+       Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
+  };
+
+  std::vector<SemanticToken> Results = toSemanticTokens(Tokens);
+  EXPECT_EQ(Tokens.size(), Results.size());
+  EXPECT_EQ(Results[0].tokenType, unsigned(HighlightingKind::Variable));
+  EXPECT_EQ(Results[0].deltaLine, 1u);
+  EXPECT_EQ(Results[0].deltaStart, 1u);
+  EXPECT_EQ(Results[0].length, 4u);
+
+  EXPECT_EQ(Results[1].tokenType, unsigned(HighlightingKind::Function));
+  EXPECT_EQ(Results[1].deltaLine, 2u);
+  EXPECT_EQ(Results[1].deltaStart, 4u);
+  EXPECT_EQ(Results[1].length, 3u);
+
+  EXPECT_EQ(Results[2].tokenType, unsigned(HighlightingKind::Variable));
+  EXPECT_EQ(Results[2].deltaLine, 0u);
+  EXPECT_EQ(Results[2].deltaStart, 4u);
+  EXPECT_EQ(Results[2].length, 4u);
+}
+
 TEST(SemanticHighlighting, toTheiaSemanticHighlightingInformation) {
   auto CreatePosition = [](int Line, int Character) -> Position {
     Position Pos;

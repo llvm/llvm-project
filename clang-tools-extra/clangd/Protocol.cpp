@@ -984,6 +984,29 @@ llvm::json::Value toJSON(const FileStatus &FStatus) {
   };
 }
 
+void SemanticToken::encode(std::vector<unsigned int> &Out) const {
+  Out.push_back(deltaLine);
+  Out.push_back(deltaStart);
+  Out.push_back(length);
+  Out.push_back(tokenType);
+  Out.push_back(tokenModifiers);
+}
+
+llvm::json::Value toJSON(const SemanticTokens &Tokens) {
+  std::vector<unsigned> Data;
+  for (const auto &Tok : Tokens.data)
+    Tok.encode(Data);
+  llvm::json::Object Result{{"data", std::move(Data)}};
+  if (Tokens.resultId)
+    Result["resultId"] = *Tokens.resultId;
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument);
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
                               const DocumentHighlight &V) {
   O << V.range;

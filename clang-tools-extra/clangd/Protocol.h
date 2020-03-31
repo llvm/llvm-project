@@ -1340,7 +1340,47 @@ struct FileStatus {
   std::string state;
   // FIXME: add detail messages.
 };
-llvm::json::Value toJSON(const FileStatus &FStatus);
+llvm::json::Value toJSON(const FileStatus &);
+
+/// Specifies a single semantic token in the document.
+/// This struct is not part of LSP, which just encodes lists of tokens as
+/// arrays of numbers directly.
+struct SemanticToken {
+  /// token line number, relative to the previous token
+  unsigned deltaLine = 0;
+  /// token start character, relative to the previous token
+  /// (relative to 0 or the previous token's start if they are on the same line)
+  unsigned deltaStart = 0;
+  /// the length of the token. A token cannot be multiline
+  unsigned length = 0;
+  /// will be looked up in `SemanticTokensLegend.tokenTypes`
+  unsigned tokenType = 0;
+  /// each set bit will be looked up in `SemanticTokensLegend.tokenModifiers`
+  unsigned tokenModifiers = 0;
+
+  void encode(std::vector<unsigned> &Out) const;
+};
+
+/// A versioned set of tokens.
+struct SemanticTokens {
+  // An optional result id. If provided and clients support delta updating
+  // the client will include the result id in the next semantic token request.
+  // A server can then instead of computing all semantic tokens again simply
+  // send a delta.
+  llvm::Optional<std::string> resultId;
+
+  /// The actual tokens. For a detailed description about how the data is
+  /// structured pls see
+  /// https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
+  std::vector<SemanticToken> data;
+};
+llvm::json::Value toJSON(const SemanticTokens &);
+
+struct SemanticTokensParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, SemanticTokensParams &);
 
 /// Represents a semantic highlighting information that has to be applied on a
 /// specific line of the text document.
