@@ -34,6 +34,9 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
   /// Whether or not the function is an interrupt handler.
   bool IsInterruptHandler;
 
+  /// Whether or not the function is an non-blocking interrupt handler.
+  bool IsSignalHandler;
+
   /// Size of the callee-saved register portion of the
   /// stack frame in bytes.
   unsigned CalleeSavedFrameSize;
@@ -44,18 +47,16 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
 public:
   AVRMachineFunctionInfo()
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
-        IsInterruptHandler(false), CalleeSavedFrameSize(0),
-        VarArgsFrameIndex(0) {}
+        IsInterruptHandler(false), IsSignalHandler(false),
+        CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {}
 
   explicit AVRMachineFunctionInfo(MachineFunction &MF)
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
         CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {
     unsigned CallConv = MF.getFunction().getCallingConv();
 
-    this->IsInterruptHandler =
-      CallConv == CallingConv::AVR_INTR ||
-      CallConv == CallingConv::AVR_SIGNAL ||
-      MF.getFunction().hasFnAttribute("interrupt");
+    this->IsInterruptHandler = CallConv == CallingConv::AVR_INTR || MF.getFunction().hasFnAttribute("interrupt");
+    this->IsSignalHandler = CallConv == CallingConv::AVR_SIGNAL || MF.getFunction().hasFnAttribute("signal");
   }
 
   bool getHasSpills() const { return HasSpills; }
@@ -67,7 +68,11 @@ public:
   bool getHasStackArgs() const { return HasStackArgs; }
   void setHasStackArgs(bool B) { HasStackArgs = B; }
 
+  /// Checks if the function is some form of interrupt service routine.
+  bool isInterruptOrSignalHandler() const { return isInterruptHandler() || isSignalHandler(); }
+
   bool isInterruptHandler() const { return IsInterruptHandler; }
+  bool isSignalHandler() const { return IsSignalHandler; }
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned Bytes) { CalleeSavedFrameSize = Bytes; }
