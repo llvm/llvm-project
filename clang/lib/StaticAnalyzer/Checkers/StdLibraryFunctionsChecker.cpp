@@ -215,9 +215,16 @@ class StdLibraryFunctionsChecker
   // Represents a buffer argument with an additional size argument.
   // E.g. the first two arguments here:
   //   ctime_s(char *buffer, rsize_t bufsz, const time_t *time);
+  // Another example:
+  //   size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+  //   // Here, ptr is the buffer, and its minimum size is `size * nmemb`.
   class BufferSizeConstraint : public ValueConstraint {
     // The argument which holds the size of the buffer.
     ArgNo SizeArgN;
+    // The argument which is a multiplier to size. This is set in case of
+    // `fread` like functions where the size is computed as a multiplication of
+    // two arguments.
+    llvm::Optional<ArgNo> SizeMultiplierArgN;
     // The operator we use in apply. This is negated in negate().
     BinaryOperator::Opcode Op = BO_LE;
 
@@ -225,17 +232,27 @@ class StdLibraryFunctionsChecker
     BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize)
         : ValueConstraint(Buffer), SizeArgN(BufSize) {}
 
+    BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize, ArgNo BufSizeMultiplier)
+        : ValueConstraint(Buffer), SizeArgN(BufSize),
+          SizeMultiplierArgN(BufSizeMultiplier) {}
+
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary,
                           CheckerContext &C) const override {
+      SValBuilder &SvalBuilder = C.getSValBuilder();
       // The buffer argument.
       SVal BufV = getArgSVal(Call, getArgNo());
       // The size argument.
       SVal SizeV = getArgSVal(Call, SizeArgN);
+      // Multiply with another argument if given.
+      if (SizeMultiplierArgN) {
+        SVal SizeMulV = getArgSVal(Call, *SizeMultiplierArgN);
+        SizeV = SvalBuilder.evalBinOp(State, BO_Mul, SizeV, SizeMulV,
+                                      Summary.getArgType(SizeArgN));
+      }
       // The dynamic size of the buffer argument, got from the analyzer engine.
       SVal BufDynSize = getDynamicSizeWithOffset(State, BufV);
 
-      SValBuilder &SvalBuilder = C.getSValBuilder();
       SVal Feasible = SvalBuilder.evalBinOp(State, Op, SizeV, BufDynSize,
                                             SvalBuilder.getContext().BoolTy);
       if (auto F = Feasible.getAs<DefinedOrUnknownSVal>())
@@ -744,8 +761,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                               IntRangeVector Ranges) {
     return std::make_shared<RangeConstraint>(ArgN, Kind, Ranges);
   };
-  auto BufferSize = [](ArgNo BufArgN, ArgNo SizeArgN) {
-    return std::make_shared<BufferSizeConstraint>(BufArgN, SizeArgN);
+  auto BufferSize = [](auto... Args) {
+    return std::make_shared<BufferSizeConstraint>(Args...);
   };
   struct {
     auto operator()(RangeKind Kind, IntRangeVector Ranges) {
@@ -988,6 +1005,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 EvalCallAsPure)
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1))));
+    addToFunctionSummaryMap(
+        "__buf_size_arg_constraint_mul",
+        Summary(ArgTypes{ConstVoidPtrTy, SizeTy, SizeTy}, RetType{IntTy},
+                EvalCallAsPure)
+            .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
+                                      /*BufSizeMultiplier=*/ArgNo(2))));
   }
 }
 
