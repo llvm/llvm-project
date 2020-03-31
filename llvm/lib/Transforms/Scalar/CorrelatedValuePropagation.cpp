@@ -790,7 +790,10 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (!RHS || !RHS->getValue().isMask())
     return false;
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BB, BinOp);
+  // We can only replace the AND with LHS based on range info if the range does
+  // not include undef.
+  ConstantRange LRange =
+      LVI->getConstantRange(LHS, BB, BinOp, /*UndefAllowed=*/false);
   if (!LRange.getUnsignedMax().ule(RHS->getValue()))
     return false;
 
