@@ -25,7 +25,7 @@
 # CHECK:      error: undefined symbol: vtable for Foo 
 # CHECK-NEXT: >>> referenced by undef.s
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x15)
-# CHECK-NEXT: the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+# CHECK-NEXT: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
 
 # Check that this symbol isn't demangled
 

@@ -901,8 +901,9 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   }
 
   if (sym.getName().startswith("_ZTV"))
-    msg += "\nthe vtable symbol may be undefined because the class is missing "
-           "its key function (see https://lld.llvm.org/missingkeyfunction)";
+    msg +=
+        "\n>>> the vtable symbol may be undefined because the class is missing "
+        "its key function (see https://lld.llvm.org/missingkeyfunction)";
 
   if (undef.isWarning)
     warn(msg);
