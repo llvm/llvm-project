@@ -8,20 +8,14 @@ assert sys.platform.startswith('linux') or sys.platform.startswith('darwin') \
     or sys.platform.startswith('cygwin') or sys.platform.startswith('freebsd') \
     or sys.platform.startswith('netbsd')
 
-def env_path():
-    ep = os.environ.get('LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT')
-    assert ep is not None
-    ep = os.path.realpath(ep)
-    assert os.path.isdir(ep)
-    return ep
+test_root = None
 
-env_path_global = env_path()
-
-# Make sure we don't try and write outside of env_path.
+# Make sure we don't try and write outside of the test root.
 # All paths used should be sanitized
 def sanitize(p):
+    assert os.path.isdir(test_root)
     p = os.path.realpath(p)
-    if os.path.commonprefix([env_path_global, p]):
+    if os.path.commonprefix([test_root, p]):
         return p
     assert False
 
@@ -44,7 +38,7 @@ def clean_recursive(root_p):
 
 
 def init_test_directory(root_p):
-    root_p = sanitize(root_p)
+    root_p = os.path.realpath(root_p)
     assert not os.path.exists(root_p)
     os.makedirs(root_p)
 
@@ -87,6 +81,7 @@ def create_socket(source):
 
 
 if __name__ == '__main__':
-    command = " ".join(sys.argv[1:])
+    test_root = os.path.realpath(sys.argv[1])
+    command = " ".join(sys.argv[2:])
     eval(command)
     sys.exit(0)
