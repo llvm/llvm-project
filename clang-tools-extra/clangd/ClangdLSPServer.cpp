@@ -458,6 +458,14 @@ void ClangdLSPServer::notify(llvm::StringRef Method, llvm::json::Value Params) {
   Transp.notify(Method, std::move(Params));
 }
 
+static std::vector<llvm::StringRef> semanticTokenTypes() {
+  std::vector<llvm::StringRef> Types;
+  for (unsigned I = 0; I <= static_cast<unsigned>(HighlightingKind::LastKind);
+       ++I)
+    Types.push_back(toSemanticTokenType(static_cast<HighlightingKind>(I)));
+  return Types;
+}
+
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
@@ -568,6 +576,14 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                  // We do extra checks for '>' and ':' in completion to only
                  // trigger on '->' and '::'.
                  {"triggerCharacters", {".", ">", ":"}},
+             }},
+            {"semanticTokensProvider",
+             llvm::json::Object{
+                 {"documentProvider", true},
+                 {"rangeProvider", false},
+                 {"legend",
+                  llvm::json::Object{{"tokenTypes", semanticTokenTypes()},
+                                     {"tokenModifiers", llvm::json::Array()}}},
              }},
             {"signatureHelpProvider",
              llvm::json::Object{
@@ -1220,6 +1236,20 @@ void ClangdLSPServer::onDocumentLink(
       });
 }
 
+void ClangdLSPServer::onSemanticTokens(const SemanticTokensParams &Params,
+                                       Callback<SemanticTokens> CB) {
+  Server->semanticHighlights(
+      Params.textDocument.uri.file(),
+      [CB(std::move(CB))](
+          llvm::Expected<std::vector<HighlightingToken>> Toks) mutable {
+        if (!Toks)
+          return CB(Toks.takeError());
+        SemanticTokens Result;
+        Result.data = toSemanticTokens(*Toks);
+        CB(std::move(Result));
+      });
+}
+
 ClangdLSPServer::ClangdLSPServer(
     class Transport &Transp, const FileSystemProvider &FSProvider,
     const clangd::CodeCompleteOptions &CCOpts,
@@ -1267,6 +1297,7 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
   MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
   MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
+  MsgHandler->bind("textDocument/semanticTokens", &ClangdLSPServer::onSemanticTokens);
   // clang-format on
 }
 

@@ -6,8 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// An implementation of semantic highlighting based on this proposal:
-// https://github.com/microsoft/vscode-languageserver-node/pull/367 in clangd.
+// This file supports semantic highlighting: categorizing tokens in the file so
+// that the editor can color/style them differently.
+//
+// This is particularly valuable for C++: its complex and context-dependent
+// grammar is a challenge for simple syntax-highlighting techniques.
+//
+// We support two protocols for providing highlights to the client:
+// - the `textDocument/semanticTokens` request from LSP 3.16
+//   https://github.com/microsoft/vscode-languageserver-node/blob/release/protocol/3.16.0-next.1/protocol/src/protocol.semanticTokens.proposed.ts
+// - the earlier proposed `textDocument/semanticHighlighting` notification
+//   https://github.com/microsoft/vscode-languageserver-node/pull/367
+//   This is referred to as "Theia" semantic highlighting in the code.
+//   It was supported from clangd 9 but should be considered deprecated as of
+//   clangd 11 and eventually removed.
+//
 // Semantic highlightings are calculated for an AST by visiting every AST node
 // and classifying nodes that are interesting to highlight (variables/function
 // calls etc.).
@@ -74,6 +87,9 @@ bool operator==(const LineHighlightings &L, const LineHighlightings &R);
 // Returns all HighlightingTokens from an AST. Only generates highlights for the
 // main AST.
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
+
+std::vector<SemanticToken> toSemanticTokens(llvm::ArrayRef<HighlightingToken>);
+llvm::StringRef toSemanticTokenType(HighlightingKind Kind);
 
 /// Converts a HighlightingKind to a corresponding TextMate scope
 /// (https://manual.macromates.com/en/language_grammars).
