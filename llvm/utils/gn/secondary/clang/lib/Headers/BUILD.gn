@@ -46,7 +46,7 @@ copy("arm_headers") {
     ":arm_sve",
   ]
   sources = []
-  foreach (dep, deps) {
+  foreach(dep, deps) {
     sources += get_target_outputs(dep)
   }
   outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
@@ -169,6 +169,7 @@ copy("Headers") {
     "vecintrin.h",
     "vpclmulqdqintrin.h",
     "waitpkgintrin.h",
+    "wasm_simd128.h",
     "wbnoinvdintrin.h",
     "wmmintrin.h",
     "__wmmintrin_aes.h",
