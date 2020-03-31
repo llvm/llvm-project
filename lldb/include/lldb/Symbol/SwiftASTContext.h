@@ -94,15 +94,16 @@ CompilerType ToCompilerType(swift::Type qual_type);
 /// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
 class TypePayloadSwift {
   /// Layout: bit 1 ... IsFixedValueBuffer.
-  uint32_t m_payload = 0;
+  Type::Payload m_payload = 0;
 
   static constexpr unsigned FixedValueBufferBit = 1;
 
 public:
   TypePayloadSwift() = default;
   explicit TypePayloadSwift(bool is_fixed_value_buffer);
-  explicit TypePayloadSwift(uint32_t opaque_payload) : m_payload(opaque_payload) {}
-  operator uint32_t() { return m_payload; }
+  explicit TypePayloadSwift(Type::Payload opaque_payload)
+      : m_payload(opaque_payload) {}
+  operator Type::Payload() { return m_payload; }
 
   /// \return whether this is a Swift fixed-size buffer. Resilient variables in
   /// fixed-size buffers may be indirect depending on the runtime size of the
