@@ -6252,62 +6252,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Y = getValue(I.getArgOperand(1));
     SDValue Z = getValue(I.getArgOperand(2));
     EVT VT = X.getValueType();
-    SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);
-    SDValue Zero = DAG.getConstant(0, sdl, VT);
-    SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
 
-    // When X == Y, this is rotate. If the data type has a power-of-2 size, we
-    // avoid the select that is necessary in the general case to filter out
-    // the 0-shift possibility that leads to UB.
-    if (X == Y && isPowerOf2_32(VT.getScalarSizeInBits())) {
+    if (X == Y) {
       auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
-      if (TLI.isOperationLegalOrCustom(RotateOpcode, VT)) {
-        setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
-        return;
-      }
-
-      // Some targets only rotate one way. Try the opposite direction.
-      RotateOpcode = IsFSHL ? ISD::ROTR : ISD::ROTL;
-      if (TLI.isOperationLegalOrCustom(RotateOpcode, VT)) {
-        // Negate the shift amount because it is safe to ignore the high bits.
-        SDValue NegShAmt = DAG.getNode(ISD::SUB, sdl, VT, Zero, Z);
-        setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, NegShAmt));
-        return;
-      }
-
-      // fshl (rotl): (X << (Z % BW)) | (X >> ((0 - Z) % BW))
-      // fshr (rotr): (X << ((0 - Z) % BW)) | (X >> (Z % BW))
-      SDValue NegZ = DAG.getNode(ISD::SUB, sdl, VT, Zero, Z);
-      SDValue NShAmt = DAG.getNode(ISD::UREM, sdl, VT, NegZ, BitWidthC);
-      SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : NShAmt);
-      SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, X, IsFSHL ? NShAmt : ShAmt);
-      setValue(&I, DAG.getNode(ISD::OR, sdl, VT, ShX, ShY));
-      return;
-    }
-
-    auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
-    if (TLI.isOperationLegalOrCustom(FunnelOpcode, VT)) {
+      setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
+    } else {
+      auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
       setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
-      return;
     }
-
-    // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-    // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
-    SDValue InvShAmt = DAG.getNode(ISD::SUB, sdl, VT, BitWidthC, ShAmt);
-    SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : InvShAmt);
-    SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, Y, IsFSHL ? InvShAmt : ShAmt);
-    SDValue Or = DAG.getNode(ISD::OR, sdl, VT, ShX, ShY);
-
-    // If (Z % BW == 0), then the opposite direction shift is shift-by-bitwidth,
-    // and that is undefined. We must compare and select to avoid UB.
-    EVT CCVT = MVT::i1;
-    if (VT.isVector())
-      CCVT = EVT::getVectorVT(*Context, CCVT, VT.getVectorNumElements());
-
-    // For fshl, 0-shift returns the 1st arg (X).
-    // For fshr, 0-shift returns the 2nd arg (Y).
-    SDValue IsZeroShift = DAG.getSetCC(sdl, CCVT, ShAmt, Zero, ISD::SETEQ);
-    setValue(&I, DAG.getSelect(sdl, VT, IsZeroShift, IsFSHL ? X : Y, Or));
     return;
   }
   case Intrinsic::sadd_sat: {
