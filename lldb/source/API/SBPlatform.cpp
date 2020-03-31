@@ -306,9 +306,12 @@ SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
 SBPlatform::~SBPlatform() = default;
 
 SBPlatform SBPlatform::GetHostPlatform() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBPlatform, SBPlatform,
+                                    GetHostPlatform);
+
   SBPlatform host_platform;
   host_platform.m_opaque_sp = Platform::GetHostPlatform();
-  return host_platform;
+  return LLDB_RECORD_RESULT(host_platform);
 }
 
 bool SBPlatform::IsValid() const {
@@ -756,6 +759,8 @@ void RegisterMethods<SBPlatform>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBPlatform, GetEnvironment, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBUnixSignals, SBPlatform, GetUnixSignals,
                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBPlatform, SBPlatform, GetHostPlatform,
+                              ());
 }
 
 }
