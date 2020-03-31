@@ -336,9 +336,12 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
          "expected matching number of tile sizes and loops");
 
   if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      llvm_unreachable("Unexpected conv with padding");
+    // For conv op only support tiling along batch dimension (which is the first
+    // loop).
+    if (convOp.padding() &&
+        !llvm::all_of(tileSizes.drop_front(),
+                      [](Value val) { return isZero(val); }))
+      return llvm::None;
   }
 
   // If permutation is empty, use the identity. Build the permutation map
@@ -420,12 +423,6 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
   if (tileSizes.empty())
     return llvm::None;
 
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      llvm_unreachable("Unexpected conv with padding");
-  }
-
   // The following uses the convention that "tiling by zero" skips tiling a
   // particular dimension. This convention is significantly simpler to handle
   // instead of adjusting affine maps to account for missing dimensions.
@@ -435,6 +432,14 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
   // If only 0 tilings are left, then return.
   if (llvm::all_of(tileSizes, [](int64_t v) { return v == 0; }))
     return llvm::None;
+
+  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
+    // For conv op only support tiling along batch dimension (which is the first
+    // loop).
+    if (convOp.padding() && !llvm::all_of(tileSizes.drop_front(),
+                                          [](int64_t val) { return val == 0; }))
+      return llvm::None;
+  }
 
   // Create a builder for tile size constants.
   OpBuilder::InsertionGuard g(b);
