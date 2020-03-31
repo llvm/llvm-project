@@ -9,9 +9,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 // REQUIRES: fcoroutines-ts
-
-// RUN: %{build} -fcoroutines-ts
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fcoroutines-ts
 
 #include <experimental/coroutine>
 
