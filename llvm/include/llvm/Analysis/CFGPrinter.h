@@ -20,6 +20,7 @@
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/HeatUtils.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -29,26 +30,22 @@
 #include "llvm/Support/GraphWriter.h"
 
 namespace llvm {
-class CFGViewerPass
-    : public PassInfoMixin<CFGViewerPass> {
+class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGOnlyViewerPass
-    : public PassInfoMixin<CFGOnlyViewerPass> {
+class CFGOnlyViewerPass : public PassInfoMixin<CFGOnlyViewerPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGPrinterPass
-    : public PassInfoMixin<CFGPrinterPass> {
+class CFGPrinterPass : public PassInfoMixin<CFGPrinterPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGOnlyPrinterPass
-    : public PassInfoMixin<CFGOnlyPrinterPass> {
+class CFGOnlyPrinterPass : public PassInfoMixin<CFGOnlyPrinterPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -58,13 +55,20 @@ private:
   const Function *F;
   const BlockFrequencyInfo *BFI;
   const BranchProbabilityInfo *BPI;
+  uint64_t MaxFreq;
+  bool ShowHeat;
+  bool EdgeWeights;
+  bool RawWeights;
 
 public:
-  DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr) {}
+  DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
 
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-             BranchProbabilityInfo *BPI)
-      : F(F), BFI(BFI), BPI(BPI) {
+              BranchProbabilityInfo *BPI, uint64_t MaxFreq)
+      : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
+    ShowHeat = false;
+    EdgeWeights = true;
+    RawWeights = true;
   }
 
   const BlockFrequencyInfo *getBFI() { return BFI; }
@@ -72,6 +76,24 @@ public:
   const BranchProbabilityInfo *getBPI() { return BPI; }
 
   const Function *getFunction() { return this->F; }
+
+  uint64_t getMaxFreq() { return MaxFreq; }
+
+  uint64_t getFreq(const BasicBlock *BB) {
+    return BFI->getBlockFreq(BB).getFrequency();
+  }
+
+  void setHeatColors(bool ShowHeat) { this->ShowHeat = ShowHeat; }
+
+  bool showHeatColors() { return ShowHeat; }
+
+  void setRawEdgeWeights(bool RawWeights) { this->RawWeights = RawWeights; }
+
+  bool useRawEdgeWeights() { return RawWeights; }
+
+  void setEdgeWeights(bool EdgeWeights) { this->EdgeWeights = EdgeWeights; }
+
+  bool showEdgeWeights() { return EdgeWeights; }
 };
 
 template <>
@@ -96,12 +118,13 @@ struct GraphTraits<DOTFuncInfo *> : public GraphTraits<const BasicBlock *> {
   }
 };
 
-template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
+template <>
+struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   // Cache for is hidden property
-  llvm::DenseMap <const BasicBlock *, bool> isHiddenBasicBlock;
+  llvm::DenseMap<const BasicBlock *, bool> isHiddenBasicBlock;
 
-  DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(DOTFuncInfo *CFGInfo) {
     return "CFG for '" + CFGInfo->getFunction()->getName().str() + "' function";
@@ -131,22 +154,23 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
 
     OS << *Node;
     std::string OutStr = OS.str();
-    if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
+    if (OutStr[0] == '\n')
+      OutStr.erase(OutStr.begin());
 
     // Process string output to make it nicer...
     unsigned ColNum = 0;
     unsigned LastSpace = 0;
     for (unsigned i = 0; i != OutStr.length(); ++i) {
-      if (OutStr[i] == '\n') {                            // Left justify
+      if (OutStr[i] == '\n') { // Left justify
         OutStr[i] = '\\';
-        OutStr.insert(OutStr.begin()+i+1, 'l');
+        OutStr.insert(OutStr.begin() + i + 1, 'l');
         ColNum = 0;
         LastSpace = 0;
-      } else if (OutStr[i] == ';') {                      // Delete comments!
-        unsigned Idx = OutStr.find('\n', i+1);            // Find end of line
-        OutStr.erase(OutStr.begin()+i, OutStr.begin()+Idx);
+      } else if (OutStr[i] == ';') {             // Delete comments!
+        unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
+        OutStr.erase(OutStr.begin() + i, OutStr.begin() + Idx);
         --i;
-      } else if (ColNum == MaxColumns) {                  // Wrap lines.
+      } else if (ColNum == MaxColumns) { // Wrap lines.
         // Wrap very long names even though we can't find a space.
         if (!LastSpace)
           LastSpace = i;
@@ -154,8 +178,7 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
         ColNum = i - LastSpace;
         LastSpace = 0;
         i += 3; // The loop will advance 'i' again.
-      }
-      else
+      } else
         ++ColNum;
       if (OutStr[i] == ' ')
         LastSpace = i;
@@ -163,8 +186,7 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
     return OutStr;
   }
 
-  std::string getNodeLabel(const BasicBlock *Node,
-                           DOTFuncInfo *CFGInfo) {
+  std::string getNodeLabel(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
 
     if (isSimple())
       return getSimpleNodeLabel(Node, CFGInfo);
@@ -183,7 +205,8 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
     if (const SwitchInst *SI = dyn_cast<SwitchInst>(Node->getTerminator())) {
       unsigned SuccNo = I.getSuccessorIndex();
 
-      if (SuccNo == 0) return "def";
+      if (SuccNo == 0)
+        return "def";
 
       std::string Str;
       raw_string_ostream OS(Str);
@@ -197,9 +220,37 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
                                 DOTFuncInfo *CFGInfo) {
+    if (!CFGInfo->showEdgeWeights())
+      return "";
+
     const Instruction *TI = Node->getTerminator();
     if (TI->getNumSuccessors() == 1)
+      return "penwidth=2";
+
+    unsigned OpNo = I.getSuccessorIndex();
+
+    if (OpNo >= TI->getNumSuccessors())
       return "";
+
+    BasicBlock *SuccBB = TI->getSuccessor(OpNo);
+    auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
+    double WeightPercent = ((double)BranchProb.getNumerator()) /
+                           ((double)BranchProb.getDenominator());
+    double Width = 1 + WeightPercent;
+
+    if (!CFGInfo->useRawEdgeWeights())
+      return formatv("label=\"{0:P}\" penwidth={1}", WeightPercent, Width)
+          .str();
+
+    // Prepend a 'W' to indicate that this is a weight rather than the actual
+    // profile count (due to scaling).
+
+    uint64_t Freq = CFGInfo->getFreq(Node);
+    std::string Attrs = formatv("label=\"W:{0}\" penwidth={1}",
+                                (uint64_t)(Freq * WeightPercent), Width);
+    if (Attrs.size())
+      return Attrs;
+
     MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
     if (!WeightsNode)
       return "";
@@ -207,17 +258,32 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
     MDString *MDName = cast<MDString>(WeightsNode->getOperand(0));
     if (MDName->getString() != "branch_weights")
       return "";
-    unsigned OpNo = I.getSuccessorIndex() + 1;
+
+    OpNo = I.getSuccessorIndex() + 1;
     if (OpNo >= WeightsNode->getNumOperands())
       return "";
     ConstantInt *Weight =
         mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(OpNo));
     if (!Weight)
       return "";
+    return ("label=\"W:" + std::to_string(Weight->getZExtValue()) +
+            "\" penwidth=" + std::to_string(Width));
+  }
 
-    // Prepend a 'W' to indicate that this is a weight rather than the actual
-    // profile count (due to scaling).
-    return ("label=\"W:" + Twine(Weight->getZExtValue()) + "\"").str();
+  std::string getNodeAttributes(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
+
+    if (!CFGInfo->showHeatColors())
+      return "";
+
+    uint64_t Freq = CFGInfo->getFreq(Node);
+    std::string Color = getHeatColor(Freq, CFGInfo->getMaxFreq());
+    std::string EdgeColor = (Freq <= (CFGInfo->getMaxFreq() / 2))
+                                ? (getHeatColor(0))
+                                : (getHeatColor(1));
+
+    std::string Attrs = "color=\"" + EdgeColor + "ff\", style=filled," +
+                        " fillcolor=\"" + Color + "70\"";
+    return Attrs;
   }
   bool isNodeHidden(const BasicBlock *Node);
   void computeHiddenNodes(const Function *F);
@@ -225,9 +291,9 @@ template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits 
 } // End llvm namespace
 
 namespace llvm {
-  class FunctionPass;
-  FunctionPass *createCFGPrinterLegacyPassPass ();
-  FunctionPass *createCFGOnlyPrinterLegacyPassPass ();
+class FunctionPass;
+FunctionPass *createCFGPrinterLegacyPassPass();
+FunctionPass *createCFGOnlyPrinterLegacyPassPass();
 } // End llvm namespace
 
 #endif
