@@ -2827,15 +2827,15 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     SDValue Add1 = ShiftAmt->getOperand(1);
     uint64_t Add0Imm;
     uint64_t Add1Imm;
-    // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
-    // to avoid the ADD/SUB.
-    if (isIntImmediate(Add1, Add1Imm) && (Add1Imm % Size == 0))
+    if (isIntImmediate(Add1, Add1Imm) && (Add1Imm % Size == 0)) {
+      // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
+      // to avoid the ADD/SUB.
       NewShiftAmt = Add0;
-    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
-    // generate a NEG instead of a SUB of a constant.
-    else if (ShiftAmt->getOpcode() == ISD::SUB &&
-             isIntImmediate(Add0, Add0Imm) && Add0Imm != 0 &&
-             (Add0Imm % Size == 0)) {
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isIntImmediate(Add0, Add0Imm) && Add0Imm != 0 &&
+               (Add0Imm % Size == 0)) {
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
+      // to generate a NEG instead of a SUB from a constant.
       unsigned NegOpc;
       unsigned ZeroReg;
       EVT SubVT = ShiftAmt->getValueType(0);
@@ -2852,6 +2852,26 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
       MachineSDNode *Neg =
           CurDAG->getMachineNode(NegOpc, DL, SubVT, Zero, Add1);
       NewShiftAmt = SDValue(Neg, 0);
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isIntImmediate(Add0, Add0Imm) && (Add0Imm % Size == Size - 1)) {
+      // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
+      // to generate a NOT instead of a SUB from a constant.
+      unsigned NotOpc;
+      unsigned ZeroReg;
+      EVT SubVT = ShiftAmt->getValueType(0);
+      if (SubVT == MVT::i32) {
+        NotOpc = AArch64::ORNWrr;
+        ZeroReg = AArch64::WZR;
+      } else {
+        assert(SubVT == MVT::i64);
+        NotOpc = AArch64::ORNXrr;
+        ZeroReg = AArch64::XZR;
+      }
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, SubVT);
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(NotOpc, DL, SubVT, Zero, Add1);
+      NewShiftAmt = SDValue(Not, 0);
     } else
       return false;
   } else {
