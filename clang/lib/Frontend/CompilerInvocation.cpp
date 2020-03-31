@@ -823,6 +823,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.RerollLoops = Args.hasArg(OPT_freroll_loops);
 
   Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
+  Opts.CallGraphProfile = !Opts.DisableIntegratedAS;
   Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile =
       std::string(Args.getLastArgValue(OPT_fprofile_sample_use_EQ));
