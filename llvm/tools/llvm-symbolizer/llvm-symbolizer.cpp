@@ -71,18 +71,15 @@ static cl::alias
     ClPrintInliningAliasInlines("inlines", cl::desc("Alias for -inlining"),
                                 cl::NotHidden, cl::aliasopt(ClPrintInlining));
 
-// -basenames, -s
 static cl::opt<bool> ClBasenames("basenames", cl::init(false),
                                  cl::desc("Strip directory names from paths"));
 static cl::alias ClBasenamesShort("s", cl::desc("Alias for -basenames"),
                                   cl::NotHidden, cl::aliasopt(ClBasenames));
 
-// -relativenames
 static cl::opt<bool>
     ClRelativenames("relativenames", cl::init(false),
                     cl::desc("Strip the compilation directory from paths"));
 
-// -demangle, -C, -no-demangle
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
 static cl::alias
@@ -96,7 +93,6 @@ static cl::opt<std::string> ClDefaultArch("default-arch", cl::init(""),
                                           cl::desc("Default architecture "
                                                    "(for multi-arch objects)"));
 
-// -obj, -exe, -e
 static cl::opt<std::string>
 ClBinaryName("obj", cl::init(""),
              cl::desc("Path to object file to be symbolized (if not provided, "
@@ -117,7 +113,6 @@ ClDsymHint("dsym-hint", cl::ZeroOrMore,
            cl::desc("Path to .dSYM bundles to search for debug info for the "
                     "object files"));
 
-// -print-address, -addresses, -a
 static cl::opt<bool>
 ClPrintAddress("print-address", cl::init(false),
                cl::desc("Show address before line information"));
@@ -128,7 +123,6 @@ static cl::alias
 ClPrintAddressAliasA("a", cl::desc("Alias for -print-address"),
                      cl::NotHidden, cl::aliasopt(ClPrintAddress), cl::Grouping);
 
-// -pretty-print, -p
 static cl::opt<bool>
     ClPrettyPrint("pretty-print", cl::init(false),
                   cl::desc("Make the output more human friendly"));
@@ -143,7 +137,6 @@ static cl::opt<int> ClPrintSourceContextLines(
 static cl::opt<bool> ClVerbose("verbose", cl::init(false),
                                cl::desc("Print verbose line info"));
 
-// -adjust-vma
 static cl::opt<uint64_t>
     ClAdjustVMA("adjust-vma", cl::init(0), cl::value_desc("offset"),
                 cl::desc("Add specified offset to object file addresses"));
