@@ -19,7 +19,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX7-NEXT:    s_cbranch_execz BB0_4
 ; GFX7-NEXT:  ; %bb.1:
-; GFX7-NEXT:    v_cmp_ne_u32_e64 s[12:13], 1, 0
+; GFX7-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX7-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s12, 0
 ; GFX7-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s13, v0
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -52,7 +52,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX8-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX8-NEXT:    s_cbranch_execz BB0_4
 ; GFX8-NEXT:  ; %bb.1:
-; GFX8-NEXT:    v_cmp_ne_u32_e64 s[12:13], 1, 0
+; GFX8-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX8-NEXT:    v_mbcnt_lo_u32_b32 v0, s12, 0
 ; GFX8-NEXT:    v_mbcnt_hi_u32_b32 v0, s13, v0
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -85,7 +85,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX9-NEXT:    s_cbranch_execz BB0_4
 ; GFX9-NEXT:  ; %bb.1:
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[12:13], 1, 0
+; GFX9-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s12, 0
 ; GFX9-NEXT:    v_mbcnt_hi_u32_b32 v0, s13, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -118,7 +118,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1064-NEXT:    s_cbranch_execz BB0_4
 ; GFX1064-NEXT:  ; %bb.1:
-; GFX1064-NEXT:    v_cmp_ne_u32_e64 s[12:13], 1, 0
+; GFX1064-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s12, 0
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32_e64 v0, s13, v0
@@ -153,7 +153,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz BB0_4
 ; GFX1032-NEXT:  ; %bb.1:
-; GFX1032-NEXT:    v_cmp_ne_u32_e64 s10, 1, 0
+; GFX1032-NEXT:    s_mov_b32 s10, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr1
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s10, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
@@ -213,10 +213,10 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX8-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX8-NEXT:    s_cbranch_execz BB1_4
 ; GFX8-NEXT:  ; %bb.1:
-; GFX8-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX8-NEXT:    s_mov_b64 s[10:11], exec
+; GFX8-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
-; GFX8-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX8-NEXT:    v_cmp_ne_u32_e64 s[10:11], 1, 0
+; GFX8-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX8-NEXT:    v_mbcnt_lo_u32_b32 v0, s10, 0
 ; GFX8-NEXT:    v_mbcnt_hi_u32_b32 v0, s11, v0
 ; GFX8-NEXT:    s_not_b64 exec, exec
@@ -270,10 +270,10 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX9-NEXT:    s_cbranch_execz BB1_4
 ; GFX9-NEXT:  ; %bb.1:
-; GFX9-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-NEXT:    s_mov_b64 s[10:11], exec
+; GFX9-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[10:11], 1, 0
+; GFX9-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s10, 0
 ; GFX9-NEXT:    v_mbcnt_hi_u32_b32 v0, s11, v0
 ; GFX9-NEXT:    s_not_b64 exec, exec
@@ -327,10 +327,10 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1064-NEXT:    s_cbranch_execz BB1_4
 ; GFX1064-NEXT:  ; %bb.1:
-; GFX1064-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX1064-NEXT:    s_mov_b64 s[10:11], exec
+; GFX1064-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1064-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX1064-NEXT:    v_cmp_ne_u32_e64 s[10:11], 1, 0
+; GFX1064-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s10, 0
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32_e64 v0, s11, v0
 ; GFX1064-NEXT:    s_not_b64 exec, exec
@@ -389,10 +389,10 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz BB1_4
 ; GFX1032-NEXT:  ; %bb.1:
-; GFX1032-NEXT:    s_or_saveexec_b32 s9, -1
+; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
+; GFX1032-NEXT:    s_or_saveexec_b32 s10, -1
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1032-NEXT:    v_cmp_ne_u32_e64 s9, 1, 0
+; GFX1032-NEXT:    s_mov_b32 exec_lo, s10
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s9, 0
 ; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
