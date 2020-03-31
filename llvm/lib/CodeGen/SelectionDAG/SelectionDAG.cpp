@@ -6679,19 +6679,17 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
-    EVT MemVT, MachinePointerInfo PtrInfo, unsigned Align,
+    EVT MemVT, MachinePointerInfo PtrInfo, unsigned Alignment,
     MachineMemOperand::Flags Flags, uint64_t Size, const AAMDNodes &AAInfo) {
-  if (Align == 0)  // Ensure that codegen never sees alignment 0
-    Align = getEVTAlignment(MemVT);
-
   if (!Size && MemVT.isScalableVector())
     Size = MemoryLocation::UnknownSize;
   else if (!Size)
     Size = MemVT.getStoreSize();
 
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, Flags, Size, Align, AAInfo);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, Flags, Size, Alignment ? Align(Alignment) : getEVTAlign(MemVT),
+      AAInfo);
 
   return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, MMO);
 }

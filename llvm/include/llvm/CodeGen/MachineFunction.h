@@ -819,12 +819,15 @@ public:
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   /// FIXME: Remove once transition to Align is over.
-  inline MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-      unsigned base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline MachineMemOperand *getMachineMemOperand(
+          MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
+          unsigned base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
+          const MDNode *Ranges = nullptr,
+          SyncScope::ID SSID = SyncScope::System,
+          AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+          AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic),
+      "Use the version that takes Align instead") {
     return getMachineMemOperand(PtrInfo, f, s, Align(base_alignment), AAInfo,
                                 Ranges, SSID, Ordering, FailureOrdering);
   }
