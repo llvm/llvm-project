@@ -51,6 +51,11 @@ class LibcxxTestFormat(object):
                                         initial_value=[])
         ]
 
+    # Utility function to add compile flags in lit.local.cfg files.
+    def addCompileFlags(self, config, *flags):
+        self.cxx = copy.deepcopy(self.cxx)
+        self.cxx.compile_flags += flags
+
     @staticmethod
     def _get_parser(key, parsers):
         for p in parsers:
