@@ -320,9 +320,7 @@ public:
 
   /// isDeclScope - Return true if this is the scope that the specified decl is
   /// declared in.
-  bool isDeclScope(Decl *D) {
-    return DeclsInScope.count(D) != 0;
-  }
+  bool isDeclScope(const Decl *D) const { return DeclsInScope.count(D) != 0; }
 
   DeclContext *getEntity() const { return Entity; }
   void setEntity(DeclContext *E) { Entity = E; }
