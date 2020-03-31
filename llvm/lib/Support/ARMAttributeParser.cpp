@@ -1,4 +1,4 @@
-//===--- ARMAttributeParser.cpp - ARM Attribute Information Printer -------===//
+//===- ARMAttributeParser.cpp - ARM Attribute Information Printer ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,12 +15,6 @@
 
 using namespace llvm;
 using namespace llvm::ARMBuildAttrs;
-
-static const EnumEntry<unsigned> tagNames[] = {
-    {"Tag_File", ARMBuildAttrs::File},
-    {"Tag_Section", ARMBuildAttrs::Section},
-    {"Tag_Symbol", ARMBuildAttrs::Symbol},
-};
 
 #define ATTRIBUTE_HANDLER(attr)                                                \
   { ARMBuildAttrs::attr, &ARMAttributeParser::attr }
@@ -71,7 +65,8 @@ const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
 #undef ATTRIBUTE_HANDLER
 
 Error ARMAttributeParser::stringAttribute(AttrType tag) {
-  StringRef tagName = ARMBuildAttrs::AttrTypeAsString(tag, /*TagPrefix=*/false);
+  StringRef tagName =
+      ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*TagPrefix=*/false);
   StringRef desc = de.getCStrRef(cursor);
 
   if (sw) {
@@ -81,36 +76,6 @@ Error ARMAttributeParser::stringAttribute(AttrType tag) {
       sw->printString("TagName", tagName);
     sw->printString("Value", desc);
   }
-  return Error::success();
-}
-
-void ARMAttributeParser::printAttribute(unsigned tag, unsigned value,
-                                        StringRef valueDesc) {
-  attributes.insert(std::make_pair(tag, value));
-
-  if (sw) {
-    StringRef tagName =
-        ARMBuildAttrs::AttrTypeAsString(tag, /*TagPrefix=*/false);
-    DictScope as(*sw, "Attribute");
-    sw->printNumber("Tag", tag);
-    sw->printNumber("Value", value);
-    if (!tagName.empty())
-      sw->printString("TagName", tagName);
-    if (!valueDesc.empty())
-      sw->printString("Description", valueDesc);
-  }
-}
-
-Error ARMAttributeParser::parseStringAttribute(const char *name, AttrType tag,
-                                               ArrayRef<const char *> strings) {
-  uint64_t value = de.getULEB128(cursor);
-  if (value >= strings.size()) {
-    printAttribute(tag, value, "");
-    return createStringError(errc::invalid_argument,
-                             "unknown " + Twine(name) +
-                                 " value: " + Twine(value));
-  }
-  printAttribute(tag, value, strings[value]);
   return Error::success();
 }
 
@@ -323,7 +288,9 @@ Error ARMAttributeParser::compatibility(AttrType tag) {
     DictScope scope(*sw, "Attribute");
     sw->printNumber("Tag", tag);
     sw->startLine() << "Value: " << integer << ", " << string << '\n';
-    sw->printString("TagName", AttrTypeAsString(tag, /*TagPrefix*/ false));
+    sw->printString("TagName",
+                    ELFAttrs::attrTypeAsString(tag, tagToStringMap,
+                                               /*hasTagPrefix=*/false));
     switch (integer) {
     case 0:
       sw->printString("Description", StringRef("No Specific Requirements"));
@@ -389,167 +356,18 @@ Error ARMAttributeParser::nodefaults(AttrType tag) {
   return Error::success();
 }
 
-void ARMAttributeParser::parseIndexList(SmallVectorImpl<uint8_t> &indexList) {
-  for (;;) {
-    uint64_t value = de.getULEB128(cursor);
-    if (!cursor || !value)
-      break;
-    indexList.push_back(value);
-  }
-}
-
-Error ARMAttributeParser::parseAttributeList(uint32_t length) {
-  uint64_t pos;
-  uint64_t end = cursor.tell() + length;
-  while ((pos = cursor.tell()) < end) {
-    uint64_t tag = de.getULEB128(cursor);
-    bool handled = false;
-    for (unsigned AHI = 0, AHE = array_lengthof(displayRoutines);
-         AHI != AHE && !handled; ++AHI) {
-      if (uint64_t(displayRoutines[AHI].attribute) == tag) {
-        if (Error e = (this->*displayRoutines[AHI].routine)(
-                ARMBuildAttrs::AttrType(tag)))
-          return e;
-        handled = true;
-        break;
-      }
-    }
-    if (!handled) {
-      if (tag < 32)
-        return createStringError(errc::invalid_argument,
-                                 "invalid AEABI tag 0x" +
-                                     Twine::utohexstr(tag) + " at offset 0x" +
-                                     Twine::utohexstr(pos));
-
-      if (tag % 2 == 0) {
-        uint64_t value = de.getULEB128(cursor);
-        attributes.insert(std::make_pair(tag, value));
-        if (sw)
-          sw->printNumber(ARMBuildAttrs::AttrTypeAsString(tag), value);
-      } else {
-        StringRef tagName =
-            ARMBuildAttrs::AttrTypeAsString(tag, /*TagPrefix=*/false);
-        StringRef desc = de.getCStrRef(cursor);
-
-        if (sw) {
-          DictScope scope(*sw, "Attribute");
-          sw->printNumber("Tag", tag);
-          if (!tagName.empty())
-            sw->printString("TagName", tagName);
-          sw->printString("Value", desc);
-        }
-      }
-    }
-  }
-  return Error::success();
-}
-
-Error ARMAttributeParser::parseSubsection(uint32_t length) {
-  uint64_t end = cursor.tell() - sizeof(length) + length;
-  StringRef vendorName = de.getCStrRef(cursor);
-  if (sw) {
-    sw->printNumber("SectionLength", length);
-    sw->printString("Vendor", vendorName);
-  }
-
-  // Ignore unrecognized vendor-name.
-  if (vendorName.lower() != "aeabi")
-    return createStringError(errc::invalid_argument,
-                             "unrecognized vendor-name: " + vendorName);
-
-  while (cursor.tell() < end) {
-    /// Tag_File | Tag_Section | Tag_Symbol   uleb128:byte-size
-    uint8_t tag = de.getU8(cursor);
-    uint32_t size = de.getU32(cursor);
-    if (!cursor)
-      return cursor.takeError();
-
-    if (sw) {
-      sw->printEnum("Tag", tag, makeArrayRef(tagNames));
-      sw->printNumber("Size", size);
-    }
-    if (size < 5)
-      return createStringError(errc::invalid_argument,
-                               "invalid attribute size " + Twine(size) +
-                                   " at offset 0x" +
-                                   Twine::utohexstr(cursor.tell() - 5));
-
-    StringRef scopeName, indexName;
-    SmallVector<uint8_t, 8> indicies;
-    switch (tag) {
-    case ARMBuildAttrs::File:
-      scopeName = "FileAttributes";
-      break;
-    case ARMBuildAttrs::Section:
-      scopeName = "SectionAttributes";
-      indexName = "Sections";
-      parseIndexList(indicies);
-      break;
-    case ARMBuildAttrs::Symbol:
-      scopeName = "SymbolAttributes";
-      indexName = "Symbols";
-      parseIndexList(indicies);
-      break;
-    default:
-      return createStringError(errc::invalid_argument,
-                               "unrecognized tag 0x" + Twine::utohexstr(tag) +
-                                   " at offset 0x" +
-                                   Twine::utohexstr(cursor.tell() - 5));
-    }
-
-    if (sw) {
-      DictScope scope(*sw, scopeName);
-      if (!indicies.empty())
-        sw->printList(indexName, indicies);
-      if (Error e = parseAttributeList(size - 5))
+Error ARMAttributeParser::handler(uint64_t tag, bool &handled) {
+  handled = false;
+  for (unsigned AHI = 0, AHE = array_lengthof(displayRoutines); AHI != AHE;
+       ++AHI) {
+    if (uint64_t(displayRoutines[AHI].attribute) == tag) {
+      if (Error e =
+              (this->*displayRoutines[AHI].routine)(static_cast<AttrType>(tag)))
         return e;
-    } else if (Error e = parseAttributeList(size - 5))
-      return e;
+      handled = true;
+      break;
+    }
   }
+
   return Error::success();
-}
-
-Error ARMAttributeParser::parse(ArrayRef<uint8_t> section,
-                                support::endianness endian) {
-  unsigned sectionNumber = 0;
-  de = DataExtractor(section, endian == support::little, 0);
-
-  // For early returns, we have more specific errors, consume the Error in
-  // cursor.
-  struct ClearCursorError {
-    DataExtractor::Cursor &cursor;
-    ~ClearCursorError() { consumeError(cursor.takeError()); }
-  } clear{cursor};
-
-  // Unrecognized format-version.
-  uint8_t formatVersion = de.getU8(cursor);
-  if (formatVersion != 'A')
-    return createStringError(errc::invalid_argument,
-                             "unrecognized format-version: 0x" +
-                                 utohexstr(formatVersion));
-
-  while (!de.eof(cursor)) {
-    uint32_t sectionLength = de.getU32(cursor);
-    if (!cursor)
-      return cursor.takeError();
-
-    if (sw) {
-      sw->startLine() << "Section " << ++sectionNumber << " {\n";
-      sw->indent();
-    }
-
-    if (sectionLength < 4 || cursor.tell() - 4 + sectionLength > section.size())
-      return createStringError(errc::invalid_argument,
-                               "invalid subsection length " +
-                                   Twine(sectionLength) + " at offset 0x" +
-                                   utohexstr(cursor.tell() - 4));
-    if (Error e = parseSubsection(sectionLength))
-      return e;
-    if (sw) {
-      sw->unindent();
-      sw->startLine() << "}\n";
-    }
-  }
-
-  return cursor.takeError();
 }

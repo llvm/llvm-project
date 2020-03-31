@@ -2719,7 +2719,7 @@ template <> void ELFDumper<ELF32LE>::printAttributes() {
 
     ArrayRef<uint8_t> Contents =
         unwrapOrError(ObjF->getFileName(), Obj->getSectionContents(&Sec));
-    if (Contents[0] != ARMBuildAttrs::Format_Version) {
+    if (Contents[0] != ELFAttrs::Format_Version) {
       errs() << "unrecognised FormatVersion: 0x"
              << Twine::utohexstr(Contents[0]) << '\n';
       continue;

@@ -18,10 +18,12 @@
 #ifndef LLVM_SUPPORT_ARMBUILDATTRIBUTES_H
 #define LLVM_SUPPORT_ARMBUILDATTRIBUTES_H
 
-namespace llvm {
-class StringRef;
+#include "llvm/Support/ELFAttributes.h"
 
+namespace llvm {
 namespace ARMBuildAttrs {
+
+extern const TagNameMap ARMAttributeTags;
 
 enum SpecialAttr {
   // This is for the .cpu asm attr. It translates into one or more
@@ -29,7 +31,7 @@ enum SpecialAttr {
   SEL_CPU
 };
 
-enum AttrType {
+enum AttrType : unsigned {
   // Rest correspond to ELF/.ARM.attributes
   File = 1,
   CPU_raw_name = 4,
@@ -80,15 +82,6 @@ enum AttrType {
   nodefaults = 64,           // deprecated (ABI r2.09)
   T2EE_use = 66,             // deprecated (ABI r2.09)
   MPextension_use_old = 70   // recoded to MPextension_use (ABI r2.08)
-};
-
-StringRef AttrTypeAsString(unsigned Attr, bool HasTagPrefix = true);
-StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix = true);
-int AttrTypeFromString(StringRef Tag);
-
-// Magic numbers for .ARM.attributes
-enum AttrMagic {
-  Format_Version  = 0x41
 };
 
 // Legal Values for CPU_arch, (=6), uleb128
