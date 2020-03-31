@@ -2030,7 +2030,7 @@ public:
   /// declaration to the declaration that is a definition (if there is one).
   bool isDefined(const FunctionDecl *&Definition) const;
 
-  virtual bool isDefined() const {
+  bool isDefined() const {
     const FunctionDecl* Definition;
     return isDefined(Definition);
   }
