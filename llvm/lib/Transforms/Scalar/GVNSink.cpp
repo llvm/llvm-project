@@ -350,7 +350,7 @@ using ModelledPHISet = DenseSet<ModelledPHI, DenseMapInfo<ModelledPHI>>;
 class InstructionUseExpr : public GVNExpression::BasicExpression {
   unsigned MemoryUseOrder = -1;
   bool Volatile = false;
-  std::vector<int> ShuffleMask;
+  ArrayRef<int> ShuffleMask;
 
 public:
   InstructionUseExpr(Instruction *I, ArrayRecycler<Value *> &R,
@@ -360,6 +360,13 @@ public:
     setOpcode(I->getOpcode());
     setType(I->getType());
 
+    if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+      ArrayRef<int> OrigMask = SVI->getShuffleMask();
+      int *Mask = A.Allocate<int>(OrigMask.size());
+      llvm::copy(OrigMask, Mask);
+      ShuffleMask = ArrayRef<int>(Mask, OrigMask.size());
+    }
+
     for (auto &U : I->uses())
       op_push_back(U.getUser());
     llvm::sort(op_begin(), op_end());
@@ -367,18 +374,15 @@ public:
 
   void setMemoryUseOrder(unsigned MUO) { MemoryUseOrder = MUO; }
   void setVolatile(bool V) { Volatile = V; }
-  void setShuffleMask(ArrayRef<int> Mask) {
-    ShuffleMask.assign(Mask.begin(), Mask.end());
-  }
 
   hash_code getHashValue() const override {
     return hash_combine(GVNExpression::BasicExpression::getHashValue(),
-                        MemoryUseOrder, Volatile, ArrayRef<int>(ShuffleMask));
+                        MemoryUseOrder, Volatile, ShuffleMask);
   }
 
   template <typename Function> hash_code getHashValue(Function MapFn) {
     hash_code H = hash_combine(getOpcode(), getType(), MemoryUseOrder, Volatile,
-                               ArrayRef<int>(ShuffleMask));
+                               ShuffleMask);
     for (auto *V : operands())
       H = hash_combine(H, MapFn(V));
     return H;
@@ -406,8 +410,6 @@ class ValueTable {
       CmpInst::Predicate Predicate = C->getPredicate();
       E->setOpcode((C->getOpcode() << 8) | Predicate);
     }
-    if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I))
-      E->setShuffleMask(SVI->getShuffleMask());
     return E;
   }
 
