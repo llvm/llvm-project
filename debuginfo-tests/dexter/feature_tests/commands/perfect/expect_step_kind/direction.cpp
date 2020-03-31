@@ -5,11 +5,12 @@
 //      'VERTICAL_FORWARD' for every step onto a greater source line number in
 //      the same function.
 //
-// REQUIRES: system-linux, lldb
+// UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_base test --fail-lt 1.0 -w  \
-// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
-// RUN:     | FileCheck %s
+// TODO: The dbgeng debugger does not support column step reporting at present.
+// XFAIL: system-windows
+//
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: direction.cpp:
 
 int func(int i) {
