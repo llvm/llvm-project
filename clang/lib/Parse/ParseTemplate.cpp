@@ -1321,7 +1321,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                 LAngleLoc, TemplateArgsPtr, RAngleLoc);
 
     Tok.setKind(tok::annot_typename);
-    setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());
+    setTypeAnnotation(Tok, Type);
     if (SS.isNotEmpty())
       Tok.setLocation(SS.getBeginLoc());
     else if (TemplateKWLoc.isValid())
@@ -1398,7 +1398,7 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
                 /*IsCtorOrDtorName*/ false, IsClassName);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
-  setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());
+  setTypeAnnotation(Tok, Type);
   if (SS.isNotEmpty()) // it was a C++ qualified type name.
     Tok.setLocation(SS.getBeginLoc());
   // End location stays the same
