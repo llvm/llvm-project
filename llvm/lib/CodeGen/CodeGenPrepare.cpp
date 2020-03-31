@@ -495,6 +495,9 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     if (!LargeOffsetGEPMap.empty())
       MadeChange |= splitLargeGEPOffsets();
 
+    if (MadeChange)
+      eliminateFallThrough(F);
+
     // Really free removed instructions during promotion.
     for (Instruction *I : RemovedInsts)
       I->deleteValue();
@@ -1964,6 +1967,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   if (II) {
     switch (II->getIntrinsicID()) {
     default: break;
+    case Intrinsic::assume: {
+      II->eraseFromParent();
+      return true;
+    }
+
     case Intrinsic::experimental_widenable_condition: {
       // Give up on future widening oppurtunties so that we can fold away dead
       // paths and merge blocks before going into block-local instruction
