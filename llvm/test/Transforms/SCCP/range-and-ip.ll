@@ -14,9 +14,7 @@ define i1 @constant_and_undef(i64 %a) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[RANGE:%.*]] = and i64 [[A:%.*]], 255
 ; CHECK-NEXT:    [[C_3:%.*]] = call i1 @f1(i64 [[RANGE]])
-; CHECK-NEXT:    [[R_1:%.*]] = and i1 [[C_1]], [[C_2]]
-; CHECK-NEXT:    [[R_2:%.*]] = and i1 [[R_1]], [[C_3]]
-; CHECK-NEXT:    ret i1 [[R_2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c.1 = call i1 @f1(i64 undef)
   br label %bb1
@@ -37,9 +35,8 @@ declare void @sideeffect(i1, i64 %a)
 
 define internal i1 @f1(i64 %r) {
 ; CHECK-LABEL: define {{.*}} @f1(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[R:%.*]], 256
-; CHECK-NEXT:    call void @sideeffect(i1 [[C]], i64 [[R]])
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    call void @sideeffect(i1 true, i64 [[R:%.*]])
+; CHECK-NEXT:    ret i1 undef
 ;
   %c = icmp ult i64 %r, 256
   call void @sideeffect(i1 %c, i64 %r)

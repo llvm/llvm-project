@@ -128,7 +128,7 @@ bb3:
   ret i64 %res
 }
 
-define i1 @constant_range_and_255_100(i1 %cond, i64 %a) {
+define i64 @constant_range_and_255_100(i1 %cond, i64 %a) {
 ; CHECK-LABEL: @constant_range_and_255_100(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
@@ -141,7 +141,8 @@ define i1 @constant_range_and_255_100(i1 %cond, i64 %a) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R_1]], [[BB1]] ], [ [[R_2]], [[BB2]] ]
 ; CHECK-NEXT:    [[P_AND:%.*]] = and i64 [[P]], 512
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret i64 [[P_AND]]
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
@@ -158,7 +159,8 @@ bb3:
   %p = phi i64 [ %r.1, %bb1 ], [ %r.2, %bb2 ]
   %p.and = and i64 %p, 512
   %c = icmp ult i64 %p.and, 256
-  ret i1 %c
+  call void @use(i1 %c)
+  ret i64 %p.and
 }
 
 
@@ -224,8 +226,7 @@ define i1 @constant_range_and_undef_3(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ [[R]], [[BB2]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[P]], 256
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
@@ -254,8 +255,7 @@ define i1 @constant_range_and_undef_3_switched_incoming(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ undef, [[BB2]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[P]], 256
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
