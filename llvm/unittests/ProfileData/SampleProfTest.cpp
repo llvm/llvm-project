@@ -77,11 +77,13 @@ struct SampleProfTest : ::testing::Test {
     OS->close();
   }
 
-  void testRoundTrip(SampleProfileFormat Format, bool Remap) {
+  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
     SmallVector<char, 128> ProfilePath;
     ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
     StringRef Profile(ProfilePath.data(), ProfilePath.size());
     createWriter(Format, Profile);
+    if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
+      static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -168,7 +170,7 @@ struct SampleProfTest : ::testing::Test {
 
     FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
     ASSERT_TRUE(ReadFooSamples != nullptr);
-    if (Format != SampleProfileFormat::SPF_Compact_Binary) {
+    if (!UseMD5) {
       ASSERT_EQ("_Z3fooi", ReadFooSamples->getName());
     }
     ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
@@ -176,7 +178,7 @@ struct SampleProfTest : ::testing::Test {
 
     FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
     ASSERT_TRUE(ReadBarSamples != nullptr);
-    if (Format != SampleProfileFormat::SPF_Compact_Binary) {
+    if (!UseMD5) {
       ASSERT_EQ("_Z3bari", ReadBarSamples->getName());
     }
     ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
@@ -205,10 +207,10 @@ struct SampleProfTest : ::testing::Test {
 
     std::string MconstructGUID;
     StringRef MconstructRep =
-        getRepInFormat(MconstructName, Format, MconstructGUID);
+        getRepInFormat(MconstructName, UseMD5, MconstructGUID);
     std::string StringviewGUID;
     StringRef StringviewRep =
-        getRepInFormat(StringviewName, Format, StringviewGUID);
+        getRepInFormat(StringviewName, UseMD5, StringviewGUID);
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
     ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
@@ -333,31 +335,35 @@ struct SampleProfTest : ::testing::Test {
 };
 
 TEST_F(SampleProfTest, roundtrip_text_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Text, false);
+  testRoundTrip(SampleProfileFormat::SPF_Text, false, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Binary, false, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false, true);
 }
 
 TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+}
+
+TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Text, true);
+  testRoundTrip(SampleProfileFormat::SPF_Text, true, false);
 }
 
 TEST_F(SampleProfTest, remap_raw_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Binary, true);
+  testRoundTrip(SampleProfileFormat::SPF_Binary, true, false);
 }
 
 TEST_F(SampleProfTest, remap_ext_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true, false);
 }
 
 TEST_F(SampleProfTest, sample_overflow_saturation) {

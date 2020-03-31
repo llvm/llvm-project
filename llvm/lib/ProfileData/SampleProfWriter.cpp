@@ -87,7 +87,7 @@ uint64_t SampleProfileWriterExtBinaryBase::markSectionStart(SecType Type) {
   uint64_t SectionStart = OutputStream->tell();
   auto &Entry = getEntryInLayout(Type);
   // Use LocalBuf as a temporary output for writting data.
-  if (hasSecFlag(Entry, SecFlagCompress))
+  if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress))
     LocalBufStream.swap(OutputStream);
   return SectionStart;
 }
@@ -117,7 +117,7 @@ std::error_code
 SampleProfileWriterExtBinaryBase::addNewSection(SecType Type,
                                                 uint64_t SectionStart) {
   auto Entry = getEntryInLayout(Type);
-  if (hasSecFlag(Entry, SecFlagCompress)) {
+  if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress)) {
     LocalBufStream.swap(OutputStream);
     if (std::error_code EC = compressAndOutput())
       return EC;
@@ -162,6 +162,22 @@ std::error_code SampleProfileWriterExtBinary::writeFuncOffsetTable() {
   for (auto entry : FuncOffsetTable) {
     writeNameIdx(entry.first);
     encodeULEB128(entry.second, OS);
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinary::writeNameTable() {
+  if (!UseMD5)
+    return SampleProfileWriterBinary::writeNameTable();
+
+  auto &OS = *OutputStream;
+  std::set<StringRef> V;
+  stablizeNameTable(V);
+
+  // Write out the name table.
+  encodeULEB128(NameTable.size(), OS);
+  for (auto N : V) {
+    encodeULEB128(MD5Hash(N), OS);
   }
   return sampleprof_error::success;
 }
@@ -390,19 +406,11 @@ std::error_code SampleProfileWriterBinary::writeHeader(
 
 void SampleProfileWriterExtBinaryBase::setToCompressAllSections() {
   for (auto &Entry : SectionHdrLayout)
-    addSecFlags(Entry, SecFlagCompress);
+    addSecFlag(Entry, SecCommonFlags::SecFlagCompress);
 }
 
 void SampleProfileWriterExtBinaryBase::setToCompressSection(SecType Type) {
-  addSectionFlags(Type, SecFlagCompress);
-}
-
-void SampleProfileWriterExtBinaryBase::addSectionFlags(SecType Type,
-                                                       SecFlags Flags) {
-  for (auto &Entry : SectionHdrLayout) {
-    if (Entry.Type == Type)
-      addSecFlags(Entry, Flags);
-  }
+  addSectionFlag(Type, SecCommonFlags::SecFlagCompress);
 }
 
 void SampleProfileWriterExtBinaryBase::allocSecHdrTable() {
