@@ -316,6 +316,10 @@ static ClangASTMap &GetASTMap() {
   return *g_map_ptr;
 }
 
+TypePayloadClang::TypePayloadClang(bool is_complete_objc_class) {
+  SetIsCompleteObjCClass(is_complete_objc_class);
+}
+
 char TypeSystemClang::ID;
 
 bool TypeSystemClang::IsOperator(llvm::StringRef name,
