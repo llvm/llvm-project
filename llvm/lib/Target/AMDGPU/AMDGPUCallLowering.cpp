@@ -131,12 +131,11 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
-    unsigned Align = inferAlignmentFromPtrInfo(MF, MPO);
 
     // FIXME: Get alignment
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
-        Align);
+        inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
@@ -418,9 +417,8 @@ Register AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &B,
   return B.buildPtrAdd(PtrType, KernArgSegmentVReg, OffsetReg).getReg(0);
 }
 
-void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B,
-                                        Type *ParamTy, uint64_t Offset,
-                                        unsigned Align,
+void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, Type *ParamTy,
+                                        uint64_t Offset, Align Alignment,
                                         Register DstReg) const {
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
@@ -429,11 +427,11 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B,
   unsigned TypeSize = DL.getTypeStoreSize(ParamTy);
   Register PtrReg = lowerParameterPtr(B, ParamTy, Offset);
 
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad |
-                                       MachineMemOperand::MODereferenceable |
-                                       MachineMemOperand::MOInvariant,
-                                       TypeSize, Align);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo,
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      TypeSize, Alignment);
 
   B.buildLoad(DstReg, PtrReg, *MMO);
 }
@@ -508,7 +506,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   allocateHSAUserSGPRs(CCInfo, B, MF, *TRI, *Info);
 
   unsigned i = 0;
-  const unsigned KernArgBaseAlign = 16;
+  const Align KernArgBaseAlign(16);
   const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
   uint64_t ExplicitArgOffset = 0;
 
@@ -529,9 +527,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
       OrigArgRegs.size() == 1
       ? OrigArgRegs[0]
       : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
-    unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
+    Align Alignment = commonAlignment(KernArgBaseAlign, ArgOffset);
     ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
-    lowerParameter(B, ArgTy, ArgOffset, Align, ArgReg);
+    lowerParameter(B, ArgTy, ArgOffset, Alignment, ArgReg);
     if (OrigArgRegs.size() > 1)
       unpackRegs(OrigArgRegs, ArgReg, ArgTy, B);
     ++i;
