@@ -30,9 +30,6 @@ using namespace mlir;
 /// expression is simplified before returning. This method only utilizes map
 /// composition to construct lower and upper bounds before computing the trip
 /// count expressions.
-// TODO(mlir-team): this should be moved into 'Transforms/' and be replaced by a
-// pure analysis method relying on FlatAffineConstraints; the latter will also
-// be more powerful (since both inequalities and equalities will be considered).
 void mlir::buildTripCountMapAndOperands(
     AffineForOp forOp, AffineMap *tripCountMap,
     SmallVectorImpl<Value> *tripCountOperands) {
@@ -270,8 +267,8 @@ static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
   return true;
 }
 
-template <typename LoadOrStoreOpPointer>
-static bool isVectorElement(LoadOrStoreOpPointer memoryOp) {
+template <typename LoadOrStoreOp>
+static bool isVectorElement(LoadOrStoreOp memoryOp) {
   auto memRefType = memoryOp.getMemRefType();
   return memRefType.getElementType().template isa<VectorType>();
 }
@@ -351,7 +348,7 @@ bool mlir::isVectorizableLoopBody(AffineForOp loop,
 /// 'def' and all its uses have the same shift factor.
 // TODO(mlir-team): extend this to check for memory-based dependence violation
 // when we have the support.
-bool mlir::isInstwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts) {
+bool mlir::isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts) {
   auto *forBody = forOp.getBody();
   assert(shifts.size() == forBody->getOperations().size());
 

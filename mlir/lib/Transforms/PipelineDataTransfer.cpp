@@ -345,7 +345,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
       instShiftMap[&op] = 1;
 
   // Get shifts stored in map.
-  std::vector<uint64_t> shifts(forOp.getBody()->getOperations().size());
+  SmallVector<uint64_t, 8> shifts(forOp.getBody()->getOperations().size());
   unsigned s = 0;
   for (auto &op : forOp.getBody()->without_terminator()) {
     assert(instShiftMap.find(&op) != instShiftMap.end());
@@ -358,7 +358,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     });
   }
 
-  if (!isInstwiseShiftValid(forOp, shifts)) {
+  if (!isOpwiseShiftValid(forOp, shifts)) {
     // Violates dependences.
     LLVM_DEBUG(llvm::dbgs() << "Shifts invalid - unexpected\n";);
     return;
