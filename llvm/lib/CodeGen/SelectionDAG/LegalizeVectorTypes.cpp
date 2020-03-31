@@ -337,8 +337,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
       N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
-      N->getOriginalAlign().value(), N->getMemOperand()->getFlags(),
-      N->getAAInfo());
+      N->getOriginalAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -755,8 +754,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
 
   return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
                       N->getBasePtr(), N->getPointerInfo(),
-                      N->getOriginalAlign().value(),
-                      N->getMemOperand()->getFlags(), N->getAAInfo());
+                      N->getOriginalAlign(), N->getMemOperand()->getFlags(),
+                      N->getAAInfo());
 }
 
 /// If the value to round is a vector that needs to be scalarized, it must be
@@ -1525,14 +1524,13 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   }
 
   Lo = DAG.getLoad(ISD::UNINDEXED, ExtType, LoVT, dl, Ch, Ptr, Offset,
-                   LD->getPointerInfo(), LoMemVT, Alignment.value(), MMOFlags,
-                   AAInfo);
+                   LD->getPointerInfo(), LoMemVT, Alignment, MMOFlags, AAInfo);
 
   unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
   Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset,
                    LD->getPointerInfo().getWithOffset(IncrementSize), HiMemVT,
-                   Alignment.value(), MMOFlags, AAInfo);
+                   Alignment, MMOFlags, AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -1651,7 +1649,7 @@ void DAGTypeLegalizer::SplitVecRes_MGATHER(MaskedGatherSDNode *MGT,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MGT->getPointerInfo(), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment.value(), MGT->getAAInfo(),
+      MemoryLocation::UnknownSize, Alignment, MGT->getAAInfo(),
       MGT->getRanges());
 
   SDValue OpsLo[] = {Ch, PassThruLo, MaskLo, Ptr, IndexLo, Scale};
@@ -2410,8 +2408,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSCATTER(MaskedScatterSDNode *N,
   SDValue Lo;
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment.value(), N->getAAInfo(),
-      N->getRanges());
+      MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
 
   SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Scale};
   Lo = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataLo.getValueType(),
@@ -2451,10 +2448,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
 
   if (isTruncating)
     Lo = DAG.getTruncStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), LoMemVT,
-                           Alignment.value(), MMOFlags, AAInfo);
+                           Alignment, MMOFlags, AAInfo);
   else
-    Lo = DAG.getStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), Alignment.value(),
-                      MMOFlags, AAInfo);
+    Lo = DAG.getStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), Alignment, MMOFlags,
+                      AAInfo);
 
   // Increment the pointer to the other half.
   Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
@@ -2462,11 +2459,11 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   if (isTruncating)
     Hi = DAG.getTruncStore(Ch, DL, Hi, Ptr,
                            N->getPointerInfo().getWithOffset(IncrementSize),
-                           HiMemVT, Alignment.value(), MMOFlags, AAInfo);
+                           HiMemVT, Alignment, MMOFlags, AAInfo);
   else
     Hi = DAG.getStore(Ch, DL, Hi, Ptr,
                       N->getPointerInfo().getWithOffset(IncrementSize),
-                      Alignment.value(), MMOFlags, AAInfo);
+                      Alignment, MMOFlags, AAInfo);
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
 }

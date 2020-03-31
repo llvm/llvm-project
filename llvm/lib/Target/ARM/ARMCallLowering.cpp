@@ -130,7 +130,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        /* Alignment */ 1);
+        Align(1));
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 

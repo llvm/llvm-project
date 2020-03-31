@@ -117,7 +117,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForSetTag(
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *BaseMemOperand = MF.getMachineMemOperand(
-      DstPtrInfo, MachineMemOperand::MOStore, ObjSize, 16);
+      DstPtrInfo, MachineMemOperand::MOStore, ObjSize, Align(16));
 
   bool UseSetTagRangeLoop =
       kSetTagLoopThreshold >= 0 && (int)ObjSize >= kSetTagLoopThreshold;
