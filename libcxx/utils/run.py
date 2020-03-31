@@ -49,7 +49,7 @@ def main():
             exit(1)
 
     # Run the executable with the given environment in the given working directory
-    return subprocess.call(remaining, cwd=args.working_directory, env=env)
+    return subprocess.call(' '.join(remaining), cwd=args.working_directory, env=env, shell=True)
 
 if __name__ == '__main__':
     exit(main())
