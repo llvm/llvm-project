@@ -1235,17 +1235,6 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   return ConstantExpr::getShuffleVector(V, UndefV, Zeros);
 }
 
-Constant *ConstantVector::getSplat(unsigned NumElts, Constant *V) {
-  // If this splat is compatible with ConstantDataVector, use it instead of
-  // ConstantVector.
-  if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
-      ConstantDataSequential::isElementTypeCompatible(V->getType()))
-    return ConstantDataVector::getSplat(NumElts, V);
-
-  SmallVector<Constant*, 32> Elts(NumElts, V);
-  return get(Elts);
-}
-
 ConstantTokenNone *ConstantTokenNone::get(LLVMContext &Context) {
   LLVMContextImpl *pImpl = Context.pImpl;
   if (!pImpl->TheNoneToken)
