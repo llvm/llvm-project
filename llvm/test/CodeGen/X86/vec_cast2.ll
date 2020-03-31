@@ -122,7 +122,8 @@ define <4 x i8> @cvt_v4f32_v4i8(<4 x float> %src) {
 ; CHECK-LABEL: cvt_v4f32_v4i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptosi <4 x float> %src to <4 x i8>
   ret <4 x i8> %res
@@ -167,7 +168,8 @@ define <4 x i8> @cvt_v4f32_v4u8(<4 x float> %src) {
 ; CHECK-LABEL: cvt_v4f32_v4u8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptoui <4 x float> %src to <4 x i8>
   ret <4 x i8> %res
