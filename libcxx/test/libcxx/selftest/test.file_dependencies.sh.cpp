@@ -8,5 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // FILE_DEPENDENCIES: test.pass.cpp
+// FILE_DEPENDENCIES: %s
 
 // RUN: echo %{file_dependencies} | grep 'test.pass.cpp'
+// RUN: echo %{file_dependencies} | grep '%s'
