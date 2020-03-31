@@ -46,11 +46,17 @@ struct wrapint
     wrapint(int X) : x(X) {}
 };
 
+struct wrapfoo
+{
+    foo *ptr;
+};
+
 int main()
 {
     foo f00_1(1);
     foo *f00_ptr = new foo(12);
-    
+    wrapfoo wrapper{f00_ptr};
+
     f00_1.a++; // Set break point at this line.
     
     wrapint test_cast('A' +
