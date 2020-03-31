@@ -91,16 +91,16 @@ def SPV_GLSLFAbsOp : SPV_GLSLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     abs-op ::= ssa-id `=` `spv.GLSL.FAbs` ssa-use `:`
                float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.FAbs %0 : f32
     %3 = spv.GLSL.FAbs %1 : vector<3xf16>
     ```
@@ -120,16 +120,16 @@ def SPV_GLSLSAbsOp : SPV_GLSLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
     types. Result Type and operand types must have the same number of components
     with the same component width. Results are computed per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
     abs-op ::= ssa-id `=` `spv.GLSL.SAbs` ssa-use `:`
                integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.SAbs %0 : i32
     %3 = spv.GLSL.SAbs %1 : vector<3xi16>
     ```
@@ -151,16 +151,16 @@ def SPV_GLSLCeilOp : SPV_GLSLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     ceil-op ::= ssa-id `=` `spv.GLSL.Ceil` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Ceil %0 : f32
     %3 = spv.GLSL.Ceil %1 : vector<3xf16>
     ```
@@ -181,7 +181,7 @@ def SPV_GLSLCosOp : SPV_GLSLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     restricted-float-scalar-type ::=  `f16` | `f32`
     restricted-float-scalar-vector-type ::=
@@ -190,9 +190,9 @@ def SPV_GLSLCosOp : SPV_GLSLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
     cos-op ::= ssa-id `=` `spv.GLSL.Cos` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Cos %0 : f32
     %3 = spv.GLSL.Cos %1 : vector<3xf16>
     ```
@@ -213,7 +213,7 @@ def SPV_GLSLSinOp : SPV_GLSLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     restricted-float-scalar-type ::=  `f16` | `f32`
     restricted-float-scalar-vector-type ::=
@@ -222,9 +222,9 @@ def SPV_GLSLSinOp : SPV_GLSLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
     sin-op ::= ssa-id `=` `spv.GLSL.Sin` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Sin %0 : f32
     %3 = spv.GLSL.Sin %1 : vector<3xf16>
     ```
@@ -245,7 +245,7 @@ def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
     Result Type and the type of x must be the same type. Results are
     computed per component.";
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     restricted-float-scalar-type ::=  `f16` | `f32`
     restricted-float-scalar-vector-type ::=
@@ -254,9 +254,9 @@ def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
     exp-op ::= ssa-id `=` `spv.GLSL.Exp` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Exp %0 : f32
     %3 = spv.GLSL.Exp %1 : vector<3xf16>
     ```
@@ -278,16 +278,16 @@ def SPV_GLSLFloorOp : SPV_GLSLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     floor-op ::= ssa-id `=` `spv.GLSL.Floor` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Floor %0 : f32
     %3 = spv.GLSL.Floor %1 : vector<3xf16>
     ```
@@ -308,16 +308,16 @@ def SPV_GLSLInverseSqrtOp : SPV_GLSLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Flo
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     rsqrt-op ::= ssa-id `=` `spv.GLSL.InverseSqrt` ssa-use `:`
                  float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.InverseSqrt %0 : f32
     %3 = spv.GLSL.InverseSqrt %1 : vector<3xf16>
     ```
@@ -339,7 +339,7 @@ def SPV_GLSLLogOp : SPV_GLSLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     restricted-float-scalar-type ::=  `f16` | `f32`
     restricted-float-scalar-vector-type ::=
@@ -348,9 +348,9 @@ def SPV_GLSLLogOp : SPV_GLSLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
     log-op ::= ssa-id `=` `spv.GLSL.Log` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Log %0 : f32
     %3 = spv.GLSL.Log %1 : vector<3xf16>
     ```
@@ -372,16 +372,16 @@ def SPV_GLSLFMaxOp : SPV_GLSLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
     Result Type and the type of all operands must be the same
     type. Results are computed per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     fmax-op ::= ssa-id `=` `spv.GLSL.FMax` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.FMax %0, %1 : f32
     %3 = spv.GLSL.FMax %0, %1 : vector<3xf16>
     ```
@@ -402,16 +402,16 @@ def SPV_GLSLSMaxOp : SPV_GLSLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
     smax-op ::= ssa-id `=` `spv.GLSL.SMax` ssa-use `:`
                 integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.SMax %0, %1 : i32
     %3 = spv.GLSL.SMax %0, %1 : vector<3xi16>
     ```
@@ -433,16 +433,16 @@ def SPV_GLSLFMinOp : SPV_GLSLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
     Result Type and the type of all operands must be the same type. Results are
     computed per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     fmin-op ::= ssa-id `=` `spv.GLSL.FMin` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.FMin %0, %1 : f32
     %3 = spv.GLSL.FMin %0, %1 : vector<3xf16>
     ```
@@ -463,16 +463,16 @@ def SPV_GLSLSMinOp : SPV_GLSLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
     smin-op ::= ssa-id `=` `spv.GLSL.SMin` ssa-use `:`
                 integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.SMin %0, %1 : i32
     %3 = spv.GLSL.SMin %0, %1 : vector<3xi16>
     ```
@@ -493,16 +493,16 @@ def SPV_GLSLFSignOp : SPV_GLSLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     sign-op ::= ssa-id `=` `spv.GLSL.FSign` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.FSign %0 : f32
     %3 = spv.GLSL.FSign %1 : vector<3xf16>
     ```
@@ -522,16 +522,16 @@ def SPV_GLSLSSignOp : SPV_GLSLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
     types. Result Type and operand types must have the same number of components
     with the same component width. Results are computed per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
     sign-op ::= ssa-id `=` `spv.GLSL.SSign` ssa-use `:`
                 integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.SSign %0 : i32
     %3 = spv.GLSL.SSign %1 : vector<3xi16>
     ```
@@ -552,16 +552,16 @@ def SPV_GLSLSqrtOp : SPV_GLSLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     sqrt-op ::= ssa-id `=` `spv.GLSL.Sqrt` ssa-use `:`
                 float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Sqrt %0 : f32
     %3 = spv.GLSL.Sqrt %1 : vector<3xf16>
     ```
@@ -582,7 +582,7 @@ def SPV_GLSLTanhOp : SPV_GLSLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    ### Custom assembly format
+    <!-- End of AutoGen section -->
     ```
     restricted-float-scalar-type ::=  `f16` | `f32`
     restricted-float-scalar-vector-type ::=
@@ -591,9 +591,9 @@ def SPV_GLSLTanhOp : SPV_GLSLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
     tanh-op ::= ssa-id `=` `spv.GLSL.Tanh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.GLSL.Tanh %0 : f32
     %3 = spv.GLSL.Tanh %1 : vector<3xf16>
     ```

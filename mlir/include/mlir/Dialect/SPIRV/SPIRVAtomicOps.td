@@ -82,7 +82,7 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
@@ -94,9 +94,9 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicAnd "Device" "None" %pointer, %value :
                        !spv.ptr<i32, StorageBuffer>
     ```
@@ -113,7 +113,7 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-compare-exchange-weak-op ::=
@@ -122,9 +122,9 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
                                         `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicCompareExchangeWeak "Workgroup" "Acquire" "None"
                                        %pointer, %value, %comparator
                                        : !spv.ptr<i32, WorkGroup>
@@ -176,7 +176,7 @@ def SPV_AtomicIAddOp : SPV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-iadd-op ::=
@@ -184,9 +184,9 @@ def SPV_AtomicIAddOp : SPV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicIAdd "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -216,7 +216,7 @@ def SPV_AtomicIDecrementOp : SPV_AtomicUpdateOp<"AtomicIDecrement", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-idecrement-op ::=
@@ -224,9 +224,9 @@ def SPV_AtomicIDecrementOp : SPV_AtomicUpdateOp<"AtomicIDecrement", []> {
                                `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicIDecrement "Device" "None" %pointer :
                               !spv.ptr<i32, StorageBuffer>
     ```
@@ -255,7 +255,7 @@ def SPV_AtomicIIncrementOp : SPV_AtomicUpdateOp<"AtomicIIncrement", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-iincrement-op ::=
@@ -263,9 +263,9 @@ def SPV_AtomicIIncrementOp : SPV_AtomicUpdateOp<"AtomicIIncrement", []> {
                                `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicIncrement "Device" "None" %pointer :
                              !spv.ptr<i32, StorageBuffer>
     ```
@@ -297,7 +297,7 @@ def SPV_AtomicISubOp : SPV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-isub-op ::=
@@ -305,9 +305,9 @@ def SPV_AtomicISubOp : SPV_AtomicUpdateWithValueOp<"AtomicISub", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicISub "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -338,7 +338,7 @@ def SPV_AtomicOrOp : SPV_AtomicUpdateWithValueOp<"AtomicOr", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-or-op ::=
@@ -346,9 +346,9 @@ def SPV_AtomicOrOp : SPV_AtomicUpdateWithValueOp<"AtomicOr", []> {
                        ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicOr "Device" "None" %pointer, %value :
                       !spv.ptr<i32, StorageBuffer>
     ```
@@ -380,7 +380,7 @@ def SPV_AtomicSMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-smax-op ::=
@@ -388,9 +388,9 @@ def SPV_AtomicSMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicSMax "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -422,7 +422,7 @@ def SPV_AtomicSMinOp : SPV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-smin-op ::=
@@ -430,9 +430,9 @@ def SPV_AtomicSMinOp : SPV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicSMin "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -464,7 +464,7 @@ def SPV_AtomicUMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicUMax", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-umax-op ::=
@@ -472,9 +472,9 @@ def SPV_AtomicUMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicUMax", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicUMax "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -506,7 +506,7 @@ def SPV_AtomicUMinOp : SPV_AtomicUpdateWithValueOp<"AtomicUMin", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-umin-op ::=
@@ -514,9 +514,9 @@ def SPV_AtomicUMinOp : SPV_AtomicUpdateWithValueOp<"AtomicUMin", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicUMin "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -548,7 +548,7 @@ def SPV_AtomicXorOp : SPV_AtomicUpdateWithValueOp<"AtomicXor", []> {
 
     Memory must be a valid memory Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     atomic-xor-op ::=
@@ -556,9 +556,9 @@ def SPV_AtomicXorOp : SPV_AtomicUpdateWithValueOp<"AtomicXor", []> {
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.AtomicXor "Device" "None" %pointer, %value :
                        !spv.ptr<i32, StorageBuffer>
     ```
