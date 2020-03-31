@@ -98,8 +98,6 @@ public:
     return m_collector;
   }
 
-  void recordInterestingDirectory(const llvm::Twine &dir);
-
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
     // Temporary files that are removed during execution can cause copy errors.
