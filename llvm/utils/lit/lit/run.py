@@ -14,23 +14,18 @@ class NopSemaphore(object):
     def release(self): pass
 
 
-def create_run(tests, lit_config, workers, progress_callback, max_failures,
-               timeout):
-    assert workers > 0
-    if workers == 1:
-        return SerialRun(tests, lit_config, progress_callback, max_failures, timeout)
-    return ParallelRun(tests, lit_config, progress_callback, max_failures, timeout, workers)
-
-
 class Run(object):
     """A concrete, configured testing run."""
 
-    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout):
+    def __init__(self, tests, lit_config, workers, progress_callback,
+                 max_failures, timeout):
         self.tests = tests
         self.lit_config = lit_config
+        self.workers = workers
         self.progress_callback = progress_callback
         self.max_failures = max_failures
         self.timeout = timeout
+        assert workers > 0
 
     def execute(self):
         """
@@ -65,43 +60,6 @@ class Run(object):
             if test.result is None:
                 test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
 
-    # TODO(yln): as the comment says.. this is racing with the main thread waiting
-    # for results
-    def _process_completed(self, test):
-        # Don't add any more test results after we've hit the maximum failure
-        # count.  Otherwise we're racing with the main thread, which is going
-        # to terminate the process pool soon.
-        if self.hit_max_failures:
-            return
-
-        # Use test.isFailure() for correct XFAIL and XPASS handling
-        if test.isFailure():
-            self.failure_count += 1
-            if self.failure_count == self.max_failures:
-                self.hit_max_failures = True
-
-        self.progress_callback(test)
-
-
-class SerialRun(Run):
-    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout):
-        super(SerialRun, self).__init__(tests, lit_config, progress_callback, max_failures, timeout)
-
-    def _execute(self, deadline):
-        # TODO(yln): ignores deadline
-        for test in self.tests:
-            result = lit.worker._execute(test, self.lit_config)
-            test.setResult(result)
-            self._process_completed(test)
-            if self.hit_max_failures:
-                break
-
-
-class ParallelRun(Run):
-    def __init__(self, tests, lit_config, progress_callback, max_failures, timeout, workers):
-        super(ParallelRun, self).__init__(tests, lit_config, progress_callback, max_failures, timeout)
-        self.workers = workers
-
     def _execute(self, deadline):
         semaphores = {
             k: NopSemaphore() if v is None else
@@ -120,13 +78,9 @@ class ParallelRun(Run):
 
         self._install_win32_signal_handler(pool)
 
-        def process_completed(test, idx):
-            self.tests[idx] = test
-            self._process_completed(test)
-
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
-                             callback=lambda t, i=idx: process_completed(t, i))
+                             callback=lambda t, i=idx: self._process_completed(t, i))
             for idx, test in enumerate(self.tests)]
         pool.close()
 
@@ -142,6 +96,25 @@ class ParallelRun(Run):
                 pool.terminate()
                 break
         pool.join()
+
+    # TODO(yln): as the comment says.. this is racing with the main thread waiting
+    # for results
+    def _process_completed(self, test, idx):
+        # Don't add any more test results after we've hit the maximum failure
+        # count.  Otherwise we're racing with the main thread, which is going
+        # to terminate the process pool soon.
+        if self.hit_max_failures:
+            return
+
+        self.tests[idx] = test
+
+        # Use test.isFailure() for correct XFAIL and XPASS handling
+        if test.isFailure():
+            self.failure_count += 1
+            if self.failure_count == self.max_failures:
+                self.hit_max_failures = True
+
+        self.progress_callback(test)
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these
