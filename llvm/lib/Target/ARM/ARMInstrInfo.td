@@ -3829,9 +3829,8 @@ def QSUB16  : AAIIntrinsic<0b01100010, 0b11110111, "qsub16", int_arm_qsub16>;
 def QSUB8   : AAIIntrinsic<0b01100010, 0b11111111, "qsub8", int_arm_qsub8>;
 
 def QDADD   : AAIRevOpr<0b00010100, 0b00000101, "qdadd",
-              [(set GPRnopc:$Rd, (int_arm_qadd (int_arm_qadd GPRnopc:$Rm,
-                                                             GPRnopc:$Rm),
-                                  GPRnopc:$Rn))]>;
+              [(set GPRnopc:$Rd, (int_arm_qadd GPRnopc:$Rm,
+                                  (int_arm_qadd GPRnopc:$Rn, GPRnopc:$Rn)))]>;
 def QDSUB   : AAIRevOpr<0b00010110, 0b00000101, "qdsub",
               [(set GPRnopc:$Rd, (int_arm_qsub GPRnopc:$Rm,
                                   (int_arm_qadd GPRnopc:$Rn, GPRnopc:$Rn)))]>;
@@ -3846,7 +3845,7 @@ def : ARMV5TEPat<(saddsat GPR:$a, GPR:$b),
                  (QADD GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(ssubsat GPR:$a, GPR:$b),
                  (QSUB GPR:$a, GPR:$b)>;
-def : ARMV5TEPat<(saddsat(saddsat rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+def : ARMV5TEPat<(saddsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV5TEPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDSUB rGPR:$Rm, rGPR:$Rn)>;

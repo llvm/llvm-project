@@ -2485,7 +2485,7 @@ def : Thumb2DSPPat<(int_arm_qadd rGPR:$Rm, rGPR:$Rn),
                    (t2QADD rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(int_arm_qsub rGPR:$Rm, rGPR:$Rn),
                    (t2QSUB rGPR:$Rm, rGPR:$Rn)>;
-def : Thumb2DSPPat<(int_arm_qadd(int_arm_qadd rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+def : Thumb2DSPPat<(int_arm_qadd rGPR:$Rm, (int_arm_qadd rGPR:$Rn, rGPR:$Rn)),
                    (t2QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(int_arm_qsub rGPR:$Rm, (int_arm_qadd rGPR:$Rn, rGPR:$Rn)),
                    (t2QDSUB rGPR:$Rm, rGPR:$Rn)>;
@@ -2494,7 +2494,7 @@ def : Thumb2DSPPat<(saddsat rGPR:$Rm, rGPR:$Rn),
                    (t2QADD rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(ssubsat rGPR:$Rm, rGPR:$Rn),
                    (t2QSUB rGPR:$Rm, rGPR:$Rn)>;
-def : Thumb2DSPPat<(saddsat(saddsat rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+def : Thumb2DSPPat<(saddsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                    (t2QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                    (t2QDSUB rGPR:$Rm, rGPR:$Rn)>;
