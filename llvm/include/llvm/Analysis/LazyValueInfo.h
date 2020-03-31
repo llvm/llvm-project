@@ -85,7 +85,9 @@ public:
   /// Return the ConstantRange constraint that is known to hold for the
   /// specified value at the end of the specified block. This may only be called
   /// on integer-typed Values.
-  ConstantRange getConstantRange(Value *V, BasicBlock *BB, Instruction *CxtI = nullptr);
+  ConstantRange getConstantRange(Value *V, BasicBlock *BB,
+                                 Instruction *CxtI = nullptr,
+                                 bool UndefAllowed = true);
 
   /// Determine whether the specified value is known to be a
   /// constant on the specified edge.  Return null if not.

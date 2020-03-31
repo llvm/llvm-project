@@ -57,10 +57,8 @@ define i64 @constant_range_and_undef(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -163,12 +161,9 @@ define i1 @constant_range_and_undef_3(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ [[R]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[P]], 256
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
@@ -211,10 +206,8 @@ define i64 @constant_range_and_undef_3_incoming_v1(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -261,10 +254,8 @@ define i64 @constant_range_and_undef_3_incoming_v2(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -311,10 +302,8 @@ define i64 @constant_range_and_undef_3_incoming_v3(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[P]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

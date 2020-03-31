@@ -121,11 +121,13 @@ static ValueLatticeElement intersect(const ValueLatticeElement &A,
 
   // Intersect two constant ranges
   ConstantRange Range =
-    A.getConstantRange().intersectWith(B.getConstantRange());
+      A.getConstantRange().intersectWith(B.getConstantRange());
   // Note: An empty range is implicitly converted to overdefined internally.
   // TODO: We could instead use Undefined here since we've proven a conflict
   // and thus know this path must be unreachable.
-  return ValueLatticeElement::getRange(std::move(Range));
+  return ValueLatticeElement::getRange(
+      std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() |
+                            B.isConstantRangeIncludingUndef());
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,17 +903,21 @@ bool LazyValueInfoImpl::solveBlockValueSelect(ValueLatticeElement &BBLV,
           return TrueCR.umax(FalseCR);
         };
       }();
-      BBLV = ValueLatticeElement::getRange(ResultCR);
+      BBLV = ValueLatticeElement::getRange(
+          ResultCR, TrueVal.isConstantRangeIncludingUndef() |
+                        FalseVal.isConstantRangeIncludingUndef());
       return true;
     }
 
     if (SPR.Flavor == SPF_ABS) {
       if (LHS == SI->getTrueValue()) {
-        BBLV = ValueLatticeElement::getRange(TrueCR.abs());
+        BBLV = ValueLatticeElement::getRange(
+            TrueCR.abs(), TrueVal.isConstantRangeIncludingUndef());
         return true;
       }
       if (LHS == SI->getFalseValue()) {
-        BBLV = ValueLatticeElement::getRange(FalseCR.abs());
+        BBLV = ValueLatticeElement::getRange(
+            FalseCR.abs(), FalseVal.isConstantRangeIncludingUndef());
         return true;
       }
     }
@@ -919,11 +925,13 @@ bool LazyValueInfoImpl::solveBlockValueSelect(ValueLatticeElement &BBLV,
     if (SPR.Flavor == SPF_NABS) {
       ConstantRange Zero(APInt::getNullValue(TrueCR.getBitWidth()));
       if (LHS == SI->getTrueValue()) {
-        BBLV = ValueLatticeElement::getRange(Zero.sub(TrueCR.abs()));
+        BBLV = ValueLatticeElement::getRange(
+            Zero.sub(TrueCR.abs()), FalseVal.isConstantRangeIncludingUndef());
         return true;
       }
       if (LHS == SI->getFalseValue()) {
-        BBLV = ValueLatticeElement::getRange(Zero.sub(FalseCR.abs()));
+        BBLV = ValueLatticeElement::getRange(
+            Zero.sub(FalseCR.abs()), FalseVal.isConstantRangeIncludingUndef());
         return true;
       }
     }
@@ -1706,7 +1714,8 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
 }
 
 ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
-                                              Instruction *CxtI) {
+                                              Instruction *CxtI,
+                                              bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
   unsigned Width = V->getType()->getIntegerBitWidth();
   const DataLayout &DL = BB->getModule()->getDataLayout();
@@ -1714,8 +1723,8 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
       getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
-  if (Result.isConstantRange())
-    return Result.getConstantRange();
+  if (Result.isConstantRange(UndefAllowed))
+    return Result.getConstantRange(UndefAllowed);
   // We represent ConstantInt constants as constant ranges but other kinds
   // of integer constants, i.e. ConstantExpr will be tagged as constants
   assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
