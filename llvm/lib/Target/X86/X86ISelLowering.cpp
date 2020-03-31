@@ -11229,6 +11229,72 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(X86ISD::VTRUNC, DL, VT, Src);
 }
 
+/// Check whether a compaction lowering can be done by dropping even
+/// elements and compute how many times even elements must be dropped.
+///
+/// This handles shuffles which take every Nth element where N is a power of
+/// two. Example shuffle masks:
+///
+///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14,  0,  2,  4,  6,  8, 10, 12, 14
+///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+///  N = 2:  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12
+///  N = 2:  0,  4,  8, 12, 16, 20, 24, 28,  0,  4,  8, 12, 16, 20, 24, 28
+///  N = 3:  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8
+///  N = 3:  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24
+///
+/// Any of these lanes can of course be undef.
+///
+/// This routine only supports N <= 3.
+/// FIXME: Evaluate whether either AVX or AVX-512 have any opportunities here
+/// for larger N.
+///
+/// \returns N above, or the number of times even elements must be dropped if
+/// there is such a number. Otherwise returns zero.
+static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
+                                          bool IsSingleInput) {
+  // The modulus for the shuffle vector entries is based on whether this is
+  // a single input or not.
+  int ShuffleModulus = Mask.size() * (IsSingleInput ? 1 : 2);
+  assert(isPowerOf2_32((uint32_t)ShuffleModulus) &&
+         "We should only be called with masks with a power-of-2 size!");
+
+  uint64_t ModMask = (uint64_t)ShuffleModulus - 1;
+
+  // We track whether the input is viable for all power-of-2 strides 2^1, 2^2,
+  // and 2^3 simultaneously. This is because we may have ambiguity with
+  // partially undef inputs.
+  bool ViableForN[3] = {true, true, true};
+
+  for (int i = 0, e = Mask.size(); i < e; ++i) {
+    // Ignore undef lanes, we'll optimistically collapse them to the pattern we
+    // want.
+    if (Mask[i] < 0)
+      continue;
+
+    bool IsAnyViable = false;
+    for (unsigned j = 0; j != array_lengthof(ViableForN); ++j)
+      if (ViableForN[j]) {
+        uint64_t N = j + 1;
+
+        // The shuffle mask must be equal to (i * 2^N) % M.
+        if ((uint64_t)Mask[i] == (((uint64_t)i << N) & ModMask))
+          IsAnyViable = true;
+        else
+          ViableForN[j] = false;
+      }
+    // Early exit if we exhaust the possible powers of two.
+    if (!IsAnyViable)
+      break;
+  }
+
+  for (unsigned j = 0; j != array_lengthof(ViableForN); ++j)
+    if (ViableForN[j])
+      return j + 1;
+
+  // Return 0 as there is no viable power of two.
+  return 0;
+}
+
 // X86 has dedicated pack instructions that can handle specific truncation
 // operations: PACKSS and PACKUS.
 static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
@@ -14584,72 +14650,6 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // decompose into single-input permutes and blends.
   return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v8i16, V1, V2,
                                               Mask, Subtarget, DAG);
-}
-
-/// Check whether a compaction lowering can be done by dropping even
-/// elements and compute how many times even elements must be dropped.
-///
-/// This handles shuffles which take every Nth element where N is a power of
-/// two. Example shuffle masks:
-///
-///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14,  0,  2,  4,  6,  8, 10, 12, 14
-///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-///  N = 2:  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12
-///  N = 2:  0,  4,  8, 12, 16, 20, 24, 28,  0,  4,  8, 12, 16, 20, 24, 28
-///  N = 3:  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8
-///  N = 3:  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24
-///
-/// Any of these lanes can of course be undef.
-///
-/// This routine only supports N <= 3.
-/// FIXME: Evaluate whether either AVX or AVX-512 have any opportunities here
-/// for larger N.
-///
-/// \returns N above, or the number of times even elements must be dropped if
-/// there is such a number. Otherwise returns zero.
-static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
-                                          bool IsSingleInput) {
-  // The modulus for the shuffle vector entries is based on whether this is
-  // a single input or not.
-  int ShuffleModulus = Mask.size() * (IsSingleInput ? 1 : 2);
-  assert(isPowerOf2_32((uint32_t)ShuffleModulus) &&
-         "We should only be called with masks with a power-of-2 size!");
-
-  uint64_t ModMask = (uint64_t)ShuffleModulus - 1;
-
-  // We track whether the input is viable for all power-of-2 strides 2^1, 2^2,
-  // and 2^3 simultaneously. This is because we may have ambiguity with
-  // partially undef inputs.
-  bool ViableForN[3] = {true, true, true};
-
-  for (int i = 0, e = Mask.size(); i < e; ++i) {
-    // Ignore undef lanes, we'll optimistically collapse them to the pattern we
-    // want.
-    if (Mask[i] < 0)
-      continue;
-
-    bool IsAnyViable = false;
-    for (unsigned j = 0; j != array_lengthof(ViableForN); ++j)
-      if (ViableForN[j]) {
-        uint64_t N = j + 1;
-
-        // The shuffle mask must be equal to (i * 2^N) % M.
-        if ((uint64_t)Mask[i] == (((uint64_t)i << N) & ModMask))
-          IsAnyViable = true;
-        else
-          ViableForN[j] = false;
-      }
-    // Early exit if we exhaust the possible powers of two.
-    if (!IsAnyViable)
-      break;
-  }
-
-  for (unsigned j = 0; j != array_lengthof(ViableForN); ++j)
-    if (ViableForN[j])
-      return j + 1;
-
-  // Return 0 as there is no viable power of two.
-  return 0;
 }
 
 static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
