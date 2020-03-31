@@ -335,3 +335,7 @@ TEST(DWARFExpression, DW_OP_convert) {
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
 }
+
+TEST(DWARFExpression, DW_OP_stack_value) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
