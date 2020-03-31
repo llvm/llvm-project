@@ -153,7 +153,9 @@ define void @nonpow2_add_narrowing() {
 define void @nonpow2_or_narrowing() {
   %a = add i128 undef, undef
   %b = trunc i128 %a to i96
-  %dummy = or i96 %b, %b
+  %a2 = add i128 undef, undef
+  %b2 = trunc i128 %a2 to i96
+  %dummy = or i96 %b, %b2
   store i96 %dummy, i96* undef
   ret void
 }

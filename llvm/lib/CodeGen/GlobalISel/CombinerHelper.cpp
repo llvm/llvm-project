@@ -1574,6 +1574,12 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
                        MRI);
 }
 
+bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) {
+  return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
+         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
+                       MRI);
+}
+
 bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
