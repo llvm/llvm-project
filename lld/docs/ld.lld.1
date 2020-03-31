@@ -302,8 +302,6 @@ Page align sections.
 Do not set the text data sections to be writable, page align sections.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
-.It Fl -no-threads
-Do not run the linker multi-threaded.
 .It Fl -no-undefined-version
 Report version scripts that refer undefined symbols.
 .It Fl -no-undefined
@@ -525,9 +523,12 @@ Path to ThinLTO cached object file directory.
 Pruning policy for the ThinLTO cache.
 .It Fl -thinlto-jobs Ns = Ns Ar value
 Number of ThinLTO jobs.
-.It Fl -threads
-Run the linker multi-threaded.
-This option is enabled by default.
+.It Fl -threads Ns = Ns Ar N
+Number of threads.
+.Cm all
+(default) means all of concurrent threads supported.
+.Cm 1
+disables multi-threading.
 .It Fl -trace
 Print the names of the input files.
 .It Fl -trace-symbol Ns = Ns Ar symbol , Fl y Ar symbol

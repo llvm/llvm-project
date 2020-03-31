@@ -2746,12 +2746,11 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
   // The number of symbols we will handle in this function is of the order
   // of millions for very large executables, so we use multi-threading to
   // speed it up.
-  size_t numShards = 32;
-  size_t concurrency = 1;
-  if (threadsEnabled)
-    concurrency = std::min<size_t>(
-        PowerOf2Floor(hardware_concurrency().compute_thread_count()),
-        numShards);
+  constexpr size_t numShards = 32;
+  size_t concurrency = PowerOf2Floor(
+      std::min<size_t>(hardware_concurrency(parallel::strategy.ThreadsRequested)
+                           .compute_thread_count(),
+                       numShards));
 
   // A sharded map to uniquify symbols by name.
   std::vector<DenseMap<CachedHashStringRef, size_t>> map(numShards);
@@ -3194,11 +3193,10 @@ void MergeNoTailSection::finalizeContents() {
 
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.
-  size_t concurrency = 1;
-  if (threadsEnabled)
-    concurrency = std::min<size_t>(
-        PowerOf2Floor(hardware_concurrency().compute_thread_count()),
-        numShards);
+  size_t concurrency = PowerOf2Floor(
+      std::min<size_t>(hardware_concurrency(parallel::strategy.ThreadsRequested)
+                           .compute_thread_count(),
+                       numShards));
 
   // Add section pieces to the builders.
   parallelForEachN(0, concurrency, [&](size_t threadId) {
