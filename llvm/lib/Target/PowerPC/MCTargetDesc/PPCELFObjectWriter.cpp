@@ -73,6 +73,9 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
   MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
 
   // determine the type of the relocation
@@ -133,9 +136,6 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   } else {
     switch (Fixup.getTargetKind()) {
       default: llvm_unreachable("invalid fixup kind!");
-    case FK_NONE:
-      Type = ELF::R_PPC_NONE;
-      break;
     case PPC::fixup_ppc_br24abs:
       Type = ELF::R_PPC_ADDR24;
       break;

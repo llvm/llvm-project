@@ -1878,9 +1878,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
                                      Tok.getLocation());
     } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-      if (TemplateId->Kind != TNK_Type_template &&
-          TemplateId->Kind != TNK_Dependent_template_name &&
-          TemplateId->Kind != TNK_Undeclared_template) {
+      if (!TemplateId->mightBeType()) {
         Diag(Tok, diag::err_typename_refers_to_non_type_template)
           << Tok.getAnnotationRange();
         return true;
@@ -1889,14 +1887,13 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
       ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                          TemplateId->NumArgs);
 
-      Ty = Actions.ActOnTypenameType(getCurScope(), TypenameLoc, SS,
-                                     TemplateId->TemplateKWLoc,
-                                     TemplateId->Template,
-                                     TemplateId->Name,
-                                     TemplateId->TemplateNameLoc,
-                                     TemplateId->LAngleLoc,
-                                     TemplateArgsPtr,
-                                     TemplateId->RAngleLoc);
+      Ty = TemplateId->isInvalid()
+               ? TypeError()
+               : Actions.ActOnTypenameType(
+                     getCurScope(), TypenameLoc, SS, TemplateId->TemplateKWLoc,
+                     TemplateId->Template, TemplateId->Name,
+                     TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
+                     TemplateArgsPtr, TemplateId->RAngleLoc);
     } else {
       Diag(Tok, diag::err_expected_type_name_after_typename)
         << SS.getRange();
@@ -1905,7 +1902,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
 
     SourceLocation EndLoc = Tok.getLastLoc();
     Tok.setKind(tok::annot_typename);
-    setTypeAnnotation(Tok, Ty.isInvalid() ? nullptr : Ty.get());
+    setTypeAnnotation(Tok, Ty);
     Tok.setAnnotationEndLoc(EndLoc);
     Tok.setLocation(TypenameLoc);
     PP.AnnotateCachedTokens(Tok);

@@ -652,16 +652,13 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP Denormals.
-  if (checkDenormalAttributeConsistency(*MMI->getModule(),
-                                        "denormal-fp-math",
-                                        DenormalMode::getPreserveSign()) ||
-      TM.Options.FPDenormalMode == FPDenormal::PreserveSign)
+  if (checkDenormalAttributeConsistency(*MMI->getModule(), "denormal-fp-math",
+                                        DenormalMode::getPreserveSign()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PreserveFPSign);
   else if (checkDenormalAttributeConsistency(*MMI->getModule(),
                                              "denormal-fp-math",
-                                             DenormalMode::getPositiveZero()) ||
-           TM.Options.FPDenormalMode == FPDenormal::PositiveZero)
+                                             DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
   else if (!TM.Options.UnsafeFPMath)

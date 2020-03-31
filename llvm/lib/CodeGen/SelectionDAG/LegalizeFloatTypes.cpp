@@ -125,6 +125,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N); break;
+    case ISD::FREEZE:      R = SoftenFloatRes_FREEZE(N); break;
     case ISD::STRICT_SINT_TO_FP:
     case ISD::STRICT_UINT_TO_FP:
     case ISD::SINT_TO_FP:
@@ -182,6 +183,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_BITCAST(SDNode *N) {
   return BitConvertToInteger(N->getOperand(0));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FREEZE(SDNode *N) {
+  EVT Ty = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getNode(ISD::FREEZE, SDLoc(N), Ty,
+                     GetSoftenedFloat(N->getOperand(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_MERGE_VALUES(SDNode *N,

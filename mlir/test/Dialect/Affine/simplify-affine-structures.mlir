@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -simplify-affine-structures | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -simplify-affine-structures | FileCheck %s
 
 // CHECK-DAG: [[SET_EMPTY_2D:#set[0-9]+]] = affine_set<(d0, d1) : (1 == 0)>
 // CHECK-DAG: #set1 = affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0)>

@@ -199,6 +199,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool> EnableStructurizerWorkarounds(
+    "amdgpu-enable-structurizer-workarounds",
+    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -456,11 +461,10 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createAMDGPUAlwaysInlinePass(false));
   });
 
-  const auto &Opt = Options;
   Builder.addExtension(
     PassManagerBuilder::EP_EarlyAsPossible,
-    [AMDGPUAA, LibCallSimplify, &Opt, this](const PassManagerBuilder &,
-                                            legacy::PassManagerBase &PM) {
+    [AMDGPUAA, LibCallSimplify, this](const PassManagerBuilder &,
+                                      legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
@@ -468,7 +472,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(llvm::createAMDGPUPropagateAttributesEarlyPass(this));
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
-        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(Opt, this));
+        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
   });
 
   Builder.addExtension(
@@ -874,6 +878,9 @@ bool GCNPassConfig::addPreISel() {
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
   if (!LateCFGStructurize) {
+    if (EnableStructurizerWorkarounds) {
+      addPass(createUnifyLoopExitsPass());
+    }
     addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
   }
 

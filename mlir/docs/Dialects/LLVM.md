@@ -1,4 +1,4 @@
-# LLVM IR Dialect
+# 'llvm' Dialect
 
 This dialect wraps the LLVM IR types and instructions into MLIR types and
 operations. It provides several additional operations that are necessary to

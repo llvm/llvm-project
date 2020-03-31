@@ -132,7 +132,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
 }
 
 unsigned Type::getScalarSizeInBits() const {
-  return getScalarType()->getPrimitiveSizeInBits();
+  // It is safe to assume that the scalar types have a fixed size.
+  return getScalarType()->getPrimitiveSizeInBits().getFixedSize();
 }
 
 int Type::getFPMantissaWidth() const {

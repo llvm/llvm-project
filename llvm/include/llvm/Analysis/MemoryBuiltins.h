@@ -76,6 +76,14 @@ bool isMallocLikeFn(const Value *V,
                     bool LookThroughBitCast = false);
 
 /// Tests if a value is a call or invoke to a library function that
+/// allocates uninitialized memory with alignment (such as aligned_alloc).
+bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                          bool LookThroughBitCast = false);
+bool isAlignedAllocLikeFn(
+    const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
+    bool LookThroughBitCast = false);
+
+/// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
 bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);

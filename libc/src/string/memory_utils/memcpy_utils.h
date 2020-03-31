@@ -14,19 +14,21 @@
 
 // __builtin_memcpy_inline guarantees to never call external functions.
 // Unfortunately it is not widely available.
-#if defined(__clang__) && __has_builtin(__builtin_memcpy_inline)
+#ifdef __clang__
+#if __has_builtin(__builtin_memcpy_inline)
 #define USE_BUILTIN_MEMCPY_INLINE
+#endif
 #elif defined(__GNUC__)
 #define USE_BUILTIN_MEMCPY
 #endif
+
+namespace __llvm_libc {
 
 // This is useful for testing.
 #if defined(LLVM_LIBC_MEMCPY_MONITOR)
 extern "C" void LLVM_LIBC_MEMCPY_MONITOR(char *__restrict,
                                          const char *__restrict, size_t);
 #endif
-
-namespace __llvm_libc {
 
 // Copies `kBlockSize` bytes from `src` to `dst`.
 template <size_t kBlockSize>

@@ -119,12 +119,13 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // Other interface methods.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
-      "Return the reference iterators for this named op (if any are specied). "
-      "These reference iterators are used to specify the default behavior of "
-      "the op. Typically this would be a static method but in order to allow "
-      "rank-polymorphic ops, this needs to be per object instance. Named ops "
-      "must define referenceIterators, even if empty for the 0-D case. "
-      "Generic ops on the other hand have a None `referenceIterators`",
+      "Return the reference iterators for this named op (if any are "
+      "specified). These reference iterators are used to specify the default "
+      "behavior of the op. Typically this would be a static method but in "
+      "order to allow rank-polymorphic ops, this needs to be per object "
+      "instance. Named ops must define referenceIterators, even if empty for "
+      "the 0-D case. Generic ops on the other hand have a None "
+      "`referenceIterators`",
       "llvm::Optional<SmallVector<StringRef, 8>>", "referenceIterators"
     >,
     InterfaceMethod<

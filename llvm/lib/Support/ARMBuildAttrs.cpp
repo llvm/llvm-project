@@ -6,16 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 
 using namespace llvm;
 
-namespace {
-const struct {
-  ARMBuildAttrs::AttrType Attr;
-  StringRef TagName;
-} ARMAttributeTags[] = {
+static const TagNameItem tagData[] = {
     {ARMBuildAttrs::File, "Tag_File"},
     {ARMBuildAttrs::Section, "Tag_Section"},
     {ARMBuildAttrs::Symbol, "Tag_Symbol"},
@@ -67,35 +62,7 @@ const struct {
     {ARMBuildAttrs::ABI_align_needed, "Tag_ABI_align8_needed"},
     {ARMBuildAttrs::ABI_align_preserved, "Tag_ABI_align8_preserved"},
 };
-}
 
-namespace llvm {
-namespace ARMBuildAttrs {
-StringRef AttrTypeAsString(unsigned Attr, bool HasTagPrefix) {
-  return AttrTypeAsString(static_cast<AttrType>(Attr), HasTagPrefix);
-}
-
-StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix) {
-  for (unsigned TI = 0, TE = sizeof(ARMAttributeTags) / sizeof(*ARMAttributeTags);
-       TI != TE; ++TI)
-    if (ARMAttributeTags[TI].Attr == Attr) {
-      auto TagName = ARMAttributeTags[TI].TagName;
-      return HasTagPrefix ? TagName : TagName.drop_front(4);
-    }
-  return "";
-}
-
-int AttrTypeFromString(StringRef Tag) {
-  bool HasTagPrefix = Tag.startswith("Tag_");
-  for (unsigned TI = 0,
-                TE = sizeof(ARMAttributeTags) / sizeof(*ARMAttributeTags);
-       TI != TE; ++TI) {
-    auto TagName = ARMAttributeTags[TI].TagName;
-    if (TagName.drop_front(HasTagPrefix ? 0 : 4) == Tag) {
-      return ARMAttributeTags[TI].Attr;
-    }
-  }
-  return -1;
-}
-}
-}
+const TagNameMap llvm::ARMBuildAttrs::ARMAttributeTags(tagData,
+                                                       sizeof(tagData) /
+                                                           sizeof(TagNameItem));

@@ -739,7 +739,7 @@ public:
         "Intrinsic::ID", "Intrinsic::" + IntrinsicID);
     OS << "Builder.CreateCall(CGM.getIntrinsic(" << IntNo;
     if (!ParamTypes.empty()) {
-      OS << ", llvm::SmallVector<llvm::Type *, " << ParamTypes.size() << "> {";
+      OS << ", {";
       const char *Sep = "";
       for (auto T : ParamTypes) {
         OS << Sep << ParamAlloc.allocParam("llvm::Type *", T->llvmName());
@@ -747,7 +747,7 @@ public:
       }
       OS << "}";
     }
-    OS << "), llvm::SmallVector<Value *, " << Args.size() << "> {";
+    OS << "), {";
     const char *Sep = "";
     for (auto Arg : Args) {
       OS << Sep << Arg->asValue();

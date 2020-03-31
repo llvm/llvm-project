@@ -242,37 +242,33 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   return FI;
 }
 
-unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
-  unsigned Alignment = 0;
-  Type *ValTy = nullptr;
+Align IRTranslator::getMemOpAlign(const Instruction &I) {
   if (const StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-    Alignment = SI->getAlignment();
-    ValTy = SI->getValueOperand()->getType();
-  } else if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    Alignment = LI->getAlignment();
-    ValTy = LI->getType();
-  } else if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
-    // TODO(PR27168): This instruction has no alignment attribute, but unlike
-    // the default alignment for load/store, the default here is to assume
-    // it has NATURAL alignment, not DataLayout-specified alignment.
-    const DataLayout &DL = AI->getModule()->getDataLayout();
-    Alignment = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
-    ValTy = AI->getCompareOperand()->getType();
-  } else if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
-    // TODO(PR27168): This instruction has no alignment attribute, but unlike
-    // the default alignment for load/store, the default here is to assume
-    // it has NATURAL alignment, not DataLayout-specified alignment.
-    const DataLayout &DL = AI->getModule()->getDataLayout();
-    Alignment = DL.getTypeStoreSize(AI->getValOperand()->getType());
-    ValTy = AI->getType();
-  } else {
-    OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
-    R << "unable to translate memop: " << ore::NV("Opcode", &I);
-    reportTranslationError(*MF, *TPC, *ORE, R);
-    return 1;
+    Type *ValTy = SI->getValueOperand()->getType();
+    return SI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
   }
-
-  return Alignment ? Alignment : DL->getABITypeAlignment(ValTy);
+  if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+    Type *ValTy = LI->getType();
+    return LI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
+  }
+  if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    return Align(DL.getTypeStoreSize(AI->getCompareOperand()->getType()));
+  }
+  if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    return Align(DL.getTypeStoreSize(AI->getValOperand()->getType()));
+  }
+  OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
+  R << "unable to translate memop: " << ore::NV("Opcode", &I);
+  reportTranslationError(*MF, *TPC, *ORE, R);
+  return Align(1);
 }
 
 MachineBasicBlock &IRTranslator::getMBB(const BasicBlock &BB) {
@@ -1200,7 +1196,7 @@ void IRTranslator::getStackGuard(Register DstReg,
                MachineMemOperand::MODereferenceable;
   MachineMemOperand *MemRef =
       MF->getMachineMemOperand(MPInfo, Flags, DL->getPointerSizeInBits() / 8,
-                               DL->getPointerABIAlignment(0).value());
+                               DL->getPointerABIAlignment(0));
   MIB.setMemRefs({MemRef});
 }
 
@@ -1220,8 +1216,12 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       break;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
-  case Intrinsic::bitreverse:
+    case Intrinsic::bitreverse:
       return TargetOpcode::G_BITREVERSE;
+    case Intrinsic::fshl:
+      return TargetOpcode::G_FSHL;
+    case Intrinsic::fshr:
+      return TargetOpcode::G_FSHR;
     case Intrinsic::ceil:
       return TargetOpcode::G_FCEIL;
     case Intrinsic::cos:
@@ -1384,8 +1384,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     // FIXME: Get alignment
     MIRBuilder.buildInstr(TargetOpcode::G_VASTART, {}, {getOrCreateVReg(*Ptr)})
-        .addMemOperand(MF->getMachineMemOperand(
-            MachinePointerInfo(Ptr), MachineMemOperand::MOStore, ListSize, 1));
+        .addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Ptr),
+                                                MachineMemOperand::MOStore,
+                                                ListSize, Align(1)));
     return true;
   }
   case Intrinsic::dbg_value: {
@@ -1711,14 +1712,12 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
   if (TLI.getTgtMemIntrinsic(Info, CI, *MF, ID)) {
-    MaybeAlign Align = Info.align;
-    if (!Align)
-      Align = MaybeAlign(
-          DL->getABITypeAlignment(Info.memVT.getTypeForEVT(F->getContext())));
+    Align Alignment = Info.align.getValueOr(
+        DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
 
     uint64_t Size = Info.memVT.getStoreSize();
-    MIB.addMemOperand(MF->getMachineMemOperand(
-        MachinePointerInfo(Info.ptrVal), Info.flags, Size, Align->value()));
+    MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
+                                               Info.flags, Size, Alignment));
   }
 
   return true;
@@ -2176,15 +2175,9 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->buildFConstant(Reg, *CF);
   else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
-  else if (isa<ConstantPointerNull>(C)) {
-    // As we are trying to build a constant val of 0 into a pointer,
-    // insert a cast to make them correct with respect to types.
-    unsigned NullSize = DL->getTypeSizeInBits(C.getType());
-    auto *ZeroTy = Type::getIntNTy(C.getContext(), NullSize);
-    auto *ZeroVal = ConstantInt::get(ZeroTy, 0);
-    Register ZeroReg = getOrCreateVReg(*ZeroVal);
-    EntryBuilder->buildCast(Reg, ZeroReg);
-  } else if (auto GV = dyn_cast<GlobalValue>(&C))
+  else if (isa<ConstantPointerNull>(C))
+    EntryBuilder->buildConstant(Reg, 0);
+  else if (auto GV = dyn_cast<GlobalValue>(&C))
     EntryBuilder->buildGlobalValue(Reg, GV);
   else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
     if (!CAZ->getType()->isVectorTy())

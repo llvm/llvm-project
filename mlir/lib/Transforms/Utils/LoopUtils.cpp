@@ -17,10 +17,12 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Function.h"
+#include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -698,23 +700,88 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
 }
 
-/// Performs a sequence of loop interchanges of loops in perfectly nested
-/// sequence of loops in 'loops', as specified by permutation in 'loopPermMap'.
-unsigned mlir::interchangeLoops(ArrayRef<AffineForOp> loops,
-                                ArrayRef<unsigned> loopPermMap) {
-  Optional<unsigned> loopNestRootIndex;
-  for (int i = loops.size() - 1; i >= 0; --i) {
-    int permIndex = static_cast<int>(loopPermMap[i]);
-    // Store the index of the for loop which will be the new loop nest root.
-    if (permIndex == 0)
-      loopNestRootIndex = i;
-    if (permIndex > i) {
-      // Sink loop 'i' by 'permIndex - i' levels deeper into the loop nest.
-      sinkLoop(loops[i], permIndex - i);
-    }
+/// Return true if `loops` is a perfect nest.
+static bool isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+  auto outerLoop = loops.front();
+  for (auto loop : loops.drop_front()) {
+    auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
+    // parentForOp's body should be just this loop and the terminator.
+    if (parentForOp != outerLoop ||
+        parentForOp.getBody()->getOperations().size() != 2)
+      return false;
+    outerLoop = loop;
   }
-  assert(loopNestRootIndex.hasValue());
-  return loopNestRootIndex.getValue();
+  return true;
+}
+
+// input[i] should move from position i -> permMap[i]. Returns the position in
+// `input` that becomes the new outermost loop.
+unsigned mlir::permuteLoops(MutableArrayRef<AffineForOp> input,
+                            ArrayRef<unsigned> permMap) {
+  assert(input.size() == permMap.size() && "invalid permutation map size");
+  // Check whether the permutation spec is valid. This is a small vector - we'll
+  // just sort and check if it's iota.
+  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  llvm::sort(checkPermMap);
+  if (llvm::any_of(llvm::enumerate(checkPermMap),
+                   [](const auto &en) { return en.value() != en.index(); }))
+    assert(false && "invalid permutation map");
+
+  // Nothing to do.
+  if (input.size() < 2)
+    return 0;
+
+  assert(isPerfectlyNested(input) && "input not perfectly nested");
+
+  // Compute the inverse mapping, invPermMap: since input[i] goes to position
+  // permMap[i], position i of the permuted nest is at input[invPermMap[i]].
+  SmallVector<std::pair<unsigned, unsigned>, 4> invPermMap;
+  for (unsigned i = 0, e = input.size(); i < e; ++i)
+    invPermMap.push_back({permMap[i], i});
+  llvm::sort(invPermMap);
+
+  // Move the innermost loop body to the loop that would be the innermost in the
+  // permuted nest (only if the innermost loop is going to change).
+  if (permMap.back() != input.size() - 1) {
+    auto *destBody = input[invPermMap.back().second].getBody();
+    auto *srcBody = input.back().getBody();
+    destBody->getOperations().splice(destBody->begin(),
+                                     srcBody->getOperations(), srcBody->begin(),
+                                     std::prev(srcBody->end()));
+  }
+
+  // We'll move each loop in `input` in the reverse order so that its body is
+  // empty when we are moving it; this incurs zero copies and no erasing.
+  for (int i = input.size() - 1; i >= 0; --i) {
+    // If this has to become the outermost loop after permutation, add it to the
+    // parent block of the original root.
+    if (permMap[i] == 0) {
+      // If the root remains the same, nothing to do.
+      if (i == 0)
+        continue;
+      // Make input[i] the new outermost loop moving it into parentBlock.
+      auto *parentBlock = input[0].getOperation()->getBlock();
+      parentBlock->getOperations().splice(
+          Block::iterator(input[0]),
+          input[i].getOperation()->getBlock()->getOperations(),
+          Block::iterator(input[i]));
+      continue;
+    }
+
+    // If the parent in the permuted order is the same as in the original,
+    // nothing to do.
+    unsigned parentPosInInput = invPermMap[permMap[i] - 1].second;
+    if (i > 0 && static_cast<unsigned>(i - 1) == parentPosInInput)
+      continue;
+
+    // Move input[i] to its surrounding loop in the transformed nest.
+    auto *destBody = input[parentPosInInput].getBody();
+    destBody->getOperations().splice(
+        destBody->begin(), input[i].getOperation()->getBlock()->getOperations(),
+        Block::iterator(input[i]));
+  }
+
+  return invPermMap[0].second;
 }
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -768,17 +835,8 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
   if (!checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap))
     return forOp;
   // Perform loop interchange according to permutation 'loopPermMap'.
-  unsigned loopNestRootIndex = interchangeLoops(loops, loopPermMap);
+  unsigned loopNestRootIndex = permuteLoops(loops, loopPermMap);
   return loops[loopNestRootIndex];
-}
-
-/// Performs a series of loop interchanges to sink 'forOp' 'loopDepth' levels
-/// deeper in the loop nest.
-void mlir::sinkLoop(AffineForOp forOp, unsigned loopDepth) {
-  for (unsigned i = 0; i < loopDepth; ++i) {
-    AffineForOp nextForOp = cast<AffineForOp>(forOp.getBody()->front());
-    interchangeLoops(forOp, nextForOp);
-  }
 }
 
 // Factors out common behavior to add a new `iv` (resp. `iv` + `offset`) to the
@@ -2067,4 +2125,215 @@ void mlir::gatherLoops(FuncOp func,
     assert(depthToLoops.back().empty() && "Last loop level is not empty?");
     depthToLoops.pop_back();
   }
+}
+
+// TODO: if necessary, this can be extended to also compose in any
+// affine.applys, fold to constant if all result dimensions of the map are
+// constant (canonicalizeMapAndOperands below already does this for single
+// result bound maps), and use simplifyMap to perform algebraic simplication.
+AffineForOp mlir::createCanonicalizedAffineForOp(
+    OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
+    ValueRange ubOperands, AffineMap ubMap, int64_t step) {
+  SmallVector<Value, 4> lowerOperands(lbOperands);
+  SmallVector<Value, 4> upperOperands(ubOperands);
+
+  fullyComposeAffineMapAndOperands(&lbMap, &lowerOperands);
+  canonicalizeMapAndOperands(&lbMap, &lowerOperands);
+  fullyComposeAffineMapAndOperands(&ubMap, &upperOperands);
+  canonicalizeMapAndOperands(&ubMap, &upperOperands);
+
+  return b.create<AffineForOp>(loc, lowerOperands, lbMap, upperOperands, ubMap,
+                               step);
+}
+
+/// Creates an AffineIfOp that encodes the conditional to choose between
+/// the constant trip count version and an unknown trip count version of this
+/// nest of loops. This is used to separate partial and full tiles if `loops`
+/// has the intra-tile loops. The affine.if op is inserted at the builder
+/// insertion point of `b`.
+static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
+                                            OpBuilder b) {
+  if (loops.empty())
+    return nullptr;
+
+  auto *context = loops[0].getContext();
+
+  FlatAffineConstraints cst;
+  getIndexSet(loops, &cst);
+
+  // Remove constraints that are independent of these loop IVs.
+  cst.removeIndependentConstraints(/*pos=*/0, /*num=*/loops.size());
+
+  // Construct the constraint set representing the guard for full tiles. The
+  // lower bound (and upper bound) corresponding to the full tile should be
+  // larger (and resp. smaller) than any other lower (or upper bound).
+  SmallVector<int64_t, 8> fullTileLb, fullTileUb;
+  for (auto loop : loops) {
+    (void) loop;
+    // TODO: Non-unit stride is not an issue to generalize to.
+    assert(loop.getStep() == 1 && "point loop step expected to be one");
+    // Mark everything symbols for the purpose of finding a constant diff pair.
+    cst.setDimSymbolSeparation(/*newSymbolCount=*/cst.getNumDimAndSymbolIds() -
+                               1);
+    unsigned fullTileLbPos, fullTileUbPos;
+    if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
+                                       /*lbFloorDivisor=*/nullptr,
+                                       /*ub=*/nullptr, &fullTileLbPos,
+                                       &fullTileUbPos)) {
+      LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
+      return nullptr;
+    }
+
+    SmallVector<unsigned, 4> lbIndices, ubIndices;
+    cst.getLowerAndUpperBoundIndices(/*pos=*/0, &lbIndices, &ubIndices);
+
+    auto fLb = cst.getInequality(fullTileLbPos);
+    auto fUb = cst.getInequality(fullTileUbPos);
+    fullTileLb.assign(fLb.begin(), fLb.end());
+    fullTileUb.assign(fUb.begin(), fUb.end());
+
+    // Full tile lower bound should be >= than any other lower bound.
+    for (auto lbIndex : lbIndices)
+      for (unsigned i = 0, e = cst.getNumCols(); i < e; ++i)
+        cst.atIneq(lbIndex, i) = fullTileLb[i] - cst.atIneq(lbIndex, i);
+
+    // Full tile upper bound should be <= any other upper bound.
+    for (auto ubIndex : ubIndices)
+      for (unsigned i = 0, e = cst.getNumCols(); i < e; ++i)
+        cst.atIneq(ubIndex, i) -= fullTileUb[i];
+
+    cst.removeId(0);
+  }
+
+  // The previous step leads to all zeros for the full tile lb and ub position
+  // itself; remove those and any other duplicates / trivial redundancies.
+  cst.removeTrivialRedundancy();
+
+  // Turn everything into dims conservatively since we earlier turned all
+  // trailing ids past point loop IV into symbols. Some of these could be outer
+  // loop IVs; we'll canonicalize anyway.
+  cst.setDimSymbolSeparation(0);
+
+  IntegerSet ifCondSet = cst.getAsIntegerSet(context);
+  // ifCondSet can be null if cst was empty -- this can happen if all loops
+  // in the nest have constant trip counts.
+  if (!ifCondSet)
+    return nullptr;
+
+  SmallVector<Value, 4> setOperands;
+  cst.getIdValues(0, cst.getNumDimAndSymbolIds(), &setOperands);
+  canonicalizeSetAndOperands(&ifCondSet, &setOperands);
+  return b.create<AffineIfOp>(loops[0].getLoc(), ifCondSet, setOperands,
+                              /*withElseRegion=*/true);
+}
+
+/// Create the full tile loop nest (along with its body).
+static LogicalResult
+createFullTiles(MutableArrayRef<AffineForOp> inputNest,
+                SmallVectorImpl<AffineForOp> &fullTileLoops, OpBuilder b) {
+  fullTileLoops.reserve(inputNest.size());
+
+  // For each loop in the original nest identify a lower/upper bound pair such
+  // that their difference is a constant.
+  FlatAffineConstraints cst;
+  for (auto loop : inputNest) {
+    // TODO: straightforward to generalize to a non-unit stride.
+    if (loop.getStep() != 1) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[tile separation] non-unit stride not implemented\n");
+      return failure();
+    }
+    getIndexSet({loop}, &cst);
+    // We will mark everything other than this loop IV as symbol for getting a
+    // pair of <lb, ub> with a constant difference.
+    cst.setDimSymbolSeparation(cst.getNumDimAndSymbolIds() - 1);
+    unsigned lbPos, ubPos;
+    if (!cst.getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
+                                       /*lbDivisor=*/nullptr, /*ub=*/nullptr,
+                                       &lbPos, &ubPos) ||
+        lbPos == ubPos) {
+      LLVM_DEBUG(llvm::dbgs() << "[tile separation] Can't get constant diff / "
+                                 "equalities not yet handled\n");
+      return failure();
+    }
+
+    // Set all identifiers as dimensions uniformly since some of those marked as
+    // symbols above could be outer loop IVs (corresponding tile space IVs).
+    cst.setDimSymbolSeparation(/*newSymbolCount=*/0);
+
+    AffineValueMap lbVmap, ubVmap;
+    cst.getIneqAsAffineValueMap(/*pos=*/0, lbPos, lbVmap, b.getContext());
+    cst.getIneqAsAffineValueMap(/*pos=*/0, ubPos, ubVmap, b.getContext());
+    AffineForOp fullTileLoop = createCanonicalizedAffineForOp(
+        b, loop.getLoc(), lbVmap.getOperands(), lbVmap.getAffineMap(),
+        ubVmap.getOperands(), ubVmap.getAffineMap());
+    b = fullTileLoop.getBodyBuilder();
+    fullTileLoops.push_back(fullTileLoop);
+  }
+
+  // Add the body for the full tile loop nest.
+  BlockAndValueMapping operandMap;
+  for (auto loopEn : llvm::enumerate(inputNest))
+    operandMap.map(loopEn.value().getInductionVar(),
+                   fullTileLoops[loopEn.index()].getInductionVar());
+  b = fullTileLoops.back().getBodyBuilder();
+  for (auto &op : inputNest.back().getBody()->without_terminator())
+    b.clone(op, operandMap);
+  return success();
+}
+
+LogicalResult
+mlir::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
+                        SmallVectorImpl<AffineForOp> *fullTileNest) {
+  if (inputNest.empty())
+    return success();
+
+  auto firstLoop = inputNest[0];
+
+  // Each successive for op has to be nested in the other.
+  auto prevLoop = firstLoop;
+  for (auto loop : inputNest.drop_front(1)) {
+    assert(loop.getParentOp() == prevLoop && "input not contiguously nested");
+    prevLoop = loop;
+  }
+
+  // Create the full tile loop nest.
+  SmallVector<AffineForOp, 4> fullTileLoops;
+  OpBuilder b(firstLoop);
+  if (failed(createFullTiles(inputNest, fullTileLoops, b))) {
+    if (!fullTileLoops.empty())
+      fullTileLoops.front().erase();
+    return failure();
+  }
+
+  // Create and insert the version select right before the root of the nest.
+  b = OpBuilder(firstLoop);
+  AffineIfOp ifOp = createSeparationCondition(inputNest, b);
+  if (!ifOp) {
+    fullTileLoops.front().erase();
+    LLVM_DEBUG(llvm::dbgs() << "All tiles are full tiles, or failure creating "
+                               "separation condition\n");
+    return failure();
+  }
+
+  // Move the full tile into the then block.
+  Block *thenBlock = ifOp.getThenBlock();
+  AffineForOp outermostFullTileLoop = fullTileLoops[0];
+  thenBlock->getOperations().splice(
+      std::prev(thenBlock->end()),
+      outermostFullTileLoop.getOperation()->getBlock()->getOperations(),
+      Block::iterator(outermostFullTileLoop));
+
+  // Move the partial tile into the else block. The partial tile is the same as
+  // the original loop nest.
+  Block *elseBlock = ifOp.getElseBlock();
+  elseBlock->getOperations().splice(
+      std::prev(elseBlock->end()),
+      firstLoop.getOperation()->getBlock()->getOperations(),
+      Block::iterator(firstLoop));
+
+  if (fullTileNest)
+    *fullTileNest = std::move(fullTileLoops);
+
+  return success();
 }

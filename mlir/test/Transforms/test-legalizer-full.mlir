@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-legalize-patterns -test-legalize-mode=full -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-legalize-patterns -test-legalize-mode=full -split-input-file -verify-diagnostics %s | FileCheck %s
 
 // CHECK-LABEL: func @multi_level_mapping
 func @multi_level_mapping() {

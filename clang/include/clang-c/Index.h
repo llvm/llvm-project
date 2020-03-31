@@ -2176,7 +2176,11 @@ enum CXCursorKind {
    */
   CXCursor_FixedPointLiteral = 149,
 
-  CXCursor_LastExpr = CXCursor_FixedPointLiteral,
+  /** OpenMP 5.0 [2.1.4, Array Shaping].
+   */
+  CXCursor_OMPArrayShapingExpr = 150,
+
+  CXCursor_LastExpr = CXCursor_OMPArrayShapingExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,

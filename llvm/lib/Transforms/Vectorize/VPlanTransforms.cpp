@@ -41,7 +41,6 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       continue;
 
     VPBasicBlock *VPBB = Base->getEntryBasicBlock();
-    VPRecipeBase *LastRecipe = nullptr;
     // Introduce each ingredient into VPlan.
     for (auto I = VPBB->begin(), E = VPBB->end(); I != E;) {
       VPRecipeBase *Ingredient = &*I++;
@@ -72,20 +71,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenPHIRecipe(Phi);
       } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
         NewRecipe = new VPWidenGEPRecipe(GEP, OrigLoop);
-      } else {
-        // If the last recipe is a VPWidenRecipe, add Inst to it instead of
-        // creating a new recipe.
-        if (VPWidenRecipe *WidenRecipe =
-                dyn_cast_or_null<VPWidenRecipe>(LastRecipe)) {
-          WidenRecipe->appendInstruction(Inst);
-          Ingredient->eraseFromParent();
-          continue;
-        }
-        NewRecipe = new VPWidenRecipe(Inst);
-      }
+      } else
+        NewRecipe = new VPWidenRecipe(*Inst);
 
       NewRecipe->insertBefore(Ingredient);
-      LastRecipe = NewRecipe;
       Ingredient->eraseFromParent();
     }
   }

@@ -124,7 +124,6 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
     : tooling::Diagnostic(CheckName, DiagLevel, BuildDirectory),
       IsWarningAsError(IsWarningAsError) {}
 
-
 class ClangTidyContext::CachedGlobList {
 public:
   CachedGlobList(StringRef Globs) : Globs(Globs) {}
@@ -297,57 +296,54 @@ static bool IsNOLINTFound(StringRef NolintDirectiveText, StringRef Line,
   return true;
 }
 
+llvm::Optional<StringRef> getBuffer(const SourceManager &SM, FileID File,
+                                    bool AllowIO) {
+  // This is similar to the implementation of SourceManager::getBufferData(),
+  // but uses ContentCache::getRawBuffer() rather than getBuffer() if
+  // AllowIO=false, to avoid triggering file I/O if the file contents aren't
+  // already mapped.
+  bool CharDataInvalid = false;
+  const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(File, &CharDataInvalid);
+  if (CharDataInvalid || !Entry.isFile())
+    return llvm::None;
+  const SrcMgr::ContentCache *Cache = Entry.getFile().getContentCache();
+  const llvm::MemoryBuffer *Buffer =
+      AllowIO ? Cache->getBuffer(SM.getDiagnostics(), SM.getFileManager(),
+                                 SourceLocation(), &CharDataInvalid)
+              : Cache->getRawBuffer();
+  if (!Buffer || CharDataInvalid)
+    return llvm::None;
+  return Buffer->getBuffer();
+}
+
 static bool LineIsMarkedWithNOLINT(const SourceManager &SM, SourceLocation Loc,
                                    unsigned DiagID,
-                                   const ClangTidyContext &Context) {
-  bool Invalid;
-  const char *CharacterData = SM.getCharacterData(Loc, &Invalid);
-  if (Invalid)
+                                   const ClangTidyContext &Context,
+                                   bool AllowIO) {
+  FileID File;
+  unsigned Offset;
+  std::tie(File, Offset) = SM.getDecomposedSpellingLoc(Loc);
+  llvm::Optional<StringRef> Buffer = getBuffer(SM, File, AllowIO);
+  if (!Buffer)
     return false;
 
   // Check if there's a NOLINT on this line.
-  const char *P = CharacterData;
-  while (*P != '\0' && *P != '\r' && *P != '\n')
-    ++P;
-  StringRef RestOfLine(CharacterData, P - CharacterData + 1);
+  StringRef RestOfLine = Buffer->substr(Offset).split('\n').first;
   if (IsNOLINTFound("NOLINT", RestOfLine, DiagID, Context))
     return true;
 
   // Check if there's a NOLINTNEXTLINE on the previous line.
-  const char *BufBegin =
-      SM.getCharacterData(SM.getLocForStartOfFile(SM.getFileID(Loc)), &Invalid);
-  if (Invalid || P == BufBegin)
-    return false;
-
-  // Scan backwards over the current line.
-  P = CharacterData;
-  while (P != BufBegin && *P != '\n')
-    --P;
-
-  // If we reached the begin of the file there is no line before it.
-  if (P == BufBegin)
-    return false;
-
-  // Skip over the newline.
-  --P;
-  const char *LineEnd = P;
-
-  // Now we're on the previous line. Skip to the beginning of it.
-  while (P != BufBegin && *P != '\n')
-    --P;
-
-  RestOfLine = StringRef(P, LineEnd - P + 1);
-  if (IsNOLINTFound("NOLINTNEXTLINE", RestOfLine, DiagID, Context))
-    return true;
-
-  return false;
+  StringRef PrevLine =
+      Buffer->substr(0, Offset).rsplit('\n').first.rsplit('\n').second;
+  return IsNOLINTFound("NOLINTNEXTLINE", PrevLine, DiagID, Context);
 }
 
 static bool LineIsMarkedWithNOLINTinMacro(const SourceManager &SM,
                                           SourceLocation Loc, unsigned DiagID,
-                                          const ClangTidyContext &Context) {
+                                          const ClangTidyContext &Context,
+                                          bool AllowIO) {
   while (true) {
-    if (LineIsMarkedWithNOLINT(SM, Loc, DiagID, Context))
+    if (LineIsMarkedWithNOLINT(SM, Loc, DiagID, Context, AllowIO))
       return true;
     if (!Loc.isMacroID())
       return false;
@@ -361,14 +357,13 @@ namespace tidy {
 
 bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
                               const Diagnostic &Info, ClangTidyContext &Context,
-                              bool CheckMacroExpansion) {
+                              bool AllowIO) {
   return Info.getLocation().isValid() &&
          DiagLevel != DiagnosticsEngine::Error &&
          DiagLevel != DiagnosticsEngine::Fatal &&
-         (CheckMacroExpansion ? LineIsMarkedWithNOLINTinMacro
-                              : LineIsMarkedWithNOLINT)(Info.getSourceManager(),
-                                                        Info.getLocation(),
-                                                        Info.getID(), Context);
+         LineIsMarkedWithNOLINTinMacro(Info.getSourceManager(),
+                                       Info.getLocation(), Info.getID(),
+                                       Context, AllowIO);
 }
 
 } // namespace tidy
@@ -680,7 +675,7 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
   for (auto &FileAndEvents : FileEvents) {
     std::vector<Event> &Events = FileAndEvents.second;
     // Sweep.
-    std::sort(Events.begin(), Events.end());
+    llvm::sort(Events);
     int OpenIntervals = 0;
     for (const auto &Event : Events) {
       if (Event.Type == Event::ET_End)
@@ -710,9 +705,9 @@ struct LessClangTidyError {
     const tooling::DiagnosticMessage &M1 = LHS.Message;
     const tooling::DiagnosticMessage &M2 = RHS.Message;
 
-    return
-      std::tie(M1.FilePath, M1.FileOffset, LHS.DiagnosticName, M1.Message) <
-      std::tie(M2.FilePath, M2.FileOffset, RHS.DiagnosticName, M2.Message);
+    return std::tie(M1.FilePath, M1.FileOffset, LHS.DiagnosticName,
+                    M1.Message) <
+           std::tie(M2.FilePath, M2.FileOffset, RHS.DiagnosticName, M2.Message);
   }
 };
 struct EqualClangTidyError {
@@ -726,7 +721,7 @@ struct EqualClangTidyError {
 std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
   finalizeLastError();
 
-  std::sort(Errors.begin(), Errors.end(), LessClangTidyError());
+  llvm::sort(Errors, LessClangTidyError());
   Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
                Errors.end());
   if (RemoveIncompatibleErrors)

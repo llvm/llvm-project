@@ -28,6 +28,7 @@ add_llvm_unittest(SupportTests
   DJBTest.cpp
   EndianStreamTest.cpp
   EndianTest.cpp
+  ELFAttributeParserTest.cpp
   ErrnoTest.cpp
   ErrorOrTest.cpp
   ErrorTest.cpp
@@ -59,6 +60,7 @@ add_llvm_unittest(SupportTests
   RegexTest.cpp
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp
+  RISCVAttributeParserTest.cpp
   ScaledNumberTest.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp

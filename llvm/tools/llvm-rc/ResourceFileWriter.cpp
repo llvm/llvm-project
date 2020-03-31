@@ -1180,8 +1180,10 @@ Error ResourceFileWriter::writeMenuDefinition(
 
   if (auto *MenuItemPtr = dyn_cast<MenuItem>(DefPtr)) {
     writeInt<uint16_t>(Flags);
-    RETURN_IF_ERROR(
-        checkNumberFits<uint16_t>(MenuItemPtr->Id, "MENUITEM action ID"));
+    // Some resource files use -1, i.e. UINT32_MAX, for empty menu items.
+    if (MenuItemPtr->Id != static_cast<uint32_t>(-1))
+      RETURN_IF_ERROR(
+          checkNumberFits<uint16_t>(MenuItemPtr->Id, "MENUITEM action ID"));
     writeInt<uint16_t>(MenuItemPtr->Id);
     RETURN_IF_ERROR(writeCString(MenuItemPtr->Name));
     return Error::success();

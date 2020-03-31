@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file %s | FileCheck %s
-// RUN: mlir-opt %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
 
 // Check that the attributes for the affine operations are round-tripped.
 // Check that `affine.terminator` is visible in the generic form.

@@ -1239,6 +1239,9 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
       KMP_MB();
       // ToDo: Use __kmp_wait_sleep or similar when blocktime != inf
       KMP_WAIT(spin_here_p, FALSE, KMP_EQ, lck);
+      // Synchronize writes to both runtime thread structures
+      // and writes in user code.
+      KMP_MB();
 
 #ifdef DEBUG_QUEUING_LOCKS
       TRACE_LOCK(gtid + 1, "acq spin");

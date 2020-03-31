@@ -1047,7 +1047,7 @@ private:
                        Keywords.kw___has_include_next)) {
         parseHasInclude();
       }
-      if (Tok->is(Keywords.kw_where) && Tok->Next &&
+      if (Style.isCSharp() && Tok->is(Keywords.kw_where) && Tok->Next &&
           Tok->Next->isNot(tok::l_paren)) {
         Tok->Type = TT_CSharpGenericTypeConstraint;
         parseCSharpGenericTypeConstraint();

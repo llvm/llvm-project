@@ -1330,6 +1330,7 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   // The inner add was the result of the narrow add, zero extended to the
   // wider type.  Replace it with the result computed by the intrinsic.
   IC.replaceInstUsesWith(*OrigAdd, ZExt);
+  IC.eraseInstFromFunction(*OrigAdd);
 
   // The original icmp gets replaced with the overflow value.
   return ExtractValueInst::Create(Call, 1, "sadd.overflow");
@@ -2760,6 +2761,30 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
     if (match(BCSrcOp, m_UIToFP(m_Value(X))))
       if (Cmp.isEquality() && match(Op1, m_Zero()))
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+
+    // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
+    // the FP cast because the FP cast does not change the sign-bit.
+    const APInt *C;
+    bool TrueIfSigned;
+    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
+      if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
+          match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
+        // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
+        // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
+        Type *XType = X->getType();
+        Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
+        if (XType->isVectorTy())
+          NewType = VectorType::get(NewType, XType->getVectorNumElements());
+        Value *NewBitcast = Builder.CreateBitCast(X, NewType);
+        if (TrueIfSigned)
+          return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
+                              ConstantInt::getNullValue(NewType));
+        else
+          return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
+                              ConstantInt::getAllOnesValue(NewType));
+      }
+    }
   }
 
   // Test to see if the operands of the icmp are casted versions of other
@@ -3645,6 +3670,11 @@ Value *InstCombiner::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
   Value *Res = Builder.CreateExtractValue(Call, 1, "umul.ov");
   if (NeedNegation) // This technically increases instruction count.
     Res = Builder.CreateNot(Res, "umul.not.ov");
+
+  // If we replaced the mul, erase it. Do this after all uses of Builder,
+  // as the mul is used as insertion point.
+  if (MulHadOtherUses)
+    eraseInstFromFunction(*Mul);
 
   return Res;
 }
@@ -5473,6 +5503,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBinOp(I, Q))
     return Res;
 
+  if (Instruction *R = foldICmpWithCastOp(I))
+    return R;
+
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
@@ -5552,9 +5585,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBitCast(I, Builder))
     return Res;
 
-  if (Instruction *R = foldICmpWithCastOp(I))
-    return R;
-
   if (Instruction *Res = foldICmpWithMinMax(I))
     return Res;
 
@@ -5593,6 +5623,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
           OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, A, B, *AddI,
                                 Result, Overflow)) {
         replaceInstUsesWith(*AddI, Result);
+        eraseInstFromFunction(*AddI);
         return replaceInstUsesWith(I, Overflow);
       }
     }
@@ -5939,16 +5970,15 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 }
 
 /// Optimize fabs(X) compared with zero.
-static Instruction *foldFabsWithFcmpZero(FCmpInst &I) {
+static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombiner &IC) {
   Value *X;
   if (!match(I.getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value(X))) ||
       !match(I.getOperand(1), m_PosZeroFP()))
     return nullptr;
 
-  auto replacePredAndOp0 = [](FCmpInst *I, FCmpInst::Predicate P, Value *X) {
+  auto replacePredAndOp0 = [&IC](FCmpInst *I, FCmpInst::Predicate P, Value *X) {
     I->setPredicate(P);
-    I->setOperand(0, X);
-    return I;
+    return IC.replaceOperand(*I, 0, X);
   };
 
   switch (I.getPredicate()) {
@@ -6113,7 +6143,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   }
   }
 
-  if (Instruction *R = foldFabsWithFcmpZero(I))
+  if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {

@@ -162,6 +162,15 @@ public:
   DiagnosticEngine diagEngine;
 
   //===--------------------------------------------------------------------===//
+  // Options
+  //===--------------------------------------------------------------------===//
+
+  /// In most cases, creating operation in unregistered dialect is not desired
+  /// and indicate a misconfiguration of the compiler. This option enables to
+  /// detect such use cases
+  bool allowUnregisteredDialects = false;
+
+  //===--------------------------------------------------------------------===//
   // Other
   //===--------------------------------------------------------------------===//
 
@@ -349,6 +358,14 @@ void Dialect::registerDialect(MLIRContext *context) {
   impl.dialects.insert(insertPt, std::move(dialect));
 }
 
+bool MLIRContext::allowsUnregisteredDialects() {
+  return impl->allowUnregisteredDialects;
+}
+
+void MLIRContext::allowUnregisteredDialects(bool allowing) {
+  impl->allowUnregisteredDialects = allowing;
+}
+
 /// Return information about all registered operations.  This isn't very
 /// efficient, typically you should ask the operations about their properties
 /// directly.
@@ -458,7 +475,7 @@ static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
   return *it->second;
 }
 
-/// Returns the storage unqiuer used for constructing type storage instances.
+/// Returns the storage uniquer used for constructing type storage instances.
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 

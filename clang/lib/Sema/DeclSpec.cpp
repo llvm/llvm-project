@@ -30,6 +30,9 @@ using namespace clang;
 
 void UnqualifiedId::setTemplateId(TemplateIdAnnotation *TemplateId) {
   assert(TemplateId && "NULL template-id annotation?");
+  assert(!TemplateId->isInvalid() &&
+         "should not convert invalid template-ids to unqualified-ids");
+
   Kind = UnqualifiedIdKind::IK_TemplateId;
   this->TemplateId = TemplateId;
   StartLocation = TemplateId->TemplateNameLoc;
@@ -38,6 +41,9 @@ void UnqualifiedId::setTemplateId(TemplateIdAnnotation *TemplateId) {
 
 void UnqualifiedId::setConstructorTemplateId(TemplateIdAnnotation *TemplateId) {
   assert(TemplateId && "NULL template-id annotation?");
+  assert(!TemplateId->isInvalid() &&
+         "should not convert invalid template-ids to unqualified-ids");
+
   Kind = UnqualifiedIdKind::IK_ConstructorTemplateId;
   this->TemplateId = TemplateId;
   StartLocation = TemplateId->TemplateNameLoc;

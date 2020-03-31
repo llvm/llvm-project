@@ -89,9 +89,7 @@ class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret =
     !if(P.HasModifiers,
-        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
-                                              i32:$src0_modifiers,
-                                              i1:$clamp, i32:$omod))))],
+        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers))))],
         !if(P.HasOMod,
             [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
                                                   i1:$clamp, i32:$omod))))],

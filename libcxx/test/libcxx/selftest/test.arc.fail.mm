@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
+
 #if __has_feature(objc_arc)
 #error This test should not compile.
 #endif

@@ -1406,6 +1406,9 @@ def int_amdgcn_fcmp :
   Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, LLVMMatchType<1>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, ImmArg<2>]>;
 
+def int_amdgcn_ballot :
+  Intrinsic<[llvm_anyint_ty], [llvm_i1_ty], [IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_readfirstlane :
   GCCBuiltin<"__builtin_amdgcn_readfirstlane">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
@@ -1982,6 +1985,12 @@ def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent]>;
 // pass based on !fpmath metadata.
 def int_amdgcn_fdiv_fast : Intrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+// Represent a relocation constant.
+def int_amdgcn_reloc_constant : Intrinsic<
+  [llvm_i32_ty], [llvm_metadata_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 }

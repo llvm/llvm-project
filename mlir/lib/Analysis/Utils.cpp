@@ -1011,14 +1011,12 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
 
 IntegerSet mlir::simplifyIntegerSet(IntegerSet set) {
   FlatAffineConstraints fac(set);
-  MLIRContext *context = set.getContext();
   if (fac.isEmpty())
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
-                                   context);
+                                   set.getContext());
   fac.removeTrivialRedundancy();
 
-  auto simplifiedSet = fac.getAsIntegerSet(context);
+  auto simplifiedSet = fac.getAsIntegerSet(set.getContext());
   assert(simplifiedSet && "guaranteed to succeed while roundtripping");
-
   return simplifiedSet;
 }

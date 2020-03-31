@@ -31,6 +31,10 @@ namespace {
 
 namespace llvm {
 
+namespace AMDGPU {
+struct ImageDimIntrinsicInfo;
+}
+
 class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
 class GCNSubtarget;
@@ -107,6 +111,8 @@ private:
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
 
+  bool selectImageIntrinsic(MachineInstr &MI,
+                            const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
   int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
   bool selectG_ICMP(MachineInstr &I) const;

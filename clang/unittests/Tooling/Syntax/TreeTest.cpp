@@ -224,6 +224,59 @@ void foo() {}
 )txt");
 }
 
+TEST_F(SyntaxTreeTest, SimpleVariable) {
+  expectTreeDumpEqual(
+      R"cpp(
+int a;
+int b = 42;
+    )cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-int
+| |-SimpleDeclarator
+| | `-a
+| `-;
+`-SimpleDeclaration
+  |-int
+  |-SimpleDeclarator
+  | |-b
+  | |-=
+  | `-UnknownExpression
+  |   `-42
+  `-;
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, SimpleFunction) {
+  expectTreeDumpEqual(
+      R"cpp(
+void foo(int a, int b) {}
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-foo
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-a
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-b
+  |   `-)
+  `-CompoundStatement
+    |-{
+    `-}
+)txt");
+}
+
 TEST_F(SyntaxTreeTest, If) {
   expectTreeDumpEqual(
       R"cpp(
@@ -541,20 +594,32 @@ void test() {
 TEST_F(SyntaxTreeTest, MultipleDeclaratorsGrouping) {
   expectTreeDumpEqual(
       R"cpp(
-      int *a, b;
+      int *a, b; int *c, d;
   )cpp",
       R"txt(
 *: TranslationUnit
+|-SimpleDeclaration
+| |-int
+| |-SimpleDeclarator
+| | |-*
+| | `-a
+| |-,
+| |-SimpleDeclarator
+| | `-b
+| `-;
 `-SimpleDeclaration
   |-int
   |-SimpleDeclarator
   | |-*
-  | `-a
+  | `-c
   |-,
   |-SimpleDeclarator
-  | `-b
+  | `-d
   `-;
   )txt");
+}
+
+TEST_F(SyntaxTreeTest, MultipleDeclaratorsGroupingTypedef) {
   expectTreeDumpEqual(
       R"cpp(
     typedef int *a, b;

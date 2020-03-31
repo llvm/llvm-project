@@ -427,7 +427,6 @@ typedef DependentTemplate<NSMutableDictionaryBuilder>::type DependentTemplateFai
 template<typename K, typename V>
 struct NonDependentTemplate {
   typedef NSMutableDictionaryBuilder::template apply<NSString *, NSObject *> type; // expected-error{{'apply' following the 'template' keyword does not refer to a template}}
-  // expected-error@-1{{expected member name or }}
 };
 
 // However, one can use an alias template to turn a parameterized

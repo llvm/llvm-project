@@ -139,7 +139,8 @@ std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
     if (isVector())
-      return (isScalableVector() ? "nxv" : "v") + utostr(getVectorNumElements())
+      return (isScalableVector() ? "nxv" : "v")
+             + utostr(getVectorElementCount().Min)
              + getVectorElementType().getEVTString();
     if (isInteger())
       return "i" + utostr(getSizeInBits());

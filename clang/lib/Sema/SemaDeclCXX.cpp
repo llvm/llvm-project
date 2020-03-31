@@ -5881,38 +5881,52 @@ static void checkCUDADeviceBuiltinSurfaceClassTemplate(Sema &S,
                                                        CXXRecordDecl *Class) {
   bool ErrorReported = false;
   auto reportIllegalClassTemplate = [&ErrorReported](Sema &S,
-                                                     CXXRecordDecl *RD) {
+                                                     ClassTemplateDecl *TD) {
     if (ErrorReported)
       return;
-    S.Diag(RD->getLocation(),
+    S.Diag(TD->getLocation(),
            diag::err_cuda_device_builtin_surftex_cls_template)
-        << /*surface*/ 0 << RD;
+        << /*surface*/ 0 << TD;
     ErrorReported = true;
   };
 
-  TemplateParameterList *Params =
-      Class->getDescribedClassTemplate()->getTemplateParameters();
+  ClassTemplateDecl *TD = Class->getDescribedClassTemplate();
+  if (!TD) {
+    auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(Class);
+    if (!SD) {
+      S.Diag(Class->getLocation(),
+             diag::err_cuda_device_builtin_surftex_ref_decl)
+          << /*surface*/ 0 << Class;
+      S.Diag(Class->getLocation(),
+             diag::note_cuda_device_builtin_surftex_should_be_template_class)
+          << Class;
+      return;
+    }
+    TD = SD->getSpecializedTemplate();
+  }
+
+  TemplateParameterList *Params = TD->getTemplateParameters();
   unsigned N = Params->size();
 
   if (N != 2) {
-    reportIllegalClassTemplate(S, Class);
-    S.Diag(Class->getLocation(),
+    reportIllegalClassTemplate(S, TD);
+    S.Diag(TD->getLocation(),
            diag::note_cuda_device_builtin_surftex_cls_should_have_n_args)
-        << Class << 2;
+        << TD << 2;
   }
   if (N > 0 && !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
-    reportIllegalClassTemplate(S, Class);
-    S.Diag(Class->getLocation(),
+    reportIllegalClassTemplate(S, TD);
+    S.Diag(TD->getLocation(),
            diag::note_cuda_device_builtin_surftex_cls_should_have_match_arg)
-        << Class << /*1st*/ 0 << /*type*/ 0;
+        << TD << /*1st*/ 0 << /*type*/ 0;
   }
   if (N > 1) {
     auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Params->getParam(1));
     if (!NTTP || !NTTP->getType()->isIntegralOrEnumerationType()) {
-      reportIllegalClassTemplate(S, Class);
-      S.Diag(Class->getLocation(),
+      reportIllegalClassTemplate(S, TD);
+      S.Diag(TD->getLocation(),
              diag::note_cuda_device_builtin_surftex_cls_should_have_match_arg)
-          << Class << /*2nd*/ 1 << /*integer*/ 1;
+          << TD << /*2nd*/ 1 << /*integer*/ 1;
     }
   }
 }
@@ -5921,136 +5935,62 @@ static void checkCUDADeviceBuiltinTextureClassTemplate(Sema &S,
                                                        CXXRecordDecl *Class) {
   bool ErrorReported = false;
   auto reportIllegalClassTemplate = [&ErrorReported](Sema &S,
-                                                     CXXRecordDecl *RD) {
+                                                     ClassTemplateDecl *TD) {
     if (ErrorReported)
       return;
-    S.Diag(RD->getLocation(),
+    S.Diag(TD->getLocation(),
            diag::err_cuda_device_builtin_surftex_cls_template)
-        << /*texture*/ 1 << RD;
+        << /*texture*/ 1 << TD;
     ErrorReported = true;
   };
 
-  TemplateParameterList *Params =
-      Class->getDescribedClassTemplate()->getTemplateParameters();
+  ClassTemplateDecl *TD = Class->getDescribedClassTemplate();
+  if (!TD) {
+    auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(Class);
+    if (!SD) {
+      S.Diag(Class->getLocation(),
+             diag::err_cuda_device_builtin_surftex_ref_decl)
+          << /*texture*/ 1 << Class;
+      S.Diag(Class->getLocation(),
+             diag::note_cuda_device_builtin_surftex_should_be_template_class)
+          << Class;
+      return;
+    }
+    TD = SD->getSpecializedTemplate();
+  }
+
+  TemplateParameterList *Params = TD->getTemplateParameters();
   unsigned N = Params->size();
 
   if (N != 3) {
-    reportIllegalClassTemplate(S, Class);
-    S.Diag(Class->getLocation(),
+    reportIllegalClassTemplate(S, TD);
+    S.Diag(TD->getLocation(),
            diag::note_cuda_device_builtin_surftex_cls_should_have_n_args)
-        << Class << 3;
+        << TD << 3;
   }
   if (N > 0 && !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
-    reportIllegalClassTemplate(S, Class);
-    S.Diag(Class->getLocation(),
+    reportIllegalClassTemplate(S, TD);
+    S.Diag(TD->getLocation(),
            diag::note_cuda_device_builtin_surftex_cls_should_have_match_arg)
-        << Class << /*1st*/ 0 << /*type*/ 0;
+        << TD << /*1st*/ 0 << /*type*/ 0;
   }
   if (N > 1) {
     auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Params->getParam(1));
     if (!NTTP || !NTTP->getType()->isIntegralOrEnumerationType()) {
-      reportIllegalClassTemplate(S, Class);
-      S.Diag(Class->getLocation(),
+      reportIllegalClassTemplate(S, TD);
+      S.Diag(TD->getLocation(),
              diag::note_cuda_device_builtin_surftex_cls_should_have_match_arg)
-          << Class << /*2nd*/ 1 << /*integer*/ 1;
+          << TD << /*2nd*/ 1 << /*integer*/ 1;
     }
   }
   if (N > 2) {
     auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Params->getParam(2));
     if (!NTTP || !NTTP->getType()->isIntegralOrEnumerationType()) {
-      reportIllegalClassTemplate(S, Class);
-      S.Diag(Class->getLocation(),
+      reportIllegalClassTemplate(S, TD);
+      S.Diag(TD->getLocation(),
              diag::note_cuda_device_builtin_surftex_cls_should_have_match_arg)
-          << Class << /*3rd*/ 2 << /*integer*/ 1;
+          << TD << /*3rd*/ 2 << /*integer*/ 1;
     }
-  }
-}
-
-static void checkCUDADeviceBuiltinSurfaceType(Sema &S, CXXRecordDecl *Class) {
-  bool ErrorReported = false;
-  auto reportIllegalReferenceType = [&ErrorReported](Sema &S,
-                                                     CXXRecordDecl *RD) {
-    if (ErrorReported)
-      return;
-    S.Diag(RD->getLocation(), diag::err_cuda_device_builtin_surftex_ref_decl)
-        << /*surface*/ 0 << RD;
-    ErrorReported = true;
-  };
-
-  const auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(Class);
-  if (!TD) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_be_template_class)
-        << Class;
-    return;
-  }
-  const auto &Args = TD->getTemplateInstantiationArgs();
-  unsigned N = Args.size();
-  if (N != 2) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_n_args)
-        << Class << /*nargs*/ 2;
-  }
-  if (N > 0 && Args[0].getKind() != TemplateArgument::Type) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_match_arg)
-        << Class << /*1st*/ 0 << /*type*/ 0;
-  }
-  if (N > 1 && Args[1].getKind() != TemplateArgument::Integral) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_match_arg)
-        << Class << /*2nd*/ 1 << /*integral*/ 1;
-  }
-}
-
-static void checkCUDADeviceBuiltinTextureType(Sema &S, CXXRecordDecl *Class) {
-  bool ErrorReported = false;
-  auto reportIllegalReferenceType = [&ErrorReported](Sema &S,
-                                                     CXXRecordDecl *RD) {
-    if (ErrorReported)
-      return;
-    S.Diag(RD->getLocation(), diag::err_cuda_device_builtin_surftex_ref_decl)
-        << /*texture*/ 1 << RD;
-    ErrorReported = true;
-  };
-
-  const auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(Class);
-  if (!TD) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_be_template_class)
-        << Class;
-    return;
-  }
-  const auto &Args = TD->getTemplateInstantiationArgs();
-  unsigned N = Args.size();
-  if (N != 3) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_n_args)
-        << Class << /*nargs*/ 3;
-  }
-  if (N > 0 && Args[0].getKind() != TemplateArgument::Type) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_match_arg)
-        << Class << /*1st*/ 0 << /*type*/ 0;
-  }
-  if (N > 1 && Args[1].getKind() != TemplateArgument::Integral) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_match_arg)
-        << Class << /*2nd*/ 1 << /*integral*/ 1;
-  }
-  if (N > 2 && Args[2].getKind() != TemplateArgument::Integral) {
-    reportIllegalReferenceType(S, Class);
-    S.Diag(Class->getLocation(),
-           diag::note_cuda_device_builtin_surftex_should_have_match_arg)
-        << Class << /*3rd*/ 2 << /*integral*/ 1;
   }
 }
 
@@ -6836,17 +6776,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   }
 
   if (getLangOpts().CUDA) {
-    if (Record->getDescribedClassTemplate()) {
-      if (Record->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>())
-        checkCUDADeviceBuiltinSurfaceClassTemplate(*this, Record);
-      else if (Record->hasAttr<CUDADeviceBuiltinTextureTypeAttr>())
-        checkCUDADeviceBuiltinTextureClassTemplate(*this, Record);
-    } else {
-      if (Record->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>())
-        checkCUDADeviceBuiltinSurfaceType(*this, Record);
-      else if (Record->hasAttr<CUDADeviceBuiltinTextureTypeAttr>())
-        checkCUDADeviceBuiltinTextureType(*this, Record);
-    }
+    if (Record->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>())
+      checkCUDADeviceBuiltinSurfaceClassTemplate(*this, Record);
+    else if (Record->hasAttr<CUDADeviceBuiltinTextureTypeAttr>())
+      checkCUDADeviceBuiltinTextureClassTemplate(*this, Record);
   }
 }
 

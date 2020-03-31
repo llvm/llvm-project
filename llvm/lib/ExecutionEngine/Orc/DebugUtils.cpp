@@ -150,6 +150,10 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols) {
   return OS << printSequence(Symbols, '[', ']', PrintAll<SymbolStringPtr>());
 }
 
+raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols) {
+  return OS << printSequence(Symbols, '[', ']', PrintAll<SymbolStringPtr>());
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags) {
   if (Flags.hasError())
     OS << "[*ERROR*]";

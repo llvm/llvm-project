@@ -24,6 +24,7 @@ class AffineForOp;
 class FuncOp;
 class OpBuilder;
 class Value;
+class ValueRange;
 struct MemRefRegion;
 
 namespace loop {
@@ -90,10 +91,12 @@ LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
-/// and intra-tile loops. A band is a contiguous set of loops.
+/// and intra-tile loops. A band is a contiguous set of loops. `tiledNest` when
+/// non-null is set to the loops of the tiled nest from outermost to innermost.
 LLVM_NODISCARD
 LogicalResult tileCodeGen(MutableArrayRef<AffineForOp> band,
-                          ArrayRef<unsigned> tileSizes);
+                          ArrayRef<unsigned> tileSizes,
+                          SmallVectorImpl<AffineForOp> *tiledNest = nullptr);
 
 /// Performs loop interchange on 'forOpA' and 'forOpB'. Requires that 'forOpA'
 /// and 'forOpB' are part of a perfectly nested sequence of loops.
@@ -105,22 +108,21 @@ void interchangeLoops(AffineForOp forOpA, AffineForOp forOpB);
 bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
                                        ArrayRef<unsigned> loopPermMap);
 
-/// Performs a sequence of loop interchanges on perfectly nested 'loops', as
-/// specified by permutation 'loopPermMap' (loop 'i' in 'loops' is mapped to
-/// location 'j = 'loopPermMap[i]' after the loop interchange).
-unsigned interchangeLoops(ArrayRef<AffineForOp> loops,
-                          ArrayRef<unsigned> loopPermMap);
+/// Performs a loop permutation on a perfectly nested loop nest `inputNest`
+/// (where the contained loops appear from outer to inner) as specified by the
+/// permutation `permMap`: loop 'i' in `inputNest` is mapped to location
+/// 'loopPermMap[i]', where positions 0, 1, ... are from the outermost position
+/// to inner. Returns the position in `inputNest` of the AffineForOp that
+/// becomes the new outermost loop of this nest. This method always succeeds,
+/// asserts out on invalid input / specifications.
+unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
+                      ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
 // relative order among them) and moves all parallel loops to the
 // outermost (while again preserving relative order among them).
 // Returns AffineForOp of the root of the new loop nest after loop interchanges.
 AffineForOp sinkSequentialLoops(AffineForOp forOp);
-
-/// Sinks 'forOp' by 'loopDepth' levels by performing a series of loop
-/// interchanges. Requires that 'forOp' is part of a perfect nest with
-/// 'loopDepth' AffineForOps consecutively nested under it.
-void sinkLoop(AffineForOp forOp, unsigned loopDepth);
 
 /// Performs tiling fo imperfectly nested loops (with interchange) by
 /// strip-mining the `forOps` by `sizes` and sinking them, in their order of
@@ -270,6 +272,29 @@ void mapLoopToProcessorIds(loop::ForOp forOp, ArrayRef<Value> processorId,
 /// Gathers all AffineForOps in 'func' grouped by loop depth.
 void gatherLoops(FuncOp func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
+
+/// Creates an AffineForOp while ensuring that the lower and upper bounds are
+/// canonicalized, i.e., unused and duplicate operands are removed, and any
+/// constant operands propagated/folded in.
+AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
+                                           ValueRange lbOperands,
+                                           AffineMap lbMap,
+                                           ValueRange ubOperands,
+                                           AffineMap ubMap, int64_t step = 1);
+
+/// Separates full tiles from partial tiles for a perfect nest `nest` by
+/// generating a conditional guard that selects between the full tile version
+/// and the partial tile version using an AffineIfOp. The original loop nest
+/// is replaced by this guarded two version form.
+///
+///    affine.if (cond)
+///      // full_tile
+///    else
+///      // partial tile
+///
+LogicalResult
+separateFullTiles(MutableArrayRef<AffineForOp> nest,
+                  SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
 
 } // end namespace mlir
 

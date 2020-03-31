@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 // CHECK-LABEL: func @custom_region_names
 func @custom_region_names() -> () {

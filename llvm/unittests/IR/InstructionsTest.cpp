@@ -197,6 +197,12 @@ TEST(InstructionsTest, CastInst) {
   Type *V2Int32Ty = VectorType::get(Int32Ty, 2);
   Type *V2Int64Ty = VectorType::get(Int64Ty, 2);
   Type *V4Int16Ty = VectorType::get(Int16Ty, 4);
+  Type *V1Int16Ty = VectorType::get(Int16Ty, 1);
+
+  Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
+  Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
+  Type *VScaleV4Int16Ty = VectorType::get(Int16Ty, 4, true);
+  Type *VScaleV1Int16Ty = VectorType::get(Int16Ty, 1, true);
 
   Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
   Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
@@ -207,11 +213,15 @@ TEST(InstructionsTest, CastInst) {
   Type *V2Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 2);
   Type *V4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4);
+  Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
   Type *V4Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 4);
 
   Type *V2Int64PtrTy = VectorType::get(Int64PtrTy, 2);
   Type *V2Int32PtrTy = VectorType::get(Int32PtrTy, 2);
+  Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
   Type *V4Int32PtrTy = VectorType::get(Int32PtrTy, 4);
+  Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
+  Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
 
   const Constant* c8 = Constant::getNullValue(V8x8Ty);
   const Constant* c64 = Constant::getNullValue(V8x64Ty);
@@ -286,6 +296,75 @@ TEST(InstructionsTest, CastInst) {
                                      Constant::getNullValue(V2Int32PtrTy),
                                      V4Int32PtrAS1Ty));
 
+  // Address space cast of fixed/scalable vectors of pointers to scalable/fixed
+  // vector of pointers.
+  EXPECT_FALSE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      V4Int32PtrTy));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(V4Int32PtrTy),
+                                     VScaleV4Int32PtrAS1Ty));
+  // Address space cast of scalable vectors of pointers to scalable vector of
+  // pointers.
+  EXPECT_FALSE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      VScaleV2Int32PtrTy));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(VScaleV2Int32PtrTy),
+                                     VScaleV4Int32PtrAS1Ty));
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                    Constant::getNullValue(VScaleV4Int64PtrTy),
+                                    VScaleV4Int32PtrAS1Ty));
+  // Same number of lanes, different address space.
+  EXPECT_TRUE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      VScaleV4Int32PtrTy));
+  // Same number of lanes, same address space.
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(VScaleV4Int64PtrTy),
+                                     VScaleV4Int32PtrTy));
+
+  // Bit casting fixed/scalable vector to scalable/fixed vectors.
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V2Int32Ty),
+                                     VScaleV2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V2Int64Ty),
+                                     VScaleV2Int64Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V4Int16Ty),
+                                     VScaleV4Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     V2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     V2Int64Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV4Int16Ty),
+                                     V4Int16Ty));
+
+  // Bit casting scalable vectors to scalable vectors.
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
+                                    Constant::getNullValue(VScaleV4Int16Ty),
+                                    VScaleV2Int32Ty));
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
+                                    Constant::getNullValue(VScaleV2Int32Ty),
+                                    VScaleV4Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     VScaleV2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     VScaleV2Int64Ty));
+
+  // Bitcasting to/from <vscale x 1 x Ty>
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV1Int16Ty),
+                                     V1Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V1Int16Ty),
+                                     VScaleV1Int16Ty));
 
   // Check that assertion is not hit when creating a cast with a vector of
   // pointers

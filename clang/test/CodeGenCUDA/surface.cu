@@ -9,8 +9,13 @@ struct surfaceReference {
   int desc;
 };
 
-template <typename T, int type = 1>
+template <typename T, int dim = 1>
 struct __attribute__((device_builtin_surface_type)) surface : public surfaceReference {
+};
+
+// Partial specialization over `void`.
+template<int dim>
+struct __attribute__((device_builtin_surface_type)) surface<void, dim> : public surfaceReference {
 };
 
 // On the device side, surface references are represented as `i64` handles.

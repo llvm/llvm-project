@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -inline | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -inline | FileCheck %s
 
 // This file tests the callgraph dead code elimination performed by the inliner.
 

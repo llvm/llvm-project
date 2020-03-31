@@ -100,7 +100,8 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{Reify the shape computation for the operation.
 
-      Insert operations using the given OpBulder that computes the result shape.
+      Insert operations using the given OpBuilder that computes the result
+      shape.
       }],
       /*retTy=*/"LogicalResult",
       /*methodName=*/"reifyReturnTypeShapes",

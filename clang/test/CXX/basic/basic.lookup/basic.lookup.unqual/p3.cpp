@@ -60,7 +60,7 @@ namespace AnnexD_example {
     A a;
     f < a;
 #if __cplusplus > 201703L
-    // expected-error@-2 {{expected '>'}}
+    // expected-error@-2 {{expected '>'}} expected-note@-2 {{to match this '<'}}
 #endif
     (f) < a;
   }

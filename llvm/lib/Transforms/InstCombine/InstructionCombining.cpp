@@ -264,7 +264,7 @@ static void ClearSubclassDataAfterReassociation(BinaryOperator &I) {
 /// cast to eliminate one of the associative operations:
 /// (op (cast (op X, C2)), C1) --> (cast (op X, op (C1, C2)))
 /// (op (cast (op X, C2)), C1) --> (op (cast X), op (C1, C2))
-static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
+static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1, InstCombiner &IC) {
   auto *Cast = dyn_cast<CastInst>(BinOp1->getOperand(0));
   if (!Cast || !Cast->hasOneUse())
     return false;
@@ -297,8 +297,8 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
   Type *DestTy = C1->getType();
   Constant *CastC2 = ConstantExpr::getCast(CastOpcode, C2, DestTy);
   Constant *FoldedC = ConstantExpr::get(AssocOpcode, C1, CastC2);
-  Cast->setOperand(0, BinOp2->getOperand(0));
-  BinOp1->setOperand(1, FoldedC);
+  IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
+  IC.replaceOperand(*BinOp1, 1, FoldedC);
   return true;
 }
 
@@ -393,7 +393,7 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
     }
 
     if (I.isAssociative() && I.isCommutative()) {
-      if (simplifyAssocCastAssoc(&I)) {
+      if (simplifyAssocCastAssoc(&I, *this)) {
         Changed = true;
         ++NumReassoc;
         continue;
@@ -1975,8 +1975,6 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (DI == -1) {
       // All the GEPs feeding the PHI are identical. Clone one down into our
       // BB so that it can be merged with the current GEP.
-      GEP.getParent()->getInstList().insert(
-          GEP.getParent()->getFirstInsertionPt(), NewGEP);
     } else {
       // All the GEPs feeding the PHI differ at a single offset. Clone a GEP
       // into the current block so it can be merged, and create a new PHI to
@@ -1994,12 +1992,11 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                            PN->getIncomingBlock(I));
 
       NewGEP->setOperand(DI, NewPN);
-      GEP.getParent()->getInstList().insert(
-          GEP.getParent()->getFirstInsertionPt(), NewGEP);
-      NewGEP->setOperand(DI, NewPN);
     }
 
-    GEP.setOperand(0, NewGEP);
+    GEP.getParent()->getInstList().insert(
+        GEP.getParent()->getFirstInsertionPt(), NewGEP);
+    replaceOperand(GEP, 0, NewGEP);
     PtrOp = NewGEP;
   }
 
@@ -2099,8 +2096,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // Update the GEP in place if possible.
       if (Src->getNumOperands() == 2) {
         GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
-        GEP.setOperand(0, Src->getOperand(0));
-        GEP.setOperand(1, Sum);
+        replaceOperand(GEP, 0, Src->getOperand(0));
+        replaceOperand(GEP, 1, Sum);
         return &GEP;
       }
       Indices.append(Src->op_begin()+1, Src->op_end()-1);
@@ -2218,9 +2215,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             // array.  Because the array type is never stepped over (there
             // is a leading zero) we can fold the cast into this GEP.
             if (StrippedPtrTy->getAddressSpace() == GEP.getAddressSpace()) {
-              GEP.setOperand(0, StrippedPtr);
               GEP.setSourceElementType(XATy);
-              return &GEP;
+              return replaceOperand(GEP, 0, StrippedPtr);
             }
             // Cannot replace the base pointer directly because StrippedPtr's
             // address space is different. Instead, create a new GEP followed by
@@ -3600,27 +3596,27 @@ bool InstCombiner::run() {
   return MadeIRChange;
 }
 
-/// Walk the function in depth-first order, adding all reachable code to the
-/// worklist.
+/// Populate the IC worklist from a function, by walking it in depth-first
+/// order and adding all reachable code to the worklist.
 ///
 /// This has a couple of tricks to make the code faster and more powerful.  In
 /// particular, we constant fold and DCE instructions as we go, to avoid adding
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
-                                       SmallPtrSetImpl<BasicBlock *> &Visited,
-                                       InstCombineWorklist &ICWorklist,
-                                       const TargetLibraryInfo *TLI) {
+static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
+                                          const TargetLibraryInfo *TLI,
+                                          InstCombineWorklist &ICWorklist) {
   bool MadeIRChange = false;
+  SmallPtrSet<BasicBlock *, 32> Visited;
   SmallVector<BasicBlock*, 256> Worklist;
-  Worklist.push_back(BB);
+  Worklist.push_back(&F.front());
 
   SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
 
   do {
-    BB = Worklist.pop_back_val();
+    BasicBlock *BB = Worklist.pop_back_val();
 
     // We have now visited this block!  If we've already been here, ignore it.
     if (!Visited.insert(BB).second)
@@ -3689,6 +3685,18 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
       Worklist.push_back(SuccBB);
   } while (!Worklist.empty());
 
+  // Remove instructions inside unreachable blocks. This prevents the
+  // instcombine code from having to deal with some bad special cases, and
+  // reduces use counts of instructions.
+  for (BasicBlock &BB : F) {
+    if (Visited.count(&BB))
+      continue;
+
+    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
+    MadeIRChange |= NumDeadInstInBB > 0;
+    NumDeadInst += NumDeadInstInBB;
+  }
+
   // Once we've found all of the instructions to add to instcombine's worklist,
   // add them in reverse order.  This way instcombine will visit from the top
   // of the function down.  This jives well with the way that it adds all uses
@@ -3708,38 +3716,6 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
     }
 
     ICWorklist.push(Inst);
-  }
-
-  return MadeIRChange;
-}
-
-/// Populate the IC worklist from a function, and prune any dead basic
-/// blocks discovered in the process.
-///
-/// This also does basic constant propagation and other forward fixing to make
-/// the combiner itself run much faster.
-static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
-                                          TargetLibraryInfo *TLI,
-                                          InstCombineWorklist &ICWorklist) {
-  bool MadeIRChange = false;
-
-  // Do a depth-first traversal of the function, populate the worklist with
-  // the reachable instructions.  Ignore blocks that are not reachable.  Keep
-  // track of which blocks we visit.
-  SmallPtrSet<BasicBlock *, 32> Visited;
-  MadeIRChange |=
-      AddReachableCodeToWorklist(&F.front(), DL, Visited, ICWorklist, TLI);
-
-  // Do a quick scan over the function.  If we find any blocks that are
-  // unreachable, remove any instructions inside of them.  This prevents
-  // the instcombine code from having to deal with some bad special cases.
-  for (BasicBlock &BB : F) {
-    if (Visited.count(&BB))
-      continue;
-
-    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
-    MadeIRChange |= NumDeadInstInBB > 0;
-    NumDeadInst += NumDeadInstInBB;
   }
 
   return MadeIRChange;

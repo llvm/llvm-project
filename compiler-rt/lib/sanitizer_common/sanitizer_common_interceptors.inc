@@ -9748,6 +9748,10 @@ INTERCEPTOR(int, sigaltstack, void *ss, void *oss) {
 
 #if SANITIZER_INTERCEPT_UNAME
 INTERCEPTOR(int, uname, struct utsname *utsname) {
+#if SANITIZER_LINUX
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_uname(utsname);
+#endif
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, uname, utsname);
   int res = REAL(uname)(utsname);

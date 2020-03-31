@@ -408,6 +408,7 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-LE-NEXT:    ldrd lr, r12, [r1]
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q1
+; CHECK-LE-NEXT:    vmov.i64 q2, #0xffffffff
 ; CHECK-LE-NEXT:    rsbs.w r3, lr, #0
 ; CHECK-LE-NEXT:    vmov.32 q0[0], lr
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, lr, asr #31
@@ -424,23 +425,21 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-LE-NEXT:    bfi r1, lr, #0, #1
 ; CHECK-LE-NEXT:    vmov.32 q0[2], r12
 ; CHECK-LE-NEXT:    and r3, r1, #3
-; CHECK-LE-NEXT:    adr.w r12, .LCPI7_0
+; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    lsls r1, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r1, [r2]
 ; CHECK-LE-NEXT:    vmovne.32 q1[0], r1
 ; CHECK-LE-NEXT:    lsls r1, r3, #30
-; CHECK-LE-NEXT:    vmov r3, s0
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q1[2], r1
+; CHECK-LE-NEXT:    vmov r1, s0
 ; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    vldrw.u32 q2, [r12]
-; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    vand q1, q1, q2
-; CHECK-LE-NEXT:    rsbs r1, r3, #0
-; CHECK-LE-NEXT:    sbcs.w r1, r2, r3, asr #31
+; CHECK-LE-NEXT:    rsbs r3, r1, #0
 ; CHECK-LE-NEXT:    vmov r3, s2
+; CHECK-LE-NEXT:    sbcs.w r1, r2, r1, asr #31
 ; CHECK-LE-NEXT:    it lt
 ; CHECK-LE-NEXT:    movlt.w r12, #1
 ; CHECK-LE-NEXT:    rsbs r1, r3, #0
@@ -460,13 +459,6 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-LE-NEXT:    vstrmi d3, [r0, #8]
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    pop {r7, pc}
-; CHECK-LE-NEXT:    .p2align 4
-; CHECK-LE-NEXT:  @ %bb.1:
-; CHECK-LE-NEXT:  .LCPI7_0:
-; CHECK-LE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-LE-NEXT:    .long 0 @ 0x0
-; CHECK-LE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-LE-NEXT:    .long 0 @ 0x0
 ;
 ; CHECK-BE-LABEL: foo_zext_v2i64_v2i32:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -511,15 +503,13 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:  .LBB7_4: @ %else2
 ; CHECK-BE-NEXT:    vrev64.32 q3, q2
 ; CHECK-BE-NEXT:    movs r2, #0
-; CHECK-BE-NEXT:    vmov r3, s15
-; CHECK-BE-NEXT:    adr.w r12, .LCPI7_0
-; CHECK-BE-NEXT:    vldrb.u8 q0, [r12]
+; CHECK-BE-NEXT:    vmov r1, s15
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    vrev64.8 q2, q0
-; CHECK-BE-NEXT:    vand q0, q1, q2
-; CHECK-BE-NEXT:    rsbs r1, r3, #0
-; CHECK-BE-NEXT:    sbcs.w r1, r2, r3, asr #31
+; CHECK-BE-NEXT:    vmov.i64 q0, #0xffffffff
+; CHECK-BE-NEXT:    vand q0, q1, q0
+; CHECK-BE-NEXT:    rsbs r3, r1, #0
 ; CHECK-BE-NEXT:    vmov r3, s13
+; CHECK-BE-NEXT:    sbcs.w r1, r2, r1, asr #31
 ; CHECK-BE-NEXT:    it lt
 ; CHECK-BE-NEXT:    movlt.w r12, #1
 ; CHECK-BE-NEXT:    rsbs r1, r3, #0
@@ -539,13 +529,6 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    vstrmi d1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
-; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  @ %bb.5:
-; CHECK-BE-NEXT:  .LCPI7_0:
-; CHECK-BE-NEXT:    .long 0 @ 0x0
-; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-BE-NEXT:    .long 0 @ 0x0
-; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
@@ -565,6 +548,7 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-LE-NEXT:    ldrd lr, r12, [r1]
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q1
+; CHECK-LE-NEXT:    vmov.i64 q2, #0xffffffff
 ; CHECK-LE-NEXT:    rsbs.w r3, lr, #0
 ; CHECK-LE-NEXT:    vmov.32 q0[0], lr
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, lr, asr #31
@@ -581,23 +565,21 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-LE-NEXT:    bfi r1, lr, #0, #1
 ; CHECK-LE-NEXT:    vmov.32 q0[2], r12
 ; CHECK-LE-NEXT:    and r3, r1, #3
-; CHECK-LE-NEXT:    adr.w r12, .LCPI8_0
+; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    lsls r1, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r1, [r2]
 ; CHECK-LE-NEXT:    vmovne.32 q1[0], r1
 ; CHECK-LE-NEXT:    lsls r1, r3, #30
-; CHECK-LE-NEXT:    vmov r3, s0
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q1[2], r1
+; CHECK-LE-NEXT:    vmov r1, s0
 ; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    vldrw.u32 q2, [r12]
-; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    vand q1, q1, q2
-; CHECK-LE-NEXT:    rsbs r1, r3, #0
-; CHECK-LE-NEXT:    sbcs.w r1, r2, r3, asr #31
+; CHECK-LE-NEXT:    rsbs r3, r1, #0
 ; CHECK-LE-NEXT:    vmov r3, s2
+; CHECK-LE-NEXT:    sbcs.w r1, r2, r1, asr #31
 ; CHECK-LE-NEXT:    it lt
 ; CHECK-LE-NEXT:    movlt.w r12, #1
 ; CHECK-LE-NEXT:    rsbs r1, r3, #0
@@ -619,13 +601,6 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-LE-NEXT:    strdmi r1, r2, [r0, #8]
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    pop {r7, pc}
-; CHECK-LE-NEXT:    .p2align 4
-; CHECK-LE-NEXT:  @ %bb.1:
-; CHECK-LE-NEXT:  .LCPI8_0:
-; CHECK-LE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-LE-NEXT:    .long 0 @ 0x0
-; CHECK-LE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-LE-NEXT:    .long 0 @ 0x0
 ;
 ; CHECK-BE-LABEL: foo_zext_v2i64_v2i32_unaligned:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -670,15 +645,13 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:  .LBB8_4: @ %else2
 ; CHECK-BE-NEXT:    vrev64.32 q3, q2
 ; CHECK-BE-NEXT:    movs r2, #0
-; CHECK-BE-NEXT:    vmov r3, s15
-; CHECK-BE-NEXT:    adr.w r12, .LCPI8_0
-; CHECK-BE-NEXT:    vldrb.u8 q0, [r12]
+; CHECK-BE-NEXT:    vmov r1, s15
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    vrev64.8 q2, q0
-; CHECK-BE-NEXT:    vand q0, q1, q2
-; CHECK-BE-NEXT:    rsbs r1, r3, #0
-; CHECK-BE-NEXT:    sbcs.w r1, r2, r3, asr #31
+; CHECK-BE-NEXT:    vmov.i64 q0, #0xffffffff
+; CHECK-BE-NEXT:    vand q0, q1, q0
+; CHECK-BE-NEXT:    rsbs r3, r1, #0
 ; CHECK-BE-NEXT:    vmov r3, s13
+; CHECK-BE-NEXT:    sbcs.w r1, r2, r1, asr #31
 ; CHECK-BE-NEXT:    it lt
 ; CHECK-BE-NEXT:    movlt.w r12, #1
 ; CHECK-BE-NEXT:    rsbs r1, r3, #0
@@ -700,13 +673,6 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    strdmi r2, r1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
-; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  @ %bb.5:
-; CHECK-BE-NEXT:  .LCPI8_0:
-; CHECK-BE-NEXT:    .long 0 @ 0x0
-; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-BE-NEXT:    .long 0 @ 0x0
-; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
 entry:
   %0 = load <2 x i32>, <2 x i32>* %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer

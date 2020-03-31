@@ -870,7 +870,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
 
-  const size_t maxUndefReferences = 10;
+  const size_t maxUndefReferences = 3;
   size_t i = 0;
   for (UndefinedDiag::Loc l : undef.locs) {
     if (i >= maxUndefReferences)

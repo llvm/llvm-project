@@ -9,6 +9,9 @@
 # RUN: ld.lld %t
 # RUN: llvm-readobj a.out > /dev/null 2>&1
 
+# RUN: not ld.lld %t -o 2>&1 | FileCheck --check-prefix=NO_O_VAL %s
+# NO_O_VAL: error: -o: missing argument
+
 .globl _start
 _start:
   mov $60, %rax

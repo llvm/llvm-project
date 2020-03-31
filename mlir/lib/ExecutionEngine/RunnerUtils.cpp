@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file imlpements basic functions to debug structured MLIR types at
+// This file implements basic functions to debug structured MLIR types at
 // runtime. Entities in this file may not be compatible with targets without a
 // C++ runtime. These may be progressively migrated to CRunnerUtils.cpp over
 // time.

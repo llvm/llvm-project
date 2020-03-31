@@ -176,7 +176,7 @@ public:
 
   Error notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
     if (auto &InitSym = MU.getInitializerSymbol())
-      InitSymbols[&JD].add(InitSym);
+      InitSymbols[&JD].add(InitSym, SymbolLookupFlags::WeaklyReferencedSymbol);
     else {
       // If there's no identified init symbol attached, but there is a symbol
       // with the GenericIRPlatform::InitFunctionPrefix, then treat that as
@@ -185,7 +185,8 @@ public:
       // map (which holds the names of the symbols to execute).
       for (auto &KV : MU.getSymbols())
         if ((*KV.first).startswith(*InitFunctionPrefix)) {
-          InitSymbols[&JD].add(KV.first);
+          InitSymbols[&JD].add(KV.first,
+                               SymbolLookupFlags::WeaklyReferencedSymbol);
           InitFunctions[&JD].add(KV.first);
         }
     }

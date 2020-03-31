@@ -335,6 +335,7 @@ public:
       return EC;
     if (Remapper)
       Remapper->applyRemapping(Ctx);
+    FunctionSamples::UseMD5 = useMD5();
     return sampleprof_error::success;
   }
 
@@ -363,7 +364,7 @@ public:
   FunctionSamples *getOrCreateSamplesFor(const Function &F) {
     std::string FGUID;
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    CanonName = getRepInFormat(CanonName, getFormat(), FGUID);
+    CanonName = getRepInFormat(CanonName, useMD5(), FGUID);
     return &Profiles[CanonName];
   }
 
@@ -374,7 +375,7 @@ public:
         return FS;
     }
     std::string FGUID;
-    Fname = getRepInFormat(Fname, getFormat(), FGUID);
+    Fname = getRepInFormat(Fname, useMD5(), FGUID);
     auto It = Profiles.find(Fname);
     if (It != Profiles.end())
       return &It->second;
@@ -418,6 +419,9 @@ public:
   /// or inline instance.
   virtual std::vector<StringRef> *getNameTable() { return nullptr; }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
+
+  /// Return whether names in the profile are all MD5 numbers.
+  virtual bool useMD5() { return false; }
 
 protected:
   /// Map every function to its associated profile.
@@ -590,7 +594,7 @@ protected:
   virtual std::error_code readHeader() override;
   virtual std::error_code verifySPMagic(uint64_t Magic) override = 0;
   virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
-                                         SecType Type) = 0;
+                                         const SecHdrTableEntry &Entry) = 0;
 
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
@@ -610,11 +614,14 @@ public:
 class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
 private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
-  virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
-                                         SecType Type) override;
+  virtual std::error_code
+  readOneSection(const uint8_t *Start, uint64_t Size,
+                 const SecHdrTableEntry &Entry) override;
   std::error_code readProfileSymbolList();
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
+  std::error_code readMD5NameTable();
+  std::error_code readNameTableSec(bool IsMD5);
 
   /// The table mapping from function name to the offset of its FunctionSample
   /// towards file start.
@@ -623,6 +630,15 @@ private:
   DenseSet<StringRef> FuncsToUse;
   /// Use all functions from the input profile.
   bool UseAllFuncs = true;
+
+  /// If MD5 is used in NameTable section, the section saves uint64_t data.
+  /// The uint64_t data has to be converted to a string and then the string
+  /// will be used to initialize StringRef in NameTable.
+  /// Note NameTable contains StringRef so it needs another buffer to own
+  /// the string data. MD5StringBuf serves as the string buffer that is
+  /// referenced by NameTable (vector of StringRef). We make sure
+  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
+  std::unique_ptr<std::vector<std::string>> MD5StringBuf;
 
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -638,6 +654,12 @@ public:
 
   /// Collect functions with definitions in Module \p M.
   void collectFuncsFrom(const Module &M) override;
+
+  /// Return whether names in the profile are all MD5 numbers.
+  virtual bool useMD5() override {
+    assert(!NameTable.empty() && "NameTable should have been initialized");
+    return MD5StringBuf && !MD5StringBuf->empty();
+  }
 };
 
 class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
@@ -671,6 +693,9 @@ public:
 
   /// Collect functions to be used when compiling Module \p M.
   void collectFuncsFrom(const Module &M) override;
+
+  /// Return whether names in the profile are all MD5 numbers.
+  virtual bool useMD5() override { return true; }
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;

@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S  < %s | FileCheck %s
+; RUN: opt -instcombine -instcombine-infinite-loop-threshold=3 -S < %s | FileCheck %s
 
 %struct1 = type { %struct2*, i32, i32, i32 }
 %struct2 = type { i32, i32 }

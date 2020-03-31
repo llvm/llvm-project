@@ -771,6 +771,7 @@ class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
+def LLVM_Exp2Op : LLVM_UnaryIntrinsicOp<"exp2">;
 def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
 def LLVM_FMAOp : LLVM_TernarySameArgsIntrinsicOp<"fma">;
@@ -864,7 +865,7 @@ def LLVM_MatrixMultiplyOp
 
 /// Create a llvm.matrix.transpose call, transposing a `rows` x `columns` 2-D
 /// `matrix`, as specified in the LLVM MatrixBuilder.
-def LLVM_MatrixTranposeOp
+def LLVM_MatrixTransposeOp
     : LLVM_OneResultOp<"intr.matrix.transpose">,
       Arguments<(ins LLVM_Type:$matrix, I32Attr:$rows, I32Attr:$columns)> {
   string llvmBuilder = [{

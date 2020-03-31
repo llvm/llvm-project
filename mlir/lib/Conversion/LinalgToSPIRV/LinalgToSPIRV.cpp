@@ -70,7 +70,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
   if (!genericOp.hasBufferSemantics())
     return llvm::None;
 
-  // Make sure this is reudction with one input and one output.
+  // Make sure this is reduction with one input and one output.
   if (genericOp.args_in().getZExtValue() != 1 ||
       genericOp.args_out().getZExtValue() != 1)
     return llvm::None;

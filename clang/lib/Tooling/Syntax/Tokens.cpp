@@ -35,6 +35,69 @@
 using namespace clang;
 using namespace clang::syntax;
 
+namespace {
+// Finds the smallest consecutive subsuquence of Toks that covers R.
+llvm::ArrayRef<syntax::Token>
+getTokensCovering(llvm::ArrayRef<syntax::Token> Toks, SourceRange R,
+                  const SourceManager &SM) {
+  if (R.isInvalid())
+    return {};
+  const syntax::Token *Begin =
+      llvm::partition_point(Toks, [&](const syntax::Token &T) {
+        return SM.isBeforeInTranslationUnit(T.location(), R.getBegin());
+      });
+  const syntax::Token *End =
+      llvm::partition_point(Toks, [&](const syntax::Token &T) {
+        return !SM.isBeforeInTranslationUnit(R.getEnd(), T.location());
+      });
+  if (Begin > End)
+    return {};
+  return {Begin, End};
+}
+
+// Finds the smallest expansion range that contains expanded tokens First and
+// Last, e.g.:
+// #define ID(x) x
+// ID(ID(ID(a1) a2))
+//          ~~       -> a1
+//              ~~   -> a2
+//       ~~~~~~~~~   -> a1 a2
+SourceRange findCommonRangeForMacroArgs(const syntax::Token &First,
+                                        const syntax::Token &Last,
+                                        const SourceManager &SM) {
+  SourceRange Res;
+  auto FirstLoc = First.location(), LastLoc = Last.location();
+  // Keep traversing up the spelling chain as longs as tokens are part of the
+  // same expansion.
+  while (!FirstLoc.isFileID() && !LastLoc.isFileID()) {
+    auto ExpInfoFirst = SM.getSLocEntry(SM.getFileID(FirstLoc)).getExpansion();
+    auto ExpInfoLast = SM.getSLocEntry(SM.getFileID(LastLoc)).getExpansion();
+    // Stop if expansions have diverged.
+    if (ExpInfoFirst.getExpansionLocStart() !=
+        ExpInfoLast.getExpansionLocStart())
+      break;
+    // Do not continue into macro bodies.
+    if (!ExpInfoFirst.isMacroArgExpansion() ||
+        !ExpInfoLast.isMacroArgExpansion())
+      break;
+    FirstLoc = SM.getImmediateSpellingLoc(FirstLoc);
+    LastLoc = SM.getImmediateSpellingLoc(LastLoc);
+    // Update the result afterwards, as we want the tokens that triggered the
+    // expansion.
+    Res = {FirstLoc, LastLoc};
+  }
+  // Normally mapping back to expansion location here only changes FileID, as
+  // we've already found some tokens expanded from the same macro argument, and
+  // they should map to a consecutive subset of spelled tokens. Unfortunately
+  // SourceManager::isBeforeInTranslationUnit discriminates sourcelocations
+  // based on their FileID in addition to offsets. So even though we are
+  // referring to same tokens, SourceManager might tell us that one is before
+  // the other if they've got different FileIDs.
+  return SM.getExpansionRange(CharSourceRange(Res, true)).getAsRange();
+}
+
+} // namespace
+
 syntax::Token::Token(SourceLocation Location, unsigned Length,
                      tok::TokenKind Kind)
     : Location(Location), Length(Length), Kind(Kind) {
@@ -121,19 +184,7 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
 }
 
 llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
-  if (R.isInvalid())
-    return {};
-  const Token *Begin =
-      llvm::partition_point(expandedTokens(), [&](const syntax::Token &T) {
-        return SourceMgr->isBeforeInTranslationUnit(T.location(), R.getBegin());
-      });
-  const Token *End =
-      llvm::partition_point(expandedTokens(), [&](const syntax::Token &T) {
-        return !SourceMgr->isBeforeInTranslationUnit(R.getEnd(), T.location());
-      });
-  if (Begin > End)
-    return {};
-  return {Begin, End};
+  return getTokensCovering(expandedTokens(), R, *SourceMgr);
 }
 
 CharSourceRange FileRange::toCharRange(const SourceManager &SM) const {
@@ -206,8 +257,6 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   if (Expanded.empty())
     return llvm::None;
 
-  // FIXME: also allow changes uniquely mapping to macro arguments.
-
   const syntax::Token *BeginSpelled;
   const Mapping *BeginMapping;
   std::tie(BeginSpelled, BeginMapping) =
@@ -225,12 +274,28 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
 
   const MarkedFile &File = Files.find(FID)->second;
 
-  // Do not allow changes that cross macro expansion boundaries.
+  // If both tokens are coming from a macro argument expansion, try and map to
+  // smallest part of the macro argument. BeginMapping && LastMapping check is
+  // only for performance, they are a prerequisite for Expanded.front() and
+  // Expanded.back() being part of a macro arg expansion.
+  if (BeginMapping && LastMapping &&
+      SourceMgr->isMacroArgExpansion(Expanded.front().location()) &&
+      SourceMgr->isMacroArgExpansion(Expanded.back().location())) {
+    auto CommonRange = findCommonRangeForMacroArgs(Expanded.front(),
+                                                   Expanded.back(), *SourceMgr);
+    // It might be the case that tokens are arguments of different macro calls,
+    // in that case we should continue with the logic below instead of returning
+    // an empty range.
+    if (CommonRange.isValid())
+      return getTokensCovering(File.SpelledTokens, CommonRange, *SourceMgr);
+  }
+
+  // Do not allow changes that doesn't cover full expansion.
   unsigned BeginExpanded = Expanded.begin() - ExpandedTokens.data();
   unsigned EndExpanded = Expanded.end() - ExpandedTokens.data();
-  if (BeginMapping && BeginMapping->BeginExpanded < BeginExpanded)
+  if (BeginMapping && BeginExpanded != BeginMapping->BeginExpanded)
     return llvm::None;
-  if (LastMapping && EndExpanded < LastMapping->EndExpanded)
+  if (LastMapping && LastMapping->EndExpanded != EndExpanded)
     return llvm::None;
   // All is good, return the result.
   return llvm::makeArrayRef(
@@ -645,8 +710,8 @@ std::string syntax::Token::str() const {
 }
 
 std::string syntax::Token::dumpForTests(const SourceManager &SM) const {
-  return std::string(
-      llvm::formatv("{0}   {1}", tok::getTokenName(kind()), text(SM)));
+  return std::string(llvm::formatv("Token(`{0}`, {1}, length = {2})", text(SM),
+                                   tok::getTokenName(kind()), length()));
 }
 
 std::string TokenBuffer::dumpForTests() const {

@@ -631,6 +631,22 @@ DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
   return m_ranges.get();
 }
 
+/// Make an absolute path out of \p file_spec and remap it using the
+/// module's source remapping dictionary.
+static void MakeAbsoluteAndRemap(FileSpec &file_spec, DWARFUnit &dwarf_cu,
+                                 const ModuleSP &module_sp) {
+  if (!file_spec)
+    return;
+  // If we have a full path to the compile unit, we don't need to
+  // resolve the file.  This can be expensive e.g. when the source
+  // files are NFS mounted.
+  file_spec.MakeAbsolute(dwarf_cu.GetCompilationDirectory());
+
+  std::string remapped_file;
+  if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
+    file_spec.SetFile(remapped_file, FileSpec::Style::native);
+}
+
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   CompUnitSP cu_sp;
   CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
@@ -649,17 +665,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
         if (cu_die) {
           FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
-          if (cu_file_spec) {
-            // If we have a full path to the compile unit, we don't need to
-            // resolve the file.  This can be expensive e.g. when the source
-            // files are NFS mounted.
-            cu_file_spec.MakeAbsolute(dwarf_cu.GetCompilationDirectory());
-
-            std::string remapped_file;
-            if (module_sp->RemapSourceFile(cu_file_spec.GetPath(),
-                                           remapped_file))
-              cu_file_spec.SetFile(remapped_file, FileSpec::Style::native);
-          }
+          MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 
           LanguageType cu_language = SymbolFileDWARF::LanguageTypeFromDWARF(
               cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
@@ -921,8 +927,11 @@ bool SymbolFileDWARF::ParseImportedModules(
       }
       std::reverse(module.path.begin(), module.path.end());
       if (const char *include_path = module_die.GetAttributeValueAsString(
-              DW_AT_LLVM_include_path, nullptr))
-        module.search_path = ConstString(include_path);
+              DW_AT_LLVM_include_path, nullptr)) {
+        FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
+        MakeAbsoluteAndRemap(include_spec, *dwarf_cu, m_objfile_sp->GetModule());
+        module.search_path = ConstString(include_spec.GetPath());
+      }
       if (const char *sysroot = dwarf_cu->DIE().GetAttributeValueAsString(
               DW_AT_LLVM_sysroot, nullptr))
         module.sysroot = ConstString(sysroot);

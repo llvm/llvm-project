@@ -4063,7 +4063,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         const ClassTemplateSpecializationDecl *TD =
             cast<ClassTemplateSpecializationDecl>(
                 D->getType()->getAs<RecordType>()->getDecl());
-        const TemplateArgumentList &Args = TD->getTemplateInstantiationArgs();
+        const TemplateArgumentList &Args = TD->getTemplateArgs();
         if (TD->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>()) {
           assert(Args.size() == 2 &&
                  "Unexpected number of template arguments of CUDA device "

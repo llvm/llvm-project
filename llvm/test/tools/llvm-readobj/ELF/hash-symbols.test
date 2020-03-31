@@ -2,9 +2,12 @@
 
 ## Check the output when both .hash and .gnu.hash sections are present.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1-32.so
+# RUN: yaml2obj --docnum=1 -DBITS=32 %s -o %t1-32.so
 # RUN: llvm-readelf --hash-symbols %t1-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix HASH-32
+
+# RUN: yaml2obj --docnum=1 -DBITS=64 %s -o %t1-64.so
+# RUN: llvm-readelf --hash-symbols %t1-64.so | FileCheck %s --check-prefix HASH-64
 
 # HASH-32: Symbol table of .hash for image:
 # HASH-32-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
@@ -22,12 +25,28 @@
 # HASH-32-NEXT:    5   2: 00001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
 # HASH-32-NOT: {{.}}
 
+# HASH-64:      Symbol table of .hash for image:
+# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
+# HASH-64-NEXT:    1   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT UND ccc
+# HASH-64-NEXT:    5   0: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
+# HASH-64-NEXT:    3   0: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
+# HASH-64-NEXT:    2   0: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
+# HASH-64-NEXT:    4   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
+# HASH-64-EMPTY:
+# HASH-64-NEXT: Symbol table of .gnu.hash for image:
+# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
+# HASH-64-NEXT:    2   1: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
+# HASH-64-NEXT:    3   1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
+# HASH-64-NEXT:    4   2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
+# HASH-64-NEXT:    5   2: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
+# HASH-64-NOT: {{.}}
+
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
-  Machine: EM_386
+  Machine: EM_X86_64
 Sections:
   - Name:    .hash
     Type:    SHT_HASH
@@ -50,14 +69,14 @@ Sections:
     Flags: [ SHF_ALLOC ]
     Link:  .dynstr
     Entries:
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x1bc. DT_HASH value is 0x0. 
-## llvm-readelf will read .hash content from p_offset + (p_vaddr - DT_HASH value) = 0x1bc.
+## PT_LOAD's p_vaddr is 0x0. DT_HASH value is 0x0. 
+## llvm-readelf will read .hash content from PT_LOAD's p_offset + (DT_HASH value - p_vaddr).
 ## This matches the file offset of the .hash section.
       - Tag:   DT_HASH
         Value: 0x0000000000000000
       - Tag:   DT_GNU_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x1bc. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
-## llvm-readelf will read .gnu.hash content from p_offset + (p_vaddr - DT_GNU_HASH value) = 0x1e8.
+## PT_LOAD's p_vaddr is 0x0. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
+## llvm-readelf will read .gnu.hash content from PT_LOAD's p_offset + (DT_GNU_HASH value - p_vaddr).
 ## This matches the file offset of the .gnu.hash section.
         Value: 0x000000000000002C
       - Tag:   DT_NULL
@@ -88,94 +107,9 @@ ProgramHeaders:
       - Section: .gnu.hash
       - Section: .dynamic
 
-# RUN: yaml2obj --docnum=2 %s -o %t1-64.so
-# RUN: llvm-readelf --hash-symbols %t1-64.so | FileCheck %s --check-prefix HASH-64
-
-# HASH-64:      Symbol table of .hash for image:
-# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
-# HASH-64-NEXT:    1   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT UND ccc
-# HASH-64-NEXT:    5   0: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
-# HASH-64-NEXT:    3   0: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
-# HASH-64-NEXT:    2   0: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
-# HASH-64-NEXT:    4   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
-# HASH-64-EMPTY:
-# HASH-64-NEXT: Symbol table of .gnu.hash for image:
-# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
-# HASH-64-NEXT:    2   1: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
-# HASH-64-NEXT:    3   1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
-# HASH-64-NEXT:    4   2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
-# HASH-64-NEXT:    5   2: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
-# HASH-64-NOT: {{.}}
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .hash
-    Type:    SHT_HASH
-    Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
-    Bucket:  [ 1, 0, 0 ]
-    Chain:   [ 0, 5, 4, 2, 0, 3 ]
-  - Name:    .gnu.hash
-    Type:    SHT_GNU_HASH
-    Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
-    Header:
-      SymNdx: 0x2
-      Shift2: 0x0
-    BloomFilter: [ 0x0 ]
-    HashBuckets: [ 0x00000000, 0x00000002, 0x00000004 ]
-    HashValues:  [ 0x0B885C68, 0x0B886991, 0x0B886DF4, 0x0B8860CB ]
-  - Name:  .dynamic
-    Type:  SHT_DYNAMIC
-    Flags: [ SHF_ALLOC ]
-    Link:  .dynstr
-    Entries:
-      - Tag:   DT_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x2b8. DT_HASH value is 0x0. 
-## llvm-readelf will read .hash content from p_offset + (p_vaddr - DT_HASH value) = 0x2b8.
-## This matches the file offset of the .hash section. 
-        Value: 0x0000000000000000
-      - Tag:   DT_GNU_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x2b8. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
-## llvm-readelf will read .gnu.hash content from p_offset + (p_vaddr - DT_GNU_HASH value) = 0x2e4.
-## This matches the file offset of the .gnu.hash section.
-        Value: 0x000000000000002c
-      - Tag:   DT_NULL
-        Value: 0x0000000000000000
-DynamicSymbols:
-  - Name:    ccc
-    Binding: STB_GLOBAL
-  - Name:    aaa
-    Section: .hash
-    Binding: STB_GLOBAL
-    Value:   0x0000000000001000
-  - Name:    ddd
-    Index:   SHN_ABS
-    Binding: STB_GLOBAL
-    Value:   0x0000000000000001
-  - Name:    eee
-    Section: .gnu.hash
-    Binding: STB_GLOBAL
-  - Name:    bbb
-    Section: .hash
-    Binding: STB_WEAK
-    Value:   0x0000000000001001
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
-
 ## Check the output when only .hash section is present.
 
-# RUN: yaml2obj --docnum=3 %s -o %t2-32.so
+# RUN: yaml2obj --docnum=2 %s -o %t2-32.so
 # RUN: llvm-readelf --hash-symbols %t2-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ONLY-HASH-32
 
@@ -237,7 +171,7 @@ ProgramHeaders:
 
 ## Check the output when only .gnu.hash section is present.
 
-# RUN: yaml2obj --docnum=4 %s -o %t3-32.so
+# RUN: yaml2obj --docnum=3 %s -o %t3-32.so
 # RUN: llvm-readelf --hash-symbols %t3-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ONLY-GNUHASH-32
 
@@ -301,7 +235,7 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Show that if there are no hash sections, we do not print anything.
-# RUN: yaml2obj --docnum=5 %s -o %t4.so
+# RUN: yaml2obj --docnum=4 %s -o %t4.so
 # RUN: llvm-readelf --hash-symbols %t4.so \
 # RUN:   | FileCheck %s --check-prefix NO-HASH --allow-empty
 
@@ -377,8 +311,8 @@ ProgramHeaders:
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
 
-# RUN: yaml2obj --docnum=6 %s -o %t6.so
-# RUN: llvm-readelf --hash-symbols %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=BROKEN
+# RUN: yaml2obj --docnum=5 %s -o %t5.so
+# RUN: llvm-readelf --hash-symbols %t5.so 2>&1 | FileCheck %s -DFILE=%t5.so --check-prefix=BROKEN
 
 # BROKEN:      Symbol table of .hash for image:
 # BROKEN-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name

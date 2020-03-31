@@ -49,11 +49,8 @@ class VPRecipeBuilder {
 
   // VPlan-VPlan transformations support: Hold a mapping from ingredients to
   // their recipe. To save on memory, only do so for selected ingredients,
-  // marked by having a nullptr entry in this map. If those ingredients get a
-  // VPWidenRecipe, also avoid compressing other ingredients into it to avoid
-  // having to split such recipes later.
+  // marked by having a nullptr entry in this map.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
-  VPWidenRecipe *LastExtensibleRecipe = nullptr;
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.

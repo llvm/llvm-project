@@ -10,12 +10,12 @@ target datalayout = "p:16:16"
 @a = external global i16
 @b = external global i16*
 
-define void @f() {
+define void @f(i1 %cond) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[TMP12:%.*]] = alloca [2 x i32], align 8
 ; CHECK-NEXT:    [[TMP12_SUB:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP12]], i16 0, i16 0
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint [2 x i32]* [[TMP12]] to i16
 ; CHECK-NEXT:    store i16 [[TMP8]], i16* @a, align 2
@@ -34,7 +34,7 @@ bb0:
   %useless3 = bitcast %i64_t* %tmp1 to i16*
   %useless4 = getelementptr inbounds i16, i16* %useless3, i16 undef
   %useless5 = bitcast i16* %useless4 to i32*
-  br i1 undef, label %bb1, label %bb2
+  br i1 %cond, label %bb1, label %bb2
 
 bb1:                                              ; preds = %bb0
   %useless6 = insertvalue [1 x i32*] undef, i32* %tmp2, 0

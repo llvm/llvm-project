@@ -604,7 +604,7 @@ void SVEEmitter::createIntrinsic(
   }
 
   // Remove duplicate type specs.
-  std::sort(TypeSpecs.begin(), TypeSpecs.end());
+  llvm::sort(TypeSpecs);
   TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
                   TypeSpecs.end());
 

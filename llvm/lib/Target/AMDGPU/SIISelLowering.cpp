@@ -887,11 +887,25 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
 }
 
+static EVT memVTFromImageData(Type *Ty, unsigned DMaskLanes) {
+  assert(DMaskLanes != 0);
+
+  if (auto *VT = dyn_cast<VectorType>(Ty)) {
+    unsigned NumElts = std::min(DMaskLanes,
+                                static_cast<unsigned>(VT->getNumElements()));
+    return EVT::getVectorVT(Ty->getContext(),
+                            EVT::getEVT(VT->getElementType()),
+                            NumElts);
+  }
+
+  return EVT::getEVT(Ty);
+}
+
 // Peek through TFE struct returns to only use the data size.
-static EVT memVTFromImageReturn(Type *Ty) {
+static EVT memVTFromImageReturn(Type *Ty, unsigned DMaskLanes) {
   auto *ST = dyn_cast<StructType>(Ty);
   if (!ST)
-    return EVT::getEVT(Ty, true);
+    return memVTFromImageData(Ty, DMaskLanes);
 
   // Some intrinsics return an aggregate type - special case to work out the
   // correct memVT.
@@ -900,7 +914,7 @@ static EVT memVTFromImageReturn(Type *Ty) {
   if (ST->getNumContainedTypes() != 2 ||
       !ST->getContainedType(1)->isIntegerTy(32))
     return EVT();
-  return EVT::getEVT(ST->getContainedType(0));
+  return memVTFromImageData(ST->getContainedType(0), DMaskLanes);
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -930,13 +944,40 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MODereferenceable;
     if (Attr.hasFnAttribute(Attribute::ReadOnly) ||
         IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load) {
+      unsigned DMaskLanes = 4;
+
+      if (RsrcIntr->IsImage) {
+        const AMDGPU::ImageDimIntrinsicInfo *Intr
+          = AMDGPU::getImageDimIntrinsicInfo(IntrID);
+        const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+          AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
+
+        if (!BaseOpcode->Gather4) {
+          // If this isn't a gather, we may have excess loaded elements in the
+          // IR type. Check the dmask for the real number of elements loaded.
+          unsigned DMask
+            = cast<ConstantInt>(CI.getArgOperand(0))->getZExtValue();
+          DMaskLanes = DMask == 0 ? 1 : countPopulation(DMask);
+        }
+
+        Info.memVT = memVTFromImageReturn(CI.getType(), DMaskLanes);
+      } else
+        Info.memVT = EVT::getEVT(CI.getType());
+
+      // FIXME: What does alignment mean for an image?
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      // TODO: Account for dmask reducing loaded size.
-      Info.memVT = memVTFromImageReturn(CI.getType());
       Info.flags |= MachineMemOperand::MOLoad;
     } else if (Attr.hasFnAttribute(Attribute::WriteOnly)) {
       Info.opc = ISD::INTRINSIC_VOID;
-      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
+
+      Type *DataTy = CI.getArgOperand(0)->getType();
+      if (RsrcIntr->IsImage) {
+        unsigned DMask = cast<ConstantInt>(CI.getArgOperand(1))->getZExtValue();
+        unsigned DMaskLanes = DMask == 0 ? 1 : countPopulation(DMask);
+        Info.memVT = memVTFromImageData(DataTy, DMaskLanes);
+      } else
+        Info.memVT = EVT::getEVT(DataTy);
+
       Info.flags |= MachineMemOperand::MOStore;
     } else {
       // Atomic
@@ -1440,7 +1481,7 @@ SDValue SITargetLowering::convertArgType(SelectionDAG &DAG, EVT VT, EVT MemVT,
   }
 
   if (MemVT.isFloatingPoint())
-    Val = getFPExtOrFPTrunc(DAG, Val, SL, VT);
+    Val = getFPExtOrFPRound(DAG, Val, SL, VT);
   else if (Signed)
     Val = DAG.getSExtOrTrunc(Val, SL, VT);
   else
@@ -4224,6 +4265,43 @@ static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
   return DAG.getZExtOrTrunc(SetCC, SL, VT);
 }
 
+static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
+                                    SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(1);
+  SDLoc SL(N);
+
+  if (Src.getOpcode() == ISD::SETCC) {
+    // (ballot (ISD::SETCC ...)) -> (AMDGPUISD::SETCC ...)
+    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Src.getOperand(0),
+                       Src.getOperand(1), Src.getOperand(2));
+  }
+  if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
+    // (ballot 0) -> 0
+    if (Arg->isNullValue())
+      return DAG.getConstant(0, SL, VT);
+
+    // (ballot 1) -> EXEC/EXEC_LO
+    if (Arg->isOne()) {
+      Register Exec;
+      if (VT.getScalarSizeInBits() == 32)
+        Exec = AMDGPU::EXEC_LO;
+      else if (VT.getScalarSizeInBits() == 64)
+        Exec = AMDGPU::EXEC;
+      else
+        return SDValue();
+
+      return DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, VT);
+    }
+  }
+
+  // (ballot (i1 $src)) -> (AMDGPUISD::SETCC (i32 (zext $src)) (i32 0)
+  // ISD::SETNE)
+  return DAG.getNode(
+      AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
+      DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+}
+
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
@@ -4539,13 +4617,14 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op,
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
 }
 
-SDValue SITargetLowering::getFPExtOrFPTrunc(SelectionDAG &DAG,
+SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG,
                                             SDValue Op,
                                             const SDLoc &DL,
                                             EVT VT) const {
   return Op.getValueType().bitsLE(VT) ?
       DAG.getNode(ISD::FP_EXTEND, DL, VT, Op) :
-      DAG.getNode(ISD::FTRUNC, DL, VT, Op);
+    DAG.getNode(ISD::FP_ROUND, DL, VT, Op,
+                DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -4571,7 +4650,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   bool IsIEEEMode = Info->getMode().IEEE;
 
-  // FIXME: Assert during eslection that this is only selected for
+  // FIXME: Assert during selection that this is only selected for
   // ieee_mode. Currently a combine can produce the ieee version for non-ieee
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
@@ -5630,14 +5709,14 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   MachineFunction &MF = DAG.getMachineFunction();
 
   const DataLayout &DataLayout = DAG.getDataLayout();
-  unsigned Align =
-      DataLayout.getABITypeAlignment(VT.getTypeForEVT(*DAG.getContext()));
+  Align Alignment =
+      DataLayout.getABITypeAlign(VT.getTypeForEVT(*DAG.getContext()));
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
-      VT.getStoreSize(), Align);
+      VT.getStoreSize(), Alignment);
 
   if (!Offset->isDivergent()) {
     SDValue Ops[] = {
@@ -5944,6 +6023,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fcmp: {
     return lowerFCMPIntrinsic(*this, Op.getNode(), DAG);
   }
+  case Intrinsic::amdgcn_ballot:
+    return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
@@ -6025,6 +6106,16 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_alignbit:
     return DAG.getNode(ISD::FSHR, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::amdgcn_reloc_constant: {
+    Module *M = const_cast<Module *>(MF.getFunction().getParent());
+    const MDNode *Metadata = cast<MDNodeSDNode>(Op.getOperand(1))->getMD();
+    auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
+    auto RelocSymbol = cast<GlobalVariable>(
+        M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
+    SDValue GA = DAG.getTargetGlobalAddress(RelocSymbol, DL, MVT::i32, 0,
+                                            SIInstrInfo::MO_ABS32_LO);
+    return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -7947,7 +8038,7 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
                                                      DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
-  if (ScalarVT != MVT::f32)
+  if (ScalarVT != MVT::f32 && ScalarVT != MVT::f16)
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -7962,8 +8053,14 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
   // about in practice.
   if (DCI.isAfterLegalizeDAG() && SrcVT == MVT::i32) {
     if (DAG.MaskedValueIsZero(Src, APInt::getHighBitsSet(32, 24))) {
-      SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, VT, Src);
+      SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, MVT::f32, Src);
       DCI.AddToWorklist(Cvt.getNode());
+
+      // For the f16 case, fold to a cast to f32 and then cast back to f16.
+      if (ScalarVT != MVT::f32) {
+        Cvt = DAG.getNode(ISD::FP_ROUND, DL, VT, Cvt,
+                          DAG.getTargetConstant(0, DL, MVT::i32));
+      }
       return Cvt;
     }
   }

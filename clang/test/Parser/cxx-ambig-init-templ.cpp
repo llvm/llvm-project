@@ -2,6 +2,7 @@
 
 template<int> struct c { c(int) = delete; typedef void val; operator int() const; };
 
+int f;
 int val;
 int foobar;
 struct S {
@@ -28,6 +29,12 @@ struct S {
     int k5 = a < b, c < d > ::val,
     int k6 = a < b, c < d > (n) // expected-error {{undeclared identifier 'n'}}
   );
+
+  static void f1b(
+    int k6 = a < b, c < d > (f)
+  );
+  using f1b_T = decltype(f1b(0)); // only one parameter, because second param
+                                  // would be missing its default argument
 
   void f2a(
     // T3<int> here is a parameter type, so must be declared before it is used.
@@ -56,14 +63,21 @@ struct S {
     int missing_default // expected-error {{missing default argument on parameter}}
   );
 
+  // FIXME: We should ideally disambiguate this as two parameters.
   void f6(
-    int k = b < c,
-    unsigned int (missing_default) // expected-error {{missing default argument on parameter}}
+    int k = b < c, // expected-error {{unexpected end of default argument}}
+    unsigned int (missing_default)
   );
 
-  template<int, int=0> struct a { static const int val = 0; operator int(); }; // expected-note {{here}}
+  template<int, int = 0> struct a { // expected-note {{here}}
+    a();
+    a(int);
+    static const int val = 0;
+    operator int();
+  };
   static const int b = 0, c = 1, d = 2, goobar = 3;
   template<int, typename> struct e { operator int(); };
+  static const int f = 0;
 
   int mp1 = 0 < 1,
       a<b<c,b<c>::*mp2,

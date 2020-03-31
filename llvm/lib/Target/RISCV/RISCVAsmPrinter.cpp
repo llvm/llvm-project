@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVTargetStreamer.h"
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -63,6 +64,12 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return LowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
   }
+
+  void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
+
+private:
+  void emitAttributes();
 };
 }
 
@@ -168,6 +175,32 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   SetupMachineFunction(MF);
   emitFunctionBody();
   return false;
+}
+
+void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    emitAttributes();
+}
+
+void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    RTS.finishAttributeSection();
+}
+
+void RISCVAsmPrinter::emitAttributes() {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
+  const Triple &TT = TM.getTargetTriple();
+  StringRef CPU = TM.getTargetCPU();
+  StringRef FS = TM.getTargetFeatureString();
+  const RISCVTargetMachine &RTM = static_cast<const RISCVTargetMachine &>(TM);
+  const RISCVSubtarget STI(TT, CPU, FS, /*ABIName=*/"", RTM);
+
+  RTS.emitTargetAttributes(STI);
 }
 
 // Force static initialization.

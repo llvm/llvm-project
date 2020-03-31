@@ -581,15 +581,66 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     OS << InstrNames.get(std::string(Inst->TheDef->getName())) << "U, ";
     ++Num;
   }
-
   OS << "\n};\n\n";
+
+  bool HasDeprecationFeatures =
+      llvm::any_of(NumberedInstructions, [](const CodeGenInstruction *Inst) {
+        return !Inst->HasComplexDeprecationPredicate &&
+               !Inst->DeprecatedReason.empty();
+      });
+  if (HasDeprecationFeatures) {
+    OS << "extern const uint8_t " << TargetName
+       << "InstrDeprecationFeatures[] = {";
+    Num = 0;
+    for (const CodeGenInstruction *Inst : NumberedInstructions) {
+      if (Num % 8 == 0)
+        OS << "\n    ";
+      if (!Inst->HasComplexDeprecationPredicate &&
+          !Inst->DeprecatedReason.empty())
+        OS << Target.getInstNamespace() << "::" << Inst->DeprecatedReason
+           << ", ";
+      else
+        OS << "uint8_t(-1), ";
+      ++Num;
+    }
+    OS << "\n};\n\n";
+  }
+
+  bool HasComplexDeprecationInfos =
+      llvm::any_of(NumberedInstructions, [](const CodeGenInstruction *Inst) {
+        return Inst->HasComplexDeprecationPredicate;
+      });
+  if (HasComplexDeprecationInfos) {
+    OS << "extern const MCInstrInfo::ComplexDeprecationPredicate " << TargetName
+       << "InstrComplexDeprecationInfos[] = {";
+    Num = 0;
+    for (const CodeGenInstruction *Inst : NumberedInstructions) {
+      if (Num % 8 == 0)
+        OS << "\n    ";
+      if (Inst->HasComplexDeprecationPredicate)
+        // Emit a function pointer to the complex predicate method.
+        OS << "&get" << Inst->DeprecatedReason << "DeprecationInfo, ";
+      else
+        OS << "nullptr, ";
+      ++Num;
+    }
+    OS << "\n};\n\n";
+  }
 
   // MCInstrInfo initialization routine.
   OS << "static inline void Init" << TargetName
      << "MCInstrInfo(MCInstrInfo *II) {\n";
-  OS << "  II->InitMCInstrInfo(" << TargetName << "Insts, "
-     << TargetName << "InstrNameIndices, " << TargetName << "InstrNameData, "
-     << NumberedInstructions.size() << ");\n}\n\n";
+  OS << "  II->InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
+     << "InstrNameIndices, " << TargetName << "InstrNameData, ";
+  if (HasDeprecationFeatures)
+    OS << TargetName << "InstrDeprecationFeatures, ";
+  else
+    OS << "nullptr, ";
+  if (HasComplexDeprecationInfos)
+    OS << TargetName << "InstrComplexDeprecationInfos, ";
+  else
+    OS << "nullptr, ";
+  OS << NumberedInstructions.size() << ");\n}\n\n";
 
   OS << "} // end namespace llvm\n";
 
@@ -629,12 +680,28 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "extern const MCInstrDesc " << TargetName << "Insts[];\n";
   OS << "extern const unsigned " << TargetName << "InstrNameIndices[];\n";
   OS << "extern const char " << TargetName << "InstrNameData[];\n";
+  if (HasDeprecationFeatures)
+    OS << "extern const uint8_t " << TargetName
+       << "InstrDeprecationFeatures[];\n";
+  if (HasComplexDeprecationInfos)
+    OS << "extern const MCInstrInfo::ComplexDeprecationPredicate " << TargetName
+       << "InstrComplexDeprecationInfos[];\n";
   OS << ClassName << "::" << ClassName
-     << "(int CFSetupOpcode, int CFDestroyOpcode, int CatchRetOpcode, int ReturnOpcode)\n"
-     << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, ReturnOpcode) {\n"
+     << "(int CFSetupOpcode, int CFDestroyOpcode, int CatchRetOpcode, int "
+        "ReturnOpcode)\n"
+     << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
+        "ReturnOpcode) {\n"
      << "  InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
-     << "InstrNameIndices, " << TargetName << "InstrNameData, "
-     << NumberedInstructions.size() << ");\n}\n";
+     << "InstrNameIndices, " << TargetName << "InstrNameData, ";
+  if (HasDeprecationFeatures)
+    OS << TargetName << "InstrDeprecationFeatures, ";
+  else
+    OS << "nullptr, ";
+  if (HasComplexDeprecationInfos)
+    OS << TargetName << "InstrComplexDeprecationInfos, ";
+  else
+    OS << "nullptr, ";
+  OS << NumberedInstructions.size() << ");\n}\n";
   OS << "} // end namespace llvm\n";
 
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
@@ -744,18 +811,6 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
     OS << "nullptr";
   else
     OS << "OperandInfo" << OpInfo.find(OperandInfo)->second;
-
-  if (Inst.HasComplexDeprecationPredicate)
-    // Emit a function pointer to the complex predicate method.
-    OS << ", -1 "
-       << ",&get" << Inst.DeprecatedReason << "DeprecationInfo";
-  else if (!Inst.DeprecatedReason.empty())
-    // Emit the Subtarget feature.
-    OS << ", " << Target.getInstNamespace() << "::" << Inst.DeprecatedReason
-       << " ,nullptr";
-  else
-    // Instruction isn't deprecated.
-    OS << ", -1 ,nullptr";
 
   OS << " },  // Inst #" << Num << " = " << Inst.TheDef->getName() << "\n";
 }

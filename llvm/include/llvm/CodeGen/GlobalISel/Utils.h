@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MachineValueType.h"
 
@@ -181,8 +182,7 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
 
-unsigned inferAlignmentFromPtrInfo(MachineFunction &MF,
-                                   const MachinePointerInfo &MPO);
+Align inferAlignFromPtrInfo(MachineFunction &MF, const MachinePointerInfo &MPO);
 
 /// Return the least common multiple type of \p Ty0 and \p Ty1, by changing
 /// the number of vector elements or scalar bitwidth. The intent is a

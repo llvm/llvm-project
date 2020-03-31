@@ -121,3 +121,17 @@ void test_3arg_malloc_leak(struct malloc_type *mtp, int flags) {
   if (list == NULL)
     return;
 } // expected-warning{{Potential leak of memory pointed to by 'list'}}
+
+// kmalloc can return a constant value defined in ZERO_SIZE_PTR
+// if a block of size 0 is requested
+#define ZERO_SIZE_PTR ((void *)16)
+
+void test_kfree_ZERO_SIZE_PTR() {
+  void *ptr = ZERO_SIZE_PTR;
+  kfree(ptr); // no warning about freeing this value
+}
+
+void test_kfree_other_constant_value() {
+  void *ptr = (void *)1;
+  kfree(ptr); // expected-warning{{Argument to kfree() is a constant address (1)}}
+}

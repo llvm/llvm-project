@@ -1352,7 +1352,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
-  const unsigned Align = NumLoads > 1 ? 16 * NumLoads : 1;
+  const unsigned Alignment = NumLoads > 1 ? 16 * NumLoads : 1;
 
   MachineIRBuilder B(MI);
   MachineFunction &MF = B.getMF();
@@ -1362,12 +1362,12 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   int64_t ImmOffset = 0;
 
   unsigned MMOOffset = setBufferOffsets(B, *this, MI.getOperand(2).getReg(),
-                                        VOffset, SOffset, ImmOffset, Align);
+                                        VOffset, SOffset, ImmOffset, Alignment);
 
   // TODO: 96-bit loads were widened to 128-bit results. Shrink the result if we
   // can, but we neeed to track an MMO for that.
   const unsigned MemSize = (Ty.getSizeInBits() + 7) / 8;
-  const unsigned MemAlign = 4; // FIXME: ABI type alignment?
+  const Align MemAlign(4); // FIXME: ABI type alignment?
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(
     MachinePointerInfo(),
     MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
@@ -2920,6 +2920,10 @@ AMDGPURegisterBankInfo::getImageMapping(const MachineRegisterInfo &MRI,
       continue;
 
     Register OpReg = MI.getOperand(I).getReg();
+    // We replace some dead address operands with $noreg
+    if (!OpReg)
+      continue;
+
     unsigned Size = getSizeInBits(OpReg, MRI, *TRI);
 
     // FIXME: Probably need a new intrinsic register bank searchable table to
@@ -3284,10 +3288,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_BSWAP: // TODO: Somehow expand for scalar?
+  case AMDGPU::G_FSHR: // TODO: Expand for scalar
   case AMDGPU::G_AMDGPU_FFBH_U32:
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {

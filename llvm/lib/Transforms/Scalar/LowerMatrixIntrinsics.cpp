@@ -873,11 +873,11 @@ public:
     }
   }
 
-  /// Compute Res += A * B for tile-sized matrices with left-associating
+  /// Compute \p Result += \p A * \p B for input matrices with left-associating
   /// addition.
-  void emitChainedMatrixMultiply(MatrixTy &Result, const MatrixTy &A,
-                                 const MatrixTy &B, bool AllowContraction,
-                                 IRBuilder<> &Builder, bool isTiled) {
+  void emitMatrixMultiply(MatrixTy &Result, const MatrixTy &A,
+                          const MatrixTy &B, bool AllowContraction,
+                          IRBuilder<> &Builder, bool isTiled) {
     const unsigned VF = std::max<unsigned>(
         TTI.getRegisterBitWidth(true) /
             Result.getElementType()->getPrimitiveSizeInBits().getFixedSize(),
@@ -936,7 +936,7 @@ public:
 
     bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
                                                   MatMul->hasAllowContract());
-    emitChainedMatrixMultiply(Result, Lhs, Rhs, AllowContract, Builder, false);
+    emitMatrixMultiply(Result, Lhs, Rhs, AllowContract, Builder, false);
     finalizeLowering(MatMul, Result, Builder);
   }
 

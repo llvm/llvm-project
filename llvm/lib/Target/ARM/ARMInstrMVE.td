@@ -607,6 +607,7 @@ class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
   let horizontalReduction = 1;
+  let validForTailPredication = 1;
 }
 
 def ARMVADDVs       : SDNode<"ARMISD::VADDVs", SDTVecReduce>;
@@ -2389,6 +2390,8 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VMOVimmi16 nImmSplatI16:$simm))>;
   def : Pat<(v4i32 (ARMvmovImm timm:$simm)),
             (v4i32 (MVE_VMOVimmi32 nImmVMOVI32:$simm))>;
+  def : Pat<(v2i64 (ARMvmovImm timm:$simm)),
+            (v2i64 (MVE_VMOVimmi64 nImmSplatI64:$simm))>;
 
   def : Pat<(v8i16 (ARMvmvnImm timm:$simm)),
             (v8i16 (MVE_VMVNimmi16 nImmSplatI16:$simm))>;

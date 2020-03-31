@@ -236,7 +236,7 @@ public:
                         DenseMap<uint64_t, StringRef> &GUIDToFuncNameMap)
       : CurrentReader(Reader), CurrentModule(M),
       CurrentGUIDToFuncNameMap(GUIDToFuncNameMap) {
-    if (CurrentReader.getFormat() != SPF_Compact_Binary)
+    if (!CurrentReader.useMD5())
       return;
 
     for (const auto &F : CurrentModule) {
@@ -262,7 +262,7 @@ public:
   }
 
   ~GUIDToFuncNameMapper() {
-    if (CurrentReader.getFormat() != SPF_Compact_Binary)
+    if (!CurrentReader.useMD5())
       return;
 
     CurrentGUIDToFuncNameMap.clear();

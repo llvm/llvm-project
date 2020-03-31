@@ -934,7 +934,8 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   BasicBlock *UnconditionalSucc = nullptr;
 
   Instruction *I = InitialInst;
-  while (I->isTerminator()) {
+  while (I->isTerminator() ||
+         (isa<CmpInst>(I) && I->getNextNode()->isTerminator())) {
     if (isa<ReturnInst>(I)) {
       if (I != InitialInst) {
         // If InitialInst is an unconditional branch,
@@ -958,6 +959,29 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
         I = BB->getFirstNonPHIOrDbgOrLifetime();
         continue;
       }
+    } else if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
+      auto *BR = dyn_cast<BranchInst>(I->getNextNode());
+      if (BR && BR->isConditional() && CondCmp == BR->getCondition()) {
+        // If the case number of suspended switch instruction is reduced to
+        // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
+        // And the comparsion looks like : %cond = icmp eq i8 %V, constant.
+        ConstantInt *CondConst = dyn_cast<ConstantInt>(CondCmp->getOperand(1));
+        if (CondConst && CondCmp->getPredicate() == CmpInst::ICMP_EQ) {
+          Value *V = CondCmp->getOperand(0);
+          auto it = ResolvedValues.find(V);
+          if (it != ResolvedValues.end())
+            V = it->second;
+
+          if (ConstantInt *Cond0 = dyn_cast<ConstantInt>(V)) {
+            BasicBlock *BB = Cond0->equalsInt(CondConst->getZExtValue())
+                                 ? BR->getSuccessor(0)
+                                 : BR->getSuccessor(1);
+            scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
+            I = BB->getFirstNonPHIOrDbgOrLifetime();
+            continue;
+          }
+        }
+      }
     } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
       Value *V = SI->getCondition();
       auto it = ResolvedValues.find(V);
@@ -975,6 +999,37 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   return false;
 }
 
+// Check whether CI obeys the rules of musttail attribute.
+static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
+  if (CI.isInlineAsm())
+    return false;
+
+  // Match prototypes and calling conventions of resume function.
+  FunctionType *CalleeTy = CI.getFunctionType();
+  if (!CalleeTy->getReturnType()->isVoidTy() || (CalleeTy->getNumParams() != 1))
+    return false;
+
+  Type *CalleeParmTy = CalleeTy->getParamType(0);
+  if (!CalleeParmTy->isPointerTy() ||
+      (CalleeParmTy->getPointerAddressSpace() != 0))
+    return false;
+
+  if (CI.getCallingConv() != F.getCallingConv())
+    return false;
+
+  // CI should not has any ABI-impacting function attributes.
+  static const Attribute::AttrKind ABIAttrs[] = {
+      Attribute::StructRet,  Attribute::ByVal,    Attribute::InAlloca,
+      Attribute::InReg,      Attribute::Returned, Attribute::SwiftSelf,
+      Attribute::SwiftError, Attribute::Alignment};
+  AttributeList Attrs = CI.getAttributes();
+  for (auto AK : ABIAttrs)
+    if (Attrs.hasParamAttribute(0, AK))
+      return false;
+
+  return true;
+}
+
 // Add musttail to any resume instructions that is immediately followed by a
 // suspend (i.e. ret). We do this even in -O0 to support guaranteed tail call
 // for symmetrical coroutine control transfer (C++ Coroutines TS extension).
@@ -987,11 +1042,8 @@ static void addMustTailToCoroResumes(Function &F) {
   SmallVector<CallInst *, 4> Resumes;
   for (auto &I : instructions(F))
     if (auto *Call = dyn_cast<CallInst>(&I))
-      if (auto *CalledValue = Call->getCalledValue())
-        // CoroEarly pass replaced coro resumes with indirect calls to an
-        // address return by CoroSubFnInst intrinsic. See if it is one of those.
-        if (isa<CoroSubFnInst>(CalledValue->stripPointerCasts()))
-          Resumes.push_back(Call);
+      if (shouldBeMustTail(*Call, F))
+        Resumes.push_back(Call);
 
   // Set musttail on those that are followed by a ret instruction.
   for (CallInst *Call : Resumes)

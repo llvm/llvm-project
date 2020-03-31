@@ -251,21 +251,13 @@ define arm_aapcs_vfpcc <2 x i32> @ptr_v2i16_zext(<2 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v2i16_zext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    adr r2, .LCPI9_0
+; CHECK-NEXT:    vmov.i64 q0, #0xffff
 ; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    ldrh r1, [r1]
 ; CHECK-NEXT:    vmov.32 q1[0], r1
 ; CHECK-NEXT:    vmov.32 q1[2], r0
 ; CHECK-NEXT:    vand q0, q1, q0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %offs = load <2 x i16*>, <2 x i16*>* %offptr, align 4
   %gather = call <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*> %offs, i32 2, <2 x i1> <i1 true, i1 true>, <2 x i16> undef)

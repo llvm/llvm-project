@@ -101,7 +101,7 @@ static void inlineRegionAndEmitStdStore(OpType op,
   assert(isa<YieldOp>(terminator) &&
          "expected an yield op in the end of the region");
   for (unsigned i = 0, e = terminator.getNumOperands(); i < e; ++i) {
-    std_store(map.lookup(terminator.getOperand(i)), outputBuffers[i],
+    std_store(map.lookupOrDefault(terminator.getOperand(i)), outputBuffers[i],
               indexing[i]);
   }
 }
@@ -203,7 +203,7 @@ template <typename IndexedValueType>
 class LinalgScopedEmitter<IndexedValueType, ConvOp> {
 public:
   /// Returns the input value of convOp. If the indices in `imIdx` is out of
-  /// boundrary, returns 0 instead.
+  /// boundary, returns 0 instead.
   static ValueHandle getConvOpInput(ConvOp convOp, IndexedValueType im,
                                     ArrayRef<ValueHandle> imIdx) {
     // TODO(ntv): add a level of indirection to linalg.generic.
@@ -234,7 +234,7 @@ public:
       ValueHandle rightBound = std_dim(convOp.input(), idx);
       conds.push_back(conds.back() || (dim >= rightBound));
 
-      // When padding is involed, the indices will only be shifted to negative,
+      // When padding is involved, the indices will only be shifted to negative,
       // so having a max op is enough.
       auto maxMap = AffineMap::get(/*dimCount=*/1, 0,
                                    {getAffineDimExpr(/*position=*/0, context),

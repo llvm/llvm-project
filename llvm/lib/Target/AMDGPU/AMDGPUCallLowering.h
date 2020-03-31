@@ -27,7 +27,7 @@ class AMDGPUCallLowering: public CallLowering {
                              uint64_t Offset) const;
 
   void lowerParameter(MachineIRBuilder &B, Type *ParamTy, uint64_t Offset,
-                      unsigned Align, Register DstReg) const;
+                      Align Alignment, Register DstReg) const;
 
   /// A function of this type is used to perform value split action.
   using SplitArgTy = std::function<void(ArrayRef<Register>, Register, LLT, LLT, int)>;

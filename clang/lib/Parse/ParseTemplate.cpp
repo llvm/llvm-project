@@ -1031,7 +1031,8 @@ void Parser::DiagnoseMisplacedEllipsisInDeclarator(SourceLocation EllipsisLoc,
 /// or argument list.
 ///
 /// \returns true, if current token does not start with '>', false otherwise.
-bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
+bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
+                                            SourceLocation &RAngleLoc,
                                             bool ConsumeLastToken,
                                             bool ObjCGenericList) {
   // What will be left once we've consumed the '>'.
@@ -1041,7 +1042,8 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
 
   switch (Tok.getKind()) {
   default:
-    Diag(Tok.getLocation(), diag::err_expected) << tok::greater;
+    Diag(getEndOfPreviousToken(), diag::err_expected) << tok::greater;
+    Diag(LAngleLoc, diag::note_matching) << tok::less;
     return true;
 
   case tok::greater:
@@ -1220,16 +1222,17 @@ Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
 
     if (Invalid) {
       // Try to find the closing '>'.
-      if (ConsumeLastToken)
-        SkipUntil(tok::greater, StopAtSemi);
+      if (getLangOpts().CPlusPlus11)
+        SkipUntil(tok::greater, tok::greatergreater,
+                  tok::greatergreatergreater, StopAtSemi | StopBeforeMatch);
       else
         SkipUntil(tok::greater, StopAtSemi | StopBeforeMatch);
-      return true;
     }
   }
 
-  return ParseGreaterThanInTemplateList(RAngleLoc, ConsumeLastToken,
-                                        /*ObjCGenericList=*/false);
+  return ParseGreaterThanInTemplateList(LAngleLoc, RAngleLoc, ConsumeLastToken,
+                                        /*ObjCGenericList=*/false) ||
+         Invalid;
 }
 
 /// Replace the tokens that form a simple-template-id with an
@@ -1280,12 +1283,13 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                      bool AllowTypeAnnotation,
                                      bool TypeConstraint) {
   assert(getLangOpts().CPlusPlus && "Can only annotate template-ids in C++");
-  assert(Template && (Tok.is(tok::less) || TypeConstraint) &&
+  assert((Tok.is(tok::less) || TypeConstraint) &&
          "Parser isn't at the beginning of a template-id");
   assert(!(TypeConstraint && AllowTypeAnnotation) && "type-constraint can't be "
                                                      "a type annotation");
   assert((!TypeConstraint || TNK == TNK_Concept_template) && "type-constraint "
          "must accompany a concept name");
+  assert((Template || TNK == TNK_Non_template) && "missing template name");
 
   // Consume the template-name.
   SourceLocation TemplateNameLoc = TemplateName.getSourceRange().getBegin();
@@ -1293,40 +1297,31 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
   // Parse the enclosed template argument list.
   SourceLocation LAngleLoc, RAngleLoc;
   TemplateArgList TemplateArgs;
+  bool ArgsInvalid = false;
   if (!TypeConstraint || Tok.is(tok::less)) {
-    bool Invalid = ParseTemplateIdAfterTemplateName(false, LAngleLoc,
-                                                    TemplateArgs,
-                                                    RAngleLoc);
-
-    if (Invalid) {
-      // If we failed to parse the template ID but skipped ahead to a >, we're not
-      // going to be able to form a token annotation.  Eat the '>' if present.
-      TryConsumeToken(tok::greater);
-      // FIXME: Annotate the token stream so we don't produce the same errors
-      // again if we're doing this annotation as part of a tentative parse.
+    ArgsInvalid = ParseTemplateIdAfterTemplateName(false, LAngleLoc,
+                                                   TemplateArgs, RAngleLoc);
+    // If we couldn't recover from invalid arguments, don't form an annotation
+    // token -- we don't know how much to annotate.
+    // FIXME: This can lead to duplicate diagnostics if we retry parsing this
+    // template-id in another context. Try to annotate anyway?
+    if (RAngleLoc.isInvalid())
       return true;
-    }
   }
 
   ASTTemplateArgsPtr TemplateArgsPtr(TemplateArgs);
 
   // Build the annotation token.
   if (TNK == TNK_Type_template && AllowTypeAnnotation) {
-    TypeResult Type = Actions.ActOnTemplateIdType(
-        getCurScope(), SS, TemplateKWLoc, Template, TemplateName.Identifier,
-        TemplateNameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc);
-    if (Type.isInvalid()) {
-      // If we failed to parse the template ID but skipped ahead to a >, we're
-      // not going to be able to form a token annotation.  Eat the '>' if
-      // present.
-      TryConsumeToken(tok::greater);
-      // FIXME: Annotate the token stream so we don't produce the same errors
-      // again if we're doing this annotation as part of a tentative parse.
-      return true;
-    }
+    TypeResult Type = ArgsInvalid
+                          ? TypeError()
+                          : Actions.ActOnTemplateIdType(
+                                getCurScope(), SS, TemplateKWLoc, Template,
+                                TemplateName.Identifier, TemplateNameLoc,
+                                LAngleLoc, TemplateArgsPtr, RAngleLoc);
 
     Tok.setKind(tok::annot_typename);
-    setTypeAnnotation(Tok, Type.get());
+    setTypeAnnotation(Tok, Type);
     if (SS.isNotEmpty())
       Tok.setLocation(SS.getBeginLoc());
     else if (TemplateKWLoc.isValid())
@@ -1350,7 +1345,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 
     TemplateIdAnnotation *TemplateId = TemplateIdAnnotation::Create(
         TemplateKWLoc, TemplateNameLoc, TemplateII, OpKind, Template, TNK,
-        LAngleLoc, RAngleLoc, TemplateArgs, TemplateIds);
+        LAngleLoc, RAngleLoc, TemplateArgs, ArgsInvalid, TemplateIds);
 
     Tok.setAnnotationValue(TemplateId);
     if (TemplateKWLoc.isValid())
@@ -1386,29 +1381,24 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
   assert(Tok.is(tok::annot_template_id) && "Requires template-id tokens");
 
   TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-  assert((TemplateId->Kind == TNK_Type_template ||
-          TemplateId->Kind == TNK_Dependent_template_name ||
-          TemplateId->Kind == TNK_Undeclared_template) &&
+  assert(TemplateId->mightBeType() &&
          "Only works for type and dependent templates");
 
   ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                      TemplateId->NumArgs);
 
-  TypeResult Type
-    = Actions.ActOnTemplateIdType(getCurScope(),
-                                  SS,
-                                  TemplateId->TemplateKWLoc,
-                                  TemplateId->Template,
-                                  TemplateId->Name,
-                                  TemplateId->TemplateNameLoc,
-                                  TemplateId->LAngleLoc,
-                                  TemplateArgsPtr,
-                                  TemplateId->RAngleLoc,
-                                  /*IsCtorOrDtorName*/false,
-                                  IsClassName);
+  TypeResult Type =
+      TemplateId->isInvalid()
+          ? TypeError()
+          : Actions.ActOnTemplateIdType(
+                getCurScope(), SS, TemplateId->TemplateKWLoc,
+                TemplateId->Template, TemplateId->Name,
+                TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
+                TemplateArgsPtr, TemplateId->RAngleLoc,
+                /*IsCtorOrDtorName*/ false, IsClassName);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
-  setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());
+  setTypeAnnotation(Tok, Type);
   if (SS.isNotEmpty()) // it was a C++ qualified type name.
     Tok.setLocation(SS.getBeginLoc());
   // End location stays the same
@@ -1420,7 +1410,9 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
 
 /// Determine whether the given token can end a template argument.
 static bool isEndOfTemplateArgument(Token Tok) {
-  return Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater);
+  // FIXME: Handle '>>>'.
+  return Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater,
+                     tok::greatergreatergreater);
 }
 
 /// Parse a C++ template template argument.
@@ -1460,15 +1452,14 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
 
       TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
-      // If the next token signals the end of a template argument,
-      // then we have a dependent template name that could be a template
-      // template argument.
+      // If the next token signals the end of a template argument, then we have
+      // a (possibly-dependent) template name that could be a template template
+      // argument.
       TemplateTy Template;
       if (isEndOfTemplateArgument(Tok) &&
-          Actions.ActOnDependentTemplateName(
-              getCurScope(), SS, TemplateKWLoc, Name,
-              /*ObjectType=*/nullptr,
-              /*EnteringContext=*/false, Template))
+          Actions.ActOnTemplateName(getCurScope(), SS, TemplateKWLoc, Name,
+                                    /*ObjectType=*/nullptr,
+                                    /*EnteringContext=*/false, Template))
         Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
     }
   } else if (Tok.is(tok::identifier)) {
@@ -1572,10 +1563,8 @@ Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs) {
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
 
-    if (Arg.isInvalid()) {
-      SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
+    if (Arg.isInvalid())
       return true;
-    }
 
     // Save this template argument.
     TemplateArgs.push_back(Arg);
@@ -1755,7 +1744,7 @@ bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
     TPA.Commit();
 
     SourceLocation Greater;
-    ParseGreaterThanInTemplateList(Greater, true, false);
+    ParseGreaterThanInTemplateList(Less, Greater, true, false);
     Actions.diagnoseExprIntendedAsTemplateName(getCurScope(), LHS,
                                                Less, Greater);
     return true;
@@ -1784,7 +1773,7 @@ void Parser::checkPotentialAngleBracket(ExprResult &PotentialTemplateName) {
        NextToken().isOneOf(tok::greatergreater, tok::greatergreatergreater))) {
     SourceLocation Less = ConsumeToken();
     SourceLocation Greater;
-    ParseGreaterThanInTemplateList(Greater, true, false);
+    ParseGreaterThanInTemplateList(Less, Greater, true, false);
     Actions.diagnoseExprIntendedAsTemplateName(
         getCurScope(), PotentialTemplateName, Less, Greater);
     // FIXME: Perform error recovery.

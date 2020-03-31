@@ -1,4 +1,4 @@
-# Vector Dialect
+# 'vector' Dialect
 
 [TOC]
 

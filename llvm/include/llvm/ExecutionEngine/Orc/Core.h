@@ -483,6 +483,20 @@ public:
   /// callbacks, metadata).
   Error defineMaterializing(SymbolFlagsMap SymbolFlags);
 
+  /// Define the given symbols as non-existent, removing it from the symbol
+  /// table and notifying any pending queries. Queries that lookup up the
+  /// symbol using the SymbolLookupFlags::WeaklyReferencedSymbol flag will
+  /// behave as if the symbol had not been matched in the first place. Queries
+  /// that required this symbol will fail with a missing symbol definition
+  /// error.
+  ///
+  /// This method is intended to support cleanup of special symbols like
+  /// initializer symbols: Queries using
+  /// SymbolLookupFlags::WeaklyReferencedSymbol can be used to trigger their
+  /// emission, and this method can be used to remove them from the JITDylib
+  /// once materialization is complete.
+  void defineNonExistent(ArrayRef<SymbolStringPtr> Symbols);
+
   /// Notify all not-yet-emitted covered by this MaterializationResponsibility
   /// instance that an error has occurred.
   /// This will remove all symbols covered by this MaterializationResponsibilty
@@ -721,15 +735,6 @@ public:
   void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
                                     JITEvaluatedSymbol Sym);
 
-  /// Remove a symbol from the query. This is used to drop weakly referenced
-  /// symbols that are not found.
-  void dropSymbol(const SymbolStringPtr &Name) {
-    assert(ResolvedSymbols.count(Name) &&
-           "Redundant removal of weakly-referenced symbol");
-    ResolvedSymbols.erase(Name);
-    --OutstandingSymbolsCount;
-  }
-
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
   bool isComplete() const { return OutstandingSymbolsCount == 0; }
@@ -746,6 +751,8 @@ private:
   void addQueryDependence(JITDylib &JD, SymbolStringPtr Name);
 
   void removeQueryDependence(JITDylib &JD, const SymbolStringPtr &Name);
+
+  void dropSymbol(const SymbolStringPtr &Name);
 
   bool canStillFail();
 
@@ -1298,6 +1305,16 @@ auto JITDylib::withSearchOrderDo(Func &&F)
 template <typename MaterializationUnitType>
 Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU) {
   assert(MU && "Can not define with a null MU");
+
+  if (MU->getSymbols().empty()) {
+    // Empty MUs are allowable but pathological, so issue a warning.
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "Warning: Discarding empty MU " << MU->getName() << "\n";
+    });
+    return Error::success();
+  } else
+    DEBUG_WITH_TYPE("orc", dbgs() << "Defining MU " << MU->getName() << ":\n");
+
   return ES.runSessionLocked([&, this]() -> Error {
     if (auto Err = defineImpl(*MU))
       return Err;
@@ -1319,6 +1336,15 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU) {
 template <typename MaterializationUnitType>
 Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU) {
   assert(MU && "Can not define with a null MU");
+
+  if (MU->getSymbols().empty()) {
+    // Empty MUs are allowable but pathological, so issue a warning.
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "Warning: Discarding empty MU " << MU->getName() << "\n";
+    });
+    return Error::success();
+  } else
+    DEBUG_WITH_TYPE("orc", dbgs() << "Defining MU " << MU->getName() << ":\n");
 
   return ES.runSessionLocked([&, this]() -> Error {
     if (auto Err = defineImpl(*MU))

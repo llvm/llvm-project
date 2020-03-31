@@ -266,6 +266,7 @@ int vararg_receiver(int count, svint8_t first, ...) {
   __builtin_va_list va;
 
   __builtin_va_start(va, first);
+  __builtin_va_arg(va, svint8_t);
   __builtin_va_end(va);
   return count;
 }
@@ -477,6 +478,7 @@ void cxx_only(int sel) {
   (void)typeid(ref_int8);
   (void)typeid(static_int8_ptr);
 
+  _Static_assert(__is_trivially_copyable(svint8_t), "");
   _Static_assert(__is_trivially_destructible(svint8_t), "");
   _Static_assert(!__is_nothrow_assignable(svint8_t, svint8_t), "");
   _Static_assert(__is_nothrow_assignable(svint8_t &, svint8_t), "");
@@ -491,6 +493,16 @@ void cxx_only(int sel) {
   _Static_assert(!__is_assignable(svint8_t, svint8_t), "");
   _Static_assert(__is_assignable(svint8_t &, svint8_t), "");
   _Static_assert(!__is_assignable(svint8_t &, svint16_t), "");
+  _Static_assert(__has_nothrow_assign(svint8_t), "");
+  _Static_assert(__has_nothrow_move_assign(svint8_t), "");
+  _Static_assert(__has_nothrow_copy(svint8_t), "");
+  _Static_assert(__has_nothrow_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_assign(svint8_t), "");
+  _Static_assert(__has_trivial_move_assign(svint8_t), "");
+  _Static_assert(__has_trivial_copy(svint8_t), "");
+  _Static_assert(__has_trivial_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_move_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_destructor(svint8_t), "");
   _Static_assert(!__has_virtual_destructor(svint8_t), "");
   _Static_assert(!__is_abstract(svint8_t), "");
   _Static_assert(!__is_aggregate(svint8_t), "");
@@ -502,7 +514,9 @@ void cxx_only(int sel) {
   _Static_assert(!__is_enum(svint8_t), "");
   _Static_assert(!__is_final(svint8_t), "");
   _Static_assert(!__is_literal(svint8_t), "");
+  _Static_assert(__is_pod(svint8_t), "");
   _Static_assert(!__is_polymorphic(svint8_t), "");
+  _Static_assert(__is_trivial(svint8_t), "");
   _Static_assert(__is_object(svint8_t), "");
   _Static_assert(!__is_arithmetic(svint8_t), "");
   _Static_assert(!__is_floating_point(svint8_t), "");
@@ -579,9 +593,7 @@ void cxx_only(int sel) {
   for (const svint8_t &x : wrapper<svint8_t>()) { // expected-warning {{loop variable 'x' binds to a temporary value produced by a range of type 'wrapper<svint8_t>'}} expected-note {{use non-reference type}}
     (void)x;
   }
-  // This warning is bogus and will be removed by a later patch.
-  // The point is to show that it's being removed for the right reasons.
-  for (const svint8_t x : wrapper<const svint8_t &>()) { // expected-warning {{loop variable 'x' creates a copy from type 'const svint8_t'}} expected-note {{use reference type}}
+  for (const svint8_t x : wrapper<const svint8_t &>()) {
     (void)x;
   }
 #endif
