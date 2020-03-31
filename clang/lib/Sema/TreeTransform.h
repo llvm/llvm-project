@@ -730,10 +730,10 @@ public:
 #define ABSTRACT_STMT(Stmt)
 #include "clang/AST/StmtNodes.inc"
 
-#define OPENMP_CLAUSE(Name, Class)                        \
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                           \
   LLVM_ATTRIBUTE_NOINLINE \
   OMPClause *Transform ## Class(Class *S);
-#include "clang/Basic/OpenMPKinds.def"
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 
   /// Build a new qualified type given its unqualified type and type location.
   ///
@@ -3597,10 +3597,10 @@ OMPClause *TreeTransform<Derived>::TransformOMPClause(OMPClause *S) {
   switch (S->getClauseKind()) {
   default: break;
   // Transform individual clause nodes
-#define OPENMP_CLAUSE(Name, Class)                                             \
-  case OMPC_ ## Name :                                                         \
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) \
+  case Enum:                                                                   \
     return getDerived().Transform ## Class(cast<Class>(S));
-#include "clang/Basic/OpenMPKinds.def"
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
 
   return S;
