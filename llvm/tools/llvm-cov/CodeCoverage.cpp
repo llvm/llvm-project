@@ -867,8 +867,8 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   }
 
   sys::fs::file_status Status;
-  if (sys::fs::status(PGOFilename, Status)) {
-    error("profdata file error: can not get the file status. \n");
+  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
+    error("Could not read profile data!", EC.message());
     return 1;
   }
 

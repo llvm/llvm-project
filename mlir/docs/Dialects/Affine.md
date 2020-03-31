@@ -1,4 +1,4 @@
-# `affine` Dialect
+# 'affine' Dialect
 
 This dialect provides a powerful abstraction for affine operations and analyses.
 

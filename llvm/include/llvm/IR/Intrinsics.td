@@ -1151,7 +1151,9 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
                                 [], "llvm.clear_cache">;
 
 // Intrinsic to detect whether its argument is a constant.
-def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem, IntrWillReturn], "llvm.is.constant">;
+def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty],
+                                [IntrNoMem, IntrWillReturn, IntrConvergent],
+                                "llvm.is.constant">;
 
 // Intrinsic to mask out bits of a pointer.
 def int_ptrmask: Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_anyint_ty],

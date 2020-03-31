@@ -261,7 +261,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   auto MAI = MCAsmInfo();
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
-                                      MachineMemOperand::MOLoad, 8, 8);
+                                      MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
@@ -308,7 +308,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   auto MAI = MCAsmInfo();
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
-                                      MachineMemOperand::MOLoad, 8, 8);
+                                      MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
@@ -345,7 +345,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   auto MAI = MCAsmInfo();
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
-                                      MachineMemOperand::MOLoad, 8, 8);
+                                      MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.push_back(MMO);
   MMOs.push_back(MMO);

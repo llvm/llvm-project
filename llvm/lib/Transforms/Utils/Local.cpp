@@ -3031,3 +3031,42 @@ AllocaInst *llvm::findAllocaForValue(Value *V,
     AllocaForValue[V] = Res;
   return Res;
 }
+
+Value *llvm::invertCondition(Value *Condition) {
+  // First: Check if it's a constant
+  if (Constant *C = dyn_cast<Constant>(Condition))
+    return ConstantExpr::getNot(C);
+
+  // Second: If the condition is already inverted, return the original value
+  Value *NotCondition;
+  if (match(Condition, m_Not(m_Value(NotCondition))))
+    return NotCondition;
+
+  if (Instruction *Inst = dyn_cast<Instruction>(Condition)) {
+    // Third: Check all the users for an invert
+    BasicBlock *Parent = Inst->getParent();
+    for (User *U : Condition->users())
+      if (Instruction *I = dyn_cast<Instruction>(U))
+        if (I->getParent() == Parent && match(I, m_Not(m_Specific(Condition))))
+          return I;
+
+    // Last option: Create a new instruction
+    auto Inverted = BinaryOperator::CreateNot(Inst, "");
+    if (isa<PHINode>(Inst)) {
+      // FIXME: This fails if the inversion is to be used in a
+      // subsequent PHINode in the same basic block.
+      Inverted->insertBefore(&*Parent->getFirstInsertionPt());
+    } else {
+      Inverted->insertAfter(Inst);
+    }
+    return Inverted;
+  }
+
+  if (Argument *Arg = dyn_cast<Argument>(Condition)) {
+    BasicBlock &EntryBlock = Arg->getParent()->getEntryBlock();
+    return BinaryOperator::CreateNot(Condition, Arg->getName() + ".inv",
+                                     &*EntryBlock.getFirstInsertionPt());
+  }
+
+  llvm_unreachable("Unhandled condition to invert");
+}

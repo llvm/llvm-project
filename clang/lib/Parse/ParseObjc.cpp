@@ -2978,7 +2978,7 @@ bool Parser::isStartOfObjCClassMessageMissingOpenBracket() {
       InMessageExpression)
     return false;
 
-  ParsedType Type;
+  TypeResult Type;
 
   if (Tok.is(tok::annot_typename))
     Type = getTypeAnnotation(Tok);
@@ -2988,7 +2988,8 @@ bool Parser::isStartOfObjCClassMessageMissingOpenBracket() {
   else
     return false;
 
-  if (!Type.get().isNull() && Type.get()->isObjCObjectOrInterfaceType()) {
+  // FIXME: Should not be querying properties of types from the parser.
+  if (Type.isUsable() && Type.get().get()->isObjCObjectOrInterfaceType()) {
     const Token &AfterNext = GetLookAheadToken(2);
     if (AfterNext.isOneOf(tok::colon, tok::r_square)) {
       if (Tok.is(tok::identifier))

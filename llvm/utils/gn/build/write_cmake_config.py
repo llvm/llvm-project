@@ -22,7 +22,7 @@ empty string, which is falsy, but FOO=0 sets it to '0' which is truthy):
         #define FOO 0
 
 2.) #cmakedefine FOO [...]
-    Checks if key FOO is set to a truthy in value, and depending on that prints
+    Checks if key FOO is set to a truthy value, and depending on that prints
     one of the following two lines:
 
         #define FOO [...]

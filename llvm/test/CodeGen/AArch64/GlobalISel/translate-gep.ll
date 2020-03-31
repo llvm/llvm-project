@@ -8,9 +8,8 @@ define i8*  @translate_element_size1(i64 %arg) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[COPY]](s64)
+  ; CHECK:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[C]], [[COPY]](s64)
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; CHECK:   $x0 = COPY [[COPY1]](p0)
   ; CHECK:   RET_ReallyLR implicit $x0

@@ -594,8 +594,7 @@ define i32 @test_urem(i32 %arg1, i32 %arg2) {
 }
 
 ; CHECK-LABEL: name: test_constant_null
-; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
+; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
 ; CHECK: $x0 = COPY [[NULL]]
 define i8* @test_constant_null() {
   ret i8* null
@@ -1393,6 +1392,30 @@ define i32 @test_bitreverse_intrinsic(i32 %a) {
 ; CHECK: [[RES:%[0-9]+]]:_(s32) = G_BITREVERSE [[A]]
 ; CHECK: $w0 = COPY [[RES]]
   %res = call i32 @llvm.bitreverse.i32(i32 %a)
+  ret i32 %res
+}
+
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+define i32 @test_fshl_intrinsic(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: name: test_fshl_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $w1
+; CHECK: [[C:%[0-9]+]]:_(s32) = COPY $w2
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FSHL [[A]], [[B]], [[C]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %res
+}
+
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+define i32 @test_fshr_intrinsic(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: name: test_fshr_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $w1
+; CHECK: [[C:%[0-9]+]]:_(s32) = COPY $w2
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FSHR [[A]], [[B]], [[C]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
   ret i32 %res
 }
 

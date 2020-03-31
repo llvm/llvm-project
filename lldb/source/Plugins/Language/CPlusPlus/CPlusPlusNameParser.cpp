@@ -347,7 +347,7 @@ bool CPlusPlusNameParser::ConsumeOperator() {
       // If we find ( or < then this is indeed operator<< no need for fix.
       if (n_token.getKind() != tok::l_paren && n_token.getKind() != tok::less) {
         clang::Token tmp_tok;
-
+        tmp_tok.startToken();
         tmp_tok.setLength(1);
         tmp_tok.setLocation(token.getLocation().getLocWithOffset(1));
         tmp_tok.setKind(tok::less);

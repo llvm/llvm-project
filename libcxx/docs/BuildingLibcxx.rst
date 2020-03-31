@@ -68,7 +68,7 @@ rebuilding LLVM as often. An out-of-tree build would look like this:
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/separate/libcxxabi/include \
           path/to/llvm-project/libcxx
   $ make
-  $ make check-libcxx # optional
+  $ make check-cxx # optional
 
 
 Experimental Support for Windows
@@ -166,7 +166,7 @@ libc++ specific options
 
 .. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
 
-  **Default**: ``ON``
+  **Default**: ``OFF``
 
   Build libc++ with assertions enabled.
 

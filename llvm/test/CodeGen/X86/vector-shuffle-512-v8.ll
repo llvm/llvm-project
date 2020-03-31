@@ -2147,8 +2147,7 @@ define <8 x i64> @shuffle_v8i64_4567uuuu(<8 x i64> %a0, <8 x i64> %a1) {
 define <8 x i64> @shuffle_v8i64_uu67zzzz(<8 x i64> %a0, <8 x i64> %a1) {
 ; ALL-LABEL: shuffle_v8i64_uu67zzzz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,6,7],zmm1[4,5,6,7]
+; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x i64> %a0, <8 x i64> zeroinitializer, <8 x i32> <i32 undef, i32 undef, i32 6, i32 7, i32 8, i32 8, i32 8, i32 8>
   ret <8 x i64> %1

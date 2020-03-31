@@ -50,14 +50,16 @@ struct TypeDependenceScope {
     /// Whether this type is a variably-modified type (C99 6.7.5).
     VariablyModified = 8,
 
-    // FIXME: add Error bit.
+    /// Whether this type references an error, e.g. decltype(err-expression)
+    /// yields an error type.
+    Error = 16,
 
     None = 0,
-    All = 15,
+    All = 31,
 
     DependentInstantiation = Dependent | Instantiation,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/VariablyModified)
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
   };
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
@@ -147,6 +149,7 @@ public:
     return translate(V, UnexpandedPack, TypeDependence::UnexpandedPack) |
            translate(V, Instantiation, TypeDependence::Instantiation) |
            translate(V, Dependent, TypeDependence::Dependent) |
+           translate(V, Error, TypeDependence::Error) |
            translate(V, VariablyModified, TypeDependence::VariablyModified);
   }
 

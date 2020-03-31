@@ -1,4 +1,4 @@
-# `linalg` Dialect
+# 'linalg' Dialect
 
 [TOC]
 

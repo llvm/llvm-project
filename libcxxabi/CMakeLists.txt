@@ -1,5 +1,9 @@
 # See www/CMake.html for instructions on how to build libcxxabi with CMake.
 
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
+  message(FATAL_ERROR "libc++abi now requires being built in a monorepo layout with libcxx available")
+endif()
+
 #===============================================================================
 # Setup Project
 #===============================================================================

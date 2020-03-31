@@ -120,7 +120,7 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<2 x p0>) = G_INSERT_VECTOR_ELT %0:_, %3:_(p0), %5:_(s32) (in function: vector_of_pointers_insertelement)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<2 x p0>) = G_INSERT_VECTOR_ELT %0:_, %{{[0-9]+}}:_(p0), %{{[0-9]+}}:_(s32) (in function: vector_of_pointers_insertelement)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_insertelement
 ; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_insertelement:
 define void @vector_of_pointers_insertelement() {
@@ -153,7 +153,9 @@ define void @nonpow2_add_narrowing() {
 define void @nonpow2_or_narrowing() {
   %a = add i128 undef, undef
   %b = trunc i128 %a to i96
-  %dummy = or i96 %b, %b
+  %a2 = add i128 undef, undef
+  %b2 = trunc i128 %a2 to i96
+  %dummy = or i96 %b, %b2
   store i96 %dummy, i96* undef
   ret void
 }

@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -1068,5 +1069,15 @@ void ento::registerContainerModeling(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterContainerModeling(const CheckerManager &mgr) {
+  if (!mgr.getLangOpts().CPlusPlus)
+    return false;
+
+  if (!mgr.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation) {
+    mgr.getASTContext().getDiagnostics().Report(
+        diag::err_analyzer_checker_incompatible_analyzer_option)
+      << "aggressive-binary-operation-simplification" << "false";
+    return false;
+  }
+
   return true;
 }

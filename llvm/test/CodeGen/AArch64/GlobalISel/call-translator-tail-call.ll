@@ -260,9 +260,8 @@ define void @foo(i32*) {
   ; COMMON: bb.1 (%ir-block.1):
   ; COMMON:   liveins: $x0
   ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; COMMON:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; COMMON:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
-  ; COMMON:   $x0 = COPY [[INTTOPTR]](p0)
+  ; COMMON:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+  ; COMMON:   $x0 = COPY [[C]](p0)
   ; COMMON:   TCRETURNdi @must_callee, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
   musttail call void @must_callee(i8* null)
   ret void

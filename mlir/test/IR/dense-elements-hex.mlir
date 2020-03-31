@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -verify-diagnostics -split-input-file -mlir-print-elementsattrs-with-hex-if-larger=1 | FileCheck %s --check-prefix=HEX
-// RUN: mlir-opt %s -verify-diagnostics -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -verify-diagnostics -split-input-file -mlir-print-elementsattrs-with-hex-if-larger=1 | FileCheck %s --check-prefix=HEX
+// RUN: mlir-opt -allow-unregistered-dialect %s -verify-diagnostics -split-input-file | FileCheck %s
 
 // HEX: dense<"0x00000000000024400000000000001440"> : tensor<2xf64>
 "foo.op"() {dense.attr = dense<[10.0, 5.0]> : tensor<2xf64>} : () -> ()

@@ -116,6 +116,95 @@ public:
     return const_child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
   }
 };
+
+/// An explicit cast in C or a C-style cast in C++, which uses the syntax
+/// ([s1][s2]...[sn])expr. For example: @c ([3][3])f.
+class OMPArrayShapingExpr final
+    : public Expr,
+      private llvm::TrailingObjects<OMPArrayShapingExpr, Expr *, SourceRange> {
+  friend TrailingObjects;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  /// Base node.
+  SourceLocation LPLoc; /// The location of the left paren
+  SourceLocation RPLoc; /// The location of the right paren
+  unsigned NumDims = 0; /// Number of dimensions in the shaping expression.
+
+  /// Construct full expression.
+  OMPArrayShapingExpr(QualType ExprTy, Expr *Op, SourceLocation L,
+                      SourceLocation R, ArrayRef<Expr *> Dims);
+
+  /// Construct an empty expression.
+  explicit OMPArrayShapingExpr(EmptyShell Shell, unsigned NumDims)
+      : Expr(OMPArrayShapingExprClass, Shell), NumDims(NumDims) {}
+
+  /// Sets the dimensions for the array shaping.
+  void setDimensions(ArrayRef<Expr *> Dims);
+
+  /// Sets the base expression for array shaping operation.
+  void setBase(Expr *Op) { getTrailingObjects<Expr *>()[NumDims] = Op; }
+
+  /// Sets source ranges for the brackets in the array shaping operation.
+  void setBracketsRanges(ArrayRef<SourceRange> BR);
+
+  unsigned numTrailingObjects(OverloadToken<Expr *>) const {
+    // Add an extra one for the base expression.
+    return NumDims + 1;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<SourceRange>) const {
+    return NumDims;
+  }
+
+public:
+  static OMPArrayShapingExpr *Create(const ASTContext &Context, QualType T,
+                                     Expr *Op, SourceLocation L,
+                                     SourceLocation R, ArrayRef<Expr *> Dims,
+                                     ArrayRef<SourceRange> BracketRanges);
+
+  static OMPArrayShapingExpr *CreateEmpty(const ASTContext &Context,
+                                          unsigned NumDims);
+
+  SourceLocation getLParenLoc() const { return LPLoc; }
+  void setLParenLoc(SourceLocation L) { LPLoc = L; }
+
+  SourceLocation getRParenLoc() const { return RPLoc; }
+  void setRParenLoc(SourceLocation L) { RPLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LPLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBase()->getEndLoc();
+  }
+
+  /// Fetches the dimensions for array shaping expression.
+  ArrayRef<Expr *> getDimensions() const {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumDims);
+  }
+
+  /// Fetches source ranges for the brackets os the array shaping expression.
+  ArrayRef<SourceRange> getBracketsRanges() const {
+    return llvm::makeArrayRef(getTrailingObjects<SourceRange>(), NumDims);
+  }
+
+  /// Fetches base expression of array shaping expression.
+  Expr *getBase() { return getTrailingObjects<Expr *>()[NumDims]; }
+  const Expr *getBase() const { return getTrailingObjects<Expr *>()[NumDims]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPArrayShapingExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    return child_range(Begin, Begin + NumDims + 1);
+  }
+  const_child_range children() const {
+    Stmt *const *Begin =
+        reinterpret_cast<Stmt *const *>(getTrailingObjects<Expr *>());
+    return const_child_range(Begin, Begin + NumDims + 1);
+  }
+};
 } // end namespace clang
 
 #endif

@@ -3217,16 +3217,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (Next.is(tok::annot_typename)) {
         DS.getTypeSpecScope() = SS;
         ConsumeAnnotationToken(); // The C++ scope.
-        if (Tok.getAnnotationValue()) {
-          ParsedType T = getTypeAnnotation(Tok);
-          isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename,
-                                         Tok.getAnnotationEndLoc(),
-                                         PrevSpec, DiagID, T, Policy);
-          if (isInvalid)
-            break;
-        }
-        else
-          DS.SetTypeSpecError();
+        TypeResult T = getTypeAnnotation(Tok);
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename,
+                                       Tok.getAnnotationEndLoc(),
+                                       PrevSpec, DiagID, T, Policy);
+        if (isInvalid)
+          break;
         DS.SetRangeEnd(Tok.getAnnotationEndLoc());
         ConsumeAnnotationToken(); // The typename
       }
@@ -3294,13 +3290,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (DS.hasTypeSpecifier() && DS.hasTagDefinition())
         goto DoneWithDeclSpec;
 
-      if (Tok.getAnnotationValue()) {
-        ParsedType T = getTypeAnnotation(Tok);
-        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
-                                       DiagID, T, Policy);
-      } else
-        DS.SetTypeSpecError();
-
+      TypeResult T = getTypeAnnotation(Tok);
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                     DiagID, T, Policy);
       if (isInvalid)
         break;
 

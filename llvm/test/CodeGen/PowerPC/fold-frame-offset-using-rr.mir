@@ -152,3 +152,16 @@ body: |
     ; CHECK: $x6 = LD 4, killed $x4
     BLR8 implicit $lr8, implicit $rm
 ...
+---
+name: testR0
+# Give up the folding if the register is R0/X0
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $f1, $x0, $x3
+    $x4 = ADDI8 killed $x3, -8
+    $x4 = ADD8 killed $x4, $x0
+    STFD killed $f1, -8, killed $x4
+    ; CHECK-NOT: STFDX
+    BLR8 implicit $lr8, implicit $rm
+...

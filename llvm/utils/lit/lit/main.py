@@ -85,8 +85,7 @@ def main(builtin_params={}):
                              'Consider decreasing the number of shards.\n')
             sys.exit(0)
 
-    if opts.max_tests:
-        filtered_tests = filtered_tests[:opts.max_tests]
+    filtered_tests = filtered_tests[:opts.max_tests]
 
     opts.workers = min(len(filtered_tests), opts.workers)
 
@@ -199,8 +198,8 @@ def run_tests(tests, lit_config, opts, numTotalTests):
         if opts.order == 'failing-first':
             touch_file(test)
 
-    run = lit.run.create_run(tests, lit_config, opts.workers, progress_callback,
-                             opts.max_failures, opts.timeout)
+    run = lit.run.Run(tests, lit_config, opts.workers, progress_callback,
+                      opts.max_failures, opts.timeout)
 
     display.print_header()
     try:

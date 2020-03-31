@@ -5363,17 +5363,32 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       if (Dependencies[I].first == OMPC_DEPEND_depobj)
         continue;
       const Expr *E = Dependencies[I].second;
-      LValue Addr = CGF.EmitLValue(E);
+      const auto *OASE = dyn_cast<OMPArrayShapingExpr>(E);
+      llvm::Value *Addr;
+      if (OASE) {
+        const Expr *Base = OASE->getBase();
+        Addr = CGF.EmitScalarExpr(Base);
+      } else {
+        Addr = CGF.EmitLValue(E).getPointer(CGF);
+      }
       llvm::Value *Size;
       QualType Ty = E->getType();
-      if (const auto *ASE =
-              dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
+      if (OASE) {
+        Size = llvm::ConstantInt::get(CGF.SizeTy,/*V=*/1);
+        for (const Expr *SE : OASE->getDimensions()) {
+           llvm::Value *Sz = CGF.EmitScalarExpr(SE);
+           Sz = CGF.EmitScalarConversion(Sz, SE->getType(),
+                                    CGF.getContext().getSizeType(),
+                                    SE->getExprLoc());
+           Size = CGF.Builder.CreateNUWMul(Size, Sz);
+        }
+      } else if (const auto *ASE =
+                     dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
         LValue UpAddrLVal =
             CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
         llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
             UpAddrLVal.getPointer(CGF), /*Idx0=*/1);
-        llvm::Value *LowIntPtr =
-            CGF.Builder.CreatePtrToInt(Addr.getPointer(CGF), CGM.SizeTy);
+        llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGM.SizeTy);
         llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGM.SizeTy);
         Size = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
       } else {
@@ -5392,9 +5407,8 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       // deps[i].base_addr = &<Dependencies[i].second>;
       LValue BaseAddrLVal = CGF.EmitLValueForField(
           Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      CGF.EmitStoreOfScalar(
-          CGF.Builder.CreatePtrToInt(Addr.getPointer(CGF), CGF.IntPtrTy),
-          BaseAddrLVal);
+      CGF.EmitStoreOfScalar(CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy),
+                            BaseAddrLVal);
       // deps[i].len = sizeof(<Dependencies[i].second>);
       LValue LenLVal = CGF.EmitLValueForField(
           Base, *std::next(KmpDependInfoRD->field_begin(), Len));

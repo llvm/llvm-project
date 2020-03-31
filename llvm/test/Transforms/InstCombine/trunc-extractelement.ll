@@ -68,6 +68,18 @@ define i16 @shrinkExtractElt_i64_to_i16_2(<3 x i64> %x) {
   ret i16 %t
 }
 
+; Crazy types may be ok.
+define i11 @shrinkExtractElt_i33_to_11_2(<3 x i33> %x) {
+; ANY-LABEL: @shrinkExtractElt_i33_to_11_2(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i33> [[X:%.*]], i16 2
+; ANY-NEXT:    [[T:%.*]] = trunc i33 [[E]] to i11
+; ANY-NEXT:    ret i11 [[T]]
+;
+  %e = extractelement <3 x i33> %x, i16 2
+  %t = trunc i33 %e to i11
+  ret i11 %t
+}
+
 ; Do not optimize if it would result in an invalid bitcast instruction.
 define i13 @shrinkExtractElt_i67_to_i13_2(<3 x i67> %x) {
 ; ANY-LABEL: @shrinkExtractElt_i67_to_i13_2(

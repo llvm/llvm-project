@@ -430,17 +430,9 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @zext_v2i32_v2i64(<2 x i32> %src) {
 ; CHECK-LABEL: zext_v2i32_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI20_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI20_0:
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %0 = zext <2 x i32> %src to <2 x i64>
   ret <2 x i64> %0

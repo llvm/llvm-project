@@ -690,10 +690,10 @@ void HexagonSplitDoubleRegs::splitMemRef(MachineInstr *MI,
     MachineMemOperand::Flags F = MO->getFlags();
     Align A = MO->getAlign();
 
-    auto *Tmp1 = MF.getMachineMemOperand(Ptr, F, 4 /*size*/, A.value());
+    auto *Tmp1 = MF.getMachineMemOperand(Ptr, F, 4 /*size*/, A);
     LowI->addMemOperand(MF, Tmp1);
-    auto *Tmp2 = MF.getMachineMemOperand(Ptr, F, 4 /*size*/,
-                                         std::min(A, Align(4)).value());
+    auto *Tmp2 =
+        MF.getMachineMemOperand(Ptr, F, 4 /*size*/, std::min(A, Align(4)));
     HighI->addMemOperand(MF, Tmp2);
   }
 }

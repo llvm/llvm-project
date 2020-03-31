@@ -204,7 +204,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   llvm::raw_string_ostream os(out);
   os << "undefined symbol: " << toString(*undefDiag.sym);
 
-  const size_t maxUndefReferences = 10;
+  const size_t maxUndefReferences = 3;
   size_t i = 0, numRefs = 0;
   for (const UndefinedDiag::File &ref : undefDiag.files) {
     std::vector<std::string> symbolLocations =

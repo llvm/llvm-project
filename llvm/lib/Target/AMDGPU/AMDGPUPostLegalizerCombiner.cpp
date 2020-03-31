@@ -127,6 +127,43 @@ static void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+static bool matchUCharToFloat(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineFunction &MF, CombinerHelper &Helper) {
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // TODO: We could try to match extracting the higher bytes, which would be
+  // easier if i8 vectors weren't promoted to i32 vectors, particularly after
+  // types are legalized. v4i8 -> v4f32 is probably the only case to worry
+  // about in practice.
+  LLT Ty = MRI.getType(DstReg);
+  if (Ty == LLT::scalar(32) || Ty == LLT::scalar(16)) {
+    const APInt Mask = APInt::getHighBitsSet(32, 24);
+    return Helper.getKnownBits()->maskedValueIsZero(MI.getOperand(1).getReg(),
+                                                    Mask);
+  }
+
+  return false;
+}
+
+static void applyUCharToFloat(MachineInstr &MI) {
+  MachineIRBuilder B(MI);
+
+  const LLT S32 = LLT::scalar(32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = B.getMRI()->getType(DstReg);
+
+  if (Ty == S32) {
+    B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg},
+                   {MI.getOperand(1)}, MI.getFlags());
+  } else {
+    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32},
+                             {MI.getOperand(1)}, MI.getFlags());
+    B.buildFPTrunc(DstReg, Cvt0, MI.getFlags());
+  }
+
+  MI.eraseFromParent();
+}
 
 #define AMDGPUPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AMDGPUGenPostLegalizeGICombiner.inc"

@@ -2139,6 +2139,11 @@ public:
     return static_cast<TypeDependence>(TypeBits.Dependence);
   }
 
+  /// Whether this type is an error type.
+  bool containsErrors() const {
+    return getDependence() & TypeDependence::Error;
+  }
+
   /// Whether this type is a dependent type, meaning that its definition
   /// somehow depends on a template parameter (C++ [temp.dep.type]).
   bool isDependentType() const {

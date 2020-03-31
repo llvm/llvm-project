@@ -737,7 +737,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   // Deal with weird cases where the class only partially supports the subreg
   // index.
   Src0RC = TRI.getSubClassWithSubReg(Src0RC, SubReg);
-  if (!Src0RC)
+  if (!Src0RC || !Src1RC)
     return false;
 
   if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
@@ -1185,9 +1185,280 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
     .addImm(Offset)
     .addImm(IsGDS ? -1 : 0)
     .cloneMemRefs(MI);
-
   MI.eraseFromParent();
   return true;
+}
+
+static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
+                         bool &IsTexFail) {
+  if (TexFailCtrl)
+    IsTexFail = true;
+
+  TFE = (TexFailCtrl & 0x1) ? 1 : 0;
+  TexFailCtrl &= ~(uint64_t)0x1;
+  LWE = (TexFailCtrl & 0x2) ? 1 : 0;
+  TexFailCtrl &= ~(uint64_t)0x2;
+
+  return TexFailCtrl == 0;
+}
+
+static bool parseCachePolicy(uint64_t Value,
+                             bool *GLC, bool *SLC, bool *DLC) {
+  if (GLC) {
+    *GLC = (Value & 0x1) ? 1 : 0;
+    Value &= ~(uint64_t)0x1;
+  }
+  if (SLC) {
+    *SLC = (Value & 0x2) ? 1 : 0;
+    Value &= ~(uint64_t)0x2;
+  }
+  if (DLC) {
+    *DLC = (Value & 0x4) ? 1 : 0;
+    Value &= ~(uint64_t)0x4;
+  }
+
+  return Value == 0;
+}
+
+bool AMDGPUInstructionSelector::selectImageIntrinsic(
+  MachineInstr &MI, const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+    AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
+
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
+  const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
+      AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode);
+  const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
+      AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
+  unsigned IntrOpcode = Intr->BaseOpcode;
+  const bool IsGFX10 = STI.getGeneration() >= AMDGPUSubtarget::GFX10;
+
+  const LLT S16 = LLT::scalar(16);
+  const int VAddrIdx = getImageVAddrIdxBegin(BaseOpcode,
+                                             MI.getNumExplicitDefs());
+  int NumVAddr, NumGradients;
+  std::tie(NumVAddr, NumGradients) = getImageNumVAddr(Intr, BaseOpcode);
+
+  const LLT AddrTy = MRI->getType(MI.getOperand(VAddrIdx).getReg());
+  const bool IsA16 = AddrTy.getScalarType() == S16;
+
+  Register VDataIn, VDataOut;
+  LLT VDataTy;
+  int NumVDataDwords = -1;
+  bool IsD16 = false;
+
+  // XXX - Can we just get the second to last argument for ctrl?
+  unsigned CtrlIdx; // Index of texfailctrl argument
+  bool Unorm;
+  if (!BaseOpcode->Sampler) {
+    Unorm = true;
+    CtrlIdx = VAddrIdx + NumVAddr + 1;
+  } else {
+    Unorm = MI.getOperand(VAddrIdx + NumVAddr + 2).getImm() != 0;
+    CtrlIdx = VAddrIdx + NumVAddr + 3;
+  }
+
+  bool TFE;
+  bool LWE;
+  bool IsTexFail = false;
+  if (!parseTexFail(MI.getOperand(CtrlIdx).getImm(), TFE, LWE, IsTexFail))
+    return false;
+
+  unsigned DMask = 0;
+  unsigned DMaskLanes = 0;
+
+  if (BaseOpcode->Atomic) {
+    VDataOut = MI.getOperand(0).getReg();
+    VDataIn = MI.getOperand(2).getReg();
+    LLT Ty = MRI->getType(VDataIn);
+
+    // Be careful to allow atomic swap on 16-bit element vectors.
+    const bool Is64Bit = BaseOpcode->AtomicX2 ?
+      Ty.getSizeInBits() == 128 :
+      Ty.getSizeInBits() == 64;
+
+    if (BaseOpcode->AtomicX2) {
+      assert(MI.getOperand(3).getReg() == AMDGPU::NoRegister);
+
+      DMask = Is64Bit ? 0xf : 0x3;
+      NumVDataDwords = Is64Bit ? 4 : 2;
+    } else {
+      DMask = Is64Bit ? 0x3 : 0x1;
+      NumVDataDwords = Is64Bit ? 2 : 1;
+    }
+  } else {
+    const int DMaskIdx = 2; // Input/output + intrinsic ID.
+
+    DMask = MI.getOperand(DMaskIdx).getImm();
+    DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
+
+    if (BaseOpcode->Store) {
+      VDataIn = MI.getOperand(1).getReg();
+      VDataTy = MRI->getType(VDataIn);
+      NumVDataDwords = (VDataTy.getSizeInBits() + 31) / 32;
+    } else {
+      VDataOut = MI.getOperand(0).getReg();
+      VDataTy = MRI->getType(VDataOut);
+      NumVDataDwords = DMaskLanes;
+
+      // One memoperand is mandatory, except for getresinfo.
+      // FIXME: Check this in verifier.
+      if (!MI.memoperands_empty()) {
+        const MachineMemOperand *MMO = *MI.memoperands_begin();
+
+        // Infer d16 from the memory size, as the register type will be mangled by
+        // unpacked subtargets, or by TFE.
+        IsD16 = ((8 * MMO->getSize()) / DMaskLanes) < 32;
+
+        if (IsD16 && !STI.hasUnpackedD16VMem())
+          NumVDataDwords = (DMaskLanes + 1) / 2;
+      }
+    }
+  }
+
+  // Optimize _L to _LZ when _L is zero
+  if (LZMappingInfo) {
+    // The legalizer replaced the register with an immediate 0 if we need to
+    // change the opcode.
+    const MachineOperand &Lod = MI.getOperand(VAddrIdx + NumVAddr - 1);
+    if (Lod.isImm()) {
+      assert(Lod.getImm() == 0);
+      IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
+    }
+  }
+
+  // Optimize _mip away, when 'lod' is zero
+  if (MIPMappingInfo) {
+    const MachineOperand &Lod = MI.getOperand(VAddrIdx + NumVAddr - 1);
+    if (Lod.isImm()) {
+      assert(Lod.getImm() == 0);
+      IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
+    }
+  }
+
+  // TODO: Check this in verifier.
+  assert(!IsTexFail || DMaskLanes >= 1 && "should have legalized this");
+
+  bool GLC = false;
+  bool SLC = false;
+  bool DLC = false;
+  if (BaseOpcode->Atomic) {
+    GLC = true; // TODO no-return optimization
+    if (!parseCachePolicy(MI.getOperand(CtrlIdx + 1).getImm(), nullptr, &SLC,
+                          IsGFX10 ? &DLC : nullptr))
+      return false;
+  } else {
+    if (!parseCachePolicy(MI.getOperand(CtrlIdx + 1).getImm(), &GLC, &SLC,
+                          IsGFX10 ? &DLC : nullptr))
+      return false;
+  }
+
+  int NumVAddrRegs = 0;
+  int NumVAddrDwords = 0;
+  for (int I = 0; I < NumVAddr; ++I) {
+    // Skip the $noregs and 0s inserted during legalization.
+    MachineOperand &AddrOp = MI.getOperand(VAddrIdx + I);
+    if (!AddrOp.isReg())
+      continue; // XXX - Break?
+
+    Register Addr = AddrOp.getReg();
+    if (!Addr)
+      break;
+
+    ++NumVAddrRegs;
+    NumVAddrDwords += (MRI->getType(Addr).getSizeInBits() + 31) / 32;
+  }
+
+  // The legalizer preprocessed the intrinsic arguments. If we aren't using
+  // NSA, these should have beeen packed into a single value in the first
+  // address register
+  const bool UseNSA = NumVAddrRegs != 1 && NumVAddrDwords == NumVAddrRegs;
+  if (UseNSA && !STI.hasFeature(AMDGPU::FeatureNSAEncoding)) {
+    LLVM_DEBUG(dbgs() << "Trying to use NSA on non-NSA target\n");
+    return false;
+  }
+
+  if (IsTexFail)
+    ++NumVDataDwords;
+
+  int Opcode = -1;
+  if (IsGFX10) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
+                                   UseNSA ? AMDGPU::MIMGEncGfx10NSA
+                                          : AMDGPU::MIMGEncGfx10Default,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else {
+    if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
+                                     NumVDataDwords, NumVAddrDwords);
+    if (Opcode == -1)
+      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
+                                     NumVDataDwords, NumVAddrDwords);
+  }
+  assert(Opcode != -1);
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opcode))
+    .cloneMemRefs(MI);
+
+  if (VDataOut) {
+    if (BaseOpcode->AtomicX2) {
+      const bool Is64 = MRI->getType(VDataOut).getSizeInBits() == 64;
+
+      Register TmpReg = MRI->createVirtualRegister(
+        Is64 ? &AMDGPU::VReg_128RegClass : &AMDGPU::VReg_64RegClass);
+      unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
+
+      MIB.addDef(TmpReg);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
+        .addReg(TmpReg, RegState::Kill, SubReg);
+
+    } else {
+      MIB.addDef(VDataOut); // vdata output
+    }
+  }
+
+  if (VDataIn)
+    MIB.addReg(VDataIn); // vdata input
+
+  for (int i = 0; i != NumVAddrRegs; ++i) {
+    MachineOperand &SrcOp = MI.getOperand(VAddrIdx + i);
+    if (SrcOp.isReg()) {
+      assert(SrcOp.getReg() != 0);
+      MIB.addReg(SrcOp.getReg());
+    }
+  }
+
+  MIB.addReg(MI.getOperand(VAddrIdx + NumVAddr).getReg()); // rsrc
+  if (BaseOpcode->Sampler)
+    MIB.addReg(MI.getOperand(VAddrIdx + NumVAddr + 1).getReg()); // sampler
+
+  MIB.addImm(DMask); // dmask
+
+  if (IsGFX10)
+    MIB.addImm(DimInfo->Encoding);
+  MIB.addImm(Unorm);
+  if (IsGFX10)
+    MIB.addImm(DLC);
+
+  MIB.addImm(GLC);
+  MIB.addImm(SLC);
+  MIB.addImm(IsA16 &&  // a16 or r128
+             STI.hasFeature(AMDGPU::FeatureR128A16) ? -1 : 0);
+  if (IsGFX10)
+    MIB.addImm(IsA16 ? -1 : 0);
+
+  MIB.addImm(TFE); // tfe
+  MIB.addImm(LWE); // lwe
+  if (!IsGFX10)
+    MIB.addImm(DimInfo->DA ? -1 : 0);
+  if (BaseOpcode->HasD16)
+    MIB.addImm(IsD16 ? -1 : 0);
+
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
@@ -1210,8 +1481,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
     return selectDSAppendConsume(I, false);
-  default:
+  default: {
     return selectImpl(I, *CoverageInfo);
+  }
   }
 }
 
@@ -2371,6 +2643,13 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_AMDGPU_ATOMIC_DEC:
     initM0(I);
     return selectImpl(I, *CoverageInfo);
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE: {
+    const AMDGPU::ImageDimIntrinsicInfo *Intr
+      = AMDGPU::getImageDimIntrinsicInfo(I.getIntrinsicID());
+    assert(Intr && "not an image intrinsic with image pseudo");
+    return selectImageIntrinsic(I, Intr);
+  }
   default:
     return selectImpl(I, *CoverageInfo);
   }

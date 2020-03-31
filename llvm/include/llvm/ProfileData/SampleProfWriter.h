@@ -57,6 +57,8 @@ public:
   create(std::unique_ptr<raw_ostream> &OS, SampleProfileFormat Format);
 
   virtual void setProfileSymbolList(ProfileSymbolList *PSL) {}
+  virtual void setToCompressAllSections() {}
+  virtual void setUseMD5() {}
 
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
@@ -147,12 +149,20 @@ public:
   virtual std::error_code
   write(const StringMap<FunctionSamples> &ProfileMap) override;
 
-  void setToCompressAllSections();
+  virtual void setToCompressAllSections() override;
   void setToCompressSection(SecType Type);
 
 protected:
   uint64_t markSectionStart(SecType Type);
   std::error_code addNewSection(SecType Sec, uint64_t SectionStart);
+  template <class SecFlagType>
+  void addSectionFlag(SecType Type, SecFlagType Flag) {
+    for (auto &Entry : SectionHdrLayout) {
+      if (Entry.Type == Type)
+        addSecFlag(Entry, Flag);
+    }
+  }
+
   virtual void initSectionHdrLayout() = 0;
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
@@ -168,7 +178,6 @@ private:
   std::error_code writeSecHdrTable();
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
-  void addSectionFlags(SecType Type, SecFlags Flags);
   SecHdrTableEntry &getEntryInLayout(SecType Type);
   std::error_code compressAndOutput();
 
@@ -202,6 +211,12 @@ public:
     ProfSymList = PSL;
   };
 
+  // Set to use MD5 to represent string in NameTable.
+  virtual void setUseMD5() override {
+    UseMD5 = true;
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
+  }
+
 private:
   virtual void initSectionHdrLayout() override {
     // Note that SecFuncOffsetTable section is written after SecLBRProfile
@@ -222,6 +237,10 @@ private:
   };
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) override;
+
+  std::error_code writeFuncOffsetTable();
+  virtual std::error_code writeNameTable() override;
+
   ProfileSymbolList *ProfSymList = nullptr;
 
   // Save the start of SecLBRProfile so we can compute the offset to the
@@ -231,7 +250,8 @@ private:
   // FuncOffsetTable maps function name to its profile offset in SecLBRProfile
   // section. It is used to load function profile on demand.
   MapVector<StringRef, uint64_t> FuncOffsetTable;
-  std::error_code writeFuncOffsetTable();
+  // Whether to use MD5 to represent string.
+  bool UseMD5 = false;
 };
 
 // CompactBinary is a compact format of binary profile which both reduces

@@ -313,8 +313,11 @@ PLACEHOLDER_TYPE(ARCUnbridgedCast, ARCUnbridgedCastTy)
 // A placeholder type for OpenMP array sections.
 PLACEHOLDER_TYPE(OMPArraySection, OMPArraySectionTy)
 
+// A placeholder type for OpenMP array shaping operation.
+PLACEHOLDER_TYPE(OMPArrayShaping, OMPArrayShapingTy)
+
 #ifdef LAST_BUILTIN_TYPE
-LAST_BUILTIN_TYPE(OMPArraySection)
+LAST_BUILTIN_TYPE(OMPArrayShaping)
 #undef LAST_BUILTIN_TYPE
 #endif
 

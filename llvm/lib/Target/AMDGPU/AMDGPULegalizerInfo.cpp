@@ -1313,6 +1313,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
+  getActionDefinitionsBuilder(G_FSHR)
+    .legalFor({{S32, S32}})
+    .scalarize(0)
+    .lower();
+
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
@@ -1327,7 +1332,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_SADDO, G_SSUBO,
 
        // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM
+      G_FMINIMUM, G_FMAXIMUM,
+      G_FSHL
     }).lower();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
@@ -2529,11 +2535,176 @@ bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
   return true;
 }
 
+// Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
+//
+// Return lo, hi of result
+//
+// %cvt.lo = G_UITOFP Val.lo
+// %cvt.hi = G_UITOFP Val.hi
+// %mad = G_FMAD %cvt.hi, 2**32, %cvt.lo
+// %rcp = G_AMDGPU_RCP_IFLAG %mad
+// %mul1 = G_FMUL %rcp, 0x5f7ffffc
+// %mul2 = G_FMUL %mul1, 2**(-32)
+// %trunc = G_INTRINSIC_TRUNC %mul2
+// %mad2 = G_FMAD %trunc, -(2**32), %mul1
+// return {G_FPTOUI %mad2, G_FPTOUI %trunc}
+static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
+                                                       Register Val) {
+  const LLT S32 = LLT::scalar(32);
+  auto Unmerge = B.buildUnmerge(S32, Val);
+
+  auto CvtLo = B.buildUITOFP(S32, Unmerge.getReg(0));
+  auto CvtHi = B.buildUITOFP(S32, Unmerge.getReg(1));
+
+  auto Mad = B.buildFMAD(S32, CvtHi, // 2**32
+                         B.buildFConstant(S32, BitsToFloat(0x4f800000)), CvtLo);
+
+  auto Rcp = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Mad});
+  auto Mul1 =
+      B.buildFMul(S32, Rcp, B.buildFConstant(S32, BitsToFloat(0x5f7ffffc)));
+
+  // 2**(-32)
+  auto Mul2 =
+      B.buildFMul(S32, Mul1, B.buildFConstant(S32, BitsToFloat(0x2f800000)));
+  auto Trunc = B.buildIntrinsicTrunc(S32, Mul2);
+
+  // -(2**32)
+  auto Mad2 = B.buildFMAD(S32, Trunc,
+                          B.buildFConstant(S32, BitsToFloat(0xcf800000)), Mul1);
+
+  auto ResultLo = B.buildFPTOUI(S32, Mad2);
+  auto ResultHi = B.buildFPTOUI(S32, Trunc);
+
+  return {ResultLo.getReg(0), ResultHi.getReg(0)};
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM64(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  const bool IsDiv = MI.getOpcode() == TargetOpcode::G_UDIV;
+  const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
+  const LLT S1 = LLT::scalar(1);
+  Register Numer = MI.getOperand(1).getReg();
+  Register Denom = MI.getOperand(2).getReg();
+  Register RcpLo, RcpHi;
+
+  std::tie(RcpLo, RcpHi) = emitReciprocalU64(B, Denom);
+
+  auto Rcp = B.buildMerge(S64, {RcpLo, RcpHi});
+
+  auto Zero64 = B.buildConstant(S64, 0);
+  auto NegDenom = B.buildSub(S64, Zero64, Denom);
+
+  auto MulLo1 = B.buildMul(S64, NegDenom, Rcp);
+  auto MulHi1 = B.buildUMulH(S64, Rcp, MulLo1);
+
+  auto UnmergeMulHi1 = B.buildUnmerge(S32, MulHi1);
+  Register MulHi1_Lo = UnmergeMulHi1.getReg(0);
+  Register MulHi1_Hi = UnmergeMulHi1.getReg(1);
+
+  auto Add1_Lo = B.buildUAddo(S32, S1, RcpLo, MulHi1_Lo);
+  auto Add1_Hi = B.buildUAdde(S32, S1, RcpHi, MulHi1_Hi, Add1_Lo.getReg(1));
+  auto Add1_HiNc = B.buildAdd(S32, RcpHi, MulHi1_Hi);
+  auto Add1 = B.buildMerge(S64, {Add1_Lo, Add1_Hi});
+
+  auto MulLo2 = B.buildMul(S64, NegDenom, Add1);
+  auto MulHi2 = B.buildUMulH(S64, Add1, MulLo2);
+  auto UnmergeMulHi2 = B.buildUnmerge(S32, MulHi2);
+  Register MulHi2_Lo = UnmergeMulHi2.getReg(0);
+  Register MulHi2_Hi = UnmergeMulHi2.getReg(1);
+
+  auto Zero32 = B.buildConstant(S32, 0);
+  auto Add2_Lo = B.buildUAddo(S32, S1, Add1_Lo, MulHi2_Lo);
+  auto Add2_HiC =
+      B.buildUAdde(S32, S1, Add1_HiNc, MulHi2_Hi, Add1_Lo.getReg(1));
+  auto Add2_Hi = B.buildUAdde(S32, S1, Add2_HiC, Zero32, Add2_Lo.getReg(1));
+  auto Add2 = B.buildMerge(S64, {Add2_Lo, Add2_Hi});
+
+  auto UnmergeNumer = B.buildUnmerge(S32, Numer);
+  Register NumerLo = UnmergeNumer.getReg(0);
+  Register NumerHi = UnmergeNumer.getReg(1);
+
+  auto MulHi3 = B.buildUMulH(S64, Numer, Add2);
+  auto Mul3 = B.buildMul(S64, Denom, MulHi3);
+  auto UnmergeMul3 = B.buildUnmerge(S32, Mul3);
+  Register Mul3_Lo = UnmergeMul3.getReg(0);
+  Register Mul3_Hi = UnmergeMul3.getReg(1);
+  auto Sub1_Lo = B.buildUSubo(S32, S1, NumerLo, Mul3_Lo);
+  auto Sub1_Hi = B.buildUSube(S32, S1, NumerHi, Mul3_Hi, Sub1_Lo.getReg(1));
+  auto Sub1_Mi = B.buildSub(S32, NumerHi, Mul3_Hi);
+  auto Sub1 = B.buildMerge(S64, {Sub1_Lo, Sub1_Hi});
+
+  auto UnmergeDenom = B.buildUnmerge(S32, Denom);
+  Register DenomLo = UnmergeDenom.getReg(0);
+  Register DenomHi = UnmergeDenom.getReg(1);
+
+  auto CmpHi = B.buildICmp(CmpInst::ICMP_UGE, S1, Sub1_Hi, DenomHi);
+  auto C1 = B.buildSExt(S32, CmpHi);
+
+  auto CmpLo = B.buildICmp(CmpInst::ICMP_UGE, S1, Sub1_Lo, DenomLo);
+  auto C2 = B.buildSExt(S32, CmpLo);
+
+  auto CmpEq = B.buildICmp(CmpInst::ICMP_EQ, S1, Sub1_Hi, DenomHi);
+  auto C3 = B.buildSelect(S32, CmpEq, C2, C1);
+
+  // TODO: Here and below portions of the code can be enclosed into if/endif.
+  // Currently control flow is unconditional and we have 4 selects after
+  // potential endif to substitute PHIs.
+
+  // if C3 != 0 ...
+  auto Sub2_Lo = B.buildUSubo(S32, S1, Sub1_Lo, DenomLo);
+  auto Sub2_Mi = B.buildUSube(S32, S1, Sub1_Mi, DenomHi, Sub1_Lo.getReg(1));
+  auto Sub2_Hi = B.buildUSube(S32, S1, Sub2_Mi, Zero32, Sub2_Lo.getReg(1));
+  auto Sub2 = B.buildMerge(S64, {Sub2_Lo, Sub2_Hi});
+
+  auto One64 = B.buildConstant(S64, 1);
+  auto Add3 = B.buildAdd(S64, MulHi3, One64);
+
+  auto C4 =
+      B.buildSExt(S32, B.buildICmp(CmpInst::ICMP_UGE, S1, Sub2_Hi, DenomHi));
+  auto C5 =
+      B.buildSExt(S32, B.buildICmp(CmpInst::ICMP_UGE, S1, Sub2_Lo, DenomLo));
+  auto C6 = B.buildSelect(
+      S32, B.buildICmp(CmpInst::ICMP_EQ, S1, Sub2_Hi, DenomHi), C5, C4);
+
+  // if (C6 != 0)
+  auto Add4 = B.buildAdd(S64, Add3, One64);
+  auto Sub3_Lo = B.buildUSubo(S32, S1, Sub2_Lo, DenomLo);
+
+  auto Sub3_Mi = B.buildUSube(S32, S1, Sub2_Mi, DenomHi, Sub2_Lo.getReg(1));
+  auto Sub3_Hi = B.buildUSube(S32, S1, Sub3_Mi, Zero32, Sub3_Lo.getReg(1));
+  auto Sub3 = B.buildMerge(S64, {Sub3_Lo, Sub3_Hi});
+
+  // endif C6
+  // endif C3
+
+  if (IsDiv) {
+    auto Sel1 = B.buildSelect(
+        S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Add4, Add3);
+    B.buildSelect(MI.getOperand(0),
+                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel1, MulHi3);
+  } else {
+    auto Sel2 = B.buildSelect(
+        S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Sub3, Sub2);
+    B.buildSelect(MI.getOperand(0),
+                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel2, Sub1);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
-  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty == LLT::scalar(32))
     return legalizeUDIV_UREM32(MI, MRI, B);
+  if (Ty == LLT::scalar(64))
+    return legalizeUDIV_UREM64(MI, MRI, B);
   return false;
 }
 
@@ -3380,7 +3551,11 @@ static void packImageA16AddressToDwords(MachineIRBuilder &B, MachineInstr &MI,
   const LLT V2S16 = LLT::vector(2, 16);
 
   for (int I = AddrIdx; I < AddrIdx + NumVAddrs; ++I) {
-    Register AddrReg = MI.getOperand(I).getReg();
+    MachineOperand &SrcOp = MI.getOperand(I);
+    if (!SrcOp.isReg())
+      continue; // _L to _LZ may have eliminated this.
+
+    Register AddrReg = SrcOp.getReg();
 
     if (I < DimIdx) {
       AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
@@ -3391,7 +3566,9 @@ static void packImageA16AddressToDwords(MachineIRBuilder &B, MachineInstr &MI,
       if (((I + 1) >= (AddrIdx + NumVAddrs)) ||
           ((NumGradients / 2) % 2 == 1 &&
            (I == DimIdx + (NumGradients / 2) - 1 ||
-            I == DimIdx + NumGradients - 1))) {
+            I == DimIdx + NumGradients - 1)) ||
+          // Check for _L to _LZ optimization
+          !MI.getOperand(I + 1).isReg()) {
         PackedAddrs.push_back(
             B.buildBuildVector(V2S16, {AddrReg, B.buildUndef(S16).getReg(0)})
                 .getReg(0));
@@ -3409,44 +3586,37 @@ static void packImageA16AddressToDwords(MachineIRBuilder &B, MachineInstr &MI,
 /// and replace the remaining operands with $noreg.
 static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
                                      int DimIdx, int NumVAddrs) {
-  SmallVector<Register, 8> AddrRegs(NumVAddrs);
+  const LLT S32 = LLT::scalar(32);
+
+  SmallVector<Register, 8> AddrRegs;
   for (int I = 0; I != NumVAddrs; ++I) {
-    AddrRegs[I] = MI.getOperand(DimIdx + I).getReg();
-    assert(B.getMRI()->getType(AddrRegs[I]) == LLT::scalar(32));
+    MachineOperand &SrcOp = MI.getOperand(DimIdx + I);
+    if (SrcOp.isReg()) {
+      AddrRegs.push_back(SrcOp.getReg());
+      assert(B.getMRI()->getType(SrcOp.getReg()) == S32);
+    }
   }
 
-  auto VAddr = B.buildBuildVector(LLT::vector(NumVAddrs, 32), AddrRegs);
-  MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
-  for (int I = 1; I != NumVAddrs; ++I)
-    MI.getOperand(DimIdx + I).setReg(AMDGPU::NoRegister);
-}
+  int NumAddrRegs = AddrRegs.size();
+  if (NumAddrRegs != 1) {
+    // Round up to 8 elements for v5-v7
+    // FIXME: Missing intermediate sized register classes and instructions.
+    if (NumAddrRegs > 4 && !isPowerOf2_32(NumAddrRegs)) {
+      const int RoundedNumRegs = NextPowerOf2(NumAddrRegs);
+      auto Undef = B.buildUndef(S32);
+      AddrRegs.append(RoundedNumRegs - NumAddrRegs, Undef.getReg(0));
+      NumAddrRegs = RoundedNumRegs;
+    }
 
-/// Return number of address arguments, and the number of gradients
-static std::pair<int, int>
-getImageNumVAddr(const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
-                 const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode) {
-  const AMDGPU::MIMGDimInfo *DimInfo
-    = AMDGPU::getMIMGDimInfo(ImageDimIntr->Dim);
+    auto VAddr = B.buildBuildVector(LLT::vector(NumAddrRegs, 32), AddrRegs);
+    MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
+  }
 
-  int NumGradients = BaseOpcode->Gradients ? DimInfo->NumGradients : 0;
-  int NumCoords = BaseOpcode->Coordinates ? DimInfo->NumCoords : 0;
-  int NumLCM = BaseOpcode->LodOrClampOrMip ? 1 : 0;
-  int NumVAddr = BaseOpcode->NumExtraArgs + NumGradients + NumCoords + NumLCM;
-  return {NumVAddr, NumGradients};
-}
-
-static int getDMaskIdx(const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode,
-                       int NumDefs) {
-  assert(!BaseOpcode->Atomic);
-  return NumDefs + 1 + (BaseOpcode->Store ? 1 : 0);
-}
-
-/// Return first address operand index in an image intrinsic.
-static int getImageVAddrIdxBegin(const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode,
-                                 int NumDefs) {
-  if (BaseOpcode->Atomic)
-    return NumDefs + 1 + (BaseOpcode->AtomicX2 ? 2 : 1);
-  return getDMaskIdx(BaseOpcode, NumDefs) + 1;
+  for (int I = 1; I != NumVAddrs; ++I) {
+    MachineOperand &SrcOp = MI.getOperand(DimIdx + I);
+    if (SrcOp.isReg())
+      MI.getOperand(DimIdx + I).setReg(AMDGPU::NoRegister);
+  }
 }
 
 /// Rewrite image intrinsics to use register layouts expected by the subtarget.
@@ -3528,6 +3698,59 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MI.getOperand(DMaskIdx).setImm(DMask);
   }
 
+  if (BaseOpcode->Atomic) {
+    Register VData0 = MI.getOperand(2).getReg();
+    LLT Ty = MRI->getType(VData0);
+
+    // TODO: Allow atomic swap and bit ops for v2s16/v4s16
+    if (Ty.isVector())
+      return false;
+
+    if (BaseOpcode->AtomicX2) {
+      Register VData1 = MI.getOperand(3).getReg();
+      // The two values are packed in one register.
+      LLT PackedTy = LLT::vector(2, Ty);
+      auto Concat = B.buildBuildVector(PackedTy, {VData0, VData1});
+      MI.getOperand(2).setReg(Concat.getReg(0));
+      MI.getOperand(3).setReg(AMDGPU::NoRegister);
+    }
+  }
+
+  int CorrectedNumVAddrs = NumVAddrs;
+
+  // Optimize _L to _LZ when _L is zero
+  if (const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
+        AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
+    const ConstantFP *ConstantLod;
+    const int LodIdx = AddrIdx + NumVAddrs - 1;
+
+    // FIXME: This isn't the cleanest way to handle this, but it's the easiest
+    // option the current infrastructure gives. We really should be changing the
+    // base intrinsic opcode, but the current searchable tables only gives us
+    // the final MI opcode. Eliminate the register here, and track with an
+    // immediate 0 so the final selection will know to do the opcode change.
+    if (mi_match(MI.getOperand(LodIdx).getReg(), *MRI, m_GFCst(ConstantLod))) {
+      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
+        MI.getOperand(LodIdx).ChangeToImmediate(0);
+        --CorrectedNumVAddrs;
+      }
+    }
+  }
+
+  // Optimize _mip away, when 'lod' is zero
+  if (const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
+        AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
+    int64_t ConstantLod;
+    const int LodIdx = AddrIdx + NumVAddrs - 1;
+
+    if (mi_match(MI.getOperand(LodIdx).getReg(), *MRI, m_ICst(ConstantLod))) {
+      if (ConstantLod == 0) {
+        MI.getOperand(LodIdx).ChangeToImmediate(0);
+        --CorrectedNumVAddrs;
+      }
+    }
+  }
+
   // If the register allocator cannot place the address registers contiguously
   // without introducing moves, then using the non-sequential address encoding
   // is always preferable, since it saves VALU instructions and is usually a
@@ -3539,8 +3762,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   //
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
-  const bool UseNSA = NumVAddrs >= 3 &&
-                      ST.hasFeature(AMDGPU::FeatureNSAEncoding);
+  const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
 
   // Rewrite the addressing register layout before doing anything else.
   if (IsA16) {
@@ -3563,17 +3785,24 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
       const int NumPacked = PackedRegs.size();
       for (int I = 0; I != NumVAddrs; ++I) {
-        assert(MI.getOperand(AddrIdx + I).getReg() != AMDGPU::NoRegister);
+        MachineOperand &SrcOp = MI.getOperand(AddrIdx + I);
+        if (!SrcOp.isReg()) {
+          assert(SrcOp.isImm() && SrcOp.getImm() == 0);
+          continue;
+        }
+
+        assert(SrcOp.getReg() != AMDGPU::NoRegister);
 
         if (I < NumPacked)
-          MI.getOperand(AddrIdx + I).setReg(PackedRegs[I]);
+          SrcOp.setReg(PackedRegs[I]);
         else
-          MI.getOperand(AddrIdx + I).setReg(AMDGPU::NoRegister);
+          SrcOp.setReg(AMDGPU::NoRegister);
       }
     }
   } else if (!UseNSA && NumVAddrs > 1) {
     convertImageAddrToPacked(B, MI, AddrIdx, NumVAddrs);
   }
+
 
   if (BaseOpcode->Store) { // No TFE for stores?
     // TODO: Handle dmask trim

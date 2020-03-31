@@ -193,8 +193,7 @@ define void @test_stack_slots([8 x i64], i64 %lhs, i64 %rhs, i64* %addr) {
 ; CHECK-LABEL: name: test_call_stack
 ; CHECK: [[C42:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
 ; CHECK: [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[PTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
+; CHECK: [[PTR:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
 ; CHECK: ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C42_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
