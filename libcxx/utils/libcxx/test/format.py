@@ -112,8 +112,6 @@ class LibcxxTestFormat(object):
         script = lit.TestRunner.parseIntegratedTestScript(
             test, additional_parsers=parsers, require_script=is_sh_test)
 
-        local_cwd = os.path.dirname(test.getSourcePath())
-        data_files = [os.path.join(local_cwd, f) for f in test.file_dependencies]
         # Check if a result for the test was returned. If so return that
         # result.
         if isinstance(script, lit.Test.Result):
@@ -128,7 +126,14 @@ class LibcxxTestFormat(object):
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
         substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
                                                                tmpBase)
+
+        # Apply substitutions in FILE_DEPENDENCIES markup
+        data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
+                                                       recursion_limit=10)
+        local_cwd = os.path.dirname(test.getSourcePath())
+        data_files = [f if os.path.isabs(f) else os.path.join(local_cwd, f) for f in data_files]
         substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
+
         script = lit.TestRunner.applySubstitutions(script, substitutions,
                                                    recursion_limit=10)
 
