@@ -11613,8 +11613,8 @@ public:
   OMPClauseReader(ASTRecordReader &Record)
       : Record(Record), Context(Record.getContext()) {}
 
-#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *C);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   OMPClause *readClause();
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
@@ -11628,149 +11628,149 @@ OMPClause *ASTRecordReader::readOMPClause() {
 
 OMPClause *OMPClauseReader::readClause() {
   OMPClause *C = nullptr;
-  switch (Record.readInt()) {
-  case OMPC_if:
+  switch (llvm::omp::Clause(Record.readInt())) {
+  case llvm::omp::OMPC_if:
     C = new (Context) OMPIfClause();
     break;
-  case OMPC_final:
+  case llvm::omp::OMPC_final:
     C = new (Context) OMPFinalClause();
     break;
-  case OMPC_num_threads:
+  case llvm::omp::OMPC_num_threads:
     C = new (Context) OMPNumThreadsClause();
     break;
-  case OMPC_safelen:
+  case llvm::omp::OMPC_safelen:
     C = new (Context) OMPSafelenClause();
     break;
-  case OMPC_simdlen:
+  case llvm::omp::OMPC_simdlen:
     C = new (Context) OMPSimdlenClause();
     break;
-  case OMPC_allocator:
+  case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
     break;
-  case OMPC_collapse:
+  case llvm::omp::OMPC_collapse:
     C = new (Context) OMPCollapseClause();
     break;
-  case OMPC_default:
+  case llvm::omp::OMPC_default:
     C = new (Context) OMPDefaultClause();
     break;
-  case OMPC_proc_bind:
+  case llvm::omp::OMPC_proc_bind:
     C = new (Context) OMPProcBindClause();
     break;
-  case OMPC_schedule:
+  case llvm::omp::OMPC_schedule:
     C = new (Context) OMPScheduleClause();
     break;
-  case OMPC_ordered:
+  case llvm::omp::OMPC_ordered:
     C = OMPOrderedClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_nowait:
+  case llvm::omp::OMPC_nowait:
     C = new (Context) OMPNowaitClause();
     break;
-  case OMPC_untied:
+  case llvm::omp::OMPC_untied:
     C = new (Context) OMPUntiedClause();
     break;
-  case OMPC_mergeable:
+  case llvm::omp::OMPC_mergeable:
     C = new (Context) OMPMergeableClause();
     break;
-  case OMPC_read:
+  case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;
-  case OMPC_write:
+  case llvm::omp::OMPC_write:
     C = new (Context) OMPWriteClause();
     break;
-  case OMPC_update:
+  case llvm::omp::OMPC_update:
     C = OMPUpdateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_capture:
+  case llvm::omp::OMPC_capture:
     C = new (Context) OMPCaptureClause();
     break;
-  case OMPC_seq_cst:
+  case llvm::omp::OMPC_seq_cst:
     C = new (Context) OMPSeqCstClause();
     break;
-  case OMPC_acq_rel:
+  case llvm::omp::OMPC_acq_rel:
     C = new (Context) OMPAcqRelClause();
     break;
-  case OMPC_acquire:
+  case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
-  case OMPC_release:
+  case llvm::omp::OMPC_release:
     C = new (Context) OMPReleaseClause();
     break;
-  case OMPC_relaxed:
+  case llvm::omp::OMPC_relaxed:
     C = new (Context) OMPRelaxedClause();
     break;
-  case OMPC_threads:
+  case llvm::omp::OMPC_threads:
     C = new (Context) OMPThreadsClause();
     break;
-  case OMPC_simd:
+  case llvm::omp::OMPC_simd:
     C = new (Context) OMPSIMDClause();
     break;
-  case OMPC_nogroup:
+  case llvm::omp::OMPC_nogroup:
     C = new (Context) OMPNogroupClause();
     break;
-  case OMPC_unified_address:
+  case llvm::omp::OMPC_unified_address:
     C = new (Context) OMPUnifiedAddressClause();
     break;
-  case OMPC_unified_shared_memory:
+  case llvm::omp::OMPC_unified_shared_memory:
     C = new (Context) OMPUnifiedSharedMemoryClause();
     break;
-  case OMPC_reverse_offload:
+  case llvm::omp::OMPC_reverse_offload:
     C = new (Context) OMPReverseOffloadClause();
     break;
-  case OMPC_dynamic_allocators:
+  case llvm::omp::OMPC_dynamic_allocators:
     C = new (Context) OMPDynamicAllocatorsClause();
     break;
-  case OMPC_atomic_default_mem_order:
+  case llvm::omp::OMPC_atomic_default_mem_order:
     C = new (Context) OMPAtomicDefaultMemOrderClause();
     break;
- case OMPC_private:
+ case llvm::omp::OMPC_private:
     C = OMPPrivateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_firstprivate:
+  case llvm::omp::OMPC_firstprivate:
     C = OMPFirstprivateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_lastprivate:
+  case llvm::omp::OMPC_lastprivate:
     C = OMPLastprivateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_shared:
+  case llvm::omp::OMPC_shared:
     C = OMPSharedClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_reduction:
+  case llvm::omp::OMPC_reduction:
     C = OMPReductionClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_task_reduction:
+  case llvm::omp::OMPC_task_reduction:
     C = OMPTaskReductionClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_in_reduction:
+  case llvm::omp::OMPC_in_reduction:
     C = OMPInReductionClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_linear:
+  case llvm::omp::OMPC_linear:
     C = OMPLinearClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_aligned:
+  case llvm::omp::OMPC_aligned:
     C = OMPAlignedClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_copyin:
+  case llvm::omp::OMPC_copyin:
     C = OMPCopyinClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_copyprivate:
+  case llvm::omp::OMPC_copyprivate:
     C = OMPCopyprivateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_flush:
+  case llvm::omp::OMPC_flush:
     C = OMPFlushClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_depobj:
+  case llvm::omp::OMPC_depobj:
     C = OMPDepobjClause::CreateEmpty(Context);
     break;
-  case OMPC_depend: {
+  case llvm::omp::OMPC_depend: {
     unsigned NumVars = Record.readInt();
     unsigned NumLoops = Record.readInt();
     C = OMPDependClause::CreateEmpty(Context, NumVars, NumLoops);
     break;
   }
-  case OMPC_device:
+  case llvm::omp::OMPC_device:
     C = new (Context) OMPDeviceClause();
     break;
-  case OMPC_map: {
+  case llvm::omp::OMPC_map: {
     OMPMappableExprListSizeTy Sizes;
     Sizes.NumVars = Record.readInt();
     Sizes.NumUniqueDeclarations = Record.readInt();
@@ -11779,31 +11779,31 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPMapClause::CreateEmpty(Context, Sizes);
     break;
   }
-  case OMPC_num_teams:
+  case llvm::omp::OMPC_num_teams:
     C = new (Context) OMPNumTeamsClause();
     break;
-  case OMPC_thread_limit:
+  case llvm::omp::OMPC_thread_limit:
     C = new (Context) OMPThreadLimitClause();
     break;
-  case OMPC_priority:
+  case llvm::omp::OMPC_priority:
     C = new (Context) OMPPriorityClause();
     break;
-  case OMPC_grainsize:
+  case llvm::omp::OMPC_grainsize:
     C = new (Context) OMPGrainsizeClause();
     break;
-  case OMPC_num_tasks:
+  case llvm::omp::OMPC_num_tasks:
     C = new (Context) OMPNumTasksClause();
     break;
-  case OMPC_hint:
+  case llvm::omp::OMPC_hint:
     C = new (Context) OMPHintClause();
     break;
-  case OMPC_dist_schedule:
+  case llvm::omp::OMPC_dist_schedule:
     C = new (Context) OMPDistScheduleClause();
     break;
-  case OMPC_defaultmap:
+  case llvm::omp::OMPC_defaultmap:
     C = new (Context) OMPDefaultmapClause();
     break;
-  case OMPC_to: {
+  case llvm::omp::OMPC_to: {
     OMPMappableExprListSizeTy Sizes;
     Sizes.NumVars = Record.readInt();
     Sizes.NumUniqueDeclarations = Record.readInt();
@@ -11812,7 +11812,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPToClause::CreateEmpty(Context, Sizes);
     break;
   }
-  case OMPC_from: {
+  case llvm::omp::OMPC_from: {
     OMPMappableExprListSizeTy Sizes;
     Sizes.NumVars = Record.readInt();
     Sizes.NumUniqueDeclarations = Record.readInt();
@@ -11821,7 +11821,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPFromClause::CreateEmpty(Context, Sizes);
     break;
   }
-  case OMPC_use_device_ptr: {
+  case llvm::omp::OMPC_use_device_ptr: {
     OMPMappableExprListSizeTy Sizes;
     Sizes.NumVars = Record.readInt();
     Sizes.NumUniqueDeclarations = Record.readInt();
@@ -11830,7 +11830,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPUseDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
-  case OMPC_is_device_ptr: {
+  case llvm::omp::OMPC_is_device_ptr: {
     OMPMappableExprListSizeTy Sizes;
     Sizes.NumVars = Record.readInt();
     Sizes.NumUniqueDeclarations = Record.readInt();
@@ -11839,27 +11839,31 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPIsDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
-  case OMPC_allocate:
+  case llvm::omp::OMPC_allocate:
     C = OMPAllocateClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_nontemporal:
+  case llvm::omp::OMPC_nontemporal:
     C = OMPNontemporalClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_inclusive:
+  case llvm::omp::OMPC_inclusive:
     C = OMPInclusiveClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_exclusive:
+  case llvm::omp::OMPC_exclusive:
     C = OMPExclusiveClause::CreateEmpty(Context, Record.readInt());
     break;
-  case OMPC_order:
+  case llvm::omp::OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
-  case OMPC_destroy:
+  case llvm::omp::OMPC_destroy:
     C = new (Context) OMPDestroyClause();
     break;
-  case OMPC_detach:
+  case llvm::omp::OMPC_detach:
     C = new (Context) OMPDetachClause();
     break;
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
+  case llvm::omp::Enum:                                                        \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   assert(C && "Unknown OMPClause type");
 
