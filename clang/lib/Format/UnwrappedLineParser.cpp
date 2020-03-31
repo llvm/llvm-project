@@ -2340,6 +2340,12 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       if (FormatTok->Tok.is(tok::semi))
         return;
+      if (Style.isCSharp() && FormatTok->is(Keywords.kw_where)) {
+        addUnwrappedLine();
+        nextToken();
+        parseCSharpGenericTypeConstraint();
+        break;
+      }
       nextToken();
     }
   }
