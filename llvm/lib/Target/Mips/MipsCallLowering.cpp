@@ -271,8 +271,9 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   MachinePointerInfo MPO =
       MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
   unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
-  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
-  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Align);
+  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
+  MMO =
+      MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Alignment);
 
   return AddrReg.getReg(0);
 }
@@ -485,9 +486,8 @@ bool MipsCallLowering::lowerFormalArguments(
       MachinePointerInfo MPO = MachinePointerInfo::getFixedStack(MF, FI);
       MachineInstrBuilder FrameIndex =
           MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI);
-      MachineMemOperand *MMO =
-          MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, RegSize,
-                                  /* Alignment */ RegSize);
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MPO, MachineMemOperand::MOStore, RegSize, Align(RegSize));
       MIRBuilder.buildStore(Copy, FrameIndex, *MMO);
     }
   }

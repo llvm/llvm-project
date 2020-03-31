@@ -1238,7 +1238,7 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlignment(FrameIdx));
+      MFI.getObjectAlign(FrameIdx));
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
@@ -1301,7 +1301,7 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlignment(FrameIdx));
+      MFI.getObjectAlign(FrameIdx));
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 

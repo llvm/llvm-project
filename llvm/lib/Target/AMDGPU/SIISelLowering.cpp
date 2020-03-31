@@ -5705,14 +5705,14 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   MachineFunction &MF = DAG.getMachineFunction();
 
   const DataLayout &DataLayout = DAG.getDataLayout();
-  unsigned Align =
-      DataLayout.getABITypeAlignment(VT.getTypeForEVT(*DAG.getContext()));
+  Align Alignment =
+      DataLayout.getABITypeAlign(VT.getTypeForEVT(*DAG.getContext()));
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
-      VT.getStoreSize(), Align);
+      VT.getStoreSize(), Alignment);
 
   if (!Offset->isDivergent()) {
     SDValue Ops[] = {

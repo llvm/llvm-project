@@ -795,12 +795,11 @@ bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   }
   if (Addr.isFIBase()) {
     unsigned FI = Addr.getFI();
-    unsigned Align = 4;
     int64_t Offset = Addr.getOffset();
     MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
-        MFI.getObjectSize(FI), Align);
+        MFI.getObjectSize(FI), Align(4));
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
         .addFrameIndex(FI)
         .addImm(Offset)
@@ -846,12 +845,11 @@ bool MipsFastISel::emitStore(MVT VT, unsigned SrcReg, Address &Addr,
   }
   if (Addr.isFIBase()) {
     unsigned FI = Addr.getFI();
-    unsigned Align = 4;
     int64_t Offset = Addr.getOffset();
     MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
-        MFI.getObjectSize(FI), Align);
+        MFI.getObjectSize(FI), Align(4));
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc))
         .addReg(SrcReg)
         .addFrameIndex(FI)
@@ -1263,7 +1261,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
       Addr.setReg(Mips::SP);
       Addr.setOffset(VA.getLocMemOffset() + BEAlign);
 
-      unsigned Alignment = DL.getABITypeAlignment(ArgVal->getType());
+      Align Alignment = DL.getABITypeAlign(ArgVal->getType());
       MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
           MachinePointerInfo::getStack(*FuncInfo.MF, Addr.getOffset()),
           MachineMemOperand::MOStore, ArgVT.getStoreSize(), Alignment);

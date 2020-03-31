@@ -3400,7 +3400,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       MachineFunction& MF = CurDAG->getMachineFunction();
       MachineMemOperand *MemOp =
           MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                                  MachineMemOperand::MOLoad, 4, 4);
+                                  MachineMemOperand::MOLoad, 4, Align(4));
 
       CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
 
