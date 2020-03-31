@@ -62,7 +62,17 @@ function(llvm_ExternalProject_Add name source_dir)
   foreach(tool ${ARG_TOOLCHAIN_TOOLS})
     if(TARGET ${tool})
       list(APPEND TOOLCHAIN_TOOLS ${tool})
-      list(APPEND TOOLCHAIN_BINS $<TARGET_FILE:${tool}>)
+
+      # $<TARGET_FILE:tgt> only works on add_executable or add_library targets
+      # The below logic mirrors cmake's own implementation
+      get_target_property(target_type "${tool}" TYPE)
+      if(NOT target_type STREQUAL "OBJECT_LIBRARY" AND
+         NOT target_type STREQUAL "UTILITY" AND
+         NOT target_type STREQUAL "GLOBAL_TARGET" AND
+         NOT target_type STREQUAL "INTERFACE_LIBRARY")
+        list(APPEND TOOLCHAIN_BINS $<TARGET_FILE:${tool}>)
+      endif()
+
     endif()
   endforeach()
 
