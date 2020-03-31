@@ -31,6 +31,9 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
   /// used inside the function.
   bool HasStackArgs;
 
+  /// Whether or not the function is an interrupt handler.
+  bool IsInterruptHandler;
+
   /// Size of the callee-saved register portion of the
   /// stack frame in bytes.
   unsigned CalleeSavedFrameSize;
@@ -41,11 +44,19 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
 public:
   AVRMachineFunctionInfo()
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
-        CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {}
+        IsInterruptHandler(false), CalleeSavedFrameSize(0),
+        VarArgsFrameIndex(0) {}
 
   explicit AVRMachineFunctionInfo(MachineFunction &MF)
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
-        CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {}
+        CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {
+    unsigned CallConv = MF.getFunction().getCallingConv();
+
+    this->IsInterruptHandler =
+      CallConv == CallingConv::AVR_INTR ||
+      CallConv == CallingConv::AVR_SIGNAL ||
+      MF.getFunction().hasFnAttribute("interrupt");
+  }
 
   bool getHasSpills() const { return HasSpills; }
   void setHasSpills(bool B) { HasSpills = B; }
@@ -55,6 +66,8 @@ public:
 
   bool getHasStackArgs() const { return HasStackArgs; }
   void setHasStackArgs(bool B) { HasStackArgs = B; }
+
+  bool isInterruptHandler() const { return IsInterruptHandler; }
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned Bytes) { CalleeSavedFrameSize = Bytes; }
