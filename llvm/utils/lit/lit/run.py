@@ -67,14 +67,12 @@ class Run(object):
 
     # TODO(yln): as the comment says.. this is racing with the main thread waiting
     # for results
-    def _process_result(self, test, result):
+    def _process_completed(self, test):
         # Don't add any more test results after we've hit the maximum failure
         # count.  Otherwise we're racing with the main thread, which is going
         # to terminate the process pool soon.
         if self.hit_max_failures:
             return
-
-        test.setResult(result)
 
         # Use test.isFailure() for correct XFAIL and XPASS handling
         if test.isFailure():
@@ -93,7 +91,8 @@ class SerialRun(Run):
         # TODO(yln): ignores deadline
         for test in self.tests:
             result = lit.worker._execute(test, self.lit_config)
-            self._process_result(test, result)
+            test.setResult(result)
+            self._process_completed(test)
             if self.hit_max_failures:
                 break
 
@@ -121,10 +120,14 @@ class ParallelRun(Run):
 
         self._install_win32_signal_handler(pool)
 
+        def process_completed(test, idx):
+            self.tests[idx] = test
+            self._process_completed(test)
+
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
-                callback=lambda r, t=test: self._process_result(t, r))
-            for test in self.tests]
+                             callback=lambda t, i=idx: process_completed(t, i))
+            for idx, test in enumerate(self.tests)]
         pool.close()
 
         for ar in async_results:
