@@ -22,6 +22,7 @@
 
 #include "AVR.h"
 #include "AVRInstrInfo.h"
+#include "AVRMachineFunctionInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -34,19 +35,21 @@ AVRRegisterInfo::AVRRegisterInfo() : AVRGenRegisterInfo(0) {}
 
 const uint16_t *
 AVRRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  CallingConv::ID CC = MF->getFunction().getCallingConv();
+  const AVRMachineFunctionInfo *AFI = MF->getInfo<AVRMachineFunctionInfo>();
 
-  return ((CC == CallingConv::AVR_INTR || CC == CallingConv::AVR_SIGNAL)
+  return AFI->isInterruptHandler()
               ? CSR_Interrupts_SaveList
-              : CSR_Normal_SaveList);
+              : CSR_Normal_SaveList;
 }
 
 const uint32_t *
 AVRRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
-  return ((CC == CallingConv::AVR_INTR || CC == CallingConv::AVR_SIGNAL)
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  return AFI->isInterruptHandler()
               ? CSR_Interrupts_RegMask
-              : CSR_Normal_RegMask);
+              : CSR_Normal_RegMask;
 }
 
 BitVector AVRRegisterInfo::getReservedRegs(const MachineFunction &MF) const {

@@ -1429,10 +1429,12 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return Chain;
   }
 
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
   unsigned RetOpc =
-      (CallConv == CallingConv::AVR_INTR || CallConv == CallingConv::AVR_SIGNAL)
-          ? AVRISD::RETI_FLAG
-          : AVRISD::RET_FLAG;
+    AFI->isInterruptHandler()
+        ? AVRISD::RETI_FLAG
+        : AVRISD::RET_FLAG;
 
   RetOps[0] = Chain; // Update chain.
 
