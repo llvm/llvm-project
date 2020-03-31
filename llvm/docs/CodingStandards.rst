@@ -320,6 +320,46 @@ Preferred:
   /// Builds a B-tree in order to do foo.  See paper by...
   void example() { ... }
 
+Error and Warning Messages
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clear diagnostic messages are important to help users identify and fix issues in
+their inputs. Use succinct but correct English prose that gives the user the
+context needed to understand what went wrong. Also, to match error message
+styles commonly produced by other tools, start the first sentence with a
+lower-case letter, and finish the last sentence without a period, if it would
+end in one otherwise. Sentences which end with different punctuation, such as
+"did you forget ';'?", should still do so.
+
+For example this is a good error message:
+
+.. code-block:: none
+
+  error: file.o: section header 3 is corrupt. Size is 10 when it should be 20
+
+This is a bad message, since it does not provide useful information and uses the
+wrong style:
+
+.. code-block:: none
+
+  error: file.o: Corrupt section header.
+
+As with other coding standards, individual projects, such as the Clang Static
+Analyzer, may have preexisting styles that do not conform to this. If a
+different formatting scheme is used consistently throughout the project, use
+that style instead. Otherwise, this standard applies to all LLVM tools,
+including clang, clang-tidy, and so on.
+
+If the tool or project does not have existing functions to emit warnings or
+errors, use the error and warning handlers provided in ``Support/WithColor.h``
+to ensure they are printed in the appropriate style, rather than printing to
+stderr directly.
+
+When using ``report_fatal_error``, follow the same standards for the message as
+regular error messages. Assertion messages and ``llvm_unreachable`` calls do not
+necessarily need to follow these same styles as they are automatically
+formatted, and thus these guidelines may not be suitable.
+
 ``#include`` Style
 ^^^^^^^^^^^^^^^^^^
 
