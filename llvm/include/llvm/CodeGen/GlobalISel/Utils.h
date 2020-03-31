@@ -184,12 +184,6 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
 
 Align inferAlignFromPtrInfo(MachineFunction &MF, const MachinePointerInfo &MPO);
 
-/// FIXME: Remove once the transition to Align is over.
-inline unsigned inferAlignmentFromPtrInfo(MachineFunction &MF,
-                                          const MachinePointerInfo &MPO) {
-  return inferAlignFromPtrInfo(MF, MPO).value();
-}
-
 /// Return the least common multiple type of \p Ty0 and \p Ty1, by changing
 /// the number of vector elements or scalar bitwidth. The intent is a
 /// G_MERGE_VALUES can be constructed from \p Ty0 elements, and unmerged into
