@@ -1151,13 +1151,10 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
       AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
-      ParsedType Type = getTypeAnnotation(Tok);
+      TypeResult Type = getTypeAnnotation(Tok);
       EndLocation = Tok.getAnnotationEndLoc();
       ConsumeAnnotationToken();
-
-      if (Type)
-        return Type;
-      return true;
+      return Type;
     }
 
     // Fall through to produce an error below.
@@ -1204,7 +1201,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     // Retrieve the type from the annotation token, consume that token, and
     // return.
     EndLocation = Tok.getAnnotationEndLoc();
-    ParsedType Type = getTypeAnnotation(Tok);
+    TypeResult Type = getTypeAnnotation(Tok);
     ConsumeAnnotationToken();
     return Type;
   }
@@ -3512,7 +3509,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
   // : declype(...)
   DeclSpec DS(AttrFactory);
   // : template_name<...>
-  ParsedType TemplateTypeTy;
+  TypeResult TemplateTypeTy;
 
   if (Tok.is(tok::identifier)) {
     // Get the identifier. This may be a member name or a class name,
@@ -3534,8 +3531,6 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);
       ConsumeAnnotationToken();
-      if (!TemplateTypeTy)
-        return true;
     } else {
       Diag(Tok, diag::err_expected_member_or_base_name);
       return true;
@@ -3554,8 +3549,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     SourceLocation EllipsisLoc;
     TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
+    if (TemplateTypeTy.isInvalid())
+      return true;
     return Actions.ActOnMemInitializer(ConstructorDecl, getCurScope(), SS, II,
-                                       TemplateTypeTy, DS, IdLoc,
+                                       TemplateTypeTy.get(), DS, IdLoc,
                                        InitList.get(), EllipsisLoc);
   } else if(Tok.is(tok::l_paren)) {
     BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -3565,8 +3562,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     ExprVector ArgExprs;
     CommaLocsTy CommaLocs;
     auto RunSignatureHelp = [&] {
+      if (TemplateTypeTy.isInvalid())
+        return QualType();
       QualType PreferredType = Actions.ProduceCtorInitMemberSignatureHelp(
-          getCurScope(), ConstructorDecl, SS, TemplateTypeTy, ArgExprs, II,
+          getCurScope(), ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs, II,
           T.getOpenLocation());
       CalledSignatureHelp = true;
       return PreferredType;
@@ -3587,11 +3586,16 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     SourceLocation EllipsisLoc;
     TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
+    if (TemplateTypeTy.isInvalid())
+      return true;
     return Actions.ActOnMemInitializer(ConstructorDecl, getCurScope(), SS, II,
-                                       TemplateTypeTy, DS, IdLoc,
+                                       TemplateTypeTy.get(), DS, IdLoc,
                                        T.getOpenLocation(), ArgExprs,
                                        T.getCloseLocation(), EllipsisLoc);
   }
+
+  if (TemplateTypeTy.isInvalid())
+    return true;
 
   if (getLangOpts().CPlusPlus11)
     return Diag(Tok, diag::err_expected_either) << tok::l_paren << tok::l_brace;
