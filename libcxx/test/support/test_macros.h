@@ -28,6 +28,9 @@
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 #endif
 
+#define TEST_STRINGIZE_IMPL(x) #x
+#define TEST_STRINGIZE(x) TEST_STRINGIZE_IMPL(x)
+
 #define TEST_CONCAT1(X, Y) X##Y
 #define TEST_CONCAT(X, Y) TEST_CONCAT1(X, Y)
 
