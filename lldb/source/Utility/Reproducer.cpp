@@ -321,11 +321,6 @@ void WorkingDirectoryProvider::Keep() {
   os << m_cwd << "\n";
 }
 
-void FileProvider::recordInterestingDirectory(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addDirectory(dir);
-}
-
 void ProviderBase::anchor() {}
 char CommandProvider::ID = 0;
 char FileProvider::ID = 0;
