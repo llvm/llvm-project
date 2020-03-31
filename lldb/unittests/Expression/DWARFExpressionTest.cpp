@@ -234,10 +234,6 @@ TEST(DWARFExpression, DW_OP_convert) {
       llvm::Failed());
 }
 
-TEST(DWARFExpression, DW_OP_stack_value) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
-}
-
 TEST(DWARFExpression, DW_OP_piece) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2u, 0x11, 0x22, DW_OP_piece, 2,
                                  DW_OP_const2u, 0x33, 0x44, DW_OP_piece, 2}),
