@@ -23,6 +23,14 @@ void printQuotedQualifiedName(llvm::raw_ostream &Os,
   Os << "'";
 }
 
+template <typename NamedDeclDerivedT>
+void printQuotedName(llvm::raw_ostream &Os, const NamedDeclDerivedT &D) {
+  Os << "'";
+  D->getNameForDiagnostic(Os, D->getASTContext().getPrintingPolicy(),
+                          /*Qualified=*/false);
+  Os << "'";
+}
+
 } // namespace clang
 
 #endif
