@@ -3310,7 +3310,7 @@ void Verifier::visitInsertElementInst(InsertElementInst &IE) {
 
 void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
   Assert(ShuffleVectorInst::isValidOperands(SV.getOperand(0), SV.getOperand(1),
-                                            SV.getOperand(2)),
+                                            SV.getShuffleMask()),
          "Invalid shufflevector operands!", &SV);
   visitInstruction(SV);
 }

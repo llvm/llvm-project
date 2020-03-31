@@ -3437,14 +3437,19 @@ void SelectionDAGBuilder::visitExtractElement(const User &I) {
 void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   SDValue Src1 = getValue(I.getOperand(0));
   SDValue Src2 = getValue(I.getOperand(1));
-  Constant *MaskV = cast<Constant>(I.getOperand(2));
+  ArrayRef<int> Mask;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
+    Mask = SVI->getShuffleMask();
+  else
+    Mask = cast<ConstantExpr>(I).getShuffleMask();
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   EVT SrcVT = Src1.getValueType();
   unsigned SrcNumElts = SrcVT.getVectorNumElements();
 
-  if (MaskV->isNullValue() && VT.isScalableVector()) {
+  if (all_of(Mask, [](int Elem) { return Elem == 0; }) &&
+      VT.isScalableVector()) {
     // Canonical splat form of first element of first input vector.
     SDValue FirstElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcVT.getScalarType(), Src1,
@@ -3458,8 +3463,6 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // for targets that support a SPLAT_VECTOR for non-scalable vector types.
   assert(!VT.isScalableVector() && "Unsupported scalable vector shuffle");
 
-  SmallVector<int, 8> Mask;
-  ShuffleVectorInst::getShuffleMask(MaskV, Mask);
   unsigned MaskNumElts = Mask.size();
 
   if (SrcNumElts == MaskNumElts) {

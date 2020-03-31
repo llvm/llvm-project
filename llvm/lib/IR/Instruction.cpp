@@ -443,6 +443,9 @@ static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
            RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
+  if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I1))
+    return SVI->getShuffleMask() ==
+           cast<ShuffleVectorInst>(I2)->getShuffleMask();
 
   return true;
 }

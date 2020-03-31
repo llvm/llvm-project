@@ -532,8 +532,18 @@ namespace llvm {
     return LHS.equals(RHS);
   }
 
-  template<typename T>
+  template <typename T>
+  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+    return ArrayRef<T>(LHS).equals(RHS);
+  }
+
+  template <typename T>
   inline bool operator!=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS == RHS);
+  }
+
+  template <typename T>
+  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
     return !(LHS == RHS);
   }
 

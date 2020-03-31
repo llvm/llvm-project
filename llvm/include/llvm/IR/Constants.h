@@ -1206,7 +1206,8 @@ public:
                                      Type *OnlyIfReducedTy = nullptr);
   static Constant *getInsertElement(Constant *Vec, Constant *Elt, Constant *Idx,
                                     Type *OnlyIfReducedTy = nullptr);
-  static Constant *getShuffleVector(Constant *V1, Constant *V2, Constant *Mask,
+  static Constant *getShuffleVector(Constant *V1, Constant *V2,
+                                    ArrayRef<int> Mask,
                                     Type *OnlyIfReducedTy = nullptr);
   static Constant *getExtractValue(Constant *Agg, ArrayRef<unsigned> Idxs,
                                    Type *OnlyIfReducedTy = nullptr);
@@ -1224,6 +1225,16 @@ public:
   /// Assert that this is an insertvalue or exactvalue
   /// expression and return the list of indices.
   ArrayRef<unsigned> getIndices() const;
+
+  /// Assert that this is a shufflevector and return the mask. See class
+  /// ShuffleVectorInst for a description of the mask representation.
+  ArrayRef<int> getShuffleMask() const;
+
+  /// Assert that this is a shufflevector and return the mask.
+  ///
+  /// TODO: This is a temporary hack until we update the bitcode format for
+  /// shufflevector.
+  Constant *getShuffleMaskForBitcode() const;
 
   /// Return a string representation for an opcode.
   const char *getOpcodeName() const;

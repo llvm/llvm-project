@@ -4439,36 +4439,31 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
   return RootVec;
 }
 
-static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
-                                        Type *RetTy, const SimplifyQuery &Q,
+static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
+                                        ArrayRef<int> Mask, Type *RetTy,
+                                        const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (isa<UndefValue>(Mask))
+  if (all_of(Mask, [](int Elem) { return Elem == UndefMaskElem; }))
     return UndefValue::get(RetTy);
 
   Type *InVecTy = Op0->getType();
-  ElementCount MaskEltCount = Mask->getType()->getVectorElementCount();
+  unsigned MaskNumElts = Mask.size();
   ElementCount InVecEltCount = InVecTy->getVectorElementCount();
 
-  assert(MaskEltCount.Scalable == InVecEltCount.Scalable &&
-         "vscale mismatch between input vector and mask");
-
-  bool Scalable = MaskEltCount.Scalable;
+  bool Scalable = InVecEltCount.Scalable;
 
   SmallVector<int, 32> Indices;
-  if (!Scalable) {
-    ShuffleVectorInst::getShuffleMask(Mask, Indices);
-    assert(MaskEltCount.Min == Indices.size() &&
-           "Size of Indices not same as number of mask elements?");
-  }
+  Indices.assign(Mask.begin(), Mask.end());
 
+  // Canonicalization: If mask does not select elements from an input vector,
+  // replace that input vector with undef.
   if (!Scalable) {
-    // Canonicalization: If mask does not select elements from an input vector,
-    // replace that input vector with undef.
     bool MaskSelects0 = false, MaskSelects1 = false;
-    for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
+    unsigned InVecNumElts = InVecEltCount.Min;
+    for (unsigned i = 0; i != MaskNumElts; ++i) {
       if (Indices[i] == -1)
         continue;
-      if ((unsigned)Indices[i] < InVecEltCount.Min)
+      if ((unsigned)Indices[i] < InVecNumElts)
         MaskSelects0 = true;
       else
         MaskSelects1 = true;
@@ -4514,8 +4509,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
       assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
 
       // Shuffle mask undefs become undefined constant result elements.
-      SmallVector<Constant *, 16> VecC(MaskEltCount.Min, C);
-      for (unsigned i = 0; i != MaskEltCount.Min; ++i)
+      SmallVector<Constant *, 16> VecC(MaskNumElts, C);
+      for (unsigned i = 0; i != MaskNumElts; ++i)
         if (Indices[i] == -1)
           VecC[i] = UndefValue::get(C->getType());
       return ConstantVector::get(VecC);
@@ -4526,7 +4521,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
     if (isa<UndefValue>(Op1) && RetTy == InVecTy &&
-        OpShuf->getMask()->getSplatValue())
+        is_splat(OpShuf->getShuffleMask()))
       return Op0;
 
   // All remaining transformation depend on the value of the mask, which is
@@ -4545,7 +4540,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // shuffle. This handles simple identity shuffles as well as chains of
   // shuffles that may widen/narrow and/or move elements across lanes and back.
   Value *RootVec = nullptr;
-  for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
+  for (unsigned i = 0; i != MaskNumElts; ++i) {
     // Note that recursion is limited for each vector element, so if any element
     // exceeds the limit, this will fail to simplify.
     RootVec =
@@ -4559,8 +4554,9 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
 }
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
-Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
-                                       Type *RetTy, const SimplifyQuery &Q) {
+Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
+                                       ArrayRef<int> Mask, Type *RetTy,
+                                       const SimplifyQuery &Q) {
   return ::SimplifyShuffleVectorInst(Op0, Op1, Mask, RetTy, Q, RecursionLimit);
 }
 
@@ -5523,8 +5519,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   }
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
-    Result = SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                       SVI->getMask(), SVI->getType(), Q);
+    Result =
+        SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
+                                  SVI->getShuffleMask(), SVI->getType(), Q);
     break;
   }
   case Instruction::PHI:

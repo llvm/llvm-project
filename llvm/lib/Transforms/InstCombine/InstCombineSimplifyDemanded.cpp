@@ -1389,7 +1389,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
         Shuffle->getOperand(0)->getType()->getVectorNumElements();
     // Handle trivial case of a splat. Only check the first element of LHS
     // operand.
-    if (isa<ConstantAggregateZero>(Shuffle->getMask()) &&
+    if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnesValue()) {
       if (!isa<UndefValue>(I->getOperand(1))) {
         I->setOperand(1, UndefValue::get(I->getOperand(1)->getType()));
@@ -1518,15 +1518,14 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     }
     if (NewUndefElts) {
       // Add additional discovered undefs.
-      SmallVector<Constant*, 16> Elts;
+      SmallVector<int, 16> Elts;
       for (unsigned i = 0; i < VWidth; ++i) {
         if (UndefElts[i])
-          Elts.push_back(UndefValue::get(Type::getInt32Ty(I->getContext())));
+          Elts.push_back(UndefMaskElem);
         else
-          Elts.push_back(ConstantInt::get(Type::getInt32Ty(I->getContext()),
-                                          Shuffle->getMaskValue(i)));
+          Elts.push_back(Shuffle->getMaskValue(i));
       }
-      I->setOperand(2, ConstantVector::get(Elts));
+      Shuffle->setShuffleMask(Elts);
       MadeChange = true;
     }
     break;

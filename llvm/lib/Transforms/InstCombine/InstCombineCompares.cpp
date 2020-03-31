@@ -2814,11 +2814,10 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
     return nullptr;
 
   Value *Vec;
-  Constant *Mask;
-  if (match(BCSrcOp,
-            m_ShuffleVector(m_Value(Vec), m_Undef(), m_Constant(Mask)))) {
+  ArrayRef<int> Mask;
+  if (match(BCSrcOp, m_ShuffleVector(m_Value(Vec), m_Undef(), m_Mask(Mask)))) {
     // Check whether every element of Mask is the same constant
-    if (auto *Elem = dyn_cast_or_null<ConstantInt>(Mask->getSplatValue())) {
+    if (is_splat(Mask)) {
       auto *VecTy = cast<VectorType>(BCSrcOp->getType());
       auto *EltTy = cast<IntegerType>(VecTy->getElementType());
       if (C->isSplat(EltTy->getBitWidth())) {
@@ -2827,6 +2826,7 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
         // then:
         //   =>  %E = extractelement <N x iK> %vec, i32 Elem
         //       icmp <pred> iK %SplatVal, <pattern>
+        Value *Elem = Builder.getInt32(Mask[0]);
         Value *Extract = Builder.CreateExtractElement(Vec, Elem);
         Value *NewC = ConstantInt::get(EltTy, C->trunc(EltTy->getBitWidth()));
         return new ICmpInst(Pred, Extract, NewC);
@@ -5380,15 +5380,15 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   bool IsFP = isa<FCmpInst>(Cmp);
 
   Value *V1, *V2;
-  Constant *M;
-  if (!match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(M))))
+  ArrayRef<int> M;
+  if (!match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Mask(M))))
     return nullptr;
 
   // If both arguments of the cmp are shuffles that use the same mask and
   // shuffle within a single vector, move the shuffle after the cmp:
   // cmp (shuffle V1, M), (shuffle V2, M) --> shuffle (cmp V1, V2), M
   Type *V1Ty = V1->getType();
-  if (match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(M))) &&
+  if (match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_SpecificMask(M))) &&
       V1Ty == V2->getType() && (LHS->hasOneUse() || RHS->hasOneUse())) {
     Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, V2)
                          : Builder.CreateICmp(Pred, V1, V2);
@@ -5405,16 +5405,16 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   // Length-changing splats are ok, so adjust the constants as needed:
   // cmp (shuffle V1, M), C --> shuffle (cmp V1, C'), M
   Constant *ScalarC = C->getSplatValue(/* AllowUndefs */ true);
-  Constant *ScalarM = M->getSplatValue(/* AllowUndefs */ true);
-  if (ScalarC && ScalarM) {
+  int MaskSplatIndex;
+  if (ScalarC && match(M, m_SplatOrUndefMask(MaskSplatIndex))) {
     // We allow undefs in matching, but this transform removes those for safety.
     // Demanded elements analysis should be able to recover some/all of that.
     C = ConstantVector::getSplat(V1Ty->getVectorElementCount(), ScalarC);
-    M = ConstantVector::getSplat(M->getType()->getVectorElementCount(),
-                                 ScalarM);
+    SmallVector<int, 8> NewM(M.size(), MaskSplatIndex);
     Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, C)
                          : Builder.CreateICmp(Pred, V1, C);
-    return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
+    return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()),
+                                 NewM);
   }
 
   return nullptr;

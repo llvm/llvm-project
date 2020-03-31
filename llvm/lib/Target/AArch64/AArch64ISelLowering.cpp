@@ -9207,10 +9207,10 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2) {
     return FullVT->getNumElements() == 2 * HalfVT->getNumElements();
   };
 
-  Constant *M1, *M2;
+  ArrayRef<int> M1, M2;
   Value *S1Op1, *S2Op1;
-  if (!match(Op1, m_ShuffleVector(m_Value(S1Op1), m_Undef(), m_Constant(M1))) ||
-      !match(Op2, m_ShuffleVector(m_Value(S2Op1), m_Undef(), m_Constant(M2))))
+  if (!match(Op1, m_ShuffleVector(m_Value(S1Op1), m_Undef(), m_Mask(M1))) ||
+      !match(Op2, m_ShuffleVector(m_Value(S2Op1), m_Undef(), m_Mask(M2))))
     return false;
 
   // Check that the operands are half as wide as the result and we extract

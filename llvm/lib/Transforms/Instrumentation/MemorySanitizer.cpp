@@ -1867,10 +1867,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitShuffleVectorInst(ShuffleVectorInst &I) {
-    insertShadowCheck(I.getOperand(2), &I);
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateShuffleVector(getShadow(&I, 0), getShadow(&I, 1),
-              I.getOperand(2), "_msprop"));
+                                          I.getShuffleMask(), "_msprop"));
     setOriginForNaryOp(I);
   }
 
