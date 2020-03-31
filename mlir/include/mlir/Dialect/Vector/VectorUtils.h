@@ -31,6 +31,9 @@ class VectorType;
 SmallVector<int64_t, 4> computeStrides(ArrayRef<int64_t> shape,
                                        ArrayRef<int64_t> sizes);
 
+/// Computes and returns the linearized index of 'offsets' w.r.t. 'basis'.
+int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
+
 /// Given the slice strides together with a linear index in the dimension
 /// space, returns the vector-space offsets in each dimension for a
 /// de-linearized index.
