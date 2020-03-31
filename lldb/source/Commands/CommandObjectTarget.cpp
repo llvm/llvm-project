@@ -571,7 +571,7 @@ protected:
   }
 };
 
-#pragma mark CommandObjectTargetSelect
+#pragma mark CommandObjectTargetDelete
 
 // "target delete"
 
@@ -2198,7 +2198,7 @@ protected:
   }
 };
 
-#pragma mark CommandObjectTargetModulesDumpSections
+#pragma mark CommandObjectTargetModulesDumpClangAST
 
 // Clang AST dumping command
 
