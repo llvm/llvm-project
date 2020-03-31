@@ -258,7 +258,8 @@ public:
 
   /// Perform target specific adjustments to the latency of a schedule
   /// dependency.
-  void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep) const override;
 
   unsigned getVectorLength() const {
     assert(useHVXOps());
