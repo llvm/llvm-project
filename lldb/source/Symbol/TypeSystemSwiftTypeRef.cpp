@@ -298,20 +298,6 @@ void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
 DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   return m_swift_ast_context->GetDWARFParser();
 }
-ConstString TypeSystemSwiftTypeRef::DeclContextGetName(void *opaque_decl_ctx) {
-  return m_swift_ast_context->DeclContextGetName(opaque_decl_ctx);
-}
-ConstString TypeSystemSwiftTypeRef::DeclContextGetScopeQualifiedName(
-    void *opaque_decl_ctx) {
-  return m_swift_ast_context->DeclContextGetScopeQualifiedName(opaque_decl_ctx);
-}
-bool TypeSystemSwiftTypeRef::DeclContextIsClassMethod(
-    void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-    bool *is_instance_method_ptr, ConstString *language_object_name_ptr) {
-  return m_swift_ast_context->DeclContextIsClassMethod(
-      opaque_decl_ctx, language_ptr, is_instance_method_ptr,
-      language_object_name_ptr);
-}
 
 // Tests
 
@@ -400,12 +386,6 @@ bool TypeSystemSwiftTypeRef::IsArrayType(void *type, CompilerType *element_type,
 bool TypeSystemSwiftTypeRef::IsAggregateType(void *type) {
   return m_swift_ast_context->IsAggregateType(ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsCharType(void *type) {
-  return m_swift_ast_context->IsCharType(ReconstructType(type));
-}
-bool TypeSystemSwiftTypeRef::IsCompleteType(void *type) {
-  return m_swift_ast_context->IsCompleteType(ReconstructType(type));
-}
 bool TypeSystemSwiftTypeRef::IsDefined(void *type) {
   return m_swift_ast_context->IsDefined(ReconstructType(type));
 }
@@ -415,8 +395,21 @@ bool TypeSystemSwiftTypeRef::IsFloatingPointType(void *type, uint32_t &count,
                                                   is_complex);
 }
 bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
-  return m_swift_ast_context->IsFunctionType(ReconstructType(type),
-                                             is_variadic_ptr);
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node =
+        GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
+    if (!node || node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::Global)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Function)
+      return false;
+    return true;
+  };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsFunctionType(
+                                ReconstructType(type), nullptr));
 }
 size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
   return m_swift_ast_context->GetNumberOfFunctionArguments(
@@ -430,11 +423,6 @@ TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
 }
 bool TypeSystemSwiftTypeRef::IsFunctionPointerType(void *type) {
   return m_swift_ast_context->IsFunctionPointerType(ReconstructType(type));
-}
-bool TypeSystemSwiftTypeRef::IsBlockPointerType(
-    void *type, CompilerType *function_pointer_type_ptr) {
-  return m_swift_ast_context->IsBlockPointerType(ReconstructType(type),
-                                                 function_pointer_type_ptr);
 }
 bool TypeSystemSwiftTypeRef::IsIntegerType(void *type, bool &is_signed) {
   return m_swift_ast_context->IsIntegerType(ReconstructType(type), is_signed);
@@ -526,10 +514,6 @@ CompilerType TypeSystemSwiftTypeRef::GetPointerType(void *type) {
 }
 
 // Exploring the type
-const llvm::fltSemantics &
-TypeSystemSwiftTypeRef::GetFloatTypeSemantics(size_t byte_size) {
-  return m_swift_ast_context->GetFloatTypeSemantics(byte_size);
-}
 llvm::Optional<uint64_t>
 TypeSystemSwiftTypeRef::GetBitSize(lldb::opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) {
@@ -552,9 +536,6 @@ TypeSystemSwiftTypeRef::GetNumChildren(void *type, bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
   return m_swift_ast_context->GetNumChildren(ReconstructType(type),
                                              omit_empty_base_classes, exe_ctx);
-}
-lldb::BasicType TypeSystemSwiftTypeRef::GetBasicTypeEnumeration(void *type) {
-  return m_swift_ast_context->GetBasicTypeEnumeration(ReconstructType(type));
 }
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(void *type) {
   return m_swift_ast_context->GetNumFields(ReconstructType(type));
@@ -692,9 +673,6 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type) {
 void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type, Stream *s) {
   return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), s);
 }
-bool TypeSystemSwiftTypeRef::IsRuntimeGeneratedType(void *type) {
-  return m_swift_ast_context->IsRuntimeGeneratedType(ReconstructType(type));
-}
 void TypeSystemSwiftTypeRef::DumpSummary(void *type, ExecutionContext *exe_ctx,
                                          Stream *s, const DataExtractor &data,
                                          lldb::offset_t data_offset,
@@ -707,50 +685,16 @@ bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
   return m_swift_ast_context->IsPointerOrReferenceType(ReconstructType(type),
                                                        pointee_type);
 }
-unsigned TypeSystemSwiftTypeRef::GetTypeQualifiers(void *type) {
-  return m_swift_ast_context->GetTypeQualifiers(ReconstructType(type));
-}
-bool TypeSystemSwiftTypeRef::IsCStringType(void *type, uint32_t &length) {
-  return m_swift_ast_context->IsCStringType(ReconstructType(type), length);
-}
 llvm::Optional<size_t>
 TypeSystemSwiftTypeRef::GetTypeBitAlign(void *type,
                                         ExecutionContextScope *exe_scope) {
   return m_swift_ast_context->GetTypeBitAlign(ReconstructType(type), exe_scope);
-}
-CompilerType
-TypeSystemSwiftTypeRef::GetBasicTypeFromAST(lldb::BasicType basic_type) {
-  return m_swift_ast_context->GetBasicTypeFromAST(basic_type);
-}
-bool TypeSystemSwiftTypeRef::IsBeingDefined(void *type) {
-  return m_swift_ast_context->IsBeingDefined(ReconstructType(type));
-}
-bool TypeSystemSwiftTypeRef::IsConst(void *type) {
-  return m_swift_ast_context->IsConst(ReconstructType(type));
-}
-uint32_t
-TypeSystemSwiftTypeRef::IsHomogeneousAggregate(void *type,
-                                               CompilerType *base_type_ptr) {
-  return m_swift_ast_context->IsHomogeneousAggregate(ReconstructType(type),
-                                                     base_type_ptr);
-}
-bool TypeSystemSwiftTypeRef::IsPolymorphicClass(void *type) {
-  return m_swift_ast_context->IsPolymorphicClass(ReconstructType(type));
 }
 bool TypeSystemSwiftTypeRef::IsTypedefType(void *type) {
   return m_swift_ast_context->IsTypedefType(ReconstructType(type));
 }
 CompilerType TypeSystemSwiftTypeRef::GetTypedefedType(void *type) {
   return m_swift_ast_context->GetTypedefedType(ReconstructType(type));
-}
-CompilerType TypeSystemSwiftTypeRef::GetTypeForDecl(void *opaque_decl) {
-  return m_swift_ast_context->GetTypeForDecl(opaque_decl);
-}
-bool TypeSystemSwiftTypeRef::IsVectorType(void *type,
-                                          CompilerType *element_type,
-                                          uint64_t *size) {
-  return m_swift_ast_context->IsVectorType(ReconstructType(type), element_type,
-                                           size);
 }
 CompilerType TypeSystemSwiftTypeRef::GetFullyUnqualifiedType(void *type) {
   return m_swift_ast_context->GetFullyUnqualifiedType(ReconstructType(type));
@@ -767,20 +711,11 @@ CompilerType TypeSystemSwiftTypeRef::GetRValueReferenceType(void *type) {
 uint32_t TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(void *type) {
   return m_swift_ast_context->GetNumDirectBaseClasses(ReconstructType(type));
 }
-uint32_t TypeSystemSwiftTypeRef::GetNumVirtualBaseClasses(void *type) {
-  return m_swift_ast_context->GetNumVirtualBaseClasses(ReconstructType(type));
-}
 CompilerType
 TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(void *type, size_t idx,
                                                   uint32_t *bit_offset_ptr) {
   return m_swift_ast_context->GetDirectBaseClassAtIndex(ReconstructType(type),
                                                         idx, bit_offset_ptr);
-}
-CompilerType
-TypeSystemSwiftTypeRef::GetVirtualBaseClassAtIndex(void *type, size_t idx,
-                                                   uint32_t *bit_offset_ptr) {
-  return m_swift_ast_context->GetVirtualBaseClassAtIndex(ReconstructType(type),
-                                                         idx, bit_offset_ptr);
 }
 bool TypeSystemSwiftTypeRef::IsReferenceType(void *type,
                                              CompilerType *pointee_type,

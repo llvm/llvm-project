@@ -5163,25 +5163,6 @@ void SwiftASTContext::AddDebuggerClient(
       std::unique_ptr<swift::DebuggerClient>(debugger_client));
 }
 
-ConstString SwiftASTContext::DeclContextGetName(void *opaque_decl_ctx) {
-  return ConstString();
-}
-
-ConstString
-SwiftASTContext::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
-  return ConstString();
-}
-
-bool SwiftASTContext::DeclContextIsClassMethod(
-    void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-    bool *is_instance_method_ptr, ConstString *language_object_name_ptr) {
-  return false;
-}
-
-///////////
-////////////////////
-///////////
-
 #ifndef NDEBUG
 bool SwiftASTContext::Verify(lldb::opaque_compiler_type_t type) {
   // Manual casting to avoid construction a temporary CompilerType
@@ -5232,23 +5213,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
   return false;
 }
 
-bool SwiftASTContext::IsVectorType(void *type, CompilerType *element_type,
-                                   uint64_t *size) {
-  return false;
-}
-
-bool SwiftASTContext::IsRuntimeGeneratedType(void *type) { return false; }
-
-bool SwiftASTContext::IsCharType(void *type) { return false; }
-
-bool SwiftASTContext::IsCompleteType(void *type) { return true; }
-
-bool SwiftASTContext::IsConst(void *type) { return false; }
-
-bool SwiftASTContext::IsCStringType(void *type, uint32_t &length) {
-  return false;
-}
-
 bool SwiftASTContext::IsFunctionType(void *type, bool *is_variadic_ptr) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -5264,12 +5228,6 @@ bool SwiftASTContext::IsFunctionType(void *type, bool *is_variadic_ptr) {
     }
   }
   return false;
-}
-
-/// Used to detect "Homogeneous Floating-point Aggregates"
-uint32_t SwiftASTContext::IsHomogeneousAggregate(void *type,
-                                                 CompilerType *base_type_ptr) {
-  return 0;
 }
 
 size_t SwiftASTContext::GetNumberOfFunctionArguments(void *type) {
@@ -5303,11 +5261,6 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
 
 bool SwiftASTContext::IsFunctionPointerType(void *type) {
   return IsFunctionType(type, nullptr); // FIXME: think about this
-}
-
-bool SwiftASTContext::IsBlockPointerType(
-    void *type, CompilerType *function_pointer_type_ptr) {
-  return false;
 }
 
 bool SwiftASTContext::IsIntegerType(void *type, bool &is_signed) {
@@ -5382,8 +5335,6 @@ bool SwiftASTContext::IsDefined(void *type) {
 
   return true;
 }
-
-bool SwiftASTContext::IsPolymorphicClass(void *type) { return false; }
 
 bool SwiftASTContext::IsPossibleDynamicType(void *type,
                                             CompilerType *dynamic_pointee_type,
@@ -5571,8 +5522,6 @@ SwiftASTContext::GetAllocationStrategy(CompilerType type) {
 
   return TypeAllocationStrategy::eUnknown;
 }
-
-bool SwiftASTContext::IsBeingDefined(void *type) { return false; }
 
 //----------------------------------------------------------------------
 // Type Completion
@@ -5893,8 +5842,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   return lldb::eTypeClassOther;
 }
 
-unsigned SwiftASTContext::GetTypeQualifiers(void *type) { return 0; }
-
 //----------------------------------------------------------------------
 // Creating related types
 //----------------------------------------------------------------------
@@ -6147,19 +6094,6 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return ToCompilerType({GetSwiftType(type)});
 }
 
-CompilerType SwiftASTContext::GetTypeForDecl(void *opaque_decl) {
-  assert("not yet implemented");
-  return {};
-}
-
-//----------------------------------------------------------------------
-// Create related types using the current type's AST
-//----------------------------------------------------------------------
-
-CompilerType SwiftASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
-  return {};
-}
-
 //----------------------------------------------------------------------
 // Exploring the type
 //----------------------------------------------------------------------
@@ -6195,13 +6129,6 @@ bool SwiftASTContext::IsFixedSize(CompilerType compiler_type) {
   if (type_info)
     return type_info->isFixedSize();
   return false;
-}
-
-const llvm::fltSemantics &
-SwiftASTContext::GetFloatTypeSemantics(size_t byte_size) {
-  // See: https://reviews.llvm.org/D67239. At this time of writing this API
-  // is only used by DumpDataExtractor for the C type system.
-  llvm_unreachable("SwiftASTContext::GetFloatTypeSemantics not implemented.");
 }
 
 llvm::Optional<uint64_t>
@@ -6602,10 +6529,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   return num_children;
 }
 
-lldb::BasicType SwiftASTContext::GetBasicTypeEnumeration(void *type) {
-  return eBasicTypeInvalid;
-}
-
 #pragma mark Aggregate Types
 
 uint32_t SwiftASTContext::GetNumDirectBaseClasses(void *opaque_type) {
@@ -6619,10 +6542,6 @@ uint32_t SwiftASTContext::GetNumDirectBaseClasses(void *opaque_type) {
       return 1;
   }
 
-  return 0;
-}
-
-uint32_t SwiftASTContext::GetNumVirtualBaseClasses(void *opaque_type) {
   return 0;
 }
 
@@ -6739,12 +6658,6 @@ SwiftASTContext::GetDirectBaseClassAtIndex(void *opaque_type, size_t idx,
         return ToCompilerType({base_class_type.getPointer()});
     }
   }
-  return {};
-}
-
-CompilerType
-SwiftASTContext::GetVirtualBaseClassAtIndex(void *opaque_type, size_t idx,
-                                            uint32_t *bit_offset_ptr) {
   return {};
 }
 
