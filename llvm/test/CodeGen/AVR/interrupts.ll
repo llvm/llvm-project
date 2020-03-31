@@ -48,5 +48,21 @@ define avr_signalcc void @signal_handler() {
   ret void
 }
 
+define void @signal_handler_via_attribute() #1 {
+; CHECK-LABEL: signal_handler_via_attribute:
+; CHECK-NOT: sei
+; CHECK: push r0
+; CHECK-NEXT: push r1
+; CHECK-NEXT: in r0, 63
+; CHECK-NEXT: push r0
+; CHECK: clr r0
+; CHECK: pop r0
+; CHECK-NEXT: out 63, r0
+; CHECK-NEXT: pop r1
+; CHECK-NEXT: pop r0
+; CHECK-NEXT: reti
+  ret void
+}
+
 attributes #0 = { "interrupt" }
 attributes #1 = { "signal" }
