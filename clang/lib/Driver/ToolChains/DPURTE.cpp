@@ -70,8 +70,8 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
 
 Tool *DPURTE::buildLinker() const {
   return new tools::dpu::Linker(*this, PathToLinkScript, PathToRtLibDirectory,
-                                RtLibName, PathToRtLibBc, PathToBootstrap,
-                                McountLibName);
+                                RtLibName, PathToRtLibLTO, PathToRtLibLTOThin,
+                                PathToBootstrap, McountLibName);
 }
 
 void DPURTE::addClangTargetOptions(
@@ -119,10 +119,14 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-L");
     CmdArgs.push_back(RtLibraryPath);
 
-    if (TCArgs.hasArg(options::OPT_flto) ||
-        TCArgs.hasArg(options::OPT_flto_EQ)) {
+    if (TCArgs.hasArg(options::OPT_flto_EQ)) {
       // Need to inject the RTE BC library into the whole chain.
-      CmdArgs.push_back(RtBcLibrary);
+      CmdArgs.push_back(llvm::StringSwitch<const char *>(
+                            TCArgs.getLastArg(options::OPT_flto_EQ)->getValue())
+                            .Case("thin", RtLTOThinLibrary)
+                            .Default(RtLTOLibrary));
+    } else if (TCArgs.hasArg(options::OPT_flto)) {
+      CmdArgs.push_back(RtLTOLibrary);
     } else {
       CmdArgs.push_back("-l");
       CmdArgs.push_back(RtLibraryName);
