@@ -9,9 +9,7 @@
 // test that cmath builds with -fdelayed-template-parsing
 
 // REQUIRES: fdelayed-template-parsing
-
-// RUN: %{build} -fdelayed-template-parsing
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fdelayed-template-parsing
 
 #include <cmath>
 #include <cassert>
