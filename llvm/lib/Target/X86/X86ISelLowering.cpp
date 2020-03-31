@@ -34293,7 +34293,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                              Subtarget)) {
       bool IsTRUNCATE = ShuffleVT.getVectorNumElements() ==
                         ShuffleSrcVT.getVectorNumElements();
-      unsigned Opc = IsTRUNCATE ? ISD::TRUNCATE : X86ISD::VTRUNC;
+      unsigned Opc =
+          IsTRUNCATE ? (unsigned)ISD::TRUNCATE : (unsigned)X86ISD::VTRUNC;
       if (Depth == 0 && Root.getOpcode() == Opc)
         return SDValue(); // Nothing to do!
       V1 = DAG.getBitcast(ShuffleSrcVT, V1);
