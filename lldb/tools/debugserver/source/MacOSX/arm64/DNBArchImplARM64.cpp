@@ -1067,31 +1067,34 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
                    "DNBArchMachARM64::GetHardwareWatchpointHit() addr = 0x%llx",
                    (uint64_t)addr);
 
-  // This is the watchpoint value to match against, i.e., word address.
-  nub_addr_t wp_val = addr & ~((nub_addr_t)3);
   if (kret == KERN_SUCCESS) {
     DBG &debug_state = m_state.dbg;
     uint32_t i, num = NumSupportedHardwareWatchpoints();
     for (i = 0; i < num; ++i) {
       nub_addr_t wp_addr = GetWatchAddress(debug_state, i);
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                        "GetHardwareWatchpointHit() slot: %u "
-                                        "(addr = 0x%llx).",
-                       i, (uint64_t)wp_addr);
-      if (wp_val == wp_addr) {
-        uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
+      uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
 
-        // Sanity check the byte_mask, first.
-        if (LowestBitSet(byte_mask) < 0)
-          continue;
+      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchImplX86_64::"
+                       "GetHardwareWatchpointHit() slot: %u "
+                       "(addr = 0x%llx; byte_mask = 0x%x)",
+                       i, static_cast<uint64_t>(wp_addr),
+                       byte_mask);
 
-        // Check that the watchpoint is enabled.
-        if (!IsWatchpointEnabled(debug_state, i))
-          continue;
+      if (!IsWatchpointEnabled(debug_state, i))
+        continue;
 
-        // Compute the starting address (from the point of view of the
-        // debugger).
-        addr = wp_addr + LowestBitSet(byte_mask);
+      if (bits(wp_addr, 48, 3) != bits(addr, 48, 3))
+        continue;
+
+      // Sanity check the byte_mask
+      uint32_t lsb = LowestBitSet(byte_mask);
+      if (lsb < 0)
+        continue;
+
+      uint64_t byte_to_match = bits(addr, 2, 0);
+
+      if (byte_mask & (1 << byte_to_match)) {
+        addr = wp_addr + lsb;
         return i;
       }
     }
