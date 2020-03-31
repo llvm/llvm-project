@@ -174,10 +174,10 @@ struct AssumeBuilderState {
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
 
-  void addAttr(Attribute::AttrKind Kind, Value *Ptr, unsigned Argument = 0) {
+  void addAttr(Attribute::AttrKind Kind, Value *Val, unsigned Argument = 0) {
     AssumedKnowledge AK;
     AK.Name = Attribute::getNameFromAttrKind(Kind).data();
-    AK.WasOn.setPointer(Ptr);
+    AK.WasOn.setPointer(Val);
     if (Attribute::doesAttrKindHaveArgument(Kind)) {
       AK.Argument =
           ConstantInt::get(Type::getInt64Ty(M->getContext()), Argument);
@@ -188,35 +188,32 @@ struct AssumeBuilderState {
     AssumedKnowledgeSet.insert(AK);
   };
 
-  void addLoadOrStore(Instruction *I) {
-    auto Impl = [&](auto *MemInst, Type *T) {
-      uint64_t DerefSize =
-          I->getModule()->getDataLayout().getTypeStoreSize(T).getKnownMinSize();
-      if (DerefSize != 0) {
-        addAttr(Attribute::Dereferenceable, MemInst->getPointerOperand(),
-                DerefSize);
-        if (!NullPointerIsDefined(MemInst->getFunction(),
-                                  MemInst->getPointerOperand()
-                                      ->getType()
-                                      ->getPointerAddressSpace()))
-          addAttr(Attribute::NonNull, MemInst->getPointerOperand());
-      }
-      MaybeAlign MA = MemInst->getAlign();
-      if (MA.valueOrOne() > 1)
-        addAttr(Attribute::Alignment, MemInst->getPointerOperand(),
-                MA.valueOrOne().value());
-    };
-    if (auto *Load = dyn_cast<LoadInst>(I))
-      Impl(Load, Load->getType());
-    if (auto *Store = dyn_cast<StoreInst>(I))
-      Impl(Store, Store->getValueOperand()->getType());
+  void addAccessedPtr(Instruction *MemInst, Value *Pointer, Type *AccType,
+                      MaybeAlign MA) {
+    uint64_t DerefSize = MemInst->getModule()
+                             ->getDataLayout()
+                             .getTypeStoreSize(AccType)
+                             .getKnownMinSize();
+    if (DerefSize != 0) {
+      addAttr(Attribute::Dereferenceable, Pointer, DerefSize);
+      if (!NullPointerIsDefined(MemInst->getFunction(),
+                                Pointer->getType()->getPointerAddressSpace()))
+        addAttr(Attribute::NonNull, Pointer);
+    }
+    if (MA.valueOrOne() > 1)
+      addAttr(Attribute::Alignment, Pointer, MA.valueOrOne().value());
   }
 
   void addInstruction(Instruction *I) {
     if (auto *Call = dyn_cast<CallBase>(I))
       return addCall(Call);
-    if (isa<LoadInst>(I) || isa<StoreInst>(I))
-      return addLoadOrStore(I);
+    if (auto *Load = dyn_cast<LoadInst>(I))
+      return addAccessedPtr(I, Load->getPointerOperand(), Load->getType(),
+                            Load->getAlign());
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      return addAccessedPtr(I, Store->getPointerOperand(),
+                            Store->getValueOperand()->getType(),
+                            Store->getAlign());
     // TODO: Add support for the other Instructions.
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
@@ -232,8 +229,8 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
-void llvm::salvageKnowledge(Instruction* I) {
-  if (Instruction* Intr = buildAssumeFromInst(I))
+void llvm::salvageKnowledge(Instruction *I) {
+  if (Instruction *Intr = buildAssumeFromInst(I))
     Intr->insertBefore(I);
 }
 
