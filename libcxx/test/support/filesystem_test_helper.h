@@ -251,7 +251,6 @@ private:
     static inline fs::path random_path() {
         fs::path tmp = fs::temp_directory_path();
         fs::path p = fs::path(tmp) / unique_path_suffix();
-        assert(p.parent_path() == tmp);
         return p;
     }
 
