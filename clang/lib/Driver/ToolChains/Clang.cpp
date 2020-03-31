@@ -5130,15 +5130,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Pass -fmessage-length=.
-  CmdArgs.push_back("-fmessage-length");
+  unsigned MessageLength = 0;
   if (Arg *A = Args.getLastArg(options::OPT_fmessage_length_EQ)) {
-    CmdArgs.push_back(A->getValue());
+    StringRef V(A->getValue());
+    if (V.getAsInteger(0, MessageLength))
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << V << A->getOption().getName();
   } else {
     // If -fmessage-length=N was not specified, determine whether this is a
     // terminal and, if so, implicitly define -fmessage-length appropriately.
-    unsigned N = llvm::sys::Process::StandardErrColumns();
-    CmdArgs.push_back(Args.MakeArgString(Twine(N)));
+    MessageLength = llvm::sys::Process::StandardErrColumns();
   }
+  if (MessageLength != 0)
+    CmdArgs.push_back(
+        Args.MakeArgString("-fmessage-length=" + Twine(MessageLength)));
 
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,
