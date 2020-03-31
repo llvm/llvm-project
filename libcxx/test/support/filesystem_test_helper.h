@@ -103,9 +103,6 @@ static const fs::path RecDirFollowSymlinksIterationList[] = {
 
 #endif // LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
 
-#ifndef LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT
-#warning LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT must be defined
-#else // LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT
 
 #ifndef LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER
 #error LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER must be defined
@@ -127,8 +124,16 @@ inline char random_hex_char() {
 
 struct scoped_test_env
 {
-    scoped_test_env() : test_root(random_env_path())
-        { fs_helper_run(fs_make_cmd("init_test_directory", test_root)); }
+    scoped_test_env() : test_root(random_path())
+    {
+        fs_helper_run(fs_make_cmd("init_test_directory", test_root));
+
+        // Ensure that the root_path is fully resolved, i.e. it contains no
+        // symlinks. The filesystem tests depend on that. We do this after
+        // creating the root_path, because `fs::canonical` requires the
+        // path to exist.
+        test_root = fs::canonical(test_root);
+    }
 
     ~scoped_test_env()
         { fs_helper_run(fs_make_cmd("destroy_test_directory", test_root)); }
@@ -229,7 +234,7 @@ struct scoped_test_env
     }
 #endif
 
-    fs::path const test_root;
+    fs::path test_root;
 
 private:
     static std::string unique_path_suffix() {
@@ -243,10 +248,10 @@ private:
 
     // This could potentially introduce a filesystem race with other tests
     // running at the same time, but oh well, it's just test code.
-    static inline fs::path random_env_path() {
-        static const char* env_path = LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT;
-        fs::path p = fs::path(env_path) / unique_path_suffix();
-        assert(p.parent_path() == env_path);
+    static inline fs::path random_path() {
+        fs::path tmp = fs::temp_directory_path();
+        fs::path p = fs::path(tmp) / unique_path_suffix();
+        assert(p.parent_path() == tmp);
         return p;
     }
 
@@ -270,38 +275,14 @@ private:
         return cmd_name + "(" + make_arg(arg1) + ", " + make_arg(arg2) + ")";
     }
 
-    static inline void fs_helper_run(std::string const& raw_cmd) {
-        // check that the fs test root in the environment matches what we were
-        // compiled with.
-        static bool checked = checkDynamicTestRoot();
-        ((void)checked);
+    void fs_helper_run(std::string const& raw_cmd) {
         std::string cmd = LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER;
+        cmd += " \"" + test_root.native() + "\"";
         cmd += " \"" + raw_cmd + "\"";
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
     }
-
-    static bool checkDynamicTestRoot() {
-        // LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT is expected not to contain symlinks.
-        char* fs_root = std::getenv("LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT");
-        if (!fs_root) {
-            std::printf("ERROR: LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT must be a defined "
-                         "environment variable when running the test.\n");
-            std::abort();
-        }
-        if (std::string(fs_root) != LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT) {
-            std::printf("ERROR: LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT environment variable"
-                        " must have the same value as when the test was compiled.\n");
-            std::printf("   Current Value:  '%s'\n", fs_root);
-            std::printf("   Expected Value: '%s'\n", LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT);
-            std::abort();
-        }
-        return true;
-    }
-
 };
-
-#endif // LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT
 
 // Misc test types
 
