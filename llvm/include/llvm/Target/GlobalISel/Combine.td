@@ -192,6 +192,14 @@ def select_same_val: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
+// Fold x op 0 -> x
+def right_identity_zero: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR):$root,
+    [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -199,7 +207,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask]>;
 
-def identity_combines : GICombineGroup<[select_same_val]>;
+def identity_combines : GICombineGroup<[select_same_val, right_identity_zero]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,

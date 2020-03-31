@@ -221,6 +221,10 @@ public:
   /// equivalent instructions.
   bool matchEqualDefs(const MachineOperand &MOP1, const MachineOperand &MOP2);
 
+  /// Return true if \p MOP is defined by a G_CONSTANT with a value equal to
+  /// \p C.
+  bool matchConstantOp(const MachineOperand &MOP, int64_t C);
+
   /// Optimize (cond ? x : x) -> x
   bool matchSelectSameVal(MachineInstr &MI);
 
