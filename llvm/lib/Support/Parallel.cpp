@@ -20,6 +20,8 @@
 #include <thread>
 #include <vector>
 
+llvm::ThreadPoolStrategy llvm::parallel::strategy;
+
 namespace llvm {
 namespace parallel {
 namespace detail {
@@ -78,6 +80,9 @@ public:
         T.join();
   }
 
+  struct Creator {
+    static void *call() { return new ThreadPoolExecutor(strategy); }
+  };
   struct Deleter {
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
@@ -131,7 +136,8 @@ Executor *Executor::getDefaultExecutor() {
   // are more frequent with the debug static runtime.
   //
   // This also prevents intermittent deadlocks on exit with the MinGW runtime.
-  static ManagedStatic<ThreadPoolExecutor, object_creator<ThreadPoolExecutor>,
+
+  static ManagedStatic<ThreadPoolExecutor, ThreadPoolExecutor::Creator,
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));

@@ -5,26 +5,26 @@
 # RUN: ld.lld --build-id %t -o %t2
 # RUN: llvm-readobj -S %t2 | FileCheck -check-prefix=ALIGN %s
 
-# RUN: ld.lld --build-id %t -o %t2 -threads
+# RUN: ld.lld --build-id %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
-# RUN: ld.lld --build-id=fast %t -o %t2 -threads
+# RUN: ld.lld --build-id=fast %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
-# RUN: ld.lld --build-id %t -o %t2 -no-threads
+# RUN: ld.lld --build-id %t -o %t2 --threads=1
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
 
-# RUN: ld.lld --build-id=md5 %t -o %t2 -threads
+# RUN: ld.lld --build-id=md5 %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=MD5 %s
-# RUN: ld.lld --build-id=md5 %t -o %t2 -no-threads
+# RUN: ld.lld --build-id=md5 %t -o %t2 --threads=1
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=MD5 %s
 
-# RUN: ld.lld --build-id=sha1 %t -o %t2 -threads
+# RUN: ld.lld --build-id=sha1 %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
-# RUN: ld.lld --build-id=sha1 %t -o %t2 -no-threads
+# RUN: ld.lld --build-id=sha1 %t -o %t2 --threads=1
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 
-# RUN: ld.lld --build-id=tree %t -o %t2 -threads
+# RUN: ld.lld --build-id=tree %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
-# RUN: ld.lld --build-id=tree %t -o %t2 -no-threads
+# RUN: ld.lld --build-id=tree %t -o %t2 --threads=1
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 
 # RUN: ld.lld --build-id=uuid %t -o %t2

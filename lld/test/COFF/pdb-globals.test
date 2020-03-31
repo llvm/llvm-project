@@ -2,9 +2,9 @@ RUN: yaml2obj %S/Inputs/pdb-globals.yaml > %t.obj
 RUN: lld-link /debug /nodefaultlib /entry:main /out:%t.exe /pdb:%t.pdb %t.obj
 RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
 
-RUN: lld-link /debug /nodefaultlib /entry:main /out:%t.exe /pdb:%t.pdb %t.obj /threads
+RUN: lld-link /debug /nodefaultlib /entry:main /out:%t.exe /pdb:%t.pdb %t.obj /threads:1
 RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
-RUN: lld-link /debug /nodefaultlib /entry:main /out:%t.exe /pdb:%t.pdb %t.obj /threads:no
+RUN: lld-link /debug /nodefaultlib /entry:main /out:%t.exe /pdb:%t.pdb %t.obj /threads:2
 RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
 
 # Test that we correctly distribute symbols between the globals and module
