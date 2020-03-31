@@ -8,6 +8,7 @@ add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
   TypeSystemClang.cpp
+  TypeSystemSwiftTypeRef.cpp
   ClangASTImporter.cpp
   ClangASTMetadata.cpp
   ClangExternalASTSourceCallbacks.cpp

@@ -20,6 +20,7 @@
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
@@ -150,6 +151,7 @@ public:
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
+  CompilerType GetTypeFromMangledTypename(ConstString mangled_typename);
 
   // PluginInterface functions
   ConstString GetPluginName() override;
@@ -355,6 +357,7 @@ public:
 
 private:
   void *ReconstructType(void *type);
+  const char *AsMangledName(void *opaque_type);
 
   SwiftASTContext *m_swift_ast_context = nullptr;
 };
