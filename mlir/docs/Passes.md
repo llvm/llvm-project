@@ -4,21 +4,21 @@ This document describes the available MLIR passes and their contracts.
 
 [TOC]
 
-## Affine control lowering (`-lower-affine`)
+## Affine dialect lowering (`-lower-affine`)
 
-Convert operations related to affine control into a graph of blocks using
-operations from the standard dialect.
+Convert operations from the affine dialect into operations from the loop and
+standard dialects.
 
-Loop statements are converted to a subgraph of blocks (initialization, condition
-checking, subgraph of body blocks) with loop induction variable being passed as
-the block argument of the condition checking block. Conditional statements are
-converted to a subgraph of blocks (chain of condition checking with
-short-circuit logic, subgraphs of 'then' and 'else' body blocks). `affine.apply`
-operations are converted into sequences of primitive arithmetic operations that
-have the same effect, using operands of the `index` type. Consequently, named
-maps and sets may be removed from the module.
+`affine.for` operations are converted to `loop.for` operations that are free of
+certain structural restrictions (on their bounds and step). `affine.if` is
+similarly converted to the `loop.if` operation. `affine.apply` operations are
+converted into sequences of primitive arithmetic operations from the standard
+dialect that have the same effect, using operands of the `index` type.
+Consequently, named maps and sets thare are no longer in use may be removed from
+the module.
 
-For example, `%r = affine.apply (d0, d1)[s0] -> (d0 + 2*d1 + s0)(%d0, %d1)[%s0]`
+For example, `%r = affine.apply affine_map<(d0, d1)[s0] -> (d0 + 2*d1 +
+s0)>(%d0, %d1)[%s0]`
 can be converted into:
 
 ```mlir

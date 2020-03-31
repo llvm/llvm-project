@@ -597,4 +597,4 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createLowerAffinePass() {
 
 static PassRegistration<LowerAffinePass>
     pass("lower-affine",
-         "Lower If, For, AffineApply operations to primitive equivalents");
+         "Lower affine dialect operations to loop/standard dialect ones");
