@@ -1017,7 +1017,7 @@ multiclass VectorRounding<Instruction insn, TypedReg tr> {
 
 let Predicates = [FeatureVector] in {
   // Add.
-  let Uses = [FPC], mayRaiseFPException = 1 in {
+  let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
     def VFA   : BinaryVRRcFloatGeneric<"vfa", 0xE7E3>;
     def VFADB : BinaryVRRc<"vfadb", 0xE7E3, any_fadd, v128db, v128db, 3, 0>;
     def WFADB : BinaryVRRc<"wfadb", 0xE7E3, any_fadd, v64db, v64db, 3, 8>;
@@ -1225,7 +1225,7 @@ let Predicates = [FeatureVector] in {
   }
 
   // Multiply.
-  let Uses = [FPC], mayRaiseFPException = 1 in {
+  let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
     def VFM   : BinaryVRRcFloatGeneric<"vfm", 0xE7E7>;
     def VFMDB : BinaryVRRc<"vfmdb", 0xE7E7, any_fmul, v128db, v128db, 3, 0>;
     def WFMDB : BinaryVRRc<"wfmdb", 0xE7E7, any_fmul, v64db, v64db, 3, 8>;
