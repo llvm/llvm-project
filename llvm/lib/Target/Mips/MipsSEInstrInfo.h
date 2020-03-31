@@ -62,6 +62,8 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  bool isBranchWithImm(unsigned Opc) const override;
+
   unsigned getOppositeBranchOpc(unsigned Opc) const override;
 
   /// Adjust SP by Amount bytes.
