@@ -147,6 +147,27 @@ Example 4 - CODE and DATA prefixes:
   bar
   6295592 4
 
+Example 5 - path-style options:
+
+This example uses the same source file as above, but the source file's
+full path is /tmp/foo/test.cpp and is compiled as follows. The first case
+shows the default absolute path, the second --basenames, and the third
+shows --relativenames.
+
+.. code-block:: console
+  $ pwd
+  /tmp
+  $ clang -g foo/test.cpp -o test.elf
+  $ llvm-symbolizer --obj=test.elf 0x4004a0 
+  main
+  /tmp/foo/test.cpp:15:0
+  $ llvm-symbolizer --obj=test.elf 0x4004a0 --basenames
+  main
+  test.cpp:15:0
+  $ llvm-symbolizer --obj=test.elf 0x4004a0 --relativenames
+  main
+  foo/test.cpp:15:0
+   
 OPTIONS
 -------
 
@@ -158,8 +179,15 @@ OPTIONS
 
 .. option:: --basenames, -s
 
-  Strip directories when printing the file path.
+  Print just the file's name without any directories, instead of the
+  absolute path.
 
+.. option:: --relativenames
+
+  Print the file's path relative to the compilation directory, instead
+  of the absolute path. If the command-line to the compiler included
+  the full path, this will be the same as the default.
+  
 .. _llvm-symbolizer-opt-C:
 
 .. option:: --demangle, -C

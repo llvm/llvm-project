@@ -77,6 +77,11 @@ static cl::opt<bool> ClBasenames("basenames", cl::init(false),
 static cl::alias ClBasenamesShort("s", cl::desc("Alias for -basenames"),
                                   cl::NotHidden, cl::aliasopt(ClBasenames));
 
+// -relativenames
+static cl::opt<bool>
+    ClRelativenames("relativenames", cl::init(false),
+                    cl::desc("Strip the compilation directory from paths"));
+
 // -demangle, -C, -no-demangle
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
@@ -310,8 +315,12 @@ int main(int argc, char **argv) {
   Opts.DWPName = ClDwpName;
   Opts.DebugFileDirectory = ClDebugFileDirectory;
   Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
-  if (ClBasenames)
+  // If both --basenames and --relativenames are specified then pick the last
+  // one.
+  if (ClBasenames.getPosition() > ClRelativenames.getPosition())
     Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::BaseNameOnly;
+  else if (ClRelativenames)
+    Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath;
 
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {
