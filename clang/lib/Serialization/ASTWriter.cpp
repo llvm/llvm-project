@@ -6379,7 +6379,6 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
   Record.push_back(C->varlist_size());
   Record.push_back(C->getNumLoops());
   Record.AddSourceLocation(C->getLParenLoc());
-  Record.AddStmt(C->getModifier());
   Record.push_back(C->getDependencyKind());
   Record.AddSourceLocation(C->getDependencyLoc());
   Record.AddSourceLocation(C->getColonLoc());

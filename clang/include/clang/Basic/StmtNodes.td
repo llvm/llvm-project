@@ -70,7 +70,6 @@ def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
 def OMPArraySectionExpr : StmtNode<Expr>;
-def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
 def CastExpr : StmtNode<Expr, 1>;

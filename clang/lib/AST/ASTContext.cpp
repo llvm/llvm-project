@@ -1389,7 +1389,6 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.OpenMP) {
     InitBuiltinType(OMPArraySectionTy, BuiltinType::OMPArraySection);
     InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
-    InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
   }
 
   // C99 6.2.5p11.
