@@ -3717,8 +3717,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   int CorrectedNumVAddrs = NumVAddrs;
 
   // Optimize _L to _LZ when _L is zero
-  if (const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-        AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
+  if (AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
     const ConstantFP *ConstantLod;
     const int LodIdx = AddrIdx + NumVAddrs - 1;
 
@@ -3736,8 +3735,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   // Optimize _mip away, when 'lod' is zero
-  if (const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
-        AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
+  if (AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
     int64_t ConstantLod;
     const int LodIdx = AddrIdx + NumVAddrs - 1;
 
