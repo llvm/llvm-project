@@ -262,5 +262,3 @@ void CSE::runOnOperation() {
 }
 
 std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }
-
-static PassRegistration<CSE> pass("cse", "Eliminate common sub-expressions");

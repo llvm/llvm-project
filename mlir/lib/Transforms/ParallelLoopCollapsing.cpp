@@ -15,8 +15,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-#define PASS_NAME "parallel-loop-collapsing"
-#define DEBUG_TYPE PASS_NAME
+#define DEBUG_TYPE "parallel-loop-collapsing"
 
 using namespace mlir;
 
@@ -64,6 +63,3 @@ struct ParallelLoopCollapsing : public OperationPass<ParallelLoopCollapsing> {
 std::unique_ptr<Pass> mlir::createParallelLoopCollapsingPass() {
   return std::make_unique<ParallelLoopCollapsing>();
 }
-
-static PassRegistration<ParallelLoopCollapsing>
-    reg(PASS_NAME, "collapse parallel loops to use less induction variables.");

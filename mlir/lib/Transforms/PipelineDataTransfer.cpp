@@ -366,8 +366,3 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     return;
   }
 }
-
-static PassRegistration<PipelineDataTransfer> pass(
-    "affine-pipeline-data-transfer",
-    "Pipeline non-blocking data transfers between explicitly managed levels of "
-    "the memory hierarchy");

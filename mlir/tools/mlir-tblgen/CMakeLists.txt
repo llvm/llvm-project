@@ -13,6 +13,7 @@ add_tablegen(mlir-tblgen MLIR
   OpDocGen.cpp
   OpFormatGen.cpp
   OpInterfacesGen.cpp
+  PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
   StructsGen.cpp

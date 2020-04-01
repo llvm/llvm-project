@@ -121,7 +121,3 @@ void LoopInvariantCodeMotion::runOnOperation() {
 std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }
-
-static PassRegistration<LoopInvariantCodeMotion>
-    pass("loop-invariant-code-motion",
-         "Hoist loop invariant instructions outside of the loop");

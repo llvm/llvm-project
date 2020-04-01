@@ -40,6 +40,3 @@ struct Canonicalizer : public OperationPass<Canonicalizer> {
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
   return std::make_unique<Canonicalizer>();
 }
-
-static PassRegistration<Canonicalizer> pass("canonicalize",
-                                            "Canonicalize operations");

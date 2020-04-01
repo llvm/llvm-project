@@ -89,7 +89,3 @@ public:
 std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }
-
-static PassRegistration<LoopCoalescingPass>
-    reg(PASS_NAME,
-        "coalesce nested loops with independent bounds into a single loop");
