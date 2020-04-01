@@ -10,7 +10,7 @@
 // The range of addresses covered by the table entry is terminated by the
 // next table entry. This means that an executable section without a .ARM.exidx
 // section does not terminate the range of addresses. To fix this the linker
-// synthesises an EXIDX_CANTUNWIND entry for each section wihout a .ARM.exidx
+// synthesises an EXIDX_CANTUNWIND entry for each section without a .ARM.exidx
 // section.
 
         .syntax unified

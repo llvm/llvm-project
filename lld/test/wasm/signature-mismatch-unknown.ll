@@ -4,7 +4,7 @@
 ; RUN: wasm-ld --fatal-warnings -o %t.wasm %t.main.o %t.ret32.o
 
 ; Also test the case where there are two different object files that contains
-; referneces ret32:
+; references ret32:
 ; %t.main.o: Does not call ret32 directly; used the wrong signature.
 ; %t.call-ret32.o: Calls ret32 directly; uses the correct signature.
 ; RUN: llc -filetype=obj %p/Inputs/call-ret32.ll -o %t.call-ret32.o

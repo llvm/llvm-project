@@ -16,7 +16,7 @@
 
 # A caller with a stack that is small enough that the addis instruction
 # from the split-stack prologue is unneeded, and after the prologue adjustment
-# the stack size still fits whithin 16 bits.
+# the stack size still fits within 16 bits.
         .p2align    2
         .global caller_small_stack
         .type caller_small_stack, @function
@@ -56,7 +56,7 @@ caller_small_stack:
 # CHECK-NEXT:  cmpld 7, 12, 0
 # CHECK-NEXT:  bt-  28, 0x10010204
 
-# A caller that has a stack size that fits whithin 16 bits, but the adjusted
+# A caller that has a stack size that fits within 16 bits, but the adjusted
 # stack size after prologue adjustment now overflows 16 bits needing both addis
 # and addi instructions.
         .p2align    2

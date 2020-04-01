@@ -364,7 +364,7 @@ private:
 
   // Try to merge two GOTs. In case of success the `Dst` contains
   // result of merging and the function returns true. In case of
-  // ovwerflow the `Dst` is unchanged and the function returns false.
+  // overflow the `Dst` is unchanged and the function returns false.
   bool tryMergeGots(FileGot & dst, FileGot & src, bool isPrimary);
 };
 
