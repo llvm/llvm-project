@@ -268,38 +268,10 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 HIPToolChain::HIPToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ToolChain &HostTC, const ArgList &Args)
-    : ToolChain(D, Triple, Args), HostTC(HostTC) {
+    : AMDGPUToolChain(D, Triple, Args), HostTC(HostTC) {
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-}
-
-// FIXME: Duplicated in AMDGPUToolChain
-llvm::DenormalMode HIPToolChain::getDefaultDenormalModeForType(
-    const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
-    const llvm::fltSemantics *FPType) const {
-  // Denormals should always be enabled for f16 and f64.
-  if (!FPType || FPType != &llvm::APFloat::IEEEsingle())
-    return llvm::DenormalMode::getIEEE();
-
-  if (DeviceOffloadKind == Action::OFK_Cuda) {
-    if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
-        DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                           options::OPT_fno_cuda_flush_denormals_to_zero,
-                           false))
-      return llvm::DenormalMode::getPreserveSign();
-  }
-
-  const StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
-  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
-
-  // TODO: There are way too many flags that change this. Do we need to check
-  // them all?
-  bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
-    !AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(Kind);
-  // Outputs are flushed to zero, preserving sign
-  return DAZ ? llvm::DenormalMode::getPreserveSign() :
-               llvm::DenormalMode::getIEEE();
 }
 
 void HIPToolChain::addClangTargetOptions(
