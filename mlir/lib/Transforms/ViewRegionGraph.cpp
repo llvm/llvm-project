@@ -80,6 +80,3 @@ mlir::createPrintCFGGraphPass(raw_ostream &os, bool shortNames,
                               const Twine &title) {
   return std::make_unique<PrintCFGPass>(os, shortNames, title);
 }
-
-static PassRegistration<PrintCFGPass> pass("print-cfg-graph",
-                                           "Print CFG graph per Function");

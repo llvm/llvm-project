@@ -23,6 +23,7 @@ add_mlir_library(MLIRTransforms
 
   DEPENDS
   MLIRStandardOpsIncGen
+  MLIRTransformsPassIncGen
   )
 
 target_link_libraries(MLIRTransforms
