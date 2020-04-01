@@ -59,6 +59,6 @@ caller:
 # CHECK-NEXT: addis 12, 1, -32768
 # CHECK-NEXT: nop
 # CHECK-NEXT: cmpld 7, 12, 0
-# CHECK-NEXT: bt- 28, .+36
+# CHECK-NEXT: bt- 28, 0x10010204
 
 .section        .note.GNU-split-stack,"",@progbits
