@@ -11328,20 +11328,21 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
 
 // X86 has dedicated pack instructions that can handle specific truncation
 // operations: PACKSS and PACKUS.
+// TODO: Add support for matching multiple PACKSS/PACKUS stages.
 static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
                                  unsigned &PackOpcode, ArrayRef<int> TargetMask,
                                  SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   unsigned NumElts = VT.getVectorNumElements();
   unsigned BitSize = VT.getScalarSizeInBits();
-  MVT PackSVT = MVT::getIntegerVT(BitSize * 2);
-  MVT PackVT = MVT::getVectorVT(PackSVT, NumElts / 2);
 
-  auto MatchPACK = [&](SDValue N1, SDValue N2) {
+  auto MatchPACK = [&](SDValue N1, SDValue N2, MVT PackVT) {
+    unsigned NumSrcBits = PackVT.getScalarSizeInBits();
+    unsigned NumPackedBits = NumSrcBits - BitSize;
     SDValue VV1 = DAG.getBitcast(PackVT, N1);
     SDValue VV2 = DAG.getBitcast(PackVT, N2);
-    if (Subtarget.hasSSE41() || PackSVT == MVT::i16) {
-      APInt ZeroMask = APInt::getHighBitsSet(BitSize * 2, BitSize);
+    if (Subtarget.hasSSE41() || BitSize == 8) {
+      APInt ZeroMask = APInt::getHighBitsSet(NumSrcBits, NumPackedBits);
       if ((N1.isUndef() || DAG.MaskedValueIsZero(VV1, ZeroMask)) &&
           (N2.isUndef() || DAG.MaskedValueIsZero(VV2, ZeroMask))) {
         V1 = VV1;
@@ -11351,8 +11352,8 @@ static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
         return true;
       }
     }
-    if ((N1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
-        (N2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize)) {
+    if ((N1.isUndef() || DAG.ComputeNumSignBits(VV1) > NumPackedBits) &&
+        (N2.isUndef() || DAG.ComputeNumSignBits(VV2) > NumPackedBits)) {
       V1 = VV1;
       V2 = VV2;
       SrcVT = PackVT;
@@ -11362,18 +11363,21 @@ static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
     return false;
   };
 
+  MVT PackSVT = MVT::getIntegerVT(BitSize * 2);
+  MVT PackVT = MVT::getVectorVT(PackSVT, NumElts / 2);
+
   // Try binary shuffle.
   SmallVector<int, 32> BinaryMask;
   createPackShuffleMask(VT, BinaryMask, false);
   if (isTargetShuffleEquivalent(TargetMask, BinaryMask, V1, V2))
-    if (MatchPACK(V1, V2))
+    if (MatchPACK(V1, V2, PackVT))
       return true;
 
   // Try unary shuffle.
   SmallVector<int, 32> UnaryMask;
   createPackShuffleMask(VT, UnaryMask, true);
   if (isTargetShuffleEquivalent(TargetMask, UnaryMask, V1))
-    if (MatchPACK(V1, V1))
+    if (MatchPACK(V1, V1, PackVT))
       return true;
 
   return false;
