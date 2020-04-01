@@ -42,10 +42,8 @@ define i32 @ptestz_128_invert1(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_128_invert1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vptest %xmm1, %xmm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vptest %xmm0, %xmm1
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = xor <2 x i64> %d, <i64 -1, i64 -1>
   %t2 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %c, <2 x i64> %t1)
@@ -58,11 +56,8 @@ define i32 @ptestz_256_invert1(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_invert1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; CHECK-NEXT:    vptest %ymm1, %ymm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vptest %ymm0, %ymm1
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t1 = xor <4 x i64> %d, <i64 -1, i64 -1, i64 -1, i64 -1>
