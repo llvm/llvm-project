@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "GISelMITest.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
+
+#define DEBUG_TYPE "legalizer-test"
 
 using namespace LegalizeActions;
 using namespace LegalizeMutations;
@@ -60,9 +63,10 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
     return;
 
   ALegalizerInfo LI(MF->getSubtarget());
+  LostDebugLocObserver LocObserver(DEBUG_TYPE);
 
-  Legalizer::MFResult Result =
-      Legalizer::legalizeMachineFunction(*MF, LI, {}, B);
+  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -98,6 +102,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
     return;
 
   ALegalizerInfo LI(MF->getSubtarget());
+  LostDebugLocObserver LocObserver(DEBUG_TYPE);
 
   // The events here unfold as follows:
   // 1. First, the function is scanned pre-forming the worklist of artifacts:
@@ -153,8 +158,8 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   //  pair(s) of artifacts that could be immediately combined out. After that
   //  the process follows def-use chains, making them shorter at each step, thus
   //  combining everything that can be combined in O(n) time.
-  Legalizer::MFResult Result =
-      Legalizer::legalizeMachineFunction(*MF, LI, {}, B);
+  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -191,9 +196,10 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
     return;
 
   ALegalizerInfo LI(MF->getSubtarget());
+  LostDebugLocObserver LocObserver(DEBUG_TYPE);
 
-  Legalizer::MFResult Result =
-      Legalizer::legalizeMachineFunction(*MF, LI, {}, B);
+  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
