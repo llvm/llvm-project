@@ -1943,7 +1943,8 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
           if (isa<ArraySubscriptExpr>(EI->getAssociatedExpression()) ||
               isa<OMPArraySectionExpr>(EI->getAssociatedExpression()) ||
-              isa<MemberExpr>(EI->getAssociatedExpression())) {
+              isa<MemberExpr>(EI->getAssociatedExpression()) ||
+              isa<OMPArrayShapingExpr>(EI->getAssociatedExpression())) {
             IsVariableAssociatedWithSection = true;
             // There is nothing more we need to know about this variable.
             return true;
@@ -3225,7 +3226,7 @@ public:
                        StackComponents,
                    OpenMPClauseKind) {
                   // Variable is used if it has been marked as an array, array
-                  // section or the variable iself.
+                  // section, array shaping or the variable iself.
                   return StackComponents.size() == 1 ||
                          std::all_of(
                              std::next(StackComponents.rbegin()),
@@ -3235,6 +3236,8 @@ public:
                                return MC.getAssociatedDeclaration() ==
                                           nullptr &&
                                       (isa<OMPArraySectionExpr>(
+                                           MC.getAssociatedExpression()) ||
+                                       isa<OMPArrayShapingExpr>(
                                            MC.getAssociatedExpression()) ||
                                        isa<ArraySubscriptExpr>(
                                            MC.getAssociatedExpression()));
@@ -3393,8 +3396,10 @@ public:
                   // Do both expressions have the same kind?
                   if (CCI->getAssociatedExpression()->getStmtClass() !=
                       SC.getAssociatedExpression()->getStmtClass())
-                    if (!(isa<OMPArraySectionExpr>(
-                              SC.getAssociatedExpression()) &&
+                    if (!((isa<OMPArraySectionExpr>(
+                               SC.getAssociatedExpression()) ||
+                           isa<OMPArrayShapingExpr>(
+                               SC.getAssociatedExpression())) &&
                           isa<ArraySubscriptExpr>(
                               CCI->getAssociatedExpression())))
                       return false;
@@ -16284,6 +16289,15 @@ public:
     Components.emplace_back(OASE, nullptr);
     return RelevantExpr || Visit(E);
   }
+  bool VisitOMPArrayShapingExpr(OMPArrayShapingExpr *E) {
+    Expr *Base = E->getBase();
+
+    // Record the component - we don't have any declaration associated.
+    Components.emplace_back(E, nullptr);
+
+    return Visit(Base->IgnoreParenImpCasts());
+  }
+
   bool VisitUnaryOperator(UnaryOperator *UO) {
     if (SemaRef.getLangOpts().OpenMP < 50 || !UO->isLValue() ||
         UO->getOpcode() != UO_Deref) {
@@ -16409,9 +16423,11 @@ static bool checkMapConflicts(
           //  variable in map clauses of the same construct.
           if (CurrentRegionOnly &&
               (isa<ArraySubscriptExpr>(CI->getAssociatedExpression()) ||
-               isa<OMPArraySectionExpr>(CI->getAssociatedExpression())) &&
+               isa<OMPArraySectionExpr>(CI->getAssociatedExpression()) ||
+               isa<OMPArrayShapingExpr>(CI->getAssociatedExpression())) &&
               (isa<ArraySubscriptExpr>(SI->getAssociatedExpression()) ||
-               isa<OMPArraySectionExpr>(SI->getAssociatedExpression()))) {
+               isa<OMPArraySectionExpr>(SI->getAssociatedExpression()) ||
+               isa<OMPArrayShapingExpr>(SI->getAssociatedExpression()))) {
             SemaRef.Diag(CI->getAssociatedExpression()->getExprLoc(),
                          diag::err_omp_multiple_array_items_in_map_clause)
                 << CI->getAssociatedExpression()->getSourceRange();
@@ -16443,6 +16459,9 @@ static bool checkMapConflicts(
             const Expr *E = OASE->getBase()->IgnoreParenImpCasts();
             Type =
                 OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+          } else if (const auto *OASE = dyn_cast<OMPArrayShapingExpr>(
+                         SI->getAssociatedExpression())) {
+            Type = OASE->getBase()->getType()->getPointeeType();
           }
           if (Type.isNull() || Type->isAnyPointerType() ||
               checkArrayExpressionDoesNotReferToWholeSize(
@@ -16905,6 +16924,7 @@ static void checkMappableExpressionList(
     QualType Type;
     auto *ASE = dyn_cast<ArraySubscriptExpr>(VE->IgnoreParens());
     auto *OASE = dyn_cast<OMPArraySectionExpr>(VE->IgnoreParens());
+    auto *OAShE = dyn_cast<OMPArrayShapingExpr>(VE->IgnoreParens());
     if (ASE) {
       Type = ASE->getType().getNonReferenceType();
     } else if (OASE) {
@@ -16915,6 +16935,8 @@ static void checkMappableExpressionList(
       else
         Type = BaseType->getPointeeType();
       Type = Type.getNonReferenceType();
+    } else if (OAShE) {
+      Type = OAShE->getBase()->getType()->getPointeeType();
     } else {
       Type = VE->getType();
     }
