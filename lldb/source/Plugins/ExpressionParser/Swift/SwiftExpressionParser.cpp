@@ -250,7 +250,7 @@ public:
       // must be moved to the source-file level to be legal.  But we
       // don't want to register them with lldb unless they are of the
       // kind lldb explicitly wants to globalize.
-      if (shouldGlobalize(value_decl->getBaseName().getIdentifier(),
+      if (shouldGlobalize(value_decl->getBaseIdentifier(),
                           value_decl->getKind()))
         m_staged_decls.AddDecl(value_decl, false, ConstString());
     }
