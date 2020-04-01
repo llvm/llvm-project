@@ -597,6 +597,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
     NewExt->insertAfter(OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
+    IC.eraseInstFromFunction(*OldExt);
   }
 }
 
