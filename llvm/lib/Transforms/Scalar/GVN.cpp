@@ -289,7 +289,7 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     e.commutative = true;
   }
 
-  if (CmpInst *C = dyn_cast<CmpInst>(I)) {
+  if (auto *C = dyn_cast<CmpInst>(I)) {
     // Sort the operand value numbers so x<y and y>x get the same value number.
     CmpInst::Predicate Predicate = C->getPredicate();
     if (e.varargs[0] > e.varargs[1]) {
@@ -298,10 +298,11 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     }
     e.opcode = (C->getOpcode() << 8) | Predicate;
     e.commutative = true;
-  } else if (InsertValueInst *E = dyn_cast<InsertValueInst>(I)) {
-    for (InsertValueInst::idx_iterator II = E->idx_begin(), IE = E->idx_end();
-         II != IE; ++II)
-      e.varargs.push_back(*II);
+  } else if (auto *E = dyn_cast<InsertValueInst>(I)) {
+    e.varargs.append(E->idx_begin(), E->idx_end());
+  } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+    ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
+    e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
   }
 
   return e;
@@ -1732,7 +1733,8 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
     // instead of value numbers. Those index numbers should not be
     // translated.
     if ((i > 1 && Exp.opcode == Instruction::InsertValue) ||
-        (i > 0 && Exp.opcode == Instruction::ExtractValue))
+        (i > 0 && Exp.opcode == Instruction::ExtractValue) ||
+        (i > 1 && Exp.opcode == Instruction::ShuffleVector))
       continue;
     Exp.varargs[i] = phiTranslate(Pred, PhiBlock, Exp.varargs[i], Gvn);
   }

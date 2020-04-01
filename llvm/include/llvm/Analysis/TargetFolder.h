@@ -259,7 +259,7 @@ public:
   }
 
   Constant *CreateShuffleVector(Constant *V1, Constant *V2,
-                                Constant *Mask) const override {
+                                ArrayRef<int> Mask) const override {
     return Fold(ConstantExpr::getShuffleVector(V1, V2, Mask));
   }
 

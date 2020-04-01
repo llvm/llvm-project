@@ -1534,9 +1534,10 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // narrow binop on each pair of the source operands followed by concatenation
   // of the results.
   Value *L0, *L1, *R0, *R1;
-  Constant *Mask;
-  if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Constant(Mask))) &&
-      match(RHS, m_ShuffleVector(m_Value(R0), m_Value(R1), m_Specific(Mask))) &&
+  ArrayRef<int> Mask;
+  if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
+      match(RHS,
+            m_ShuffleVector(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
       LHS->hasOneUse() && RHS->hasOneUse() &&
       cast<ShuffleVectorInst>(LHS)->isConcat() &&
       cast<ShuffleVectorInst>(RHS)->isConcat()) {
@@ -1560,7 +1561,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   if (!isSafeToSpeculativelyExecute(&Inst))
     return nullptr;
 
-  auto createBinOpShuffle = [&](Value *X, Value *Y, Constant *M) {
+  auto createBinOpShuffle = [&](Value *X, Value *Y, ArrayRef<int> M) {
     Value *XY = Builder.CreateBinOp(Opcode, X, Y);
     if (auto *BO = dyn_cast<BinaryOperator>(XY))
       BO->copyIRFlags(&Inst);
@@ -1570,8 +1571,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
   Value *V1, *V2;
-  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(Mask))) &&
-      match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(Mask))) &&
+  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
+      match(RHS,
+            m_ShuffleVector(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
       V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
@@ -1581,17 +1583,19 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of a commutative binop are select-shuffles that use the
   // same mask with commuted operands, the shuffles are unnecessary.
   if (Inst.isCommutative() &&
-      match(LHS, m_ShuffleVector(m_Value(V1), m_Value(V2), m_Constant(Mask))) &&
+      match(LHS, m_ShuffleVector(m_Value(V1), m_Value(V2), m_Mask(Mask))) &&
       match(RHS, m_ShuffleVector(m_Specific(V2), m_Specific(V1),
-                                 m_Specific(Mask)))) {
+                                 m_SpecificMask(Mask)))) {
     auto *LShuf = cast<ShuffleVectorInst>(LHS);
     auto *RShuf = cast<ShuffleVectorInst>(RHS);
     // TODO: Allow shuffles that contain undefs in the mask?
     //       That is legal, but it reduces undef knowledge.
     // TODO: Allow arbitrary shuffles by shuffling after binop?
     //       That might be legal, but we have to deal with poison.
-    if (LShuf->isSelect() && !LShuf->getMask()->containsUndefElement() &&
-        RShuf->isSelect() && !RShuf->getMask()->containsUndefElement()) {
+    if (LShuf->isSelect() &&
+        !is_contained(LShuf->getShuffleMask(), UndefMaskElem) &&
+        RShuf->isSelect() &&
+        !is_contained(RShuf->getShuffleMask(), UndefMaskElem)) {
       // Example:
       // LHS = shuffle V1, V2, <0, 5, 6, 3>
       // RHS = shuffle V2, V1, <0, 5, 6, 3>
@@ -1608,9 +1612,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // other binops, so they can be folded. It may also enable demanded elements
   // transforms.
   Constant *C;
-  if (match(&Inst, m_c_BinOp(
-          m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(Mask))),
-          m_Constant(C))) &&
+  if (match(&Inst, m_c_BinOp(m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(),
+                                                      m_Mask(Mask))),
+                             m_Constant(C))) &&
       V1->getType()->getVectorNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
@@ -1621,8 +1625,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     // reorder is not possible. A 1-to-1 mapping is not required. Example:
     // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
-    SmallVector<int, 16> ShMask;
-    ShuffleVectorInst::getShuffleMask(Mask, ShMask);
+    ArrayRef<int> ShMask = Mask;
     unsigned SrcVecNumElts = V1->getType()->getVectorNumElements();
     UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
     SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
@@ -1687,12 +1690,12 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
       std::swap(LHS, RHS);
 
     Value *X;
-    Constant *MaskC;
-    const APInt *SplatIndex;
+    ArrayRef<int> MaskC;
+    int SplatIndex;
     BinaryOperator *BO;
     if (!match(LHS, m_OneUse(m_ShuffleVector(m_Value(X), m_Undef(),
-                                             m_Constant(MaskC)))) ||
-        !match(MaskC, m_APIntAllowUndef(SplatIndex)) ||
+                                             m_Mask(MaskC)))) ||
+        !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
         X->getType() != Inst.getType() || !match(RHS, m_OneUse(m_BinOp(BO))) ||
         BO->getOpcode() != Opcode)
       return nullptr;
@@ -1701,10 +1704,10 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     //        moving 'Y' before the splat shuffle, we are implicitly assuming
     //        that it is not undef/poison at the splat index.
     Value *Y, *OtherOp;
-    if (isSplatValue(BO->getOperand(0), SplatIndex->getZExtValue())) {
+    if (isSplatValue(BO->getOperand(0), SplatIndex)) {
       Y = BO->getOperand(0);
       OtherOp = BO->getOperand(1);
-    } else if (isSplatValue(BO->getOperand(1), SplatIndex->getZExtValue())) {
+    } else if (isSplatValue(BO->getOperand(1), SplatIndex)) {
       Y = BO->getOperand(1);
       OtherOp = BO->getOperand(0);
     } else {
@@ -1716,7 +1719,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     // bo (splat X), (bo Y, OtherOp) --> bo (splat (bo X, Y)), OtherOp
     Value *NewBO = Builder.CreateBinOp(Opcode, X, Y);
     UndefValue *Undef = UndefValue::get(Inst.getType());
-    Constant *NewMask = ConstantInt::get(MaskC->getType(), *SplatIndex);
+    SmallVector<int, 8> NewMask(MaskC.size(), SplatIndex);
     Value *NewSplat = Builder.CreateShuffleVector(NewBO, Undef, NewMask);
     Instruction *R = BinaryOperator::Create(Opcode, NewSplat, OtherOp);
 

@@ -6257,7 +6257,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 }
 
 static bool isBroadcastShuffle(ShuffleVectorInst *SVI) {
-  SmallVector<int, 16> Mask(SVI->getShuffleMask());
+  ArrayRef<int> Mask(SVI->getShuffleMask());
   int SplatElem = -1;
   for (unsigned i = 0; i < Mask.size(); ++i) {
     if (SplatElem != -1 && Mask[i] != -1 && Mask[i] != SplatElem)
@@ -6307,7 +6307,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
       assert(InsertPt != UserBB->end());
       InsertedShuffle =
           new ShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                SVI->getOperand(2), "", &*InsertPt);
+                                SVI->getShuffleMask(), "", &*InsertPt);
       InsertedShuffle->setDebugLoc(SVI->getDebugLoc());
     }
 

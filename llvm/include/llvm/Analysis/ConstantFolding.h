@@ -119,10 +119,11 @@ Constant *ConstantFoldInsertElementInstruction(Constant *Val,
 Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 
 /// Attempt to constant fold a shufflevector instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
+/// specified operands and mask.  See class ShuffleVectorInst for a description
+/// of the mask representation. The constant result is returned if successful;
+/// if not, null is returned.
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
-                                               Constant *Mask);
+                                               ArrayRef<int> Mask);
 
 /// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
 /// produce if it is constant and determinable.  If this is not determinable,
