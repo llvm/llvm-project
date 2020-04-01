@@ -8133,7 +8133,7 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 
     // FIXME: 256-bit vector instructions don't require a strict alignment,
     // improve this code to support it better.
-    unsigned RequiredAlign = VT.getSizeInBits()/8;
+    Align RequiredAlign(VT.getSizeInBits() / 8);
     SDValue Chain = LD->getChain();
     // Make sure the stack object alignment is at least 16 or 32.
     MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
@@ -8152,9 +8152,9 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
     // Ptr + (Offset & ~15).
     if (Offset < 0)
       return SDValue();
-    if ((Offset % RequiredAlign) & 3)
+    if ((Offset % RequiredAlign.value()) & 3)
       return SDValue();
-    int64_t StartOffset = Offset & ~int64_t(RequiredAlign - 1);
+    int64_t StartOffset = Offset & ~int64_t(RequiredAlign.value() - 1);
     if (StartOffset) {
       SDLoc DL(Ptr);
       Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
