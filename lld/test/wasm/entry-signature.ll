@@ -1,4 +1,4 @@
-; Verify that the entry point signauture can be flexible.
+; Verify that the entry point signature can be flexible.
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -o %t1.wasm %t.o
 

@@ -95,7 +95,7 @@ k:
 // OutputRelocs-NEXT: Offset Info Type Symbol's Value Symbol's Name + Addend
 // OutputRelocs-NEXT: R_PPC64_DTPMOD64
 
-// Check that the got has 3 entries, 1 for the TOC and 1 stucture of 2 entries
+// Check that the got has 3 entries, 1 for the TOC and 1 structure of 2 entries
 // for the tls variables. Also verify the address so we can check the offsets
 // we calculate for each relocation type.
 // CheckGot: got          00000018 0000000000020100

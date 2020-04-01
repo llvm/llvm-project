@@ -61,7 +61,7 @@ public:
 
   /// Used by GOTPass to update GOT References.
   void updateReferenceToGOT(const Reference *ref, bool targetNowGOT) override {
-    // If GOT slot was instanciated, transform:
+    // If GOT slot was instantiated, transform:
     //   gotPage21/gotOffset12 -> page21/offset12scale8
     // If GOT slot optimized away, transform:
     //   gotPage21/gotOffset12 -> page21/addOffset12

@@ -1,7 +1,7 @@
 ; Optional linker-synthetic symbols are only created if they are undefined
 ; in the final output.
 ; This test is for a regression where an explicit --export of an lazy archive
-; symbol caused an undefined referece to an optional symbol to occur *after*
+; symbol caused an undefined reference to an optional symbol to occur *after*
 ; the optional symbols were created.
 
 ; RUN: llc -filetype=obj %s -o %t.o
