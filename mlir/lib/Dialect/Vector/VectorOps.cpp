@@ -1524,6 +1524,23 @@ static LogicalResult verify(TupleOp op) { return success(); }
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
+// Eliminates transpose operations, which produce values identical to their
+// input values. This happens when the dimensions of the input vector remain in
+// their original order after the transpose operation.
+OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+  SmallVector<int64_t, 4> transp;
+  getTransp(transp);
+
+  // Check if the permutation of the dimensions contains sequential values:
+  // {0, 1, 2, ...}.
+  for (int64_t i = 0, e = transp.size(); i < e; i++) {
+    if (transp[i] != i)
+      return {};
+  }
+
+  return vector();
+}
+
 static LogicalResult verify(TransposeOp op) {
   VectorType vectorType = op.getVectorType();
   VectorType resultType = op.getResultType();
@@ -1547,6 +1564,10 @@ static LogicalResult verify(TransposeOp op) {
       return op.emitOpError("dimension size mismatch at: ") << i;
   }
   return success();
+}
+
+void TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
+  populateFromInt64AttrArray(transp(), results);
 }
 
 //===----------------------------------------------------------------------===//
