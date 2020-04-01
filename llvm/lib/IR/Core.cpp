@@ -826,6 +826,7 @@ LLVMTypeRef LLVMTypeOf(LLVMValueRef Val) {
 
 LLVMValueKind LLVMGetValueKind(LLVMValueRef Val) {
     switch(unwrap(Val)->getValueID()) {
+#define LLVM_C_API 1
 #define HANDLE_VALUE(Name) \
   case Value::Name##Val: \
     return LLVM##Name##ValueKind;

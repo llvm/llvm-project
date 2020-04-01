@@ -360,6 +360,7 @@ enum Kind {
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
+  kw_dso_local_equivalent,
 
   kw_freeze,
 
