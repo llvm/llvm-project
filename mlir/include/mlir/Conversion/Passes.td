@@ -18,6 +18,53 @@ include "mlir/Pass/PassBase.td"
 def ConvertAffineToStandard : Pass<"lower-affine"> {
   let summary = "Lower Affine operations to a combination of Standard and Loop "
                 "operations";
+  let description = [{
+
+    Convert operations from the affine dialect into operations from the loop and
+    standard dialects.
+
+    `affine.for` operations are converted to `loop.for` operations that are free
+    of certain structural restrictions (on their bounds and step). `affine.if`
+    is similarly converted to the `loop.if` operation. `affine.apply` operations
+    are converted into sequences of primitive arithmetic operations from the
+    standard dialect that have the same effect, using operands of the `index`
+    type. Consequently, named maps and sets thare are no longer in use may be
+    removed from the module.
+
+    For example, `%r = affine.apply affine_map<(d0, d1)[s0] -> (d0 + 2*d1 +
+    s0)>(%d0, %d1)[%s0]`
+    can be converted into:
+
+    ```mlir
+    %d0 = <...>
+    %d1 = <...>
+    %s0 = <...>
+    %0 = constant 2 : index
+    %1 = muli %0, %d1
+    %2 = addi %d0, %1
+    %r = addi %2, %s0
+    ```
+
+    #### Input invariant
+
+    -   no `Tensor` types;
+
+    These restrictions may be lifted in the future.
+
+    #### Output IR
+
+    Functions with `affine.for` and `affine.if` operations eliminated. These
+    functions may contain operations from the Standard dialect in addition to
+    those already present before the pass.
+
+    #### Invariants
+
+    -   Functions without a body are not modified.
+    -   The semantics of the other functions is preserved.
+    -   Individual operations other than those mentioned above are not modified
+        if they do not depend on the loop iterator value or on the result of
+        `affine.apply`.
+  }];
   let constructor = "mlir::createLowerAffinePass()";
 }
 
@@ -152,6 +199,30 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
 def ConvertStandardToLLVM : Pass<"convert-std-to-llvm"> {
   let summary = "Convert scalar and vector operations from the Standard to the "
                 "LLVM dialect";
+  let description = [{
+    Convert standard operations into the LLVM IR dialect operations.
+
+    #### Input invariant
+
+    -   operations including: arithmetic on integers and floats, constants,
+        direct calls, returns and branches;
+    -   no `tensor` types;
+    -   all `vector` are one-dimensional;
+    -   all blocks are reachable by following the successors of the first basic
+        block;
+
+    If other operations are present and their results are required by the LLVM
+    IR dialect operations, the pass will fail.  Any LLVM IR operations or types
+    already present in the IR will be kept as is.
+
+    #### Output IR
+
+    Functions converted to LLVM IR. Function arguments types are converted
+    one-to-one. Function results are converted one-to-one and, in case more than
+    1 value is returned, packed into an LLVM IR struct type. Function calls and
+    returns are updated accordingly. Block argument types are updated to use
+    LLVM IR types.
+  }];
   let constructor = "mlir::createLowerToLLVMPass()";
   let options = [
     Option<"useAlloca", "use-alloca", "bool", /*default=*/"false",

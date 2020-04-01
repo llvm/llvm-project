@@ -32,3 +32,5 @@ add_public_tablegen_target(MLIRLLVMAVX512ConversionsIncGen)
 set(LLVM_TARGET_DEFINITIONS Transforms/Passes.td)
 mlir_tablegen(Transforms/Passes.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIRLLVMPassIncGen)
+
+add_mlir_doc(Transforms/Passes -gen-pass-doc LLVMPasses ./)
