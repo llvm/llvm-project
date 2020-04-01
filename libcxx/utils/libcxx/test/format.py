@@ -125,8 +125,8 @@ class LibcxxTestFormat(object):
             lit_config.fatal('Unsupported RUN line found in test %s' % name)
 
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
-        substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
-                                                               tmpBase)
+        substitutions = lit.TestRunner.getDefaultSubstitutions(
+            test, tmpDir, tmpBase, normalize_slashes=self.execute_external)
 
         # Apply substitutions in FILE_DEPENDENCIES markup
         data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,

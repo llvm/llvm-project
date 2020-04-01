@@ -15,6 +15,7 @@ conformance test suite.
 
 import argparse
 import os
+import posixpath
 import subprocess
 import sys
 
@@ -53,7 +54,7 @@ def main():
     scp = lambda src, dst: ['scp', '-oBatchMode=yes', '-r', src, '{}:{}'.format(args.host, dst)]
 
     # Create a temporary directory where the test will be run
-    tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX')).strip()
+    tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
 
     # Ensure the test dependencies exist and scp them to the temporary directory.
     # Test dependencies can be either files or directories, so the `scp` command
@@ -68,7 +69,7 @@ def main():
     # We know it has been copied to the remote host when we handled the test
     # dependencies above.
     if exe:
-        exe = os.path.join(tmp, os.path.basename(exe))
+        exe = posixpath.join(tmp, os.path.basename(exe))
 
     # If there's an executable, make sure it has 'execute' permissions on the
     # remote host. The host that compiled the executable might not have a notion
