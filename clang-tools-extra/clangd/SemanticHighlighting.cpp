@@ -600,5 +600,31 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
   llvm_unreachable("unhandled HighlightingKind");
 }
 
+std::vector<SemanticTokensEdit>
+diffTokens(llvm::ArrayRef<SemanticToken> Old,
+           llvm::ArrayRef<SemanticToken> New) {
+  // For now, just replace everything from the first-last modification.
+  // FIXME: use a real diff instead, this is bad with include-insertion.
+
+  unsigned Offset = 0;
+  while (!Old.empty() && !New.empty() && Old.front() == New.front()) {
+    ++Offset;
+    Old = Old.drop_front();
+    New = New.drop_front();
+  }
+  while (!Old.empty() && !New.empty() && Old.back() == New.back()) {
+    Old = Old.drop_back();
+    New = New.drop_back();
+  }
+
+  if (Old.empty() && New.empty())
+    return {};
+  SemanticTokensEdit Edit;
+  Edit.startToken = Offset;
+  Edit.deleteTokens = Old.size();
+  Edit.tokens = New;
+  return {std::move(Edit)};
+}
+
 } // namespace clangd
 } // namespace clang

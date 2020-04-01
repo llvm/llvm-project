@@ -986,27 +986,57 @@ llvm::json::Value toJSON(const FileStatus &FStatus) {
   };
 }
 
-void SemanticToken::encode(std::vector<unsigned int> &Out) const {
-  Out.push_back(deltaLine);
-  Out.push_back(deltaStart);
-  Out.push_back(length);
-  Out.push_back(tokenType);
-  Out.push_back(tokenModifiers);
+constexpr unsigned SemanticTokenEncodingSize = 5;
+static llvm::json::Value encodeTokens(llvm::ArrayRef<SemanticToken> Toks) {
+  llvm::json::Array Result;
+  for (const auto &Tok : Toks) {
+    Result.push_back(Tok.deltaLine);
+    Result.push_back(Tok.deltaStart);
+    Result.push_back(Tok.length);
+    Result.push_back(Tok.tokenType);
+    Result.push_back(Tok.tokenModifiers);
+  }
+  assert(Result.size() == SemanticTokenEncodingSize * Toks.size());
+  return Result;
+}
+
+bool operator==(const SemanticToken &L, const SemanticToken &R) {
+  return std::tie(L.deltaLine, L.deltaStart, L.length, L.tokenType,
+                  L.tokenModifiers) == std::tie(R.deltaLine, R.deltaStart,
+                                                R.length, R.tokenType,
+                                                R.tokenModifiers);
 }
 
 llvm::json::Value toJSON(const SemanticTokens &Tokens) {
-  std::vector<unsigned> Data;
-  for (const auto &Tok : Tokens.data)
-    Tok.encode(Data);
-  llvm::json::Object Result{{"data", std::move(Data)}};
-  if (Tokens.resultId)
-    Result["resultId"] = *Tokens.resultId;
+  return llvm::json::Object{{"resultId", Tokens.resultId},
+                            {"data", encodeTokens(Tokens.tokens)}};
+}
+
+llvm::json::Value toJSON(const SemanticTokensEdit &Edit) {
+  return llvm::json::Object{
+      {"start", SemanticTokenEncodingSize * Edit.startToken},
+      {"deleteCount", SemanticTokenEncodingSize * Edit.deleteTokens},
+      {"data", encodeTokens(Edit.tokens)}};
+}
+
+llvm::json::Value toJSON(const SemanticTokensOrEdits &TE) {
+  llvm::json::Object Result{{"resultId", TE.resultId}};
+  if (TE.edits)
+    Result["edits"] = *TE.edits;
+  if (TE.tokens)
+    Result["data"] = encodeTokens(*TE.tokens);
   return Result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, SemanticTokensParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument);
+}
+
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensEditsParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("previousResultId", R.previousResultId);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
