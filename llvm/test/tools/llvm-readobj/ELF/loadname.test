@@ -14,7 +14,7 @@
 # GNU:       Dynamic section at offset 0x80 contains 4 entries:
 # GNU-NEXT:   Tag                Type     Name/Value
 # GNU-NEXT:   0x0000000000000005 (STRTAB) 0x0
-# GNU-NEXT:   0x000000000000000a (STRSZ)  7 (bytes)
+# GNU-NEXT:   0x000000000000000a (STRSZ)  8 (bytes)
 # GNU-NEXT:   0x000000000000000e (SONAME) Library soname: [test.so]
 # GNU-NEXT:   0x0000000000000000 (NULL)   0x0
 
@@ -37,7 +37,7 @@ Sections:
       - Tag:   DT_STRTAB
         Value: [[DTSTRTABVAL]]
       - Tag:   DT_STRSZ
-        Value: 0x0000000000000007
+        Value: 0x0000000000000008
       - Tag:   DT_SONAME
         Value: 0x0000000000000000
       - Tag:   DT_NULL

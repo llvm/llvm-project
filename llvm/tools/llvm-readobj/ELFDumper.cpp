@@ -2558,24 +2558,41 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
 
 template <class ELFT>
 StringRef ELFDumper<ELFT>::getDynamicString(uint64_t Value) const {
-  auto WarnAndReturn = [this](const Twine &Msg) {
-    reportUniqueWarning(createError(Msg));
+  if (DynamicStringTable.empty() && !DynamicStringTable.data()) {
+    reportUniqueWarning(createError("string table was not found"));
+    return "<?>";
+  }
+
+  auto WarnAndReturn = [this](const Twine &Msg, uint64_t Offset) {
+    reportUniqueWarning(createError("string table at offset 0x" +
+                                    Twine::utohexstr(Offset) + Msg));
     return "<?>";
   };
 
-  if (DynamicStringTable.empty() && !DynamicStringTable.data())
-    return WarnAndReturn("string table was not found");
-
-  if (Value < DynamicStringTable.size())
-    return DynamicStringTable.data() + Value;
-
+  const uint64_t FileSize = ObjF->getELFFile()->getBufSize();
   const uint64_t Offset =
       (const uint8_t *)DynamicStringTable.data() - ObjF->getELFFile()->base();
-  return WarnAndReturn(
-      "string table at offset 0x" + Twine::utohexstr(Offset) +
-      ": unable to read the string at 0x" + Twine::utohexstr(Offset + Value) +
-      ", it goes past the end of the table (0x" +
-      Twine::utohexstr(Offset + DynamicStringTable.size()) + ")");
+  if (DynamicStringTable.size() > FileSize - Offset)
+    return WarnAndReturn(" with size 0x" +
+                             Twine::utohexstr(DynamicStringTable.size()) +
+                             " goes past the end of the file (0x" +
+                             Twine::utohexstr(FileSize) + ")",
+                         Offset);
+
+  if (Value >= DynamicStringTable.size())
+    return WarnAndReturn(
+        ": unable to read the string at 0x" + Twine::utohexstr(Offset + Value) +
+            ": it goes past the end of the table (0x" +
+            Twine::utohexstr(Offset + DynamicStringTable.size()) + ")",
+        Offset);
+
+  if (DynamicStringTable.back() != '\0')
+    return WarnAndReturn(": unable to read the string at 0x" +
+                             Twine::utohexstr(Offset + Value) +
+                             ": the string table is not null-terminated",
+                         Offset);
+
+  return DynamicStringTable.data() + Value;
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printUnwindInfo() {
