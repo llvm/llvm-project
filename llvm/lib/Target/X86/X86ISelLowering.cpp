@@ -39836,13 +39836,19 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     }
   }
 
-  // TODO: TESTZ(X,~Y) == TESTC(Y,X)
-
-  // TESTZ(X,-1) == TESTZ(X,X)
-  // TESTZ(-1,X) == TESTZ(X,X)
   if (CC == X86::COND_E || CC == X86::COND_NE) {
+    // TESTZ(X,~Y) == TESTC(Y,X)
+    if (SDValue NotOp1 = IsNOT(Op1, DAG)) {
+      CC = (CC == X86::COND_E ? X86::COND_B : X86::COND_AE);
+      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT,
+                         DAG.getBitcast(OpVT, NotOp1), Op0);
+    }
+
+    // TESTZ(-1,X) == TESTZ(X,X)
     if (ISD::isBuildVectorAllOnes(Op0.getNode()))
       return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op1, Op1);
+
+    // TESTZ(X,-1) == TESTZ(X,X)
     if (ISD::isBuildVectorAllOnes(Op1.getNode()))
       return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op0, Op0);
   }
