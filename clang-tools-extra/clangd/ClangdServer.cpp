@@ -134,7 +134,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      : nullptr),
       GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
-      TweakFilter(Opts.TweakFilter), WorkspaceRoot(Opts.WorkspaceRoot),
+      BuildRecoveryAST(Opts.BuildRecoveryAST), TweakFilter(Opts.TweakFilter),
+      WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
@@ -191,6 +192,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
+  Inputs.Opts.BuildRecoveryAST = BuildRecoveryAST;
   bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)

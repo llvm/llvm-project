@@ -253,6 +253,10 @@ ParsedAST::build(llvm::StringRef Version,
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
+  // Recovery expression currently only works for C++.
+  if (CI->getLangOpts()->CPlusPlus)
+    CI->getLangOpts()->RecoveryAST = Opts.BuildRecoveryAST;
+
   StoreDiags ASTDiags;
   std::string Content = std::string(Buffer->getBuffer());
   std::string Filename =
