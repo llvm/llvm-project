@@ -2590,7 +2590,7 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
   // Then process all callee saved slots.
   if (getSVECalleeSaveSlotRange(MFI, MinCSFrameIndex, MaxCSFrameIndex)) {
     // Make sure to align the last callee save slot.
-    MFI.setObjectAlignment(MaxCSFrameIndex, 16U);
+    MFI.setObjectAlignment(MaxCSFrameIndex, Align(16));
 
     // Assign offsets to the callee save slots.
     for (int I = MinCSFrameIndex; I <= MaxCSFrameIndex; ++I) {
