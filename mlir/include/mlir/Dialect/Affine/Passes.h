@@ -42,10 +42,14 @@ std::unique_ptr<OpPassBase<FuncOp>> createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace,
     unsigned tagMemorySpace = 0, int minDmaTransferSize = 1024,
     uint64_t fastMemCapacityBytes = std::numeric_limits<uint64_t>::max());
+/// Overload relying on pass options for initialization.
+std::unique_ptr<OpPassBase<FuncOp>> createAffineDataCopyGenerationPass();
 
 /// Creates a pass to perform tiling on loop nests.
 std::unique_ptr<OpPassBase<FuncOp>>
 createLoopTilingPass(uint64_t cacheSizeBytes);
+/// Overload relying on pass options for initialization.
+std::unique_ptr<OpPassBase<FuncOp>> createLoopTilingPass();
 
 /// Creates a loop unrolling pass with the provided parameters.
 /// 'getUnrollFactor' is a function callback for clients to supply a function
@@ -67,6 +71,8 @@ createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 /// target-independent, n-D super-vector abstraction.
 std::unique_ptr<OpPassBase<FuncOp>>
 createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize);
+/// Overload relying on pass options for initialization.
+std::unique_ptr<OpPassBase<FuncOp>> createSuperVectorizePass();
 
 } // end namespace mlir
 

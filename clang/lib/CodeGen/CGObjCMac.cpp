@@ -1107,11 +1107,6 @@ public:
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
-  /// GetOrEmitProtocol - Get the protocol object for the given
-  /// declaration, emitting it if necessary. The return value has type
-  /// ProtocolPtrTy.
-  virtual llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD)=0;
-
   /// GetOrEmitProtocolRef - Get a forward reference to the protocol
   /// object for the given declaration, emitting it if needed. These
   /// forward references will be filled in with empty bodies if no

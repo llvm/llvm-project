@@ -59,6 +59,10 @@ namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
 struct LoopTiling : public FunctionPass<LoopTiling> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineLoopTiling
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   explicit LoopTiling(uint64_t cacheSizeBytes = kDefaultCacheMemCapacity,
                       bool avoidMaxMinBounds = true)
       : cacheSizeBytes(cacheSizeBytes), avoidMaxMinBounds(avoidMaxMinBounds) {}
@@ -84,6 +88,9 @@ struct LoopTiling : public FunctionPass<LoopTiling> {
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLoopTilingPass(uint64_t cacheSizeBytes) {
   return std::make_unique<LoopTiling>(cacheSizeBytes);
+}
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopTilingPass() {
+  return std::make_unique<LoopTiling>();
 }
 
 // Move the loop body of AffineForOp 'src' from 'src' into the specified
@@ -420,5 +427,3 @@ void LoopTiling::runOnFunction() {
 
 constexpr unsigned LoopTiling::kDefaultTileSize;
 constexpr uint64_t LoopTiling::kDefaultCacheMemCapacity;
-
-static PassRegistration<LoopTiling> pass("affine-loop-tile", "Tile loop nests");

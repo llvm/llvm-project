@@ -34,7 +34,7 @@
 # RUN: ld.lld %t1.o --script %t4.script -o %t4
 # RUN: llvm-objdump -s %t4 | FileCheck --check-prefix=SUBALIGN %s
 
-## Test we fail gracefuly when alignment value is not a power of 2.
+## Test we fail gracefully when alignment value is not a power of 2.
 # RUN: echo "SECTIONS { .aaa : SUBALIGN(3) { *(.aaa*) } }" > %t5.script
 # RUN: not ld.lld %t1.o --script %t5.script -o /dev/null 2>&1 | FileCheck --check-prefix=ERR2 %s
 # ERR2: {{.*}}.script:1: alignment must be power of 2

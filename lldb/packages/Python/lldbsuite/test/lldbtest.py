@@ -2414,9 +2414,12 @@ FileCheck output:
 
         # Set the usual default options for normal expressions.
         options.SetIgnoreBreakpoints(True)
-        options.SetLanguage(frame.GuessLanguage())
 
-        eval_result = frame.EvaluateExpression(expr, options)
+        if self.frame().IsValid():
+          options.SetLanguage(frame.GuessLanguage())
+          eval_result = self.frame().EvaluateExpression(expr, options)
+        else:
+          eval_result = self.target().EvaluateExpression(expr, options)
 
         if not eval_result.GetError().Success():
             self.assertTrue(eval_result.GetError().Success(),

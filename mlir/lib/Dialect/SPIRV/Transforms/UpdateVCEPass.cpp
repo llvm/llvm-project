@@ -177,8 +177,3 @@ std::unique_ptr<OpPassBase<spirv::ModuleOp>>
 mlir::spirv::createUpdateVersionCapabilityExtensionPass() {
   return std::make_unique<UpdateVCEPass>();
 }
-
-static PassRegistration<UpdateVCEPass>
-    pass("spirv-update-vce",
-         "Deduce and attach minimal (version, capabilities, extensions) "
-         "requirements to spv.module ops");

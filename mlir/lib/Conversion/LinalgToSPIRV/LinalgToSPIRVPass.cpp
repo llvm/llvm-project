@@ -17,6 +17,10 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Linalg ops into SPIR-V ops.
 class LinalgToSPIRVPass : public ModulePass<LinalgToSPIRVPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertLinalgToSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace
@@ -46,6 +50,3 @@ void LinalgToSPIRVPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createLinalgToSPIRVPass() {
   return std::make_unique<LinalgToSPIRVPass>();
 }
-
-static PassRegistration<LinalgToSPIRVPass>
-    pass("convert-linalg-to-spirv", "Convert Linalg ops to SPIR-V ops");

@@ -38,6 +38,7 @@ public:
 struct ParseOptions {
   tidy::ClangTidyOptions ClangTidyOpts;
   bool SuggestMissingIncludes = false;
+  bool BuildRecoveryAST = false;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.

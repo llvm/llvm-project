@@ -2417,8 +2417,7 @@ static void fixupFuncForFI(SelectionDAG &DAG, int FrameIdx, EVT VT) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  unsigned Align = MFI.getObjectAlignment(FrameIdx);
-  if (Align >= 4)
+  if (MFI.getObjectAlign(FrameIdx) >= Align(4))
     return;
 
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
@@ -2750,7 +2749,7 @@ SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
-      MachinePointerInfo::getGOT(DAG.getMachineFunction()), 0,
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()), None,
       MachineMemOperand::MOLoad);
 }
 

@@ -49,8 +49,15 @@ public:
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
                        MLIRContext *context);
 
+  /// Returns an affine map with `dimCount` dimensions and `symbolCount` symbols
+  /// mapping to the given results. The array of results cannot be empty.
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
                        ArrayRef<AffineExpr> results);
+
+  /// Returns an affine map with `dimCount` dimensions and `symbolCount` mapping
+  /// to the given results, where the number of results can be zero.
+  static AffineMap get(unsigned dimCount, unsigned symbolCount,
+                       ArrayRef<AffineExpr> results, MLIRContext *context);
 
   /// Returns a single constant result affine map.
   static AffineMap getConstantMap(int64_t val, MLIRContext *context);

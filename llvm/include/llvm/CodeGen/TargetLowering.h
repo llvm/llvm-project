@@ -1962,6 +1962,18 @@ public:
     return ISD::ZERO_EXTEND;
   }
 
+  /// Returns how the platform's atomic compare and swap expects its comparison
+  /// value to be extended (ZERO_EXTEND, SIGN_EXTEND, or ANY_EXTEND). This is
+  /// separate from getExtendForAtomicOps, which is concerned with the
+  /// sign-extension of the instruction's output, whereas here we are concerned
+  /// with the sign-extension of the input. For targets with compare-and-swap
+  /// instructions (or sub-word comparisons in their LL/SC loop expansions),
+  /// the input can be ANY_EXTEND, but the output will still have a specific
+  /// extension.
+  virtual ISD::NodeType getExtendForAtomicCmpSwapArg() const {
+    return ISD::ANY_EXTEND;
+  }
+
   /// @}
 
   /// Returns true if we should normalize

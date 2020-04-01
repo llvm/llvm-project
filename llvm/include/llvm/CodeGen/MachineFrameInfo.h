@@ -462,10 +462,10 @@ public:
 
   /// Return the alignment of the specified stack object.
   /// FIXME: Remove this function once transition to Align is over.
-  unsigned getObjectAlignment(int ObjectIdx) const {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    return Objects[ObjectIdx + NumFixedObjects].Alignment.value();
+  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned getObjectAlignment(int ObjectIdx)
+                                const,
+                            "Use getObjectAlign instead") {
+    return getObjectAlign(ObjectIdx).value();
   }
 
   /// Return the alignment of the specified stack object.
@@ -473,18 +473,6 @@ public:
     assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx + NumFixedObjects].Alignment;
-  }
-
-  /// setObjectAlignment - Change the alignment of the specified stack object.
-  /// FIXME: Remove this function once transition to Align is over.
-  void setObjectAlignment(int ObjectIdx, unsigned Align) {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    Objects[ObjectIdx + NumFixedObjects].Alignment = assumeAligned(Align);
-
-    // Only ensure max alignment for the default stack.
-    if (getStackID(ObjectIdx) == 0)
-      ensureMaxAlignment(assumeAligned(Align));
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
@@ -496,6 +484,14 @@ public:
     // Only ensure max alignment for the default stack.
     if (getStackID(ObjectIdx) == 0)
       ensureMaxAlignment(Alignment);
+  }
+
+  /// setObjectAlignment - Change the alignment of the specified stack object.
+  /// FIXME: Remove this function once transition to Align is over.
+  LLVM_ATTRIBUTE_DEPRECATED(inline void setObjectAlignment(int ObjectIdx,
+                                                           unsigned Align),
+                            "Use the version that takes Align instead") {
+    setObjectAlignment(ObjectIdx, assumeAligned(Align));
   }
 
   /// Return the underlying Alloca of the specified

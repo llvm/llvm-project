@@ -246,6 +246,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::OMPArrayShaping:
     ID = PREDEF_TYPE_OMP_ARRAY_SHAPING;
     break;
+  case BuiltinType::OMPIterator:
+    ID = PREDEF_TYPE_OMP_ITERATOR;
+    break;
   }
 
   return TypeIdx(ID);

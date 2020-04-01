@@ -28,11 +28,12 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 
 namespace llvm {
-  class DataLayout;
-  class Module;
-  class Function;
-  class FunctionType;
-  class Type;
+class Constant;
+class DataLayout;
+class Module;
+class Function;
+class FunctionType;
+class Type;
 }
 
 namespace clang {
@@ -44,6 +45,7 @@ class CoverageSourceInfo;
 class DiagnosticsEngine;
 class HeaderSearchOptions;
 class ObjCMethodDecl;
+class ObjCProtocolDecl;
 class PreprocessorOptions;
 
 namespace CodeGen {
@@ -137,6 +139,13 @@ llvm::Function *getNonTrivialCStructDestructor(CodeGenModule &CGM,
                                                CharUnits DstAlignment,
                                                bool IsVolatile, QualType QT);
 
+/// Get a pointer to a protocol object for the given declaration, emitting it if
+/// it hasn't already been emitted in this translation unit. Note that the ABI
+/// for emitting a protocol reference in code (e.g. for a protocol expression)
+/// in most runtimes is not as simple as just materializing a pointer to this
+/// object.
+llvm::Constant *emitObjCProtocolObject(CodeGenModule &CGM,
+                                       const ObjCProtocolDecl *p);
 }  // end namespace CodeGen
 }  // end namespace clang
 

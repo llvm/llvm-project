@@ -3399,6 +3399,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ArraySubscriptExprClass:
   case OMPArraySectionExprClass:
   case OMPArrayShapingExprClass:
+  case OMPIteratorExprClass:
   case MemberExprClass:
   case ConditionalOperatorClass:
   case BinaryConditionalOperatorClass:
@@ -4616,4 +4617,119 @@ OMPArrayShapingExpr *OMPArrayShapingExpr::CreateEmpty(const ASTContext &Context,
       totalSizeToAlloc<Expr *, SourceRange>(NumDims + 1, NumDims),
       alignof(OMPArrayShapingExpr));
   return new (Mem) OMPArrayShapingExpr(EmptyShell(), NumDims);
+}
+
+void OMPIteratorExpr::setIteratorDeclaration(unsigned I, Decl *D) {
+  assert(I < NumIterators &&
+         "Idx is greater or equal the number of iterators definitions.");
+  getTrailingObjects<Decl *>()[I] = D;
+}
+
+void OMPIteratorExpr::setAssignmentLoc(unsigned I, SourceLocation Loc) {
+  assert(I < NumIterators &&
+         "Idx is greater or equal the number of iterators definitions.");
+  getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::AssignLoc)] = Loc;
+}
+
+void OMPIteratorExpr::setIteratorRange(unsigned I, Expr *Begin,
+                                       SourceLocation ColonLoc, Expr *End,
+                                       SourceLocation SecondColonLoc,
+                                       Expr *Step) {
+  assert(I < NumIterators &&
+         "Idx is greater or equal the number of iterators definitions.");
+  getTrailingObjects<Expr *>()[I * static_cast<int>(RangeExprOffset::Total) +
+                               static_cast<int>(RangeExprOffset::Begin)] =
+      Begin;
+  getTrailingObjects<Expr *>()[I * static_cast<int>(RangeExprOffset::Total) +
+                               static_cast<int>(RangeExprOffset::End)] = End;
+  getTrailingObjects<Expr *>()[I * static_cast<int>(RangeExprOffset::Total) +
+                               static_cast<int>(RangeExprOffset::Step)] = Step;
+  getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::FirstColonLoc)] =
+      ColonLoc;
+  getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::SecondColonLoc)] =
+      SecondColonLoc;
+}
+
+Decl *OMPIteratorExpr::getIteratorDecl(unsigned I) {
+  return getTrailingObjects<Decl *>()[I];
+}
+
+OMPIteratorExpr::IteratorRange OMPIteratorExpr::getIteratorRange(unsigned I) {
+  IteratorRange Res;
+  Res.Begin =
+      getTrailingObjects<Expr *>()[I * static_cast<int>(
+                                           RangeExprOffset::Total) +
+                                   static_cast<int>(RangeExprOffset::Begin)];
+  Res.End =
+      getTrailingObjects<Expr *>()[I * static_cast<int>(
+                                           RangeExprOffset::Total) +
+                                   static_cast<int>(RangeExprOffset::End)];
+  Res.Step =
+      getTrailingObjects<Expr *>()[I * static_cast<int>(
+                                           RangeExprOffset::Total) +
+                                   static_cast<int>(RangeExprOffset::Step)];
+  return Res;
+}
+
+SourceLocation OMPIteratorExpr::getAssignLoc(unsigned I) const {
+  return getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::AssignLoc)];
+}
+
+SourceLocation OMPIteratorExpr::getColonLoc(unsigned I) const {
+  return getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::FirstColonLoc)];
+}
+
+SourceLocation OMPIteratorExpr::getSecondColonLoc(unsigned I) const {
+  return getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(RangeLocOffset::Total) +
+                        static_cast<int>(RangeLocOffset::SecondColonLoc)];
+}
+
+OMPIteratorExpr::OMPIteratorExpr(
+    QualType ExprTy, SourceLocation IteratorKwLoc, SourceLocation L,
+    SourceLocation R, ArrayRef<OMPIteratorExpr::IteratorDefinition> Data)
+    : Expr(OMPIteratorExprClass, ExprTy, VK_LValue, OK_Ordinary),
+      IteratorKwLoc(IteratorKwLoc), LPLoc(L), RPLoc(R),
+      NumIterators(Data.size()) {
+  for (unsigned I = 0, End = Data.size(); I < End; ++I) {
+    const IteratorDefinition &D = Data[I];
+    setIteratorDeclaration(I, D.IteratorDecl);
+    setIteratorRange(I, D.Range.Begin, D.ColonLoc, D.Range.End,
+                     D.SecondColonLoc, D.Range.Step);
+  }
+  setDependence(computeDependence(this));
+}
+
+OMPIteratorExpr *
+OMPIteratorExpr::Create(const ASTContext &Context, QualType T,
+                        SourceLocation IteratorKwLoc, SourceLocation L,
+                        SourceLocation R,
+                        ArrayRef<OMPIteratorExpr::IteratorDefinition> Data) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Decl *, Expr *, SourceLocation>(
+          Data.size(), Data.size() * static_cast<int>(RangeExprOffset::Total),
+          Data.size() * static_cast<int>(RangeLocOffset::Total)),
+      alignof(OMPIteratorExpr));
+  auto *E = new (Mem) OMPIteratorExpr(T, IteratorKwLoc, L, R, Data);
+  return E;
+}
+
+OMPIteratorExpr *OMPIteratorExpr::CreateEmpty(const ASTContext &Context,
+                                              unsigned NumIterators) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Decl *, Expr *, SourceLocation>(
+          NumIterators, NumIterators * static_cast<int>(RangeExprOffset::Total),
+          NumIterators * static_cast<int>(RangeLocOffset::Total)),
+      alignof(OMPIteratorExpr));
+  return new (Mem) OMPIteratorExpr(EmptyShell(), NumIterators);
 }

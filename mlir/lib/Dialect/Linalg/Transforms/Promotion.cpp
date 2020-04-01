@@ -231,6 +231,10 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
 
 namespace {
 struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgPromotion
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
   LinalgPromotionPass() = default;
   LinalgPromotionPass(const LinalgPromotionPass &) {}
   LinalgPromotionPass(bool dynamicBuffers) {
@@ -240,11 +244,6 @@ struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
   void runOnFunction() override {
     promoteSubViews(getFunction(), dynamicBuffers);
   }
-
-  Option<bool> dynamicBuffers{
-      *this, "test-promote-dynamic",
-      llvm::cl::desc("Test generation of dynamic promoted buffers"),
-      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -252,6 +251,6 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLinalgPromotionPass(bool dynamicBuffers) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers);
 }
-
-static PassRegistration<LinalgPromotionPass>
-    pass("linalg-promote-subviews", "promote subview ops to local buffers");
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgPromotionPass() {
+  return std::make_unique<LinalgPromotionPass>();
+}

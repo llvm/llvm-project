@@ -118,6 +118,9 @@ public:
     /// enabled.
     ClangTidyOptionsBuilder GetClangTidyOptions;
 
+    /// If true, turn on the `-frecovery-ast` clang flag.
+    bool BuildRecoveryAST = false;
+
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -344,6 +347,9 @@ private:
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
+
+  // If true, preserve expressions in AST for broken code.
+  bool BuildRecoveryAST = false;
 
   std::function<bool(const Tweak &)> TweakFilter;
 

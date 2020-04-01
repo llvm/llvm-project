@@ -1842,12 +1842,13 @@ public:
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *
-  RebuildOMPDependClause(OpenMPDependClauseKind DepKind, SourceLocation DepLoc,
-                         SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
-                         SourceLocation StartLoc, SourceLocation LParenLoc,
-                         SourceLocation EndLoc) {
-    return getSema().ActOnOpenMPDependClause(DepKind, DepLoc, ColonLoc, VarList,
-                                             StartLoc, LParenLoc, EndLoc);
+  RebuildOMPDependClause(Expr *DepModifier, OpenMPDependClauseKind DepKind,
+                         SourceLocation DepLoc, SourceLocation ColonLoc,
+                         ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                         SourceLocation LParenLoc, SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPDependClause(DepModifier, DepKind, DepLoc,
+                                             ColonLoc, VarList, StartLoc,
+                                             LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'device' clause.
@@ -2389,6 +2390,17 @@ public:
                                         ArrayRef<SourceRange> BracketsRanges) {
     return getSema().ActOnOMPArrayShapingExpr(Base, LParenLoc, RParenLoc, Dims,
                                               BracketsRanges);
+  }
+
+  /// Build a new iterator expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildOMPIteratorExpr(
+      SourceLocation IteratorKwLoc, SourceLocation LLoc, SourceLocation RLoc,
+      ArrayRef<Sema::OMPIteratorData> Data) {
+    return getSema().ActOnOMPIteratorExpr(/*Scope=*/nullptr, IteratorKwLoc,
+                                          LLoc, RLoc, Data);
   }
 
   /// Build a new call expression.
@@ -9291,6 +9303,13 @@ template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPDependClause(OMPDependClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
+  Expr *DepModifier = C->getModifier();
+  if (DepModifier) {
+    ExprResult DepModRes = getDerived().TransformExpr(DepModifier);
+    if (DepModRes.isInvalid())
+      return nullptr;
+    DepModifier = DepModRes.get();
+  }
   Vars.reserve(C->varlist_size());
   for (auto *VE : C->varlists()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
@@ -9299,8 +9318,9 @@ TreeTransform<Derived>::TransformOMPDependClause(OMPDependClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPDependClause(
-      C->getDependencyKind(), C->getDependencyLoc(), C->getColonLoc(), Vars,
-      C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      DepModifier, C->getDependencyKind(), C->getDependencyLoc(),
+      C->getColonLoc(), Vars, C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>
@@ -10052,6 +10072,65 @@ TreeTransform<Derived>::TransformOMPArrayShapingExpr(OMPArrayShapingExpr *E) {
   return getDerived().RebuildOMPArrayShapingExpr(Base.get(), E->getLParenLoc(),
                                                  E->getRParenLoc(), Dims,
                                                  E->getBracketsRanges());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformOMPIteratorExpr(OMPIteratorExpr *E) {
+  unsigned NumIterators = E->numOfIterators();
+  SmallVector<Sema::OMPIteratorData, 4> Data(NumIterators);
+
+  bool ErrorFound = false;
+  bool NeedToRebuild = getDerived().AlwaysRebuild();
+  for (unsigned I = 0; I < NumIterators; ++I) {
+    auto *D = cast<VarDecl>(E->getIteratorDecl(I));
+    Data[I].DeclIdent = D->getIdentifier();
+    Data[I].DeclIdentLoc = D->getLocation();
+    if (D->getLocation() == D->getBeginLoc()) {
+      assert(SemaRef.Context.hasSameType(D->getType(), SemaRef.Context.IntTy) &&
+             "Implicit type must be int.");
+    } else {
+      TypeSourceInfo *TSI = getDerived().TransformType(D->getTypeSourceInfo());
+      QualType DeclTy = getDerived().TransformType(D->getType());
+      Data[I].Type = SemaRef.CreateParsedType(DeclTy, TSI);
+    }
+    OMPIteratorExpr::IteratorRange Range = E->getIteratorRange(I);
+    ExprResult Begin = getDerived().TransformExpr(Range.Begin);
+    ExprResult End = getDerived().TransformExpr(Range.End);
+    ExprResult Step = getDerived().TransformExpr(Range.Step);
+    ErrorFound = ErrorFound ||
+                 !(!D->getTypeSourceInfo() || (Data[I].Type.getAsOpaquePtr() &&
+                                               !Data[I].Type.get().isNull())) ||
+                 Begin.isInvalid() || End.isInvalid() || Step.isInvalid();
+    if (ErrorFound)
+      continue;
+    Data[I].Range.Begin = Begin.get();
+    Data[I].Range.End = End.get();
+    Data[I].Range.Step = Step.get();
+    Data[I].AssignLoc = E->getAssignLoc(I);
+    Data[I].ColonLoc = E->getColonLoc(I);
+    Data[I].SecColonLoc = E->getSecondColonLoc(I);
+    NeedToRebuild =
+        NeedToRebuild ||
+        (D->getTypeSourceInfo() && Data[I].Type.get().getTypePtrOrNull() !=
+                                       D->getType().getTypePtrOrNull()) ||
+        Range.Begin != Data[I].Range.Begin || Range.End != Data[I].Range.End ||
+        Range.Step != Data[I].Range.Step;
+  }
+  if (ErrorFound)
+    return ExprError();
+  if (!NeedToRebuild)
+    return E;
+
+  ExprResult Res = getDerived().RebuildOMPIteratorExpr(
+      E->getIteratorKwLoc(), E->getLParenLoc(), E->getRParenLoc(), Data);
+  if (!Res.isUsable())
+    return Res;
+  auto *IE = cast<OMPIteratorExpr>(Res.get());
+  for (unsigned I = 0; I < NumIterators; ++I)
+    getDerived().transformedLocalDecl(E->getIteratorDecl(I),
+                                      IE->getIteratorDecl(I));
+  return Res;
 }
 
 template<typename Derived>

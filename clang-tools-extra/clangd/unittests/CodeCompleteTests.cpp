@@ -127,7 +127,6 @@ CodeCompleteResult completions(llvm::StringRef Text,
   Annotations Test(Text);
   auto TU = TestTU::withCode(Test.code());
   // To make sure our tests for completiopns inside templates work on Windows.
-  TU.ExtraArgs = {"-fno-delayed-template-parsing"};
   TU.Filename = FilePath.str();
   return completions(TU, Test.point(), std::move(IndexSymbols),
                      std::move(Opts));
@@ -1050,8 +1049,12 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
   auto Preamble =
       buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
                     /*InMemory=*/true, /*Callback=*/nullptr);
-  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
-                       Preamble.get(), Text, Point, Inputs.FS, Index.get());
+  if (!Preamble) {
+    ADD_FAILURE() << "Couldn't build Preamble";
+    return {};
+  }
+  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand, *Preamble,
+                       Text, Point, Inputs.FS, Index.get());
 }
 
 SignatureHelp signatures(llvm::StringRef Text,
@@ -2658,6 +2661,20 @@ TEST(CompletionTest, NoCrashWithIncompleteLambda) {
 
   auto Signatures = signatures("auto x() { x(^").signatures;
   EXPECT_THAT(Signatures, Contains(Sig("x() -> auto")));
+}
+
+TEST(CompletionTest, DelayedTemplateParsing) {
+  Annotations Test(R"cpp(
+    int xxx;
+    template <typename T> int foo() { return xx^; }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  // Even though delayed-template-parsing is on, we will disable it to provide
+  // completion in templates.
+  TU.ExtraArgs.push_back("-fdelayed-template-parsing");
+
+  EXPECT_THAT(completions(TU, Test.point()).Completions,
+              Contains(Named("xxx")));
 }
 
 TEST(CompletionTest, CompletionRange) {

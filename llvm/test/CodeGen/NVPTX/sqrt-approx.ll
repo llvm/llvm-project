@@ -45,35 +45,63 @@ define double @test_rsqrt64_ftz(double %a) #0 #1 {
 
 ; CHECK-LABEL test_sqrt32
 define float @test_sqrt32(float %a) #0 {
-; CHECK: sqrt.approx.f32
+; CHECK: sqrt.rn.f32
   %ret = tail call float @llvm.sqrt.f32(float %a)
+  ret float %ret
+}
+
+; CHECK-LABEL test_sqrt32_ninf
+define float @test_sqrt32_ninf(float %a) #0 {
+; CHECK: sqrt.approx.f32
+  %ret = tail call ninf float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
 ; CHECK-LABEL test_sqrt_ftz
 define float @test_sqrt_ftz(float %a) #0 #1 {
-; CHECK: sqrt.approx.ftz.f32
+; CHECK: sqrt.rn.ftz.f32
   %ret = tail call float @llvm.sqrt.f32(float %a)
+  ret float %ret
+}
+
+; CHECK-LABEL test_sqrt_ftz_ninf
+define float @test_sqrt_ftz_ninf(float %a) #0 #1 {
+; CHECK: sqrt.approx.ftz.f32
+  %ret = tail call ninf float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
 ; CHECK-LABEL test_sqrt64
 define double @test_sqrt64(double %a) #0 {
+; CHECK: sqrt.rn.f64
+  %ret = tail call double @llvm.sqrt.f64(double %a)
+  ret double %ret
+}
+
+; CHECK-LABEL test_sqrt64_ninf
+define double @test_sqrt64_ninf(double %a) #0 {
 ; There's no sqrt.approx.f64 instruction; we emit
 ; reciprocal(rsqrt.approx.f64(x)).  There's no non-ftz approximate reciprocal,
 ; so we just use the ftz version.
 ; CHECK: rsqrt.approx.f64
 ; CHECK: rcp.approx.ftz.f64
-  %ret = tail call double @llvm.sqrt.f64(double %a)
+  %ret = tail call ninf double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 
 ; CHECK-LABEL test_sqrt64_ftz
 define double @test_sqrt64_ftz(double %a) #0 #1 {
+; CHECK: sqrt.rn.f64
+  %ret = tail call double @llvm.sqrt.f64(double %a)
+  ret double %ret
+}
+
+; CHECK-LABEL test_sqrt64_ftz_ninf
+define double @test_sqrt64_ftz_ninf(double %a) #0 #1 {
 ; There's no sqrt.approx.ftz.f64 instruction; we just use the non-ftz version.
 ; CHECK: rsqrt.approx.f64
 ; CHECK: rcp.approx.ftz.f64
-  %ret = tail call double @llvm.sqrt.f64(double %a)
+  %ret = tail call ninf double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 
@@ -92,8 +120,15 @@ define float @test_rsqrt32_refined(float %a) #0 #2 {
 
 ; CHECK-LABEL: test_sqrt32_refined
 define float @test_sqrt32_refined(float %a) #0 #2 {
-; CHECK: rsqrt.approx.f32
+; CHECK: sqrt.rn.f32
   %ret = tail call float @llvm.sqrt.f32(float %a)
+  ret float %ret
+}
+
+; CHECK-LABEL: test_sqrt32_refined_ninf
+define float @test_sqrt32_refined_ninf(float %a) #0 #2 {
+; CHECK: rsqrt.approx.f32
+  %ret = tail call ninf float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
@@ -107,8 +142,15 @@ define double @test_rsqrt64_refined(double %a) #0 #2 {
 
 ; CHECK-LABEL: test_sqrt64_refined
 define double @test_sqrt64_refined(double %a) #0 #2 {
-; CHECK: rsqrt.approx.f64
+; CHECK: sqrt.rn.f64
   %ret = tail call double @llvm.sqrt.f64(double %a)
+  ret double %ret
+}
+
+; CHECK-LABEL: test_sqrt64_refined_ninf
+define double @test_sqrt64_refined_ninf(double %a) #0 #2 {
+; CHECK: rsqrt.approx.f64
+  %ret = tail call ninf double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 
@@ -124,8 +166,15 @@ define float @test_rsqrt32_refined_ftz(float %a) #0 #1 #2 {
 
 ; CHECK-LABEL: test_sqrt32_refined_ftz
 define float @test_sqrt32_refined_ftz(float %a) #0 #1 #2 {
-; CHECK: rsqrt.approx.ftz.f32
+; CHECK: sqrt.rn.ftz.f32
   %ret = tail call float @llvm.sqrt.f32(float %a)
+  ret float %ret
+}
+
+; CHECK-LABEL: test_sqrt32_refined_ftz_ninf
+define float @test_sqrt32_refined_ftz_ninf(float %a) #0 #1 #2 {
+; CHECK: rsqrt.approx.ftz.f32
+  %ret = tail call ninf float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
@@ -140,8 +189,15 @@ define double @test_rsqrt64_refined_ftz(double %a) #0 #1 #2 {
 
 ; CHECK-LABEL: test_sqrt64_refined_ftz
 define double @test_sqrt64_refined_ftz(double %a) #0 #1 #2 {
-; CHECK: rsqrt.approx.f64
+; CHECK: sqrt.rn.f64
   %ret = tail call double @llvm.sqrt.f64(double %a)
+  ret double %ret
+}
+
+; CHECK-LABEL: test_sqrt64_refined_ftz_ninf
+define double @test_sqrt64_refined_ftz_ninf(double %a) #0 #1 #2 {
+; CHECK: rsqrt.approx.f64
+  %ret = tail call ninf double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 

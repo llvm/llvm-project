@@ -69,7 +69,7 @@
 // ANDROID32-HEADERS: 0x6000000F ANDROID_REL          [[ADDR]]
 // ANDROID32-HEADERS: 0x60000010 ANDROID_RELSZ        [[SIZE]]
 
-// Packed should have the groups of non-relative reloations first, followed
+// Packed should have the groups of non-relative relocations first, followed
 // by the larger groups of relative relocations (i.e. the 8 and 9 followed
 // by the 7.)
 // ANDROID32:          Section ({{.+}}) .rel.dyn {

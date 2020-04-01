@@ -30,3 +30,9 @@ set(LLVM_TARGET_DEFINITIONS TargetAndABI.td)
 mlir_tablegen(TargetAndABI.h.inc -gen-struct-attr-decls)
 mlir_tablegen(TargetAndABI.cpp.inc -gen-struct-attr-defs)
 add_public_tablegen_target(MLIRSPIRVTargetAndABIIncGen)
+
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls)
+add_public_tablegen_target(MLIRSPIRVPassIncGen)
+
+add_mlir_doc(Passes -gen-pass-doc SPIRVPasses ./)

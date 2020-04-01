@@ -13109,8 +13109,12 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
 
 SDValue DAGCombiner::visitFSQRT(SDNode *N) {
   SDNodeFlags Flags = N->getFlags();
-  if (!DAG.getTarget().Options.UnsafeFPMath &&
-      !Flags.hasApproximateFuncs())
+  const TargetOptions &Options = DAG.getTarget().Options;
+
+  // Require 'ninf' flag since sqrt(+Inf) = +Inf, but the estimation goes as:
+  // sqrt(+Inf) == rsqrt(+Inf) * +Inf = 0 * +Inf = NaN
+  if ((!Options.UnsafeFPMath && !Flags.hasApproximateFuncs()) ||
+      (!Options.NoInfsFPMath && !Flags.hasNoInfs()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14629,11 +14633,12 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
 
   // Try to infer better alignment information than the load already has.
   if (OptLevel != CodeGenOpt::None && LD->isUnindexed() && !LD->isAtomic()) {
-    if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
-      if (Align > LD->getAlignment() && LD->getSrcValueOffset() % Align == 0) {
+    if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
+      if (*Alignment > LD->getAlign() &&
+          isAligned(*Alignment, LD->getSrcValueOffset())) {
         SDValue NewLoad = DAG.getExtLoad(
             LD->getExtensionType(), SDLoc(N), LD->getValueType(0), Chain, Ptr,
-            LD->getPointerInfo(), LD->getMemoryVT(), Align,
+            LD->getPointerInfo(), LD->getMemoryVT(), *Alignment,
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
         // NewLoad will always be N as we are only refining the alignment
         assert(NewLoad.getNode() == N);
@@ -16695,11 +16700,12 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // Try to infer better alignment information than the store already has.
   if (OptLevel != CodeGenOpt::None && ST->isUnindexed() && !ST->isAtomic()) {
-    if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
-      if (Align > ST->getAlignment() && ST->getSrcValueOffset() % Align == 0) {
+    if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
+      if (*Alignment > ST->getAlign() &&
+          isAligned(*Alignment, ST->getSrcValueOffset())) {
         SDValue NewStore =
             DAG.getTruncStore(Chain, SDLoc(N), Value, Ptr, ST->getPointerInfo(),
-                              ST->getMemoryVT(), Align,
+                              ST->getMemoryVT(), *Alignment,
                               ST->getMemOperand()->getFlags(), ST->getAAInfo());
         // NewStore will always be N as we are only refining the alignment
         assert(NewStore.getNode() == N);
@@ -19815,8 +19821,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
         ShuffleVectorSDNode *InnerSVN = cast<ShuffleVectorSDNode>(BC0);
         SmallVector<int, 8> InnerMask;
         SmallVector<int, 8> OuterMask;
-        scaleShuffleMask<int>(InnerScale, InnerSVN->getMask(), InnerMask);
-        scaleShuffleMask<int>(OuterScale, SVN->getMask(), OuterMask);
+        scaleShuffleMask(InnerScale, InnerSVN->getMask(), InnerMask);
+        scaleShuffleMask(OuterScale, SVN->getMask(), OuterMask);
 
         // Merge the shuffle masks.
         SmallVector<int, 8> NewMask;

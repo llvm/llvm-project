@@ -520,6 +520,7 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::InactiveCode:
     return "comment";
   }
+  llvm_unreachable("unhandled HighlightingKind");
 }
 
 std::vector<TheiaSemanticHighlightingInformation>

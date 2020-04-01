@@ -71,13 +71,17 @@ struct DOTGraphTraits<const CAGSlice *>
 } // end namespace llvm
 
 namespace {
-
 class InferQuantizedTypesPass : public ModulePass<InferQuantizedTypesPass> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantizerInferQuantizedTypes
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
   InferQuantizedTypesPass() = default;
   InferQuantizedTypesPass(SolverContext &solverContext,
                           const TargetConfiguration &config)
       : explicitSolverContext(&solverContext), explicitConfig(&config) {}
+
   void runOnModule() override;
   void runWithConfig(SolverContext &solverContext,
                      const TargetConfiguration &config);
@@ -282,12 +286,7 @@ mlir::quantizer::createInferQuantizedTypesPass(
     SolverContext &solverContext, const TargetConfiguration &config) {
   return std::make_unique<InferQuantizedTypesPass>(solverContext, config);
 }
-void mlir::quantizer::registerInferQuantizedTypesPass() {
-  // Do nothing, this will be enough to force link this file and the static
-  // registration will kick-in. This is temporary while we're refactoring pass
-  // registration to move away from static constructors.
+std::unique_ptr<OpPassBase<ModuleOp>>
+mlir::quantizer::createInferQuantizedTypesPass() {
+  return std::make_unique<InferQuantizedTypesPass>();
 }
-
-static PassRegistration<InferQuantizedTypesPass>
-    pass("quantizer-infer-quantized-types",
-         "Infers quantized types for a module");
