@@ -364,13 +364,10 @@ void LowerUniformRealMathPass::runOnFunction() {
   applyPatternsGreedily(fn, patterns);
 }
 
-OpPassBase<FuncOp> *mlir::fxpmath::createLowerUniformRealMathPass() {
-  return new LowerUniformRealMathPass();
+std::unique_ptr<OpPassBase<FuncOp>>
+mlir::fxpmath::createLowerUniformRealMathPass() {
+  return std::make_unique<LowerUniformRealMathPass>();
 }
-
-static PassRegistration<LowerUniformRealMathPass> lowerUniformRealMathPass(
-    "fxpmath-lower-uniform-real-math",
-    "Lowers uniform-quantized real math ops to integer arithmetic.");
 
 //===----------------------------------------------------------------------===//
 // LowerUniformCasts pass
@@ -384,10 +381,7 @@ void LowerUniformCastsPass::runOnFunction() {
   applyPatternsGreedily(fn, patterns);
 }
 
-OpPassBase<FuncOp> *mlir::fxpmath::createLowerUniformCastsPass() {
-  return new LowerUniformCastsPass();
+std::unique_ptr<OpPassBase<FuncOp>>
+mlir::fxpmath::createLowerUniformCastsPass() {
+  return std::make_unique<LowerUniformCastsPass>();
 }
-
-static PassRegistration<LowerUniformCastsPass>
-    lowerUniformCastsPass("fxpmath-lower-uniform-casts",
-                          "Lowers uniform-quantized casts.");

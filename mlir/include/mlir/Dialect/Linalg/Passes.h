@@ -20,8 +20,10 @@ namespace mlir {
 class FuncOp;
 class ModuleOp;
 template <typename T> class OpPassBase;
+class Pass;
 
 std::unique_ptr<OpPassBase<FuncOp>> createLinalgFusionPass();
+std::unique_ptr<Pass> createLinalgFusionOfTensorOpsPass();
 
 std::unique_ptr<OpPassBase<FuncOp>>
 createLinalgTilingPass(ArrayRef<int64_t> tileSizes = {});
@@ -31,6 +33,7 @@ createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes = {});
 
 std::unique_ptr<OpPassBase<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers);
+std::unique_ptr<OpPassBase<FuncOp>> createLinalgPromotionPass();
 
 /// Create a pass to convert Linalg operations to loop.for loops and
 /// std.load/std.store accesses.

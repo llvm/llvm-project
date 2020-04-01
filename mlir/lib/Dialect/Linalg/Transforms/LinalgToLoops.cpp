@@ -767,19 +767,3 @@ INSTANTIATE_LINALG_OP_TO_LOOPS(IndexedGenericOp)
 template LogicalResult
 mlir::linalg::linalgOpToParallelLoops<GenericOp>(PatternRewriter &rewriter,
                                                  Operation *op);
-
-static PassRegistration<LowerLinalgToLoopsPass<loop::ForOp, StdIndexedValue>>
-    structuredLoopsPass(
-        "convert-linalg-to-loops",
-        "Lower the operations from the linalg dialect into loops");
-
-static PassRegistration<
-    LowerLinalgToLoopsPass<loop::ParallelOp, StdIndexedValue>>
-    parallelLoopsPass(
-        "convert-linalg-to-parallel-loops",
-        "Lower the operations from the linalg dialect into parallel loops");
-
-static PassRegistration<LowerLinalgToLoopsPass<AffineForOp, AffineIndexedValue>>
-    affineLoopsPass(
-        "convert-linalg-to-affine-loops",
-        "Lower the operations from the linalg dialect into affine loops");

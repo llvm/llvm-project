@@ -300,7 +300,3 @@ private:
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createGpuKernelOutliningPass() {
   return std::make_unique<GpuKernelOutliningPass>();
 }
-
-static PassRegistration<GpuKernelOutliningPass>
-    pass("gpu-kernel-outlining",
-         "Outline gpu.launch bodies to kernel functions.");

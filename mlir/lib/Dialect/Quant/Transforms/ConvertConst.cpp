@@ -106,7 +106,3 @@ void ConvertConstPass::runOnFunction() {
 std::unique_ptr<OpPassBase<FuncOp>> mlir::quant::createConvertConstPass() {
   return std::make_unique<ConvertConstPass>();
 }
-
-static PassRegistration<ConvertConstPass>
-    pass("quant-convert-const",
-         "Converts constants followed by qbarrier to actual quantized values");

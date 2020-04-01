@@ -67,7 +67,3 @@ struct LegalizeForExportPass : public OperationPass<LegalizeForExportPass> {
 std::unique_ptr<Pass> LLVM::createLegalizeForExportPass() {
   return std::make_unique<LegalizeForExportPass>();
 }
-
-static PassRegistration<LegalizeForExportPass>
-    pass("llvm-legalize-for-export",
-         "Legalize LLVM dialect to be convertible to LLVM IR");

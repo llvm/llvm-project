@@ -173,6 +173,3 @@ struct ParallelLoopFusion : public OperationPass<ParallelLoopFusion> {
 std::unique_ptr<Pass> mlir::createParallelLoopFusionPass() {
   return std::make_unique<ParallelLoopFusion>();
 }
-
-static PassRegistration<ParallelLoopFusion>
-    pass("parallel-loop-fusion", "Fuse adjacent parallel loops.");

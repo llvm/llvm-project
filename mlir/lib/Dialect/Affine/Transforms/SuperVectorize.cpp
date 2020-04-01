@@ -1271,7 +1271,6 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
   return std::make_unique<Vectorize>(virtualVectorSize);
 }
-
-static PassRegistration<Vectorize>
-    pass("affine-super-vectorize",
-         "Vectorize to a target independent n-D vector abstraction");
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createSuperVectorizePass() {
+  return std::make_unique<Vectorize>();
+}

@@ -70,7 +70,3 @@ struct ParallelLoopSpecialization
 std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
   return std::make_unique<ParallelLoopSpecialization>();
 }
-
-static PassRegistration<ParallelLoopSpecialization>
-    pass("parallel-loop-specialization",
-         "Specialize parallel loops for vectorization.");

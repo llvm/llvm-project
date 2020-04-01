@@ -61,8 +61,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::quantizer::createRemoveInstrumentationPass() {
   return std::make_unique<RemoveInstrumentationPass>();
 }
-
-static PassRegistration<RemoveInstrumentationPass>
-    pass("quantizer-remove-instrumentation",
-         "Removes instrumentation and hints which have no effect on final "
-         "execution");
