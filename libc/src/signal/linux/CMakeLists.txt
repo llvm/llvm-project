@@ -94,3 +94,29 @@ add_entrypoint_object(
     sigaction
     signal_h
 )
+
+add_entrypoint_object(
+  sigfillset
+  SRCS
+    sigfillset.cpp
+  HDRS
+    signal.h
+    ../sigfillset.h
+  DEPENDS
+    __errno_location
+    errno_h
+    signal_h
+)
+
+add_entrypoint_object(
+  sigdelset
+  SRCS
+    sigdelset.cpp
+  HDRS
+    signal.h
+    ../sigdelset.h
+  DEPENDS
+    __errno_location
+    errno_h
+    signal_h
+)
