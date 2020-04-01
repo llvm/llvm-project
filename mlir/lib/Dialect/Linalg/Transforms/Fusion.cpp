@@ -157,9 +157,9 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
   }
 
   auto subView = dyn_cast_or_null<SubViewOp>(
-      consumer.getInput(consumerIdx).getDefiningOp());
-  auto slice =
-      dyn_cast_or_null<SliceOp>(consumer.getInput(consumerIdx).getDefiningOp());
+      consumer.getBuffer(consumerIdx).getDefiningOp());
+  auto slice = dyn_cast_or_null<SliceOp>(
+      consumer.getBuffer(consumerIdx).getDefiningOp());
   assert(subView || slice);
   (void)subView;
   (void)slice;
@@ -274,16 +274,15 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
   return true;
 }
 
-// Only consider RAW atm.
-Optional<FusionInfo> mlir::linalg::fuseProducerOf(
-    OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
-    const LinalgDependenceGraph &graph, OperationFolder *folder) {
+static Optional<FusionInfo>
+fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
+                  const LinalgDependenceGraph &graph, OperationFolder *folder,
+                  LinalgDependenceGraph::DependenceType depType) {
   assert(consumer.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   LLVM_DEBUG(dbgs() << "\nStart examining consumer: "
                     << *consumer.getOperation());
-  for (auto dependence : graph.getDependencesInto(
-           consumer, LinalgDependenceGraph::DependenceType::RAW)) {
+  for (auto dependence : graph.getDependencesInto(consumer, depType)) {
     LLVM_DEBUG(dbgs() << "\n***Consider producer:\t"
                       << *dependence.dependentOpView.op << "\n");
     auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
@@ -294,7 +293,7 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;
-    if (consumer.getInput(consumerIdx) != consumedView)
+    if (consumer.getBuffer(consumerIdx) != consumedView)
       continue;
 
     // Consumer consumes this view, `isStructurallyFusableProducer` also checks
@@ -302,9 +301,10 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     auto producedView = dependence.dependentOpView.view;
     auto producerIdx = producer.getIndexOfOutputBuffer(producedView).getValue();
     // `consumerIdx` and `producerIdx` exist by construction.
-    LLVM_DEBUG(dbgs() << "\nRAW producer: " << *producer.getOperation()
-                      << " view: " << producedView
-                      << " output index: " << producerIdx);
+    LLVM_DEBUG(dbgs() << "\n"
+                      << LinalgDependenceGraph::getDependenceTypeStr(depType)
+                      << "producer: " << *producer.getOperation() << " view: "
+                      << producedView << " output index: " << producerIdx);
 
     // Must be a subview or a slice to guarantee there are loops we can fuse
     // into.
@@ -328,6 +328,22 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
                               producerIdx, folder);
 
     return FusionInfo{producer, fusedProducer};
+  }
+  return llvm::None;
+}
+
+// Only consider RAW and WAW atm.
+Optional<FusionInfo> mlir::linalg::fuseProducerOf(
+    OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
+    const LinalgDependenceGraph &graph, OperationFolder *folder) {
+  SmallVector<LinalgDependenceGraph::DependenceType, 4> deps = {
+      LinalgDependenceGraph::DependenceType::RAW,
+      LinalgDependenceGraph::DependenceType::WAW,
+  };
+  for (auto dep : deps) {
+    if (auto res =
+            fuseProducerOfDep(b, consumer, consumerIdx, graph, folder, dep))
+      return res;
   }
   return llvm::None;
 }
@@ -498,7 +514,8 @@ static void fuseLinalgOpsGreedily(FuncOp f) {
   // The current naive and expensive reconstruction of the graph should be
   // removed.
   for (auto *op : llvm::reverse(linalgOps)) {
-    for (unsigned id = 0, e = LinalgOp(op).getNumInputs(); id < e; ++id) {
+    for (unsigned id = 0, e = LinalgOp(op).getNumInputsAndOutputBuffers();
+         id < e; ++id) {
       linalg::Aliases aliases;
       linalg::LinalgDependenceGraph graph(aliases, linalgOps);
       if (auto info = fuseProducerOf(b, op, id, graph, &folder)) {
