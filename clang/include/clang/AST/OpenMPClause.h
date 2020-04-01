@@ -4372,9 +4372,6 @@ class OMPDependClause final
   /// Set colon location.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
-  /// Sets optional dependency modifier.
-  void setModifier(Expr *DepModifier);
-
 public:
   /// Creates clause with a list of variables \a VL.
   ///
@@ -4390,7 +4387,7 @@ public:
   /// clause.
   static OMPDependClause *Create(const ASTContext &C, SourceLocation StartLoc,
                                  SourceLocation LParenLoc,
-                                 SourceLocation EndLoc, Expr *DepModifier,
+                                 SourceLocation EndLoc,
                                  OpenMPDependClauseKind DepKind,
                                  SourceLocation DepLoc, SourceLocation ColonLoc,
                                  ArrayRef<Expr *> VL, unsigned NumLoops);
@@ -4406,12 +4403,6 @@ public:
 
   /// Get dependency type.
   OpenMPDependClauseKind getDependencyKind() const { return DepKind; }
-
-  /// Return optional depend modifier.
-  Expr *getModifier();
-  const Expr *getModifier() const {
-    return const_cast<OMPDependClause *>(this)->getModifier();
-  }
 
   /// Get dependency type location.
   SourceLocation getDependencyLoc() const { return DepLoc; }
