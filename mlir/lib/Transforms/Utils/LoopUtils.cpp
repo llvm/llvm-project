@@ -694,7 +694,7 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 }
 
 /// Return true if `loops` is a perfect nest.
-static bool isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+static bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops) {
   auto outerLoop = loops.front();
   for (auto loop : loops.drop_front()) {
     auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
