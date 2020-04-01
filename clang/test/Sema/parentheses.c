@@ -117,5 +117,5 @@ void conditional_op(int x, int y, _Bool b, void* p) {
   (void)(x && b ? 1 : 2);  // no warning, logical operator
 }
 
-// RUN: not %clang_cc1 -fsyntax-only -Wparentheses -Werror -fdiagnostics-show-option %s 2>&1 | FileCheck %s -check-prefix=CHECK-FLAG
+// RUN: not %clang_cc1 -fsyntax-only -Wparentheses -Werror %s 2>&1 | FileCheck %s -check-prefix=CHECK-FLAG
 // CHECK-FLAG: error: using the result of an assignment as a condition without parentheses [-Werror,-Wparentheses]
