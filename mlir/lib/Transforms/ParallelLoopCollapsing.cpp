@@ -37,7 +37,7 @@ struct ParallelLoopCollapsing : public OperationPass<ParallelLoopCollapsing> {
         combinedLoops.push_back(clCollapsedIndices1);
       if (clCollapsedIndices2.size())
         combinedLoops.push_back(clCollapsedIndices2);
-      collapsePLoops(op, combinedLoops);
+      collapseParallelLoops(op, combinedLoops);
     });
   }
 

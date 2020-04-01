@@ -1226,7 +1226,7 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
 static void normalizeLoop(loop::ForOp loop, loop::ForOp outer,
                           loop::ForOp inner) {
   OpBuilder builder(outer);
-  OpBuilder innerBuilder(inner.getBody(), inner.getBody()->begin());
+  OpBuilder innerBuilder = OpBuilder::atBlockBegin(inner.getBody());
   auto loopPieces =
       normalizeLoop(builder, innerBuilder, loop.getLoc(), loop.lowerBound(),
                     loop.upperBound(), loop.step(), loop.getInductionVar());
@@ -1291,8 +1291,9 @@ void mlir::coalesceLoops(MutableArrayRef<loop::ForOp> loops) {
   second.erase();
 }
 
-void mlir::collapsePLoops(loop::ParallelOp loops,
-                          ArrayRef<std::vector<unsigned>> combinedDimensions) {
+void mlir::collapseParallelLoops(
+    loop::ParallelOp loops,
+    ArrayRef<std::vector<unsigned>> combinedDimensions) {
   OpBuilder outsideBuilder(loops);
   Location loc = loops.getLoc();
 
@@ -1301,7 +1302,7 @@ void mlir::collapsePLoops(loop::ParallelOp loops,
   SmallVector<Value, 3> normalizedSteps;
   SmallVector<Value, 3> normalizedUpperBounds;
   for (unsigned i = 0, e = loops.getNumLoops(); i < e; ++i) {
-    OpBuilder insideLoopBuilder(loops.getBody(), loops.getBody()->begin());
+    OpBuilder insideLoopBuilder = OpBuilder::atBlockBegin(loops.getBody());
     auto resultBounds =
         normalizeLoop(outsideBuilder, insideLoopBuilder, loc,
                       loops.lowerBound()[i], loops.upperBound()[i],
@@ -1312,7 +1313,7 @@ void mlir::collapsePLoops(loop::ParallelOp loops,
     normalizedSteps.push_back(resultBounds.step);
   }
 
-  // Combine iteration spaces
+  // Combine iteration spaces.
   SmallVector<Value, 3> lowerBounds;
   SmallVector<Value, 3> steps;
   SmallVector<Value, 3> upperBounds;
@@ -1337,7 +1338,7 @@ void mlir::collapsePLoops(loop::ParallelOp loops,
   // that is un-normalized already by the previous logic.
   auto newPloop = outsideBuilder.create<loop::ParallelOp>(loc, lowerBounds,
                                                           upperBounds, steps);
-  OpBuilder insideBuilder(newPloop.getBody(), newPloop.getBody()->begin());
+  OpBuilder insideBuilder(newPloop.region());
   for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
     Value previous = newPloop.getBody()->getArgument(i);
     unsigned numberCombinedDimensions = combinedDimensions[i].size();
