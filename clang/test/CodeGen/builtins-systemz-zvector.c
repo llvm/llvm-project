@@ -3665,31 +3665,31 @@ void test_integer(void) {
   // CHECK-ASM: vsumqg
 
   idx = vec_test_mask(vsc, vuc);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vuc, vuc);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vss, vus);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vus, vus);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vsi, vui);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vui, vui);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vsl, vul);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vul, vul);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vd, vul);
-  // CHECK: call signext i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
 }
 

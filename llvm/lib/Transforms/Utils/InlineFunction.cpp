@@ -80,20 +80,10 @@ EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
   cl::Hidden,
   cl::desc("Convert noalias attributes to metadata during inlining."));
 
-static cl::opt<bool> UpdateReturnAttributes(
-    "update-return-attrs", cl::init(true), cl::Hidden,
-    cl::desc("Update return attributes on calls within inlined body"));
-
 static cl::opt<bool>
 PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
   cl::init(true), cl::Hidden,
   cl::desc("Convert align attributes to assumptions during inlining."));
-
-static cl::opt<unsigned> InlinerAttributeWindow(
-    "inliner-attribute-window", cl::Hidden,
-    cl::desc("the maximum number of instructions analyzed for may throw during "
-             "attribute inference in inlined body"),
-    cl::init(4));
 
 llvm::InlineResult llvm::InlineFunction(CallBase *CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
@@ -1146,81 +1136,6 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   }
 }
 
-static bool MayContainThrowingOrExitingCall(Instruction *Begin,
-                                            Instruction *End) {
-
-  assert(Begin->getParent() == End->getParent() &&
-         "Expected to be in same basic block!");
-  unsigned NumInstChecked = 0;
-  // Check that all instructions in the range [Begin, End) are guaranteed to
-  // transfer execution to successor.
-  for (auto &I : make_range(Begin->getIterator(), End->getIterator()))
-    if (NumInstChecked++ > InlinerAttributeWindow ||
-        !isGuaranteedToTransferExecutionToSuccessor(&I))
-      return true;
-  return false;
-}
-
-static void AddReturnAttributes(CallSite CS, ValueToValueMapTy &VMap) {
-  if (!UpdateReturnAttributes)
-    return;
-  AttrBuilder AB(CS.getAttributes(), AttributeList::ReturnIndex);
-  if (AB.empty())
-    return;
-
-  auto *CalledFunction = CS.getCalledFunction();
-  auto &Context = CalledFunction->getContext();
-
-  for (auto &BB : *CalledFunction) {
-    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI || !isa<CallBase>(RI->getOperand(0)))
-      continue;
-    // Sanity check that the cloned return instruction exists and is a return
-    // instruction itself.
-    auto *NewRI = dyn_cast_or_null<ReturnInst>(VMap.lookup(RI));
-    if (!NewRI)
-      continue;
-    auto *RetVal = cast<CallBase>(RI->getOperand(0));
-    // Sanity check that the cloned RetVal exists and is a call.
-    // Simplification during inlining could have transformed the cloned
-    // instruction.
-    auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
-    if (!NewRetVal)
-      continue;
-    // Backward propagation of attributes to the returned value may be incorrect
-    // if it is control flow dependent.
-    // Consider:
-    // @callee {
-    //  %rv = call @foo()
-    //  %rv2 = call @bar()
-    //  if (%rv2 != null)
-    //    return %rv2
-    //  if (%rv == null)
-    //    exit()
-    //  return %rv
-    // }
-    // caller() {
-    //   %val = call nonnull @callee()
-    // }
-    // Here we cannot add the nonnull attribute on either foo or bar. So, we
-    // limit the check to both NewRetVal and NewRI are in the same basic block
-    // and there are no throwing/exiting instructions between these
-    // instructions.
-    if (NewRI->getParent() != NewRetVal->getParent() ||
-        MayContainThrowingOrExitingCall(NewRetVal, NewRI))
-      continue;
-    // Add to the existing attributes of NewRetVal.
-    // NB! When we have the same attribute already existing on NewRetVal, but
-    // with a differing value, the AttributeList's merge API honours the already
-    // existing attribute value (i.e. attributes such as dereferenceable,
-    // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
-    AttributeList AL = NewRetVal->getAttributes();
-    AttributeList NewAL =
-        AL.addAttributes(Context, AttributeList::ReturnIndex, AB);
-    NewRetVal->setAttributes(NewAL);
-  }
-}
-
 /// If the inlined function has non-byval align arguments, then
 /// add @llvm.assume-based alignment assumptions to preserve this information.
 static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
@@ -1885,10 +1800,6 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CS, VMap, DL, CalleeAAR);
-
-    // Clone return attributes on the callsite into the calls within the inlined
-    // function which feed into its return value.
-    AddReturnAttributes(CS, VMap);
 
     // Propagate llvm.mem.parallel_loop_access if necessary.
     PropagateParallelLoopAccessMetadata(CS, VMap);
