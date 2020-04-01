@@ -39777,6 +39777,75 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
   return SDValue();
 }
 
+/// If we are inverting an PTEST/TESTP operand, attempt to adjust the CC
+/// to avoid the inversion.
+static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
+                              SelectionDAG &DAG) {
+  // TODO: Handle X86ISD::KTEST/X86ISD::KORTEST.
+  if (EFLAGS.getOpcode() != X86ISD::PTEST &&
+      EFLAGS.getOpcode() != X86ISD::TESTP)
+    return SDValue();
+
+  // PTEST/TESTP sets EFLAGS as:
+  // TESTZ: ZF = (Op0 & Op1) == 0
+  // TESTC: CF = (~Op0 & Op1) == 0
+  // TESTNZC: ZF == 0 && CF == 0
+  EVT VT = EFLAGS.getValueType();
+  SDValue Op0 = EFLAGS.getOperand(0);
+  SDValue Op1 = EFLAGS.getOperand(1);
+  EVT OpVT = Op0.getValueType();
+
+  // TEST*(~X,Y) == TEST*(X,Y)
+  if (SDValue NotOp0 = IsNOT(Op0, DAG)) {
+    X86::CondCode InvCC;
+    switch (CC) {
+    case X86::COND_B:
+      // testc -> testz.
+      InvCC = X86::COND_E;
+      break;
+    case X86::COND_AE:
+      // !testc -> !testz.
+      InvCC = X86::COND_NE;
+      break;
+    case X86::COND_E:
+      // testz -> testc.
+      InvCC = X86::COND_B;
+      break;
+    case X86::COND_NE:
+      // !testz -> !testc.
+      InvCC = X86::COND_AE;
+      break;
+    case X86::COND_A:
+    case X86::COND_BE:
+      // testnzc -> testnzc (no change).
+      InvCC = CC;
+      break;
+    default:
+      InvCC = X86::COND_INVALID;
+      break;
+    }
+
+    if (InvCC != X86::COND_INVALID) {
+      CC = InvCC;
+      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT,
+                         DAG.getBitcast(OpVT, NotOp0), Op1);
+    }
+  }
+
+  // TODO: TESTZ(X,~Y) == TESTC(Y,X)
+
+  // TESTZ(X,-1) == TESTZ(X,X)
+  // TESTZ(-1,X) == TESTZ(X,X)
+  if (CC == X86::COND_E || CC == X86::COND_NE) {
+    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op1, Op1);
+    if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op0, Op0);
+  }
+
+  return SDValue();
+}
+
 /// Optimize an EFLAGS definition used according to the condition code \p CC
 /// into a simpler EFLAGS value, potentially returning a new \p CC and replacing
 /// uses of chain values.
@@ -39789,6 +39858,10 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
 
   if (SDValue R = checkBoolTestSetCCCombine(EFLAGS, CC))
     return R;
+
+  if (SDValue R = combinePTESTCC(EFLAGS, CC, DAG))
+    return R;
+
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);
 }
 
