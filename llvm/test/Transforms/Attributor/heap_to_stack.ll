@@ -76,6 +76,26 @@ define void @test3a(i8* %p) {
   ret void
 }
 
+declare noalias i8* @aligned_alloc(i64, i64)
+
+define void @test3b(i8* %p) {
+  %1 = tail call noalias i8* @aligned_alloc(i64 32, i64 128)
+  ; CHECK: %1 = alloca i8, i64 128, align 32
+  ; CHECK-NEXT: tail call void @nofree_arg_only
+  tail call void @nofree_arg_only(i8* %1, i8* %p)
+  ; CHECK-NOT: @free(i8* %1)
+  tail call void @free(i8* %1)
+  ret void
+}
+
+; leave alone non-constant alignments.
+define void @test3c(i64 %alignment) {
+  %1 = tail call noalias i8* @aligned_alloc(i64 %alignment, i64 128)
+  ; CHECK: tail call noalias i8* @aligned_alloc
+  tail call void @free(i8* %1)
+  ret void
+}
+
 declare noalias i8* @calloc(i64, i64)
 
 define void @test0() {
@@ -90,7 +110,7 @@ define void @test0() {
   ret void
 }
 
-; TEST 4 
+; TEST 4
 define void @test4() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
@@ -219,7 +239,7 @@ define i32 @test_lifetime() {
   ret i32 %3
 }
 
-; TEST 11 
+; TEST 11
 
 define void @test11() {
   %1 = tail call noalias i8* @malloc(i64 4)
