@@ -61,7 +61,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
             count);
       } else {
         bool changed = false;
-        for (size_t i = 1; i < argc; i += 2, ++idx) {
+        for (size_t i = 1; i < argc; i += 2) {
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
@@ -70,9 +70,13 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
             if (!m_path_mappings.Replace(a, b, idx, m_notify_changes))
               m_path_mappings.Append(a, b, m_notify_changes);
             changed = true;
+            idx++;
           } else {
+            std::string previousError =
+                error.Fail() ? std::string(error.AsCString()) + "\n" : "";
             error.SetErrorStringWithFormat(
-                "the replacement path doesn't exist: \"%s\"", replace_path);
+                "%sthe replacement path doesn't exist: \"%s\"",
+                previousError.c_str(), replace_path);
             break;
           }
         }
@@ -109,9 +113,11 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
           m_value_was_set = true;
           changed = true;
         } else {
+          std::string previousError =
+              error.Fail() ? std::string(error.AsCString()) + "\n" : "";
           error.SetErrorStringWithFormat(
-              "the replacement path doesn't exist: \"%s\"", replace_path);
-          break;
+              "%sthe replacement path doesn't exist: \"%s\"",
+              previousError.c_str(), replace_path);
         }
       }
       if (changed)
@@ -135,7 +141,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         bool changed = false;
         if (op == eVarSetOperationInsertAfter)
           ++idx;
-        for (size_t i = 1; i < argc; i += 2, ++idx) {
+        for (size_t i = 1; i < argc; i += 2) {
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
@@ -143,9 +149,13 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
             ConstString b(replace_path);
             m_path_mappings.Insert(a, b, idx, m_notify_changes);
             changed = true;
+            idx++;
           } else {
+            std::string previousError =
+                error.Fail() ? std::string(error.AsCString()) + "\n" : "";
             error.SetErrorStringWithFormat(
-                "the replacement path doesn't exist: \"%s\"", replace_path);
+                "%sthe replacement path doesn't exist: \"%s\"",
+                previousError.c_str(), replace_path);
             break;
           }
         }
