@@ -13053,7 +13053,7 @@ OMPClause *Sema::ActOnOpenMPDestroyClause(SourceLocation StartLoc,
 }
 
 OMPClause *Sema::ActOnOpenMPVarListClause(
-    OpenMPClauseKind Kind, ArrayRef<Expr *> VarList, Expr *TailExpr,
+    OpenMPClauseKind Kind, ArrayRef<Expr *> VarList, Expr *DepModOrTailExpr,
     const OMPVarListLocTy &Locs, SourceLocation ColonLoc,
     CXXScopeSpec &ReductionOrMapperIdScopeSpec,
     DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
@@ -13103,13 +13103,13 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_LINEAR_unknown &&
            "Unexpected linear modifier.");
     Res = ActOnOpenMPLinearClause(
-        VarList, TailExpr, StartLoc, LParenLoc,
+        VarList, DepModOrTailExpr, StartLoc, LParenLoc,
         static_cast<OpenMPLinearClauseKind>(ExtraModifier), ExtraModifierLoc,
         ColonLoc, EndLoc);
     break;
   case OMPC_aligned:
-    Res = ActOnOpenMPAlignedClause(VarList, TailExpr, StartLoc, LParenLoc,
-                                   ColonLoc, EndLoc);
+    Res = ActOnOpenMPAlignedClause(VarList, DepModOrTailExpr, StartLoc,
+                                   LParenLoc, ColonLoc, EndLoc);
     break;
   case OMPC_copyin:
     Res = ActOnOpenMPCopyinClause(VarList, StartLoc, LParenLoc, EndLoc);
@@ -13124,8 +13124,8 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_DEPEND_unknown &&
            "Unexpected depend modifier.");
     Res = ActOnOpenMPDependClause(
-        static_cast<OpenMPDependClauseKind>(ExtraModifier), ExtraModifierLoc,
-        ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
+        DepModOrTailExpr, static_cast<OpenMPDependClauseKind>(ExtraModifier),
+        ExtraModifierLoc, ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_map:
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_MAP_unknown &&
@@ -13150,8 +13150,8 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPIsDevicePtrClause(VarList, Locs);
     break;
   case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(TailExpr, VarList, StartLoc, LParenLoc,
-                                    ColonLoc, EndLoc);
+    Res = ActOnOpenMPAllocateClause(DepModOrTailExpr, VarList, StartLoc,
+                                    LParenLoc, ColonLoc, EndLoc);
     break;
   case OMPC_nontemporal:
     Res = ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc, EndLoc);
@@ -15642,7 +15642,7 @@ OMPClause *Sema::ActOnOpenMPDepobjClause(Expr *Depobj, SourceLocation StartLoc,
 }
 
 OMPClause *
-Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
+Sema::ActOnOpenMPDependClause(Expr *DepModifier, OpenMPDependClauseKind DepKind,
                               SourceLocation DepLoc, SourceLocation ColonLoc,
                               ArrayRef<Expr *> VarList, SourceLocation StartLoc,
                               SourceLocation LParenLoc, SourceLocation EndLoc) {
@@ -15664,12 +15664,26 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
     Except.push_back(OMPC_DEPEND_sink);
     if (LangOpts.OpenMP < 50 || DSAStack->getCurrentDirective() == OMPD_depobj)
       Except.push_back(OMPC_DEPEND_depobj);
+    std::string Expected = (LangOpts.OpenMP >= 50 && !DepModifier)
+                               ? "depend modifier(iterator) or "
+                               : "";
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
-        << getListOfPossibleValues(OMPC_depend, /*First=*/0,
-                                   /*Last=*/OMPC_DEPEND_unknown, Except)
+        << Expected + getListOfPossibleValues(OMPC_depend, /*First=*/0,
+                                              /*Last=*/OMPC_DEPEND_unknown,
+                                              Except)
         << getOpenMPClauseName(OMPC_depend);
     return nullptr;
   }
+  if (DepModifier &&
+      (DepKind == OMPC_DEPEND_source || DepKind == OMPC_DEPEND_sink)) {
+    Diag(DepModifier->getExprLoc(),
+         diag::err_omp_depend_sink_source_with_modifier);
+    return nullptr;
+  }
+  if (DepModifier &&
+      !DepModifier->getType()->isSpecificBuiltinType(BuiltinType::OMPIterator))
+    Diag(DepModifier->getExprLoc(), diag::err_omp_depend_modifier_not_iterator);
+
   SmallVector<Expr *, 8> Vars;
   DSAStackTy::OperatorOffsetTy OpsOffs;
   llvm::APSInt DepCounter(/*BitWidth=*/32);
@@ -15878,8 +15892,8 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
     return nullptr;
 
   auto *C = OMPDependClause::Create(Context, StartLoc, LParenLoc, EndLoc,
-                                    DepKind, DepLoc, ColonLoc, Vars,
-                                    TotalDepCount.getZExtValue());
+                                    DepModifier, DepKind, DepLoc, ColonLoc,
+                                    Vars, TotalDepCount.getZExtValue());
   if ((DepKind == OMPC_DEPEND_sink || DepKind == OMPC_DEPEND_source) &&
       DSAStack->isParentOrderedRegion())
     DSAStack->addDoacrossDependClause(C, OpsOffs);
