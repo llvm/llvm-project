@@ -195,30 +195,30 @@ static bool parseCommand(StringRef InputString, Command &Cmd,
     // If no cmd, assume it's CODE.
     Cmd = Command::Code;
   }
-  const char *pos = InputString.data();
+  const char *Pos = InputString.data();
   // Skip delimiters and parse input filename (if needed).
   if (ClBinaryName.empty()) {
-    pos += strspn(pos, kDelimiters);
-    if (*pos == '"' || *pos == '\'') {
-      char quote = *pos;
-      pos++;
-      const char *end = strchr(pos, quote);
-      if (!end)
+    Pos += strspn(Pos, kDelimiters);
+    if (*Pos == '"' || *Pos == '\'') {
+      char Quote = *Pos;
+      Pos++;
+      const char *End = strchr(Pos, Quote);
+      if (!End)
         return false;
-      ModuleName = std::string(pos, end - pos);
-      pos = end + 1;
+      ModuleName = std::string(Pos, End - Pos);
+      Pos = End + 1;
     } else {
-      int name_length = strcspn(pos, kDelimiters);
-      ModuleName = std::string(pos, name_length);
-      pos += name_length;
+      int NameLength = strcspn(Pos, kDelimiters);
+      ModuleName = std::string(Pos, NameLength);
+      Pos += NameLength;
     }
   } else {
     ModuleName = ClBinaryName;
   }
   // Skip delimiters and parse module offset.
-  pos += strspn(pos, kDelimiters);
-  int offset_length = strcspn(pos, kDelimiters);
-  return !StringRef(pos, offset_length).getAsInteger(0, ModuleOffset);
+  Pos += strspn(Pos, kDelimiters);
+  int OffsetLength = strcspn(Pos, kDelimiters);
+  return !StringRef(Pos, OffsetLength).getAsInteger(0, ModuleOffset);
 }
 
 static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
