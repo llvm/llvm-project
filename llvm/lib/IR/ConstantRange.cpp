@@ -1196,6 +1196,10 @@ ConstantRange::binaryAnd(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
+  // Use APInt's implementation of AND for single element ranges.
+  if (isSingleElement() && Other.isSingleElement())
+    return {*getSingleElement() & *Other.getSingleElement()};
+
   // TODO: replace this with something less conservative
 
   APInt umin = APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax());
@@ -1206,6 +1210,10 @@ ConstantRange
 ConstantRange::binaryOr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
+
+  // Use APInt's implementation of OR for single element ranges.
+  if (isSingleElement() && Other.isSingleElement())
+    return {*getSingleElement() | *Other.getSingleElement()};
 
   // TODO: replace this with something less conservative
 
