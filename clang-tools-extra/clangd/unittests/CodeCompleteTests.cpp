@@ -1049,8 +1049,12 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
   auto Preamble =
       buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
                     /*InMemory=*/true, /*Callback=*/nullptr);
-  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
-                       Preamble.get(), Text, Point, Inputs.FS, Index.get());
+  if (!Preamble) {
+    ADD_FAILURE() << "Couldn't build Preamble";
+    return {};
+  }
+  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand, *Preamble,
+                       Text, Point, Inputs.FS, Index.get());
 }
 
 SignatureHelp signatures(llvm::StringRef Text,
