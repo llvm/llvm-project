@@ -3,7 +3,7 @@
 ; RUN: not wasm-ld --fatal-warnings %t.o %t1.o -o %t.wasm 2>&1 | FileCheck %s
 
 ; Test that functions defined in bitcode correctly report signature
-; mistmaches with existing undefined sybmols in normal objects.
+; mismatches with existing undefined sybmols in normal objects.
 
 target triple = "wasm32-unknown-unknown"
 

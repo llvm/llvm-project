@@ -108,7 +108,7 @@ private:
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
   std::vector<Symbol *> symVector;
 
-  // For certain symbols types, e.g. function symbols, we allow for muliple
+  // For certain symbols types, e.g. function symbols, we allow for multiple
   // variants of the same symbol with different signatures.
   llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> symVariants;
 

@@ -14,7 +14,7 @@
 # RUN: llvm-objdump -d %t3 | FileCheck %s
 # RUN: llvm-objdump -d %t4 | FileCheck --check-prefix=REVERT %s
 
-# inputs contain different constants for instuction movl.
+# inputs contain different constants for instruction movl.
 # Tests below checks that order of files in command line
 # affects on what symbol will be used.
 # If flag allow-multiple-definition is enabled the first

@@ -16,7 +16,7 @@ sym4:
     .long .Lprologue_end - .Lprologue_start # prologue length
 .Lprologue_start:
     .byte 1                         # minimum instruction length
-    .byte 1                         # maximum operatiosn per instruction
+    .byte 1                         # maximum operations per instruction
     .byte 1                         # default is_stmt
     .byte -5                        # line base
     .byte 14                        # line range
@@ -59,7 +59,7 @@ sym4:
     .long .Lprologue2_end - .Lprologue2_start # prologue length
 .Lprologue2_start:
     .byte 1                         # minimum instruction length
-    .byte 1                         # maximum operatiosn per instruction
+    .byte 1                         # maximum operations per instruction
     .byte 1                         # default is_stmt
     .byte -5                        # line base
     .byte 14                        # line range
