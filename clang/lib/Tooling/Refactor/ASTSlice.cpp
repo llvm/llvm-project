@@ -182,6 +182,9 @@ ASTSlice::ASTSlice(SourceLocation Location, SourceRange SelectionRange,
   ASTSliceFinder Visitor(Location, SelectionRange, Context);
   SourceLocation EndLoc;
   for (auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
+    if (CurrDecl->getBeginLoc().isInvalid())
+      continue;
+
     if (EndLoc.isValid() &&
         !Context.getSourceManager().isBeforeInTranslationUnit(
             CurrDecl->getBeginLoc(), EndLoc))
