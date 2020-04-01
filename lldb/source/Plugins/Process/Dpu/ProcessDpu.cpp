@@ -213,7 +213,7 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   polling_spec.it_interval.tv_nsec = k_ci_polling_interval_ns;
   int tfd = timerfd_create(CLOCK_MONOTONIC, 0);
   assert(tfd != -1);
-  m_timer_fd.reset(new File(tfd, true));
+  m_timer_fd.reset(new NativeFile(tfd, File::eOpenOptionRead, true));
 
   Status status;
   m_timer_handle = mainloop.RegisterReadObject(
@@ -223,7 +223,7 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
 
   for (int thread_id = 0; thread_id < m_dpu->GetNrThreads(); thread_id++) {
     m_threads.push_back(
-        llvm::make_unique<ThreadDpu>(*this, pid + thread_id, thread_id));
+        std::make_unique<ThreadDpu>(*this, pid + thread_id, thread_id));
   }
 
   if (dpu->PrintfEnable()) {
@@ -235,6 +235,32 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
 
   SetCurrentThreadID(pid);
   SetState(StateType::eStateStopped, false);
+
+  dpu_description_t desc = rank->GetDesc();
+  unsigned int iram_size = desc->memories.iram_size * sizeof(dpuinstruction_t);
+  unsigned int mram_size = desc->memories.mram_size;
+  unsigned int wram_size = desc->memories.wram_size * sizeof(dpuword_t);
+
+  m_iram_region.GetRange().SetRangeBase(k_dpu_iram_base);
+  m_iram_region.GetRange().SetRangeEnd(k_dpu_iram_base + iram_size);
+  m_iram_region.SetReadable(MemoryRegionInfo::eYes);
+  m_iram_region.SetWritable(MemoryRegionInfo::eYes);
+  m_iram_region.SetExecutable(MemoryRegionInfo::eYes);
+  m_iram_region.SetMapped(MemoryRegionInfo::eYes);
+
+  m_mram_region.GetRange().SetRangeBase(k_dpu_mram_base);
+  m_mram_region.GetRange().SetRangeEnd(k_dpu_mram_base + mram_size);
+  m_mram_region.SetReadable(MemoryRegionInfo::eYes);
+  m_mram_region.SetWritable(MemoryRegionInfo::eYes);
+  m_mram_region.SetExecutable(MemoryRegionInfo::eNo);
+  m_mram_region.SetMapped(MemoryRegionInfo::eYes);
+
+  m_wram_region.GetRange().SetRangeBase(k_dpu_wram_base);
+  m_wram_region.GetRange().SetRangeEnd(k_dpu_wram_base + wram_size);
+  m_wram_region.SetReadable(MemoryRegionInfo::eYes);
+  m_wram_region.SetWritable(MemoryRegionInfo::eYes);
+  m_wram_region.SetExecutable(MemoryRegionInfo::eNo);
+  m_wram_region.SetMapped(MemoryRegionInfo::eYes);
 }
 
 void ProcessDpu::InterfaceTimerCallback() {
@@ -401,6 +427,26 @@ Status ProcessDpu::Kill() {
   // TODO: kill it
 
   return error;
+}
+
+Status ProcessDpu::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                       MemoryRegionInfo &range_info) {
+  if (m_wram_region.GetRange().Contains(load_addr)) {
+    range_info = m_wram_region;
+  } else if (m_mram_region.GetRange().Contains(load_addr)) {
+    range_info = m_mram_region;
+  } else if (m_iram_region.GetRange().Contains(load_addr)) {
+    range_info = m_iram_region;
+  } else {
+    range_info.GetRange().SetRangeBase(load_addr);
+    range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+    range_info.SetReadable(MemoryRegionInfo::eNo);
+    range_info.SetWritable(MemoryRegionInfo::eNo);
+    range_info.SetExecutable(MemoryRegionInfo::eNo);
+    range_info.SetMapped(MemoryRegionInfo::eNo);
+  }
+
+  return Status();
 }
 
 Status ProcessDpu::AllocateMemory(size_t size, uint32_t permissions,

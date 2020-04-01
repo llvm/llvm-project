@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import get_stopped_thread
 
-import dpu_commands
+from lldb import dpu_commands
 
 
 class DpuAttachOnBootTestCase(TestBase):

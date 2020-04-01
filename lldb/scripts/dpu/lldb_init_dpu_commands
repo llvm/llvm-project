@@ -1,4 +1,4 @@
-script import dpu_commands
+script from lldb import dpu_commands
 command script add -f dpu_commands.dpu_attach dpu_attach
 command script add -f dpu_commands.dpu_list dpu_list
 command script add -f dpu_commands.dpu_attach_on_boot dpu_attach_on_boot

@@ -130,10 +130,11 @@ uint32_t UnwindDPU::DoGetFrameCount() {
 }
 
 bool UnwindDPU::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                                      lldb::addr_t &pc) {
+                                      lldb::addr_t &pc, bool &behaves_like_zeroth_frame) {
   if (frame_idx >= DoGetFrameCount())
     return false;
 
+  behaves_like_zeroth_frame = frame_idx == 0;
   cfa = m_frames[frame_idx]->cfa;
   pc = m_frames[frame_idx]->pc;
   return true;

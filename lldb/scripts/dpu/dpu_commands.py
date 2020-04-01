@@ -22,7 +22,8 @@ def get_value_from_command(debugger, command, base):
     debugger.GetCommandInterpreter().HandleCommand("p/x " + command, return_obj)
     if return_obj.GetStatus() != lldb.eReturnStatusSuccessFinishResult:
         return False, 0
-    if return_obj.GetOutput() is None:
+    output = return_obj.GetOutput()
+    if output is None or len(output) == 0:
         return True, 0
     addr = int(re.search('.*= (.+)', return_obj.GetOutput()).group(1), base)
     return True, addr
@@ -50,9 +51,9 @@ def get_dpu_from_command(command, debugger, target):
                              str(dpu[1]) + "." + str(dpu[2]) + "." +
                              str(dpu[3]) + "." + str(dpu[4]))),
                         0)
-            if addr == 0:
-                print("Could not interpret command '" + command + "'")
-                return None
+    if addr == 0:
+        print("Could not interpret command '" + command + "'")
+        return None
     return target.CreateValueFromExpression(
         "dpu", "(struct dpu_t *)" + str(addr))
 

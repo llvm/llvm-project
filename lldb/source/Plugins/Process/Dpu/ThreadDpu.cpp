@@ -31,7 +31,7 @@ using namespace lldb_private::process_dpu;
 ThreadDpu::ThreadDpu(ProcessDpu &process, lldb::tid_t tid, int index)
     : NativeThreadProtocol(process, tid), m_thread_index(index),
       m_state(eStateStopped),
-      m_reg_context_up(llvm::make_unique<RegisterContextDpu>(*this, process)) {}
+      m_reg_context_up(std::make_unique<RegisterContextDpu>(*this, process)) {}
 
 std::string ThreadDpu::GetName() {
   return "DPUthread" + llvm::to_string(m_thread_index);

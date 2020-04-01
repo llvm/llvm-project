@@ -36,6 +36,7 @@ class DpuContext;
 
 const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
 
+constexpr lldb::addr_t k_dpu_wram_base = 0x00000000;
 constexpr lldb::addr_t k_dpu_mram_base = 0x08000000;
 constexpr lldb::addr_t k_dpu_iram_base = 0x80000000;
 } // namespace dpu
@@ -72,6 +73,9 @@ public:
   Status Interrupt() override;
 
   Status Kill() override;
+
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &range_info) override;
 
   Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                     size_t &bytes_read) override;
@@ -147,6 +151,9 @@ private:
   MainLoop::ReadHandleUP m_timer_handle;
   dpu::Dpu *m_dpu;
   dpu::DpuRank *m_rank;
+  MemoryRegionInfo m_iram_region;
+  MemoryRegionInfo m_mram_region;
+  MemoryRegionInfo m_wram_region;
 };
 
 } // namespace process_dpu
