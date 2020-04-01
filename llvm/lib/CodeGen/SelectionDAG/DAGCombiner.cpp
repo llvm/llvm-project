@@ -14633,11 +14633,12 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
 
   // Try to infer better alignment information than the load already has.
   if (OptLevel != CodeGenOpt::None && LD->isUnindexed() && !LD->isAtomic()) {
-    if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
-      if (Align > LD->getAlignment() && LD->getSrcValueOffset() % Align == 0) {
+    if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
+      if (*Alignment > LD->getAlign() &&
+          isAligned(*Alignment, LD->getSrcValueOffset())) {
         SDValue NewLoad = DAG.getExtLoad(
             LD->getExtensionType(), SDLoc(N), LD->getValueType(0), Chain, Ptr,
-            LD->getPointerInfo(), LD->getMemoryVT(), Align,
+            LD->getPointerInfo(), LD->getMemoryVT(), *Alignment,
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
         // NewLoad will always be N as we are only refining the alignment
         assert(NewLoad.getNode() == N);
@@ -16699,11 +16700,12 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // Try to infer better alignment information than the store already has.
   if (OptLevel != CodeGenOpt::None && ST->isUnindexed() && !ST->isAtomic()) {
-    if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
-      if (Align > ST->getAlignment() && ST->getSrcValueOffset() % Align == 0) {
+    if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
+      if (*Alignment > ST->getAlign() &&
+          isAligned(*Alignment, ST->getSrcValueOffset())) {
         SDValue NewStore =
             DAG.getTruncStore(Chain, SDLoc(N), Value, Ptr, ST->getPointerInfo(),
-                              ST->getMemoryVT(), Align,
+                              ST->getMemoryVT(), *Alignment,
                               ST->getMemOperand()->getFlags(), ST->getAAInfo());
         // NewStore will always be N as we are only refining the alignment
         assert(NewStore.getNode() == N);

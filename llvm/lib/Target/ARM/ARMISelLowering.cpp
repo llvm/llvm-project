@@ -2272,9 +2272,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         for (i = 0, j = RegBegin; j < RegEnd; i++, j++) {
           SDValue Const = DAG.getConstant(4*i, dl, MVT::i32);
           SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, Const);
-          SDValue Load = DAG.getLoad(PtrVT, dl, Chain, AddArg,
-                                     MachinePointerInfo(),
-                                     DAG.InferPtrAlignment(AddArg));
+          SDValue Load =
+              DAG.getLoad(PtrVT, dl, Chain, AddArg, MachinePointerInfo(),
+                          DAG.InferPtrAlign(AddArg));
           MemOpChains.push_back(Load.getValue(1));
           RegsToPass.push_back(std::make_pair(j, Load));
         }
