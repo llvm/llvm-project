@@ -115,6 +115,11 @@ public:
 
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
+  llvm::DenormalMode getDefaultDenormalModeForType(
+    const llvm::opt::ArgList &DriverArgs,
+    Action::OffloadKind DeviceOffloadKind,
+    const llvm::fltSemantics *FPType = nullptr) const override;
+
   const ToolChain &HostTC;
 
 protected:
