@@ -1817,9 +1817,10 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
         if (auto *templateType =
                 dyn_cast_or_null<NonTypeTemplateParmDecl>(TPList->getParam(i)))
           if (templateType->hasDefaultArgument())
-            defaultParameter =
+            defaultParameter = llvm::APSInt::isSameValue(
                 templateType->getDefaultArgument()->EvaluateKnownConstInt(
-                    CGM.getContext()) == TA.getAsIntegral();
+                    CGM.getContext()),
+                TA.getAsIntegral());
 
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter,
