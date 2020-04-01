@@ -2607,9 +2607,35 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
     W.startLine() << L << "\n";
 }
 
+template <class ELFT>
+static bool checkHashTable(const ELFFile<ELFT> *Obj,
+                           const typename ELFT::Hash *H, StringRef FileName) {
+  auto WarnAndReturn = [&](uint64_t Off, const Twine &Msg = "") {
+    reportWarning(createError("the hash table at offset 0x" +
+                              Twine::utohexstr(Off) +
+                              " goes past the end of the file (0x" +
+                              Twine::utohexstr(Obj->getBufSize()) + ")" + Msg),
+                  FileName);
+    return false;
+  };
+
+  // Each SHT_HASH section starts from two 32-bit fields: nbucket and nchain.
+  const unsigned HeaderSize = 2 * sizeof(typename ELFT::Word);
+  const uint64_t SecOffset = (const uint8_t *)H - Obj->base();
+  if (Obj->getBufSize() - SecOffset < HeaderSize)
+    return WarnAndReturn(SecOffset);
+
+  if (Obj->getBufSize() - SecOffset - HeaderSize <
+      ((uint64_t)H->nbucket + H->nchain) * sizeof(typename ELFT::Word))
+    return WarnAndReturn(SecOffset, ", nbucket = " + Twine(H->nbucket) +
+                                        ", nchain = " + Twine(H->nchain));
+  return true;
+}
+
 template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   DictScope D(W, "HashTable");
-  if (!HashTable)
+  if (!HashTable ||
+      !checkHashTable(ObjF->getELFFile(), HashTable, ObjF->getFileName()))
     return;
   W.printNumber("Num Buckets", HashTable->nbucket);
   W.printNumber("Num Chains", HashTable->nchain);
@@ -3899,9 +3925,7 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
   auto StringTable = this->dumper()->getDynamicStringTable();
   auto DynSyms = this->dumper()->dynamic_symbols();
 
-  // Try printing .hash
-  if (auto SysVHash = this->dumper()->getHashTable()) {
-    OS << "\n Symbol table of .hash for image:\n";
+  auto PrintHashTable = [&](const Elf_Hash *SysVHash) {
     if (ELFT::Is64Bits)
       OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
     else
@@ -3930,6 +3954,12 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
         Visited[Ch] = true;
       }
     }
+  };
+
+  if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
+    OS << "\n Symbol table of .hash for image:\n";
+    if (checkHashTable(Obj, SysVHash, this->FileName))
+      PrintHashTable(SysVHash);
   }
 
   // Try printing .gnu.hash
@@ -4452,6 +4482,9 @@ template <class ELFT>
 void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
   // Print histogram for .hash section
   if (const Elf_Hash *HashTable = this->dumper()->getHashTable()) {
+    if (!checkHashTable(Obj, HashTable, this->FileName))
+      return;
+
     size_t NBucket = HashTable->nbucket;
     size_t NChain = HashTable->nchain;
     ArrayRef<Elf_Word> Buckets = HashTable->buckets();
