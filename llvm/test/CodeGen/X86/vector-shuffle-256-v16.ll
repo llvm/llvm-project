@@ -6914,6 +6914,102 @@ define <16 x i16> @shuffle_v16i16_02_18_03_19_10_26_11_27_00_16_01_17_08_24_09_2
   ret <16 x i16> %4
 }
 
+define <16 x i16> @shuffle_v16i16_ashr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30(<8 x i32> %a0, <8 x i32> %a1) {
+; AVX1-LABEL: shuffle_v16i16_ashr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $25, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsrad $25, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $25, %xmm1, %xmm3
+; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v16i16_ashr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpsrad $25, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    vpsrad $25, %ymm1, %ymm1
+; AVX2OR512VL-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    retq
+;
+; XOPAVX1-LABEL: shuffle_v16i16_ashr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpsrad $25, %xmm0, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vpsrad $25, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsrad $25, %xmm1, %xmm3
+; XOPAVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; XOPAVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: shuffle_v16i16_ashr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpsrad $25, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsrad $25, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    retq
+  %1 = ashr <8 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = ashr <8 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <8 x i32> %1 to <16 x i16>
+  %4 = bitcast <8 x i32> %2 to <16 x i16>
+  %5 = shufflevector <16 x i16> %3, <16 x i16> %4, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>
+  ret <16 x i16> %5
+}
+
+define <16 x i16> @shuffle_v16i16_lshr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30(<8 x i32> %a0, <8 x i32> %a1) {
+; AVX1-LABEL: shuffle_v16i16_lshr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrld $25, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsrld $25, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrld $25, %xmm1, %xmm3
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpsrld $25, %xmm1, %xmm1
+; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v16i16_lshr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpsrld $25, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    vpsrld $25, %ymm1, %ymm1
+; AVX2OR512VL-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    retq
+;
+; XOPAVX1-LABEL: shuffle_v16i16_lshr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpsrld $25, %xmm0, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vpsrld $25, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsrld $25, %xmm1, %xmm3
+; XOPAVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; XOPAVX1-NEXT:    vpsrld $25, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: shuffle_v16i16_lshr_00_02_04_06_16_18_20_22_08_10_12_14_24_26_28_30:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpsrld $25, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsrld $25, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    retq
+  %1 = lshr <8 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = lshr <8 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <8 x i32> %1 to <16 x i16>
+  %4 = bitcast <8 x i32> %2 to <16 x i16>
+  %5 = shufflevector <16 x i16> %3, <16 x i16> %4, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>
+  ret <16 x i16> %5
+}
+
 define <16 x i16> @shuffle_v16i16_04_06_07_uu_uu_06_07_05_12_14_15_uu_uu_14_15_13(<16 x i16> %a) {
 ; AVX1-LABEL: shuffle_v16i16_04_06_07_uu_uu_06_07_05_12_14_15_uu_uu_14_15_13:
 ; AVX1:       # %bb.0:
