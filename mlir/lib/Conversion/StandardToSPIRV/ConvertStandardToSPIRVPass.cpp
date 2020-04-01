@@ -23,6 +23,10 @@ namespace {
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
     : public ModulePass<ConvertStandardToSPIRVPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertStandardToSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

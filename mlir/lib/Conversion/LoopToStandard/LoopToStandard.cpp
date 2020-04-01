@@ -31,6 +31,10 @@ using namespace mlir::loop;
 namespace {
 
 struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertLoopToStandard
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnOperation() override;
 };
 

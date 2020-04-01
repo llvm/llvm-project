@@ -71,13 +71,17 @@ struct DOTGraphTraits<const CAGSlice *>
 } // end namespace llvm
 
 namespace {
-
 class InferQuantizedTypesPass : public ModulePass<InferQuantizedTypesPass> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantizerInferQuantizedTypes
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
   InferQuantizedTypesPass() = default;
   InferQuantizedTypesPass(SolverContext &solverContext,
                           const TargetConfiguration &config)
       : explicitSolverContext(&solverContext), explicitConfig(&config) {}
+
   void runOnModule() override;
   void runWithConfig(SolverContext &solverContext,
                      const TargetConfiguration &config);

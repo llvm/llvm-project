@@ -23,9 +23,12 @@ using namespace mlir::quantizer;
 using namespace mlir::quant;
 
 namespace {
-
 class RemoveInstrumentationPass
     : public FunctionPass<RemoveInstrumentationPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantizerRemoveInstrumentation
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
   void runOnFunction() override;
 };
 

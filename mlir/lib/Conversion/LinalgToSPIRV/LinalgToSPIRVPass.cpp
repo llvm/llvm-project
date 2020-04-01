@@ -17,6 +17,10 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Linalg ops into SPIR-V ops.
 class LinalgToSPIRVPass : public ModulePass<LinalgToSPIRVPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertLinalgToSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

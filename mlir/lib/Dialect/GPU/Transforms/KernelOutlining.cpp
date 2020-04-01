@@ -205,7 +205,6 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
 }
 
 namespace {
-
 /// Pass that moves the kernel of each LaunchOp into its separate nested module.
 ///
 /// This pass moves the kernel code of each LaunchOp into a function created
@@ -217,6 +216,10 @@ namespace {
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass : public ModulePass<GpuKernelOutliningPass> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_GpuKernelOutlining
+#include "mlir/Dialect/GPU/Passes.h.inc"
+
   void runOnModule() override {
     SymbolTable symbolTable(getModule());
     bool modified = false;

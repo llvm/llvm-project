@@ -101,6 +101,10 @@ namespace {
 // Note: this is a module pass only to avoid interleaving on the same ostream
 // due to multi-threading over functions.
 struct PrintOpPass : public ModulePass<PrintOpPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_PrintOpGraph
+#include "mlir/Transforms/Passes.h.inc"
+
   explicit PrintOpPass(raw_ostream &os = llvm::errs(), bool short_names = false,
                        const Twine &title = "")
       : os(os), title(title.str()), short_names(short_names) {}

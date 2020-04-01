@@ -28,7 +28,10 @@ using namespace mlir;
 namespace {
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion : public OperationPass<LoopInvariantCodeMotion> {
-public:
+/// Include the generated pass utilities.
+#define GEN_PASS_LoopInvariantCodeMotion
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override;
 };
 } // end anonymous namespace

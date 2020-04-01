@@ -590,6 +590,10 @@ static void inlineSCC(Inliner &inliner, CGUseList &useList,
 
 namespace {
 struct InlinerPass : public OperationPass<InlinerPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_Inliner
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override {
     CallGraph &cg = getAnalysis<CallGraph>();
     auto *context = &getContext();

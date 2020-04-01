@@ -24,6 +24,11 @@ def LoopParallelLoopSpecialization : Pass<"parallel-loop-specialization"> {
 def LoopParallelLoopTiling : Pass<"parallel-loop-tiling"> {
   let summary = "Tile parallel loops";
   let constructor = "mlir::createParallelLoopTilingPass()";
+  let options = [
+    ListOption<"tileSizes", "parallel-loop-tile-sizes", "int64_t",
+               "Factors to tile parallel loops by",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
 }
 
 #endif // MLIR_DIALECT_LOOP_PASSES

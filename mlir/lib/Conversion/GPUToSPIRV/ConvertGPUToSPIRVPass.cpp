@@ -34,6 +34,10 @@ namespace {
 ///
 /// 2) Lower the body of the spirv::ModuleOp.
 struct GPUToSPIRVPass : public ModulePass<GPUToSPIRVPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuToSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

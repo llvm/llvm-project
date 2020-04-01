@@ -29,6 +29,10 @@ namespace {
 // GPU launch operations.  Nested launches are not allowed, so this does not
 // walk the function recursively to avoid considering nested loops.
 struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertSimpleLoopsToGPU
+#include "mlir/Conversion/Passes.h.inc"
+
   ForLoopMapper() = default;
   ForLoopMapper(const ForLoopMapper &) {}
   ForLoopMapper(unsigned numBlockDims, unsigned numThreadDims) {
@@ -50,15 +54,6 @@ struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
         }
       }
   }
-
-  Option<unsigned> numBlockDims{
-      *this, "gpu-block-dims",
-      llvm::cl::desc("Number of GPU block dimensions for mapping"),
-      llvm::cl::init(1u)};
-  Option<unsigned> numThreadDims{
-      *this, "gpu-thread-dims",
-      llvm::cl::desc("Number of GPU thread dimensions for mapping"),
-      llvm::cl::init(1u)};
 };
 
 // A pass that traverses top-level loops in the function and convertes them to
@@ -68,6 +63,10 @@ struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
 // to be perfectly nested upto depth equal to size of `workGroupSize`.
 struct ImperfectlyNestedForLoopMapper
     : public FunctionPass<ImperfectlyNestedForLoopMapper> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertLoopsToGPU
+#include "mlir/Conversion/Passes.h.inc"
+
   ImperfectlyNestedForLoopMapper() = default;
   ImperfectlyNestedForLoopMapper(const ImperfectlyNestedForLoopMapper &) {}
   ImperfectlyNestedForLoopMapper(ArrayRef<int64_t> numWorkGroups,
@@ -103,17 +102,13 @@ struct ImperfectlyNestedForLoopMapper
       }
     }
   }
-  ListOption<int64_t> numWorkGroups{
-      *this, "gpu-num-workgroups",
-      llvm::cl::desc("Num workgroups in the GPU launch"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<int64_t> workGroupSize{
-      *this, "gpu-workgroup-size",
-      llvm::cl::desc("Workgroup Size in the GPU launch"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
 };
 
 struct ParallelLoopToGpuPass : public OperationPass<ParallelLoopToGpuPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertParallelLoopToGpu
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     populateParallelLoopToGPUPatterns(patterns, &getContext());

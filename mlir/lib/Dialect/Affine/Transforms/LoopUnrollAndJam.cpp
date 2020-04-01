@@ -61,6 +61,10 @@ namespace {
 /// Loop unroll jam pass. Currently, this just unroll jams the first
 /// outer loop in a Function.
 struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineLoopUnrollAndJam
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   Optional<unsigned> unrollJamFactor;
   static const unsigned kDefaultUnrollJamFactor = 4;
 

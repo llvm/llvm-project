@@ -58,6 +58,10 @@ void mlir::LLVM::ensureDistinctSuccessors(Operation *op) {
 
 namespace {
 struct LegalizeForExportPass : public OperationPass<LegalizeForExportPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LLVMLegalizeForExport
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
+
   void runOnOperation() override {
     LLVM::ensureDistinctSuccessors(getOperation());
   }

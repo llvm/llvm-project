@@ -119,11 +119,25 @@ def ConvertLoopToStandard : Pass<"convert-loop-to-std"> {
 def ConvertSimpleLoopsToGPU : Pass<"convert-loops-to-gpu"> {
   let summary = "Convert top-level loops to GPU kernels";
   let constructor = "mlir::createSimpleLoopsToGPUPass()";
+  let options = [
+    Option<"numBlockDims", "gpu-block-dims", "unsigned", /*default=*/"1u",
+           "Number of GPU block dimensions for mapping">,
+    Option<"numThreadDims", "gpu-thread-dims", "unsigned", /*default=*/"1u",
+           "Number of GPU thread dimensions for mapping">
+  ];
 }
 
 def ConvertLoopsToGPU : Pass<"convert-loop-op-to-gpu"> {
   let summary = "Convert top-level loop::ForOp to GPU kernels";
   let constructor = "mlir::createLoopToGPUPass()";
+  let options = [
+    ListOption<"numWorkGroups", "gpu-num-workgroups", "int64_t",
+               "Num workgroups in the GPU launch",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"workGroupSize", "gpu-workgroup-size", "int64_t",
+               "Workgroup Size in the GPU launch",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
 }
 
 def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
@@ -139,6 +153,20 @@ def ConvertStandardToLLVM : Pass<"convert-std-to-llvm"> {
   let summary = "Convert scalar and vector operations from the Standard to the "
                 "LLVM dialect";
   let constructor = "mlir::createLowerToLLVMPass()";
+  let options = [
+    Option<"useAlloca", "use-alloca", "bool", /*default=*/"false",
+           "Use `alloca` instead of `call @malloc` for converting std.alloc">,
+    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
+           /*default=*/"false",
+           "Replace FuncOp's MemRef arguments with bare pointers to the MemRef "
+           "element types">,
+    Option<"emitCWrappers", "emit-c-wrappers", "bool", /*default=*/"false",
+           "Emit wrappers for C-compatible pointer-to-struct memref "
+           "descriptors">,
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=*/"kDeriveIndexBitwidthFromDataLayout",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

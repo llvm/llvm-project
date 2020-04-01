@@ -28,6 +28,10 @@ namespace {
 /// identity layout ones.
 struct SimplifyAffineStructures
     : public FunctionPass<SimplifyAffineStructures> {
+/// Include the generated pass utilities.
+#define GEN_PASS_SimplifyAffineStructures
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   void runOnFunction() override;
 
   /// Utility to simplify an affine attribute and update its entry in the parent

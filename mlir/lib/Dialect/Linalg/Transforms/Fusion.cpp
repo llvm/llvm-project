@@ -568,6 +568,10 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
 
 /// Pass that fuses generic ops on tensors. Used only for testing.
 struct FusionOfTensorOpsPass : public OperationPass<FusionOfTensorOpsPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgFusionOfTensorOps
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
@@ -577,6 +581,10 @@ struct FusionOfTensorOpsPass : public OperationPass<FusionOfTensorOpsPass> {
 };
 
 struct LinalgFusionPass : public FunctionPass<LinalgFusionPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgFusion
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
   void runOnFunction() override { fuseLinalgOpsGreedily(getFunction()); }
 };
 } // namespace
