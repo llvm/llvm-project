@@ -397,6 +397,22 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   return false;
 }
 
+void llvm::scaleShuffleMask(size_t Scale, ArrayRef<int> Mask,
+                            SmallVectorImpl<int> &ScaledMask) {
+  assert(Scale > 0 && "Unexpected scaling factor");
+
+  // Fast-path: if no scaling, then it is just a copy.
+  if (Scale == 1) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return;
+  }
+
+  ScaledMask.clear();
+  for (int MaskElt : Mask)
+    for (int ScaleElt = 0; ScaleElt != (int)Scale; ++ScaleElt)
+      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + ScaleElt);
+}
+
 MapVector<Instruction *, uint64_t>
 llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                                const TargetTransformInfo *TTI) {

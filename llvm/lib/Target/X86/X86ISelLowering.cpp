@@ -6133,6 +6133,35 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   return SDValue();
 }
 
+void llvm::createUnpackShuffleMask(MVT VT, SmallVectorImpl<int> &Mask,
+                                   bool Lo, bool Unary) {
+  assert(Mask.empty() && "Expected an empty shuffle mask vector");
+  int NumElts = VT.getVectorNumElements();
+  int NumEltsInLane = 128 / VT.getScalarSizeInBits();
+  for (int i = 0; i < NumElts; ++i) {
+    unsigned LaneStart = (i / NumEltsInLane) * NumEltsInLane;
+    int Pos = (i % NumEltsInLane) / 2 + LaneStart;
+    Pos += (Unary ? 0 : NumElts * (i % 2));
+    Pos += (Lo ? 0 : NumEltsInLane / 2);
+    Mask.push_back(Pos);
+  }
+}
+
+/// Similar to unpacklo/unpackhi, but without the 128-bit lane limitation
+/// imposed by AVX and specific to the unary pattern. Example:
+/// v8iX Lo --> <0, 0, 1, 1, 2, 2, 3, 3>
+/// v8iX Hi --> <4, 4, 5, 5, 6, 6, 7, 7>
+void llvm::createSplat2ShuffleMask(MVT VT, SmallVectorImpl<int> &Mask,
+                                   bool Lo) {
+  assert(Mask.empty() && "Expected an empty shuffle mask vector");
+  int NumElts = VT.getVectorNumElements();
+  for (int i = 0; i < NumElts; ++i) {
+    int Pos = i / 2;
+    Pos += (Lo ? 0 : NumElts / 2);
+    Mask.push_back(Pos);
+  }
+}
+
 /// Returns a vector_shuffle node for an unpackl operation.
 static SDValue getUnpackl(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
                           SDValue V1, SDValue V2) {
@@ -7320,8 +7349,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
-    scaleShuffleMask<int>(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
-    scaleShuffleMask<int>(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
+    scaleShuffleMask(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
+    scaleShuffleMask(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
     for (size_t i = 0; i != MaskSize; ++i) {
       if (Mask0[i] == SM_SentinelUndef && Mask1[i] == SM_SentinelUndef)
         Mask.push_back(SM_SentinelUndef);
@@ -7379,7 +7408,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       if ((NumSubElts % SubMask.size()) == 0) {
         int Scale = NumSubElts / SubMask.size();
         SmallVector<int,64> ScaledSubMask;
-        scaleShuffleMask<int>(Scale, SubMask, ScaledSubMask);
+        scaleShuffleMask(Scale, SubMask, ScaledSubMask);
         SubMask = ScaledSubMask;
       } else {
         int Scale = SubMask.size() / NumSubElts;
@@ -16279,7 +16308,7 @@ static SDValue lowerV4I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     SmallVector<int, 2> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v4i64, Mask, RepeatedMask)) {
       SmallVector<int, 4> PSHUFDMask;
-      scaleShuffleMask<int>(2, RepeatedMask, PSHUFDMask);
+      scaleShuffleMask(2, RepeatedMask, PSHUFDMask);
       return DAG.getBitcast(
           MVT::v4i64,
           DAG.getNode(X86ISD::PSHUFD, DL, MVT::v8i32,
@@ -16928,7 +16957,7 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
   SmallVector<int, 2> Widened256Mask;
   if (canWidenShuffleElements(Widened128Mask, Widened256Mask)) {
     Widened128Mask.clear();
-    llvm::scaleShuffleMask<int>(2, Widened256Mask, Widened128Mask);
+    llvm::scaleShuffleMask(2, Widened256Mask, Widened128Mask);
   }
 
   // Try to lower to vshuf64x2/vshuf32x4.
@@ -17079,7 +17108,7 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     SmallVector<int, 2> Repeated128Mask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v8i64, Mask, Repeated128Mask)) {
       SmallVector<int, 4> PSHUFDMask;
-      scaleShuffleMask<int>(2, Repeated128Mask, PSHUFDMask);
+      scaleShuffleMask(2, Repeated128Mask, PSHUFDMask);
       return DAG.getBitcast(
           MVT::v8i64,
           DAG.getNode(X86ISD::PSHUFD, DL, MVT::v16i32,
@@ -20166,7 +20195,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     // Scale shuffle mask to avoid bitcasts and help ComputeNumSignBits.
     SmallVector<int, 64> Mask;
     int Scale = 64 / OutVT.getScalarSizeInBits();
-    scaleShuffleMask<int>(Scale, ArrayRef<int>({ 0, 2, 1, 3 }), Mask);
+    scaleShuffleMask(Scale, { 0, 2, 1, 3 }, Mask);
     Res = DAG.getVectorShuffle(OutVT, DL, Res, Res, Mask);
 
     if (DstVT.is256BitVector())
@@ -33612,7 +33641,7 @@ static bool matchUnaryPermuteShuffle(MVT MaskVT, ArrayRef<int> Mask,
       // Narrow the repeated mask to create 32-bit element permutes.
       SmallVector<int, 4> WordMask = RepeatedMask;
       if (MaskScalarSizeInBits == 64)
-        scaleShuffleMask<int>(2, RepeatedMask, WordMask);
+        scaleShuffleMask(2, RepeatedMask, WordMask);
 
       Shuffle = (AllowIntDomain ? X86ISD::PSHUFD : X86ISD::VPERMILPI);
       ShuffleVT = (AllowIntDomain ? MVT::i32 : MVT::f32);
@@ -34065,7 +34094,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (BaseMaskEltSizeInBits > 64) {
     assert((BaseMaskEltSizeInBits % 64) == 0 && "Illegal mask size");
     int MaskScale = BaseMaskEltSizeInBits / 64;
-    scaleShuffleMask<int>(MaskScale, BaseMask, Mask);
+    scaleShuffleMask(MaskScale, BaseMask, Mask);
   } else {
     Mask = SmallVector<int, 64>(BaseMask.begin(), BaseMask.end());
   }
@@ -38189,7 +38218,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     if ((NumSrcElts % Mask.size()) == 0) {
       SmallVector<int, 16> ScaledMask;
       int Scale = NumSrcElts / Mask.size();
-      scaleShuffleMask<int>(Scale, Mask, ScaledMask);
+      scaleShuffleMask(Scale, Mask, ScaledMask);
       Mask = std::move(ScaledMask);
     } else if ((Mask.size() % NumSrcElts) == 0) {
       // Simplify Mask based on demanded element.
