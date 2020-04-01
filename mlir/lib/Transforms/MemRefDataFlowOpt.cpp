@@ -222,6 +222,3 @@ void MemRefDataFlowOpt::runOnFunction() {
     defInst->erase();
   }
 }
-
-static PassRegistration<MemRefDataFlowOpt>
-    pass("memref-dataflow-opt", "Perform store/load forwarding for memrefs");

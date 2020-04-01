@@ -84,6 +84,3 @@ void PrintOpStatsPass::printSummary() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createPrintOpStatsPass() {
   return std::make_unique<PrintOpStatsPass>();
 }
-
-static PassRegistration<PrintOpStatsPass>
-    pass("print-op-stats", "Print statistics of operations");

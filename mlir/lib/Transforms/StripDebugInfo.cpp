@@ -29,6 +29,3 @@ void StripDebugInfo::runOnOperation() {
 std::unique_ptr<Pass> mlir::createStripDebugInfoPass() {
   return std::make_unique<StripDebugInfo>();
 }
-
-static PassRegistration<StripDebugInfo>
-    pass("strip-debuginfo", "Strip debug info from all operations");

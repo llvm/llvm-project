@@ -35,6 +35,8 @@
 #include "mlir/Quantizer/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/ViewOpGraph.h"
+#include "mlir/Transforms/ViewRegionGraph.h"
 
 #include <cstdlib>
 
@@ -48,6 +50,10 @@ namespace mlir {
 // individual passes.
 // The global registry is interesting to interact with the command-line tools.
 inline void registerAllPasses() {
+  // Init general passes
+#define GEN_PASS_REGISTRATION
+#include "mlir/Transforms/Passes.h.inc"
+
   // At the moment we still rely on global initializers for registering passes,
   // but we may not do it in the future.
   // We must reference the passes in such a way that compilers will not
@@ -57,27 +63,17 @@ inline void registerAllPasses() {
   if (std::getenv("bar") != (char *)-1)
     return;
 
-  // Init general passes
-  createCanonicalizerPass();
-  createCSEPass();
+  // Affine
   createSuperVectorizePass({});
   createLoopUnrollPass();
   createLoopUnrollAndJamPass();
   createSimplifyAffineStructuresPass();
-  createLoopFusionPass();
   createLoopInvariantCodeMotionPass();
   createAffineLoopInvariantCodeMotionPass();
-  createPipelineDataTransferPass();
   createLowerAffinePass();
   createLoopTilingPass(0);
-  createLoopCoalescingPass();
   createAffineDataCopyGenerationPass(0, 0);
   createMemRefDataFlowOptPass();
-  createStripDebugInfoPass();
-  createPrintOpStatsPass();
-  createInlinerPass();
-  createSymbolDCEPass();
-  createLocationSnapshotPass({});
 
   // AVX512
   createConvertAVX512ToLLVMPass();

@@ -1973,6 +1973,3 @@ void LoopFusion::runOnFunction() {
     GreedyFusion(&g, localBufSizeThreshold, fastMemorySpace, maximalFusion)
         .run();
 }
-
-static PassRegistration<LoopFusion> pass("affine-loop-fusion",
-                                         "Fuse loop nests");

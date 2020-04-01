@@ -161,6 +161,3 @@ mlir::createPrintOpGraphPass(raw_ostream &os, bool shortNames,
                              const Twine &title) {
   return std::make_unique<PrintOpPass>(os, shortNames, title);
 }
-
-static PassRegistration<PrintOpPass> pass("print-op-graph",
-                                          "Print op graph per region");

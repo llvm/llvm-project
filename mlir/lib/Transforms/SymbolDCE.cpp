@@ -156,5 +156,3 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
 std::unique_ptr<Pass> mlir::createSymbolDCEPass() {
   return std::make_unique<SymbolDCE>();
 }
-
-static PassRegistration<SymbolDCE> pass("symbol-dce", "Eliminate dead symbols");
