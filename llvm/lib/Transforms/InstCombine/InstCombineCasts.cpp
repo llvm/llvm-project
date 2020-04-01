@@ -153,6 +153,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
     // allocation instruction, also pointer typed. Thus, cast to use is BitCast.
     Value *NewCast = Builder.CreateBitCast(New, AI.getType(), "tmpcast");
     replaceInstUsesWith(AI, NewCast);
+    eraseInstFromFunction(AI);
   }
   return replaceInstUsesWith(CI, New);
 }
