@@ -40,7 +40,7 @@
 ## high-0x2028 = 0x02002008-0x2020 = 65536*512-24
 # PI:         <__LongThunk_high>:
 # PI-NEXT:        2018: mflr 0
-# PI-NEXT:              bcl 20, 31, .+4
+# PI-NEXT:              bcl 20, 31, 0x2020
 # PI-NEXT:        2020: mflr 12
 # PI-NEXT:              addis 12, 12, 512
 # PI-NEXT:              addi 12, 12, -24
@@ -51,7 +51,7 @@
 ## .text_high+16-0x2048 = 0x02002010-0x2048 = 65536*512-48
 # PI:         <__LongThunk_>:
 # PI-NEXT:        2038: mflr 0
-# PI-NEXT:              bcl 20, 31, .+4
+# PI-NEXT:              bcl 20, 31, 0x2040
 # PI-NEXT:        2040: mflr 12
 # PI-NEXT:              addis 12, 12, 512
 # PI-NEXT:              addi 12, 12, -48

@@ -60,6 +60,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCDisassembler() {
                                          createPPCLEDisassembler);
 }
 
+static DecodeStatus decodeCondBrTarget(MCInst &Inst, unsigned Imm,
+                                       uint64_t /*Address*/,
+                                       const void * /*Decoder*/) {
+  Inst.addOperand(MCOperand::createImm(SignExtend32<14>(Imm)));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodePCRel24BranchTarget(MCInst &Inst, unsigned Imm,
                                               uint64_t Addr,
                                               const void *Decoder) {
