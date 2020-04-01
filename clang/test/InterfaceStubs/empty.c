@@ -3,8 +3,6 @@
 // CHECK:      --- !experimental-ifs-v2
 // CHECK-NEXT: IfsVersion: 2.0
 // CHECK-NEXT: Triple:
-// CHECK-NEXT: ObjectFileFormat: ELF
+// CHECK-NEXT: ObjectFileFormat:
 // CHECK-NEXT: Symbols:
 // CHECK-NEXT: ...
-
-template<typename T> class C2 { union { T c; }; };
