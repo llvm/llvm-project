@@ -817,6 +817,11 @@ def ImageDimIntrinsicTable : GenericTable {
   let PrimaryKeyEarlyOut = 1;
 }
 
+def getImageDimInstrinsicByBaseOpcode : SearchIndex {
+  let Table = ImageDimIntrinsicTable;
+  let Key = ["BaseOpcode", "Dim"];
+}
+
 foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
                            AMDGPUImageDimAtomicIntrinsics) in {
   def : ImageDimIntrinsicInfo<intr>;
