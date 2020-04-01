@@ -169,5 +169,3 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopUnrollPass(
       unrollFactor == -1 ? None : Optional<unsigned>(unrollFactor),
       unrollFull == -1 ? None : Optional<bool>(unrollFull), getUnrollFactor);
 }
-
-static PassRegistration<LoopUnroll> pass("affine-loop-unroll", "Unroll loops");

@@ -129,6 +129,3 @@ std::unique_ptr<Pass>
 mlir::createParallelLoopTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<ParallelLoopTiling>(tileSizes);
 }
-
-static PassRegistration<ParallelLoopTiling> pass("parallel-loop-tiling",
-                                                 "Tile parallel loops.");

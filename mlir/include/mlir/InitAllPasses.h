@@ -54,6 +54,40 @@ inline void registerAllPasses() {
 #define GEN_PASS_REGISTRATION
 #include "mlir/Transforms/Passes.h.inc"
 
+  // Affine
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
+  // FxpMath
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/FxpMathOps/Passes.h.inc"
+
+  // GPU
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/GPU/Passes.h.inc"
+
+  // Linalg
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
+  // LLVM
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
+
+  // Loop
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/LoopOps/Passes.h.inc"
+
+  // Quant
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Quant/Passes.h.inc"
+#define GEN_PASS_REGISTRATION
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
+  // SPIR-V
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/SPIRV/Passes.h.inc"
+
   // At the moment we still rely on global initializers for registering passes,
   // but we may not do it in the future.
   // We must reference the passes in such a way that compilers will not
@@ -64,16 +98,7 @@ inline void registerAllPasses() {
     return;
 
   // Affine
-  createSuperVectorizePass({});
-  createLoopUnrollPass();
-  createLoopUnrollAndJamPass();
-  createSimplifyAffineStructuresPass();
-  createLoopInvariantCodeMotionPass();
-  createAffineLoopInvariantCodeMotionPass();
   createLowerAffinePass();
-  createLoopTilingPass(0);
-  createAffineDataCopyGenerationPass(0, 0);
-  createMemRefDataFlowOptPass();
 
   // AVX512
   createConvertAVX512ToLLVMPass();
@@ -81,12 +106,7 @@ inline void registerAllPasses() {
   // GPUtoRODCLPass
   createLowerGpuOpsToROCDLOpsPass();
 
-  // FxpOpsDialect passes
-  fxpmath::createLowerUniformRealMathPass();
-  fxpmath::createLowerUniformCastsPass();
-
   // GPU
-  createGpuKernelOutliningPass();
   createSimpleLoopsToGPUPass(0, 0);
   createLoopToGPUPass({}, {});
 
@@ -95,35 +115,9 @@ inline void registerAllPasses() {
   createLowerGpuOpsToNVVMOpsPass();
 
   // Linalg
-  createLinalgFusionPass();
-  createLinalgTilingPass();
-  createLinalgTilingToParallelLoopsPass();
-  createLinalgPromotionPass(0);
-  createConvertLinalgToLoopsPass();
-  createConvertLinalgToParallelLoopsPass();
-  createConvertLinalgToAffineLoopsPass();
   createConvertLinalgToLLVMPass();
 
-  // LLVM
-  LLVM::createLegalizeForExportPass();
-
-  // LoopOps
-  createParallelLoopCollapsingPass();
-  createParallelLoopFusionPass();
-  createParallelLoopSpecializationPass();
-  createParallelLoopTilingPass();
-
-  // QuantOps
-  quant::createConvertSimulatedQuantPass();
-  quant::createConvertConstPass();
-  quantizer::createAddDefaultStatsPass();
-  quantizer::createRemoveInstrumentationPass();
-  quantizer::registerInferQuantizedTypesPass();
-
   // SPIR-V
-  spirv::createDecorateSPIRVCompositeTypeLayoutPass();
-  spirv::createLowerABIAttributesPass();
-  spirv::createUpdateVersionCapabilityExtensionPass();
   createConvertGPUToSPIRVPass();
   createConvertStandardToSPIRVPass();
   createLegalizeStdOpsForSPIRVLoweringPass();

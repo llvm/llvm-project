@@ -232,7 +232,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createAffineLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }
-
-static PassRegistration<LoopInvariantCodeMotion>
-    pass("affine-loop-invariant-code-motion",
-         "Hoist loop invariant instructions outside of the loop");

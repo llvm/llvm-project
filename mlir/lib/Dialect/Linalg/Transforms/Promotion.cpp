@@ -252,6 +252,6 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLinalgPromotionPass(bool dynamicBuffers) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers);
 }
-
-static PassRegistration<LinalgPromotionPass>
-    pass("linalg-promote-subviews", "promote subview ops to local buffers");
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgPromotionPass() {
+  return std::make_unique<LinalgPromotionPass>();
+}

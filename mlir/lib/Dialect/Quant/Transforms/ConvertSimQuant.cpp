@@ -142,8 +142,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::quant::createConvertSimulatedQuantPass() {
   return std::make_unique<ConvertSimulatedQuantPass>();
 }
-
-static PassRegistration<ConvertSimulatedQuantPass>
-    pass("quant-convert-simulated-quantization",
-         "Converts training-time simulated quantization ops to corresponding "
-         "quantize/dequantize casts.");

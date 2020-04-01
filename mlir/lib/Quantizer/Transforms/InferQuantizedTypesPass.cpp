@@ -282,12 +282,7 @@ mlir::quantizer::createInferQuantizedTypesPass(
     SolverContext &solverContext, const TargetConfiguration &config) {
   return std::make_unique<InferQuantizedTypesPass>(solverContext, config);
 }
-void mlir::quantizer::registerInferQuantizedTypesPass() {
-  // Do nothing, this will be enough to force link this file and the static
-  // registration will kick-in. This is temporary while we're refactoring pass
-  // registration to move away from static constructors.
+std::unique_ptr<OpPassBase<ModuleOp>>
+mlir::quantizer::createInferQuantizedTypesPass() {
+  return std::make_unique<InferQuantizedTypesPass>();
 }
-
-static PassRegistration<InferQuantizedTypesPass>
-    pass("quantizer-infer-quantized-types",
-         "Infers quantized types for a module");
