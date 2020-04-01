@@ -67,7 +67,7 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
 
     Predicate must be a Boolean type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -75,9 +75,9 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
                               ssa-use `:` `vector` `<` 4 `x` `integer-type` `>`
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.GroupNonUniformBallot "SubGroup" %predicate : vector<4xi32>
     ```
   }];
@@ -116,7 +116,7 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
 
     Execution must be Workgroup or Subgroup Scope.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -124,9 +124,9 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
                              `:` `i1`
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.GroupNonUniformElect : i1
     ```
   }];
@@ -180,7 +180,7 @@ def SPV_GroupNonUniformFAddOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -192,9 +192,9 @@ def SPV_GroupNonUniformFAddOp :
                             `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
@@ -234,7 +234,7 @@ def SPV_GroupNonUniformFMaxOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -246,9 +246,9 @@ def SPV_GroupNonUniformFMaxOp :
                             `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
@@ -288,7 +288,7 @@ def SPV_GroupNonUniformFMinOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -300,9 +300,9 @@ def SPV_GroupNonUniformFMinOp :
                             `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
@@ -339,7 +339,7 @@ def SPV_GroupNonUniformFMulOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -351,9 +351,9 @@ def SPV_GroupNonUniformFMulOp :
                             `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
@@ -388,7 +388,7 @@ def SPV_GroupNonUniformIAddOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -400,9 +400,9 @@ def SPV_GroupNonUniformIAddOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
@@ -437,7 +437,7 @@ def SPV_GroupNonUniformIMulOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -449,9 +449,9 @@ def SPV_GroupNonUniformIMulOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
@@ -486,7 +486,7 @@ def SPV_GroupNonUniformSMaxOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -498,9 +498,9 @@ def SPV_GroupNonUniformSMaxOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
@@ -535,7 +535,7 @@ def SPV_GroupNonUniformSMinOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -547,9 +547,9 @@ def SPV_GroupNonUniformSMinOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
@@ -585,7 +585,7 @@ def SPV_GroupNonUniformUMaxOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -597,9 +597,9 @@ def SPV_GroupNonUniformUMaxOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
@@ -635,7 +635,7 @@ def SPV_GroupNonUniformUMinOp :
     a power of 2. If ClusterSize is greater than the declared SubGroupSize,
     executing this instruction results in undefined behavior.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
@@ -647,9 +647,9 @@ def SPV_GroupNonUniformUMinOp :
                             `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %four = spv.constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>

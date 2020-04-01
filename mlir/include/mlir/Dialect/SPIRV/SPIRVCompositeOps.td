@@ -44,16 +44,16 @@ def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
     type of the result. When constructing a vector, there must be at least
     two Constituent operands.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     composite-construct-op ::= ssa-id `=` `spv.CompositeConstruct`
                                (ssa-use (`,` ssa-use)* )? `:` composite-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.CompositeConstruct %1, %2, %3 : vector<3xf32>
     ```
   }];
@@ -83,7 +83,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
     bounds.  All composite constituents use zero-based numbering, as
     described by their OpType… instruction.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     composite-extract-op ::= ssa-id `=` `spv.CompositeExtract` ssa-use
@@ -91,9 +91,9 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
                              `:` composite-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
     %1 = spv.Load "Function" %0 ["Volatile"] : !spv.array<4x!spv.array<4xf32>>
     %2 = spv.CompositeExtract %1[1 : i32] : !spv.array<4x!spv.array<4xf32>>
@@ -138,7 +138,7 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
     numbering, as described by their OpType… instruction. The type of the
     part selected to modify must match the type of Object.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     composite-insert-op ::= ssa-id `=` `spv.CompositeInsert` ssa-use, ssa-use
@@ -146,9 +146,9 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
                             `:` object-type `into` composite-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.CompositeInsert %object, %composite[1 : i32] : f32 into !spv.array<4xf32>
     ```
   }];
