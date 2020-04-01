@@ -16,6 +16,7 @@ add_llvm_component_library(LLVMGlobalISel
         LegalizerHelper.cpp
         LegalizerInfo.cpp
         Localizer.cpp
+        LostDebugLocObserver.cpp
         MachineIRBuilder.cpp
         RegBankSelect.cpp
         RegisterBank.cpp
