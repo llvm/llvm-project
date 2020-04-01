@@ -1276,13 +1276,11 @@ define i32 @ret1or2(i1 %c) {
 define i1 @callee_range_1(i1 %c1, i1 %c2, i1 %c3) {
 ; OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
-; OLD_PM-NEXT:    [[F:%.*]] = and i1 true, true
-; OLD_PM-NEXT:    ret i1 [[F]]
+; OLD_PM-NEXT:    ret i1 true
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
-; NEW_PM-NEXT:    [[F:%.*]] = and i1 true, true
-; NEW_PM-NEXT:    ret i1 [[F]]
+; NEW_PM-NEXT:    ret i1 true
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; CGSCC_OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
