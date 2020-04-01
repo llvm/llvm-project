@@ -53,15 +53,14 @@ struct LoopParams {
 /// part of the unrolled loop. Computes the bound as an AffineMap with its
 /// operands or a null map when the trip count can't be expressed as an affine
 /// expression.
-void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
-                                    AffineMap *map,
-                                    SmallVectorImpl<Value> *operands,
-                                    OpBuilder &b) {
+static void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
+                                     AffineMap &map,
+                                     SmallVectorImpl<Value> &operands) {
   auto lbMap = forOp.getLowerBoundMap();
 
   // Single result lower bound map only.
   if (lbMap.getNumResults() != 1) {
-    *map = AffineMap();
+    map = AffineMap();
     return;
   }
 
@@ -71,11 +70,11 @@ void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 
   // Sometimes the trip count cannot be expressed as an affine expression.
   if (!tripCountMap) {
-    *map = AffineMap();
+    map = AffineMap();
     return;
   }
 
-  unsigned step = forOp.getStep();
+  OpBuilder b(forOp);
   auto lb = b.create<AffineApplyOp>(forOp.getLoc(), lbMap,
                                     forOp.getLowerBoundOperands());
 
@@ -86,6 +85,7 @@ void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
   // these affine.apply's make up the cleanup loop lower bound.
   SmallVector<AffineExpr, 4> bumpExprs(tripCountMap.getNumResults());
   SmallVector<Value, 4> bumpValues(tripCountMap.getNumResults());
+  int64_t step = forOp.getStep();
   for (unsigned i = 0, e = tripCountMap.getNumResults(); i < e; i++) {
     auto tripCountExpr = tripCountMap.getResult(i);
     bumpExprs[i] = (tripCountExpr - tripCountExpr % unrollFactor) * step;
@@ -99,19 +99,19 @@ void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
   for (unsigned i = 0, e = bumpExprs.size(); i < e; i++)
     newUbExprs[i] = b.getAffineDimExpr(0) + b.getAffineDimExpr(i + 1);
 
-  operands->clear();
-  operands->push_back(lb);
-  operands->append(bumpValues.begin(), bumpValues.end());
-  *map = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs);
+  operands.clear();
+  operands.push_back(lb);
+  operands.append(bumpValues.begin(), bumpValues.end());
+  map = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs);
   // Simplify the map + operands.
-  fullyComposeAffineMapAndOperands(map, operands);
-  *map = simplifyAffineMap(*map);
-  canonicalizeMapAndOperands(map, operands);
+  fullyComposeAffineMapAndOperands(&map, &operands);
+  map = simplifyAffineMap(map);
+  canonicalizeMapAndOperands(&map, &operands);
   // Remove any affine.apply's that became dead from the simplification above.
-  for (auto v : bumpValues) {
+  for (auto v : bumpValues)
     if (v.use_empty())
       v.getDefiningOp()->erase();
-  }
+
   if (lb.use_empty())
     lb.erase();
 }
@@ -121,16 +121,15 @@ void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 // TODO(bondhugula): extend this for arbitrary affine bounds.
 LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   Optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount.hasValue() || tripCount.getValue() != 1)
+  if (!tripCount || tripCount.getValue() != 1)
     return failure();
 
-  // TODO(mlir-team): there is no builder for a max.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
     return failure();
 
   // Replaces all IV uses to its single iteration value.
   auto iv = forOp.getInductionVar();
-  Operation *op = forOp.getOperation();
+  auto *parentBlock = forOp.getOperation()->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
       OpBuilder topBuilder(forOp.getParentOfType<FuncOp>().getBody());
@@ -140,7 +139,7 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
     } else {
       auto lbOperands = forOp.getLowerBoundOperands();
       auto lbMap = forOp.getLowerBoundMap();
-      OpBuilder builder(op->getBlock(), Block::iterator(op));
+      OpBuilder builder(parentBlock, Block::iterator(forOp));
       if (lbMap == builder.getDimIdentityMap()) {
         // No need of generating an affine.apply.
         iv.replaceAllUsesWith(lbOperands[0]);
@@ -151,17 +150,16 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
       }
     }
   }
-  // Move the loop body operations, except for terminator, to the loop's
+  // Move the loop body operations, except for its terminator, to the loop's
   // containing block.
-  auto *block = op->getBlock();
-  forOp.getBody()->getOperations().back().erase();
-  block->getOperations().splice(Block::iterator(op),
-                                forOp.getBody()->getOperations());
+  forOp.getBody()->back().erase();
+  parentBlock->getOperations().splice(Block::iterator(forOp),
+                                      forOp.getBody()->getOperations());
   forOp.erase();
   return success();
 }
 
-/// Promotes all single iteration for op's in the FuncOp, i.e., moves
+/// Promotes all single iteration 'for' ops in `f`, i.e., moves
 /// their body into the containing Block.
 void mlir::promoteSingleIterationLoops(FuncOp f) {
   // Gathers all innermost loops through a post order pruned walk.
@@ -233,6 +231,8 @@ static AffineForOp generateShiftedLoop(
 LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
                                         ArrayRef<uint64_t> shifts,
                                         bool unrollPrologueEpilogue) {
+  assert(forOp.getBody()->getOperations().size() == shifts.size() &&
+         "too few/many shifts");
   if (forOp.getBody()->begin() == std::prev(forOp.getBody()->end()))
     return success();
 
@@ -247,20 +247,17 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
   }
   uint64_t tripCount = mayBeConstTripCount.getValue();
 
-  assert(isInstwiseShiftValid(forOp, shifts) &&
+  assert(isOpwiseShiftValid(forOp, shifts) &&
          "shifts will lead to an invalid transformation\n");
 
   int64_t step = forOp.getStep();
 
-  unsigned numChildInsts = forOp.getBody()->getOperations().size();
+  unsigned numChildOps = shifts.size();
 
   // Do a linear time (counting) sort for the shifts.
-  uint64_t maxShift = 0;
-  for (unsigned i = 0; i < numChildInsts; i++) {
-    maxShift = std::max(maxShift, shifts[i]);
-  }
-  // Such large shifts are not the typical use case.
-  if (maxShift >= numChildInsts) {
+  uint64_t maxShift = *std::max_element(shifts.begin(), shifts.end());
+  if (maxShift >= numChildOps) {
+    // Large shifts are not the typical use case.
     forOp.emitWarning("not shifting because shifts are unrealistically large");
     return success();
   }
@@ -289,13 +286,13 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
 
   auto origLbMap = forOp.getLowerBoundMap();
   uint64_t lbShift = 0;
-  OpBuilder b(forOp.getOperation());
+  OpBuilder b(forOp);
   for (uint64_t d = 0, e = sortedOpGroups.size(); d < e; ++d) {
     // If nothing is shifted by d, continue.
     if (sortedOpGroups[d].empty())
       continue;
     if (!opGroupQueue.empty()) {
-      assert(d >= 1 &&
+      assert(d > 0 &&
              "Queue expected to be empty when the first block is found");
       // The interval for which the loop needs to be generated here is:
       // [lbShift, min(lbShift + tripCount, d)) and the body of the
@@ -343,8 +340,7 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
 
   if (unrollPrologueEpilogue && prologue)
     loopUnrollFull(prologue);
-  if (unrollPrologueEpilogue && !epilogue &&
-      epilogue.getOperation() != prologue.getOperation())
+  if (unrollPrologueEpilogue && !epilogue && epilogue != prologue)
     loopUnrollFull(epilogue);
 
   return success();
@@ -389,9 +385,8 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.hasValue()) {
     uint64_t tripCount = mayBeConstantTripCount.getValue();
-    if (tripCount == 1) {
+    if (tripCount == 1)
       return promoteIfSingleIteration(forOp);
-    }
     return loopUnrollByFactor(forOp, tripCount);
   }
   return failure();
@@ -413,14 +408,14 @@ LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
 /// is successfully unrolled.
 LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
                                        uint64_t unrollFactor) {
-  assert(unrollFactor >= 1 && "unroll factor should be >= 1");
+  assert(unrollFactor > 0 && "unroll factor should be positive");
 
   if (unrollFactor == 1)
     return promoteIfSingleIteration(forOp);
 
-  if (forOp.getBody()->empty() ||
-      forOp.getBody()->begin() == std::prev(forOp.getBody()->end()))
-    return failure();
+  // Nothing in the loop body other than the terminator.
+  if (has_single_element(forOp.getBody()->getOperations()))
+    return success();
 
   // Loops where the lower bound is a max expression isn't supported for
   // unrolling since the trip count can be expressed as an affine function when
@@ -438,20 +433,19 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
     return failure();
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
-  Operation *op = forOp.getOperation();
   if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
-    OpBuilder builder(op->getBlock(), ++Block::iterator(op));
-    auto cleanupForInst = cast<AffineForOp>(builder.clone(*op));
+    OpBuilder builder(forOp.getOperation()->getBlock(),
+                      std::next(Block::iterator(forOp)));
+    auto cleanupForOp = cast<AffineForOp>(builder.clone(*forOp));
     AffineMap cleanupMap;
     SmallVector<Value, 4> cleanupOperands;
-    getCleanupLoopLowerBound(forOp, unrollFactor, &cleanupMap, &cleanupOperands,
-                             builder);
+    getCleanupLoopLowerBound(forOp, unrollFactor, cleanupMap, cleanupOperands);
     assert(cleanupMap &&
            "cleanup loop lower bound map for single result lower bound maps "
            "can always be determined");
-    cleanupForInst.setLowerBound(cleanupOperands, cleanupMap);
+    cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
     // Promote the loop body up if this has turned into a single iteration loop.
-    promoteIfSingleIteration(cleanupForInst);
+    promoteIfSingleIteration(cleanupForOp);
 
     // Adjust upper bound of the original loop; this is the same as the lower
     // bound of the cleanup loop.
@@ -470,7 +464,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
   // so that we know what to clone (since we are doing this in-place).
   Block::iterator srcBlockEnd = std::prev(forOp.getBody()->end(), 2);
 
-  // Unroll the contents of 'forOp' (append unrollFactor-1 additional copies).
+  // Unroll the contents of 'forOp' (append unrollFactor - 1 additional copies).
   auto forOpIV = forOp.getInductionVar();
   for (unsigned i = 1; i < unrollFactor; i++) {
     BlockAndValueMapping operandMap;
@@ -501,7 +495,6 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
 LogicalResult mlir::loopUnrollJamUpToFactor(AffineForOp forOp,
                                             uint64_t unrollJamFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-
   if (mayBeConstantTripCount.hasValue() &&
       mayBeConstantTripCount.getValue() < unrollJamFactor)
     return loopUnrollJamByFactor(forOp, mayBeConstantTripCount.getValue());
@@ -524,6 +517,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
         for (auto &block : region)
           walk(block);
     }
+
     void walk(Block &block) {
       for (auto it = block.begin(), e = std::prev(block.end()); it != e;) {
         auto subBlockStart = it;
@@ -531,21 +525,21 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
           ++it;
         if (it != subBlockStart)
           subBlocks.push_back({subBlockStart, std::prev(it)});
-        // Process all for insts that appear next.
+        // Process all for ops that appear next.
         while (it != e && isa<AffineForOp>(&*it))
           walk(&*it++);
       }
     }
   };
 
-  assert(unrollJamFactor >= 1 && "unroll jam factor should be >= 1");
+  assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
   if (unrollJamFactor == 1)
     return promoteIfSingleIteration(forOp);
 
-  if (forOp.getBody()->empty() ||
-      forOp.getBody()->begin() == std::prev(forOp.getBody()->end()))
-    return failure();
+  // Nothing in the loop body other than the terminator.
+  if (has_single_element(forOp.getBody()->getOperations()))
+    return success();
 
   // Loops where both lower and upper bounds are multi-result maps won't be
   // unrolled (since the trip can't be expressed as an affine function in
@@ -559,28 +553,29 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   // If the trip count is lower than the unroll jam factor, no unroll jam.
   if (mayBeConstantTripCount.hasValue() &&
-      mayBeConstantTripCount.getValue() < unrollJamFactor)
+      mayBeConstantTripCount.getValue() < unrollJamFactor) {
+    LLVM_DEBUG(llvm::dbgs() << "[failed] trip count < unroll-jam factor\n");
     return failure();
-
-  auto *forInst = forOp.getOperation();
+  }
 
   // Gather all sub-blocks to jam upon the loop being unrolled.
   JamBlockGatherer jbg;
-  jbg.walk(forInst);
+  jbg.walk(forOp);
   auto &subBlocks = jbg.subBlocks;
 
   // Generate the cleanup loop if trip count isn't a multiple of
   // unrollJamFactor.
   if (getLargestDivisorOfTripCount(forOp) % unrollJamFactor != 0) {
     // Insert the cleanup loop right after 'forOp'.
-    OpBuilder builder(forInst->getBlock(), std::next(Block::iterator(forInst)));
-    auto cleanupAffineForOp = cast<AffineForOp>(builder.clone(*forInst));
+    OpBuilder builder(forOp.getOperation()->getBlock(),
+                      std::next(Block::iterator(forOp)));
+    auto cleanupAffineForOp = cast<AffineForOp>(builder.clone(*forOp));
     // Adjust the lower bound of the cleanup loop; its upper bound is the same
     // as the original loop's upper bound.
     AffineMap cleanupMap;
     SmallVector<Value, 4> cleanupOperands;
-    getCleanupLoopLowerBound(forOp, unrollJamFactor, &cleanupMap,
-                             &cleanupOperands, builder);
+    getCleanupLoopLowerBound(forOp, unrollJamFactor, cleanupMap,
+                             cleanupOperands);
     cleanupAffineForOp.setLowerBound(cleanupOperands, cleanupMap);
 
     // Promote the cleanup loop if it has turned into a single iteration loop.
@@ -599,7 +594,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   // Unroll and jam (appends unrollJamFactor - 1 additional copies).
   for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
     // Operand map persists across all sub-blocks.
-    BlockAndValueMapping operandMapping;
+    BlockAndValueMapping operandMap;
     for (auto &subBlock : subBlocks) {
       // Builder to insert unroll-jammed bodies. Insert right at the end of
       // sub-block.
@@ -612,13 +607,12 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
         auto d0 = builder.getAffineDimExpr(0);
         auto bumpMap = AffineMap::get(1, 0, {d0 + i * step});
         auto ivUnroll =
-            builder.create<AffineApplyOp>(forInst->getLoc(), bumpMap, forOpIV);
-        operandMapping.map(forOpIV, ivUnroll);
+            builder.create<AffineApplyOp>(forOp.getLoc(), bumpMap, forOpIV);
+        operandMap.map(forOpIV, ivUnroll);
       }
       // Clone the sub-block being unroll-jammed.
-      for (auto it = subBlock.first; it != std::next(subBlock.second); ++it) {
-        builder.clone(*it, operandMapping);
-      }
+      for (auto it = subBlock.first; it != std::next(subBlock.second); ++it)
+        builder.clone(*it, operandMap);
     }
   }
 
@@ -630,8 +624,6 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 /// Performs loop interchange on 'forOpA' and 'forOpB', where 'forOpB' is
 /// nested within 'forOpA' as the only non-terminator operation in its block.
 void mlir::interchangeLoops(AffineForOp forOpA, AffineForOp forOpB) {
-  auto *forOpAInst = forOpA.getOperation();
-
   assert(&*forOpA.getBody()->begin() == forOpB.getOperation());
   auto &forOpABody = forOpA.getBody()->getOperations();
   auto &forOpBBody = forOpB.getBody()->getOperations();
@@ -639,16 +631,17 @@ void mlir::interchangeLoops(AffineForOp forOpA, AffineForOp forOpB) {
   // 1) Splice forOpA's non-terminator operations (which is just forOpB) just
   // before forOpA (in ForOpA's parent's block) this should leave 'forOpA's
   // body containing only the terminator.
-  forOpAInst->getBlock()->getOperations().splice(Block::iterator(forOpAInst),
-                                                 forOpABody, forOpABody.begin(),
-                                                 std::prev(forOpABody.end()));
+  forOpA.getOperation()->getBlock()->getOperations().splice(
+      Block::iterator(forOpA), forOpABody, forOpABody.begin(),
+      std::prev(forOpABody.end()));
   // 2) Splice forOpB's non-terminator operations into the beginning of forOpA's
   // body (this leaves forOpB's body containing only the terminator).
   forOpABody.splice(forOpABody.begin(), forOpBBody, forOpBBody.begin(),
                     std::prev(forOpBBody.end()));
   // 3) Splice forOpA into the beginning of forOpB's body.
-  forOpBBody.splice(forOpBBody.begin(), forOpAInst->getBlock()->getOperations(),
-                    Block::iterator(forOpAInst));
+  forOpBBody.splice(forOpBBody.begin(),
+                    forOpA.getOperation()->getBlock()->getOperations(),
+                    Block::iterator(forOpA));
 }
 
 // Checks each dependence component against the permutation to see if the
@@ -873,8 +866,8 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   auto scaledStep = originalStep * factor;
   forOp.setStep(scaledStep);
 
-  auto *op = forOp.getOperation();
-  OpBuilder b(op->getBlock(), ++Block::iterator(op));
+  OpBuilder b(forOp.getOperation()->getBlock(),
+              std::next(Block::iterator(forOp)));
 
   // Lower-bound map creation.
   auto lbMap = forOp.getLowerBoundMap();
@@ -1179,7 +1172,6 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   bool isStepOne = false;
   if (auto stepCst = dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp()))
     isStepOne = stepCst.getValue() == 1;
-
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
@@ -1823,16 +1815,16 @@ static LogicalResult generateCopy(
 
 /// Construct the memref region to just include the entire memref. Returns false
 /// dynamic shaped memref's for now. `numParamLoopIVs` is the number of
-/// enclosing loop IVs of opInst (starting from the outermost) that the region
+/// enclosing loop IVs of `op` (starting from the outermost) that the region
 /// is parametric on.
-static bool getFullMemRefAsRegion(Operation *opInst, unsigned numParamLoopIVs,
+static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
                                   MemRefRegion *region) {
   unsigned rank;
-  if (auto loadOp = dyn_cast<AffineLoadOp>(opInst)) {
+  if (auto loadOp = dyn_cast<AffineLoadOp>(op)) {
     rank = loadOp.getMemRefType().getRank();
     region->memref = loadOp.getMemRef();
     region->setWrite(false);
-  } else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst)) {
+  } else if (auto storeOp = dyn_cast<AffineStoreOp>(op)) {
     rank = storeOp.getMemRefType().getRank();
     region->memref = storeOp.getMemRef();
     region->setWrite(true);
@@ -1849,7 +1841,7 @@ static bool getFullMemRefAsRegion(Operation *opInst, unsigned numParamLoopIVs,
   // Just get the first numSymbols IVs, which the memref region is parametric
   // on.
   SmallVector<AffineForOp, 4> ivs;
-  getLoopIVs(*opInst, &ivs);
+  getLoopIVs(*op, &ivs);
   ivs.resize(numParamLoopIVs);
   SmallVector<Value, 4> symbols;
   extractForInductionVars(ivs, &symbols);

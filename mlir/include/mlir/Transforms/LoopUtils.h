@@ -72,20 +72,11 @@ LogicalResult promoteIfSingleIteration(AffineForOp forOp);
 /// their body into the containing Block.
 void promoteSingleIterationLoops(FuncOp f);
 
-/// Computes the cleanup loop lower bound of the loop being unrolled with
-/// the specified unroll factor; this bound will also be upper bound of the main
-/// part of the unrolled loop. Computes the bound as an AffineMap with its
-/// operands or a null map when the trip count can't be expressed as an affine
-/// expression.
-void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
-                              AffineMap *map, SmallVectorImpl<Value> *operands,
-                              OpBuilder &builder);
-
-/// Skew the operations in the body of an affine.for operation with the
-/// specified operation-wise shifts. The shifts are with respect to the
-/// original execution order, and are multiplied by the loop 'step' before being
-/// applied. If `unrollPrologueEpilogue` is set, fully unroll the prologue and
-/// epilogue loops when possible.
+/// Skew the operations in an affine.for's body with the specified
+/// operation-wise shifts. The shifts are with respect to the original execution
+/// order, and are multiplied by the loop 'step' before being applied. If
+/// `unrollPrologueEpilogue` is set, fully unroll the prologue and epilogue
+/// loops when possible.
 LLVM_NODISCARD
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
