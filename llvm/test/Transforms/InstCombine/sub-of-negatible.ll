@@ -159,8 +159,8 @@ define i8 @n8(i8 %x, i1 %y, i8 %z) {
 ; x - (y - z) -> x - y + z -> x + (z - y)
 define i8 @t9(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[T01:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[T01]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T0_NEG]]
 ;
   %t0 = sub i8 %y, %x
   %t1 = sub i8 0, %t0
@@ -374,4 +374,52 @@ define i8 @n21(i8 %x, i16 %y) {
   call void @use8(i8 %t1)
   %t2 = sub i8 %x, %t1
   ret i8 %t2
+}
+
+define i4 @negate_xor(i4 %x) {
+; CHECK-LABEL: @negate_xor(
+; CHECK-NEXT:    [[O:%.*]] = xor i4 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = sub i4 0, [[O]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o = xor i4 %x, 5
+  %r = sub i4 0, %o
+  ret i4 %r
+}
+
+define <2 x i4> @negate_xor_vec(<2 x i4> %x) {
+; CHECK-LABEL: @negate_xor_vec(
+; CHECK-NEXT:    [[O:%.*]] = xor <2 x i4> [[X:%.*]], <i4 5, i4 -6>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i4> zeroinitializer, [[O]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %o = xor <2 x i4> %x, <i4 5, i4 10>
+  %r = sub <2 x i4> zeroinitializer, %o
+  ret <2 x i4> %r
+}
+
+define i8 @negate_xor_use(i8 %x) {
+; CHECK-LABEL: @negate_xor_use(
+; CHECK-NEXT:    [[O:%.*]] = xor i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use8(i8 [[O]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[O]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = xor i8 %x, 5
+  call void @use8(i8 %o)
+  %r = sub i8 0, %o
+  ret i8 %r
+}
+
+define i4 @negate_shl_xor(i4 %x, i4 %y) {
+; CHECK-LABEL: @negate_shl_xor(
+; CHECK-NEXT:    [[O:%.*]] = xor i4 [[X:%.*]], 5
+; CHECK-NEXT:    [[S:%.*]] = shl i4 [[O]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i4 0, [[S]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o = xor i4 %x, 5
+  %s = shl i4 %o, %y
+  %r = sub i4 0, %s
+  ret i4 %r
 }
