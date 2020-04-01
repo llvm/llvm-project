@@ -63,6 +63,10 @@ namespace {
 class GpuLaunchFuncToCudaCallsPass
     : public ModulePass<GpuLaunchFuncToCudaCallsPass> {
 private:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuLaunchFuncToCudaCalls
+#include "mlir/Conversion/Passes.h.inc"
+
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
   llvm::LLVMContext &getLLVMContext() {

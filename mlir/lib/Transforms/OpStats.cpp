@@ -19,6 +19,10 @@ using namespace mlir;
 
 namespace {
 struct PrintOpStatsPass : public ModulePass<PrintOpStatsPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_PrintOpStats
+#include "mlir/Transforms/Passes.h.inc"
+
   explicit PrintOpStatsPass(raw_ostream &os = llvm::errs()) : os(os) {}
 
   // Prints the resultant operation statistics post iterating over the module.

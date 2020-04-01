@@ -18,6 +18,10 @@ using namespace mlir;
 
 namespace {
 struct SymbolDCE : public OperationPass<SymbolDCE> {
+/// Include the generated pass utilities.
+#define GEN_PASS_SymbolDCE
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override;
 
   /// Compute the liveness of the symbols within the given symbol table.

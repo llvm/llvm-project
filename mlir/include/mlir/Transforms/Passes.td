@@ -35,6 +35,10 @@ def Canonicalizer : Pass<"canonicalize"> {
 def CSE : Pass<"cse"> {
   let summary = "Eliminate common sub-expressions";
   let constructor = "mlir::createCSEPass()";
+  let statistics = [
+    Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
+    Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">
+  ];
 }
 
 def Inliner : Pass<"inline"> {
@@ -45,6 +49,13 @@ def Inliner : Pass<"inline"> {
 def LocationSnapshot : Pass<"snapshot-op-locations"> {
   let summary = "Generate new locations from the current IR";
   let constructor = "mlir::createLocationSnapshotPass()";
+  let options = [
+    Option<"fileName", "filename", "std::string", /*default=*/"",
+           "The filename to print the generated IR.">,
+    Option<"tag", "tag", "std::string", /*default=*/"",
+           "A tag to use when fusing the new locations with the "
+           "original. If unset, the locations are replaced.">,
+  ];
 }
 
 def LoopCoalescing : Pass<"loop-coalescing"> {
@@ -66,6 +77,17 @@ def MemRefDataFlowOpt : Pass<"memref-dataflow-opt"> {
 def ParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {
   let summary = "Collapse parallel loops to use less induction variables";
   let constructor = "mlir::createParallelLoopCollapsingPass()";
+  let options = [
+    ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
+               "Which loop indices to combine 0th loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"clCollapsedIndices1", "collapsed-indices-1", "unsigned",
+               "Which loop indices to combine into the position 1 loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"clCollapsedIndices2", "collapsed-indices-2", "unsigned",
+               "Which loop indices to combine into the position 2 loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+  ];
 }
 
 def PrintCFG : Pass<"print-cfg-graph"> {

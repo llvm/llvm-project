@@ -59,6 +59,10 @@ namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
 struct LoopTiling : public FunctionPass<LoopTiling> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineLoopTiling
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   explicit LoopTiling(uint64_t cacheSizeBytes = kDefaultCacheMemCapacity,
                       bool avoidMaxMinBounds = true)
       : cacheSizeBytes(cacheSizeBytes), avoidMaxMinBounds(avoidMaxMinBounds) {}

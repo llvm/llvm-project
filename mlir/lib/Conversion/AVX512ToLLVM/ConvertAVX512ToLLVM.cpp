@@ -164,6 +164,10 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
 
 namespace {
 struct ConvertAVX512ToLLVMPass : public ModulePass<ConvertAVX512ToLLVMPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertAVX512ToLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

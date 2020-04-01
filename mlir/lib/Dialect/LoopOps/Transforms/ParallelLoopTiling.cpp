@@ -102,8 +102,12 @@ static bool getInnermostNestedLoops(Block *block,
 
 namespace {
 struct ParallelLoopTiling : public FunctionPass<ParallelLoopTiling> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LoopParallelLoopTiling
+#include "mlir/Dialect/LoopOps/Passes.h.inc"
+
   ParallelLoopTiling() = default;
-  ParallelLoopTiling(const ParallelLoopTiling &) {} // tileSize is non-copyable.
+  ParallelLoopTiling(const ParallelLoopTiling &) {}
   explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes) {
     this->tileSizes = tileSizes;
   }
@@ -117,11 +121,6 @@ struct ParallelLoopTiling : public FunctionPass<ParallelLoopTiling> {
       tileParallelLoop(pLoop, tileSizes);
     }
   }
-
-  ListOption<int64_t> tileSizes{
-      *this, "parallel-loop-tile-sizes",
-      llvm::cl::desc("factors to tile parallel loops by"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
 };
 } // namespace
 

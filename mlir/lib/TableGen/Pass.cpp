@@ -13,10 +13,63 @@ using namespace mlir;
 using namespace mlir::tblgen;
 
 //===----------------------------------------------------------------------===//
+// PassOption
+//===----------------------------------------------------------------------===//
+
+StringRef PassOption::getCppVariableName() const {
+  return def->getValueAsString("cppName");
+}
+
+StringRef PassOption::getArgument() const {
+  return def->getValueAsString("argument");
+}
+
+StringRef PassOption::getType() const { return def->getValueAsString("type"); }
+
+Optional<StringRef> PassOption::getDefaultValue() const {
+  StringRef defaultVal = def->getValueAsString("defaultValue");
+  return defaultVal.empty() ? Optional<StringRef>() : defaultVal;
+}
+
+StringRef PassOption::getDescription() const {
+  return def->getValueAsString("description");
+}
+
+Optional<StringRef> PassOption::getAdditionalFlags() const {
+  StringRef additionalFlags = def->getValueAsString("additionalOptFlags");
+  return additionalFlags.empty() ? Optional<StringRef>() : additionalFlags;
+}
+
+bool PassOption::isListOption() const {
+  return def->isSubClassOf("ListOption");
+}
+
+//===----------------------------------------------------------------------===//
+// PassStatistic
+//===----------------------------------------------------------------------===//
+
+StringRef PassStatistic::getCppVariableName() const {
+  return def->getValueAsString("cppName");
+}
+
+StringRef PassStatistic::getName() const {
+  return def->getValueAsString("name");
+}
+
+StringRef PassStatistic::getDescription() const {
+  return def->getValueAsString("description");
+}
+
+//===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
 
-Pass::Pass(const llvm::Record *def) : def(def) {}
+Pass::Pass(const llvm::Record *def) : def(def) {
+  for (auto *init : def->getValueAsListOfDefs("options"))
+    options.push_back(PassOption(init));
+  for (auto *init : def->getValueAsListOfDefs("statistics"))
+    statistics.push_back(PassStatistic(init));
+}
 
 StringRef Pass::getArgument() const {
   return def->getValueAsString("argument");
@@ -31,3 +84,7 @@ StringRef Pass::getDescription() const {
 StringRef Pass::getConstructor() const {
   return def->getValueAsString("constructor");
 }
+
+ArrayRef<PassOption> Pass::getOptions() const { return options; }
+
+ArrayRef<PassStatistic> Pass::getStatistics() const { return statistics; }

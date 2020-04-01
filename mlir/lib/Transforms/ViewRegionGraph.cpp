@@ -61,6 +61,10 @@ void mlir::Region::viewGraph() { viewGraph("region"); }
 
 namespace {
 struct PrintCFGPass : public FunctionPass<PrintCFGPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_PrintCFG
+#include "mlir/Transforms/Passes.h.inc"
+
   PrintCFGPass(raw_ostream &os = llvm::errs(), bool shortNames = false,
                const Twine &title = "")
       : os(os), shortNames(shortNames), title(title.str()) {}

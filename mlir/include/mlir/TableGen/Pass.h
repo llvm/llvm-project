@@ -19,6 +19,58 @@ class Record;
 namespace mlir {
 namespace tblgen {
 //===----------------------------------------------------------------------===//
+// PassOption
+//===----------------------------------------------------------------------===//
+class PassOption {
+public:
+  explicit PassOption(const llvm::Record *def) : def(def) {}
+
+  /// Return the name for the C++ option variable.
+  StringRef getCppVariableName() const;
+
+  /// Return the command line argument to use for this option.
+  StringRef getArgument() const;
+
+  /// Return the C++ type of the option.
+  StringRef getType() const;
+
+  /// Return the default value of the option.
+  Optional<StringRef> getDefaultValue() const;
+
+  /// Return the description for this option.
+  StringRef getDescription() const;
+
+  /// Return the additional flags passed to the option constructor.
+  Optional<StringRef> getAdditionalFlags() const;
+
+  /// Flag indicating if this is a list option.
+  bool isListOption() const;
+
+private:
+  const llvm::Record *def;
+};
+
+//===----------------------------------------------------------------------===//
+// PassStatistic
+//===----------------------------------------------------------------------===//
+class PassStatistic {
+public:
+  explicit PassStatistic(const llvm::Record *def) : def(def) {}
+
+  /// Return the name for the C++ statistic variable.
+  StringRef getCppVariableName() const;
+
+  /// Return the name of the statistic.
+  StringRef getName() const;
+
+  /// Return the description for this statistic.
+  StringRef getDescription() const;
+
+private:
+  const llvm::Record *def;
+};
+
+//===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
 
@@ -39,8 +91,18 @@ public:
   /// Return the C++ constructor call to create an instance of this pass.
   StringRef getConstructor() const;
 
+  /// Return the options provided by this pass.
+  ArrayRef<PassOption> getOptions() const;
+
+  /// Return the statistics provided by this pass.
+  ArrayRef<PassStatistic> getStatistics() const;
+
+  const llvm::Record *getDef() const { return def; }
+
 private:
   const llvm::Record *def;
+  std::vector<PassOption> options;
+  std::vector<PassStatistic> statistics;
 };
 
 } // end namespace tblgen

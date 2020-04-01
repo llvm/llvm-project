@@ -68,7 +68,6 @@ static llvm::cl::opt<unsigned long long> clFusionLocalBufThreshold(
     llvm::cl::cat(clOptionsCategory));
 
 namespace {
-
 /// Loop fusion pass. This pass currently supports a greedy fusion policy,
 /// which fuses loop nests with single-writer/single-reader memref dependences
 /// with the goal of improving locality.
@@ -79,6 +78,10 @@ namespace {
 // and add support for more general loop fusion algorithms.
 
 struct LoopFusion : public FunctionPass<LoopFusion> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineLoopFusion
+#include "mlir/Transforms/Passes.h.inc"
+
   LoopFusion(unsigned fastMemorySpace = 0, uint64_t localBufSizeThreshold = 0,
              bool maximalFusion = false)
       : localBufSizeThreshold(localBufSizeThreshold),

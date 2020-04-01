@@ -40,6 +40,10 @@ namespace {
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
     : public ModulePass<ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuLaunchFuncToVulkanLaunchFunc
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 
 private:

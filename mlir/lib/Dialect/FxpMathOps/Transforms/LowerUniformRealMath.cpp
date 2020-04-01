@@ -21,13 +21,20 @@ using namespace mlir::fxpmath::detail;
 using namespace mlir::quant;
 
 namespace {
-
 struct LowerUniformRealMathPass
     : public FunctionPass<LowerUniformRealMathPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_FxpMathLowerUniformRealMath
+#include "mlir/Dialect/FxpMathOps/Passes.h.inc"
+
   void runOnFunction() override;
 };
 
 struct LowerUniformCastsPass : public FunctionPass<LowerUniformCastsPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_FxpMathLowerUniformCasts
+#include "mlir/Dialect/FxpMathOps/Passes.h.inc"
+
   void runOnFunction() override;
 };
 

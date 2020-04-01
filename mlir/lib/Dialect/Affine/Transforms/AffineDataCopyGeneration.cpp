@@ -75,6 +75,10 @@ namespace {
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
     : public FunctionPass<AffineDataCopyGeneration> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineDataCopyGeneration
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   explicit AffineDataCopyGeneration(
       unsigned slowMemorySpace = 0,
       unsigned fastMemorySpace = clFastMemorySpace, unsigned tagMemorySpace = 0,

@@ -15,6 +15,50 @@
 #define MLIR_PASS_PASSBASE
 
 //===----------------------------------------------------------------------===//
+// Options
+//===----------------------------------------------------------------------===//
+
+class Option<string varName, string arg, string valueType, string default,
+             string desc, string additionalFlags = ""> {
+  // The name for the C++ option variable.
+  string cppName = varName;
+
+  // The command line argument to use for this option.
+  string argument = arg;
+
+  // The C++ type of the option.
+  string type = valueType;
+
+  // The default value of the option. "" corresponds to no default.
+  string defaultValue = default;
+
+  // A description for this option.
+  string description = desc;
+
+  // A set of additional flags to pass along to the option constructor.
+  string additionalOptFlags = additionalFlags;
+}
+
+class ListOption<string varName, string arg, string valueType,
+                 string desc, string additionalFlags = "">
+  : Option<varName, arg, valueType, /*default=*/"", desc, additionalFlags> {}
+
+//===----------------------------------------------------------------------===//
+// Statistics
+//===----------------------------------------------------------------------===//
+
+class Statistic<string varName, string statName, string desc> {
+  // The C++ variable name for the statistic.
+  string cppName = varName;
+
+  // The displayed name of the statistic, similar to the argument of an option.
+  string name = statName;
+
+  // The description of the statistic.
+  string description = desc;
+}
+
+//===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
 
@@ -30,6 +74,12 @@ class Pass<string passArg> {
 
   // A C++ constructor call to create an instance of this pass.
   code constructor = [{}];
+
+  // A set of options provided by this pass.
+  list<Option> options = [];
+
+  // A set of statistics provided by this pass.
+  list<Statistic> statistics = [];
 }
 
 #endif // MLIR_PASS_PASSBASE

@@ -34,6 +34,10 @@ namespace {
 class LowerGpuOpsToROCDLOpsPass
     : public OperationPass<LowerGpuOpsToROCDLOpsPass, gpu::GPUModuleOp> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuOpsToROCDLOps
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
