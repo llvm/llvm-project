@@ -13,10 +13,10 @@
 # CHECK-NEXT:     symbols:         [ __Z3fooi ]
 # CHECK-NEXT: ...
 
---- !experimental-ifs-v1
-IfsVersion: 1.0
+--- !experimental-ifs-v2
+IfsVersion: 2.0
 Triple: arm64-apple-watchos
 ObjectFileFormat: TBD
 Symbols:
-  __Z3fooi: { Type: Func }
+  - { Name: __Z3fooi, Type: Func }
 ...
