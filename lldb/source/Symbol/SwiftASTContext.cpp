@@ -191,11 +191,10 @@ swift::Type TypeSystemSwiftTypeRef::GetSwiftType(CompilerType compiler_type) {
   if (!ts)
     return {};
 
-  Status error;
   // FIXME: Suboptimal performance, because the ConstString is looked up again.
   ConstString mangled_name(
       reinterpret_cast<const char *>(compiler_type.GetOpaqueQualType()));
-  return ts->m_swift_ast_context->ReconstructType(mangled_name, error);
+  return ts->m_swift_ast_context->ReconstructType(mangled_name);
 }
 
 swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
@@ -2853,8 +2852,8 @@ protected:
 class StoringDiagnosticConsumer : public swift::DiagnosticConsumer {
 public:
   StoringDiagnosticConsumer(SwiftASTContext &ast_context)
-      : m_ast_context(ast_context), m_diagnostics(), m_num_errors(0),
-        m_colorize(false) {
+      : m_ast_context(ast_context), m_raw_diagnostics(), m_diagnostics(),
+        m_num_errors(0), m_colorize(false) {
     m_ast_context.GetDiagnosticEngine().resetHadAnyError();
     m_ast_context.GetDiagnosticEngine().addConsumer(*this);
   }
@@ -2926,19 +2925,19 @@ public:
       std::string &message_ref = os.str();
 
       if (message_ref.empty())
-        m_diagnostics.push_back(RawDiagnostic(
+        m_raw_diagnostics.push_back(RawDiagnostic(
             text.str(), info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
       else
-        m_diagnostics.push_back(RawDiagnostic(
+        m_raw_diagnostics.push_back(RawDiagnostic(
             message_ref, info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     } else {
-      m_diagnostics.push_back(RawDiagnostic(
+      m_raw_diagnostics.push_back(RawDiagnostic(
           text.str(), info.Kind, bufferName, bufferID, line_col.first,
           line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     }
@@ -2949,6 +2948,7 @@ public:
 
   void Clear() {
     m_ast_context.GetDiagnosticEngine().resetHadAnyError();
+    m_raw_diagnostics.clear();
     m_diagnostics.clear();
     m_num_errors = 0;
   }
@@ -2980,8 +2980,13 @@ public:
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
                         uint32_t last_line = UINT32_MAX) {
-    bool added_one_diagnostic = false;
-    for (const RawDiagnostic &diagnostic : m_diagnostics) {
+    bool added_one_diagnostic = !m_diagnostics.empty();
+
+    for (std::unique_ptr<Diagnostic> &diagnostic : m_diagnostics) {
+      diagnostic_manager.AddDiagnostic(std::move(diagnostic));
+    }
+
+    for (const RawDiagnostic &diagnostic : m_raw_diagnostics) {
       // We often make expressions and wrap them in some code.  When
       // we see errors we want the line numbers to be correct so we
       // correct them below. LLVM stores in SourceLoc objects as
@@ -3053,7 +3058,7 @@ public:
       // This will report diagnostic errors from outside the
       // expression's source range. Those are not interesting to
       // users, so we only emit them in debug builds.
-      for (const RawDiagnostic &diagnostic : m_diagnostics) {
+      for (const RawDiagnostic &diagnostic : m_raw_diagnostics) {
         const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
         const DiagnosticOrigin origin = eDiagnosticOriginSwift;
         diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
@@ -3068,6 +3073,10 @@ public:
     const bool old = m_colorize;
     m_colorize = b;
     return old;
+  }
+
+  void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
+    m_diagnostics.push_back(std::move(diagnostic));
   }
 
 private:
@@ -3095,9 +3104,12 @@ private:
     std::vector<swift::DiagnosticInfo::FixIt> fixits;
   };
   typedef std::vector<RawDiagnostic> RawDiagnosticBuffer;
+  typedef std::vector<std::unique_ptr<Diagnostic>> DiagnosticList;
 
   SwiftASTContext &m_ast_context;
-  RawDiagnosticBuffer m_diagnostics;
+  RawDiagnosticBuffer m_raw_diagnostics;
+  DiagnosticList m_diagnostics;
+
   unsigned m_num_errors = 0;
   bool m_colorize;
 };
@@ -4360,9 +4372,8 @@ swift::Type convertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
 
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename) {
-  Status error;
   if (llvm::isa<SwiftASTContextForExpressions>(this))
-    return GetCompilerType(ReconstructType(mangled_typename, error));
+    return GetCompilerType(ReconstructType(mangled_typename));
   return GetCompilerType(mangled_typename);
 }
 
@@ -4408,6 +4419,17 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   if (!clang_type)
     clang_type = clang_ctx->GetBasicType(eBasicTypeObjCID);
   return clang_type;
+}
+
+swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename) {
+  Status error;
+
+  auto reconstructed_type =
+      this->ReconstructType(mangled_typename, error);
+  if (!error.Success()) {
+    this->AddErrorStatusAsGenericDiagnostic(error);
+  }
+  return reconstructed_type;
 }
 
 swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
@@ -4999,6 +5021,17 @@ bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
                m_diagnostic_consumer_ap.get())
         ->SetColorize(b);
   return false;
+}
+
+void SwiftASTContext::AddErrorStatusAsGenericDiagnostic(Status error) {
+  assert(!error.Success() && "status should be in an error state");
+
+  auto diagnostic = std::make_unique<Diagnostic>(
+      error.AsCString(), eDiagnosticSeverityError, eDiagnosticOriginLLDB,
+      LLDB_INVALID_COMPILER_ID);
+  if (m_diagnostic_consumer_ap.get())
+    static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+        ->AddDiagnostic(std::move(diagnostic));
 }
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,

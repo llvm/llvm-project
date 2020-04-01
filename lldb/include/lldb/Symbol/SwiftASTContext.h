@@ -612,6 +612,7 @@ public:
 
   /// Reconstruct a Swift AST type from a mangled name by looking its
   /// components up in Swift modules.
+  swift::TypeBase *ReconstructType(ConstString mangled_typename);
   swift::TypeBase *ReconstructType(ConstString mangled_typename, Status &error);
   CompilerType GetTypeFromMangledTypename(ConstString mangled_typename);
 
@@ -667,6 +668,7 @@ public:
   void ClearDiagnostics();
 
   bool SetColorizeDiagnostics(bool b);
+  void AddErrorStatusAsGenericDiagnostic(Status error);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
