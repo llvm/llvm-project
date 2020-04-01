@@ -313,6 +313,95 @@ func @tuple_get(%arg0: vector<4xf32>, %arg1: vector<8xf32>) -> vector<8xf32> {
   return %1 : vector<8xf32>
 }
 
+// CHECK-LABEL: func @tuple_get_producer_consumer
+// CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A1:.*1]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A2:.*2]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A3:.*3]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A4:.*4]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A5:.*5]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A6:.*6]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A7:.*7]]: vector<2x4xf32>
+//      CHECK: return %[[A7]] : vector<2x4xf32>
+
+func @tuple_get_producer_consumer(
+  %arg0 : vector<2x4xf32>, %arg1 : vector<2x4xf32>,
+  %arg2 : vector<2x4xf32>, %arg3 : vector<2x4xf32>,
+  %arg4 : vector<2x4xf32>, %arg5 : vector<2x4xf32>,
+  %arg6 : vector<2x4xf32>, %arg7 : vector<2x4xf32>) -> vector<2x4xf32> {
+  %0 = vector.tuple %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7
+    : vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>,
+      vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>
+  // %arg7 == %0 at tupleIndex = 7, offsets = [0, 0]
+  %1 = vector.insert_slices %0, [2, 4], [1, 1]
+    : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>,
+            vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+      into vector<4x16xf32>
+  // %arg7 == %1 at tupleIndex = -1, offsets = [2, 12]
+  %2 = vector.extract_slices %1, [4, 8], [1, 1]
+    : vector<4x16xf32> into tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %2 at tupleIndex = 1, offsets = [2, 4]
+  %3 = vector.tuple_get %2, 1 : tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %3 at tupleIndex = -1, offsets = [2, 4]
+  %4 = vector.extract_slices %3, [2, 4], [1, 1]
+    : vector<4x8xf32> into
+      tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+  // %arg7 == %4 at tupleIndex = 3, offsets = [0, 0]
+  %5 = vector.tuple_get %4, 3
+    : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+  // %arg7 == %5
+  return %5 : vector<2x4xf32>
+}
+
+// CHECK-LABEL: func @tuple_get_producer_consumer_swizzle
+// CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A1:.*1]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A2:.*2]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A3:.*3]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A4:.*4]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A5:.*5]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A6:.*6]]: vector<2x4xf32>,
+// CHECK-SAME: %[[A7:.*7]]: vector<2x4xf32>
+//      CHECK: return %[[A7]] : vector<2x4xf32>
+
+func @tuple_get_producer_consumer_swizzle(
+  %arg0 : vector<2x4xf32>, %arg1 : vector<2x4xf32>,
+  %arg2 : vector<2x4xf32>, %arg3 : vector<2x4xf32>,
+  %arg4 : vector<2x4xf32>, %arg5 : vector<2x4xf32>,
+  %arg6 : vector<2x4xf32>, %arg7 : vector<2x4xf32>) -> vector<2x4xf32> {
+  %0 = vector.tuple %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7
+    : vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>,
+      vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>
+  // %arg7 == %0 at tupleIndex = 7, offsets = [0, 0]
+  %1 = vector.insert_slices %0, [2, 4], [1, 1]
+    : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>,
+            vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+      into vector<4x16xf32>
+  // %arg7 == %1 at tupleIndex = -1, offsets = [2, 12]
+  %2 = vector.extract_slices %1, [4, 8], [1, 1]
+    : vector<4x16xf32> into tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %2 at tupleIndex = 1, offsets = [2, 4]
+
+  // Extract tuple elements.
+  %3 = vector.tuple_get %2, 0 : tuple<vector<4x8xf32>, vector<4x8xf32>>
+  %4 = vector.tuple_get %2, 1 : tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %4 at tupleIndex = -1, offsets = [2, 4]
+
+  // Swizzle tuple elements.
+  %5 = vector.tuple %4, %3 : vector<4x8xf32>, vector<4x8xf32>
+  // %arg7 == %5 at tupleIndex = 0, offsets = [2, 4]
+  %6 = vector.tuple_get %5, 0 : tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %6 at tupleIndex = -1, offsets = [2, 4]
+  %7 = vector.extract_slices %6, [2, 4], [1, 1]
+    : vector<4x8xf32> into
+      tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+  // %arg7 == %7 at tupleIndex = 3, offsets = [0, 0]
+  %8 = vector.tuple_get %7, 3
+    : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
+  // %arg7 == %8
+  return %8 : vector<2x4xf32>
+}
+
 // CHECK-LABEL: func @vector_transfers_vector_element_type
 //      CHECK: %[[C0:.*]] = constant 0 : index
 //      CHECK: %[[C1:.*]] = constant 1 : index

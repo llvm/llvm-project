@@ -114,7 +114,7 @@ static void cndmask0Reg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
         .addImm(0)
         .addImm(0)
         .addImm(0)
-        .addReg(SrcReg, 0, AMDGPU::sub0 + i)
+        .addReg(SrcReg, 0, RI->getSubRegFromChannel(i))
         .addReg(MaskReg, getKillRegState(KillMask && (i == (RegSize - 1))));
       TRegs.push_back(TReg);
     }

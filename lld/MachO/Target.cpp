@@ -1,4 +1,4 @@
-//===- Threads.cpp --------------------------------------------------------===//
+//===- Target.cpp ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Common/Threads.h"
+#include "Target.h"
 
-bool lld::threadsEnabled = true;
+using namespace lld;
+using namespace lld::macho;
+
+TargetInfo *macho::target = nullptr;

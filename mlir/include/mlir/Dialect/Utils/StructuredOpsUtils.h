@@ -72,6 +72,15 @@ constexpr StringRef getFunAttrName() { return "fun"; }
 /// function that implements the structured op.
 constexpr StringRef getLibraryCallAttrName() { return "library_call"; }
 
+/// Attribute name for the StrArrayAttr which encodes the value of strides.
+constexpr StringRef getStridesAttrName() { return "strides"; }
+
+/// Attribute name for the StrArrayAttr which encodes the value of dilations.
+constexpr StringRef getDilationsAttrName() { return "dilations"; }
+
+/// Attribute name for the StrArrayAttr which encodes the value of paddings.
+constexpr StringRef getPaddingAttrName() { return "padding"; }
+
 /// Use to encode that a particular iterator type has parallel semantics.
 constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
 

@@ -20,9 +20,7 @@
 
 // NOTE: Only clang-3.7 and GCC 5.1 and greater support -fsized-deallocation.
 // REQUIRES: -fsized-deallocation
-
-// RUN: %{build} -fsized-deallocation -O3
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation, -O3
 
 #if !defined(__cpp_sized_deallocation)
 # error __cpp_sized_deallocation should be defined

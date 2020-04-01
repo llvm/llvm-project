@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // C++98 [basic.lookup.classref]p1:
 //   In a class member access expression (5.2.5), if the . or -> token is

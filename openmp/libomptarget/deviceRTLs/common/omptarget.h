@@ -14,11 +14,6 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-// std includes
-#include <inttypes.h>
-#include <math.h>
-
-// local includes
 #include "target_impl.h"
 #include "common/debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user

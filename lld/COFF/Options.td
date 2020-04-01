@@ -219,9 +219,9 @@ def lto_obj_path : P<
     "output native object for merged LTO unit to this path">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Print version information">;
-defm threads: B<"threads",
-    "Run the linker multi-threaded (default)",
-    "Do not run the linker multi-threaded">;
+def threads
+    : P<"threads", "Number of threads. '1' disables multi-threading. By "
+                   "default all available hardware threads are used">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

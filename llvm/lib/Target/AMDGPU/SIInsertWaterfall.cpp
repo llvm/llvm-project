@@ -138,8 +138,8 @@ static void orReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
     for (unsigned i = 0; i < RegSize; ++i) {
       unsigned TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_OR_B32_e64), TReg)
-          .addReg(PhiReg, 0, AMDGPU::sub0 + i)
-          .addReg(EndSrc, 0, AMDGPU::sub0 + i);
+          .addReg(PhiReg, 0, RI->getSubRegFromChannel(i))
+          .addReg(EndSrc, 0, RI->getSubRegFromChannel(i));
       TRegs.push_back(TReg);
     }
     MachineInstrBuilder MIB =
@@ -168,7 +168,7 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
     for (unsigned i = 0; i < RegSize; ++i) {
       unsigned TReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), TReg)
-          .addReg(RFLSrcReg, 0, AMDGPU::sub0 + i);
+          .addReg(RFLSrcReg, 0, RI->getSubRegFromChannel(i));
       TRegs.push_back(TReg);
     }
     MachineInstrBuilder MIB =
@@ -236,8 +236,8 @@ static unsigned compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
       unsigned TReg2 =
           MRI->createVirtualRegister(BoolXExecRC);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), TReg2)
-          .addReg(CurrentIdxReg, 0, AMDGPU::sub0 + i)
-          .addReg(IndexReg, 0, AMDGPU::sub0 + i);
+          .addReg(CurrentIdxReg, 0, RI->getSubRegFromChannel(i))
+          .addReg(IndexReg, 0, RI->getSubRegFromChannel(i));
       unsigned TReg3 =
           MRI->createVirtualRegister(BoolXExecRC);
       BuildMI(MBB, I, DL, TII->get(AndOpc), TReg3)

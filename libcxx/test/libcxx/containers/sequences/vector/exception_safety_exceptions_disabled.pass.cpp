@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %{build} -fno-exceptions
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 // UNSUPPORTED: c++98, c++03
 
@@ -43,7 +42,7 @@ int main(int, char**) {
   // have to be moved when it is resized.
   v.reserve(10);
   size_t old_cap = v.capacity();
-  for (int i = 0; i < v.capacity(); ++i) {
+  for (size_t i = 0; i < v.capacity(); ++i) {
     v.emplace_back(42);
   }
   assert(v.capacity() == old_cap);

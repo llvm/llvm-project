@@ -384,7 +384,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   NumElts = OpTy->getVectorNumElements();
   if (NumElts == 2) {
     // Extract down to 2 elements.
-    Ops[0] = Builder.CreateShuffleVector(Ops[0], Ops[0], {0, 1});
+    Ops[0] = Builder.CreateShuffleVector(Ops[0], Ops[0], ArrayRef<int>{0, 1});
   } else if (NumElts >= 8) {
     SmallVector<uint32_t, 32> ConcatMask(NumElts);
     unsigned SubElts = Ops[0]->getType()->getVectorNumElements();

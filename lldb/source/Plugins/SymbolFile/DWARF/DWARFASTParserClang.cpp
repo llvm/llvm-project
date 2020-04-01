@@ -1634,12 +1634,11 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   // parameters in any class methods need it for the clang types for
   // function prototypes.
   LinkDeclContextToDIE(m_ast.GetDeclContextForType(clang_type), die);
-  type_sp = std::make_shared<Type>(die.GetID(), dwarf, attrs.name,
-                                   attrs.byte_size, nullptr, LLDB_INVALID_UID,
-                                   Type::eEncodingIsUID, &attrs.decl,
-                                   clang_type, Type::ResolveState::Forward);
-
-  type_sp->SetIsCompleteObjCClass(attrs.is_complete_objc_class);
+  type_sp = std::make_shared<Type>(
+      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
+      LLDB_INVALID_UID, Type::eEncodingIsUID, &attrs.decl, clang_type,
+      Type::ResolveState::Forward,
+      TypePayloadClang(attrs.is_complete_objc_class));
 
   // Add our type to the unique type map so we don't end up creating many
   // copies of the same type over and over in the ASTContext for our

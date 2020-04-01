@@ -1348,8 +1348,8 @@ def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, load, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  def MSC  : BinaryRXY<"msc",  0xE353, null_frag, GR32, load, 4>;
-  def MSGC : BinaryRXY<"msgc", 0xE383, null_frag, GR64, load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, load, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, load, 8>;
 }
 
 // Multiplication of a register, producing two results.

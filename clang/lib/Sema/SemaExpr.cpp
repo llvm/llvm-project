@@ -4817,10 +4817,13 @@ ExprResult Sema::ActOnOMPArrayShapingExpr(Expr *Base, SourceLocation LParenLoc,
   if (!BaseTy->isPointerType() && Base->isTypeDependent())
     return OMPArrayShapingExpr::Create(Context, Context.DependentTy, Base,
                                        LParenLoc, RParenLoc, Dims, Brackets);
-  if (!BaseTy->isPointerType())
+  if (!BaseTy->isPointerType() ||
+      (!Base->isTypeDependent() &&
+       BaseTy->getPointeeType()->isIncompleteType()))
     return ExprError(Diag(Base->getExprLoc(),
                           diag::err_omp_non_pointer_type_array_shaping_base)
                      << Base->getSourceRange());
+
   SmallVector<Expr *, 4> NewDims;
   bool ErrorFound = false;
   for (Expr *Dim : Dims) {

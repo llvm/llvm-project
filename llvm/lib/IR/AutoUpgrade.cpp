@@ -2335,11 +2335,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                             PointerType::getUnqual(VT));
       Value *Load = Builder.CreateAlignedLoad(VT, Op, Align(1));
       if (NumSrcElts == 2)
-        Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
-                                          { 0, 1, 0, 1 });
+        Rep = Builder.CreateShuffleVector(
+            Load, UndefValue::get(Load->getType()), ArrayRef<int>{0, 1, 0, 1});
       else
-        Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
-                                          { 0, 1, 2, 3, 0, 1, 2, 3 });
+        Rep =
+            Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
+                                        ArrayRef<int>{0, 1, 2, 3, 0, 1, 2, 3});
     } else if (IsX86 && (Name.startswith("avx512.mask.shuf.i") ||
                          Name.startswith("avx512.mask.shuf.f"))) {
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();

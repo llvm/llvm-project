@@ -106,6 +106,23 @@ static void inlineRegionAndEmitStdStore(OpType op,
   }
 }
 
+// Returns a pair that contains input indices and output indices of a
+// SingleInputPoolingOp `op`.
+template <typename SingleInputPoolingOp>
+static std::pair<SmallVector<ValueHandle, 8>, SmallVector<ValueHandle, 8>>
+getInputAndOutputIndices(ArrayRef<Value> allIvs, SingleInputPoolingOp op) {
+  auto &b = ScopedContext::getBuilder();
+  auto loc = ScopedContext::getLocation();
+  auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
+  auto maps =
+      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  SmallVector<ValueHandle, 8> iIdx(
+      makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
+  SmallVector<ValueHandle, 8> oIdx(
+      makeCanonicalAffineApplies(b, loc, maps[2], allIvs));
+  return {iIdx, oIdx};
+}
+
 namespace {
 template <typename IndexedValueType, typename LinalgOpType>
 class LinalgScopedEmitter {};
@@ -270,6 +287,57 @@ public:
     // Emit scalar form.
     ValueHandle paddedInput = getConvOpInput(convOp, I, imIdx);
     O(oIdx) += F(fIdx) * paddedInput;
+  }
+};
+
+template <typename IndexedValueType>
+class LinalgScopedEmitter<IndexedValueType, PoolingMaxOp> {
+public:
+  static void emitScalarImplementation(ArrayRef<Value> allIvs,
+                                       PoolingMaxOp op) {
+    auto indices = getInputAndOutputIndices(allIvs, op);
+    ValueHandleArray iIdx(indices.first);
+    ValueHandleArray oIdx(indices.second);
+
+    // Emit scalar form.
+    ValueHandle lhs = std_load(op.output(), oIdx);
+    ValueHandle rhs = std_load(op.input(), iIdx);
+    using edsc::op::operator>;
+    ValueHandle maxValue = std_select(lhs > rhs, lhs, rhs);
+    std_store(maxValue, op.output(), oIdx);
+  }
+};
+
+template <typename IndexedValueType>
+class LinalgScopedEmitter<IndexedValueType, PoolingMinOp> {
+public:
+  static void emitScalarImplementation(ArrayRef<Value> allIvs,
+                                       PoolingMinOp op) {
+    auto indices = getInputAndOutputIndices(allIvs, op);
+    ValueHandleArray iIdx(indices.first);
+    ValueHandleArray oIdx(indices.second);
+
+    // Emit scalar form.
+    ValueHandle lhs = std_load(op.output(), oIdx);
+    ValueHandle rhs = std_load(op.input(), iIdx);
+    using edsc::op::operator<;
+    ValueHandle minValue = std_select(lhs < rhs, lhs, rhs);
+    std_store(minValue, op.output(), oIdx);
+  }
+};
+
+template <typename IndexedValueType>
+class LinalgScopedEmitter<IndexedValueType, PoolingSumOp> {
+public:
+  static void emitScalarImplementation(ArrayRef<Value> allIvs,
+                                       PoolingSumOp op) {
+    auto indices = getInputAndOutputIndices(allIvs, op);
+    SmallVector<ValueHandle, 8> iIdx = indices.first;
+    SmallVector<ValueHandle, 8> oIdx = indices.second;
+    IndexedValueType input(op.input()), output(op.output());
+
+    // Emit scalar form.
+    output(oIdx) += input(iIdx);
   }
 };
 
@@ -688,6 +756,9 @@ INSTANTIATE_LINALG_OP_TO_LOOPS(DotOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(MatvecOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(MatmulOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(ConvOp)
+INSTANTIATE_LINALG_OP_TO_LOOPS(PoolingMaxOp)
+INSTANTIATE_LINALG_OP_TO_LOOPS(PoolingMinOp)
+INSTANTIATE_LINALG_OP_TO_LOOPS(PoolingSumOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(GenericOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(IndexedGenericOp)
 

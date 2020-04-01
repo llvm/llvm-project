@@ -15,6 +15,8 @@ Vulkan and OpenCL. It is fully defined in a
 [human-readable specification][SpirvSpec]; the syntax of various SPIR-V
 instructions are encoded in a [machine-readable grammar][SpirvGrammar].
 
+[TOC]
+
 ## Design Guidelines
 
 SPIR-V is a binary intermediate language that serves dual purpose: on one side,
@@ -459,8 +461,9 @@ can be represented in the dialect as
 ```
 
 Operation documentation is written in each op's Op Definition Spec using
-TableGen. A markdown version of the doc can be found at
-[mlir.llvm.org][LlvmMlirSpirvDoc] or generated using `mlir-tblgen -gen-doc`.
+TableGen. A markdown version of the doc can be generated using
+`mlir-tblgen -gen-doc` and is attached in the
+[Operation definitions](#operation-definitions) section.
 
 ### Ops from extended instruction sets
 
@@ -1224,6 +1227,10 @@ conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 operations contained within its region are valid operations in the SPIR-V
 dialect.
 
+## Operation definitions
+
+[include "Dialects/SPIRVOps.md"]
+
 [Spirv]: https://www.khronos.org/registry/spir-v/
 [SpirvSpec]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html
 [SpirvLogicalLayout]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_logicallayout_a_logical_layout_of_a_module
@@ -1270,7 +1277,6 @@ dialect.
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
-[LlvmMlirSpirvDoc]: ../Dialects/SPIRVOps/
 [CustomTypeAttrTutorial]: ../DefiningAttributesAndTypes/
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
 [VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources

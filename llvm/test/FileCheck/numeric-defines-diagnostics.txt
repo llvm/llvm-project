@@ -28,6 +28,7 @@ NUMERRCLITRAIL-NEXT:Global define #1: #VALUE+2=10 (parsed as: {{\[\[#VALUE\+2:10
      NUMERRCLITRAIL-NEXT:                                                  ^
 
 ; Invalid format for variable.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#,VALUE=10 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix NUMERRCLIFMT
 

@@ -513,3 +513,14 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
   %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>, affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32> into memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>
 }
+
+// -----
+
+func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
+                            %arg1: memref<2x3xf32>,
+                            %arg2: memref<?x?x?xf32>) {
+  // expected-error @+1 {{expects memref ranks to match}}
+  linalg.pooling_max(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
+    memref<?x?x?xf32>, memref<2x3xf32>, memref<?x?x?xf32>
+  return
+}

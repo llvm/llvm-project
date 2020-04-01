@@ -1230,8 +1230,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   Constant *UndefV = UndefValue::get(VTy);
   V = ConstantExpr::getInsertElement(UndefV, V, ConstantInt::get(I32Ty, 0));
   // Build shuffle mask to perform the splat.
-  Type *MaskTy = VectorType::get(I32Ty, EC);
-  Constant *Zeros = ConstantAggregateZero::get(MaskTy);
+  SmallVector<int, 8> Zeros(EC.Min, 0);
   // Splat.
   return ConstantExpr::getShuffleVector(V, UndefV, Zeros);
 }
@@ -1309,6 +1308,14 @@ unsigned ConstantExpr::getPredicate() const {
   return cast<CompareConstantExpr>(this)->predicate;
 }
 
+ArrayRef<int> ConstantExpr::getShuffleMask() const {
+  return cast<ShuffleVectorConstantExpr>(this)->ShuffleMask;
+}
+
+Constant *ConstantExpr::getShuffleMaskForBitcode() const {
+  return cast<ShuffleVectorConstantExpr>(this)->ShuffleMaskForBitcode;
+}
+
 Constant *
 ConstantExpr::getWithOperandReplaced(unsigned OpNo, Constant *Op) const {
   assert(Op->getType() == getOperand(OpNo)->getType() &&
@@ -1360,7 +1367,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::ExtractValue:
     return ConstantExpr::getExtractValue(Ops[0], getIndices(), OnlyIfReducedTy);
   case Instruction::ShuffleVector:
-    return ConstantExpr::getShuffleVector(Ops[0], Ops[1], Ops[2],
+    return ConstantExpr::getShuffleVector(Ops[0], Ops[1], getShuffleMask(),
                                           OnlyIfReducedTy);
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
@@ -2163,7 +2170,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   if (InRangeIndex && *InRangeIndex < 63)
     SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, None, Ty);
+                                SubClassOptionalData, None, None, Ty);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2265,23 +2272,25 @@ Constant *ConstantExpr::getInsertElement(Constant *Val, Constant *Elt,
 }
 
 Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
-                                         Constant *Mask, Type *OnlyIfReducedTy) {
+                                         ArrayRef<int> Mask,
+                                         Type *OnlyIfReducedTy) {
   assert(ShuffleVectorInst::isValidOperands(V1, V2, Mask) &&
          "Invalid shuffle vector constant expr operands!");
 
   if (Constant *FC = ConstantFoldShuffleVectorInstruction(V1, V2, Mask))
     return FC;          // Fold a few common cases.
 
-  ElementCount NElts = Mask->getType()->getVectorElementCount();
+  unsigned NElts = Mask.size();
   Type *EltTy = V1->getType()->getVectorElementType();
-  Type *ShufTy = VectorType::get(EltTy, NElts);
+  bool TypeIsScalable = V1->getType()->getVectorIsScalable();
+  Type *ShufTy = VectorType::get(EltTy, NElts, TypeIsScalable);
 
   if (OnlyIfReducedTy == ShufTy)
     return nullptr;
 
   // Look up the constant in the table first to ensure uniqueness
-  Constant *ArgVec[] = { V1, V2, Mask };
-  const ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec);
+  Constant *ArgVec[] = {V1, V2};
+  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, 0, None, Mask);
 
   LLVMContextImpl *pImpl = ShufTy->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
@@ -3128,7 +3137,7 @@ Instruction *ConstantExpr::getAsInstruction() const {
   case Instruction::ExtractValue:
     return ExtractValueInst::Create(Ops[0], getIndices());
   case Instruction::ShuffleVector:
-    return new ShuffleVectorInst(Ops[0], Ops[1], Ops[2]);
+    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask());
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);

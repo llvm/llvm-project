@@ -58,21 +58,21 @@ caller:
 # CHECK-NEXT: addis 12, 1, -1
 # CHECK-NEXT: addi 12, 12, 32736
 # CHECK-NEXT: cmpld 7, 12, 0
-# CHECK-NEXT: bt- 28, .+36
+# CHECK-NEXT: bt- 28, 0x10010204
 
 # SMALL-LABEL: caller
 # SMALL:      ld 0, -28736(13)
 # SMALL-NEXT: addi 12, 1, -4128
 # SMALL-NEXT: nop
 # SMALL-NEXT: cmpld 7, 12, 0
-# SMALL-NEXT: bt- 28, .+36
+# SMALL-NEXT: bt- 28, 0x10010204
 
 # ZERO-LABEL: caller
 # ZERO:      ld 0, -28736(13)
 # ZERO-NEXT: addi 12, 1, -32
 # ZERO-NEXT: nop
 # ZERO-NEXT: cmpld 7, 12, 0
-# ZERO-NEXT: bt- 28, .+36
+# ZERO-NEXT: bt- 28, 0x10010204
         .p2align    2
         .global main
 	.type  main, @function

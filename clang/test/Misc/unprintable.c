@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 %s -fmessage-length 40 2>&1 | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 %s -fmessage-length=40 2>&1 | FileCheck -strict-whitespace %s
 
 int main() {
     int i;

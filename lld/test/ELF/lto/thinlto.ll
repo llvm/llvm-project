@@ -22,6 +22,18 @@
 ; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 
+;; --thinlto-jobs= defaults to --threads=.
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: ld.lld -save-temps --threads=2 -shared %t1.o %t2.o -o %t3
+; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
+
+;; --thinlto-jobs= overrides --threads=.
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: ld.lld -save-temps --threads=1 --plugin-opt=jobs=2 -shared %t1.o %t2.o -o %t3
+; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
+
 ; Test with all threads, on all cores, on all CPU sockets
 ; RUN: rm -f %t31.lto.o %t32.lto.o
 ; RUN: ld.lld -save-temps --thinlto-jobs=all -shared %t1.o %t2.o -o %t3

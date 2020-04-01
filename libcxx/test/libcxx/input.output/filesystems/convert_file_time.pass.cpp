@@ -12,8 +12,7 @@
 
 // typedef TrivialClock file_time_type;
 
-// RUN: %{build} -I%{libcxx_src_root}/src/filesystem
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -I%{libcxx_src_root}/src/filesystem
 
 #include <filesystem>
 #include <chrono>

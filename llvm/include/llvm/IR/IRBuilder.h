@@ -2617,17 +2617,25 @@ public:
 
   Value *CreateShuffleVector(Value *V1, Value *V2, Value *Mask,
                              const Twine &Name = "") {
-    if (auto *V1C = dyn_cast<Constant>(V1))
-      if (auto *V2C = dyn_cast<Constant>(V2))
-        if (auto *MC = dyn_cast<Constant>(Mask))
-          return Insert(Folder.CreateShuffleVector(V1C, V2C, MC), Name);
-    return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
+    SmallVector<int, 16> IntMask;
+    ShuffleVectorInst::getShuffleMask(cast<Constant>(Mask), IntMask);
+    return CreateShuffleVector(V1, V2, IntMask, Name);
   }
 
-  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<uint32_t> IntMask,
+  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<uint32_t> Mask,
                              const Twine &Name = "") {
-    Value *Mask = ConstantDataVector::get(Context, IntMask);
-    return CreateShuffleVector(V1, V2, Mask, Name);
+    SmallVector<int, 16> IntMask;
+    IntMask.assign(Mask.begin(), Mask.end());
+    return CreateShuffleVector(V1, V2, IntMask, Name);
+  }
+
+  /// See class ShuffleVectorInst for a description of the mask representation.
+  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask,
+                             const Twine &Name = "") {
+    if (auto *V1C = dyn_cast<Constant>(V1))
+      if (auto *V2C = dyn_cast<Constant>(V2))
+        return Insert(Folder.CreateShuffleVector(V1C, V2C, Mask), Name);
+    return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 
   Value *CreateExtractValue(Value *Agg,

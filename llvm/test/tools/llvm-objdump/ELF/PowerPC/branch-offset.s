@@ -29,7 +29,9 @@ b:
   b .+4
 
 # CHECK-LABEL: <bt>:
-# CHECK-NEXT:   bt 2, .+65532
+# CHECK-NEXT:   18: bt 2, 0x14
+# CHECK-NEXT:   1c: bt 1, 0x20
 
 bt:
   bt 2, .-4
+  bgt .+4

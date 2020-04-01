@@ -18,6 +18,7 @@ from lit.TestRunner import ParserKind, IntegratedTestKeywordParser  \
     # pylint: disable=import-error
 
 from libcxx.test.executor import LocalExecutor as LocalExecutor
+from libcxx.test.executor import SSHExecutor as SSHExecutor
 import libcxx.util
 
 
@@ -112,8 +113,6 @@ class LibcxxTestFormat(object):
         script = lit.TestRunner.parseIntegratedTestScript(
             test, additional_parsers=parsers, require_script=is_sh_test)
 
-        local_cwd = os.path.dirname(test.getSourcePath())
-        data_files = [os.path.join(local_cwd, f) for f in test.file_dependencies]
         # Check if a result for the test was returned. If so return that
         # result.
         if isinstance(script, lit.Test.Result):
@@ -128,7 +127,14 @@ class LibcxxTestFormat(object):
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
         substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
                                                                tmpBase)
+
+        # Apply substitutions in FILE_DEPENDENCIES markup
+        data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
+                                                       recursion_limit=10)
+        local_cwd = os.path.dirname(test.getSourcePath())
+        data_files = [f if os.path.isabs(f) else os.path.join(local_cwd, f) for f in data_files]
         substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
+
         script = lit.TestRunner.applySubstitutions(script, substitutions,
                                                    recursion_limit=10)
 
@@ -163,8 +169,9 @@ class LibcxxTestFormat(object):
 
         # Dispatch the test based on its suffix.
         if is_sh_test:
-            if not isinstance(self.executor, LocalExecutor):
-                # We can't run ShTest tests with a executor yet.
+            if not isinstance(self.executor, LocalExecutor) and not isinstance(self.executor, SSHExecutor):
+                # We can't run ShTest tests with other executors than
+                # LocalExecutor and SSHExecutor yet.
                 # For now, bail on trying to run them
                 return lit.Test.UNSUPPORTED, 'ShTest format not yet supported'
             test.config.environment = self.executor.merge_environments(os.environ, self.exec_env)

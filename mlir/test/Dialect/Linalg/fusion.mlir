@@ -41,11 +41,10 @@ func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
 }
 // CHECK-LABEL: func @f1
 // CHECK:   (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// No RAW dependences, the pass does not fuse RAR atm.
-// CHECK: linalg.matmul
 // CHECK: loop.for
 // CHECK:   loop.for
 // CHECK:     loop.for
+// CHECK:       linalg.matmul
 // CHECK:       linalg.matmul
 
 // -----
@@ -334,15 +333,13 @@ func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f6
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// Cannot fuse C due to interleaved read of C that would be bypassed.
-// Cannot fuse E (WAW).
-// CHECK:  linalg.matmul
-// CHECK:  linalg.matmul
+// Fuse the producer of E (WAW) then the producer of C (WAR).
 // CHECK:  loop.for
 // CHECK:    loop.for
 // CHECK:      loop.for
 // CHECK:        linalg.matmul
-// CHECK-NOT:      linalg.matmul
+// CHECK:        linalg.matmul
+// CHECK:        linalg.matmul
 
 // -----
 
@@ -785,3 +782,53 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 // CHECK:       linalg.generic
 // CHECK:         exp
 // CHECK:         linalg.yield
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1 - d2)>
+#map1 = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
+#map2 = affine_map<()[s0] -> (s0 + 3)>
+
+func @fill_and_conv(%arg0: memref<1x4x5x1xf32>, %arg1: memref<2x3x1x1xf32>, %arg2: memref<1x4x5x1xf32>) {
+  %cst = constant 0.000000e+00 : f32
+  linalg.fill(%arg2, %cst) : memref<1x4x5x1xf32>, f32
+
+  %c4 = constant 4 : index
+  %c1 = constant 1 : index
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %4 = dim %arg1, 0 : memref<2x3x1x1xf32>
+  %5 = dim %arg1, 1 : memref<2x3x1x1xf32>
+  %6 = dim %arg0, 0 : memref<1x4x5x1xf32>
+  %7 = dim %arg0, 1 : memref<1x4x5x1xf32>
+  %8 = dim %arg0, 3 : memref<1x4x5x1xf32>
+  %9 = dim %arg2, 0 : memref<1x4x5x1xf32>
+  %10 = dim %arg2, 1 : memref<1x4x5x1xf32>
+  %11 = dim %arg2, 2 : memref<1x4x5x1xf32>
+  %12 = dim %arg2, 3 : memref<1x4x5x1xf32>
+  %13 = linalg.range %c0 : %6 : %c2 : !linalg.range
+  %14 = linalg.range %c0 : %10 : %c3 : !linalg.range
+  loop.for %arg3 = %c0 to %6 step %c2 {
+    loop.for %arg4 = %c0 to %10 step %c3 {
+      %15 = affine.min #map0(%c2, %c1, %arg3)
+      %16 = affine.apply #map2()[%7]
+      %17 = affine.min #map0(%16, %c4, %arg4)
+      %18 = dim %arg0, 2 : memref<1x4x5x1xf32>
+      %19 = dim %arg0, 3 : memref<1x4x5x1xf32>
+      %20 = subview %arg0[%arg3, %arg4, %c0, %c0] [%15, %17, %18, %19] [%c1, %c1, %c1, %c1] : memref<1x4x5x1xf32> to memref<?x?x?x?xf32, #map1>
+      %21 = affine.min #map0(%c2, %c1, %arg3)
+      %22 = affine.min #map0(%c3, %c4, %arg4)
+      %23 = dim %arg2, 2 : memref<1x4x5x1xf32>
+      %24 = dim %arg2, 3 : memref<1x4x5x1xf32>
+      %25 = subview %arg2[%arg3, %arg4, %c0, %c0] [%21, %22, %23, %24] [%c1, %c1, %c1, %c1] : memref<1x4x5x1xf32> to memref<?x?x?x?xf32, #map1>
+      linalg.conv(%arg1, %20, %25) {dilations = [1, 1], strides = [1, 1]} : memref<2x3x1x1xf32>, memref<?x?x?x?xf32, #map1>, memref<?x?x?x?xf32, #map1>
+    }
+  }
+  return
+}
+// CHECK-LABEL: func @fill_and_conv
+// CHECK: loop.for
+// CHECK:   loop.for
+// CHECK:     linalg.fill
+// CHECK:     linalg.conv

@@ -1781,9 +1781,11 @@ LLVMValueRef LLVMConstInsertElement(LLVMValueRef VectorConstant,
 LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
                                     LLVMValueRef VectorBConstant,
                                     LLVMValueRef MaskConstant) {
+  SmallVector<int, 16> IntMask;
+  ShuffleVectorInst::getShuffleMask(unwrap<Constant>(MaskConstant), IntMask);
   return wrap(ConstantExpr::getShuffleVector(unwrap<Constant>(VectorAConstant),
                                              unwrap<Constant>(VectorBConstant),
-                                             unwrap<Constant>(MaskConstant)));
+                                             IntMask));
 }
 
 LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,

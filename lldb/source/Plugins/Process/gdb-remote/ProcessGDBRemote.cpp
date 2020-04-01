@@ -4418,7 +4418,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         });
 
         if (!gdb_type.empty() && !(encoding_set || format_set)) {
-          if (gdb_type.find("int") == 0) {
+          if (llvm::StringRef(gdb_type).startswith("int")) {
             reg_info.format = eFormatHex;
             reg_info.encoding = eEncodingUint;
           } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {

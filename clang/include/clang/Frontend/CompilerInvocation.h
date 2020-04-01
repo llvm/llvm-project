@@ -59,8 +59,7 @@ class TargetOptions;
 /// report the error(s).
 bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
-                         bool DefaultDiagColor = true,
-                         bool DefaultShowOpt = true);
+                         bool DefaultDiagColor = true);
 
 class CompilerInvocationBase {
 public:

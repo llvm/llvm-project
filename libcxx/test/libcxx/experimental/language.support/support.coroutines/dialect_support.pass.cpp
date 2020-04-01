@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: fcoroutines-ts
-
-// RUN: %{build} -fcoroutines-ts
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fcoroutines-ts
 
 // A simple "breathing" test that checks that <experimental/coroutine>
 // can be parsed and used in all dialects, including C++03 in order to match

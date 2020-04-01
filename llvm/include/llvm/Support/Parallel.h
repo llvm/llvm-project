@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Threading.h"
 
 #include <algorithm>
 #include <condition_variable>
@@ -32,6 +33,11 @@ struct is_execution_policy
 
 constexpr sequential_execution_policy seq{};
 constexpr parallel_execution_policy par{};
+
+// Strategy for the default executor used by the parallel routines provided by
+// this file. It defaults to using all hardware threads and should be
+// initialized before the first use of parallel routines.
+extern ThreadPoolStrategy strategy;
 
 namespace detail {
 

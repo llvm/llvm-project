@@ -198,6 +198,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          { MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv4i8,
            MVT::nxv4i16, MVT::nxv4i32, MVT::nxv8i8, MVT::nxv8i16 })
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Legal);
+
+    for (auto VT :
+         { MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32, MVT::nxv4f32,
+           MVT::nxv2f64 }) {
+      setCondCodeAction(ISD::SETO, VT, Expand);
+      setCondCodeAction(ISD::SETOLT, VT, Expand);
+      setCondCodeAction(ISD::SETOLE, VT, Expand);
+      setCondCodeAction(ISD::SETULT, VT, Expand);
+      setCondCodeAction(ISD::SETULE, VT, Expand);
+      setCondCodeAction(ISD::SETUGE, VT, Expand);
+      setCondCodeAction(ISD::SETUGT, VT, Expand);
+      setCondCodeAction(ISD::SETUEQ, VT, Expand);
+      setCondCodeAction(ISD::SETUNE, VT, Expand);
+    }
   }
 
   // Compute derived properties from the register classes
@@ -7544,9 +7558,15 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   // FPRs don't have this restriction.
   switch (ElemVT.getSimpleVT().SimpleTy) {
   case MVT::i1: {
+    // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
+    // lowering code.
+    if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+      if (ConstVal->isOne())
+        return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
+      // TODO: Add special case for constant false
+    }
     // The general case of i1.  There isn't any natural way to do this,
     // so we use some trickery with whilelo.
-    // TODO: Add special cases for splat of constant true/false.
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
     SplatVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i64, SplatVal,
                            DAG.getValueType(MVT::i1));
@@ -9187,10 +9207,10 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2) {
     return FullVT->getNumElements() == 2 * HalfVT->getNumElements();
   };
 
-  Constant *M1, *M2;
+  ArrayRef<int> M1, M2;
   Value *S1Op1, *S2Op1;
-  if (!match(Op1, m_ShuffleVector(m_Value(S1Op1), m_Undef(), m_Constant(M1))) ||
-      !match(Op2, m_ShuffleVector(m_Value(S2Op1), m_Undef(), m_Constant(M2))))
+  if (!match(Op1, m_ShuffleVector(m_Value(S1Op1), m_Undef(), m_Mask(M1))) ||
+      !match(Op2, m_ShuffleVector(m_Value(S2Op1), m_Undef(), m_Mask(M2))))
     return false;
 
   // Check that the operands are half as wide as the result and we extract

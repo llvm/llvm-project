@@ -20,7 +20,7 @@
 namespace clang {
 namespace clangd {
 
-ParsedAST TestTU::build() const {
+ParseInputs TestTU::inputs() const {
   std::string FullFilename = testPath(Filename),
               FullHeaderName = testPath(HeaderFilename),
               ImportThunk = testPath("import_thunk.h");
@@ -34,25 +34,24 @@ ParsedAST TestTU::build() const {
   Files[FullHeaderName] = HeaderCode;
   Files[ImportThunk] = ThunkContents;
 
-  std::vector<const char *> Cmd = {"clang"};
+  ParseInputs Inputs;
+  auto& Argv = Inputs.CompileCommand.CommandLine;
+  Argv = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
-    Cmd.push_back("-include");
-    Cmd.push_back(ImplicitHeaderGuard ? ImportThunk.c_str()
-                                      : FullHeaderName.c_str());
+    Argv.push_back("-include");
+    Argv.push_back(ImplicitHeaderGuard ? ImportThunk : FullHeaderName);
     // ms-compatibility changes the meaning of #import.
     // The default is OS-dependent (on on windows), ensure it's off.
     if (ImplicitHeaderGuard)
-      Cmd.push_back("-fno-ms-compatibility");
+      Inputs.CompileCommand.CommandLine.push_back("-fno-ms-compatibility");
   }
-  Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
+  Argv.insert(Argv.end(), ExtraArgs.begin(), ExtraArgs.end());
   // Put the file name at the end -- this allows the extra arg (-xc++) to
   // override the language setting.
-  Cmd.push_back(FullFilename.c_str());
-  ParseInputs Inputs;
+  Argv.push_back(FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
-  Inputs.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
   Inputs.FS = buildTestFS(Files);
@@ -62,15 +61,20 @@ ParsedAST TestTU::build() const {
   Inputs.Index = ExternalIndex;
   if (Inputs.Index)
     Inputs.Opts.SuggestMissingIncludes = true;
+  return Inputs;
+}
+
+ParsedAST TestTU::build() const {
+  auto Inputs = inputs();
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
   auto Preamble =
-      buildPreamble(FullFilename, *CI,
+      buildPreamble(testPath(Filename), *CI,
                     /*OldPreamble=*/nullptr, Inputs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
-  auto AST =
-      buildAST(FullFilename, std::move(CI), Diags.take(), Inputs, Preamble);
+  auto AST = buildAST(testPath(Filename), std::move(CI), Diags.take(), Inputs,
+                      Preamble);
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");
@@ -79,9 +83,17 @@ ParsedAST TestTU::build() const {
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
   // Ownership and layering makes it pretty hard.
-  if (llvm::none_of(Files, [](const auto &KV) {
-        return llvm::StringRef(KV.second).contains("error-ok");
-      })) {
+  bool ErrorOk = [&, this] {
+    llvm::StringLiteral Marker = "error-ok";
+    if (llvm::StringRef(Code).contains(Marker) ||
+        llvm::StringRef(HeaderCode).contains(Marker))
+      return true;
+    for (const auto& KV : this->AdditionalFiles)
+      if (llvm::StringRef(KV.second).contains(Marker))
+        return true;
+    return false;
+  }();
+  if (!ErrorOk) {
     for (const auto &D : AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
         ADD_FAILURE()

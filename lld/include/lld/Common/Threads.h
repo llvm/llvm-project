@@ -63,10 +63,8 @@
 
 namespace lld {
 
-extern bool threadsEnabled;
-
 template <typename R, class FuncTy> void parallelForEach(R &&range, FuncTy fn) {
-  if (threadsEnabled)
+  if (llvm::parallel::strategy.ThreadsRequested != 1)
     for_each(llvm::parallel::par, std::begin(range), std::end(range), fn);
   else
     for_each(llvm::parallel::seq, std::begin(range), std::end(range), fn);
@@ -74,14 +72,14 @@ template <typename R, class FuncTy> void parallelForEach(R &&range, FuncTy fn) {
 
 inline void parallelForEachN(size_t begin, size_t end,
                              llvm::function_ref<void(size_t)> fn) {
-  if (threadsEnabled)
+  if (llvm::parallel::strategy.ThreadsRequested != 1)
     for_each_n(llvm::parallel::par, begin, end, fn);
   else
     for_each_n(llvm::parallel::seq, begin, end, fn);
 }
 
 template <typename R, class FuncTy> void parallelSort(R &&range, FuncTy fn) {
-  if (threadsEnabled)
+  if (llvm::parallel::strategy.ThreadsRequested != 1)
     sort(llvm::parallel::par, std::begin(range), std::end(range), fn);
   else
     sort(llvm::parallel::seq, std::begin(range), std::end(range), fn);
