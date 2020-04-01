@@ -645,15 +645,15 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
       for (int i = HMFI.getFirstNamedArgFrameIndex(),
                e = HMFI.getLastNamedArgFrameIndex(); i >= e; --i) {
-        int ObjSize = MFI.getObjectSize(i);
-        int ObjAlign = MFI.getObjectAlignment(i);
+        uint64_t ObjSize = MFI.getObjectSize(i);
+        Align ObjAlign = MFI.getObjectAlign(i);
 
         // Determine the kind of load/store that should be used.
         unsigned LDOpc, STOpc;
-        int OpcodeChecker = ObjAlign;
+        uint64_t OpcodeChecker = ObjAlign.value();
 
         // Handle cases where alignment of an object is > its size.
-        if (ObjSize < ObjAlign) {
+        if (ObjAlign > ObjSize) {
           if (ObjSize <= 1)
             OpcodeChecker = 1;
           else if (ObjSize <= 2)
@@ -702,17 +702,17 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
         while (Count < LoadStoreCount) {
           // Load the value of the named argument on stack.
           BuildMI(MBB, InsertPt, dl, HII.get(LDOpc), RegUsed)
-            .addReg(SP)
-            .addImm(RegisterSavedAreaSizePlusPadding +
-                    ObjAlign * Count + NumBytes)
-            .setMIFlag(MachineInstr::FrameSetup);
+              .addReg(SP)
+              .addImm(RegisterSavedAreaSizePlusPadding +
+                      ObjAlign.value() * Count + NumBytes)
+              .setMIFlag(MachineInstr::FrameSetup);
 
           // Store it below the register saved area plus padding.
           BuildMI(MBB, InsertPt, dl, HII.get(STOpc))
-            .addReg(SP)
-            .addImm(ObjAlign * Count + NumBytes)
-            .addReg(RegUsed)
-            .setMIFlag(MachineInstr::FrameSetup);
+              .addReg(SP)
+              .addImm(ObjAlign.value() * Count + NumBytes)
+              .addReg(RegUsed)
+              .setMIFlag(MachineInstr::FrameSetup);
 
           Count++;
         }
@@ -1520,8 +1520,8 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     unsigned S = MFI.getObjectSize(i);
     // Reduce the alignment to at most 8. This will require unaligned vector
     // stores if they happen here.
-    unsigned A = std::max(MFI.getObjectAlignment(i), 8U);
-    MFI.setObjectAlignment(i, 8);
+    Align A = std::max(MFI.getObjectAlign(i), Align(8));
+    MFI.setObjectAlignment(i, Align(8));
     LFS = alignTo(LFS+S, A);
     MFI.mapLocalFrameObject(i, -static_cast<int64_t>(LFS));
     DealignSlots.insert(i);
@@ -1934,11 +1934,11 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   bool NeedsAligna = needsAligna(MF);
 
   unsigned Size = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-  unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
-  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
+  Align HasAlign = MFI.getObjectAlign(FI);
   unsigned StoreOpc;
 
-  auto UseAligned = [&] (unsigned NeedAlign, unsigned HasAlign) {
+  auto UseAligned = [&](Align NeedAlign, Align HasAlign) {
     return !NeedsAligna && (NeedAlign <= HasAlign);
   };
 
@@ -1986,11 +1986,11 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
   bool NeedsAligna = needsAligna(MF);
 
   unsigned Size = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-  unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
-  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
+  Align HasAlign = MFI.getObjectAlign(FI);
   unsigned LoadOpc;
 
-  auto UseAligned = [&] (unsigned NeedAlign, unsigned HasAlign) {
+  auto UseAligned = [&](Align NeedAlign, Align HasAlign) {
     return !NeedsAligna && (NeedAlign <= HasAlign);
   };
 
@@ -2030,8 +2030,8 @@ bool HexagonFrameLowering::expandStoreVec(MachineBasicBlock &B,
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
-  unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
-  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
+  Align HasAlign = MFI.getObjectAlign(FI);
   bool UseAligned = !NeedsAligna && (NeedAlign <= HasAlign);
   unsigned StoreOpc = UseAligned ? Hexagon::V6_vS32b_ai
                                  : Hexagon::V6_vS32Ub_ai;
@@ -2060,8 +2060,8 @@ bool HexagonFrameLowering::expandLoadVec(MachineBasicBlock &B,
   Register DstR = MI->getOperand(0).getReg();
   int FI = MI->getOperand(1).getIndex();
 
-  unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
-  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
+  Align HasAlign = MFI.getObjectAlign(FI);
   bool UseAligned = !NeedsAligna && (NeedAlign <= HasAlign);
   unsigned LoadOpc = UseAligned ? Hexagon::V6_vL32b_ai
                                 : Hexagon::V6_vL32Ub_ai;

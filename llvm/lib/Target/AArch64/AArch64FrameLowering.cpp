@@ -2099,8 +2099,8 @@ static void computeCalleeSaveRegisterPairs(
       FixupDone = true;
       ByteOffset -= 8;
       assert(ByteOffset % 16 == 0);
-      assert(MFI.getObjectAlignment(RPI.FrameIdx) <= 16);
-      MFI.setObjectAlignment(RPI.FrameIdx, 16);
+      assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
+      MFI.setObjectAlignment(RPI.FrameIdx, Align(16));
     }
 
     int Offset = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
@@ -2595,7 +2595,7 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
     // Assign offsets to the callee save slots.
     for (int I = MinCSFrameIndex; I <= MaxCSFrameIndex; ++I) {
       Offset += MFI.getObjectSize(I);
-      Offset = alignTo(Offset, MFI.getObjectAlignment(I));
+      Offset = alignTo(Offset, MFI.getObjectAlign(I));
       if (AssignOffsets)
         Assign(I, -Offset);
     }
@@ -2617,15 +2617,15 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
 
   // Allocate all SVE locals and spills
   for (unsigned FI : ObjectsToAllocate) {
-    unsigned Align = MFI.getObjectAlignment(FI);
+    Align Alignment = MFI.getObjectAlign(FI);
     // FIXME: Given that the length of SVE vectors is not necessarily a power of
     // two, we'd need to align every object dynamically at runtime if the
     // alignment is larger than 16. This is not yet supported.
-    if (Align > 16)
+    if (Alignment > Align(16))
       report_fatal_error(
           "Alignment of scalable vectors > 16 bytes is not yet supported");
 
-    Offset = alignTo(Offset + MFI.getObjectSize(FI), Align);
+    Offset = alignTo(Offset + MFI.getObjectSize(FI), Alignment);
     if (AssignOffsets)
       Assign(FI, -Offset);
   }

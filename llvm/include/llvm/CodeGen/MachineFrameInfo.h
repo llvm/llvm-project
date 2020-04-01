@@ -462,10 +462,10 @@ public:
 
   /// Return the alignment of the specified stack object.
   /// FIXME: Remove this function once transition to Align is over.
-  unsigned getObjectAlignment(int ObjectIdx) const {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    return Objects[ObjectIdx + NumFixedObjects].Alignment.value();
+  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned getObjectAlignment(int ObjectIdx)
+                                const,
+                            "Use getObjectAlign instead") {
+    return getObjectAlign(ObjectIdx).value();
   }
 
   /// Return the alignment of the specified stack object.
