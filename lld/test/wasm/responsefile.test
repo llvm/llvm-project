@@ -10,11 +10,11 @@ RUN:     FileCheck --check-prefix=INVRSP %s
 INVRSP: invalid response file quoting: foobar
 
 RUN: echo "blah\foo" > %t.rsp
-RUN: not wasm-ld --rsp-quoting=windows @%t.rsp 2>&1 | \
+RUN: not wasm-ld -o a.out --rsp-quoting=windows @%t.rsp 2>&1 | \
 RUN:     FileCheck --check-prefix=WINRSP %s
 WINRSP: error: cannot open blah\foo:
 
 RUN: echo "blah\foo" > %t.rsp
-RUN: not wasm-ld --rsp-quoting=posix @%t.rsp 2>&1 | \
+RUN: not wasm-ld -o a.out --rsp-quoting=posix @%t.rsp 2>&1 | \
 RUN:     FileCheck --check-prefix=POSRSP %s
 POSRSP: error: cannot open blahfoo:
