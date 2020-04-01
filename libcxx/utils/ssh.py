@@ -30,7 +30,7 @@ def main():
 
     if len(remaining) < 2:
         sys.stderr.write('Missing actual commands to run')
-        exit(1)
+        return 1
     remaining = remaining[1:] # Skip the '--'
 
     # HACK:
@@ -53,43 +53,50 @@ def main():
     ssh = lambda command: ['ssh', '-oBatchMode=yes', args.host, command]
     scp = lambda src, dst: ['scp', '-oBatchMode=yes', '-r', src, '{}:{}'.format(args.host, dst)]
 
-    # Create a temporary directory where the test will be run
+    # Create a temporary directory where the test will be run.
     tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
+    try:
+        # Ensure the test dependencies exist and scp them to the temporary directory.
+        # Test dependencies can be either files or directories, so the `scp` command
+        # needs to use `-r`.
+        for dep in args.dependencies:
+            if not os.path.exists(dep):
+                sys.stderr.write('Missing file or directory {} marked as a dependency of a test'.format(dep))
+                return 1
+            rc = subprocess.call(scp(dep, tmp))
+            if rc != 0:
+                sys.stderr.write('Failed to copy dependency "{}" to remote host'.format(dep))
+                return rc
 
-    # Ensure the test dependencies exist and scp them to the temporary directory.
-    # Test dependencies can be either files or directories, so the `scp` command
-    # needs to use `-r`.
-    for dep in args.dependencies:
-        if not os.path.exists(dep):
-            sys.stderr.write('Missing file or directory {} marked as a dependency of a test'.format(dep))
-            exit(1)
-        subprocess.call(scp(dep, tmp))
+        # If there's an executable, change its path to be in the temporary directory.
+        # We know it has been copied to the remote host when we handled the test
+        # dependencies above.
+        if exe:
+            exe = posixpath.join(tmp, os.path.basename(exe))
 
-    # If there's an executable, change its path to be in the temporary directory.
-    # We know it has been copied to the remote host when we handled the test
-    # dependencies above.
-    if exe:
-        exe = posixpath.join(tmp, os.path.basename(exe))
+        # If there's an executable, make sure it has 'execute' permissions on the
+        # remote host. The host that compiled the executable might not have a notion
+        # of 'executable' permissions.
+        if exe:
+            rc = subprocess.call(ssh('chmod +x {}'.format(exe)))
+            if rc != 0:
+                sys.stderr.write('Failed to chmod +x test-executable "{}" on the remote host'.format(exe))
+                return rc
 
-    # If there's an executable, make sure it has 'execute' permissions on the
-    # remote host. The host that compiled the executable might not have a notion
-    # of 'executable' permissions.
-    if exe:
-        subprocess.call(ssh('chmod +x {}'.format(exe)))
+        # Execute the command through SSH in the temporary directory, with the
+        # correct environment.
+        commands = [
+            'cd {}'.format(tmp),
+            'export {}'.format(' '.join(args.env)),
+            ' '.join([exe] + remaining if exe else remaining)
+        ]
+        rc = subprocess.call(ssh(' && '.join(commands)))
+        return rc
 
-    # Execute the command through SSH in the temporary directory, with the
-    # correct environment.
-    commands = [
-        'cd {}'.format(tmp),
-        'export {}'.format(' '.join(args.env)),
-        ' '.join([exe] + remaining if exe else remaining)
-    ]
-    res = subprocess.call(ssh(' && '.join(commands)))
+    finally:
+        # Make sure the temporary directory is removed when we're done.
+        subprocess.call(ssh('rm -r {}'.format(tmp)))
 
-    # Remove the temporary directory when we're done.
-    subprocess.call(ssh('rm -r {}'.format(tmp)))
-
-    return res
 
 if __name__ == '__main__':
     exit(main())
