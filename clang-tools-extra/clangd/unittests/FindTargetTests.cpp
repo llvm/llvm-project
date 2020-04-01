@@ -65,7 +65,7 @@ class TargetDeclTest : public ::testing::Test {
 protected:
   using Rel = DeclRelation;
   std::string Code;
-  std::vector<const char *> Flags;
+  std::vector<std::string> Flags;
 
   // Asserts that `Code` has a marked selection of a node `NodeType`,
   // and returns allTargetDecls() as PrintedDecl structs.
