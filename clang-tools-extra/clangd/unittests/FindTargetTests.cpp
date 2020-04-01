@@ -132,6 +132,16 @@ TEST_F(TargetDeclTest, Exprs) {
   EXPECT_DECLS("CXXOperatorCallExpr", "void operator()(int n)");
 }
 
+TEST_F(TargetDeclTest, Recovery) {
+  Code = R"cpp(
+    // error-ok: testing behavior on broken code
+    int f();
+    int f(int, int);
+    int x = [[f]](42);
+  )cpp";
+  EXPECT_DECLS("UnresolvedLookupExpr", "int f()", "int f(int, int)");
+}
+
 TEST_F(TargetDeclTest, UsingDecl) {
   Code = R"cpp(
     namespace foo {
@@ -685,6 +695,15 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {x}\n"
         "1: targets = {X::a}\n"},
+       {R"cpp(
+        // error-ok: testing with broken code
+        int bar();
+        int foo() {
+          return $0^bar() + $1^bar(42);
+        }
+        )cpp",
+        "0: targets = {bar}\n"
+        "1: targets = {bar}\n"},
        // Namespaces and aliases.
        {R"cpp(
           namespace ns {}
