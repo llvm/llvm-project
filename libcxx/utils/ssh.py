@@ -78,8 +78,12 @@ def main():
 
     # Execute the command through SSH in the temporary directory, with the
     # correct environment.
-    command = [exe] + remaining if exe else remaining
-    res = subprocess.call(ssh('cd {} && env -i {} {}'.format(tmp, ' '.join(args.env), ' '.join(command))))
+    commands = [
+        'cd {}'.format(tmp),
+        'export {}'.format(' '.join(args.env)),
+        ' '.join([exe] + remaining if exe else remaining)
+    ]
+    res = subprocess.call(ssh(' && '.join(commands)))
 
     # Remove the temporary directory when we're done.
     subprocess.call(ssh('rm -r {}'.format(tmp)))
