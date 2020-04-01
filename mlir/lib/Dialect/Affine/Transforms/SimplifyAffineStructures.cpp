@@ -94,7 +94,3 @@ void SimplifyAffineStructures::runOnFunction() {
     normalizeMemRef(allocOp);
   }
 }
-
-static PassRegistration<SimplifyAffineStructures>
-    pass("simplify-affine-structures",
-         "Simplify affine expressions in maps/sets and normalize memrefs");

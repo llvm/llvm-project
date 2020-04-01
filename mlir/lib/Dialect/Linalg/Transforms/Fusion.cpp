@@ -585,9 +585,6 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgFusionPass() {
   return std::make_unique<LinalgFusionPass>();
 }
 
-static PassRegistration<LinalgFusionPass>
-    pass("linalg-fusion", "Fuse operations in the linalg dialect");
-
-static PassRegistration<FusionOfTensorOpsPass>
-    tensorOpsPass("linalg-fusion-for-tensor-ops",
-                  "Fuse operations on RankedTensorType in linalg dialect");
+std::unique_ptr<Pass> mlir::createLinalgFusionOfTensorOpsPass() {
+  return std::make_unique<FusionOfTensorOpsPass>();
+}

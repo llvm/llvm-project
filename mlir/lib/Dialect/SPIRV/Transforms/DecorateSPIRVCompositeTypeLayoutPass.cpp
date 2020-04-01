@@ -117,7 +117,3 @@ std::unique_ptr<OpPassBase<ModuleOp>>
 mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
   return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
 }
-
-static PassRegistration<DecorateSPIRVCompositeTypeLayoutPass>
-    pass("decorate-spirv-composite-type-layout",
-         "Decorate SPIR-V composite type with layout info");

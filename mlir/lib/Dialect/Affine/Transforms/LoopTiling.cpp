@@ -85,6 +85,9 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLoopTilingPass(uint64_t cacheSizeBytes) {
   return std::make_unique<LoopTiling>(cacheSizeBytes);
 }
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopTilingPass() {
+  return std::make_unique<LoopTiling>();
+}
 
 // Move the loop body of AffineForOp 'src' from 'src' into the specified
 // location in destination's body, ignoring the terminator.
@@ -420,5 +423,3 @@ void LoopTiling::runOnFunction() {
 
 constexpr unsigned LoopTiling::kDefaultTileSize;
 constexpr uint64_t LoopTiling::kDefaultCacheMemCapacity;
-
-static PassRegistration<LoopTiling> pass("affine-loop-tile", "Tile loop nests");

@@ -136,6 +136,9 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass() {
+  return std::make_unique<AffineDataCopyGeneration>();
+}
 
 /// Generate copies for this block. The block is partitioned into separate
 /// ranges: each range is either a sequence of one or more operations starting
@@ -261,7 +264,3 @@ void AffineDataCopyGeneration::runOnFunction() {
     nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
   }
 }
-
-static PassRegistration<AffineDataCopyGeneration>
-    pass("affine-data-copy-generate",
-         "Generate explicit copying for memory operations");

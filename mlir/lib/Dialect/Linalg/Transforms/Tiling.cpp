@@ -537,11 +537,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass<loop::ParallelOp>>(tileSizes);
 }
-
-static PassRegistration<LinalgTilingPass<loop::ForOp>>
-    tiling_pass("linalg-tile", "Tile operations in the linalg dialect");
-
-static PassRegistration<LinalgTilingPass<loop::ParallelOp>>
-    tiling_to_parallel_loops(
-        "linalg-tile-to-parallel-loops",
-        "Tile operations in the linalg dialect to parallel loops");

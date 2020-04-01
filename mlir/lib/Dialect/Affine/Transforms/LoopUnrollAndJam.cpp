@@ -100,6 +100,3 @@ LogicalResult LoopUnrollAndJam::runOnAffineForOp(AffineForOp forOp) {
   // Unroll and jam by four otherwise.
   return loopUnrollJamByFactor(forOp, kDefaultUnrollJamFactor);
 }
-
-static PassRegistration<LoopUnrollAndJam> pass("affine-loop-unroll-jam",
-                                               "Unroll and jam loops");

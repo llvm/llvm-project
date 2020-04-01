@@ -113,8 +113,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::quantizer::createAddDefaultStatsPass() {
   return std::make_unique<AddDefaultStatsPass>();
 }
-
-static PassRegistration<AddDefaultStatsPass> pass(
-    "quantizer-add-default-stats-test",
-    "Adds default (dummy) statistics to all ops that can benefit from "
-    "runtime statistics. This is meant to help in early stage bootstrapping.");
