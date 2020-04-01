@@ -1198,7 +1198,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
       if (isVCTP(Divergent->MI)) {
         // The vctp will be removed, so the size of the vpt block needs to be
         // modified.
-        uint64_t Size = getARMVPTBlockMask(Block.size() - 1);
+        uint64_t Size = (uint64_t)getARMVPTBlockMask(Block.size() - 1);
         Block.getVPST()->getOperand(0).setImm(Size);
         LLVM_DEBUG(dbgs() << "ARM Loops: Modified VPT block mask.\n");
       } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
@@ -1227,7 +1227,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         MachineInstrBuilder MIB = BuildMI(*InsertAt->getParent(), InsertAt,
                                           InsertAt->getDebugLoc(),
                                           TII->get(ARM::MVE_VPST));
-        MIB.addImm(getARMVPTBlockMask(Size));
+        MIB.addImm((uint64_t)getARMVPTBlockMask(Size));
         LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getVPST());
         LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
         LoLoop.ToRemove.insert(Block.getVPST());
