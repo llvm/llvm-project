@@ -41,8 +41,10 @@ CHECK-LABEL: DEF FMT SPC
 CHECK-NEXT: [[# %x , VAR2a : ]]
 
 ; Numeric variable definition with unsupported matching format.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefixes ERR,INVALID-FMT-SPEC1 --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefix INVALID-FMT-SPEC-MSG1 --strict-whitespace %s
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefixes ERR,INVALID-FMT-SPEC2 --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefix INVALID-FMT-SPEC-MSG2 --strict-whitespace %s
 
@@ -182,6 +184,7 @@ CHECK-NEXT: [[# %u, VAR2]]
 CHECK-NEXT: [[# %u, VAR3]]
 
 ; Conflicting implicit format.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefixes CHECK,FMT-CONFLICT --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix FMT-CONFLICT-MSG %s
 
@@ -359,6 +362,7 @@ SAME-LINE-USE-MSG2-NEXT: {{S}}AME-LINE-USE2-NEXT: {{\[\[#VAR2:VAR1\+1\]\] \[\[#V
 SAME-LINE-USE-MSG2-NEXT:        {{^}}                                         ^{{$}}
 
 ; Invalid change of format in variable redefinition.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix REDEF-NEW-FMT --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix REDEF-NEW-FMT-MSG %s
 
