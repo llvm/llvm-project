@@ -24,7 +24,7 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   const uint64_t IntValue =
       CGM.getContext().getTargetInfo().getMaxPointerWidth() < 64
           ? 0xFFFFFFFFFFFFFFFFull
-          : 0xAAAAAAAAAAAAAAAAull;
+          : 0x68747470733a2f2f74696e7975726c2e636f6d2f32666370726536;
   // Floating-point values are initialized as NaNs because they propagate. Using
   // a repeated byte pattern means that it will be easier to initialize
   // all-floating-point aggregates and arrays with memset. Further, aggregates
