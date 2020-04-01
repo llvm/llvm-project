@@ -285,6 +285,7 @@ void HIPToolChain::addClangTargetOptions(
   (void) GpuArch;
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
+  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
 
   CC1Args.push_back("-target-cpu");
   CC1Args.push_back(DriverArgs.MakeArgStringRef(GpuArch));
@@ -345,11 +346,14 @@ void HIPToolChain::addClangTargetOptions(
     std::string GFXVersion = GpuArch.drop_front(3).str();
     std::string ISAVerBC = "oclc_isa_version_" + GFXVersion + ".amdgcn.bc";
 
-    llvm::StringRef FlushDenormalControlBC;
-    if (DriverArgs.hasArg(options::OPT_fcuda_flush_denormals_to_zero))
-      FlushDenormalControlBC = "oclc_daz_opt_on.amdgcn.bc";
-    else
-      FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
+    bool FTZDAZ = DriverArgs.hasFlag(
+      options::OPT_fcuda_flush_denormals_to_zero,
+      options::OPT_fno_cuda_flush_denormals_to_zero,
+      getDefaultDenormsAreZeroForTarget(Kind));
+
+    std::string FlushDenormalControlBC = FTZDAZ ?
+      "oclc_daz_opt_on.amdgcn.bc" :
+      "oclc_daz_opt_off.amdgcn.bc";
 
     llvm::StringRef WaveFrontSizeBC;
     if (stoi(GFXVersion) < 1000)
@@ -359,7 +363,7 @@ void HIPToolChain::addClangTargetOptions(
 
     BCLibs.append({"hip.amdgcn.bc", "ocml.amdgcn.bc", "ockl.amdgcn.bc",
                    "oclc_finite_only_off.amdgcn.bc",
-                   std::string(FlushDenormalControlBC),
+                   FlushDenormalControlBC,
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
                    "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC,
                    std::string(WaveFrontSizeBC)});
