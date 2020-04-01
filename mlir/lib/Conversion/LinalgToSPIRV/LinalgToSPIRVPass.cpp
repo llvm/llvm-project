@@ -46,6 +46,3 @@ void LinalgToSPIRVPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createLinalgToSPIRVPass() {
   return std::make_unique<LinalgToSPIRVPass>();
 }
-
-static PassRegistration<LinalgToSPIRVPass>
-    pass("convert-linalg-to-spirv", "Convert Linalg ops to SPIR-V ops");

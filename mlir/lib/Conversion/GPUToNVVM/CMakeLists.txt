@@ -6,6 +6,7 @@ add_mlir_conversion_library(MLIRGPUtoNVVMTransforms
   LowerGpuOpsToNVVMOps.cpp
 
   DEPENDS
+  MLIRConversionPassIncGen
   MLIRGPUToNVVMIncGen
   )
 

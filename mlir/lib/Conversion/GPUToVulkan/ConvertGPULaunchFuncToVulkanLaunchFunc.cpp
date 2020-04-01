@@ -169,7 +169,3 @@ std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass() {
   return std::make_unique<ConvertGpuLaunchFuncToVulkanLaunchFunc>();
 }
-
-static PassRegistration<ConvertGpuLaunchFuncToVulkanLaunchFunc>
-    pass("convert-gpu-launch-to-vulkan-launch",
-         "Convert gpu.launch_func to vulkanLaunch external call");

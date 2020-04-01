@@ -22,8 +22,11 @@
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
+#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/FxpMathOps/Passes.h"
 #include "mlir/Dialect/GPU/Passes.h"
@@ -53,6 +56,10 @@ inline void registerAllPasses() {
   // Init general passes
 #define GEN_PASS_REGISTRATION
 #include "mlir/Transforms/Passes.h.inc"
+
+  // Conversion passes
+#define GEN_PASS_REGISTRATION
+#include "mlir/Conversion/Passes.h.inc"
 
   // Affine
 #define GEN_PASS_REGISTRATION
@@ -87,45 +94,6 @@ inline void registerAllPasses() {
   // SPIR-V
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/SPIRV/Passes.h.inc"
-
-  // At the moment we still rely on global initializers for registering passes,
-  // but we may not do it in the future.
-  // We must reference the passes in such a way that compilers will not
-  // delete it all as dead code, even with whole program optimization,
-  // yet is effectively a NO-OP. As the compiler isn't smart enough
-  // to know that getenv() never returns -1, this will do the job.
-  if (std::getenv("bar") != (char *)-1)
-    return;
-
-  // Affine
-  createLowerAffinePass();
-
-  // AVX512
-  createConvertAVX512ToLLVMPass();
-
-  // GPUtoRODCLPass
-  createLowerGpuOpsToROCDLOpsPass();
-
-  // GPU
-  createSimpleLoopsToGPUPass(0, 0);
-  createLoopToGPUPass({}, {});
-
-  // CUDA
-  createConvertGpuLaunchFuncToCudaCallsPass();
-  createLowerGpuOpsToNVVMOpsPass();
-
-  // Linalg
-  createConvertLinalgToLLVMPass();
-
-  // SPIR-V
-  createConvertGPUToSPIRVPass();
-  createConvertStandardToSPIRVPass();
-  createLegalizeStdOpsForSPIRVLoweringPass();
-  createLinalgToSPIRVPass();
-
-  // Vulkan
-  createConvertGpuLaunchFuncToVulkanLaunchFuncPass();
-  createConvertVulkanLaunchFuncToVulkanCallsPass();
 }
 
 } // namespace mlir

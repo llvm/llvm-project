@@ -7,6 +7,7 @@ add_mlir_conversion_library(MLIRGPUtoSPIRVTransforms
   ConvertGPUToSPIRVPass.cpp
 
   DEPENDS
+  MLIRConversionPassIncGen
   MLIRGPUToSPIRVIncGen
   )
 

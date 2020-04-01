@@ -4,6 +4,9 @@ add_mlir_conversion_library(MLIRLoopsToGPU
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/LoopsToGPU
+
+  DEPENDS
+  MLIRConversionPassIncGen
 )
 target_link_libraries(MLIRLoopsToGPU
   PUBLIC
