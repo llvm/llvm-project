@@ -217,7 +217,7 @@ Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
 
     if (sectionLength < 4 || cursor.tell() - 4 + sectionLength > section.size())
       return createStringError(errc::invalid_argument,
-                               "invalid subsection length " +
+                               "invalid section length " +
                                    Twine(sectionLength) + " at offset 0x" +
                                    utohexstr(cursor.tell() - 4));
 

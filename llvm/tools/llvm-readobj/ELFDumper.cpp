@@ -52,6 +52,8 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/RISCVAttributeParser.h"
+#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -2678,6 +2680,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   switch (Obj->getHeader()->e_machine) {
   case EM_ARM:
+  case EM_RISCV:
     printAttributes();
     break;
   case EM_MIPS: {
@@ -2698,40 +2701,45 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printAttributes() {
-  W.startLine() << "Attributes not implemented.\n";
-}
-
 namespace {
 
-template <> void ELFDumper<ELF32LE>::printAttributes() {
-  const ELFFile<ELF32LE> *Obj = ObjF->getELFFile();
-  if (Obj->getHeader()->e_machine != EM_ARM) {
+template <class ELFT> void ELFDumper<ELFT>::printAttributes() {
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  if (!Obj->isLE()) {
     W.startLine() << "Attributes not implemented.\n";
     return;
   }
 
+  const unsigned Machine = Obj->getHeader()->e_machine;
+  assert((Machine == EM_ARM || Machine == EM_RISCV) &&
+         "Attributes not implemented.");
+
   DictScope BA(W, "BuildAttributes");
-  for (const ELFO::Elf_Shdr &Sec :
-       unwrapOrError(ObjF->getFileName(), Obj->sections())) {
-    if (Sec.sh_type != ELF::SHT_ARM_ATTRIBUTES)
+  for (const auto &Sec : unwrapOrError(ObjF->getFileName(), Obj->sections())) {
+    if (Sec.sh_type != ELF::SHT_ARM_ATTRIBUTES &&
+        Sec.sh_type != ELF::SHT_RISCV_ATTRIBUTES)
       continue;
 
     ArrayRef<uint8_t> Contents =
         unwrapOrError(ObjF->getFileName(), Obj->getSectionContents(&Sec));
     if (Contents[0] != ELFAttrs::Format_Version) {
-      errs() << "unrecognised FormatVersion: 0x"
-             << Twine::utohexstr(Contents[0]) << '\n';
+      reportWarning(createError(Twine("unrecognised FormatVersion: 0x") +
+                                Twine::utohexstr(Contents[0])),
+                    ObjF->getFileName());
       continue;
     }
-
     W.printHex("FormatVersion", Contents[0]);
     if (Contents.size() == 1)
       continue;
 
-    // TODO: Print error and delete the redundant FormatVersion check above.
-    if (Error E = ARMAttributeParser(&W).parse(Contents, support::little))
-      consumeError(std::move(E));
+    // TODO: Delete the redundant FormatVersion check above.
+    if (Machine == EM_ARM) {
+      if (Error E = ARMAttributeParser(&W).parse(Contents, support::little))
+        reportWarning(std::move(E), ObjF->getFileName());
+    } else if (Machine == EM_RISCV) {
+      if (Error E = RISCVAttributeParser(&W).parse(Contents, support::little))
+        reportWarning(std::move(E), ObjF->getFileName());
+    }
   }
 }
 
@@ -3569,6 +3577,11 @@ static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
       return "MIPS_ABIFLAGS";
     }
     break;
+  case EM_RISCV:
+    switch (Type) {
+    case SHT_RISCV_ATTRIBUTES:
+      return "RISCV_ATTRIBUTES";
+    }
   }
   switch (Type) {
   case SHT_NULL:
