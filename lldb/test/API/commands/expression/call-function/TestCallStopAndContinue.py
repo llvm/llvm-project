@@ -2,12 +2,9 @@
 Test calling a function, stopping in the call, continue and gather the result on stop.
 """
 
-
-
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
 
 class ExprCommandCallStopContinueTestCase(TestBase):
 
@@ -17,27 +14,16 @@ class ExprCommandCallStopContinueTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break for main.c.
-        self.line = line_number(
-            'main.cpp',
-            '// Please test these expressions while stopped at this line:')
-        self.func_line = line_number('main.cpp', '{5, "five"}')
 
     def test(self):
         """Test gathering result from interrupted function call."""
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        # Some versions of GCC encode two locations for the 'return' statement
-        # in main.cpp
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         lldbutil.run_break_set_by_file_and_line(
             self,
             "main.cpp",
-            self.func_line,
+            line_number('main.cpp', '{5, "five"}'),
             num_expected_locations=-1,
             loc_exact=True)
 
