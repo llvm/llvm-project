@@ -349,8 +349,8 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
     MemoryBufferRef ChildBufferRef(ChildBufferInfo.first,
                                    ChildBufferInfo.second);
 
-    if (auto Err =
-            L.add(JD, MemoryBuffer::getMemBuffer(ChildBufferRef), VModuleKey()))
+    if (auto Err = L.add(JD, MemoryBuffer::getMemBuffer(ChildBufferRef, false),
+                         VModuleKey()))
       return Err;
   }
 
