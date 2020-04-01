@@ -140,7 +140,8 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actuallly escape.
+annotated with ``noescape`` do not actuallly escape. Calling ``free()`` on such
+a parameter does not constitute an escape.
 
 For example:
 
