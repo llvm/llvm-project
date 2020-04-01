@@ -7,7 +7,7 @@
 short test_loadbe_i16(const short *P) {
   // CHECK-LABEL: @test_loadbe_i16
   // CHECK: [[LOAD:%.*]] = load i16, i16* %{{.*}}, align 1
-  // CHECK: call signext i16 @llvm.bswap.i16(i16 [[LOAD]])
+  // CHECK: call i16 @llvm.bswap.i16(i16 [[LOAD]])
   return _loadbe_i16(P);
 }
 
