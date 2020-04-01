@@ -271,9 +271,13 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
     if (!IP)
       return CB(IP.takeError());
 
-    auto PreambleData = IP->Preamble;
-    CB(clangd::signatureHelp(File, IP->Command, PreambleData, IP->Contents, Pos,
-                             FS, Index));
+    const auto *PreambleData = IP->Preamble;
+    if (!PreambleData)
+      return CB(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                        "Failed to parse includes"));
+
+    CB(clangd::signatureHelp(File, IP->Command, *PreambleData, IP->Contents,
+                             Pos, FS, Index));
   };
 
   // Unlike code completion, we wait for an up-to-date preamble here.
