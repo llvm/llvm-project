@@ -642,12 +642,12 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
                                        InstCombiner::BuilderTy &Builder) {
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && isa<UndefValue>(Shuf->getOperand(1)) &&
-      Shuf->getMask()->getSplatValue() &&
+      is_splat(Shuf->getShuffleMask()) &&
       Shuf->getType() == Shuf->getOperand(0)->getType()) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Undef, SplatMask
     Constant *NarrowUndef = UndefValue::get(Trunc.getType());
     Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
-    return new ShuffleVectorInst(NarrowOp, NarrowUndef, Shuf->getMask());
+    return new ShuffleVectorInst(NarrowOp, NarrowUndef, Shuf->getShuffleMask());
   }
 
   return nullptr;
@@ -2553,7 +2553,7 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
         Value *RHS = Builder.CreateBitCast(ShufOp1, DestTy);
         // Return a new shuffle vector.  Use the same element ID's, as we
         // know the vector types match #elts.
-        return new ShuffleVectorInst(LHS, RHS, Shuf->getOperand(2));
+        return new ShuffleVectorInst(LHS, RHS, Shuf->getShuffleMask());
       }
     }
 

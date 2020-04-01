@@ -2030,10 +2030,12 @@ NewGVN::performSymbolicEvaluation(Value *V,
     case Instruction::Select:
     case Instruction::ExtractElement:
     case Instruction::InsertElement:
-    case Instruction::ShuffleVector:
     case Instruction::GetElementPtr:
       E = createExpression(I);
       break;
+    case Instruction::ShuffleVector:
+      // FIXME: Add support for shufflevector to createExpression.
+      return nullptr;
     default:
       return nullptr;
     }

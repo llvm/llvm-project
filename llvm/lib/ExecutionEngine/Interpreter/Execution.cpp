@@ -1868,7 +1868,6 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
 
   GenericValue Src1 = getOperandValue(I.getOperand(0), SF);
   GenericValue Src2 = getOperandValue(I.getOperand(1), SF);
-  GenericValue Src3 = getOperandValue(I.getOperand(2), SF);
   GenericValue Dest;
 
   // There is no need to check types of src1 and src2, because the compiled
@@ -1878,7 +1877,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
   Type *TyContained = Ty->getElementType();
   unsigned src1Size = (unsigned)Src1.AggregateVal.size();
   unsigned src2Size = (unsigned)Src2.AggregateVal.size();
-  unsigned src3Size = (unsigned)Src3.AggregateVal.size();
+  unsigned src3Size = I.getShuffleMask().size();
 
   Dest.AggregateVal.resize(src3Size);
 
@@ -1888,7 +1887,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::IntegerTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = Src3.AggregateVal[i].IntVal.getZExtValue();
+        unsigned j = std::max(0, I.getMaskValue(i));
         if(j < src1Size)
           Dest.AggregateVal[i].IntVal = Src1.AggregateVal[j].IntVal;
         else if(j < src1Size + src2Size)
@@ -1904,7 +1903,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::FloatTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = Src3.AggregateVal[i].IntVal.getZExtValue();
+        unsigned j = std::max(0, I.getMaskValue(i));
         if(j < src1Size)
           Dest.AggregateVal[i].FloatVal = Src1.AggregateVal[j].FloatVal;
         else if(j < src1Size + src2Size)
@@ -1915,7 +1914,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::DoubleTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = Src3.AggregateVal[i].IntVal.getZExtValue();
+        unsigned j = std::max(0, I.getMaskValue(i));
         if(j < src1Size)
           Dest.AggregateVal[i].DoubleVal = Src1.AggregateVal[j].DoubleVal;
         else if(j < src1Size + src2Size)

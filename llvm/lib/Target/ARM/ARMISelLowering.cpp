@@ -15547,7 +15547,7 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
     return false;
   if (!match(I->getOperand(Op),
              m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
-                             m_Undef(), m_Zero()))) {
+                             m_Undef(), m_ZeroMask()))) {
     return false;
   }
   Instruction *Shuffle = cast<Instruction>(I->getOperand(Op));

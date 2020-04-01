@@ -210,7 +210,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       Arg.replaceAllUsesWith(NewVal);
     } else if (IsV3) {
       Value *Shuf = Builder.CreateShuffleVector(Load, UndefValue::get(V4Ty),
-                                                {0, 1, 2},
+                                                ArrayRef<int>{0, 1, 2},
                                                 Arg.getName() + ".load");
       Arg.replaceAllUsesWith(Shuf);
     } else {
