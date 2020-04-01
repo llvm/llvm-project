@@ -3,7 +3,7 @@ import * as vscodelc from 'vscode-languageclient';
 import * as semanticHighlighting from './semantic-highlighting';
 
 /**
- * Method to get workspace configuration option
+ * Get an option from workspace configuration.
  * @param option name of the option (e.g. for clangd.path should be path)
  * @param defaultValue default value to return if option is not set
  */
@@ -75,8 +75,8 @@ class EnableEditsNearCursorFeature implements vscodelc.StaticFeature {
 }
 
 /**
- *  this method is called when your extension is activate
- *  your extension is activated the very first time the command is executed
+ *  This method is called when the extension is activated. The extension is
+ *  activated the very first time a command is executed.
  */
 export function activate(context: vscode.ExtensionContext) {
   const syncFileEvents = getConfig<boolean>('syncFileEvents', true);
@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
         documentSelector: [
             { scheme: 'file', language: 'c' },
             { scheme: 'file', language: 'cpp' },
-            // cuda is not supported by vscode, but our extension does.
+            // CUDA is not supported by vscode, but our extension does supports it.
             { scheme: 'file', language: 'cuda' },
             { scheme: 'file', language: 'objective-c'},
             { scheme: 'file', language: 'objective-cpp'}
@@ -106,7 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
         // FIXME: send sync file events when clangd provides implementations.
         },
         initializationOptions: { clangdFileStatus: true },
-        // Do not switch to output window when clangd returns output
+        // Do not switch to output window when clangd returns output.
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never,
 
         // We hack up the completion items a bit to prevent VSCode from re-ranking them
@@ -126,7 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
           provideCompletionItem: async (document, position, context, token, next) => {
             let list = await next(document, position, context, token);
             let items = (Array.isArray(list) ? list : list.items).map(item => {
-              // Gets the prefix used by vscode when doing fuzzymatch.
+              // Gets the prefix used by VSCode when doing fuzzymatch.
               let prefix = document.getText(new vscode.Range(item.range.start, position))
               if (prefix)
                 item.filterText = prefix + "_" + item.filterText;
