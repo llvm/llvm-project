@@ -1315,10 +1315,12 @@ def Vector_TransposeOp :
     VectorType getResultType() {
       return result().getType().cast<VectorType>();
     }
+    void getTransp(SmallVectorImpl<int64_t> &results);
   }];
   let assemblyFormat = [{
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
   }];
+  let hasFolder = 1;
 }
 
 def Vector_TupleGetOp :
