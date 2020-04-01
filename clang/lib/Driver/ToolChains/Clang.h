@@ -77,6 +77,7 @@ private:
   enum RewriteKind { RK_None, RK_Fragile, RK_NonFragile };
 
   ObjCRuntime AddObjCRuntimeArgs(const llvm::opt::ArgList &args,
+                                 const InputInfoList &inputs,
                                  llvm::opt::ArgStringList &cmdArgs,
                                  RewriteKind rewrite) const;
 
