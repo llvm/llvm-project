@@ -34,7 +34,7 @@ GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
 Align GISelKnownBits::inferAlignmentForFrameIdx(int FrameIdx, int Offset,
                                                 const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return commonAlignment(Align(MFI.getObjectAlignment(FrameIdx)), Offset);
+  return commonAlignment(MFI.getObjectAlign(FrameIdx), Offset);
   // TODO: How to handle cases with Base + Offset?
 }
 
