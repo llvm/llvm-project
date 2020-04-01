@@ -55,7 +55,7 @@ CHECK:        000000a4 <a>:
 CHECK-NEXT:        ...
 CHECK:        Disassembly of section .tdata:
 CHECK:        00000000 <d>:
-CHECK-NEXT:        0: 40 09 21 f9                  	bdnzfl	9, .+8696
+CHECK-NEXT:        0: 40 09 21 f9                  	bdnzfl	9, $+8696
 CHECK-NEXT:        4: f0 1b 86 6e                  	<unknown>
 CHECK:        Disassembly of section .tbss:
 CHECK:        00000008 <c>:
