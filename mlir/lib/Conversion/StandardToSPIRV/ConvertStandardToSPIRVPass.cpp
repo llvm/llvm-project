@@ -48,6 +48,3 @@ void ConvertStandardToSPIRVPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertStandardToSPIRVPass() {
   return std::make_unique<ConvertStandardToSPIRVPass>();
 }
-
-static PassRegistration<ConvertStandardToSPIRVPass>
-    pass("convert-std-to-spirv", "Convert Standard Ops to SPIR-V dialect");

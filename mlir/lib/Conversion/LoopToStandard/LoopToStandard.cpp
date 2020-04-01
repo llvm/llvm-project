@@ -364,7 +364,3 @@ void LoopToStandardPass::runOnOperation() {
 std::unique_ptr<Pass> mlir::createLowerToCFGPass() {
   return std::make_unique<LoopToStandardPass>();
 }
-
-static PassRegistration<LoopToStandardPass>
-    pass("convert-loop-to-std", "Convert Loop dialect to Standard dialect, "
-                                "replacing structured control flow with a CFG");

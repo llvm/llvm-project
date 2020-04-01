@@ -2881,7 +2881,3 @@ mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
   return std::make_unique<LLVMLoweringPass>(useAlloca, useBarePtrCallConv,
                                             emitCWrappers, indexBitwidth);
 }
-
-static PassRegistration<LLVMLoweringPass>
-    pass(PASS_NAME, "Convert scalar and vector operations from the "
-                    "Standard to the LLVM dialect");

@@ -428,7 +428,3 @@ std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
 mlir::createConvertVulkanLaunchFuncToVulkanCallsPass() {
   return std::make_unique<VulkanLaunchFuncToVulkanCallsPass>();
 }
-
-static PassRegistration<VulkanLaunchFuncToVulkanCallsPass>
-    pass("launch-func-to-vulkan",
-         "Convert vulkanLaunch external call to Vulkan runtime external calls");

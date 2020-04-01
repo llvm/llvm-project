@@ -84,6 +84,3 @@ mlir::createLowerGpuOpsToROCDLOpsPass() {
   return std::make_unique<LowerGpuOpsToROCDLOpsPass>();
 }
 
-static PassRegistration<LowerGpuOpsToROCDLOpsPass>
-    pass("convert-gpu-to-rocdl",
-         "Generate ROCDL operations for gpu operations");

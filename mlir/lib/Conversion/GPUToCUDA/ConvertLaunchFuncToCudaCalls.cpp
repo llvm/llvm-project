@@ -465,7 +465,3 @@ std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToCudaCallsPass() {
   return std::make_unique<GpuLaunchFuncToCudaCallsPass>();
 }
-
-static PassRegistration<GpuLaunchFuncToCudaCallsPass>
-    pass("launch-func-to-cuda",
-         "Convert all launch_func ops to CUDA runtime calls");

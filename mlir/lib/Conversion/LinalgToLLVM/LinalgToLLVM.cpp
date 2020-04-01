@@ -587,7 +587,3 @@ void ConvertLinalgToLLVMPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertLinalgToLLVMPass() {
   return std::make_unique<ConvertLinalgToLLVMPass>();
 }
-
-static PassRegistration<ConvertLinalgToLLVMPass> pass(
-    "convert-linalg-to-llvm",
-    "Convert the operations from the linalg dialect into the LLVM dialect");
