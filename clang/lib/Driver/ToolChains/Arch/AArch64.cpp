@@ -154,7 +154,8 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 
   // 'cyclone' and later have zero-cycle register moves and zeroing.
   if (MtuneLowerCase == "cyclone" || MtuneLowerCase == "vortex" ||
-      MtuneLowerCase == "lightning" || MtuneLowerCase.find("apple") == 0) {
+      MtuneLowerCase == "lightning" ||
+      StringRef(MtuneLowerCase).startswith("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }

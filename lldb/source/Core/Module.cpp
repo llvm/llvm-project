@@ -1414,7 +1414,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         if (FileSystem::Instance().IsDirectory(file)) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());
-          if (old_path.find(new_path) == 0) {
+          if (llvm::StringRef(old_path).startswith(new_path)) {
             // We specified the same bundle as the symbol file that we already
             // have
             return;

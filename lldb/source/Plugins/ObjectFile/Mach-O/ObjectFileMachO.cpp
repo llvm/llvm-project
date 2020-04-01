@@ -5140,10 +5140,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       std::string loader_path("@loader_path");
       std::string executable_path("@executable_path");
       for (auto &rpath : rpath_paths) {
-        if (rpath.find(loader_path) == 0) {
+        if (llvm::StringRef(rpath).startswith(loader_path)) {
           rpath.erase(0, loader_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-        } else if (rpath.find(executable_path) == 0) {
+        } else if (llvm::StringRef(rpath).startswith(executable_path)) {
           rpath.erase(0, executable_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
         }
