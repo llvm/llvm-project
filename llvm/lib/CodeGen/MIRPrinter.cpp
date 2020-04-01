@@ -198,7 +198,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   yaml::MachineFunction YamlMF;
   YamlMF.Name = MF.getName();
-  YamlMF.Alignment = MF.getAlignment().value();
+  YamlMF.Alignment = MF.getAlignment();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
   YamlMF.HasWinCFI = MF.hasWinCFI();
 
@@ -373,7 +373,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
                           : yaml::FixedMachineStackObject::DefaultType;
     YamlObject.Offset = MFI.getObjectOffset(I);
     YamlObject.Size = MFI.getObjectSize(I);
-    YamlObject.Alignment = MFI.getObjectAlignment(I);
+    YamlObject.Alignment = MFI.getObjectAlign(I);
     YamlObject.StackID = (TargetStackID::Value)MFI.getStackID(I);
     YamlObject.IsImmutable = MFI.isImmutableObjectIndex(I);
     YamlObject.IsAliased = MFI.isAliasedObjectIndex(I);
@@ -400,7 +400,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
                                 : yaml::MachineStackObject::DefaultType;
     YamlObject.Offset = MFI.getObjectOffset(I);
     YamlObject.Size = MFI.getObjectSize(I);
-    YamlObject.Alignment = MFI.getObjectAlignment(I);
+    YamlObject.Alignment = MFI.getObjectAlign(I);
     YamlObject.StackID = (TargetStackID::Value)MFI.getStackID(I);
 
     YMF.StackObjects.push_back(YamlObject);
@@ -514,7 +514,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
     YamlConstant.Value = StrOS.str();
-    YamlConstant.Alignment = Constant.getAlignment();
+    YamlConstant.Alignment = MaybeAlign(Constant.getAlignment());
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
     MF.Constants.push_back(YamlConstant);
