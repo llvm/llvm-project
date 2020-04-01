@@ -40,7 +40,7 @@ namespace llvm {
     // When changing the underlying type, change the format string as well.
     using Type = uint64_t;
     enum : unsigned { BitWidth = 8*sizeof(Type) };
-    constexpr static const char *const FormatStr = "%016lX";
+    constexpr static const char *const FormatStr = "%016llX";
 
     constexpr LaneBitmask() = default;
     explicit constexpr LaneBitmask(Type V) : Mask(V) {}
