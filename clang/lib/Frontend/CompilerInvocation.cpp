@@ -1547,7 +1547,7 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
 
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
-                                bool DefaultDiagColor, bool DefaultShowOpt) {
+                                bool DefaultDiagColor) {
   bool Success = true;
 
   Opts.DiagnosticLogFile =
@@ -1565,9 +1565,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
   Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
   Opts.AbsolutePath = Args.hasArg(OPT_fdiagnostics_absolute_paths);
-  Opts.ShowOptionNames =
-      Args.hasFlag(OPT_fdiagnostics_show_option,
-                   OPT_fno_diagnostics_show_option, DefaultShowOpt);
+  Opts.ShowOptionNames = !Args.hasArg(OPT_fno_diagnostics_show_option);
 
   llvm::sys::Process::UseANSIEscapeCodes(Args.hasArg(OPT_fansi_escape_codes));
 
@@ -3597,9 +3595,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     Diags.Report(diag::err_fe_dependency_file_requires_MT);
     Success = false;
   }
-  Success &=
-      ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                          false /*DefaultDiagColor*/, false /*DefaultShowOpt*/);
+  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
+                                 /*DefaultDiagColor=*/false);
   ParseCommentArgs(LangOpts.CommentOpts, Args);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here

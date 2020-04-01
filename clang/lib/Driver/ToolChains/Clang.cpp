@@ -3559,9 +3559,9 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-fno-diagnostics-fixit-info");
 
   // Enable -fdiagnostics-show-option by default.
-  if (Args.hasFlag(options::OPT_fdiagnostics_show_option,
-                   options::OPT_fno_diagnostics_show_option))
-    CmdArgs.push_back("-fdiagnostics-show-option");
+  if (!Args.hasFlag(options::OPT_fdiagnostics_show_option,
+                    options::OPT_fno_diagnostics_show_option, true))
+    CmdArgs.push_back("-fno-diagnostics-show-option");
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_show_category_EQ)) {
