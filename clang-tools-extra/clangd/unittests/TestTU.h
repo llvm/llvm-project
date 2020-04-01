@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
+#include "Compiler.h"
 #include "ParsedAST.h"
 #include "Path.h"
 #include "index/Index.h"
@@ -54,7 +55,7 @@ struct TestTU {
   llvm::StringMap<std::string> AdditionalFiles;
 
   // Extra arguments for the compiler invocation.
-  std::vector<const char *> ExtraArgs;
+  std::vector<std::string> ExtraArgs;
 
   llvm::Optional<std::string> ClangTidyChecks;
   llvm::Optional<std::string> ClangTidyWarningsAsErrors;
@@ -67,6 +68,7 @@ struct TestTU {
   // By default, build() will report Error diagnostics as GTest errors.
   // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
+  ParseInputs inputs() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;
 };

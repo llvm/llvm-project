@@ -93,8 +93,9 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   return MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
 }
 
-CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef TestCode,
-                               Position Point,
+// Runs code completion.
+// If IndexSymbols is non-empty, an index will be built and passed to opts.
+CodeCompleteResult completions(const TestTU &TU, Position Point,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {}) {
   std::unique_ptr<SymbolIndex> OverrideIndex;
@@ -104,49 +105,35 @@ CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef TestCode,
     Opts.Index = OverrideIndex.get();
   }
 
-  auto File = testPath("foo.cpp");
-  runAddDocument(Server, File, TestCode);
-  auto CompletionList =
-      llvm::cantFail(runCodeComplete(Server, File, Point, Opts));
-  return CompletionList;
-}
-
-CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef Text,
-                               std::vector<Symbol> IndexSymbols = {},
-                               clangd::CodeCompleteOptions Opts = {},
-                               PathRef FilePath = "foo.cpp") {
-  std::unique_ptr<SymbolIndex> OverrideIndex;
-  if (!IndexSymbols.empty()) {
-    assert(!Opts.Index && "both Index and IndexSymbols given!");
-    OverrideIndex = memIndex(std::move(IndexSymbols));
-    Opts.Index = OverrideIndex.get();
+  auto Inputs = TU.inputs();
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  if (!CI) {
+    ADD_FAILURE() << "Couldn't build CompilerInvocation";
+    return {};
   }
-
-  auto File = testPath(FilePath);
-  Annotations Test(Text);
-  runAddDocument(Server, File, Test.code());
-  auto CompletionList =
-      llvm::cantFail(runCodeComplete(Server, File, Test.point(), Opts));
-  return CompletionList;
+  auto Preamble =
+      buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
+                    /*InMemory=*/true, /*Callback=*/nullptr);
+  return codeComplete(testPath(TU.Filename), Inputs.CompileCommand,
+                      Preamble.get(), TU.Code, Point, Inputs.FS, Opts);
 }
 
-// Builds a server and runs code completion.
-// If IndexSymbols is non-empty, an index will be built and passed to opts.
+// Runs code completion.
 CodeCompleteResult completions(llvm::StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {},
                                PathRef FilePath = "foo.cpp") {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
+  Annotations Test(Text);
+  auto TU = TestTU::withCode(Test.code());
   // To make sure our tests for completiopns inside templates work on Windows.
-  CDB.ExtraClangFlags = {"-fno-delayed-template-parsing"};
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-  return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),
-                     FilePath);
+  TU.ExtraArgs = {"-fno-delayed-template-parsing"};
+  TU.Filename = FilePath.str();
+  return completions(TU, Test.point(), std::move(IndexSymbols),
+                     std::move(Opts));
 }
 
-// Builds a server and runs code completion.
-// If IndexSymbols is non-empty, an index will be built and passed to opts.
+// Runs code completion without the clang parser.
 CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
                                         std::vector<Symbol> IndexSymbols = {},
                                         clangd::CodeCompleteOptions Opts = {},
@@ -669,53 +656,38 @@ TEST(CompletionTest, SemaIndexMergeWithLimit) {
 }
 
 TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  std::string Subdir = testPath("sub");
-  std::string SearchDirArg = (Twine("-I") + Subdir).str();
-  CDB.ExtraClangFlags = {SearchDirArg.c_str()};
-  std::string BarHeader = testPath("sub/bar.h");
-  FS.Files[BarHeader] = "";
+  TestTU TU;
+  TU.ExtraArgs.push_back("-I" + testPath("sub"));
+  TU.AdditionalFiles["sub/bar.h"] = "";
+  auto BarURI = URI::create(testPath("sub/bar.h")).toString();
 
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-  auto BarURI = URI::create(BarHeader).toString();
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
   Sym.IncludeHeaders.emplace_back(BarURI, 1);
   // Shoten include path based on search directory and insert.
-  auto Results = completions(Server,
-                             R"cpp(
-          int main() { ns::^ }
-      )cpp",
-                             {Sym});
+  Annotations Test("int main() { ns::^ }");
+  TU.Code = Test.code().str();
+  auto Results = completions(TU, Test.point(), {Sym});
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(Named("X"), InsertInclude("\"bar.h\""))));
   // Can be disabled via option.
   CodeCompleteOptions NoInsertion;
   NoInsertion.InsertIncludes = CodeCompleteOptions::NeverInsert;
-  Results = completions(Server,
-                        R"cpp(
-          int main() { ns::^ }
-      )cpp",
-                        {Sym}, NoInsertion);
+  Results = completions(TU, Test.point(), {Sym}, NoInsertion);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(Named("X"), Not(InsertInclude()))));
   // Duplicate based on inclusions in preamble.
-  Results = completions(Server,
-                        R"cpp(
+  Test = Annotations(R"cpp(
           #include "sub/bar.h"  // not shortest, so should only match resolved.
           int main() { ns::^ }
-      )cpp",
-                        {Sym});
+      )cpp");
+  TU.Code = Test.code().str();
+  Results = completions(TU, Test.point(), {Sym});
   EXPECT_THAT(Results.Completions, ElementsAre(AllOf(Named("X"), Labeled("X"),
                                                      Not(InsertInclude()))));
 }
 
 TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   Symbol SymX = cls("ns::X");
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
@@ -725,8 +697,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   SymX.IncludeHeaders.emplace_back("<bar>", 1);
   SymY.IncludeHeaders.emplace_back("<bar>", 1);
   // Shoten include path based on search directory and insert.
-  auto Results = completions(Server,
-                             R"cpp(
+  auto Results = completions(R"cpp(
           namespace ns {
             class X;
             class Y {};
@@ -740,34 +711,27 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
 }
 
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-
-  FS.Files[testPath("bar.h")] =
-      R"cpp(namespace ns { struct preamble { int member; }; })cpp";
-  auto File = testPath("foo.cpp");
   Annotations Test(R"cpp(
       #include "bar.h"
       namespace ns { int local; }
       void f() { ns::^; }
       void f2() { ns::preamble().$2^; }
   )cpp");
-  runAddDocument(Server, File, Test.code());
-  clangd::CodeCompleteOptions Opts = {};
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["bar.h"] =
+      R"cpp(namespace ns { struct preamble { int member; }; })cpp";
 
+  clangd::CodeCompleteOptions Opts = {};
   auto I = memIndex({var("ns::index")});
   Opts.Index = I.get();
-  auto WithIndex = cantFail(runCodeComplete(Server, File, Test.point(), Opts));
+  auto WithIndex = completions(TU, Test.point(), {}, Opts);
   EXPECT_THAT(WithIndex.Completions,
               UnorderedElementsAre(Named("local"), Named("index")));
-  auto ClassFromPreamble =
-      cantFail(runCodeComplete(Server, File, Test.point("2"), Opts));
+  auto ClassFromPreamble = completions(TU, Test.point("2"), {}, Opts);
   EXPECT_THAT(ClassFromPreamble.Completions, Contains(Named("member")));
 
   Opts.Index = nullptr;
-  auto WithoutIndex =
-      cantFail(runCodeComplete(Server, File, Test.point(), Opts));
+  auto WithoutIndex = completions(TU, Test.point(), {}, Opts);
   EXPECT_THAT(WithoutIndex.Completions,
               UnorderedElementsAre(Named("local"), Named("preamble")));
 }
@@ -811,7 +775,14 @@ TEST(CompletionTest, DynamicIndexIncludeInsertion) {
   Server.addDocument(testPath("foo_impl.cpp"), FileContent);
   // Wait for the dynamic index being built.
   ASSERT_TRUE(Server.blockUntilIdleForTest());
-  EXPECT_THAT(completions(Server, "Foo^ foo;").Completions,
+
+  auto File = testPath("foo.cpp");
+  Annotations Test("Foo^ foo;");
+  runAddDocument(Server, File, Test.code());
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+
+  EXPECT_THAT(CompletionList.Completions,
               ElementsAre(AllOf(Named("Foo"), HasInclude("\"foo_header.h\""),
                                 InsertInclude())));
 }
@@ -892,13 +863,17 @@ TEST(CompletionTest, CommentsFromSystemHeaders) {
     int foo();
   )cpp";
 
-  auto Results = completions(Server,
-                             R"cpp(
+  auto File = testPath("foo.cpp");
+  Annotations Test(R"cpp(
 #include "foo.h"
 int x = foo^
      )cpp");
+  runAddDocument(Server, File, Test.code());
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+
   EXPECT_THAT(
-      Results.Completions,
+      CompletionList.Completions,
       Contains(AllOf(Named("foo"), Doc("This comment should be retained!"))));
 }
 
@@ -1064,15 +1039,19 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
   if (!IndexSymbols.empty())
     Index = memIndex(IndexSymbols);
 
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  ClangdServer::Options Opts = ClangdServer::optsForTest();
-  Opts.StaticIndex = Index.get();
-
-  ClangdServer Server(CDB, FS, Opts);
-  auto File = testPath("foo.cpp");
-  runAddDocument(Server, File, Text);
-  return llvm::cantFail(runSignatureHelp(Server, File, Point));
+  auto TU = TestTU::withCode(Text);
+  auto Inputs = TU.inputs();
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  if (!CI) {
+    ADD_FAILURE() << "Couldn't build CompilerInvocation";
+    return {};
+  }
+  auto Preamble =
+      buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
+                    /*InMemory=*/true, /*Callback=*/nullptr);
+  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
+                       Preamble.get(), Text, Point, Inputs.FS, Index.get());
 }
 
 SignatureHelp signatures(llvm::StringRef Text,
@@ -1546,14 +1525,7 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
 }
 
 TEST(CompletionTest, NonDocComments) {
-  MockFSProvider FS;
-  auto FooCpp = testPath("foo.cpp");
-  FS.Files[FooCpp] = "";
-
-  MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-
-  Annotations Source(R"cpp(
+  const char *Text = R"cpp(
     // We ignore namespace comments, for rationale see CodeCompletionStrings.h.
     namespace comments_ns {
     }
@@ -1588,17 +1560,11 @@ TEST(CompletionTest, NonDocComments) {
     int Struct<T>::comments_quux() {
       int a = comments^;
     }
-  )cpp");
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  CDB.ExtraClangFlags.push_back("-fno-delayed-template-parsing");
-  runAddDocument(Server, FooCpp, Source.code(), "null", WantDiagnostics::Yes);
-  CodeCompleteResult Completions = cantFail(runCodeComplete(
-      Server, FooCpp, Source.point(), clangd::CodeCompleteOptions()));
+  )cpp";
 
   // We should not get any of those comments in completion.
   EXPECT_THAT(
-      Completions.Completions,
+      completions(Text).Completions,
       UnorderedElementsAre(AllOf(Not(IsDocumented()), Named("comments_foo")),
                            AllOf(IsDocumented(), Named("comments_baz")),
                            AllOf(IsDocumented(), Named("comments_quux")),
@@ -1740,11 +1706,10 @@ TEST(CompletionTest, CodeCompletionContext) {
 TEST(CompletionTest, FixItForArrowToDot) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
-  Annotations TestCode(
+  const char* Code =
       R"cpp(
         class Auxilary {
          public:
@@ -1760,13 +1725,12 @@ TEST(CompletionTest, FixItForArrowToDot) {
           ClassWithPtr x;
           x[[->]]^;
         }
-      )cpp");
-  auto Results =
-      completions(Server, TestCode.code(), TestCode.point(), {}, Opts);
+      )cpp";
+  auto Results = completions(Code, {}, Opts);
   EXPECT_EQ(Results.Completions.size(), 3u);
 
   TextEdit ReplacementEdit;
-  ReplacementEdit.range = TestCode.range();
+  ReplacementEdit.range = Annotations(Code).range();
   ReplacementEdit.newText = ".";
   for (const auto &C : Results.Completions) {
     EXPECT_TRUE(C.FixIts.size() == 1u || C.Name == "AuxFunction");
@@ -1777,13 +1741,9 @@ TEST(CompletionTest, FixItForArrowToDot) {
 }
 
 TEST(CompletionTest, FixItForDotToArrow) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
-  Annotations TestCode(
+  const char* Code =
       R"cpp(
         class Auxilary {
          public:
@@ -1799,13 +1759,12 @@ TEST(CompletionTest, FixItForDotToArrow) {
           ClassWithPtr x;
           x[[.]]^;
         }
-      )cpp");
-  auto Results =
-      completions(Server, TestCode.code(), TestCode.point(), {}, Opts);
+      )cpp";
+  auto Results = completions(Code, {}, Opts);
   EXPECT_EQ(Results.Completions.size(), 3u);
 
   TextEdit ReplacementEdit;
-  ReplacementEdit.range = TestCode.range();
+  ReplacementEdit.range = Annotations(Code).range();
   ReplacementEdit.newText = "->";
   for (const auto &C : Results.Completions) {
     EXPECT_TRUE(C.FixIts.empty() || C.Name == "AuxFunction");
@@ -1858,8 +1817,8 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 TEST(CompletionTest, CompletionTokenRange) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  FS.Files["foo/abc/foo.h"] = "";
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+  TestTU TU;
+  TU.AdditionalFiles["foo/abc/foo.h"] = "";
 
   constexpr const char *TestCodes[] = {
       R"cpp(
@@ -1891,10 +1850,10 @@ TEST(CompletionTest, CompletionTokenRange) {
       };
   for (const auto &Text : TestCodes) {
     Annotations TestCode(Text);
-    auto Results = completions(Server, TestCode.code(), TestCode.point());
-
+    TU.Code = TestCode.code().str();
+    auto Results = completions(TU, TestCode.point());
     if (Results.Completions.size() != 1) {
-      ADD_FAILURE() << "Results.Completions.size() != 1";
+      ADD_FAILURE() << "Results.Completions.size() != 1" << Text;
       continue;
     }
     EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
@@ -2247,13 +2206,12 @@ TEST(CompletionTest, InsertTheMostPopularHeader) {
 }
 
 TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-
-  std::string FooHeader = testPath("foo.h");
-  FS.Files[FooHeader] = "";
-
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+  Annotations Test(R"cpp(
+    #include "foo.h"
+    Fun^
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo.h"] = "";
 
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
@@ -2262,7 +2220,7 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
   EXPECT_THAT(
-      completions(Server, "#include \"foo.h\"\nFun^", {Sym}).Completions,
+      completions(TU, Test.point(), {Sym}).Completions,
       UnorderedElementsAre(
           AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
 }
@@ -2279,20 +2237,15 @@ TEST(CompletionTest, MergeMacrosFromIndexAndSema) {
 }
 
 TEST(CompletionTest, MacroFromPreamble) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  std::string FooHeader = testPath("foo.h");
-  FS.Files[FooHeader] = "#define CLANGD_PREAMBLE_HEADER x\n";
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-  auto Results = completions(
-      R"cpp(#include "foo.h"
-          #define CLANGD_PREAMBLE_MAIN x
+  Annotations Test(R"cpp(#define CLANGD_PREAMBLE_MAIN x
 
           int x = 0;
           #define CLANGD_MAIN x
           void f() { CLANGD_^ }
-      )cpp",
-      {func("CLANGD_INDEX")});
+      )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.HeaderCode = "#define CLANGD_PREAMBLE_HEADER x";
+  auto Results = completions(TU, Test.point(), {func("CLANGD_INDEX")});
   // We should get results from the main file, including the preamble section.
   // However no results from included files (the index should cover them).
   EXPECT_THAT(Results.Completions,
@@ -2405,29 +2358,22 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
 }
 
 TEST(CompletionTest, IncludedCompletionKinds) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  std::string Subdir = testPath("sub");
-  std::string SearchDirArg = (Twine("-I") + Subdir).str();
-  CDB.ExtraClangFlags = {SearchDirArg.c_str()};
-  std::string BarHeader = testPath("sub/bar.h");
-  FS.Files[BarHeader] = "";
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
-  auto Results = completions(Server,
-                             R"cpp(
-        #include "^"
-      )cpp");
+  Annotations Test(R"cpp(#include "^")cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["sub/bar.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("sub"));
+
+  auto Results = completions(TU, Test.point());
   EXPECT_THAT(Results.Completions,
               AllOf(Has("sub/", CompletionItemKind::Folder),
                     Has("bar.h\"", CompletionItemKind::File)));
 }
 
 TEST(CompletionTest, NoCrashAtNonAlphaIncludeHeader) {
-  auto Results = completions(
+  completions(
       R"cpp(
         #include "./^"
       )cpp");
-  EXPECT_TRUE(Results.Completions.empty());
 }
 
 TEST(CompletionTest, NoAllScopesCompletionWhenQualified) {
