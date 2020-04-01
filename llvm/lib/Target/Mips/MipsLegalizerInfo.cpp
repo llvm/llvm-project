@@ -525,12 +525,13 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
-    auto Tmp = MIRBuilder.buildLoad(LLT::pointer(0, 32), MI.getOperand(2),
-                                    *MI.getMF()->getMachineMemOperand(
-                                        MPO, MachineMemOperand::MOLoad, 4, 4));
+    auto Tmp =
+        MIRBuilder.buildLoad(LLT::pointer(0, 32), MI.getOperand(2),
+                             *MI.getMF()->getMachineMemOperand(
+                                 MPO, MachineMemOperand::MOLoad, 4, Align(4)));
     MIRBuilder.buildStore(Tmp, MI.getOperand(1),
                           *MI.getMF()->getMachineMemOperand(
-                              MPO, MachineMemOperand::MOStore, 4, 4));
+                              MPO, MachineMemOperand::MOStore, 4, Align(4)));
     MI.eraseFromParent();
     return true;
   }

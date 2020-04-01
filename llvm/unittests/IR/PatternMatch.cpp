@@ -991,31 +991,32 @@ TEST_F(PatternMatchTest, VectorOps) {
   EXPECT_TRUE(match(EX3, m_ExtractElement(m_Constant(), m_ConstantInt())));
 
   // Test matching shufflevector
-  EXPECT_TRUE(match(SI1, m_ShuffleVector(m_Value(), m_Undef(), m_Zero())));
-  EXPECT_TRUE(match(SI2, m_ShuffleVector(m_Value(A), m_Value(B), m_Value(C))));
+  ArrayRef<int> Mask;
+  EXPECT_TRUE(match(SI1, m_ShuffleVector(m_Value(), m_Undef(), m_ZeroMask())));
+  EXPECT_TRUE(
+      match(SI2, m_ShuffleVector(m_Value(A), m_Value(B), m_Mask(Mask))));
   EXPECT_TRUE(A == VI3);
   EXPECT_TRUE(B == VI4);
-  EXPECT_TRUE(C == IdxVec);
   A = B = C = nullptr; // reset
 
   // Test matching the vector splat pattern
   EXPECT_TRUE(match(
       SI1,
       m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(1), m_Zero()),
-                      m_Undef(), m_Zero())));
+                      m_Undef(), m_ZeroMask())));
   EXPECT_FALSE(match(
       SI3, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
-                           m_Undef(), m_Zero())));
+                           m_Undef(), m_ZeroMask())));
   EXPECT_FALSE(match(
       SI4, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
-                           m_Undef(), m_Zero())));
+                           m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(match(
       SP1,
       m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(2), m_Zero()),
-                      m_Undef(), m_Zero())));
+                      m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(match(
       SP2, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(A), m_Zero()),
-                           m_Undef(), m_Zero())));
+                           m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
 }
 

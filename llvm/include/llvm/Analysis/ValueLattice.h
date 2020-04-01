@@ -37,7 +37,7 @@ class ValueLatticeElement {
     /// assuming all uses of the result will be replaced.
     /// Transition allowed to the following states:
     ///  constant
-    ///  singlecrfromundef
+    ///  constantrange_including_undef
     ///  overdefined
     undef,
 
@@ -59,20 +59,20 @@ class ValueLatticeElement {
     /// The Value falls within this range. (Used only for integer typed values.)
     /// Transition allowed to the following states:
     ///  constantrange (new range must be a superset of the existing range)
-    ///  singlecrfromundef (range must stay a single element range)
+    ///  constantrange_including_undef
     ///  overdefined
     constantrange,
 
-    /// This Value contains a single element constant range that was merged with
-    /// an Undef value. Merging it with other constant ranges results in
-    /// overdefined, unless they match the single element constant range.
+    /// This Value falls within this range, but also may be undef.
+    /// Merging it with other constant ranges results in
+    /// constantrange_including_undef.
     /// Transition allowed to the following states:
     ///  overdefined
-    singlecrfromundef,
+    constantrange_including_undef,
 
     /// We can not precisely model the dynamic values this value might take.
     /// No transitions are allowed after reaching overdefined.
-    overdefined
+    overdefined,
   };
 
   ValueLatticeElementTy Tag;
@@ -97,9 +97,9 @@ public:
     case unknown:
     case undef:
     case constant:
-    case singlecrfromundef:
     case notconstant:
       break;
+    case constantrange_including_undef:
     case constantrange:
       Range.~ConstantRange();
       break;
@@ -128,7 +128,7 @@ public:
 
     switch (Other.Tag) {
     case constantrange:
-    case singlecrfromundef:
+    case constantrange_including_undef:
       if (!isConstantRange())
         new (&Range) ConstantRange(Other.Range);
       else
@@ -161,12 +161,13 @@ public:
     Res.markNotConstant(C);
     return Res;
   }
-  static ValueLatticeElement getRange(ConstantRange CR) {
+  static ValueLatticeElement getRange(ConstantRange CR,
+                                      bool MayIncludeUndef = false) {
     if (CR.isFullSet())
       return getOverdefined();
 
     ValueLatticeElement Res;
-    Res.markConstantRange(std::move(CR));
+    Res.markConstantRange(std::move(CR), MayIncludeUndef);
     return Res;
   }
   static ValueLatticeElement getOverdefined() {
@@ -179,10 +180,17 @@ public:
   bool isUnknown() const { return Tag == unknown; }
   bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
   bool isConstant() const { return Tag == constant; }
-  bool isSingleCRFromUndef() const { return Tag == singlecrfromundef; }
   bool isNotConstant() const { return Tag == notconstant; }
-  bool isConstantRange() const {
-    return Tag == constantrange || Tag == singlecrfromundef;
+  bool isConstantRangeIncludingUndef() const {
+    return Tag == constantrange_including_undef;
+  }
+  /// Returns true if this value is a constant range. Use \p UndefAllowed to
+  /// exclude non-singleton constant ranges that may also be undef. Note that
+  /// this function also returns true if the range may include undef, but only
+  /// contains a single element. In that case, it can be replaced by a constant.
+  bool isConstantRange(bool UndefAllowed = true) const {
+    return Tag == constantrange || (Tag == constantrange_including_undef &&
+                                    (UndefAllowed || Range.isSingleElement()));
   }
   bool isOverdefined() const { return Tag == overdefined; }
 
@@ -196,8 +204,12 @@ public:
     return ConstVal;
   }
 
-  const ConstantRange &getConstantRange() const {
-    assert(isConstantRange() &&
+  /// Returns the constant range for this value. Use \p UndefAllowed to exclude
+  /// non-singleton constant ranges that may also be undef. Note that this
+  /// function also returns a range if the range may include undef, but only
+  /// contains a single element. In that case, it can be replaced by a constant.
+  const ConstantRange &getConstantRange(bool UndefAllowed = true) const {
+    assert(isConstantRange(UndefAllowed) &&
            "Cannot get the constant-range of a non-constant-range!");
     return Range;
   }
@@ -231,7 +243,7 @@ public:
     return true;
   }
 
-  bool markConstant(Constant *V) {
+  bool markConstant(Constant *V, bool MayIncludeUndef = false) {
     if (isa<UndefValue>(V))
       return markUndef();
 
@@ -241,7 +253,7 @@ public:
     }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
-      return markConstantRange(ConstantRange(CI->getValue()));
+      return markConstantRange(ConstantRange(CI->getValue()), MayIncludeUndef);
 
     assert(isUnknown() || isUndef());
     Tag = constant;
@@ -271,17 +283,26 @@ public:
 
   /// Mark the object as constant range with \p NewR. If the object is already a
   /// constant range, nothing changes if the existing range is equal to \p
-  /// NewR. Otherwise \p NewR must be a superset of the existing range or the
-  /// object must be undef.
-  bool markConstantRange(ConstantRange NewR) {
+  /// NewR and the tag. Otherwise \p NewR must be a superset of the existing
+  /// range or the object must be undef. The tag is set to
+  /// constant_range_including_undef if either the existing value or the new
+  /// range may include undef.
+  bool markConstantRange(ConstantRange NewR, bool MayIncludeUndef = false) {
+    if (NewR.isFullSet())
+      return markOverdefined();
+
+    ValueLatticeElementTy OldTag = Tag;
+    ValueLatticeElementTy NewTag =
+        (isUndef() || isConstantRangeIncludingUndef() || MayIncludeUndef)
+            ? constantrange_including_undef
+            : constantrange;
     if (isConstantRange()) {
-      if (getConstantRange() == NewR)
-        return false;
-
-      assert(!isSingleCRFromUndef());
-
       if (NewR.isEmptySet())
         return markOverdefined();
+
+      Tag = NewTag;
+      if (getConstantRange() == NewR)
+        return Tag != OldTag;
 
       assert(NewR.contains(getConstantRange()) &&
              "Existing range must be a subset of NewR");
@@ -289,11 +310,11 @@ public:
       return true;
     }
 
-    assert(isUnknown() || (isUndef() && NewR.isSingleElement()));
+    assert(isUnknown() || isUndef());
     if (NewR.isEmptySet())
       return markOverdefined();
 
-    Tag = isUnknown() ? constantrange : singlecrfromundef;
+    Tag = NewTag;
     new (&Range) ConstantRange(std::move(NewR));
     return true;
   }
@@ -313,9 +334,10 @@ public:
       if (RHS.isUndef())
         return false;
       if (RHS.isConstant())
-        return markConstant(RHS.getConstant());
-      if (RHS.isConstantRange() && RHS.getConstantRange().isSingleElement())
-        return markConstantRange(RHS.getConstantRange());
+        return markConstant(RHS.getConstant(), /*MayIncludeUndef=*/true);
+      if (RHS.isConstantRange())
+        return markConstantRange(RHS.getConstantRange(true),
+                                 /*MayIncludeUndef=*/true);
       return markOverdefined();
     }
 
@@ -341,9 +363,12 @@ public:
       return true;
     }
 
+    auto OldTag = Tag;
     assert(isConstantRange() && "New ValueLattice type?");
-    if (RHS.isUndef() && getConstantRange().isSingleElement())
-      return false;
+    if (RHS.isUndef()) {
+      Tag = constantrange_including_undef;
+      return OldTag != Tag;
+    }
 
     if (!RHS.isConstantRange()) {
       // We can get here if we've encountered a constantexpr of integer type
@@ -353,21 +378,9 @@ public:
     }
 
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
-
-    if (isSingleCRFromUndef() || RHS.isSingleCRFromUndef()) {
-      if (NewR.isSingleElement()) {
-        assert(getConstantRange() == NewR);
-        return false;
-      }
-      markOverdefined();
-      return true;
-    }
-    if (NewR.isFullSet())
-      return markOverdefined();
-    else if (NewR == getConstantRange())
-      return false;
-    else
-      return markConstantRange(std::move(NewR));
+    return markConstantRange(
+        std::move(NewR),
+        /*MayIncludeUndef=*/RHS.isConstantRangeIncludingUndef());
   }
 
   // Compares this symbolic value with Other using Pred and returns either

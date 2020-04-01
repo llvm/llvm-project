@@ -999,9 +999,9 @@ std::string TreePredicateFn::getPredCode() const {
 
     int64_t MinAlign = getMinAlignment();
     if (MinAlign > 0) {
-      Code += "if (cast<MemSDNode>(N)->getAlignment() < ";
+      Code += "if (cast<MemSDNode>(N)->getAlign() < Align(";
       Code += utostr(MinAlign);
-      Code += ")\nreturn false;\n";
+      Code += "))\nreturn false;\n";
     }
 
     Record *MemoryVT = getMemoryVT();

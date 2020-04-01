@@ -13,10 +13,10 @@
 
 beq 0, LAB1               # 4
 beq 1, LAB2               # 8
-# CHECK-BE:       0: 41 82 00 c0        bt 2, .+192
-# CHECK-BE-NEXT:  4: 41 86 00 f8        bt 6, .+248
-# CHECK-LE:       0: c0 00 82 41        bt 2, .+192
-# CHECK-LE-NEXT:  4: f8 00 86 41        bt 6, .+248
+# CHECK-BE:       0: 41 82 00 c0        bt 2, 0xc0
+# CHECK-BE-NEXT:  4: 41 86 00 f8        bt 6, 0xfc
+# CHECK-LE:       0: c0 00 82 41        bt 2, 0xc0
+# CHECK-LE-NEXT:  4: f8 00 86 41        bt 6, 0xfc
 paddi 1, 2, 8589934576, 0 # 16
 paddi 1, 2, 8589934576, 0 # 24
 paddi 1, 2, 8589934576, 0 # 32

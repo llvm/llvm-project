@@ -36,12 +36,12 @@ define i32 @qdadd(i32 %x, i32 %y) nounwind {
 ;
 ; CHECK-T2DSP-LABEL: qdadd:
 ; CHECK-T2DSP:       @ %bb.0:
-; CHECK-T2DSP-NEXT:    qdadd r0, r0, r1
+; CHECK-T2DSP-NEXT:    qdadd r0, r1, r0
 ; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: qdadd:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    qdadd r0, r0, r1
+; CHECK-ARM-NEXT:    qdadd r0, r1, r0
 ; CHECK-ARM-NEXT:    bx lr
   %z = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %x)
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %z, i32 %y)
@@ -80,12 +80,12 @@ define i32 @qdadd_c(i32 %x, i32 %y) nounwind {
 ;
 ; CHECK-T2DSP-LABEL: qdadd_c:
 ; CHECK-T2DSP:       @ %bb.0:
-; CHECK-T2DSP-NEXT:    qdadd r0, r0, r1
+; CHECK-T2DSP-NEXT:    qdadd r0, r1, r0
 ; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: qdadd_c:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    qdadd r0, r0, r1
+; CHECK-ARM-NEXT:    qdadd r0, r1, r0
 ; CHECK-ARM-NEXT:    bx lr
   %z = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %x)
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %y, i32 %z)

@@ -2379,6 +2379,65 @@ define i64 @fcmp_constant_to_rhs_olt(float %x) {
 }
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.ballot
+; --------------------------------------------------------------------
+
+declare i64 @llvm.amdgcn.ballot.i64(i1) nounwind readnone convergent
+declare i32 @llvm.amdgcn.ballot.i32(i1) nounwind readnone convergent
+
+define i64 @ballot_nocombine_64(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_64(
+; CHECK-NEXT:    %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
+; CHECK-NEXT:    ret i64 %b
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
+  ret i64 %b
+}
+
+define i64 @ballot_zero_64() {
+; CHECK-LABEL: @ballot_zero_64(
+; CHECK-NEXT:    ret i64 0
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 0)
+  ret i64 %b
+}
+
+define i64 @ballot_one_64() {
+; CHECK-LABEL: @ballot_one_64(
+; CHECK-NEXT:    %b = call i64 @llvm.read_register.i64(metadata !0) [[CONVERGENT]]
+; CHECK-NEXT:    ret i64 %b
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
+  ret i64 %b
+}
+
+define i32 @ballot_nocombine_32(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_32(
+; CHECK-NEXT:    %b = call i32 @llvm.amdgcn.ballot.i32(i1 %i)
+; CHECK-NEXT:    ret i32 %b
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 %i)
+  ret i32 %b
+}
+
+define i32 @ballot_zero_32() {
+; CHECK-LABEL: @ballot_zero_32(
+; CHECK-NEXT:    ret i32 0
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 0)
+  ret i32 %b
+}
+
+define i32 @ballot_one_32() {
+; CHECK-LABEL: @ballot_one_32(
+; CHECK-NEXT:    %b = call i32 @llvm.read_register.i32(metadata !1) [[CONVERGENT]]
+; CHECK-NEXT:    ret i32 %b
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
+  ret i32 %b
+}
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.wqm.vote
 ; --------------------------------------------------------------------
 

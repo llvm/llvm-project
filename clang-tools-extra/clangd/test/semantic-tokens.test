@@ -1,0 +1,22 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","text":"int x = 2;"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/semanticTokens","params":{"textDocument":{"uri":"test:///foo.cpp"}}}
+# CHECK:       "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "data": [
+#                  First line, char 5, variable, no modifiers.
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      4,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      0
+# CHECK-NEXT:    ]
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include <limits>
@@ -146,6 +147,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
   bool parseDirectiveOption();
+  bool parseDirectiveAttribute();
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().getFeatureBits()[Feature])) {
@@ -153,6 +155,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
     }
+  }
+
+  bool getFeatureBits(uint64_t Feature) {
+    return getSTI().getFeatureBits()[Feature];
   }
 
   void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
@@ -1579,6 +1585,8 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".option")
     return parseDirectiveOption();
+  else if (IDVal == ".attribute")
+    return parseDirectiveAttribute();
 
   return true;
 }
@@ -1674,6 +1682,151 @@ bool RISCVAsmParser::parseDirectiveOption() {
           "unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'relax' or "
           "'norelax'");
   Parser.eatToEndOfStatement();
+  return false;
+}
+
+/// parseDirectiveAttribute
+///  ::= .attribute expression ',' ( expression | "string" )
+///  ::= .attribute identifier ',' ( expression | "string" )
+bool RISCVAsmParser::parseDirectiveAttribute() {
+  MCAsmParser &Parser = getParser();
+  int64_t Tag;
+  SMLoc TagLoc;
+  TagLoc = Parser.getTok().getLoc();
+  if (Parser.getTok().is(AsmToken::Identifier)) {
+    StringRef Name = Parser.getTok().getIdentifier();
+    Optional<unsigned> Ret =
+        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::RISCVAttributeTags);
+    if (!Ret.hasValue()) {
+      Error(TagLoc, "attribute name not recognised: " + Name);
+      return false;
+    }
+    Tag = Ret.getValue();
+    Parser.Lex();
+  } else {
+    const MCExpr *AttrExpr;
+
+    TagLoc = Parser.getTok().getLoc();
+    if (Parser.parseExpression(AttrExpr))
+      return true;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(AttrExpr);
+    if (check(!CE, TagLoc, "expected numeric constant"))
+      return true;
+
+    Tag = CE->getValue();
+  }
+
+  if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+    return true;
+
+  StringRef StringValue;
+  int64_t IntegerValue = 0;
+  bool IsIntegerValue = true;
+
+  // RISC-V attributes have a string value if the tag number is odd
+  // and an integer value if the tag number is even.
+  if (Tag % 2)
+    IsIntegerValue = false;
+
+  SMLoc ValueExprLoc = Parser.getTok().getLoc();
+  if (IsIntegerValue) {
+    const MCExpr *ValueExpr;
+    if (Parser.parseExpression(ValueExpr))
+      return true;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ValueExpr);
+    if (!CE)
+      return Error(ValueExprLoc, "expected numeric constant");
+    IntegerValue = CE->getValue();
+  } else {
+    if (Parser.getTok().isNot(AsmToken::String))
+      return Error(Parser.getTok().getLoc(), "expected string constant");
+
+    StringValue = Parser.getTok().getStringContents();
+    Parser.Lex();
+  }
+
+  if (Parser.parseToken(AsmToken::EndOfStatement,
+                        "unexpected token in '.attribute' directive"))
+    return true;
+
+  if (Tag == RISCVAttrs::ARCH) {
+    StringRef Arch = StringValue;
+    if (Arch.consume_front("rv32"))
+      clearFeatureBits(RISCV::Feature64Bit, "64bit");
+    else if (Arch.consume_front("rv64"))
+      setFeatureBits(RISCV::Feature64Bit, "64bit");
+    else
+      return Error(ValueExprLoc, "bad arch string " + Arch);
+
+    while (!Arch.empty()) {
+      if (Arch[0] == 'i')
+        clearFeatureBits(RISCV::FeatureRV32E, "e");
+      else if (Arch[0] == 'e')
+        setFeatureBits(RISCV::FeatureRV32E, "e");
+      else if (Arch[0] == 'g') {
+        clearFeatureBits(RISCV::FeatureRV32E, "e");
+        setFeatureBits(RISCV::FeatureStdExtM, "m");
+        setFeatureBits(RISCV::FeatureStdExtA, "a");
+        setFeatureBits(RISCV::FeatureStdExtF, "f");
+        setFeatureBits(RISCV::FeatureStdExtD, "d");
+      } else if (Arch[0] == 'm')
+        setFeatureBits(RISCV::FeatureStdExtM, "m");
+      else if (Arch[0] == 'a')
+        setFeatureBits(RISCV::FeatureStdExtA, "a");
+      else if (Arch[0] == 'f')
+        setFeatureBits(RISCV::FeatureStdExtF, "f");
+      else if (Arch[0] == 'd') {
+        setFeatureBits(RISCV::FeatureStdExtF, "f");
+        setFeatureBits(RISCV::FeatureStdExtD, "d");
+      } else if (Arch[0] == 'c') {
+        setFeatureBits(RISCV::FeatureStdExtC, "c");
+      } else
+        return Error(ValueExprLoc, "bad arch string " + Arch);
+
+      Arch = Arch.drop_front(1);
+      int major = 0;
+      int minor = 0;
+      Arch.consumeInteger(10, major);
+      Arch.consume_front("p");
+      Arch.consumeInteger(10, minor);
+      if (major != 0 || minor != 0) {
+        Arch = Arch.drop_until([](char c) { return c == '_' || c == '"'; });
+        Arch = Arch.drop_while([](char c) { return c == '_'; });
+      }
+    }
+  }
+
+  if (IsIntegerValue)
+    getTargetStreamer().emitAttribute(Tag, IntegerValue);
+  else {
+    if (Tag != RISCVAttrs::ARCH) {
+      getTargetStreamer().emitTextAttribute(Tag, StringValue);
+    } else {
+      std::string formalArchStr = "rv32";
+      if (getFeatureBits(RISCV::Feature64Bit))
+        formalArchStr = "rv64";
+      if (getFeatureBits(RISCV::FeatureRV32E))
+        formalArchStr = (Twine(formalArchStr) + "e1p9").str();
+      else
+        formalArchStr = (Twine(formalArchStr) + "i2p0").str();
+
+      if (getFeatureBits(RISCV::FeatureStdExtM))
+        formalArchStr = (Twine(formalArchStr) + "_m2p0").str();
+      if (getFeatureBits(RISCV::FeatureStdExtA))
+        formalArchStr = (Twine(formalArchStr) + "_a2p0").str();
+      if (getFeatureBits(RISCV::FeatureStdExtF))
+        formalArchStr = (Twine(formalArchStr) + "_f2p0").str();
+      if (getFeatureBits(RISCV::FeatureStdExtD))
+        formalArchStr = (Twine(formalArchStr) + "_d2p0").str();
+      if (getFeatureBits(RISCV::FeatureStdExtC))
+        formalArchStr = (Twine(formalArchStr) + "_c2p0").str();
+
+      getTargetStreamer().emitTextAttribute(Tag, formalArchStr);
+    }
+  }
+
   return false;
 }
 

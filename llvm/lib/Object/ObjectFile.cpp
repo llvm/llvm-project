@@ -108,14 +108,17 @@ Triple ObjectFile::makeTriple() const {
     setARMSubArch(TheTriple);
 
   // TheTriple defaults to ELF, and COFF doesn't have an environment:
-  // the best we can do here is indicate that it is mach-o.
-  if (isMachO())
+  // something we can do here is indicate that it is mach-o.
+  if (isMachO()) {
     TheTriple.setObjectFormat(Triple::MachO);
-
-  if (isCOFF()) {
+  } else if (isCOFF()) {
     const auto COFFObj = cast<COFFObjectFile>(this);
     if (COFFObj->getArch() == Triple::thumb)
       TheTriple.setTriple("thumbv7-windows");
+  } else if (isXCOFF()) {
+    // XCOFF implies AIX.
+    TheTriple.setOS(Triple::AIX);
+    TheTriple.setObjectFormat(Triple::XCOFF);
   }
 
   return TheTriple;

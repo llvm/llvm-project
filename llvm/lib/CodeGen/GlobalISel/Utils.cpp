@@ -457,15 +457,16 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   return false;
 }
 
-unsigned llvm::inferAlignmentFromPtrInfo(MachineFunction &MF,
-                                         const MachinePointerInfo &MPO) {
+Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
+                                  const MachinePointerInfo &MPO) {
   auto PSV = MPO.V.dyn_cast<const PseudoSourceValue *>();
   if (auto FSPV = dyn_cast_or_null<FixedStackPseudoSourceValue>(PSV)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    return MinAlign(MFI.getObjectAlignment(FSPV->getFrameIndex()), MPO.Offset);
+    return commonAlignment(MFI.getObjectAlign(FSPV->getFrameIndex()),
+                           MPO.Offset);
   }
 
-  return 1;
+  return Align(1);
 }
 
 Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,

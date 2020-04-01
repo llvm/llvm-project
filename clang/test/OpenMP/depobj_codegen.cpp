@@ -21,7 +21,7 @@ void foo() {}
 template <class T>
 T tmain(T argc) {
   static T a;
-  void *argv;
+  int *argv;
 #pragma omp depobj(a) depend(in:argv, ([3][*(int*)argv][4])argv)
 #pragma omp depobj(argc) destroy
 #pragma omp depobj(argc) update(inout)
@@ -99,12 +99,12 @@ int main(int argc, char **argv) {
 // CHECK: store i64 8, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
-// CHECK: [[SHAPE_ADDR:%.+]] = load i8*, i8** [[ARGV_ADDR:%.+]],
-// CHECK: [[SZ1:%.+]] = mul nuw i64 3, %{{.+}}
+// CHECK: [[SHAPE_ADDR:%.+]] = load i32*, i32** [[ARGV_ADDR:%.+]],
+// CHECK: [[SZ1:%.+]] = mul nuw i64 12, %{{.+}}
 // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], 4
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
-// CHECK: [[SHAPE:%.+]] = ptrtoint i8* [[SHAPE_ADDR]] to i64
+// CHECK: [[SHAPE:%.+]] = ptrtoint i32* [[SHAPE_ADDR]] to i64
 // CHECK: store i64 [[SHAPE]], i64* [[ADDR]],
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 [[SZ]], i64* [[SZ_ADDR]],

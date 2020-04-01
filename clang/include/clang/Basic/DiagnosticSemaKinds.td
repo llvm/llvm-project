@@ -5946,7 +5946,7 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type : Error<
   "_Atomic cannot be applied to "
   "%select{incomplete |array |function |reference |atomic |qualified |sizeless |}0type "
-  "%1 %select{||||||which is not trivially copyable}0">;
+  "%1 %select{|||||||which is not trivially copyable}0">;
 
 // Expressions.
 def select_unary_expr_or_type_trait_kind : TextSubstitution<
@@ -10203,7 +10203,8 @@ def warn_nested_declare_variant
               "nested context ignored">,
       InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
-  "expected pointer type expression as a base of an array shaping operation">;
+  "expected expression with a pointer to a complete type as a base of an array "
+  "shaping operation">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

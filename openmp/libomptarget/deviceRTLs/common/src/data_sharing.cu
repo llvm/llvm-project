@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 #include "common/omptarget.h"
 #include "target_impl.h"
-#include <stdio.h>
 
 // Return true if this is the master thread.
 INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {

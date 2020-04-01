@@ -337,8 +337,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
       N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
-      N->getOriginalAlign().value(), N->getMemOperand()->getFlags(),
-      N->getAAInfo());
+      N->getOriginalAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -755,8 +754,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
 
   return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
                       N->getBasePtr(), N->getPointerInfo(),
-                      N->getOriginalAlign().value(),
-                      N->getMemOperand()->getFlags(), N->getAAInfo());
+                      N->getOriginalAlign(), N->getMemOperand()->getFlags(),
+                      N->getAAInfo());
 }
 
 /// If the value to round is a vector that needs to be scalarized, it must be

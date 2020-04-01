@@ -4773,7 +4773,9 @@ multiclass BinaryRIAndKPseudo<string key, SDPatternOperator operator,
 class MemFoldPseudo<string mnemonic, RegisterOperand cls, bits<5> bytes,
                     AddressingMode mode>
   : Pseudo<(outs cls:$R1), (ins cls:$R2, mode:$XBD2), []> {
-    let OpKey = mnemonic#"rk"#cls;
+    let OpKey = !subst("mscrk", "msrkc",
+                !subst("msgcrk", "msgrkc",
+                mnemonic#"rk"#cls));
     let OpType = "mem";
     let MemKey = mnemonic#cls;
     let MemType = "pseudo";

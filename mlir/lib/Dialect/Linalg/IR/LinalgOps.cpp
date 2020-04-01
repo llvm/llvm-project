@@ -140,7 +140,6 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
     p.printRegion(op.region());
   p.printOptionalAttrDict(op.getAttrs(), attrNames);
   p << ": " << op.getOperandTypes();
-
   auto outputTensorTypes = op.getResultTypes();
   if (!outputTensorTypes.empty())
     p << " -> " << outputTensorTypes;
@@ -827,8 +826,10 @@ static LogicalResult verify(CopyOp op) {
   return success();
 }
 
-static LogicalResult
-verifyStrideOrDilation(ConvOp op, ArrayRef<Attribute> attrs, bool isStride) {
+template <typename LinalgPoolingOp>
+static LogicalResult verifyStrideOrDilation(LinalgPoolingOp op,
+                                            ArrayRef<Attribute> attrs,
+                                            bool isStride) {
   auto strideOrDilation = isStride ? "stride" : "dilation";
   if (attrs.size() != op.getNumWindowLoops())
     return op.emitOpError("expects num ")
@@ -858,6 +859,41 @@ static LogicalResult verify(ConvOp op) {
       return failure();
   }
   return success();
+}
+
+template <typename PoolingOp>
+LogicalResult verifySingleInputPoolingOp(PoolingOp op) {
+  auto inputType = op.input().getType().template cast<MemRefType>();
+  auto outputType = op.output().getType().template cast<MemRefType>();
+  if (outputType.getElementType() != inputType.getElementType())
+    return op.emitOpError("expects memref elemental types to match");
+
+  auto windowDimsType = op.windowDims().getType().template cast<MemRefType>();
+  if (outputType.getRank() != inputType.getRank() ||
+      outputType.getRank() != windowDimsType.getRank())
+    return op.emitOpError("expects memref ranks to match");
+
+  if (auto strides = op.strides()) {
+    if (failed(
+            verifyStrideOrDilation(op, strides->getValue(), /*isStride=*/true)))
+      return failure();
+  }
+  if (auto dilations = op.dilations()) {
+    if (failed(verifyStrideOrDilation(op, dilations->getValue(),
+                                      /*isStride=*/false)))
+      return failure();
+  }
+  return success();
+}
+
+static LogicalResult verify(PoolingMaxOp op) {
+  return verifySingleInputPoolingOp(op);
+}
+static LogicalResult verify(PoolingMinOp op) {
+  return verifySingleInputPoolingOp(op);
+}
+static LogicalResult verify(PoolingSumOp op) {
+  return verifySingleInputPoolingOp(op);
 }
 
 namespace mlir {
@@ -894,20 +930,33 @@ mlir::linalg::makeAffineDimExprs(unsigned num, unsigned &startIdx,
   return res;
 }
 
+template <typename PoolingOp>
 SmallVector<AffineExpr, 4>
-mlir::linalg::weightedConvInputIndex(ConvOp op, ArrayRef<AffineExpr> xs,
-                                     ArrayRef<AffineExpr> zs) {
-  assert(xs.size() == zs.size());
+mlir::linalg::weightedPoolingInputIndex(PoolingOp op,
+                                        ArrayRef<AffineExpr> outputDims,
+                                        ArrayRef<AffineExpr> windowDims) {
+  assert(outputDims.size() == windowDims.size());
   SmallVector<AffineExpr, 4> res;
-  res.reserve(xs.size());
-  for (unsigned i = 0, e = xs.size(); i < e; ++i) {
+  res.reserve(outputDims.size());
+  for (unsigned i = 0, e = outputDims.size(); i < e; ++i) {
     // TODO(ntv): add a level of indirection to linalg.generic.
-    auto expr =
-        op.getStride(i) * xs[i] + op.getDilation(i) * zs[i] - op.getLowPad(i);
+    auto expr = op.getStride(i) * outputDims[i] +
+                op.getDilation(i) * windowDims[i] - op.getLowPad(i);
     res.push_back(expr);
   }
   return res;
 }
+
+#define INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(OP_TYPE)                      \
+  template SmallVector<AffineExpr, 4>                                          \
+  mlir::linalg::weightedPoolingInputIndex<OP_TYPE>(                            \
+      OP_TYPE op, ArrayRef<AffineExpr> outputDims,                             \
+      ArrayRef<AffineExpr> windowDims);
+
+INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(ConvOp)
+INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(PoolingMaxOp)
+INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(PoolingMinOp)
+INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(PoolingSumOp)
 
 SmallVector<AffineExpr, 4> mlir::linalg::concat(ArrayRef<AffineExpr> a,
                                                 ArrayRef<AffineExpr> b) {
@@ -957,6 +1006,18 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
 // where a Linalg "named" op **isa** LinalgOp.
 LogicalResult ConvOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult PoolingMaxOp::fold(ArrayRef<Attribute>,
+                                 SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult PoolingMinOp::fold(ArrayRef<Attribute>,
+                                 SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult PoolingSumOp::fold(ArrayRef<Attribute>,
+                                 SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
 LogicalResult CopyOp::fold(ArrayRef<Attribute>,

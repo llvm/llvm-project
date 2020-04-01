@@ -92,7 +92,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-        MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
     BuildMI(MBB, I, DL, get(ARM::tSTRspi))
         .addReg(SrcReg, getKillRegState(isKill))
         .addFrameIndex(FI)
@@ -121,7 +121,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-        MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
     BuildMI(MBB, I, DL, get(ARM::tLDRspi), DestReg)
         .addFrameIndex(FI)
         .addImm(0)

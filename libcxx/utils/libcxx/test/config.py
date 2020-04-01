@@ -140,7 +140,6 @@ class Configuration(object):
         self.configure_execute_external()
         self.configure_ccache()
         self.configure_compile_flags()
-        self.configure_filesystem_compile_flags()
         self.configure_link_flags()
         self.configure_env()
         self.configure_color_diagnostics()
@@ -724,29 +723,6 @@ class Configuration(object):
           self.config.available_features.add('libcpp-abi-unstable')
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
-    def configure_filesystem_compile_flags(self):
-        static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
-                                  'input.output', 'filesystems', 'Inputs', 'static_test_env')
-        static_env = os.path.realpath(static_env)
-        assert os.path.isdir(static_env)
-        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="%s"' % static_env]
-
-        dynamic_env = os.path.join(self.config.test_exec_root,
-                                   'filesystem', 'Output', 'dynamic_env')
-        dynamic_env = os.path.realpath(dynamic_env)
-        if not os.path.isdir(dynamic_env):
-            os.makedirs(dynamic_env)
-        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT="%s"' % dynamic_env]
-        self.exec_env['LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT'] = ("%s" % dynamic_env)
-
-        dynamic_helper = os.path.join(self.libcxx_src_root, 'test', 'support',
-                                      'filesystem_dynamic_test_helper.py')
-        assert os.path.isfile(dynamic_helper)
-
-        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER="%s %s"'
-                                   % (sys.executable, dynamic_helper)]
-
-
     def configure_link_flags(self):
         # Configure library path
         self.configure_link_flags_cxx_library_path()
@@ -1062,13 +1038,21 @@ class Configuration(object):
         # Configure exec prefix substitutions.
         # Configure run env substitution.
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
-        run_py = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
-        exec_str = '%s %s --codesign_identity "%s" --working_directory "%%S" ' \
-                   '--dependencies %%{file_dependencies} --env %s -- ' %  \
-            (pipes.quote(sys.executable), pipes.quote(run_py),
-             codesign_ident, env_vars)
-        sub.append(('%{exec}', exec_str))
+        exec_args = [
+            '--codesign_identity "{}"'.format(codesign_ident),
+            '--dependencies %{file_dependencies}',
+            '--env {}'.format(env_vars)
+        ]
+        if isinstance(self.executor, SSHExecutor):
+            exec_args.append('--host {}'.format(self.executor.user_prefix + self.executor.host))
+            executor = os.path.join(self.libcxx_src_root, 'utils', 'ssh.py')
+        else:
+            exec_args.append('--working_directory "%S"')
+            executor = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
+        sub.append(('%{exec}', '{} {} {} -- '.format(pipes.quote(sys.executable),
+                                                     pipes.quote(executor),
+                                                     ' '.join(exec_args))))
         sub.append(('%{run}', '%{exec} %t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')

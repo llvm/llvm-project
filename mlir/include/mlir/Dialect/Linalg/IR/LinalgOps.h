@@ -29,6 +29,9 @@ namespace mlir {
 namespace linalg {
 
 class ConvOp;
+class PoolingMaxOp;
+class PoolingMinOp;
+class PoolingSumOp;
 
 /// Returns the name mangled library call name to disambiguate between different
 /// overloads at the C level. The name mangling scheme is basic and uses MLIR
@@ -60,12 +63,13 @@ std::string generateLibraryCallName(Operation *op);
 SmallVector<AffineExpr, 4> makeAffineDimExprs(unsigned num, unsigned &startIdx,
                                               MLIRContext *context);
 
-/// Builds the indexing expressions for a ConvOp `op`. Returns the vector of
-/// AffineMaps representing:
-///   `stride[i] * xs[i] + dilation[i] * zs[i] - pad_low[i]`
-SmallVector<AffineExpr, 4> weightedConvInputIndex(ConvOp op,
-                                                  ArrayRef<AffineExpr> xs,
-                                                  ArrayRef<AffineExpr> zs);
+/// Builds the indexing expressions for a ConvOp/PoolingOp `op`. Returns the
+/// vector of AffineMaps representing:
+///   `stride[i] * outputDims[i] + dilation[i] * windowDims[i] - pad_low[i]`
+template <typename PoolingOp>
+extern SmallVector<AffineExpr, 4>
+weightedPoolingInputIndex(PoolingOp op, ArrayRef<AffineExpr> outputDims,
+                          ArrayRef<AffineExpr> windowDims);
 
 /// Returns `maybeMap.get()` if `maybeMap` is set, otherwise returns the
 /// symbol-less identity map of `rank`.

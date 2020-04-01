@@ -1009,7 +1009,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
         auto *SV = cast<ShuffleVectorInst>(I);
         UndefValue *VecUndef = UndefValue::get(SV->getOperand(0)->getType());
         std::string Name = suffixed_name_or(I, ".base", "base_sv");
-        return new ShuffleVectorInst(VecUndef, VecUndef, SV->getOperand(2),
+        return new ShuffleVectorInst(VecUndef, VecUndef, SV->getShuffleMask(),
                                      Name, SV);
       }
     };

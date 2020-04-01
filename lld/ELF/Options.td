@@ -350,9 +350,10 @@ defm target2:
   Eq<"target2", "Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel">,
   MetaVarName<"<type>">;
 
-defm threads: B<"threads",
-    "Run the linker multi-threaded (default)",
-    "Do not run the linker multi-threaded">;
+defm threads
+    : Eq<"threads",
+         "Number of threads. '1' disables multi-threading. By default all "
+         "available hardware threads are used">;
 
 def time_trace: F<"time-trace">, HelpText<"Record time trace">;
 def time_trace_file_eq: J<"time-trace-file=">, HelpText<"Specify time trace output file">;
@@ -509,7 +510,8 @@ defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the Th
 def thinlto_emit_imports_files: F<"thinlto-emit-imports-files">;
 def thinlto_index_only: F<"thinlto-index-only">;
 def thinlto_index_only_eq: J<"thinlto-index-only=">;
-def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
+def thinlto_jobs: J<"thinlto-jobs=">,
+  HelpText<"Number of ThinLTO jobs. Default to --threads=">;
 def thinlto_object_suffix_replace_eq: J<"thinlto-object-suffix-replace=">;
 def thinlto_prefix_replace_eq: J<"thinlto-prefix-replace=">;
 

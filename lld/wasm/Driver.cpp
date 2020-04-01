@@ -15,6 +15,7 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Strings.h"
@@ -304,6 +305,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
   }
+  if (files.empty() && errorCount() == 0)
+    error("no input files");
 }
 
 static StringRef getEntry(opt::InputArgList &args) {
@@ -362,10 +365,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
-  config->thinLTOJobs = args.getLastArgValue(OPT_thinlto_jobs);
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
-  threadsEnabled = args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 1024);
@@ -376,6 +377,20 @@ static void readConfigs(opt::InputArgList &args) {
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, config->shared);
+
+  // --threads= takes a positive integer and provides the default value for
+  // --thinlto-jobs=.
+  if (auto *arg = args.getLastArg(OPT_threads)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads == 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    parallel::strategy = hardware_concurrency(threads);
+    config->thinLTOJobs = v;
+  }
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
+    config->thinLTOJobs = arg->getValue();
 
   if (auto *arg = args.getLastArg(OPT_features)) {
     config->features =
@@ -716,16 +731,27 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
 
   readConfigs(args);
+
+  createFiles(args);
+  if (errorCount())
+    return;
+
   setConfigs();
   checkOptions(args);
+  if (errorCount())
+    return;
 
   if (auto *arg = args.getLastArg(OPT_allow_undefined_file))
     readImportFile(arg->getValue());
 
-  if (!args.hasArg(OPT_INPUT)) {
-    error("no input files");
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  if (auto e = tryCreateFile(config->outputFile))
+    error("cannot open output file " + config->outputFile + ": " + e.message());
+  // TODO(sbc): add check for map file too once we add support for that.
+  if (errorCount())
     return;
-  }
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
@@ -735,10 +761,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     config->exportedSymbols.insert(arg->getValue());
 
   createSyntheticSymbols();
-
-  createFiles(args);
-  if (errorCount())
-    return;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.

@@ -286,7 +286,7 @@ bool MVETailPredication::isTailPredicate(TripCountPattern &TCP) {
   Instruction *Insert = nullptr;
   // The shuffle which broadcasts the index iv into a vector.
   if (!match(BroadcastSplat,
-             m_ShuffleVector(m_Instruction(Insert), m_Undef(), m_Zero())))
+             m_ShuffleVector(m_Instruction(Insert), m_Undef(), m_ZeroMask())))
     return false;
 
   // The insert element which initialises a vector with the index iv.
@@ -409,7 +409,7 @@ static bool MatchElemCountLoopSetup(Loop *L, Instruction *Shuffle,
   Instruction *Insert = nullptr;
 
   if (!match(Shuffle,
-             m_ShuffleVector(m_Instruction(Insert), m_Undef(), m_Zero())))
+             m_ShuffleVector(m_Instruction(Insert), m_Undef(), m_ZeroMask())))
     return false;
 
   // Insert the limit into a vector.

@@ -153,6 +153,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
     // allocation instruction, also pointer typed. Thus, cast to use is BitCast.
     Value *NewCast = Builder.CreateBitCast(New, AI.getType(), "tmpcast");
     replaceInstUsesWith(AI, NewCast);
+    eraseInstFromFunction(AI);
   }
   return replaceInstUsesWith(CI, New);
 }
@@ -641,12 +642,12 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
                                        InstCombiner::BuilderTy &Builder) {
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && isa<UndefValue>(Shuf->getOperand(1)) &&
-      Shuf->getMask()->getSplatValue() &&
+      is_splat(Shuf->getShuffleMask()) &&
       Shuf->getType() == Shuf->getOperand(0)->getType()) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Undef, SplatMask
     Constant *NarrowUndef = UndefValue::get(Trunc.getType());
     Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
-    return new ShuffleVectorInst(NarrowOp, NarrowUndef, Shuf->getMask());
+    return new ShuffleVectorInst(NarrowOp, NarrowUndef, Shuf->getShuffleMask());
   }
 
   return nullptr;
@@ -690,6 +691,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
 
   Value *Src = CI.getOperand(0);
   Type *DestTy = CI.getType(), *SrcTy = Src->getType();
+  ConstantInt *Cst;
 
   // Attempt to truncate the entire input expression tree to the destination
   // type.   Only do this if the dest type is a simple type, don't convert the
@@ -758,7 +760,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   // more efficiently. Support vector types. Cleanup code by using m_OneUse.
 
   // Transform trunc(lshr (zext A), Cst) to eliminate one type conversion.
-  Value *A = nullptr; ConstantInt *Cst = nullptr;
+  Value *A = nullptr;
   if (Src->hasOneUse() &&
       match(Src, m_LShr(m_ZExt(m_Value(A)), m_ConstantInt(Cst)))) {
     // We have three types to worry about here, the type of A, the source of
@@ -842,6 +844,38 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
 
   if (Instruction *I = foldVecTruncToExtElt(CI, *this))
     return I;
+
+  // Whenever an element is extracted from a vector, and then truncated,
+  // canonicalize by converting it to a bitcast followed by an
+  // extractelement.
+  //
+  // Example (little endian):
+  //   trunc (extractelement <4 x i64> %X, 0) to i32
+  //   --->
+  //   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
+  Value *VecOp;
+  if (match(Src,
+            m_OneUse(m_ExtractElement(m_Value(VecOp), m_ConstantInt(Cst))))) {
+    Type *VecOpTy = VecOp->getType();
+    unsigned DestScalarSize = DestTy->getScalarSizeInBits();
+    unsigned VecOpScalarSize = VecOpTy->getScalarSizeInBits();
+    unsigned VecNumElts = VecOpTy->getVectorNumElements();
+
+    // A badly fit destination size would result in an invalid cast.
+    if (VecOpScalarSize % DestScalarSize == 0) {
+      uint64_t TruncRatio = VecOpScalarSize / DestScalarSize;
+      uint64_t BitCastNumElts = VecNumElts * TruncRatio;
+      uint64_t VecOpIdx = Cst->getZExtValue();
+      uint64_t NewIdx = DL.isBigEndian() ? (VecOpIdx + 1) * TruncRatio - 1
+                                         : VecOpIdx * TruncRatio;
+      assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
+             "overflow 32-bits");
+
+      Type *BitCastTo = VectorType::get(DestTy, BitCastNumElts);
+      Value *BitCast = Builder.CreateBitCast(VecOp, BitCastTo);
+      return ExtractElementInst::Create(BitCast, Builder.getInt32(NewIdx));
+    }
+  }
 
   return nullptr;
 }
@@ -2519,7 +2553,7 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
         Value *RHS = Builder.CreateBitCast(ShufOp1, DestTy);
         // Return a new shuffle vector.  Use the same element ID's, as we
         // know the vector types match #elts.
-        return new ShuffleVectorInst(LHS, RHS, Shuf->getOperand(2));
+        return new ShuffleVectorInst(LHS, RHS, Shuf->getShuffleMask());
       }
     }
 

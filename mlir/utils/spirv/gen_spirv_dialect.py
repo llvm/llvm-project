@@ -245,6 +245,11 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   """
   assert not (for_op and for_cap), 'cannot set both for_op and for_cap'
 
+  DEFAULT_MIN_VERSION = 'MinVersion<SPV_V_1_0>'
+  DEFAULT_MAX_VERSION = 'MaxVersion<SPV_V_1_5>'
+  DEFAULT_CAP = 'Capability<[]>'
+  DEFAULT_EXT = 'Extension<[]>'
+
   min_version = enum_case.get('version', '')
   if min_version == 'None':
     min_version = ''
@@ -253,7 +258,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not min_version:
-    min_version = 'MinVersion<SPV_V_1_0>'
+    min_version = DEFAULT_MIN_VERSION
 
   max_version = enum_case.get('lastVersion', '')
   if max_version:
@@ -261,7 +266,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not max_version:
-    max_version = 'MaxVersion<SPV_V_1_5>'
+    max_version = DEFAULT_MAX_VERSION
 
   exts = enum_case.get('extensions', [])
   if exts:
@@ -272,11 +277,11 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     # under such case should be interpreted as this symbol is introduced as
     # a core symbol since the given version, rather than a minimal version
     # requirement.
-    min_version = 'MinVersion<SPV_V_1_0>' if for_op else ''
+    min_version = DEFAULT_MIN_VERSION if for_op else ''
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not exts:
-    exts = 'Extension<[]>'
+    exts = DEFAULT_EXT
 
   caps = enum_case.get('capabilities', [])
   implies = ''
@@ -303,10 +308,16 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not caps:
-    caps = 'Capability<[]>'
+    caps = DEFAULT_CAP
 
   avail = ''
-  if min_version or max_version or caps or exts:
+  # Compose availability spec if any of the requirements is not empty.
+  # For ops, because we have a default in SPV_Op class, omit if the spec
+  # is the same.
+  if (min_version or max_version or caps or exts) and not (
+      for_op and min_version == DEFAULT_MIN_VERSION and
+      max_version == DEFAULT_MAX_VERSION and caps == DEFAULT_CAP and
+      exts == DEFAULT_EXT):
     joined_spec = ',\n    '.join(
         [e for e in [min_version, max_version, exts, caps] if e])
     avail = '{} availability = [\n    {}\n  ];'.format(
@@ -574,19 +585,19 @@ def map_spec_operand_to_ods_argument(operand):
   return '{}:${}'.format(arg_type, name)
 
 
-def get_description(text, assembly):
+def get_description(text, appendix):
   """Generates the description for the given SPIR-V instruction.
 
   Arguments:
     - text: Textual description of the operation as string.
-    - assembly: Custom Assembly format with example as string.
+    - appendix: Additional contents to attach in description as string,
+                includking IR examples, and others.
 
   Returns:
     - A string that corresponds to the description of the Tablegen op.
   """
-  fmt_str = ('{text}\n\n    ### Custom assembly ' 'form\n{assembly}\n  ')
-  return fmt_str.format(
-      text=text, assembly=assembly)
+  fmt_str = '{text}\n\n    <!-- End of AutoGen section -->\n{appendix}\n  '
+  return fmt_str.format(text=text, appendix=appendix)
 
 
 def get_op_definition(instruction, doc, existing_info, capability_mapping):
@@ -617,8 +628,6 @@ def get_op_definition(instruction, doc, existing_info, capability_mapping):
 
   opname = instruction['opname'][2:]
   category_args = existing_info.get('category_args', '')
-  # Make sure we have ', ' to separate the category arguments from traits
-  category_args = category_args.rstrip(', ') + ', '
 
   if '\n' in doc:
     summary, text = doc.split('\n', 1)
@@ -644,9 +653,13 @@ def get_op_definition(instruction, doc, existing_info, capability_mapping):
   operands = instruction.get('operands', [])
 
   # Op availability
-  avail = get_availability_spec(instruction, capability_mapping, True, False)
-  if avail:
-    avail = '\n\n  {0}'.format(avail)
+  avail = ''
+  # We assume other instruction categories has a base availability spec, so
+  # only add this if this is directly using SPV_Op as the base.
+  if inst_category == 'Op':
+    avail = get_availability_spec(instruction, capability_mapping, True, False)
+    if avail:
+      avail = '\n\n  {0}'.format(avail)
 
   # Set op's result
   results = ''
@@ -673,8 +686,8 @@ def get_op_definition(instruction, doc, existing_info, capability_mapping):
   if description is None:
     assembly = '\n    ```\n'\
                '    [TODO]\n'\
-               '    ```\n\n'\
-               '    For example:\n\n'\
+               '    ```mlir\n\n'\
+               '    #### Example:\n\n'\
                '    ```\n'\
                '    [TODO]\n' \
                '    ```'
@@ -727,7 +740,7 @@ def get_string_between_nested(base, start, end):
   Returns:
     - The substring if found
     - The part of the base after end of the substring. Is the base string itself
-      if the substring wasnt found.
+      if the substring wasn't found.
   """
   split = base.split(start, 1)
   if len(split) == 2:
@@ -738,6 +751,8 @@ def get_string_between_nested(base, start, end):
     while unmatched_start > 0 and index < len(rest):
       if rest[index:].startswith(end):
         unmatched_start -= 1
+        if unmatched_start == 0:
+          break
         index += len(end)
       elif rest[index:].startswith(start):
         unmatched_start += 1
@@ -748,7 +763,7 @@ def get_string_between_nested(base, start, end):
     assert index < len(rest), \
            'cannot find end "{end}" while extracting substring '\
            'starting with "{start}"'.format(start=start, end=end)
-    return rest[:index - len(end)].rstrip(end), rest[index:]
+    return rest[:index], rest[index + len(end):]
   return '', split[0]
 
 
@@ -775,12 +790,12 @@ def extract_td_op_info(op_def):
   inst_category = inst_category[0] if len(inst_category) == 1 else 'Op'
 
   # Get category_args
-  op_tmpl_params = get_string_between_nested(op_def, '<', '>')[0]
+  op_tmpl_params, _ = get_string_between_nested(op_def, '<', '>')
   opstringname, rest = get_string_between(op_tmpl_params, '"', '"')
   category_args = rest.split('[', 1)[0]
 
   # Get traits
-  traits, _ = get_string_between(rest, '[', ']')
+  traits, _ = get_string_between_nested(rest, '[', ']')
 
   # Get description
   description, rest = get_string_between(op_def, 'let description = [{\n',

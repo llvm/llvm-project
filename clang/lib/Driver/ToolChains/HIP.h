@@ -11,6 +11,7 @@
 
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
+#include "AMDGPU.h"
 
 namespace clang {
 namespace driver {
@@ -72,7 +73,7 @@ private:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY HIPToolChain : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY HIPToolChain final : public AMDGPUToolChain {
 public:
   HIPToolChain(const Driver &D, const llvm::Triple &Triple,
                 const ToolChain &HostTC, const llvm::opt::ArgList &Args);

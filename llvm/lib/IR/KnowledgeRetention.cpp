@@ -8,6 +8,7 @@
 
 #include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -173,9 +174,46 @@ struct AssumeBuilderState {
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
 
-  void addInstruction(const Instruction *I) {
+  void addAttr(Attribute::AttrKind Kind, Value *Val, unsigned Argument = 0) {
+    AssumedKnowledge AK;
+    AK.Name = Attribute::getNameFromAttrKind(Kind).data();
+    AK.WasOn.setPointer(Val);
+    if (Attribute::doesAttrKindHaveArgument(Kind)) {
+      AK.Argument =
+          ConstantInt::get(Type::getInt64Ty(M->getContext()), Argument);
+    } else {
+      AK.Argument = nullptr;
+      assert(Argument == 0 && "there should be no argument");
+    }
+    AssumedKnowledgeSet.insert(AK);
+  };
+
+  void addAccessedPtr(Instruction *MemInst, Value *Pointer, Type *AccType,
+                      MaybeAlign MA) {
+    uint64_t DerefSize = MemInst->getModule()
+                             ->getDataLayout()
+                             .getTypeStoreSize(AccType)
+                             .getKnownMinSize();
+    if (DerefSize != 0) {
+      addAttr(Attribute::Dereferenceable, Pointer, DerefSize);
+      if (!NullPointerIsDefined(MemInst->getFunction(),
+                                Pointer->getType()->getPointerAddressSpace()))
+        addAttr(Attribute::NonNull, Pointer);
+    }
+    if (MA.valueOrOne() > 1)
+      addAttr(Attribute::Alignment, Pointer, MA.valueOrOne().value());
+  }
+
+  void addInstruction(Instruction *I) {
     if (auto *Call = dyn_cast<CallBase>(I))
-      addCall(Call);
+      return addCall(Call);
+    if (auto *Load = dyn_cast<LoadInst>(I))
+      return addAccessedPtr(I, Load->getPointerOperand(), Load->getType(),
+                            Load->getAlign());
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      return addAccessedPtr(I, Store->getPointerOperand(),
+                            Store->getValueOperand()->getType(),
+                            Store->getAlign());
     // TODO: Add support for the other Instructions.
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
@@ -189,6 +227,11 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   AssumeBuilderState Builder(I->getModule());
   Builder.addInstruction(I);
   return Builder.build();
+}
+
+void llvm::salvageKnowledge(Instruction *I) {
+  if (Instruction *Intr = buildAssumeFromInst(I))
+    Intr->insertBefore(I);
 }
 
 static bool bundleHasArgument(const CallBase::BundleOpInfo &BOI,
