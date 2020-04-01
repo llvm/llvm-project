@@ -24,24 +24,6 @@ using namespace mlir::linalg;
 
 using llvm::dbgs;
 
-#ifndef NDEBUG
-static StringRef toStringRef(LinalgDependenceGraph::DependenceType dt) {
-  switch (dt) {
-  case LinalgDependenceGraph::DependenceType::RAW:
-    return "RAW";
-  case LinalgDependenceGraph::DependenceType::RAR:
-    return "RAR";
-  case LinalgDependenceGraph::DependenceType::WAR:
-    return "WAR";
-  case LinalgDependenceGraph::DependenceType::WAW:
-    return "WAW";
-  default:
-    break;
-  }
-  llvm_unreachable("Unexpected DependenceType");
-}
-#endif
-
 Value Aliases::find(Value v) {
   if (v.isa<BlockArgument>())
     return v;
@@ -76,6 +58,22 @@ Value Aliases::find(Value v) {
   }
 }
 
+StringRef LinalgDependenceGraph::getDependenceTypeStr(DependenceType depType) {
+  switch (depType) {
+  case LinalgDependenceGraph::DependenceType::RAW:
+    return "RAW";
+  case LinalgDependenceGraph::DependenceType::RAR:
+    return "RAR";
+  case LinalgDependenceGraph::DependenceType::WAR:
+    return "WAR";
+  case LinalgDependenceGraph::DependenceType::WAW:
+    return "WAW";
+  default:
+    break;
+  }
+  llvm_unreachable("Unexpected DependenceType");
+}
+
 LinalgDependenceGraph
 LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
   SmallVector<Operation *, 8> linalgOps;
@@ -100,7 +98,7 @@ LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
 void LinalgDependenceGraph::addDependenceElem(DependenceType dt,
                                               LinalgOpView indexingOpView,
                                               LinalgOpView dependentOpView) {
-  LLVM_DEBUG(dbgs() << "\nAdd dep type " << toStringRef(dt) << ":\t"
+  LLVM_DEBUG(dbgs() << "\nAdd dep type " << getDependenceTypeStr(dt) << ":\t"
                     << *indexingOpView.op << " -> " << *dependentOpView.op);
   dependencesFromGraphs[dt][indexingOpView.op].push_back(
       LinalgDependenceGraphElem{dependentOpView, indexingOpView.view});
@@ -227,8 +225,8 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
         continue;
       auto *op = dependence.dependentOpView.op;
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
-                        << toStringRef(dt) << ": " << *src << " -> " << *op
-                        << " on " << dependence.indexingView);
+                        << getDependenceTypeStr(dt) << ": " << *src << " -> "
+                        << *op << " on " << dependence.indexingView);
       res.push_back(op);
     }
   }

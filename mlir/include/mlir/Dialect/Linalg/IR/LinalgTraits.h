@@ -184,6 +184,10 @@ public:
   //==========================================================================//
   // Input and Output arguments handling.
   //==========================================================================//
+  Value getBuffer(unsigned i) {
+    assert(i < getNumInputsAndOutputBuffers() && "overflowing buffers index");
+    return this->getOperation()->getOperand(i);
+  }
   /// Return the number of inputs and outputs, irrespective of their buffer or
   /// tensor type.
   unsigned getNumInputsAndOutputs() { return nInputs() + nOutputs(); }

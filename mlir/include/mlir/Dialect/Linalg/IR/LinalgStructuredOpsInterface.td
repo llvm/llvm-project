@@ -101,6 +101,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // Input and Output arguments handling.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
+      "Return one single buffer at position `$i`.",
+      "Value", "getBuffer", (ins "unsigned":$i)
+    >,
+    InterfaceMethod<
       "Return the number of inputs and outputs, irrespective of their buffer "
       "or tensor type.",
       "unsigned", "getNumInputsAndOutputs"
