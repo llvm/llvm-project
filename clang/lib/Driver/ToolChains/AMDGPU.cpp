@@ -103,6 +103,19 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
+bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
+    llvm::AMDGPU::GPUKind Kind) {
+  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+
+  // Default to enabling f32 denormals by default on subtargets where fma is
+  // fast with denormals
+  const bool DefaultDenormsAreZeroForTarget =
+      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
+      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+
+  return DefaultDenormsAreZeroForTarget;
+}
+
 llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
     const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
     const llvm::fltSemantics *FPType) const {
@@ -121,18 +134,10 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
   const StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
 
-  // Default to enabling f32 denormals by default on subtargets where fma is
-  // fast with denormals
-
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
-  const bool DefaultDenormsAreZeroForTarget =
-    (ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
-    (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
-
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
-             !DefaultDenormsAreZeroForTarget;
+             !getDefaultDenormsAreZeroForTarget(Kind);
   // Outputs are flushed to zero, preserving sign
   return DAZ ? llvm::DenormalMode::getPreserveSign() :
                llvm::DenormalMode::getIEEE();
