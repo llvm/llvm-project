@@ -1,3 +1,5 @@
+add_subdirectory(Transforms)
+
 set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMOps.h.inc -gen-op-decls)
 mlir_tablegen(LLVMOps.cpp.inc -gen-op-defs)
@@ -28,9 +30,3 @@ add_mlir_dialect(LLVMAVX512 llvm_avx512 LLVMAVX512)
 set(LLVM_TARGET_DEFINITIONS LLVMAVX512.td)
 mlir_tablegen(LLVMAVX512Conversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRLLVMAVX512ConversionsIncGen)
-
-set(LLVM_TARGET_DEFINITIONS Transforms/Passes.td)
-mlir_tablegen(Transforms/Passes.h.inc -gen-pass-decls)
-add_public_tablegen_target(MLIRLLVMPassIncGen)
-
-add_mlir_doc(Transforms/Passes -gen-pass-doc LLVMPasses ./)
