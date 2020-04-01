@@ -191,7 +191,3 @@ void ConvertAVX512ToLLVMPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertAVX512ToLLVMPass() {
   return std::make_unique<ConvertAVX512ToLLVMPass>();
 }
-
-static PassRegistration<ConvertAVX512ToLLVMPass> pass(
-    "convert-avx512-to-llvm",
-    "Convert the operations from the avx512 dialect into the LLVM dialect");

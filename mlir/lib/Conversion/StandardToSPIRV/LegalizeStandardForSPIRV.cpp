@@ -175,6 +175,3 @@ void SPIRVLegalization::runOnOperation() {
 std::unique_ptr<Pass> mlir::createLegalizeStdOpsForSPIRVLoweringPass() {
   return std::make_unique<SPIRVLegalization>();
 }
-
-static PassRegistration<SPIRVLegalization>
-    pass("legalize-std-for-spirv", "Legalize standard ops for SPIR-V lowering");

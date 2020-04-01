@@ -135,6 +135,9 @@ mlir::createSimpleLoopsToGPUPass(unsigned numBlockDims,
                                  unsigned numThreadDims) {
   return std::make_unique<ForLoopMapper>(numBlockDims, numThreadDims);
 }
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createSimpleLoopsToGPUPass() {
+  return std::make_unique<ForLoopMapper>();
+}
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLoopToGPUPass(ArrayRef<int64_t> numWorkGroups,
@@ -142,18 +145,10 @@ mlir::createLoopToGPUPass(ArrayRef<int64_t> numWorkGroups,
   return std::make_unique<ImperfectlyNestedForLoopMapper>(numWorkGroups,
                                                           workGroupSize);
 }
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopToGPUPass() {
+  return std::make_unique<ImperfectlyNestedForLoopMapper>();
+}
 
 std::unique_ptr<Pass> mlir::createParallelLoopToGpuPass() {
   return std::make_unique<ParallelLoopToGpuPass>();
 }
-
-static PassRegistration<ForLoopMapper>
-    registration(PASS_NAME, "Convert top-level loops to GPU kernels");
-
-static PassRegistration<ImperfectlyNestedForLoopMapper>
-    loopOpToGPU(LOOPOP_TO_GPU_PASS_NAME,
-                "Convert top-level loop::ForOp to GPU kernels");
-
-static PassRegistration<ParallelLoopToGpuPass>
-    pass("convert-parallel-loops-to-gpu", "Convert mapped loop.parallel ops"
-                                          " to gpu launch operations.");

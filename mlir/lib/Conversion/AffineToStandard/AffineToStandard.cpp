@@ -594,7 +594,3 @@ class LowerAffinePass : public FunctionPass<LowerAffinePass> {
 std::unique_ptr<OpPassBase<FuncOp>> mlir::createLowerAffinePass() {
   return std::make_unique<LowerAffinePass>();
 }
-
-static PassRegistration<LowerAffinePass>
-    pass("lower-affine",
-         "Lower affine dialect operations to loop/standard dialect ones");

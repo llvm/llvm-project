@@ -15,7 +15,12 @@ if (MLIR_CUDA_CONVERSIONS_ENABLED)
   )
 endif()
 
-add_mlir_conversion_library(MLIRGPUtoCUDATransforms ${SOURCES})
+add_mlir_conversion_library(MLIRGPUtoCUDATransforms
+  ${SOURCES}
+
+  DEPENDS
+  MLIRConversionPassIncGen
+)
 target_link_libraries(MLIRGPUtoCUDATransforms
   PUBLIC
   ${NVPTX_LIBS}
