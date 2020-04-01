@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser TargetInfo MCTargetDesc InstPrinter
+subdirectories = AsmParser MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -31,5 +31,15 @@ has_jit = 0
 type = Library
 name = DPUCodeGen
 parent = DPU
-required_libraries = AsmPrinter CodeGen Core MC SelectionDAG Support Target DPUAsmPrinter DPUDesc DPUInfo DPUAsmParser
+required_libraries =
+ AsmPrinter
+ CodeGen
+ Core
+ DPUDesc
+ DPUInfo
+ DPUAsmParser
+ MC
+ SelectionDAG
+ Support
+ Target
 add_to_library_groups = DPU

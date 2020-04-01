@@ -37,7 +37,7 @@ public:
   // getInstruction - See MCDisassembler.
   MCDisassembler::DecodeStatus
   getInstruction(MCInst &Instr, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &VStream,
+                 uint64_t Address,
                  raw_ostream &CStream) const override;
 };
 

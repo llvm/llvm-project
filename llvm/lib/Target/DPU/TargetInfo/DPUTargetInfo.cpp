@@ -15,7 +15,7 @@ namespace llvm {
 Target TheDPUTarget;
 }
 
-extern "C" void LLVMInitializeDPUTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUTargetInfo() {
   RegisterTarget<Triple::dpu, /*HasJIT=*/false> X(TheDPUTarget, "dpu",
                                                   "UPMEM DPU", "DPU");
 }

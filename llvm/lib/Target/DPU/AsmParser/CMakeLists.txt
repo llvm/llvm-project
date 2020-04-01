@@ -1,3 +1,3 @@
-add_llvm_library(LLVMDPUAsmParser
+add_llvm_component_library(LLVMDPUAsmParser
         DPUAsmParser.cpp
   )

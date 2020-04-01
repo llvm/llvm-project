@@ -15,7 +15,7 @@
 #include "DPUInstrInfo.h"
 #include "DPUMCInstLower.h"
 #include "DPUTargetMachine.h"
-#include "InstPrinter/DPUInstPrinter.h"
+#include "MCTargetDesc/DPUInstPrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -102,6 +102,6 @@ void DPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeDPUAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUAsmPrinter() {
   RegisterAsmPrinter<DPUAsmPrinter> X(TheDPUTarget);
 }

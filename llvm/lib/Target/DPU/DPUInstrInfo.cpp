@@ -136,8 +136,8 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void DPUInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, unsigned DestReg,
-                               unsigned SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc) const {
   if (DPU::GP_REGRegClass.contains(DestReg) &&
       DPU::OP_REGRegClass.contains(SrcReg)) {
     LLVM_DEBUG(dbgs() << "DPU/Instr - copyPhysReg from src=" << SrcReg
@@ -181,7 +181,7 @@ bool DPUInstrInfo::reverseBranchCondition(
   case DPU::Jcc:
   case DPU::Jcci:
   case DPU::Jcc64:
-    Cond[1].setImm(ISD::getSetCCInverse(ISD::CondCode(Cond[1].getImm()), true));
+    Cond[1].setImm(ISD::getSetCCInverse(ISD::CondCode(Cond[1].getImm()), MVT::i32));
     return false;
   default:
     break;

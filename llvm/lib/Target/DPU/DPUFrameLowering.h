@@ -23,7 +23,7 @@ class DPUSubtarget;
 class DPUFrameLowering : public TargetFrameLowering {
 public:
   explicit DPUFrameLowering(const DPUSubtarget &SubtargetInfo)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, 8, 0),
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(8), 0),
         STI(SubtargetInfo) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;

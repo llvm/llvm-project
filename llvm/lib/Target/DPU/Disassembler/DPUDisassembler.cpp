@@ -52,7 +52,7 @@ static DecodeStatus readInstruction48(ArrayRef<uint8_t> Bytes, uint64_t &Size,
 
 DecodeStatus DPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address, raw_ostream &OS,
+                                             uint64_t Address,
                                              raw_ostream &CS) const {
   uint64_t Insn;
   DPUInstructionDecoder instructionDecoder;
@@ -125,7 +125,7 @@ createDPUSymbolizer(const Triple & /*TT*/, LLVMOpInfoCallback /*GetOpInfo*/,
   return new DPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
 }
 
-extern "C" void LLVMInitializeDPUDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUDisassembler() {
   TargetRegistry::RegisterMCDisassembler(TheDPUTarget, createDPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(TheDPUTarget, createDPUSymbolizer);
 }

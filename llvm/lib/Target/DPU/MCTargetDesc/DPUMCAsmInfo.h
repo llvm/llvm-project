@@ -19,7 +19,7 @@ class Target;
 
 class DPUMCAsmInfo : public MCAsmInfo {
 public:
-  explicit DPUMCAsmInfo(const Triple &TT) {
+  explicit DPUMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
     WeakRefDirective = ".weak";
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";

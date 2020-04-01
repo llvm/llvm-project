@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/DPUInstPrinter.h"
+#include "DPUInstPrinter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -95,7 +95,7 @@ createDPUTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new DPUTargetStreamer(S);
 }
 
-extern "C" void LLVMInitializeDPUTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<DPUMCAsmInfo> X(TheDPUTarget);
 

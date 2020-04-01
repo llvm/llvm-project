@@ -108,7 +108,7 @@ unsigned int DPUELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 std::unique_ptr<MCObjectTargetWriter> createDPUELFObjectWriter() {
-  return llvm::make_unique<DPUELFObjectWriter>();
+  return std::make_unique<DPUELFObjectWriter>();
 }
 
 } // namespace llvm

@@ -27,7 +27,7 @@ namespace llvm {
 extern Target TheDPUTarget;
 }
 
-extern "C" void LLVMInitializeDPUTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUTarget() {
   // Register the target.
   RegisterTargetMachine<DPUTargetMachine> X(TheDPUTarget);
 }
@@ -52,7 +52,7 @@ DPUTargetMachine::DPUTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
                         Options, getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()),
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }

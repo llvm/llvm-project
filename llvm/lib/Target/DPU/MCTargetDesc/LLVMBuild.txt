@@ -19,5 +19,5 @@
 type = Library
 name = DPUDesc
 parent = DPU
-required_libraries = MC MCDisassembler DPUAsmPrinter DPUInfo
+required_libraries = MC MCDisassembler DPUInfo
 add_to_library_groups = DPU

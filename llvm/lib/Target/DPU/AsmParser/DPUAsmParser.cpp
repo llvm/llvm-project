@@ -297,7 +297,7 @@ public:
 
   static std::unique_ptr<DPUOperand> CreateToken(StringRef Str, SMLoc S,
                                                  DPUAsmParser &Parser) {
-    auto Op = llvm::make_unique<DPUOperand>(Token, Parser);
+    auto Op = std::make_unique<DPUOperand>(Token, Parser);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
     Op->StartLoc = S;
@@ -307,7 +307,7 @@ public:
 
   static std::unique_ptr<DPUOperand> CreateImm(const MCExpr *Val, SMLoc S,
                                                SMLoc E, DPUAsmParser &Parser) {
-    auto Op = llvm::make_unique<DPUOperand>(Immediate, Parser);
+    auto Op = std::make_unique<DPUOperand>(Immediate, Parser);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -316,7 +316,7 @@ public:
 
   static std::unique_ptr<DPUOperand> CreateReg(unsigned int RegNum, SMLoc S,
                                                SMLoc E, DPUAsmParser &Parser) {
-    auto Op = llvm::make_unique<DPUOperand>(Register, Parser);
+    auto Op = std::make_unique<DPUOperand>(Register, Parser);
     Op->Reg.RegNum = RegNum;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -325,7 +325,7 @@ public:
 
   static std::unique_ptr<DPUOperand>
   CreateEndian(bool isLittleEndian, SMLoc S, SMLoc E, DPUAsmParser &Parser) {
-    auto Op = llvm::make_unique<DPUOperand>(Endianness, Parser);
+    auto Op = std::make_unique<DPUOperand>(Endianness, Parser);
     Op->Endian.isLittleEndian = isLittleEndian;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -336,7 +336,7 @@ public:
   CreateCondition(DPUAsmCondition::Condition Cond,
                   DPUAsmCondition::ConditionClass CondClass, SMLoc S, SMLoc E,
                   DPUAsmParser &Parser) {
-    auto Op = llvm::make_unique<DPUOperand>(Condition, Parser);
+    auto Op = std::make_unique<DPUOperand>(Condition, Parser);
     Op->Cond.Cond = Cond;
     Op->Cond.CondClass = CondClass;
     Op->StartLoc = S;
@@ -944,6 +944,6 @@ unsigned DPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
 } // end anonymous namespace
 
-extern "C" void LLVMInitializeDPUAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDPUAsmParser() {
   RegisterMCAsmParser<DPUAsmParser> X(TheDPUTarget);
 }

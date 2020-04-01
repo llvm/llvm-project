@@ -1,3 +1,3 @@
-add_llvm_library(LLVMDPUInfo
+add_llvm_component_library(LLVMDPUInfo
   DPUTargetInfo.cpp
   )

@@ -216,7 +216,7 @@ bool DPUDAGToDAGISel::replaceUsesWithConstantReg(MachineRegisterInfo *MRI,
         auto OtherReg = UMI->getOperand(newOpNo).getReg();
 
         if (UMI->getRegClassConstraint(newOpNo, DII, TRI)->contains(CstReg) &&
-            (!TRI->isPhysicalRegister(OtherReg) ||
+            (!Register::isPhysicalRegister(OtherReg) ||
              UMI->getRegClassConstraint(OpNo, DII, TRI)->contains(OtherReg))) {
           UMI->getOperand(newOpNo).setReg(CstReg);
           UMI->getOperand(OpNo).setReg(OtherReg);

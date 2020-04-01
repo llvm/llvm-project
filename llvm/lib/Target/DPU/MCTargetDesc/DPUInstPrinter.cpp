@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DPUInstPrinter.h"
-#include "MCTargetDesc/DPUAsmCondition.h"
+#include "DPUAsmCondition.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
@@ -28,9 +28,9 @@ using namespace llvm;
 
 #include "DPUCondCodes.h"
 
-void DPUInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
-  printInstruction(MI, O);
+void DPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI, raw_ostream &O) {
+  printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
 

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/IntrinsicsDPU.h"
 #include <iostream>
 #include <llvm/MC/MCSymbol.h>
 
@@ -106,7 +107,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
 
   setBooleanContents(BooleanContent::ZeroOrOneBooleanContent);
 
-  setMinStackArgumentAlignment(4);
+  setMinStackArgumentAlignment(Align(4));
 
   setTargetDAGCombine(ISD::SRL); // to produce BSWAP16
   setTargetDAGCombine(ISD::SRA); // to produce BSWAP16
