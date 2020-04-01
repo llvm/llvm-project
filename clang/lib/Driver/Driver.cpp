@@ -5172,7 +5172,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::PS4CPU>(*this, Target, Args);
       break;
     case llvm::Triple::DPURTe:
-      TC = llvm::make_unique<toolchains::DPURTE>(*this, Target, Args);
+      TC = std::make_unique<toolchains::DPURTE>(*this, Target, Args);
       break;
     case llvm::Triple::Contiki:
       TC = std::make_unique<toolchains::Contiki>(*this, Target, Args);
