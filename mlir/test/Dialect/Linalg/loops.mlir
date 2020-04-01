@@ -9,6 +9,7 @@
 // CHECK-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
 // CHECK-DAG: #[[clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
 
+// CHECK-DAG: #[[Stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0  + d1)>
 // CHECK-DAG: #[[Stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 // CHECK-DAG: #[[Stride2Dilation4:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
 // CHECK-DAG: #[[Stride3Dilation5:.*]] = affine_map<(d0, d1) -> (d0 * 3 + d1 * 5)>
@@ -250,6 +251,75 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 //       CHECK:                 %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32>
 //       CHECK:                 %{{.*}} = addf %{{.*}}, %{{.*}} : f32
 //       CHECK:                 store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32>
+
+func @pooling_max(%arg0: memref<?x?xf32>,
+                  %arg1: memref<?x?xi32>,
+                  %arg2: memref<?x?xf32>) {
+  linalg.pooling_max(%arg0, %arg1, %arg2) { strides = [2, 1] }:
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECK-LABEL: func @pooling_max
+//       CHECK:   %[[WX:.*]] = dim %arg1, 0 : memref<?x?xi32>
+//       CHECK:   %[[WY:.*]] = dim %arg1, 1 : memref<?x?xi32>
+//       CHECK:   %[[OX:.*]] = dim %arg2, 0 : memref<?x?xf32>
+//       CHECK:   %[[OY:.*]] = dim %arg2, 1 : memref<?x?xf32>
+//       CHECK:   loop.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECK:     loop.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECK:       loop.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECK:         loop.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECK:           %[[IX:.*]] = affine.apply #[[Stride2Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %[[IY:.*]] = affine.apply #[[Stride1Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECK:           %{{.*}} = load %{{.*}}[%[[IX]], %[[IY]]] : memref<?x?xf32>
+//       CHECK:           %[[RES:.*]] = select %{{.*}}, %{{.*}}, %{{.*}} : f32
+//       CHECK:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_min(%arg0: memref<?x?xf32>,
+                  %arg1: memref<?x?xi32>,
+                  %arg2: memref<?x?xf32>) {
+  linalg.pooling_min(%arg0, %arg1, %arg2) { strides = [2, 1] }:
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECK-LABEL: func @pooling_min
+//       CHECK:   %[[WX:.*]] = dim %arg1, 0 : memref<?x?xi32>
+//       CHECK:   %[[WY:.*]] = dim %arg1, 1 : memref<?x?xi32>
+//       CHECK:   %[[OX:.*]] = dim %arg2, 0 : memref<?x?xf32>
+//       CHECK:   %[[OY:.*]] = dim %arg2, 1 : memref<?x?xf32>
+//       CHECK:   loop.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECK:     loop.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECK:       loop.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECK:         loop.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECK:           %[[IX:.*]] = affine.apply #[[Stride2Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %[[IY:.*]] = affine.apply #[[Stride1Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECK:           %{{.*}} = load %{{.*}}[%[[IX]], %[[IY]]] : memref<?x?xf32>
+//       CHECK:           %[[RES:.*]] = select %{{.*}}, %{{.*}}, %{{.*}} : f32
+//       CHECK:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_sum(%arg0: memref<?x?xf32>,
+                  %arg1: memref<?x?xi32>,
+                  %arg2: memref<?x?xf32>) {
+  linalg.pooling_sum(%arg0, %arg1, %arg2) { strides = [2, 1] }:
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECK-LABEL: func @pooling_sum
+//       CHECK:   %[[WX:.*]] = dim %arg1, 0 : memref<?x?xi32>
+//       CHECK:   %[[WY:.*]] = dim %arg1, 1 : memref<?x?xi32>
+//       CHECK:   %[[OX:.*]] = dim %arg2, 0 : memref<?x?xf32>
+//       CHECK:   %[[OY:.*]] = dim %arg2, 1 : memref<?x?xf32>
+//       CHECK:   loop.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECK:     loop.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECK:       loop.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECK:         loop.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECK:           %[[IX:.*]] = affine.apply #[[Stride2Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %[[IY:.*]] = affine.apply #[[Stride1Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:           %[[RHS:.*]] = load %{{.*}}[%[[IX]], %[[IY]]] : memref<?x?xf32>
+//       CHECK:           %[[LHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECK:           %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
+//       CHECK:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 
 func @foo(%0: f32, %1: f32, %2: f32) -> (f32, f32) {
   %f0 = constant 0.0 : f32

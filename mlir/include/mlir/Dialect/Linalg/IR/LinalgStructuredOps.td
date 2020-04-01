@@ -251,7 +251,69 @@ def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
   let hasFolder = 1;
 }
 
-def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
+/// A base class for pooling operation such as conv. The arguments must contain
+/// optional arguments `strides`, `dilations` and `padding` with following type:
+///   OptionalAttr<I64ArrayAttr>:$strides
+///   OptionalAttr<I64ArrayAttr>:$dilations
+///   OptionalAttr<I64ElementsAttr>:$padding
+/// `stirdes` denotes the step of each window along the dimension.
+class PoolingBase_Op<string mnemonic, list<OpTrait> props>
+  : LinalgStructured_Op<mnemonic, props> {
+  let description = [{
+    Performs an N-D pooling operation similarly to the description in the TF
+    documentation:
+    https://www.tensorflow.org/api_docs/python/tf/nn/pool
+
+    Different from the description, this operation doesn't perform on batch and
+    channel. It only takes tensors of rank `N`.
+
+    ```
+      output[x[0], ..., x[N-1]] =
+        REDUCE_{z[0], ..., z[N-1]}
+          input[
+                x[0] * strides[0] - pad_before[0] + dilation_rate[0]*z[0],
+                ...
+                x[N-1]*strides[N-1] - pad_before[N-1] + dilation_rate[N-1]*z[N-1]
+                ],
+    ```
+
+    The required optional arguments are:
+      - strides: an i64 array specifying the stride (i.e. step) for window
+        loops.
+      - dilations: an i64 array specifying the filter upsampling/input
+        downsampling rate
+      - padding: an i64 array of pairs (low, high) specifying the number of
+        elements to pad along a dimension.
+
+    If strides or dilations attributes are missing then the default value is
+    one for each of the input dimensions. Similarly, padding values are zero
+    for both low and high in each of the dimensions, if not specified.
+  }];
+
+  code commonUtils = libraryCallName # [{
+    int64_t getStride(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!strides().hasValue()) return 1;
+      return strides()->getValue()[i]
+        .cast<IntegerAttr>().getValue().getSExtValue();
+    }
+
+    int64_t getDilation(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!dilations().hasValue()) return 1;
+      return dilations()->getValue()[i]
+        .cast<IntegerAttr>().getValue().getSExtValue();
+    }
+
+    int64_t getLowPad(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!padding().hasValue()) return 0;
+      return padding().getValue().getValue<int64_t>({i, 0});
+    }
+  }];
+}
+
+def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
 
   let description = [{
     Generic n-D convolution as described in the TF documentation:
@@ -282,7 +344,7 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
                    OptionalAttr<I64ArrayAttr>:$dilations,
                    OptionalAttr<I64ElementsAttr>:$padding);
 
-  let extraClassDeclaration = libraryCallName # [{
+  let extraClassDeclaration = commonUtils # [{
     // TODO(ntv) extend to support more than 1 dimensions and potentially
     // grouping too.
     unsigned getNumBatchDimensions() { return 1; }
@@ -307,26 +369,6 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       iters.append(nRed, getReductionIteratorTypeName());
       iters.append(nWin, getWindowIteratorTypeName());
       return iters;
-    }
-
-    int64_t getStride(unsigned i) {
-      assert(i < getNumWindowLoops());
-      if (!strides().hasValue()) return 1;
-      return strides()->getValue()[i]
-        .cast<IntegerAttr>().getValue().getSExtValue();
-    }
-
-    int64_t getDilation(unsigned i) {
-      assert(i < getNumWindowLoops());
-      if (!dilations().hasValue()) return 1;
-      return dilations()->getValue()[i]
-        .cast<IntegerAttr>().getValue().getSExtValue();
-    }
-
-    int64_t getLowPad(unsigned i) {
-      assert(i < getNumWindowLoops());
-      if (!padding().hasValue()) return 0;
-      return padding().getValue().getValue<int64_t>({i, 0});
     }
 
     //   F(z0, ..., zN-1, q, k) *
@@ -358,7 +400,7 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       // Window reduction dims: sum_{z[0], ..., z[N-1], q}
       auto zs = makeAffineDimExprs(nWin, idx, context);
       // Construct the weighedSum expression.
-      auto ws = weightedConvInputIndex(*this, xs, zs);
+      auto ws = weightedPoolingInputIndex(*this, xs, zs);
       return SmallVector<AffineMap, 8>{
         // filter[z[0], ..., z[N-1], q, k]
         AffineMap::get(idx, 0, concat(concat(zs, qs), ks)),
@@ -376,6 +418,86 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
+}
+
+class SingleInputPoolingBase_Op<string mnemonic>
+  : PoolingBase_Op<mnemonic, [NInputs<2>, NOutputs<1>]> {
+  let description = [{
+    A base class for single input pooling function.
+
+    TODO: Figure out a better way to handle window dimensions, i.e., eliminate
+    the fake memref.
+    The window dimensions are specified by argument `windowDims`. The i-th
+    dimension in the shape of `windowDims` denotes the size of the window along
+    dimension i. For example, if the window size is 2x3, then a memref<2x3>
+    should be passed to the operation as `windowDims`.
+  }];
+
+  let arguments = (ins AnyStridedMemRef:$input,
+                   AnyStridedMemRef:$windowDims,
+                   AnyStridedMemRef:$output,
+                   OptionalAttr<I64ArrayAttr>:$strides,
+                   OptionalAttr<I64ArrayAttr>:$dilations,
+                   OptionalAttr<I64ElementsAttr>:$padding);
+
+  let extraClassDeclaration = commonUtils# [{
+    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
+      // Outer parallel loops are always the number of output dimensions.
+      unsigned nPar = getOutputShapedType(0).getRank();
+      // The window loops has the same number loops with output dimensions.
+      unsigned nWin = nPar;
+      SmallVector<StringRef, 8> iters(nPar, getParallelIteratorTypeName());
+      iters.reserve(nPar + nWin);
+      iters.append(nWin, getWindowIteratorTypeName());
+      return iters;
+    }
+
+    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
+      MLIRContext *context = getContext();
+      auto nPar = getNumParallelLoops();
+      auto nWin = getNumWindowLoops();
+      assert(nWin > 0 && "expected at least one window dimension");
+      unsigned idx = 0;
+      auto outputDims = makeAffineDimExprs(nPar, idx, context);
+      auto windowDims = makeAffineDimExprs(nWin, idx, context);
+      // Construct the weighedSum expression.
+      auto inputDims =
+          weightedPoolingInputIndex(*this, outputDims, windowDims);
+      return SmallVector<AffineMap, 8>{
+        // input
+        AffineMap::get(idx, 0, inputDims),
+        // windowDims
+        AffineMap::get(idx, 0, windowDims),
+        // output
+        AffineMap::get(idx, 0, outputDims)
+        };
+    }
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
+}
+
+def PoolingMaxOp: SingleInputPoolingBase_Op<"pooling_max"> {
+  let description = [{
+    Takes max op as pooling operation, i.e., it samples the maximum value in the
+    window.
+  }];
+}
+
+def PoolingMinOp: SingleInputPoolingBase_Op<"pooling_min"> {
+  let description = [{
+    Takes min op as pooling operation, i.e., it samples the minimum value in the
+    window.
+  }];
+}
+
+def PoolingSumOp: SingleInputPoolingBase_Op<"pooling_sum"> {
+  let description = [{
+    Takes add op as pooling operation, i.e., it accumulates the values in the
+    window.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
