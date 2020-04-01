@@ -56,7 +56,7 @@ class Declaration;
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
   /// Layout: bit 31 ... IsCompleteObjCClass.
-  uint32_t m_payload = 0;
+  Type::Payload m_payload = 0;
 public:
   TypePayloadClang() = default;
   explicit TypePayloadClang(bool is_complete_objc_class);

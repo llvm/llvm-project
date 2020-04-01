@@ -196,10 +196,11 @@ public:
 
   uint32_t GetEncodingMask();
 
+  typedef uint32_t Payload;
   /// Return the language-specific payload.
-  uint32_t GetPayload() { return m_payload; }
+  Payload GetPayload() { return m_payload; }
   /// Return the language-specific payload.
-  void SetPayload(uint32_t opaque_payload) { m_payload = opaque_payload; }
+  void SetPayload(Payload opaque_payload) { m_payload = opaque_payload; }
 
 protected:
   ConstString m_name;
@@ -215,7 +216,7 @@ protected:
   CompilerType m_compiler_type;
   ResolveState m_compiler_type_resolve_state;
   /// Language-specific flags.
-  uint32_t m_payload;
+  Payload m_payload;
 
   Type *GetEncodingType();
 
