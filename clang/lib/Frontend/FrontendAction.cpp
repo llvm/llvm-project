@@ -1087,6 +1087,9 @@ void WrapperFrontendAction::ExecuteAction() {
 void WrapperFrontendAction::EndSourceFileAction() {
   WrappedAction->EndSourceFileAction();
 }
+bool WrapperFrontendAction::shouldEraseOutputFiles() {
+  return WrappedAction->shouldEraseOutputFiles();
+}
 
 bool WrapperFrontendAction::usesPreprocessorOnly() const {
   return WrappedAction->usesPreprocessorOnly();
