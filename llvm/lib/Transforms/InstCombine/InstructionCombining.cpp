@@ -910,6 +910,18 @@ Value *InstCombiner::freelyNegateValue(Value *V) {
     return Builder.CreateSub(
         I->getOperand(1), I->getOperand(0), I->getName() + ".neg");
 
+  // Negation is equivalent to bitwise-not + 1:
+  // 0 - (A ^ C)  =>  ((A ^ C) ^ -1) + 1  =>  A ^ ~C + 1
+  case Instruction::Xor: {
+    Constant *C;
+    if (match(I->getOperand(1), m_Constant(C))) {
+      Value *Xor = Builder.CreateXor(I->getOperand(0), ConstantExpr::getNot(C));
+      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
+                               I->getName() + ".neg");
+    }
+    return nullptr;
+  }
+
   // 0-(A sdiv C)  =>  A sdiv (0-C)  provided the negation doesn't overflow.
   case Instruction::SDiv: {
     Constant *C = dyn_cast<Constant>(I->getOperand(1));
