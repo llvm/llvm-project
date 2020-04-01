@@ -1290,8 +1290,8 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
           SortedSlots[J] = -1;
           LLVM_DEBUG(dbgs() << "Merging #" << FirstSlot << " and slots #"
                             << SecondSlot << " together.\n");
-          unsigned MaxAlignment = std::max(MFI->getObjectAlignment(FirstSlot),
-                                           MFI->getObjectAlignment(SecondSlot));
+          Align MaxAlignment = std::max(MFI->getObjectAlign(FirstSlot),
+                                        MFI->getObjectAlign(SecondSlot));
 
           assert(MFI->getObjectSize(FirstSlot) >=
                  MFI->getObjectSize(SecondSlot) &&
