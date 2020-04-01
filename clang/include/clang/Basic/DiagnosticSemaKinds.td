@@ -5946,7 +5946,7 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type : Error<
   "_Atomic cannot be applied to "
   "%select{incomplete |array |function |reference |atomic |qualified |sizeless |}0type "
-  "%1 %select{||||||which is not trivially copyable}0">;
+  "%1 %select{|||||||which is not trivially copyable}0">;
 
 // Expressions.
 def select_unary_expr_or_type_trait_kind : TextSubstitution<
