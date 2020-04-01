@@ -188,11 +188,21 @@ public:
     setInsertionPoint(op);
   }
 
-  explicit OpBuilder(Block *block) : OpBuilder(block, block->end()) {}
-
   OpBuilder(Block *block, Block::iterator insertPoint)
       : OpBuilder(block->getParent()) {
     setInsertionPoint(block, insertPoint);
+  }
+
+  /// Create a builder and set the insertion point to before the first operation
+  /// in the block but still inside th block.
+  static OpBuilder atBlockBegin(Block *block) {
+    return OpBuilder(block, block->begin());
+  }
+
+  /// Create a builder and set the insertion point to after the last operation
+  /// in the block but still inside the block.
+  static OpBuilder atBlockEnd(Block *block) {
+    return OpBuilder(block, block->end());
   }
 
   /// This class represents a saved insertion point.
