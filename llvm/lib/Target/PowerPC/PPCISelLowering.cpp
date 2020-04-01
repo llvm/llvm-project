@@ -13768,7 +13768,7 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
         (Op1VT == MVT::i32 || Op1VT == MVT::i64 ||
          (Subtarget.hasP9Vector() && (Op1VT == MVT::i16 || Op1VT == MVT::i8)));
 
-  if (ResVT == MVT::ppcf128 || !Subtarget.hasP8Altivec() ||
+  if (ResVT == MVT::ppcf128 || !Subtarget.hasP8Vector() ||
       cast<StoreSDNode>(N)->isTruncatingStore() || !ValidTypeForStoreFltAsInt)
     return SDValue();
 
