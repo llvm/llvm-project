@@ -19,8 +19,11 @@
 using namespace mlir;
 
 namespace {
-class LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
-public:
+struct LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LoopCoalescing
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnFunction() override {
     FuncOp func = getFunction();
 

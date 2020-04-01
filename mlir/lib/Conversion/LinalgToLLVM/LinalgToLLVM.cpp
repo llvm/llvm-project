@@ -557,6 +557,10 @@ void mlir::populateLinalgToLLVMConversionPatterns(
 
 namespace {
 struct ConvertLinalgToLLVMPass : public ModulePass<ConvertLinalgToLLVMPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertLinalgToLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

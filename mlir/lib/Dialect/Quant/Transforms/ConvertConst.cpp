@@ -21,9 +21,11 @@ using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
+struct ConvertConstPass : public FunctionPass<ConvertConstPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantConvertConst
+#include "mlir/Dialect/Quant/Passes.h.inc"
 
-class ConvertConstPass : public FunctionPass<ConvertConstPass> {
-public:
   void runOnFunction() override;
 };
 

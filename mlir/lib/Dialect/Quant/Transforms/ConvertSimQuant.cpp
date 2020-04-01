@@ -19,10 +19,12 @@ using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
-
-class ConvertSimulatedQuantPass
+struct ConvertSimulatedQuantPass
     : public FunctionPass<ConvertSimulatedQuantPass> {
-public:
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantConvertSimulatedQuant
+#include "mlir/Dialect/Quant/Passes.h.inc"
+
   void runOnFunction() override;
 };
 

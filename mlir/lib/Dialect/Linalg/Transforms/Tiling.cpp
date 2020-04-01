@@ -507,33 +507,47 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
 }
 
 namespace {
+struct LinalgTilingPass : public FunctionPass<LinalgTilingPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgTiling
+#include "mlir/Dialect/Linalg/Passes.h.inc"
 
-template <typename LoopTy>
-struct LinalgTilingPass : public FunctionPass<LinalgTilingPass<LoopTy>> {
   LinalgTilingPass() = default;
   LinalgTilingPass(const LinalgTilingPass &) {}
   LinalgTilingPass(ArrayRef<int64_t> sizes) {
-    this->tileSizes->assign(sizes.begin(), sizes.end());
+    tileSizes->assign(sizes.begin(), sizes.end());
   }
 
   void runOnFunction() override {
-    tileLinalgOps<LoopTy>(this->getFunction(), tileSizes);
+    tileLinalgOps<loop::ForOp>(getFunction(), tileSizes);
+  }
+};
+
+struct LinalgTilingToParallelLoopsPass
+    : public FunctionPass<LinalgTilingToParallelLoopsPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgTilingToParallelLoops
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
+  LinalgTilingToParallelLoopsPass() = default;
+  LinalgTilingToParallelLoopsPass(const LinalgTilingToParallelLoopsPass &) {}
+  LinalgTilingToParallelLoopsPass(ArrayRef<int64_t> sizes) {
+    tileSizes->assign(sizes.begin(), sizes.end());
   }
 
-  Pass::ListOption<int64_t> tileSizes{
-      *this, "linalg-tile-sizes",
-      llvm::cl::desc("Tile sizes by which to tile linalg operations"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  void runOnFunction() override {
+    tileLinalgOps<loop::ParallelOp>(getFunction(), tileSizes);
+  }
 };
 
 } // namespace
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
-  return std::make_unique<LinalgTilingPass<loop::ForOp>>(tileSizes);
+  return std::make_unique<LinalgTilingPass>(tileSizes);
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
-  return std::make_unique<LinalgTilingPass<loop::ParallelOp>>(tileSizes);
+  return std::make_unique<LinalgTilingToParallelLoopsPass>(tileSizes);
 }

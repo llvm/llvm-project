@@ -248,6 +248,10 @@ struct GPUReturnOpLowering : public ConvertToLLVMPattern {
 class LowerGpuOpsToNVVMOpsPass
     : public OperationPass<LowerGpuOpsToNVVMOpsPass, gpu::GPUModuleOp> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuOpsToNVVMOps
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 

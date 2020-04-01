@@ -640,14 +640,6 @@ void FillRewritePatterns(OwningRewritePatternList &patterns, MLIRContext *ctx) {
                      >::build(patterns, ctx);
 }
 
-namespace {
-template <typename LoopType, typename IndexedValueType>
-struct LowerLinalgToLoopsPass
-    : public FunctionPass<LowerLinalgToLoopsPass<LoopType, IndexedValueType>> {
-  void runOnFunction() override;
-};
-} // namespace
-
 // Local folding pattern for AffineApplyOp that we can apply greedily.
 // This replaces AffineApplyOp by the proper value in cases where the associated
 // map is trivial. A trivial map here is defined as a map with a single result
@@ -687,8 +679,7 @@ struct FoldAffineOp : public RewritePattern {
 } // namespace
 
 template <typename LoopType, typename IndexedValueType>
-void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
-  auto *context = &this->getContext();
+static void lowerLinalgToLoopsImpl(Operation *op, MLIRContext *context) {
   OwningRewritePatternList patterns;
   // Canonicalization and folding patterns applied greedily allow cleaning up
   // the emitted IR on the fly.
@@ -698,24 +689,54 @@ void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.insert<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  applyPatternsGreedily(this->getFunction(), patterns);
+  applyPatternsGreedily(op, patterns);
 }
 
+namespace {
+struct LowerToAffineLoops : public FunctionPass<LowerToAffineLoops> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgLowerToAffineLoops
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
+  void runOnFunction() override {
+    lowerLinalgToLoopsImpl<AffineForOp, AffineIndexedValue>(getFunction(),
+                                                            &getContext());
+  }
+};
+struct LowerToLoops : public FunctionPass<LowerToLoops> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgLowerToLoops
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
+  void runOnFunction() override {
+    lowerLinalgToLoopsImpl<loop::ForOp, StdIndexedValue>(getFunction(),
+                                                         &getContext());
+  }
+};
+struct LowerToParallelLoops : public FunctionPass<LowerToParallelLoops> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LinalgLowerToParallelLoops
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+
+  void runOnFunction() override {
+    lowerLinalgToLoopsImpl<loop::ParallelOp, StdIndexedValue>(getFunction(),
+                                                              &getContext());
+  }
+};
+} // namespace
+
 std::unique_ptr<OpPassBase<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
-  return std::make_unique<
-      LowerLinalgToLoopsPass<loop::ForOp, StdIndexedValue>>();
+  return std::make_unique<LowerToLoops>();
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createConvertLinalgToParallelLoopsPass() {
-  return std::make_unique<
-      LowerLinalgToLoopsPass<loop::ParallelOp, StdIndexedValue>>();
+  return std::make_unique<LowerToParallelLoops>();
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createConvertLinalgToAffineLoopsPass() {
-  return std::make_unique<
-      LowerLinalgToLoopsPass<AffineForOp, AffineIndexedValue>>();
+  return std::make_unique<LowerToAffineLoops>();
 }
 
 /// Emits a loop nest of `loop.for` with the proper body for `op`.

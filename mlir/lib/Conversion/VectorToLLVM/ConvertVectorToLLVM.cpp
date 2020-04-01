@@ -1119,6 +1119,10 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
 
 namespace {
 struct LowerVectorToLLVMPass : public ModulePass<LowerVectorToLLVMPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertVectorToLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace

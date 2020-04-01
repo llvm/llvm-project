@@ -41,16 +41,30 @@ def LinalgLowerToParallelLoops : Pass<"convert-linalg-to-parallel-loops"> {
 def LinalgPromotion : Pass<"linalg-promote-subviews"> {
   let summary = "Promote subview ops to local buffers";
   let constructor = "mlir::createLinalgPromotionPass()";
+  let options = [
+    Option<"dynamicBuffers", "test-promote-dynamic", "bool",
+           /*default=*/"false", "Test generation of dynamic promoted buffers">
+  ];
 }
 
 def LinalgTiling : Pass<"linalg-tile"> {
   let summary = "Tile operations in the linalg dialect";
   let constructor = "mlir::createLinalgTilingPass()";
+  let options = [
+    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t",
+               "Test generation of dynamic promoted buffers",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
 }
 
 def LinalgTilingToParallelLoops : Pass<"linalg-tile-to-parallel-loops"> {
   let summary = "Tile operations in the linalg dialect to parallel loops";
   let constructor = "mlir::createLinalgTilingToParallelLoopsPass()";
+  let options = [
+    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t",
+               "Test generation of dynamic promoted buffers",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
 }
 
 #endif // MLIR_DIALECT_LINALG_PASSES

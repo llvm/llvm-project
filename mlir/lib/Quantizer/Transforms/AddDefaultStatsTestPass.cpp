@@ -29,9 +29,12 @@ using namespace mlir::quantizer;
 using namespace mlir::quant;
 
 namespace {
-
 class AddDefaultStatsPass : public FunctionPass<AddDefaultStatsPass> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantizerAddDefaultStats
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
   AddDefaultStatsPass() = default;
   AddDefaultStatsPass(SolverContext &solverContext,
                       const TargetConfiguration &config)

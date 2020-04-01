@@ -21,6 +21,10 @@ using namespace mlir;
 
 namespace {
 struct ParallelLoopCollapsing : public OperationPass<ParallelLoopCollapsing> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ParallelLoopCollapsing
+#include "mlir/Transforms/Passes.h.inc"
+
   ParallelLoopCollapsing() = default;
   ParallelLoopCollapsing(const ParallelLoopCollapsing &) {}
   void runOnOperation() override {
@@ -39,23 +43,6 @@ struct ParallelLoopCollapsing : public OperationPass<ParallelLoopCollapsing> {
       collapseParallelLoops(op, combinedLoops);
     });
   }
-
-  ListOption<unsigned> clCollapsedIndices0{
-      *this, "collapsed-indices-0",
-      llvm::cl::desc("Which loop indices to combine 0th loop index"),
-      llvm::cl::MiscFlags::CommaSeparated};
-
-  ListOption<unsigned> clCollapsedIndices1{
-      *this, "collapsed-indices-1",
-      llvm::cl::desc(
-          "Which loop indices to combine into the position 1 loop index"),
-      llvm::cl::MiscFlags::CommaSeparated};
-
-  ListOption<unsigned> clCollapsedIndices2{
-      *this, "collapsed-indices-2",
-      llvm::cl::desc(
-          "Which loop indices to combine into the position 2 loop index"),
-      llvm::cl::MiscFlags::CommaSeparated};
 };
 
 } // namespace

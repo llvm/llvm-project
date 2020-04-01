@@ -28,8 +28,11 @@
 using namespace mlir;
 
 namespace {
-
 struct PipelineDataTransfer : public FunctionPass<PipelineDataTransfer> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffinePipelineDataTransfer
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnFunction() override;
   void runOnAffineForOp(AffineForOp forOp);
 
