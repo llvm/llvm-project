@@ -344,7 +344,7 @@ func @loop_min_max(%N : index) {
   return
 }
 
-#map_7_values = affine_map<(i) -> (i, i, i, i, i, i, i)>
+#map_7_values = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
 
 // Check that the "min" (cmpi "slt" + select) reduction sequence is emitted
 // correctly for a an affine map with 7 results.
@@ -369,8 +369,8 @@ func @loop_min_max(%N : index) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @min_reduction_tree(%v : index) {
-  affine.for %i = 0 to min #map_7_values(%v)[] {
+func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index, %v5 : index, %v6 : index, %v7 : index) {
+  affine.for %i = 0 to min #map_7_values(%v1, %v2, %v3, %v4, %v5, %v6, %v7)[] {
     call @body(%i) : (index) -> ()
   }
   return
