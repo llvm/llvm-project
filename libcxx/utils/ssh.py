@@ -35,7 +35,7 @@ def main():
     commandLine = remaining[1:] # Skip the '--'
 
     ssh = lambda command: ['ssh', '-oBatchMode=yes', args.host, command]
-    scp = lambda src, dst: ['scp', '-oBatchMode=yes', '-r', src, '{}:{}'.format(args.host, dst)]
+    scp = lambda src, dst: ['scp', '-oBatchMode=yes', '-p', '-r', src, '{}:{}'.format(args.host, dst)]
 
     # Create a temporary directory where the test will be run.
     tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
