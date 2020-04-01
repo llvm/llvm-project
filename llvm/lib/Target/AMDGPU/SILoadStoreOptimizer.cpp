@@ -884,7 +884,18 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
 
   MachineBasicBlock::iterator E = std::next(Paired.I);
   MachineBasicBlock::iterator MBBI = std::next(CI.I);
+  MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();
   for (; MBBI != E; ++MBBI) {
+
+    if (MBBI == MBBE) {
+      // CombineInfo::Order is a hint on the instruction ordering within the
+      // basic block. This hint suggests that CI precedes Paired, which is
+      // true most of the time. However, moveInstsAfter() processing a
+      // previous list may have changed this order in a situation when it
+      // moves an instruction which exists in some other merge list.
+      // In this case it must be dependent.
+      return false;
+    }
 
     if ((getInstClass(MBBI->getOpcode(), *TII) != InstClass) ||
         (getInstSubclass(MBBI->getOpcode(), *TII) != InstSubclass)) {
