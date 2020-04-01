@@ -1815,9 +1815,17 @@ public:
   bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                       unsigned Bytes, int Dist) const;
 
-  /// Infer alignment of a load / store address. Return 0 if
-  /// it cannot be inferred.
-  unsigned InferPtrAlignment(SDValue Ptr) const;
+  /// Infer alignment of a load / store address. Return None if it cannot be
+  /// inferred.
+  MaybeAlign InferPtrAlign(SDValue Ptr) const;
+
+  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned InferPtrAlignment(SDValue Ptr)
+                                const,
+                            "Use InferPtrAlign instead") {
+    if (auto A = InferPtrAlign(Ptr))
+      return A->value();
+    return 0;
+  }
 
   /// Compute the VTs needed for the low/hi parts of a type
   /// which is split (or expanded) into two not necessarily identical pieces.

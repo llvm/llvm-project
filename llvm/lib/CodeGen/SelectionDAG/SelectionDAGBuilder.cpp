@@ -7333,10 +7333,10 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   SDValue Src = getValue(I.getArgOperand(1));
   SDValue Size = getValue(I.getArgOperand(2));
 
-  unsigned DstAlign = DAG.InferPtrAlignment(Dst);
-  unsigned SrcAlign = DAG.InferPtrAlignment(Src);
+  Align DstAlign = DAG.InferPtrAlign(Dst).valueOrOne();
+  Align SrcAlign = DAG.InferPtrAlign(Src).valueOrOne();
   // DAG::getMemcpy needs Alignment to be defined.
-  Align Alignment = assumeAligned(std::min(DstAlign, SrcAlign));
+  Align Alignment = std::min(DstAlign, SrcAlign);
 
   bool isVol = false;
   SDLoc sdl = getCurSDLoc();
@@ -9492,16 +9492,13 @@ static void tryToElideArgumentCopy(
                   "object size\n");
     return;
   }
-  unsigned RequiredAlignment = AI->getAlignment();
-  if (!RequiredAlignment) {
-    RequiredAlignment = FuncInfo.MF->getDataLayout().getABITypeAlignment(
-        AI->getAllocatedType());
-  }
-  if (MFI.getObjectAlignment(FixedIndex) < RequiredAlignment) {
+  Align RequiredAlignment = AI->getAlign().getValueOr(
+      FuncInfo.MF->getDataLayout().getABITypeAlign(AI->getAllocatedType()));
+  if (MFI.getObjectAlign(FixedIndex) < RequiredAlignment) {
     LLVM_DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
                          "greater than stack argument alignment ("
-                      << RequiredAlignment << " vs "
-                      << MFI.getObjectAlignment(FixedIndex) << ")\n");
+                      << RequiredAlignment.value() << " vs "
+                      << MFI.getObjectAlign(FixedIndex).value() << ")\n");
     return;
   }
 
