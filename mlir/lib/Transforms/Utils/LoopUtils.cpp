@@ -2132,8 +2132,10 @@ AffineForOp mlir::createCanonicalizedAffineForOp(
 
   fullyComposeAffineMapAndOperands(&lbMap, &lowerOperands);
   canonicalizeMapAndOperands(&lbMap, &lowerOperands);
+  lbMap = removeDuplicateExprs(lbMap);
   fullyComposeAffineMapAndOperands(&ubMap, &upperOperands);
   canonicalizeMapAndOperands(&ubMap, &upperOperands);
+  ubMap = removeDuplicateExprs(ubMap);
 
   return b.create<AffineForOp>(loc, lowerOperands, lbMap, upperOperands, ubMap,
                                step);

@@ -265,8 +265,8 @@ void gatherLoops(FuncOp func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 /// Creates an AffineForOp while ensuring that the lower and upper bounds are
-/// canonicalized, i.e., unused and duplicate operands are removed, and any
-/// constant operands propagated/folded in.
+/// canonicalized, i.e., unused and duplicate operands are removed, any constant
+/// operands propagated/folded in, and duplicate bound maps dropped.
 AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
                                            ValueRange lbOperands,
                                            AffineMap lbMap,
