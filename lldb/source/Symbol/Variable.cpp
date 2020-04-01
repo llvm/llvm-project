@@ -529,7 +529,7 @@ static void PrivateAutoCompleteMembers(
           i, member_name, nullptr, nullptr, nullptr);
 
       if (partial_member_name.empty() ||
-          member_name.find(partial_member_name) == 0) {
+          llvm::StringRef(member_name).startswith(partial_member_name)) {
         if (member_name == partial_member_name) {
           PrivateAutoComplete(
               frame, partial_path,
