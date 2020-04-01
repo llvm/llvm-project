@@ -1340,7 +1340,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   }
 
   // TODO: Check this in verifier.
-  assert(!IsTexFail || DMaskLanes >= 1 && "should have legalized this");
+  assert((!IsTexFail || DMaskLanes >= 1) && "should have legalized this");
 
   bool GLC = false;
   bool SLC = false;
