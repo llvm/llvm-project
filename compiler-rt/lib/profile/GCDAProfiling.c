@@ -348,20 +348,29 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
   fd = open(filename, O_RDWR | O_BINARY);
 
   if (fd == -1) {
-    /* Try opening the file, creating it if necessary. */
-    new_file = 1;
-    mode = "w+b";
-    fd = open(filename, O_RDWR | O_CREAT | O_BINARY, 0644);
-    if (fd == -1) {
+    /* Try creating the file. */
+    fd = open(filename, O_RDWR | O_CREAT | O_EXCL | O_BINARY, 0644);
+    if (fd != -1) {
+      new_file = 1;
+      mode = "w+b";
+    } else {
       /* Try creating the directories first then opening the file. */
       __llvm_profile_recursive_mkdir(filename);
-      fd = open(filename, O_RDWR | O_CREAT | O_BINARY, 0644);
-      if (fd == -1) {
-        /* Bah! It's hopeless. */
-        int errnum = errno;
-        fprintf(stderr, "profiling: %s: cannot open: %s\n", filename,
-                strerror(errnum));
-        return;
+      fd = open(filename, O_RDWR | O_CREAT | O_EXCL | O_BINARY, 0644);
+      if (fd != -1) {
+        new_file = 1;
+        mode = "w+b";
+      } else {
+        /* Another process may have created the file just now.
+         * Try opening it without O_CREAT and O_EXCL. */
+        fd = open(filename, O_RDWR | O_BINARY);
+        if (fd == -1) {
+          /* Bah! It's hopeless. */
+          int errnum = errno;
+          fprintf(stderr, "profiling: %s: cannot open: %s\n", filename,
+                  strerror(errnum));
+          return;
+        }
       }
     }
   }
