@@ -3897,10 +3897,21 @@ struct AADereferenceableCallSiteReturned final
 
 // ------------------------ Align Argument Attribute ------------------------
 
-static unsigned int getKnownAlignForUse(Attributor &A,
-                                        AbstractAttribute &QueryingAA,
-                                        Value &AssociatedValue, const Use *U,
-                                        const Instruction *I, bool &TrackUse) {
+/// \p Ptr is accessed so we can get alignment information if the ABI requires
+/// the element type to be aligned.
+static MaybeAlign getKnownAlignmentFromAccessedPtr(const Value *Ptr,
+                                                   const DataLayout &DL) {
+  MaybeAlign KnownAlignment = Ptr->getPointerAlignment(DL);
+  Type *ElementTy = Ptr->getType()->getPointerElementType();
+  if (ElementTy->isSized())
+    KnownAlignment = max(KnownAlignment, DL.getABITypeAlign(ElementTy));
+  return KnownAlignment;
+}
+
+static unsigned getKnownAlignForUse(Attributor &A,
+                                    AbstractAttribute &QueryingAA,
+                                    Value &AssociatedValue, const Use *U,
+                                    const Instruction *I, bool &TrackUse) {
   // We need to follow common pointer manipulation uses to the accesses they
   // feed into.
   if (isa<CastInst>(I)) {
@@ -3915,7 +3926,7 @@ static unsigned int getKnownAlignForUse(Attributor &A,
     }
   }
 
-  unsigned Alignment = 0;
+  MaybeAlign MA;
   if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
     if (ICS.isBundleOperand(U) || ICS.isCallee(U))
       return 0;
@@ -3926,20 +3937,31 @@ static unsigned int getKnownAlignForUse(Attributor &A,
     // dependences here.
     auto &AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRP,
                                         /* TrackDependence */ false);
-    Alignment = AlignAA.getKnownAlign();
+    MA = MaybeAlign(AlignAA.getKnownAlign());
   }
 
+  const DataLayout &DL = A.getDataLayout();
   const Value *UseV = U->get();
   if (auto *SI = dyn_cast<StoreInst>(I)) {
-    if (SI->getPointerOperand() == UseV)
-      Alignment = SI->getAlignment();
-  } else if (auto *LI = dyn_cast<LoadInst>(I))
-    Alignment = LI->getAlignment();
+    if (SI->getPointerOperand() == UseV) {
+      if (unsigned SIAlign = SI->getAlignment())
+        MA = MaybeAlign(SIAlign);
+      else
+        MA = getKnownAlignmentFromAccessedPtr(UseV, DL);
+    }
+  } else if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (LI->getPointerOperand() == UseV) {
+      if (unsigned LIAlign = LI->getAlignment())
+        MA = MaybeAlign(LIAlign);
+      else
+        MA = getKnownAlignmentFromAccessedPtr(UseV, DL);
+    }
+  }
 
-  if (Alignment <= 1)
+  if (!MA.hasValue() || MA <= 1)
     return 0;
 
-  auto &DL = A.getDataLayout();
+  unsigned Alignment = MA->value();
   int64_t Offset;
 
   if (const Value *Base = GetPointerBaseWithConstantOffset(UseV, Offset, DL)) {
@@ -3956,6 +3978,7 @@ static unsigned int getKnownAlignForUse(Attributor &A,
 
   return Alignment;
 }
+
 struct AAAlignImpl : AAAlign {
   AAAlignImpl(const IRPosition &IRP) : AAAlign(IRP) {}
 

@@ -190,7 +190,7 @@ define void @test8() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo(i32* %2)
-  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
+  ; CHECK: @free(i8* nonnull align 4 dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -205,7 +205,7 @@ define void @test9() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo_nounw(i32* %2)
-  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
+  ; CHECK: @free(i8* nonnull align 4 dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -327,7 +327,7 @@ define i32 @test13() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -340,7 +340,7 @@ define i32 @test_sle() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -353,7 +353,7 @@ define i32 @test_overflow() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 
