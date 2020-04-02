@@ -2231,7 +2231,7 @@ void Sema::setOpenMPCaptureKind(FieldDecl *FD, const ValueDecl *D,
     }
   }
   if (OMPC != OMPC_unknown)
-    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, unsigned(OMPC)));
+    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, OMPC));
 }
 
 bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,

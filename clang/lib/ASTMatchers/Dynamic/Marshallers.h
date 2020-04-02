@@ -170,8 +170,9 @@ template <> struct ArgTypeTraits<OpenMPClauseKind> {
 private:
   static Optional<OpenMPClauseKind> getClauseKind(llvm::StringRef ClauseKind) {
     return llvm::StringSwitch<Optional<OpenMPClauseKind>>(ClauseKind)
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) .Case(#Enum, llvm::omp::Clause::Enum)
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(TextualSpelling, Class)                                  \
+  .Case("OMPC_" #TextualSpelling, OMPC_##TextualSpelling)
+#include "clang/Basic/OpenMPKinds.def"
         .Default(llvm::None);
   }
 

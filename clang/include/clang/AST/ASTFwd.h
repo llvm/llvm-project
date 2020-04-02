@@ -27,8 +27,8 @@ class Type;
 #include "clang/AST/TypeNodes.inc"
 class CXXCtorInitializer;
 class OMPClause;
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) class Class;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(KIND, CLASSNAME) class CLASSNAME;
+#include "clang/Basic/OpenMPKinds.def"
 
 
 } // end namespace clang
