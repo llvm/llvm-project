@@ -44762,7 +44762,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
 
   // We can only do this if the vector size in 256 bits or less.
   unsigned Size = VT.getSizeInBits();
-  if (Size > 256)
+  if (Size > 256 && Subtarget.useAVX512Regs())
     return SDValue();
 
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
