@@ -57,9 +57,9 @@
 # CHECK-NEXT:           bctr
 
 ## The 3 b instructions are referenced by .plt entries.
-# CHECK-NEXT: 1001025c: b .+12
-# CHECK-NEXT:           b .+8
-# CHECK-NEXT:           b .+4
+# CHECK-NEXT: 1001025c: b 0x10010268
+# CHECK-NEXT:           b 0x10010268
+# CHECK-NEXT:           b 0x10010268
 
 ## PLTresolve of 64 bytes is at the end.
 ## Operands of addis & addi: -0x1001025c = 65536*-4097-604
