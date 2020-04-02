@@ -357,9 +357,9 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg_bit20(<4 x i32> inreg %desc) {
 ; SI: s_mov_b32 [[K:s[0-9]+]], 0x80000{{$}}
 ; SI: s_buffer_load_dword s0, s[0:3], [[K]]{{$}}
 
-; CI s_buffer_load_dword s0, s[0:3], 0x20000{{$}}
+; CI: s_buffer_load_dword s0, s[0:3], 0x20000{{$}}
 
-; VI s_buffer_load_dword s0, s[0:3], 0x20000{{$}}
+; VI: s_buffer_load_dword s0, s[0:3], 0x80000{{$}}
 define amdgpu_ps i32 @s_buffer_load_imm_bit19(<4 x i32> inreg %desc) {
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 524288, i32 0)
   ret i32 %load
@@ -369,9 +369,10 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit19(<4 x i32> inreg %desc) {
 ; SI: s_mov_b32 [[K:s[0-9]+]], 0xfff80000{{$}}
 ; SI: s_buffer_load_dword s0, s[0:3], [[K]]{{$}}
 
-; CI s_buffer_load_dword s0, s[0:3], 0x20000{{$}}
+; CI: s_buffer_load_dword s0, s[0:3], 0x3ffe0000{{$}}
 
-; VI s_buffer_load_dword s0, s[0:3], 0x20000{{$}}
+; VI: s_mov_b32 [[K:s[0-9]+]], 0xfff80000{{$}}
+; VI: s_buffer_load_dword s0, s[0:3], [[K]]{{$}}
 define amdgpu_ps i32 @s_buffer_load_imm_neg_bit19(<4 x i32> inreg %desc) {
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -524288, i32 0)
   ret i32 %load
