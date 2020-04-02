@@ -14,6 +14,12 @@ class NopSemaphore(object):
     def release(self): pass
 
 
+class MaxFailuresError(Exception):
+    pass
+class TimeoutError(Exception):
+    pass
+
+
 class Run(object):
     """A concrete, configured testing run."""
 
@@ -45,8 +51,7 @@ class Run(object):
         computed. Tests which were not actually executed (for any reason) will
         be given an UNRESOLVED result.
         """
-        self.failure_count = 0
-        self.hit_max_failures = False
+        self.failures = 0
 
         # Larger timeouts (one year, positive infinity) don't work on Windows.
         one_week = 7 * 24 * 60 * 60  # days * hours * minutes * seconds
@@ -80,40 +85,37 @@ class Run(object):
 
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
-                             callback=lambda t, i=idx: self._process_completed(t, i))
-            for idx, test in enumerate(self.tests)]
+                             callback=self._process_completed)
+            for test in self.tests]
         pool.close()
 
-        for ar in async_results:
-            timeout = deadline - time.time()
+        try:
+            self._wait_for(async_results, deadline)
+        except:
+            pool.terminate()
+            raise
+        finally:
+            pool.join()
+
+    def _wait_for(self, async_results, deadline):
+        timeout = deadline - time.time()
+        for idx, ar in enumerate(async_results):
             try:
-                ar.get(timeout)
+                test = ar.get(timeout)
             except multiprocessing.TimeoutError:
-                # TODO(yln): print timeout error
-                pool.terminate()
-                break
-            if self.hit_max_failures:
-                pool.terminate()
-                break
-        pool.join()
+                raise TimeoutError()
+            else:
+                self.tests[idx] = test
+                if test.isFailure():
+                    self.failures += 1
+                    if self.failures == self.max_failures:
+                        raise MaxFailuresError()
 
-    # TODO(yln): as the comment says.. this is racing with the main thread waiting
-    # for results
-    def _process_completed(self, test, idx):
-        # Don't add any more test results after we've hit the maximum failure
-        # count.  Otherwise we're racing with the main thread, which is going
-        # to terminate the process pool soon.
-        if self.hit_max_failures:
+    def _process_completed(self, test):
+        # Avoid racing with the main thread, which is going to terminate the
+        # process pool soon.
+        if self.failures == self.max_failures:
             return
-
-        self.tests[idx] = test
-
-        # Use test.isFailure() for correct XFAIL and XPASS handling
-        if test.isFailure():
-            self.failure_count += 1
-            if self.failure_count == self.max_failures:
-                self.hit_max_failures = True
-
         self.progress_callback(test)
 
     # TODO(yln): interferes with progress bar

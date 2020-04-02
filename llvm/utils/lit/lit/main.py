@@ -189,8 +189,8 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
-def run_tests(tests, lit_config, opts, numTotalTests):
-    display = lit.display.create_display(opts, len(tests), numTotalTests,
+def run_tests(tests, lit_config, opts, discovered_tests):
+    display = lit.display.create_display(opts, len(tests), discovered_tests,
                                          opts.workers)
     def progress_callback(test):
         display.update(test)
@@ -201,12 +201,22 @@ def run_tests(tests, lit_config, opts, numTotalTests):
                       opts.max_failures, opts.timeout)
 
     display.print_header()
+
+    interrupted = False
+    error = None
     try:
         execute_in_tmp_dir(run, lit_config)
-        display.clear(interrupted=False)
     except KeyboardInterrupt:
-        display.clear(interrupted=True)
-        print(' [interrupted by user]')
+        interrupted = True
+        error = '  interrupted by user'
+    except lit.run.MaxFailuresError:
+        error = 'warning: reached maximum number of test failures'
+    except lit.run.TimeoutError:
+        error = 'warning: reached timeout'
+
+    display.clear(interrupted)
+    if error:
+        sys.stderr.write('%s, skipping remaining tests\n' % error)
 
 
 def execute_in_tmp_dir(run, lit_config):
