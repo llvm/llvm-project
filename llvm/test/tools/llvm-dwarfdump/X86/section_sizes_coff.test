@@ -1,0 +1,43 @@
+## Check how llvm-dwarfdump calculates section sizes
+## with --show-section-sizes for COFF objects.
+
+# RUN: yaml2obj %s | llvm-dwarfdump - --show-section-sizes \
+# RUN:   | FileCheck %s --match-full-lines --strict-whitespace
+
+#      CHECK:----------------------------------------------------
+# CHECK-NEXT:file: {{.*}}
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:SECTION        SIZE (b)
+# CHECK-NEXT:-------------  --------
+# CHECK-NEXT:.debug_info           2 (0.70%)
+# CHECK-NEXT:.debug_abbrev         1 (0.35%)
+# CHECK-NEXT:.debug_str            1 (0.35%)
+# CHECK-EMPTY:
+# CHECK-NEXT: Total Size: 4  (1.40%)
+# CHECK-NEXT: Total File Size: 286
+# CHECK-NEXT:----------------------------------------------------
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .bss
+    Characteristics: []
+    SectionData:     ''
+  - Name:            .debug_str
+    Characteristics: []
+    SectionData:     00
+  - Name:            .debug_abbrev
+    Characteristics: []
+    Alignment:       1
+    SectionData:     00
+  - Name:            .debug_info
+    Characteristics: []
+    SectionData:     1111
+## This is a debug section following the Mach-O naming style, and is used
+## to show that such sections are not included in the report.
+  - Name:            __debug_foo
+    Characteristics: []
+    SectionData:     00
+symbols:
+...
