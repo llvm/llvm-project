@@ -242,8 +242,10 @@ public:
   /// Create a typedef to this type using "name" as the name of the typedef this
   /// type is valid and the type system supports typedefs, else return an
   /// invalid type.
+  /// \param payload   The typesystem-specific \p lldb::Type payload.
   CompilerType CreateTypedef(const char *name,
-                             const CompilerDeclContext &decl_ctx) const;
+                             const CompilerDeclContext &decl_ctx,
+                             uint32_t payload) const;
 
   /// If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType() const;
