@@ -285,6 +285,7 @@ protected:
   bool isSectionVirtual(DataRefImpl Sec) const override;
   bool isBerkeleyText(DataRefImpl Sec) const override;
   bool isBerkeleyData(DataRefImpl Sec) const override;
+  bool isDebugSection(StringRef SectionName) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
   std::vector<SectionRef> dynamic_relocation_sections() const override;
@@ -811,6 +812,12 @@ bool ELFObjectFile<ELFT>::isBerkeleyData(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   return !isBerkeleyText(Sec) && EShdr->sh_type != ELF::SHT_NOBITS &&
          EShdr->sh_flags & ELF::SHF_ALLOC;
+}
+
+template <class ELFT>
+bool ELFObjectFile<ELFT>::isDebugSection(StringRef SectionName) const {
+  return SectionName.startswith(".debug") ||
+         SectionName.startswith(".zdebug") || SectionName == ".gdb_index";
 }
 
 template <class ELFT>
