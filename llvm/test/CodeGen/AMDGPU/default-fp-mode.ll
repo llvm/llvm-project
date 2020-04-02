@@ -91,6 +91,60 @@ define amdgpu_kernel void @test_just_f32_attr_flush(float addrspace(1)* %out0, d
   ret void
 }
 
+; GCN-LABEL: {{^}}test_flush_all_outputs:
+; GCN: FloatMode: 80
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_all_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #10 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_all_inputs:
+; GCN: FloatMode: 160
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_all_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #11 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f32_inputs:
+; GCN: FloatMode: 224
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f32_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #12 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f32_outputs:
+; GCN: FloatMode: 208
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f32_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #13 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f64_inputs:
+; GCN: FloatMode: 176
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f64_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #14 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f64_outputs:
+; GCN: FloatMode: 112
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f64_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #15 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
 ; GCN-LABEL: {{^}}kill_gs_const:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
@@ -126,3 +180,9 @@ attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" }
 attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" }
 attributes #9 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #10 = { nounwind "denormal-fp-math"="preserve-sign,ieee" }
+attributes #11 = { nounwind "denormal-fp-math"="ieee,preserve-sign" }
+attributes #12 = { nounwind "denormal-fp-math-f32"="ieee,preserve-sign" "denormal-fp-math"="ieee,ieee" }
+attributes #13 = { nounwind "denormal-fp-math-f32"="preserve-sign,ieee" "denormal-fp-math"="ieee,ieee" }
+attributes #14 = { nounwind "denormal-fp-math"="ieee,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #15 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="ieee,ieee" }
