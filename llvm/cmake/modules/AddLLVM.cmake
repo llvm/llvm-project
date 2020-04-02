@@ -1473,7 +1473,7 @@ function(configure_lit_site_cfg site_in site_out)
     set(TARGET_TRIPLE "\"+config.target_triple+\"")
   endif()
 
-  if (ARG_PATH_VALUES)
+  if (ARG_PATHS)
     # Walk ARG_PATHS and collect the current value of the variables in there.
     foreach(path ${ARG_PATHS})
       list(APPEND ARG_PATH_VALUES "${${path}}")
@@ -1495,7 +1495,7 @@ function(configure_lit_site_cfg site_in site_out)
     list(LENGTH ARG_PATH_VALUES len_path_values)
     list(LENGTH ARG_PATH_VALUES_RELATIVE len_path_value_rels)
     if ((NOT ${len_paths} EQUAL ${len_path_values}) OR
-        (NOT ${len_paths} EQUAL ${path_value_len_rels}))
+        (NOT ${len_paths} EQUAL ${len_path_value_rels}))
       message(SEND_ERROR "PATHS lengths got confused")
     endif()
 
