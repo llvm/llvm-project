@@ -77,7 +77,7 @@ public:
 class MockServerWithMockConnection : public MockServer {
 public:
   MockServerWithMockConnection() : MockServer() {
-    SetConnection(new MockConnection(m_packets));
+    SetConnection(std::make_unique<MockConnection>(m_packets));
   }
 
   llvm::ArrayRef<std::string> GetPackets() { return m_packets; };
