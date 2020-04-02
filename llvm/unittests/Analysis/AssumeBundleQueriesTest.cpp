@@ -1,4 +1,4 @@
-//===- KnowledgeRetention.h - utilities to preserve informations *- C++ -*-===//
+//===- AssumeBundleQueriesTest.cpp ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/KnowledgeRetention.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/LLVMContext.h"
@@ -14,6 +14,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "gtest/gtest.h"
 #include <random>
 
