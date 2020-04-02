@@ -89,7 +89,9 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be made with ``git format-patch``, or similar. If you use a
+#. Patches should be made with ``git format-patch``, or similar (see special
+   commands for `Requesting Phabricator review via the web interface
+   <Phabricator.html#phabricator-request-review-web>`_ ). If you use a
    different tool, make sure it uses the ``diff -u`` format and that it
    doesn't contain clutter which makes it hard to read.
 
