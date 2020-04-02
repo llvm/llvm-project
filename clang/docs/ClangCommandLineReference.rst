@@ -3145,6 +3145,8 @@ X86
 
 .. option:: -msahf, -mno-sahf
 
+.. option:: -mserialize, -mno-serialize
+
 .. option:: -msgx, -mno-sgx
 
 .. option:: -msha, -mno-sha

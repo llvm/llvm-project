@@ -434,6 +434,10 @@ _storebe_i64(void * __P, long long __D) {
 #include <enqcmdintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__SERIALIZE__)
+#include <serializeintrin.h>
+#endif
+
 #if defined(_MSC_VER) && __has_extension(gnu_asm)
 /* Define the default attributes for these intrinsics */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
