@@ -10,7 +10,7 @@ define internal void @add({i32, i32}* %this, i32* sret %r) {
 ; CHECK-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
 ; CHECK-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 1
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[AP]], align 8
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP]], align 4
 ; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    store i32 [[AB]], i32* [[R]], align 4
 ; CHECK-NEXT:    ret void
