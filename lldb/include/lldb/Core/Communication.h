@@ -221,7 +221,7 @@ public:
   ///
   /// \see
   ///     class Connection
-  void SetConnection(Connection *connection);
+  void SetConnection(std::unique_ptr<Connection> connection);
 
   /// Starts a read thread whose sole purpose it to read bytes from the
   /// current connection. This function will call connection's read function:
