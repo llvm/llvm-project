@@ -323,7 +323,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
       Optional<int> CSRSpillFI;
       if ((FrameInfo.hasCalls() || !isEntryFunction()) && CSRegs &&
           isCalleeSavedReg(CSRegs, LaneVGPR)) {
-        CSRSpillFI = FrameInfo.CreateSpillStackObject(4, 4);
+        CSRSpillFI = FrameInfo.CreateSpillStackObject(4, Align(4));
       }
 
       SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, CSRSpillFI));
