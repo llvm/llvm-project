@@ -17,6 +17,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -244,6 +245,49 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
   return true;
 }
 
+/// If this is a bitcast to narrow elements from a shuffle of wider elements,
+/// try to bitcast the source vector to the narrow type followed by shuffle.
+/// This can enable further transforms by moving bitcasts or shuffles together.
+static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
+  Value *V;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_BitCast(m_OneUse(m_ShuffleVector(m_Value(V), m_Undef(),
+                                                    m_Mask(Mask))))))
+    return false;
+
+  Type *DestTy = I.getType();
+  Type *SrcTy = V->getType();
+  if (!DestTy->isVectorTy() || I.getOperand(0)->getType() != SrcTy)
+    return false;
+
+  // TODO: Handle bitcast from narrow element type to wide element type.
+  assert(SrcTy->isVectorTy() && "Shuffle of non-vector type?");
+  unsigned DestNumElts = DestTy->getVectorNumElements();
+  unsigned SrcNumElts = SrcTy->getVectorNumElements();
+  if (SrcNumElts > DestNumElts)
+    return false;
+
+  // The new shuffle must not cost more than the old shuffle. The bitcast is
+  // moved ahead of the shuffle, so assume that it has the same cost as before.
+  if (TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DestTy) >
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy))
+    return false;
+
+  // Bitcast the source vector and expand the shuffle mask to the equivalent for
+  // narrow elements.
+  // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
+  IRBuilder<> Builder(&I);
+  Value *CastV = Builder.CreateBitCast(V, DestTy);
+  SmallVector<int, 16> NewMask;
+  assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
+  unsigned ScaleFactor = DestNumElts / SrcNumElts;
+  scaleShuffleMask(ScaleFactor, Mask, NewMask);
+  Value *Shuf = Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy),
+                                            NewMask);
+  I.replaceAllUsesWith(Shuf);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
@@ -265,6 +309,7 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       MadeChange |= foldExtractExtract(I, TTI);
+      MadeChange |= foldBitcastShuf(I, TTI);
     }
   }
 
