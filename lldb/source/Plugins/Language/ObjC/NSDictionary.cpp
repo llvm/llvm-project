@@ -76,8 +76,9 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
 
     if (!compiler_type) {
       compiler_type = target_ast_context->CreateRecordType(
-          nullptr, lldb::eAccessPublic, g___lldb_autogen_nspair.GetCString(),
-          clang::TTK_Struct, lldb::eLanguageTypeC);
+          nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
+          g___lldb_autogen_nspair.GetCString(), clang::TTK_Struct,
+          lldb::eLanguageTypeC);
 
       if (compiler_type) {
         TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
