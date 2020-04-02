@@ -24,7 +24,6 @@ add_llvm_unittest(IRTests
   IRBuilderTest.cpp
   InstructionsTest.cpp
   IntrinsicsTest.cpp
-  KnowledgeRetentionTest.cpp
   LegacyPassManagerTest.cpp
   MDBuilderTest.cpp
   ManglerTest.cpp
