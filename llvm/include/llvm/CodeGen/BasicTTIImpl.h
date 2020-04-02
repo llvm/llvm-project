@@ -551,12 +551,20 @@ public:
     return getST()->getPrefetchDistance();
   }
 
-  virtual unsigned getMinPrefetchStride() const {
-    return getST()->getMinPrefetchStride();
+  virtual unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                        unsigned NumStridedMemAccesses,
+                                        unsigned NumPrefetches,
+                                        bool HasCall) const {
+    return getST()->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
+                                         NumPrefetches, HasCall);
   }
 
   virtual unsigned getMaxPrefetchIterationsAhead() const {
     return getST()->getMaxPrefetchIterationsAhead();
+  }
+
+  virtual bool enableWritePrefetching() const {
+    return getST()->enableWritePrefetching();
   }
 
   /// @}

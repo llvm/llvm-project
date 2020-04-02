@@ -847,13 +847,27 @@ public:
   /// \return Some HW prefetchers can handle accesses up to a certain
   /// constant stride.  This is the minimum stride in bytes where it
   /// makes sense to start adding SW prefetches.  The default is 1,
-  /// i.e. prefetch with any stride.
-  unsigned getMinPrefetchStride() const;
+  /// i.e. prefetch with any stride.  Sometimes prefetching is beneficial
+  /// even below the HW prefetcher limit, and the arguments provided are
+  /// meant to serve as a basis for deciding this for a particular loop:
+  /// \param NumMemAccesses Number of memory accesses in the loop.
+  /// \param NumStridedMemAccesses Number of the memory accesses that
+  /// ScalarEvolution could find a known stride for.
+  /// \param NumPrefetches Number of software prefetches that will be emitted
+  /// as determined by the addresses involved and the cache line size.
+  /// \param HasCall True if the loop contains a call.
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const;
 
   /// \return The maximum number of iterations to prefetch ahead.  If
   /// the required number of iterations is more than this number, no
   /// prefetching is performed.
   unsigned getMaxPrefetchIterationsAhead() const;
+
+  /// \return True if prefetching should also be done for writes.
+  bool enableWritePrefetching() const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
@@ -1298,13 +1312,21 @@ public:
   /// \return Some HW prefetchers can handle accesses up to a certain
   /// constant stride.  This is the minimum stride in bytes where it
   /// makes sense to start adding SW prefetches.  The default is 1,
-  /// i.e. prefetch with any stride.
-  virtual unsigned getMinPrefetchStride() const = 0;
+  /// i.e. prefetch with any stride.  Sometimes prefetching is beneficial
+  /// even below the HW prefetcher limit, and the arguments provided are
+  /// meant to serve as a basis for deciding this for a particular loop.
+  virtual unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                        unsigned NumStridedMemAccesses,
+                                        unsigned NumPrefetches,
+                                        bool HasCall) const = 0;
 
   /// \return The maximum number of iterations to prefetch ahead.  If
   /// the required number of iterations is more than this number, no
   /// prefetching is performed.
   virtual unsigned getMaxPrefetchIterationsAhead() const = 0;
+
+  /// \return True if prefetching should also be done for writes.
+  virtual bool enableWritePrefetching() const = 0;
 
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
   virtual unsigned getArithmeticInstrCost(
@@ -1684,8 +1706,12 @@ public:
   /// Return the minimum stride necessary to trigger software
   /// prefetching.
   ///
-  unsigned getMinPrefetchStride() const override {
-    return Impl.getMinPrefetchStride();
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return Impl.getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
+                                     NumPrefetches, HasCall);
   }
 
   /// Return the maximum prefetch distance in terms of loop
@@ -1693,6 +1719,11 @@ public:
   ///
   unsigned getMaxPrefetchIterationsAhead() const override {
     return Impl.getMaxPrefetchIterationsAhead();
+  }
+
+  /// \return True if prefetching should also be done for writes.
+  bool enableWritePrefetching() const override {
+    return Impl.enableWritePrefetching();
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) override {
