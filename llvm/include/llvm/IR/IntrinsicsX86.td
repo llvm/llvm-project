@@ -4930,3 +4930,11 @@ let TargetPrefix = "x86" in {
   def int_x86_enqcmds : GCCBuiltin<"__builtin_ia32_enqcmds">,
               Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_ptr_ty], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// SERIALIZE - Serialize instruction fetch and execution
+
+let TargetPrefix = "x86" in {
+  def int_x86_serialize : GCCBuiltin<"__builtin_ia32_serialize">,
+              Intrinsic<[], [], []>;
+}

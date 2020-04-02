@@ -10876,3 +10876,7 @@ enqcmds (%bx,%di), %di
 // CHECK: enqcmds 8128(%bx,%di), %ax
 // CHECK: encoding: [0x67,0xf3,0x0f,0x38,0xf8,0x81,0xc0,0x1f]
 enqcmds 8128(%bx,%di), %ax
+
+// CHECK: serialize
+// CHECK: encoding: [0x0f,0x01,0xe8]
+serialize

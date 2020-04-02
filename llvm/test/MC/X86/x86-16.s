@@ -1029,3 +1029,7 @@ enqcmd  (%edi), %edi
 // CHECK: enqcmds (%edi), %edi
 // CHECK: encoding: [0x67,0xf3,0x0f,0x38,0xf8,0x3f]
 enqcmds (%edi), %edi
+
+// CHECK: serialize
+// CHECK: encoding: [0x0f,0x01,0xe8]
+serialize
