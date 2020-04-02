@@ -1,12 +1,6 @@
-; Test that global constructors and destructors are run:
+; RUN: lli -jit-kind=orc-lazy -orc-lazy-debug=funcs-to-stdout %s | FileCheck %s
 ;
-; RUN: lli -jit-kind=orc-lazy -orc-lazy-debug=funcs-to-stdout -extra-module %s \
-; RUN:   %S/Inputs/noop-main.ll | FileCheck %s
-;
-; Test that this is true for global constructors and destructors in other
-; JITDylibs.
-; RUN: lli -jit-kind=orc-lazy -orc-lazy-debug=funcs-to-stdout \
-; RUN:   -jd extra -extra-module %s -jd main %S/Inputs/noop-main.ll | FileCheck %s
+; Test that global constructors and destructors are run.
 ;
 ; CHECK: Hello
 ; CHECK: [ {{.*}}main{{.*}} ]
@@ -27,6 +21,11 @@ entry:
 }
 
 declare i32 @__cxa_atexit(void (i8*)*, i8*, i8*)
+
+define i32 @main(i32 %argc, i8** nocapture readnone %argv) {
+entry:
+  ret i32 0
+}
 
 define internal void @_GLOBAL__sub_I_hello.cpp() {
 entry:
