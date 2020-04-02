@@ -29,14 +29,6 @@ using namespace llvm::orc;
 
 namespace {
 
-/// Add a reference to the __dso_handle global to the given module.
-/// Returns a reference to the __dso_handle IR decl.
-GlobalVariable *addDSOHandleDecl(Module &M) {
-  auto DSOHandleTy = StructType::create(M.getContext(), "lljit.dso_handle");
-  return new GlobalVariable(M, DSOHandleTy, true, GlobalValue::ExternalLinkage,
-                            nullptr, "__dso_handle");
-}
-
 /// Adds helper function decls and wrapper functions that call the helper with
 /// some additional prefix arguments.
 ///
@@ -143,11 +135,10 @@ public:
     SymbolMap StdInterposes;
 
     StdInterposes[Mangle("__lljit.platform_support_instance")] =
-        JITEvaluatedSymbol(pointerToJITTargetAddress(this), JITSymbolFlags());
+        JITEvaluatedSymbol(pointerToJITTargetAddress(this),
+                           JITSymbolFlags::Exported);
     StdInterposes[Mangle("__lljit.cxa_atexit_helper")] = JITEvaluatedSymbol(
         pointerToJITTargetAddress(registerAtExitHelper), JITSymbolFlags());
-    StdInterposes[Mangle("__lljit.run_atexits_helper")] = JITEvaluatedSymbol(
-        pointerToJITTargetAddress(runAtExitsHelper), JITSymbolFlags());
 
     cantFail(
         J.getMainJITDylib().define(absoluteSymbols(std::move(StdInterposes))));
@@ -159,6 +150,14 @@ public:
 
   /// Adds a module that defines the __dso_handle global.
   Error setupJITDylib(JITDylib &JD) {
+
+    // Add per-jitdylib standard interposes.
+    MangleAndInterner Mangle(getExecutionSession(), J.getDataLayout());
+    SymbolMap PerJDInterposes;
+    PerJDInterposes[Mangle("__lljit.run_atexits_helper")] = JITEvaluatedSymbol(
+        pointerToJITTargetAddress(runAtExitsHelper), JITSymbolFlags());
+    cantFail(JD.define(absoluteSymbols(std::move(PerJDInterposes))));
+
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = std::make_unique<Module>("__standard_lib", *Ctx);
     M->setDataLayout(J.getDataLayout());
@@ -168,9 +167,23 @@ public:
         *M, Int64Ty, true, GlobalValue::ExternalLinkage,
         ConstantInt::get(Int64Ty, reinterpret_cast<uintptr_t>(&JD)),
         "__dso_handle");
-    DSOHandle->setVisibility(GlobalValue::HiddenVisibility);
+    DSOHandle->setVisibility(GlobalValue::DefaultVisibility);
     DSOHandle->setInitializer(
         ConstantInt::get(Int64Ty, pointerToJITTargetAddress(&JD)));
+
+    auto *GenericIRPlatformSupportTy =
+        StructType::create(*Ctx, "lljit.GenericLLJITIRPlatformSupport");
+
+    auto *PlatformInstanceDecl = new GlobalVariable(
+        *M, GenericIRPlatformSupportTy, true, GlobalValue::ExternalLinkage,
+        nullptr, "__lljit.platform_support_instance");
+
+    auto *VoidTy = Type::getVoidTy(*Ctx);
+    addHelperAndWrapper(
+        *M, "__lljit_run_atexits", FunctionType::get(VoidTy, {}, false),
+        GlobalValue::HiddenVisibility, "__lljit.run_atexits_helper",
+        {PlatformInstanceDecl, DSOHandle});
+
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
 
@@ -316,6 +329,16 @@ private:
       }
     });
 
+    LLVM_DEBUG({
+      dbgs() << "JITDylib deinit order is [ ";
+      for (auto *JD : DFSLinkOrder)
+        dbgs() << "\"" << JD->getName() << "\" ";
+      dbgs() << "]\n";
+      dbgs() << "Looking up deinit functions:\n";
+      for (auto &KV : LookupSymbols)
+        dbgs() << "  \"" << KV.first->getName() << "\": " << KV.second << "\n";
+    });
+
     auto LookupResult = Platform::lookupInitSymbols(ES, LookupSymbols);
 
     if (!LookupResult)
@@ -387,11 +410,19 @@ private:
 
   static void registerAtExitHelper(void *Self, void (*F)(void *), void *Ctx,
                                    void *DSOHandle) {
+    LLVM_DEBUG({
+      dbgs() << "Registering atexit function " << (void *)F << " for JD "
+             << (*static_cast<JITDylib **>(DSOHandle))->getName() << "\n";
+    });
     static_cast<GenericLLVMIRPlatformSupport *>(Self)->AtExitMgr.registerAtExit(
         F, Ctx, DSOHandle);
   }
 
   static void runAtExitsHelper(void *Self, void *DSOHandle) {
+    LLVM_DEBUG({
+      dbgs() << "Running atexit functions for JD "
+             << (*static_cast<JITDylib **>(DSOHandle))->getName() << "\n";
+    });
     static_cast<GenericLLVMIRPlatformSupport *>(Self)->AtExitMgr.runAtExits(
         DSOHandle);
   }
@@ -410,8 +441,6 @@ private:
         *M, GenericIRPlatformSupportTy, true, GlobalValue::ExternalLinkage,
         nullptr, "__lljit.platform_support_instance");
 
-    auto *DSOHandleDecl = addDSOHandleDecl(*M);
-
     auto *Int8Ty = Type::getInt8Ty(*Ctx);
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
     auto *VoidTy = Type::getVoidTy(*Ctx);
@@ -423,13 +452,8 @@ private:
         *M, "__cxa_atexit",
         FunctionType::get(IntTy, {AtExitCallbackPtrTy, BytePtrTy, BytePtrTy},
                           false),
-        GlobalValue::HiddenVisibility, "__lljit.cxa_atexit_helper",
+        GlobalValue::DefaultVisibility, "__lljit.cxa_atexit_helper",
         {PlatformInstanceDecl});
-
-    addHelperAndWrapper(
-        *M, "__lljit_run_atexits", FunctionType::get(VoidTy, {}, false),
-        GlobalValue::HiddenVisibility, "__lljit.run_atexits_helper",
-        {PlatformInstanceDecl, DSOHandleDecl});
 
     return ThreadSafeModule(std::move(M), std::move(Ctx));
   }
@@ -676,7 +700,7 @@ private:
     auto *DSOHandle =
         new GlobalVariable(M, Int64Ty, true, GlobalValue::ExternalLinkage,
                            ConstantInt::get(Int64Ty, 0), "__dso_handle");
-    DSOHandle->setVisibility(GlobalValue::HiddenVisibility);
+    DSOHandle->setVisibility(GlobalValue::DefaultVisibility);
 
     return cantFail(J.getIRCompileLayer().getCompiler()(M));
   }
