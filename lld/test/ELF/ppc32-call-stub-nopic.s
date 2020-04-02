@@ -47,8 +47,8 @@
 
 ## These instructions are referenced by .plt entries.
 # CHECK: 10010200 <.glink>:
-# CHECK-NEXT: b .+8
-# CHECK-NEXT: b .+4
+# CHECK-NEXT: b 0x10010208
+# CHECK-NEXT: b 0x10010208
 
 ## PLTresolve
 ## Operands of lis & lwz: .got+4 = 0x10020070+4 = 65536*4098+700
