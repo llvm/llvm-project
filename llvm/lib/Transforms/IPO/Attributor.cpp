@@ -7309,6 +7309,16 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
 ///                               Attributor
 /// ----------------------------------------------------------------------------
 
+Attributor::~Attributor() {
+  // The abstract attributes are allocated via the BumpPtrAllocator Allocator,
+  // thus we cannot delete them. We can, and want to, destruct them though.
+  for (AbstractAttribute *AA : AllAbstractAttributes)
+    AA->~AbstractAttribute();
+
+  for (auto &It : ArgumentReplacementMap)
+    DeleteContainerPointers(It.second);
+}
+
 bool Attributor::isAssumedDead(const AbstractAttribute &AA,
                                const AAIsDead *FnLivenessAA,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
@@ -8891,7 +8901,7 @@ const char AAValueConstantRange::ID = 0;
 
 #define SWITCH_PK_CREATE(CLASS, IRP, PK, SUFFIX)                               \
   case IRPosition::PK:                                                         \
-    AA = new CLASS##SUFFIX(IRP);                                               \
+    AA = new (A.Allocator) CLASS##SUFFIX(IRP);                                 \
     break;
 
 #define CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(CLASS)                 \
