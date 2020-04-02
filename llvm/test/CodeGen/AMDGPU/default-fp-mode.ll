@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_si:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_si(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
   store float 0.0, float addrspace(1)* %out0
@@ -10,7 +10,7 @@ define amdgpu_kernel void @test_default_si(float addrspace(1)* %out0, double add
 }
 
 ; GCN-LABEL: {{^}}test_default_vi:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
   store float 0.0, float addrspace(1)* %out0
@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double add
 }
 
 ; GCN-LABEL: {{^}}test_f64_denormals:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #2 {
   store float 0.0, float addrspace(1)* %out0
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double a
 }
 
 ; GCN-LABEL: {{^}}test_f16_f64_denormals:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
   store half 0.0, half addrspace(1)* %out0
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_f16_f64_denormals(half addrspace(1)* %out0, doub
 }
 
 ; GCN-LABEL: {{^}}test_no_f16_f64_denormals:
-; GCN: FloatMode: 0
+; GCN: FloatMode: 48
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_no_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
   store half 0.0, half addrspace(1)* %out0
@@ -82,7 +82,9 @@ define amdgpu_kernel void @test_f32_f16_f64_denormals(half addrspace(1)* %out0, 
   ret void
 }
 
+; FIXME: Denormals should be off by default
 ; GCN-LABEL: {{^}}kill_gs_const:
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
 define amdgpu_gs void @kill_gs_const() {
 main_body:
@@ -94,6 +96,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}kill_vcc_implicit_def:
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
 define amdgpu_ps float @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(4)* inreg, [17 x <16 x i8>] addrspace(4)* inreg, [17 x <4 x i32>] addrspace(4)* inreg, [34 x <8 x i32>] addrspace(4)* inreg, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
 entry:

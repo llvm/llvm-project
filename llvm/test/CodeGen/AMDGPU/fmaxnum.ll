@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_fmax_f32_ieee_mode_on:
 ; GCN: v_mul_f32_e64 [[QUIET0:v[0-9]+]], 1.0, s{{[0-9]+}}

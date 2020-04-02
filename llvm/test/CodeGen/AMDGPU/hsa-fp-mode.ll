@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_ci:
-; GCN: float_mode = 192
+; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
 define amdgpu_kernel void @test_default_ci(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
@@ -11,7 +11,7 @@ define amdgpu_kernel void @test_default_ci(float addrspace(1)* %out0, double add
 }
 
 ; GCN-LABEL: {{^}}test_default_vi:
-; GCN: float_mode = 192
+; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
 define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double a
 }
 
 ; GCN-LABEL: {{^}}test_no_dx10_clamp_vi:
-; GCN: float_mode = 192
+; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 0
 ; GCN: enable_ieee_mode = 1
 define amdgpu_kernel void @test_no_dx10_clamp_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
@@ -71,7 +71,7 @@ define amdgpu_kernel void @test_no_dx10_clamp_vi(float addrspace(1)* %out0, doub
 }
 
 ; GCN-LABEL: {{^}}test_no_ieee_mode_vi:
-; GCN: float_mode = 192
+; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 0
 define amdgpu_kernel void @test_no_ieee_mode_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
@@ -81,7 +81,7 @@ define amdgpu_kernel void @test_no_ieee_mode_vi(float addrspace(1)* %out0, doubl
 }
 
 ; GCN-LABEL: {{^}}test_no_ieee_mode_no_dx10_clamp_vi:
-; GCN: float_mode = 192
+; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 0
 ; GCN: enable_ieee_mode = 0
 define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #8 {
