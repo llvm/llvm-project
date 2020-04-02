@@ -275,10 +275,10 @@ declare half @llvm.minnum.f16(half, half) #1
 declare half @llvm.maxnum.f16(half, half) #1
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind "target-features"="-fp32-denormals" "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "target-features"="+fp32-denormals" "no-signed-zeros-fp-math"="true" }
-attributes #3 = { nounwind "target-features"="-fp64-fp16-denormals" "no-signed-zeros-fp-math"="true" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
+attributes #3 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
 attributes #4 = { nounwind "no-signed-zeros-fp-math"="false" }
 
 !llvm.dbg.cu = !{!0}

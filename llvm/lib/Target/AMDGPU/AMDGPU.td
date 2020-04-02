@@ -494,30 +494,6 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-// Denormal handling for fp64 and fp16 is controlled by the same
-// config register when fp16 supported.
-// TODO: Do we need a separate f16 setting when not legal?
-def FeatureFP64FP16Denormals : SubtargetFeature<"fp64-fp16-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable double and half precision denormal handling",
-  [FeatureFP64]
->;
-
-def FeatureFP64Denormals : SubtargetFeature<"fp64-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable double and half precision denormal handling",
-  [FeatureFP64, FeatureFP64FP16Denormals]
->;
-
-def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable half precision denormal handling",
-  [FeatureFP64FP16Denormals]
->;
-
 def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",
   "FPExceptions",
   "true",

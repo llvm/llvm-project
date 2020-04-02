@@ -149,7 +149,7 @@
 
   attributes #0 = { argmemonly nounwind }
   attributes #1 = { nounwind readnone speculatable }
-  attributes #2 = { convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="gfx900" "target-features"="+fp32-denormals" }
+  attributes #2 = { convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="gfx900" }
   attributes #3 = { nounwind }
 
   !llvm.dbg.cu = !{!0}
