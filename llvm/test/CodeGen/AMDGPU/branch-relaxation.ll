@@ -296,7 +296,7 @@ bb4:
 ; GCN-NEXT: s_sub_u32 s[[PC_LO]], s[[PC_LO]], ([[LONGBB]]+4)-[[LOOP]]
 ; GCN-NEXT: s_subb_u32 s[[PC_HI]], s[[PC_HI]], 0{{$}}
 ; GCN-NEXT: s_setpc_b64 s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
-; GCN-NEXT .Lfunc_end{{[0-9]+}}:
+; GCN-NEXT: .Lfunc_end{{[0-9]+}}:
 define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
 entry:
   br label %loop

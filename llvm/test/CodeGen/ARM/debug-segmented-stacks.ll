@@ -35,8 +35,8 @@ define void @test_basic() #0 !dbg !4 {
 
 ; ARM-linux:      pop     {r4, r5}
 ; ARM-linux:      .cfi_def_cfa_offset 0
-; ARM-linux       .cfi_same_value r4
-; ARM-linux       .cfi_same_value r5
+; ARM-linux:      .cfi_same_value r4
+; ARM-linux:      .cfi_same_value r5
 }
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)

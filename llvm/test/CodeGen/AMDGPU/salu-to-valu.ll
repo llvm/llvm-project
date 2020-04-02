@@ -265,7 +265,7 @@ entry:
 
 ; GCN-LABEL: {{^}}smrd_valu2_max_smrd_offset:
 ; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1020{{$}}
-; GCN-HSA flat_load_dword v{{[0-9]}}, v{{[0-9]+:[0-9]+}}
+; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
 define amdgpu_kernel void @smrd_valu2_max_smrd_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(4)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

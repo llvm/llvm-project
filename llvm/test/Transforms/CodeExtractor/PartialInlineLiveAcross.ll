@@ -38,7 +38,7 @@ define i32 @dummy_caller(i32 %arg) local_unnamed_addr #0 {
 ; CHECK: codeRepl.i:
 ; CHECK:  call void @test.1.bb2()
 ; CHECK-NOT: load
-; CHECK  br
+; CHECK:  br
 
 bb:
   %tmp = tail call i32 @test(i32 %arg)
