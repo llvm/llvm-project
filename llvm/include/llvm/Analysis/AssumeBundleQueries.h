@@ -21,17 +21,6 @@
 namespace llvm {
 class IntrinsicInst;
 
-/// Build a call to llvm.assume to preserve informations that can be derived
-/// from the given instruction.
-/// If no information derived from \p I, this call returns null.
-/// The returned instruction is not inserted anywhere.
-IntrinsicInst *buildAssumeFromInst(Instruction *I);
-
-/// Calls BuildAssumeFromInst and if the resulting llvm.assume is valid insert
-/// if before I. This is usually what need to be done to salvage the knowledge
-/// contained in the instruction I.
-void salvageKnowledge(Instruction *I);
-
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum
 /// but it may not exist.
