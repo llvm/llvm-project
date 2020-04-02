@@ -11,6 +11,7 @@ unittest("AnalysisTests") {
   sources = [
     "AliasAnalysisTest.cpp",
     "AliasSetTrackerTest.cpp",
+    "AssumeBundleQueriesTest.cpp",
     "BasicAliasAnalysisTest.cpp",
     "BlockFrequencyInfoTest.cpp",
     "BranchProbabilityInfoTest.cpp",
