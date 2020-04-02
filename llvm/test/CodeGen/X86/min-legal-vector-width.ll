@@ -1600,3 +1600,43 @@ define i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
   %4 = load i32, i32* %1, align 4
   ret i32 %4
 }
+
+define void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+; CHECK-LABEL: cmp_v8i64_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
+; CHECK-NEXT:    vpcmpgtq 32(%rdi), %ymm1, %ymm1
+; CHECK-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %xptr
+  %y = load <8 x i64>, <8 x i64>* %yptr
+  %cmp = icmp slt <8 x i64> %x, %y
+  %ext = sext <8 x i1> %cmp to <8 x i64>
+  store <8 x i64> %ext, <8 x i64>* %zptr
+  ret void
+}
+
+define void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+; CHECK-LABEL: cmp_v8i64_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
+; CHECK-NEXT:    vpcmpgtq 32(%rdi), %ymm1, %ymm1
+; CHECK-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlq $63, %ymm1, %ymm1
+; CHECK-NEXT:    vpsrlq $63, %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %xptr
+  %y = load <8 x i64>, <8 x i64>* %yptr
+  %cmp = icmp slt <8 x i64> %x, %y
+  %ext = zext <8 x i1> %cmp to <8 x i64>
+  store <8 x i64> %ext, <8 x i64>* %zptr
+  ret void
+}
