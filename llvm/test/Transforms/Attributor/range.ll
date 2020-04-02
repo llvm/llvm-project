@@ -1212,6 +1212,76 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 }
 
 
+define i32 @ret100() {
+; CHECK-LABEL: define {{[^@]+}}@ret100()
+; CHECK-NEXT:    ret i32 100
+;
+  ret i32 100
+}
+
+define i1 @ctx_adjustment(i32 %V) {
+; OLD_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; OLD_PM-SAME: (i32 [[V:%.*]])
+; OLD_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; OLD_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; OLD_PM:       if.true:
+; OLD_PM-NEXT:    br label [[END:%.*]]
+; OLD_PM:       if.false:
+; OLD_PM-NEXT:    br label [[END]]
+; OLD_PM:       end:
+; OLD_PM-NEXT:    [[PHI:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 100, [[IF_FALSE]] ]
+; OLD_PM-NEXT:    [[C2:%.*]] = icmp sge i32 [[PHI]], 100
+; OLD_PM-NEXT:    ret i1 [[C2]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; NEW_PM-SAME: (i32 [[V:%.*]])
+; NEW_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; NEW_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; NEW_PM:       if.true:
+; NEW_PM-NEXT:    br label [[END:%.*]]
+; NEW_PM:       if.false:
+; NEW_PM-NEXT:    br label [[END]]
+; NEW_PM:       end:
+; NEW_PM-NEXT:    ret i1 true
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; CGSCC_OLD_PM-SAME: (i32 [[V:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; CGSCC_OLD_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CGSCC_OLD_PM:       if.true:
+; CGSCC_OLD_PM-NEXT:    br label [[END:%.*]]
+; CGSCC_OLD_PM:       if.false:
+; CGSCC_OLD_PM-NEXT:    br label [[END]]
+; CGSCC_OLD_PM:       end:
+; CGSCC_OLD_PM-NEXT:    [[PHI:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 100, [[IF_FALSE]] ]
+; CGSCC_OLD_PM-NEXT:    [[C2:%.*]] = icmp sge i32 [[PHI]], 100
+; CGSCC_OLD_PM-NEXT:    ret i1 [[C2]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; CGSCC_NEW_PM-SAME: (i32 [[V:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; CGSCC_NEW_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CGSCC_NEW_PM:       if.true:
+; CGSCC_NEW_PM-NEXT:    br label [[END:%.*]]
+; CGSCC_NEW_PM:       if.false:
+; CGSCC_NEW_PM-NEXT:    br label [[END]]
+; CGSCC_NEW_PM:       end:
+; CGSCC_NEW_PM-NEXT:    ret i1 true
+;
+  %c1 = icmp sge i32 %V, 100
+  br i1 %c1, label %if.true, label %if.false
+if.true:
+  br label %end
+if.false:
+  %call = call i32 @ret100()
+  br label %end
+end:
+  %phi = phi i32 [ %V, %if.true ], [ %call, %if.false ]
+  %c2 = icmp sge i32 %phi, 100
+  ret i1 %c2
+}
+
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 ; CHECK: !0 = !{i32 0, i32 10}
