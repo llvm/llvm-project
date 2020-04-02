@@ -12,6 +12,7 @@ source_set("tweaks") {
   ]
   include_dirs = [ "../.." ]
   sources = [
+    "AddUsing.cpp",
     "AnnotateHighlightings.cpp",
     "DefineInline.cpp",
     "DefineOutline.cpp",
