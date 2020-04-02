@@ -55,9 +55,6 @@ copy("arm_headers") {
 copy("Headers") {
   deps = [ ":arm_headers" ]
 
-  # NOSORT
-  # Tell `gn format` to not reorder the sources list: Its order matches CMake,
-  # and the ordering is alphabetical but ignores leading underscores.
   sources = [
     "arm_cmse.h",
     "adxintrin.h",
