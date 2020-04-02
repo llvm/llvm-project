@@ -1858,10 +1858,6 @@ bool IRTranslator::translateAlloca(const User &U,
     return false;
 
   // Now we're in the harder dynamic case.
-  Type *Ty = AI.getAllocatedType();
-  unsigned Align =
-      std::max((unsigned)DL->getPrefTypeAlignment(Ty), AI.getAlignment());
-
   Register NumElts = getOrCreateVReg(*AI.getArraySize());
 
   Type *IntPtrIRTy = DL->getIntPtrType(AI.getType());
@@ -1872,19 +1868,18 @@ bool IRTranslator::translateAlloca(const User &U,
     NumElts = ExtElts;
   }
 
+  Type *Ty = AI.getAllocatedType();
+
   Register AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
   Register TySize =
       getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, DL->getTypeAllocSize(Ty)));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
-  unsigned StackAlign =
-      MF->getSubtarget().getFrameLowering()->getStackAlignment();
-  if (Align <= StackAlign)
-    Align = 0;
-
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
+  unsigned StackAlign =
+      MF->getSubtarget().getFrameLowering()->getStackAlignment();
   auto SAMinusOne = MIRBuilder.buildConstant(IntPtrTy, StackAlign - 1);
   auto AllocAdd = MIRBuilder.buildAdd(IntPtrTy, AllocSize, SAMinusOne,
                                       MachineInstr::NoUWrap);
@@ -1892,6 +1887,10 @@ bool IRTranslator::translateAlloca(const User &U,
       MIRBuilder.buildConstant(IntPtrTy, ~(uint64_t)(StackAlign - 1));
   auto AlignedAlloc = MIRBuilder.buildAnd(IntPtrTy, AllocAdd, AlignCst);
 
+  unsigned Align =
+      std::max((unsigned)DL->getPrefTypeAlignment(Ty), AI.getAlignment());
+  if (Align <= StackAlign)
+    Align = 0;
   MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AlignedAlloc, Align);
 
   MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, &AI);
