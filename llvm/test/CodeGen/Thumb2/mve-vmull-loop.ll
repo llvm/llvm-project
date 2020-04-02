@@ -6,38 +6,33 @@ define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noa
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r5, lr}
 ; CHECK-NEXT:    push {r5, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    blt .LBB0_2
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r5, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q3, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vrev64.32 q1, q2
-; CHECK-NEXT:    vrev64.32 q4, q3
-; CHECK-NEXT:    vmov r12, s4
-; CHECK-NEXT:    vmov lr, s16
-; CHECK-NEXT:    smull r12, r5, lr, r12
+; CHECK-NEXT:    vmullt.s32 q3, q2, q1
+; CHECK-NEXT:    vmov r5, s13
+; CHECK-NEXT:    vmov r12, s12
 ; CHECK-NEXT:    lsrl r12, r5, #31
 ; CHECK-NEXT:    vmov.32 q0[0], r12
-; CHECK-NEXT:    vmov r12, s6
+; CHECK-NEXT:    vmov r12, s14
 ; CHECK-NEXT:    vmov.32 q0[1], r5
-; CHECK-NEXT:    vmov r5, s18
-; CHECK-NEXT:    smull r12, r5, r5, r12
+; CHECK-NEXT:    vmov r5, s15
 ; CHECK-NEXT:    lsrl r12, r5, #31
+; CHECK-NEXT:    vmullb.s32 q3, q2, q1
 ; CHECK-NEXT:    vmov.32 q0[2], r12
-; CHECK-NEXT:    vmov r12, s8
+; CHECK-NEXT:    vmov r12, s12
 ; CHECK-NEXT:    vmov.32 q0[3], r5
-; CHECK-NEXT:    vmov r5, s12
-; CHECK-NEXT:    smull r12, r5, r5, r12
+; CHECK-NEXT:    vmov r5, s13
 ; CHECK-NEXT:    lsrl r12, r5, #31
 ; CHECK-NEXT:    vmov.32 q1[0], r12
-; CHECK-NEXT:    vmov r12, s10
+; CHECK-NEXT:    vmov r12, s14
 ; CHECK-NEXT:    vmov.32 q1[1], r5
-; CHECK-NEXT:    vmov r5, s14
-; CHECK-NEXT:    smull r12, r5, r5, r12
+; CHECK-NEXT:    vmov r5, s15
 ; CHECK-NEXT:    lsrl r12, r5, #31
 ; CHECK-NEXT:    vmov.32 q1[2], r12
 ; CHECK-NEXT:    vmov.32 q1[3], r5
@@ -52,8 +47,7 @@ define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noa
 ; CHECK-NEXT:    vmov.f32 s7, s10
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB0_1
-; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r5, pc}
 entry:
   %0 = and i32 %n, 3
@@ -103,17 +97,13 @@ define arm_aapcs_vfpcc void @test16(i16* noalias nocapture readonly %x, i16* noa
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
-; CHECK-NEXT:    vldrh.u16 q2, [r1], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmovlt.s16 q1, q0
-; CHECK-NEXT:    vmovlt.s16 q3, q2
-; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q2, q2
-; CHECK-NEXT:    vmul.i32 q1, q3, q1
-; CHECK-NEXT:    vmul.i32 q0, q2, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #15
+; CHECK-NEXT:    vmullt.s16 q2, q1, q0
+; CHECK-NEXT:    vmullb.s16 q0, q1, q0
+; CHECK-NEXT:    vshr.u32 q2, q2, #15
 ; CHECK-NEXT:    vshr.u32 q0, q0, #15
-; CHECK-NEXT:    vmovnt.i32 q0, q1
+; CHECK-NEXT:    vmovnt.i32 q0, q2
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    bne .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -166,17 +156,13 @@ define arm_aapcs_vfpcc void @test8(i8* noalias nocapture readonly %x, i8* noalia
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r0], #16
-; CHECK-NEXT:    vldrb.u8 q2, [r1], #16
+; CHECK-NEXT:    vldrb.u8 q1, [r1], #16
 ; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vmovlt.u8 q1, q0
-; CHECK-NEXT:    vmovlt.u8 q3, q2
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vmovlb.u8 q2, q2
-; CHECK-NEXT:    vmul.i16 q1, q3, q1
-; CHECK-NEXT:    vmul.i16 q0, q2, q0
-; CHECK-NEXT:    vshr.u16 q1, q1, #7
+; CHECK-NEXT:    vmullt.u8 q2, q1, q0
+; CHECK-NEXT:    vmullb.u8 q0, q1, q0
+; CHECK-NEXT:    vshr.u16 q2, q2, #7
 ; CHECK-NEXT:    vshr.u16 q0, q0, #7
-; CHECK-NEXT:    vmovnt.i16 q0, q1
+; CHECK-NEXT:    vmovnt.i16 q0, q2
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    bne .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup

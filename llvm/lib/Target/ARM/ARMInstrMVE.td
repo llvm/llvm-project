@@ -2558,22 +2558,23 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i8),
             (MVE_VMOVLs16bh (MVE_VMOVLs8bh MQPR:$src))>;
 
-  def : Pat<(sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))),
-                        v8i8), (MVE_VMOVLs8th MQPR:$src)>;
-  def : Pat<(sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
-                        v4i16), (MVE_VMOVLs16th MQPR:$src)>;
-  def : Pat<(ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))),
-                        (i32 0xAFF)), (MVE_VMOVLu8th MQPR:$src)>;
-  def : Pat<(and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
-                 (v4i32 (ARMvmovImm (i32 0xCFF)))),
-                 (MVE_VMOVLu16th MQPR:$src)>;
+  def : Pat<(sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))), v8i8),
+            (MVE_VMOVLs8th MQPR:$src)>;
+  def : Pat<(sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))), v4i16),
+            (MVE_VMOVLs16th MQPR:$src)>;
 
-  // zext_inreg 16 -> 32
-  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
-            (MVE_VMOVLu16bh MQPR:$src)>;
   // zext_inreg 8 -> 16
   def : Pat<(ARMvbicImm (v8i16 MQPR:$src), (i32 0xAFF)),
             (MVE_VMOVLu8bh MQPR:$src)>;
+  // zext_inreg 16 -> 32
+  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16bh MQPR:$src)>;
+  // Same zext_inreg with vrevs, picking the top half
+  def : Pat<(ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))), (i32 0xAFF)),
+            (MVE_VMOVLu8th MQPR:$src)>;
+  def : Pat<(and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
+                 (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16th MQPR:$src)>;
 }
 
 
@@ -4442,6 +4443,50 @@ defm MVE_VMULLBp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
                                  int_arm_mve_mull_poly_predicated, 0b0>;
 defm MVE_VMULLTp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
                                  int_arm_mve_mull_poly_predicated, 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v2i64 (ARMvmulls (v4i32 MQPR:$src1), (v4i32 MQPR:$src2))),
+            (MVE_VMULLBs32 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(v2i64 (ARMvmulls (v4i32 (ARMvrev64 (v4i32 MQPR:$src1))),
+                              (v4i32 (ARMvrev64 (v4i32 MQPR:$src2))))),
+            (MVE_VMULLTs32 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (sext_inreg (v4i32 MQPR:$src1), v4i16),
+                 (sext_inreg (v4i32 MQPR:$src2), v4i16)),
+            (MVE_VMULLBs16 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src1)))), v4i16),
+                 (sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src2)))), v4i16)),
+            (MVE_VMULLTs16 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (sext_inreg (v8i16 MQPR:$src1), v8i8),
+                 (sext_inreg (v8i16 MQPR:$src2), v8i8)),
+            (MVE_VMULLBs8 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src1)))), v8i8),
+                 (sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src2)))), v8i8)),
+            (MVE_VMULLTs8 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(v2i64 (ARMvmullu (v4i32 MQPR:$src1), (v4i32 MQPR:$src2))),
+            (MVE_VMULLBu32 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(v2i64 (ARMvmullu (v4i32 (ARMvrev64 (v4i32 MQPR:$src1))),
+                              (v4i32 (ARMvrev64 (v4i32 MQPR:$src2))))),
+            (MVE_VMULLTu32 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (and (v4i32 MQPR:$src1), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+                 (and (v4i32 MQPR:$src2), (v4i32 (ARMvmovImm (i32 0xCFF))))),
+            (MVE_VMULLBu16 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src1)))),
+                      (v4i32 (ARMvmovImm (i32 0xCFF)))),
+                 (and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src2)))),
+                      (v4i32 (ARMvmovImm (i32 0xCFF))))),
+            (MVE_VMULLTu16 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (ARMvbicImm (v8i16 MQPR:$src1), (i32 0xAFF)),
+                 (ARMvbicImm (v8i16 MQPR:$src2), (i32 0xAFF))),
+            (MVE_VMULLBu8 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src1)))), (i32 0xAFF)),
+                 (ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src2)))), (i32 0xAFF))),
+            (MVE_VMULLTu8 MQPR:$src1, MQPR:$src2)>;
+}
 
 class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
                  list<dag> pattern=[]>
