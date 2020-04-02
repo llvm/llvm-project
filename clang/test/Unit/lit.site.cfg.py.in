@@ -2,14 +2,14 @@
 
 import sys
 
-config.llvm_src_root = path("@LLVM_SOURCE_DIR@")
-config.llvm_obj_root = path("@LLVM_BINARY_DIR@")
-config.llvm_tools_dir = path("@LLVM_TOOLS_DIR@")
-config.llvm_libs_dir = path("@LLVM_LIBS_DIR@")
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.llvm_build_mode = "@LLVM_BUILD_MODE@"
-config.clang_obj_root = path("@CLANG_BINARY_DIR@")
+config.clang_obj_root = "@CLANG_BINARY_DIR@"
 config.enable_shared = @ENABLE_SHARED@
-config.shlibdir = path("@SHLIBDIR@")
+config.shlibdir = "@SHLIBDIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 
 # Support substitution of the tools_dir, libs_dirs, and build_mode with user
@@ -25,5 +25,4 @@ except KeyError:
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 # Let the main config do the real work.
-lit_config.load_config(
-    config, os.path.join(path("@CLANG_SOURCE_DIR@"), "test/Unit/lit.cfg.py"))
+lit_config.load_config(config, "@CLANG_SOURCE_DIR@/test/Unit/lit.cfg.py")
