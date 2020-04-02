@@ -367,6 +367,21 @@ public:
 
   /// Return the OpenCL C or C++ version as a VersionTuple.
   VersionTuple getOpenCLVersionTuple() const;
+
+  /// Check if return address signing is enabled.
+  bool hasSignReturnAddress() const {
+    return getSignReturnAddressScope() != SignReturnAddressScopeKind::None;
+  }
+
+  /// Check if return address signing uses AKey.
+  bool isSignReturnAddressWithAKey() const {
+    return getSignReturnAddressKey() == SignReturnAddressKeyKind::AKey;
+  }
+
+  /// Check if leaf functions are also signed.
+  bool isSignReturnAddressScopeAll() const {
+    return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
 };
 
 /// Floating point control options

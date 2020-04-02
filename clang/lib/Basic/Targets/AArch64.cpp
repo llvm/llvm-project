@@ -283,6 +283,27 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if ((FPU & NeonMode) && HasFP16FML)
     Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
 
+  if (Opts.hasSignReturnAddress()) {
+    // Bitmask:
+    // 0: Protection using the A key
+    // 1: Protection using the B key
+    // 2: Protection including leaf functions
+    unsigned Value = 0;
+
+    if (Opts.isSignReturnAddressWithAKey())
+      Value |= (1 << 0);
+    else
+      Value |= (1 << 1);
+
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= (1 << 2);
+
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
+  }
+
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
   switch (ArchKind) {
   default:
     break;
