@@ -932,6 +932,7 @@ protected:
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
+static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
   FuncOpConversion(LLVMTypeConverter &converter, bool emitCWrappers)
       : FuncOpConversionBase(converter), emitWrappers(emitCWrappers) {}
@@ -942,7 +943,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     auto funcOp = cast<FuncOp>(op);
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
-    if (emitWrappers) {
+    if (emitWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
                              newFuncOp);
@@ -1087,6 +1088,7 @@ void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
     fun(position);
   }
 }
+////////////// End Support for Lowering operations on n-D vectors //////////////
 
 /// Replaces the given operaiton "op" with a new operation of type "targetOp"
 /// and given operands.
@@ -1127,29 +1129,6 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   rewriter.replaceOp(op, results);
   return success();
 }
-
-////////////// End Support for Lowering operations on n-D vectors //////////////
-namespace {
-template <typename SourceOp, unsigned OpCount>
-struct OpCountValidator {
-  static_assert(
-      std::is_base_of<
-          typename OpTrait::NOperands<OpCount>::template Impl<SourceOp>,
-          SourceOp>::value,
-      "wrong operand count");
-};
-
-template <typename SourceOp>
-struct OpCountValidator<SourceOp, 1> {
-  static_assert(std::is_base_of<OpTrait::OneOperand<SourceOp>, SourceOp>::value,
-                "expected a single operand");
-};
-
-template <typename SourceOp, unsigned OpCount>
-void ValidateOpCount() {
-  OpCountValidator<SourceOp, OpCount>();
-}
-} // namespace
 
 static LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
@@ -2843,7 +2822,6 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
     if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
       signalPassFailure();
   }
-
 };
 } // end namespace
 

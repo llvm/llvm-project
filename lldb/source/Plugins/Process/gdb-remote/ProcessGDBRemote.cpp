@@ -960,7 +960,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
       uint32_t retry_count = 0;
       while (!m_gdb_comm.IsConnected()) {
         if (conn_up->Connect(connect_url, &error) == eConnectionStatusSuccess) {
-          m_gdb_comm.SetConnection(conn_up.release());
+          m_gdb_comm.SetConnection(std::move(conn_up));
           break;
         } else if (error.WasInterrupted()) {
           // If we were interrupted, don't keep retrying.
@@ -3482,7 +3482,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
       // Our process spawned correctly, we can now set our connection to use
       // our end of the socket pair
       cleanup_our.release();
-      m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
+      m_gdb_comm.SetConnection(
+          std::make_unique<ConnectionFileDescriptor>(our_socket, true));
 #endif
       StartAsyncThread();
     }

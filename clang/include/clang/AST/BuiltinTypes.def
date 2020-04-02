@@ -316,8 +316,11 @@ PLACEHOLDER_TYPE(OMPArraySection, OMPArraySectionTy)
 // A placeholder type for OpenMP array shaping operation.
 PLACEHOLDER_TYPE(OMPArrayShaping, OMPArrayShapingTy)
 
+// A placeholder type for OpenMP iterators.
+PLACEHOLDER_TYPE(OMPIterator, OMPIteratorTy)
+
 #ifdef LAST_BUILTIN_TYPE
-LAST_BUILTIN_TYPE(OMPArrayShaping)
+LAST_BUILTIN_TYPE(OMPIterator)
 #undef LAST_BUILTIN_TYPE
 #endif
 

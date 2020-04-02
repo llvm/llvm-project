@@ -145,7 +145,7 @@ public:
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
 
-    /// Enable semantic highlighting features.
+    /// Enable notification-based semantic highlighting.
     bool TheiaSemanticHighlighting = false;
 
     /// Returns true if the tweak should be enabled.

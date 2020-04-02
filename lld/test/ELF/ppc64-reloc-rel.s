@@ -34,7 +34,7 @@ rel16:
 .section .R_PPC64_REL24,"ax",@progbits
   b rel16
 # CHECK-LABEL: Disassembly of section .R_PPC64_REL24:
-# CHECK: b .+67108840
+# CHECK: 100101b0: b 0x10010198
 
 .section .REL32_AND_REL64,"ax",@progbits
   .cfi_startproc

@@ -1086,6 +1086,23 @@ void TextNodeDumper::VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node) {
   OS << " " << (Node->getValue() ? "__objc_yes" : "__objc_no");
 }
 
+void TextNodeDumper::VisitOMPIteratorExpr(const OMPIteratorExpr *Node) {
+  OS << " ";
+  for (unsigned I = 0, E = Node->numOfIterators(); I < E; ++I) {
+    Visit(Node->getIteratorDecl(I));
+    OS << " = ";
+    const OMPIteratorExpr::IteratorRange Range = Node->getIteratorRange(I);
+    OS << " begin ";
+    Visit(Range.Begin);
+    OS << " end ";
+    Visit(Range.End);
+    if (Range.Step) {
+      OS << " step ";
+      Visit(Range.Step);
+    }
+  }
+}
+
 void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
   if (T->isSpelledAsLValue())
     OS << " written as lvalue reference";

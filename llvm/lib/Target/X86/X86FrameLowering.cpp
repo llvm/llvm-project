@@ -2177,7 +2177,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   if (this->TRI->hasBasePointer(MF)) {
     // Allocate a spill slot for EBP if we have a base pointer and EH funclets.
     if (MF.hasEHFunclets()) {
-      int FI = MFI.CreateSpillStackObject(SlotSize, SlotSize);
+      int FI = MFI.CreateSpillStackObject(SlotSize, Align(SlotSize));
       X86FI->setHasSEHFramePtrSave(true);
       X86FI->setSEHFramePtrSaveIndex(FI);
     }

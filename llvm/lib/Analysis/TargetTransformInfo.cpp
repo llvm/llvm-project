@@ -519,12 +519,20 @@ unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }
 
-unsigned TargetTransformInfo::getMinPrefetchStride() const {
-  return TTIImpl->getMinPrefetchStride();
+unsigned TargetTransformInfo::getMinPrefetchStride(unsigned NumMemAccesses,
+                                                  unsigned NumStridedMemAccesses,
+                                                   unsigned NumPrefetches,
+                                                   bool HasCall) const {
+  return TTIImpl->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
+                                       NumPrefetches, HasCall);
 }
 
 unsigned TargetTransformInfo::getMaxPrefetchIterationsAhead() const {
   return TTIImpl->getMaxPrefetchIterationsAhead();
+}
+
+bool TargetTransformInfo::enableWritePrefetching() const {
+  return TTIImpl->enableWritePrefetching();
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {

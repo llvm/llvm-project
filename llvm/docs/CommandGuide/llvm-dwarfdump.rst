@@ -105,6 +105,10 @@ OPTIONS
             When displaying debug info entries, only show children to a maximum
             depth of <N>.
 
+.. option:: --show-section-sizes
+
+            Show the sizes of all debug sections, expressed in bytes.
+
 .. option:: --statistics
 
             Collect debug info quality metrics and print the results

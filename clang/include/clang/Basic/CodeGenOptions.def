@@ -387,10 +387,6 @@ CODEGENOPT(ForceEmitVTables, 1, 0)
 /// Whether to emit an address-significance table into the object file.
 CODEGENOPT(Addrsig, 1, 0)
 
-ENUM_CODEGENOPT(SignReturnAddress, SignReturnAddressScope, 2, SignReturnAddressScope::None)
-ENUM_CODEGENOPT(SignReturnAddressKey, SignReturnAddressKeyValue, 1, SignReturnAddressKeyValue::AKey)
-CODEGENOPT(BranchTargetEnforcement, 1, 0)
-
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
 
@@ -400,4 +396,3 @@ CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
-

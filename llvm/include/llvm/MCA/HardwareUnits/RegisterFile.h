@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
-#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace mca {

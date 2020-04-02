@@ -936,59 +936,14 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
 
 TEST(MachineInstr, HasSideEffects) {
   using namespace ARM;
-  unsigned Opcodes[] = {
-      // MVE Loads/Stores
-      MVE_VLDRBS16,        MVE_VLDRBS16_post,   MVE_VLDRBS16_pre,
-      MVE_VLDRBS16_rq,     MVE_VLDRBS32,        MVE_VLDRBS32_post,
-      MVE_VLDRBS32_pre,    MVE_VLDRBS32_rq,     MVE_VLDRBU16,
-      MVE_VLDRBU16_post,   MVE_VLDRBU16_pre,    MVE_VLDRBU16_rq,
-      MVE_VLDRBU32,        MVE_VLDRBU32_post,   MVE_VLDRBU32_pre,
-      MVE_VLDRBU32_rq,     MVE_VLDRBU8,         MVE_VLDRBU8_post,
-      MVE_VLDRBU8_pre,     MVE_VLDRBU8_rq,      MVE_VLDRDU64_qi,
-      MVE_VLDRDU64_qi_pre, MVE_VLDRDU64_rq,     MVE_VLDRDU64_rq_u,
-      MVE_VLDRHS32,        MVE_VLDRHS32_post,   MVE_VLDRHS32_pre,
-      MVE_VLDRHS32_rq,     MVE_VLDRHS32_rq_u,   MVE_VLDRHU16,
-      MVE_VLDRHU16_post,   MVE_VLDRHU16_pre,    MVE_VLDRHU16_rq,
-      MVE_VLDRHU16_rq_u,   MVE_VLDRHU32,        MVE_VLDRHU32_post,
-      MVE_VLDRHU32_pre,    MVE_VLDRHU32_rq,     MVE_VLDRHU32_rq_u,
-      MVE_VLDRWU32,        MVE_VLDRWU32_post,   MVE_VLDRWU32_pre,
-      MVE_VLDRWU32_qi,     MVE_VLDRWU32_qi_pre, MVE_VLDRWU32_rq,
-      MVE_VLDRWU32_rq_u,   MVE_VLD20_16,        MVE_VLD20_16_wb,
-      MVE_VLD20_32,        MVE_VLD20_32_wb,     MVE_VLD20_8,
-      MVE_VLD20_8_wb,      MVE_VLD21_16,        MVE_VLD21_16_wb,
-      MVE_VLD21_32,        MVE_VLD21_32_wb,     MVE_VLD21_8,
-      MVE_VLD21_8_wb,      MVE_VLD40_16,        MVE_VLD40_16_wb,
-      MVE_VLD40_32,        MVE_VLD40_32_wb,     MVE_VLD40_8,
-      MVE_VLD40_8_wb,      MVE_VLD41_16,        MVE_VLD41_16_wb,
-      MVE_VLD41_32,        MVE_VLD41_32_wb,     MVE_VLD41_8,
-      MVE_VLD41_8_wb,      MVE_VLD42_16,        MVE_VLD42_16_wb,
-      MVE_VLD42_32,        MVE_VLD42_32_wb,     MVE_VLD42_8,
-      MVE_VLD42_8_wb,      MVE_VLD43_16,        MVE_VLD43_16_wb,
-      MVE_VLD43_32,        MVE_VLD43_32_wb,     MVE_VLD43_8,
-      MVE_VLD43_8_wb,      MVE_VSTRB16,         MVE_VSTRB16_post,
-      MVE_VSTRB16_pre,     MVE_VSTRB16_rq,      MVE_VSTRB32,
-      MVE_VSTRB32_post,    MVE_VSTRB32_pre,     MVE_VSTRB32_rq,
-      MVE_VSTRB8_rq,       MVE_VSTRBU8,         MVE_VSTRBU8_post,
-      MVE_VSTRBU8_pre,     MVE_VSTRD64_qi,      MVE_VSTRD64_qi_pre,
-      MVE_VSTRD64_rq,      MVE_VSTRD64_rq_u,    MVE_VSTRH16_rq,
-      MVE_VSTRH16_rq_u,    MVE_VSTRH32,         MVE_VSTRH32_post,
-      MVE_VSTRH32_pre,     MVE_VSTRH32_rq,      MVE_VSTRH32_rq_u,
-      MVE_VSTRHU16,        MVE_VSTRHU16_post,   MVE_VSTRHU16_pre,
-      MVE_VSTRW32_qi,      MVE_VSTRW32_qi_pre,  MVE_VSTRW32_rq,
-      MVE_VSTRW32_rq_u,    MVE_VSTRWU32,        MVE_VSTRWU32_post,
-      MVE_VSTRWU32_pre,    MVE_VST20_16,        MVE_VST20_16_wb,
-      MVE_VST20_32,        MVE_VST20_32_wb,     MVE_VST20_8,
-      MVE_VST20_8_wb,      MVE_VST21_16,        MVE_VST21_16_wb,
-      MVE_VST21_32,        MVE_VST21_32_wb,     MVE_VST21_8,
-      MVE_VST21_8_wb,      MVE_VST40_16,        MVE_VST40_16_wb,
-      MVE_VST40_32,        MVE_VST40_32_wb,     MVE_VST40_8,
-      MVE_VST40_8_wb,      MVE_VST41_16,        MVE_VST41_16_wb,
-      MVE_VST41_32,        MVE_VST41_32_wb,     MVE_VST41_8,
-      MVE_VST41_8_wb,      MVE_VST42_16,        MVE_VST42_16_wb,
-      MVE_VST42_32,        MVE_VST42_32_wb,     MVE_VST42_8,
-      MVE_VST42_8_wb,      MVE_VST43_16,        MVE_VST43_16_wb,
-      MVE_VST43_32,        MVE_VST43_32_wb,     MVE_VST43_8,
-      MVE_VST43_8_wb,
+  std::set<unsigned> UnpredictableOpcodes = {
+      MVE_VCTP8,     MVE_VCTP16,    MVE_VCTP32,    MVE_VCTP64,    MVE_VPST,
+      MVE_VPTv16i8,  MVE_VPTv8i16,  MVE_VPTv4i32,  MVE_VPTv16i8r, MVE_VPTv8i16r,
+      MVE_VPTv4i32r, MVE_VPTv16s8,  MVE_VPTv8s16,  MVE_VPTv4s32,  MVE_VPTv16s8r,
+      MVE_VPTv8s16r, MVE_VPTv4s32r, MVE_VPTv16u8,  MVE_VPTv8u16,  MVE_VPTv4u32,
+      MVE_VPTv16u8r, MVE_VPTv8u16r, MVE_VPTv4u32r, MVE_VPTv8f16,  MVE_VPTv4f32,
+      MVE_VPTv8f16r, MVE_VPTv4f32r, MVE_VADC,      MVE_VADCI,     MVE_VSBC,
+      MVE_VSBCI,     MVE_VSHLC,
   };
 
   LLVMInitializeARMTargetInfo();
@@ -1013,8 +968,13 @@ TEST(MachineInstr, HasSideEffects) {
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
-  for (unsigned Op : Opcodes) {
+  for (unsigned Op = 0; Op < ARM::INSTRUCTION_LIST_END; ++Op) {
     const MCInstrDesc &Desc = TII->get(Op);
+    if ((Desc.TSFlags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+    if (UnpredictableOpcodes.count(Op))
+      continue;
+
     ASSERT_FALSE(Desc.hasUnmodeledSideEffects())
         << MII->getName(Op) << " has unexpected side effects";
   }

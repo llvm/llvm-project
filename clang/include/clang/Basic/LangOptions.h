@@ -229,6 +229,22 @@ public:
     All,
   };
 
+  enum class SignReturnAddressScopeKind {
+    /// No signing for any function.
+    None,
+    /// Sign the return address of functions that spill LR.
+    NonLeaf,
+    /// Sign the return address of all functions,
+    All
+  };
+
+  enum class SignReturnAddressKeyKind {
+    /// Return address signing uses APIA key.
+    AKey,
+    /// Return address signing uses APIB key.
+    BKey
+  };
+
 public:
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
@@ -351,6 +367,21 @@ public:
 
   /// Return the OpenCL C or C++ version as a VersionTuple.
   VersionTuple getOpenCLVersionTuple() const;
+
+  /// Check if return address signing is enabled.
+  bool hasSignReturnAddress() const {
+    return getSignReturnAddressScope() != SignReturnAddressScopeKind::None;
+  }
+
+  /// Check if return address signing uses AKey.
+  bool isSignReturnAddressWithAKey() const {
+    return getSignReturnAddressKey() == SignReturnAddressKeyKind::AKey;
+  }
+
+  /// Check if leaf functions are also signed.
+  bool isSignReturnAddressScopeAll() const {
+    return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
 };
 
 /// Floating point control options

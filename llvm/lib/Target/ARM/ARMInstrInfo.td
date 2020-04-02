@@ -289,6 +289,11 @@ def ARMvshruImm  : SDNode<"ARMISD::VSHRuIMM", SDTARMVSHIMM>;
 def ARMvshls     : SDNode<"ARMISD::VSHLs", SDTARMVSH>;
 def ARMvshlu     : SDNode<"ARMISD::VSHLu", SDTARMVSH>;
 
+def SDTARMVMULL   : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
+                                         SDTCisSameAs<1, 2>]>;
+def ARMvmulls    : SDNode<"ARMISD::VMULLs", SDTARMVMULL>;
+def ARMvmullu    : SDNode<"ARMISD::VMULLu", SDTARMVMULL>;
+
 def SDTARMVCMP    : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<1, 2>,
                                          SDTCisInt<3>]>;
 def SDTARMVCMPZ   : SDTypeProfile<1, 2, [SDTCisInt<2>]>;

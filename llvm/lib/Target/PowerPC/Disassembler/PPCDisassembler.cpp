@@ -67,9 +67,9 @@ static DecodeStatus decodeCondBrTarget(MCInst &Inst, unsigned Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodePCRel24BranchTarget(MCInst &Inst, unsigned Imm,
-                                              uint64_t Addr,
-                                              const void *Decoder) {
+static DecodeStatus decodeDirectBrTarget(MCInst &Inst, unsigned Imm,
+                                         uint64_t /*Address*/,
+                                         const void * /*Decoder*/) {
   int32_t Offset = SignExtend32<24>(Imm);
   Inst.addOperand(MCOperand::createImm(Offset));
   return MCDisassembler::Success;

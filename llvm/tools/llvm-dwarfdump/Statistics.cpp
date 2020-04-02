@@ -15,6 +15,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
 
+#include "SectionSizes.h"
+
 #define DEBUG_TYPE "dwarfdump"
 using namespace llvm;
 using namespace object;
@@ -468,6 +470,7 @@ static void printDatum(raw_ostream &OS, const char *Key, json::Value Value) {
   OS << ",\"" << Key << "\":" << Value;
   LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
 }
+
 static void printLocationStats(raw_ostream &OS,
                                const char *Key,
                                std::vector<unsigned> &LocationStats) {
@@ -491,6 +494,12 @@ static void printLocationStats(raw_ostream &OS,
   LLVM_DEBUG(llvm::dbgs() << Key << " with 100% of its scope covered: "
                           << LocationStats[NumOfCoverageCategories - 1]);
 }
+
+static void printSectionSizes(raw_ostream &OS, const SectionSizes &Sizes) {
+  for (const auto &DebugSec : Sizes.DebugSectionSizes)
+    OS << ",\"size of " << DebugSec.getKey() << "\":" << DebugSec.getValue();
+}
+
 /// \}
 
 /// Collect debug info quality metrics for an entire DIContext.
@@ -511,6 +520,10 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false))
       collectStatsRecursive(CUDie, "/", "g", 0, 0, Statistics, GlobalStats,
                             LocStats);
+
+  /// Collect the sizes of debug sections.
+  SectionSizes Sizes;
+  calculateSectionSizes(Obj, Sizes, Filename);
 
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
@@ -602,6 +615,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printDatum(OS, "vars with binary location", VarWithLoc);
   printDatum(OS, "total variables procesed by location statistics",
              LocStats.NumVarParam);
+  printSectionSizes(OS, Sizes);
   printLocationStats(OS, "variables", LocStats.VarParamLocStats);
   printLocationStats(OS, "variables (excluding the debug entry values)",
                      LocStats.VarParamNonEntryValLocStats);

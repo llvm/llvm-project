@@ -87,6 +87,7 @@ set(files
   ptwriteintrin.h
   rdseedintrin.h
   rtmintrin.h
+  serializeintrin.h
   sgxintrin.h
   s390intrin.h
   shaintrin.h

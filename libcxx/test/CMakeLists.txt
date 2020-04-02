@@ -142,9 +142,6 @@ if (LIBCXX_CONFIGURE_IDE)
   set(STATIC_ROOT ${LIBCXX_SOURCE_DIR}/test/std/input.output/filesystems/Inputs/static_test_env)
   add_definitions(-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="${STATIC_ROOT}")
 
-  set(DYNAMIC_HELPER "python ${LIBCXX_SOURCE_DIR}/test/support/filesystem_dynamic_test_helper.py ")
-  add_definitions(-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER="${DYNAMIC_HELPER}")
-
   split_list(LIBCXX_COMPILE_FLAGS)
   split_list(LIBCXX_LINK_FLAGS)
 

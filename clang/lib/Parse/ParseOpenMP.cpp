@@ -755,7 +755,8 @@ static bool parseDeclareSimdClauses(
                                  getOpenMPClauseKind(ClauseName), *Vars, Data))
           IsError = true;
         if (CKind == OMPC_aligned) {
-          Alignments.append(Aligneds.size() - Alignments.size(), Data.TailExpr);
+          Alignments.append(Aligneds.size() - Alignments.size(),
+                            Data.DepModOrTailExpr);
         } else if (CKind == OMPC_linear) {
           assert(0 <= Data.ExtraModifier &&
                  Data.ExtraModifier <= OMPC_LINEAR_unknown &&
@@ -766,7 +767,7 @@ static bool parseDeclareSimdClauses(
             Data.ExtraModifier = OMPC_LINEAR_val;
           LinModifiers.append(Linears.size() - LinModifiers.size(),
                               Data.ExtraModifier);
-          Steps.append(Linears.size() - Steps.size(), Data.TailExpr);
+          Steps.append(Linears.size() - Steps.size(), Data.DepModOrTailExpr);
         }
       } else
         // TODO: add parsing of other clauses.
@@ -3054,6 +3055,114 @@ static void parseMapType(Parser &P, Parser::OpenMPVarListDataTy &Data) {
   P.ConsumeToken();
 }
 
+/// Parses simple expression in parens for single-expression clauses of OpenMP
+/// constructs.
+/// \param RLoc Returned location of right paren.
+ExprResult Parser::ParseOpenMPIteratorsExpr() {
+  assert(Tok.is(tok::identifier) && PP.getSpelling(Tok) == "iterator" &&
+         "Expected 'iterator' token.");
+  SourceLocation IteratorKwLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, "iterator"))
+    return ExprError();
+
+  SourceLocation LLoc = T.getOpenLocation();
+  SmallVector<Sema::OMPIteratorData, 4> Data;
+  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end)) {
+    // Check if the type parsing is required.
+    ParsedType IteratorType;
+    if (Tok.isNot(tok::identifier) || NextToken().isNot(tok::equal)) {
+      // identifier '=' is not found - parse type.
+      TypeResult TR = ParseTypeName();
+      if (TR.isInvalid()) {
+        T.skipToEnd();
+        return ExprError();
+      }
+      IteratorType = TR.get();
+    }
+
+    // Parse identifier.
+    IdentifierInfo *II = nullptr;
+    SourceLocation IdLoc;
+    if (Tok.is(tok::identifier)) {
+      II = Tok.getIdentifierInfo();
+      IdLoc = ConsumeToken();
+    } else {
+      Diag(Tok, diag::err_expected_unqualified_id) << 0;
+    }
+
+    // Parse '='.
+    SourceLocation AssignLoc;
+    if (Tok.is(tok::equal))
+      AssignLoc = ConsumeToken();
+    else
+      Diag(Tok, diag::err_omp_expected_equal_in_iterator);
+
+    // Parse range-specification - <begin> ':' <end> [ ':' <step> ]
+    ColonProtectionRAIIObject ColonRAII(*this);
+    // Parse <begin>
+    SourceLocation Loc = Tok.getLocation();
+    ExprResult LHS = ParseCastExpression(AnyCastExpr);
+    ExprResult Begin = Actions.CorrectDelayedTyposInExpr(
+        ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+    Begin = Actions.ActOnFinishFullExpr(Begin.get(), Loc,
+                                        /*DiscardedValue=*/false);
+    // Parse ':'.
+    SourceLocation ColonLoc;
+    if (Tok.is(tok::colon))
+      ColonLoc = ConsumeToken();
+
+    // Parse <end>
+    Loc = Tok.getLocation();
+    LHS = ParseCastExpression(AnyCastExpr);
+    ExprResult End = Actions.CorrectDelayedTyposInExpr(
+        ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+    End = Actions.ActOnFinishFullExpr(End.get(), Loc,
+                                      /*DiscardedValue=*/false);
+
+    SourceLocation SecColonLoc;
+    ExprResult Step;
+    // Parse optional step.
+    if (Tok.is(tok::colon)) {
+      // Parse ':'
+      SecColonLoc = ConsumeToken();
+      // Parse <step>
+      Loc = Tok.getLocation();
+      LHS = ParseCastExpression(AnyCastExpr);
+      Step = Actions.CorrectDelayedTyposInExpr(
+          ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+      Step = Actions.ActOnFinishFullExpr(Step.get(), Loc,
+                                         /*DiscardedValue=*/false);
+    }
+
+    // Parse ',' or ')'
+    if (Tok.isNot(tok::comma) && Tok.isNot(tok::r_paren))
+      Diag(Tok, diag::err_omp_expected_punc_after_iterator);
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+
+    Sema::OMPIteratorData &D = Data.emplace_back();
+    D.DeclIdent = II;
+    D.DeclIdentLoc = IdLoc;
+    D.Type = IteratorType;
+    D.AssignLoc = AssignLoc;
+    D.ColonLoc = ColonLoc;
+    D.SecColonLoc = SecColonLoc;
+    D.Range.Begin = Begin.get();
+    D.Range.End = End.get();
+    D.Range.Step = Step.get();
+  }
+
+  // Parse ')'.
+  SourceLocation RLoc = Tok.getLocation();
+  if (!T.consumeClose())
+    RLoc = T.getCloseLocation();
+
+  return Actions.ActOnOMPIteratorExpr(getCurScope(), IteratorKwLoc, LLoc, RLoc,
+                                      Data);
+}
+
 /// Parses clauses with list.
 bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                 OpenMPClauseKind Kind,
@@ -3069,6 +3178,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                          getOpenMPClauseName(Kind)))
     return true;
 
+  bool DependWithIterator = false;
   bool NeedRParenForLinear = false;
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
@@ -3106,6 +3216,22 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.ReductionOrMapperId =
           Actions.GetNameFromUnqualifiedId(UnqualifiedReductionId);
   } else if (Kind == OMPC_depend) {
+    if (getLangOpts().OpenMP >= 50) {
+      if (Tok.is(tok::identifier) && PP.getSpelling(Tok) == "iterator") {
+        // Handle optional dependence modifier.
+        // iterator(iterators-definition)
+        // where iterators-definition is iterator-specifier [,
+        // iterators-definition ]
+        // where iterator-specifier is [ iterator-type ] identifier =
+        // range-specification
+        DependWithIterator = true;
+        EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+        ExprResult IteratorRes = ParseOpenMPIteratorsExpr();
+        Data.DepModOrTailExpr = IteratorRes.get();
+        // Parse ','
+        ExpectAndConsume(tok::comma);
+      }
+    }
     // Handle dependency type for depend clause.
     ColonProtectionRAIIObject ColonRAII(*this);
     Data.ExtraModifier = getOpenMPSimpleClauseType(
@@ -3227,7 +3353,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                        /*DiscardedValue=*/false);
     if (Tail.isUsable()) {
       if (Tok.is(tok::colon)) {
-        Data.TailExpr = Tail.get();
+        Data.DepModOrTailExpr = Tail.get();
         Data.ColonLoc = ConsumeToken();
         TPA.Commit();
       } else {
@@ -3253,6 +3379,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
                      Tok.isNot(tok::annot_pragma_openmp_end))) {
+    ParseScope OMPListScope(this, Scope::OpenMPDirectiveScope);
     ColonProtectionRAIIObject ColonRAII(*this, MayHaveTail);
     // Parse variable
     ExprResult VarExpr =
@@ -3289,7 +3416,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Tail =
         Actions.ActOnFinishFullExpr(Tail.get(), ELoc, /*DiscardedValue*/ false);
     if (Tail.isUsable())
-      Data.TailExpr = Tail.get();
+      Data.DepModOrTailExpr = Tail.get();
     else
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -3299,8 +3426,11 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   Data.RLoc = Tok.getLocation();
   if (!T.consumeClose())
     Data.RLoc = T.getCloseLocation();
+  // Exit from scope when the iterator is used in depend clause.
+  if (DependWithIterator)
+    ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
-         (MustHaveTail && !Data.TailExpr) || InvalidReductionId ||
+         (MustHaveTail && !Data.DepModOrTailExpr) || InvalidReductionId ||
          IsInvalidMapperModifier;
 }
 
@@ -3372,7 +3502,7 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
     return nullptr;
   OMPVarListLocTy Locs(Loc, LOpen, Data.RLoc);
   return Actions.ActOnOpenMPVarListClause(
-      Kind, Vars, Data.TailExpr, Locs, Data.ColonLoc,
+      Kind, Vars, Data.DepModOrTailExpr, Locs, Data.ColonLoc,
       Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId,
       Data.ExtraModifier, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
       Data.IsMapTypeImplicit, Data.ExtraModifierLoc);

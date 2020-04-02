@@ -2163,7 +2163,8 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
           Num = 2; // Vector predicate spills also need a vector register.
           break;
       }
-      unsigned S = HRI.getSpillSize(*RC), A = HRI.getSpillAlignment(*RC);
+      unsigned S = HRI.getSpillSize(*RC);
+      Align A = HRI.getSpillAlign(*RC);
       for (unsigned i = 0; i < Num; i++) {
         int NewFI = MFI.CreateSpillStackObject(S, A);
         RS->addScavengingFrameIndex(NewFI);

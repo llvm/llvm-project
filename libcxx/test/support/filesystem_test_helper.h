@@ -18,6 +18,12 @@
 #include "rapid-cxx-test.h"
 #include "format_string.h"
 
+// For creating socket files
+#if !defined(__FreeBSD__) && !defined(__APPLE__)
+# include <sys/socket.h>
+# include <sys/un.h>
+#endif
+
 // static test helpers
 
 #ifndef LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
@@ -103,11 +109,6 @@ static const fs::path RecDirFollowSymlinksIterationList[] = {
 
 #endif // LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
 
-
-#ifndef LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER
-#error LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER must be defined
-#endif
-
 namespace random_utils {
 inline char to_hex(int ch) {
   return ch < 10 ? static_cast<char>('0' + ch)
@@ -124,9 +125,10 @@ inline char random_hex_char() {
 
 struct scoped_test_env
 {
-    scoped_test_env() : test_root(random_path())
-    {
-        fs_helper_run(fs_make_cmd("init_test_directory", test_root));
+    scoped_test_env() : test_root(random_path()) {
+        std::string cmd = "mkdir -p " + test_root.native();
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
 
         // Ensure that the root_path is fully resolved, i.e. it contains no
         // symlinks. The filesystem tests depend on that. We do this after
@@ -135,8 +137,15 @@ struct scoped_test_env
         test_root = fs::canonical(test_root);
     }
 
-    ~scoped_test_env()
-        { fs_helper_run(fs_make_cmd("destroy_test_directory", test_root)); }
+    ~scoped_test_env() {
+        std::string cmd = "chmod -R 777 " + test_root.native();
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
+
+        cmd = "rm -r " + test_root.native();
+        ret = std::system(cmd.c_str());
+        assert(ret == 0);
+    }
 
     scoped_test_env(scoped_test_env const &) = delete;
     scoped_test_env & operator=(scoped_test_env const &) = delete;
@@ -200,27 +209,35 @@ struct scoped_test_env
 
     std::string create_dir(std::string filename) {
         filename = sanitize_path(std::move(filename));
-        fs_helper_run(fs_make_cmd("create_dir", filename));
+        std::string cmd = "mkdir " + filename;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
         return filename;
     }
 
     std::string create_symlink(std::string source, std::string to) {
         source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        fs_helper_run(fs_make_cmd("create_symlink", source, to));
+        std::string cmd = "ln -s " + source + ' ' + to;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
         return to;
     }
 
     std::string create_hardlink(std::string source, std::string to) {
         source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        fs_helper_run(fs_make_cmd("create_hardlink", source, to));
+        std::string cmd = "ln " + source + ' ' + to;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
         return to;
     }
 
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
-        fs_helper_run(fs_make_cmd("create_fifo", file));
+        std::string cmd = "mkfifo " + file;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
         return file;
     }
 
@@ -229,7 +246,13 @@ struct scoped_test_env
 #if !defined(__FreeBSD__) && !defined(__APPLE__)
     std::string create_socket(std::string file) {
         file = sanitize_path(std::move(file));
-        fs_helper_run(fs_make_cmd("create_socket", file));
+
+        ::sockaddr_un address;
+        address.sun_family = AF_UNIX;
+        assert(file.size() <= sizeof(address.sun_path));
+        ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
+        int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+        ::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address));
         return file;
     }
 #endif
@@ -252,34 +275,6 @@ private:
         fs::path tmp = fs::temp_directory_path();
         fs::path p = fs::path(tmp) / unique_path_suffix();
         return p;
-    }
-
-    static inline std::string make_arg(std::string const& arg) {
-        return "'" + arg + "'";
-    }
-
-    static inline std::string make_arg(std::size_t arg) {
-        return std::to_string(arg);
-    }
-
-    template <class T>
-    static inline std::string
-    fs_make_cmd(std::string const& cmd_name, T const& arg) {
-        return cmd_name + "(" + make_arg(arg) + ")";
-    }
-
-    template <class T, class U>
-    static inline std::string
-    fs_make_cmd(std::string const& cmd_name, T const& arg1, U const& arg2) {
-        return cmd_name + "(" + make_arg(arg1) + ", " + make_arg(arg2) + ")";
-    }
-
-    void fs_helper_run(std::string const& raw_cmd) {
-        std::string cmd = LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER;
-        cmd += " \"" + test_root.native() + "\"";
-        cmd += " \"" + raw_cmd + "\"";
-        int ret = std::system(cmd.c_str());
-        assert(ret == 0);
     }
 };
 
