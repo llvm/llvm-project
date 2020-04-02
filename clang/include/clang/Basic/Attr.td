@@ -3242,13 +3242,8 @@ def OMPCaptureKind : Attr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let SemaHandler = 0;
-  let Args = [UnsignedArgument<"CaptureKindVal">];
+  let Args = [UnsignedArgument<"CaptureKind">];
   let Documentation = [Undocumented];
-  let AdditionalMembers = [{
-    llvm::omp::Clause getCaptureKind() const {
-      return static_cast<llvm::omp::Clause>(getCaptureKindVal());
-    }
-  }];
 }
 
 def OMPReferencedVar : Attr {

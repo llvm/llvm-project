@@ -341,7 +341,8 @@ class CheckVarsEscapingDeclContext final
           if (!Attr)
             return;
           if (((Attr->getCaptureKind() != OMPC_map) &&
-               !isOpenMPPrivate(Attr->getCaptureKind())) ||
+               !isOpenMPPrivate(
+                   static_cast<OpenMPClauseKind>(Attr->getCaptureKind()))) ||
               ((Attr->getCaptureKind() == OMPC_map) &&
                !FD->getType()->isAnyPointerType()))
             return;

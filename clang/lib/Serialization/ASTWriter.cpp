@@ -6037,8 +6037,8 @@ class OMPClauseWriter : public OMPClauseVisitor<OMPClauseWriter> {
 
 public:
   OMPClauseWriter(ASTRecordWriter &Record) : Record(Record) {}
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
+#include "clang/Basic/OpenMPKinds.def"
   void writeClause(OMPClause *C);
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
@@ -6051,7 +6051,7 @@ void ASTRecordWriter::writeOMPClause(OMPClause *C) {
 }
 
 void OMPClauseWriter::writeClause(OMPClause *C) {
-  Record.push_back(unsigned(C->getClauseKind()));
+  Record.push_back(C->getClauseKind());
   Visit(C);
   Record.AddSourceLocation(C->getBeginLoc());
   Record.AddSourceLocation(C->getEndLoc());

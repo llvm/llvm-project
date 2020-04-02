@@ -534,8 +534,8 @@ private:
   bool TraverseOMPExecutableDirective(OMPExecutableDirective *S);
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) bool Visit##Class(Class *C);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(Name, Class) bool Visit##Class(Class *C);
+#include "clang/Basic/OpenMPKinds.def"
   /// Process clauses with list of variables.
   template <typename T> bool VisitOMPClauseList(T *Node);
   /// Process clauses with pre-initis.
@@ -2956,14 +2956,17 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
   if (!C)
     return true;
   switch (C->getClauseKind()) {
-#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
-  case llvm::omp::Clause::Enum:                                                \
+#define OPENMP_CLAUSE(Name, Class)                                             \
+  case OMPC_##Name:                                                            \
     TRY_TO(Visit##Class(static_cast<Class *>(C)));                             \
     break;
-#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
-  case llvm::omp::Clause::Enum:                                                \
+#include "clang/Basic/OpenMPKinds.def"
+  case OMPC_threadprivate:
+  case OMPC_uniform:
+  case OMPC_device_type:
+  case OMPC_match:
+  case OMPC_unknown:
     break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   return true;
 }

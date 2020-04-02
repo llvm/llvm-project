@@ -31,20 +31,20 @@ OMPClause::child_range OMPClause::children() {
   switch (getClauseKind()) {
   default:
     break;
-#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                           \
-  case Enum:                                                                   \
+#define OPENMP_CLAUSE(Name, Class)                                             \
+  case OMPC_##Name:                                                            \
     return static_cast<Class *>(this)->children();
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#include "clang/Basic/OpenMPKinds.def"
   }
   llvm_unreachable("unknown OMPClause");
 }
 
 OMPClause::child_range OMPClause::used_children() {
   switch (getClauseKind()) {
-#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                           \
-  case Enum:                                                                   \
+#define OPENMP_CLAUSE(Name, Class)                                             \
+  case OMPC_##Name:                                                            \
     return static_cast<Class *>(this)->used_children();
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#include "clang/Basic/OpenMPKinds.def"
   case OMPC_threadprivate:
   case OMPC_uniform:
   case OMPC_device_type:
