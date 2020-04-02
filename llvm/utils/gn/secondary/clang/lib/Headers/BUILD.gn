@@ -62,6 +62,7 @@ copy("Headers") {
     "__clang_cuda_device_functions.h",
     "__clang_cuda_intrinsics.h",
     "__clang_cuda_libdevice_declares.h",
+    "__clang_cuda_math.h",
     "__clang_cuda_math_forward_declares.h",
     "__clang_cuda_runtime_wrapper.h",
     "__stddef_max_align_t.h",
