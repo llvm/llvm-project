@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objdump.h"
+#include "COFFDump.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -72,6 +73,7 @@
 #include <utility>
 
 using namespace llvm::object;
+using namespace llvm::objdump;
 
 namespace llvm {
 
