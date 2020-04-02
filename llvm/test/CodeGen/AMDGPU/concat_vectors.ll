@@ -309,8 +309,8 @@ define amdgpu_kernel void @concat_vector_crash2(<8 x i8> addrspace(1)* %out, i32
 
 ; GCN-LABEL: {{^}}build_vector_splat_concat_v8i16:
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
-; VI: ds_write_b64
-; VI: ds_write2_b64
+; VI: ds_write_b128
+; VI: ds_write_b128
 define amdgpu_kernel void @build_vector_splat_concat_v8i16() {
 entry:
   store <8 x i16> zeroinitializer, <8 x i16> addrspace(3)* undef, align 16
