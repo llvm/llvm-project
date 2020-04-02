@@ -108,7 +108,8 @@ void OMPDeclareSimdDeclAttr::printPrettyPragma(
   for (auto *E : linears()) {
     OS << " linear(";
     if (*MI != OMPC_LINEAR_unknown)
-      OS << getOpenMPSimpleClauseTypeName(OMPC_linear, *MI) << "(";
+      OS << getOpenMPSimpleClauseTypeName(llvm::omp::Clause::OMPC_linear, *MI)
+         << "(";
     E->printPretty(OS, nullptr, Policy);
     if (*MI != OMPC_LINEAR_unknown)
       OS << ")";
