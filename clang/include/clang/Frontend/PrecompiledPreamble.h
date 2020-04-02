@@ -16,6 +16,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
 #include <cstddef>
@@ -93,6 +94,11 @@ public:
   /// For on-disk preambles returns 0 if filesystem operations fail. Intended to
   /// be used for logging and debugging purposes only.
   std::size_t getSize() const;
+
+  /// Returned string is not null-terminated.
+  llvm::StringRef getContents() const {
+    return {PreambleBytes.data(), PreambleBytes.size()};
+  }
 
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.

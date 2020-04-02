@@ -246,66 +246,6 @@ TEST_F(TUSchedulerTests, Debounce) {
   EXPECT_EQ(2, CallbackCount);
 }
 
-static std::vector<std::string> includes(const PreambleData *Preamble) {
-  std::vector<std::string> Result;
-  if (Preamble)
-    for (const auto &Inclusion : Preamble->Includes.MainFileIncludes)
-      Result.push_back(Inclusion.Written);
-  return Result;
-}
-
-TEST_F(TUSchedulerTests, PreambleConsistency) {
-  std::atomic<int> CallbackCount(0);
-  {
-    Notification InconsistentReadDone; // Must live longest.
-    TUScheduler S(CDB, optsForTest());
-    auto Path = testPath("foo.cpp");
-    // Schedule two updates (A, B) and two preamble reads (stale, consistent).
-    // The stale read should see A, and the consistent read should see B.
-    // (We recognize the preambles by their included files).
-    auto Inputs = getInputs(Path, "#include <A>");
-    Inputs.Version = "A";
-    updateWithCallback(S, Path, Inputs, WantDiagnostics::Yes, [&]() {
-      // This callback runs in between the two preamble updates.
-
-      // This blocks update B, preventing it from winning the race
-      // against the stale read.
-      // If the first read was instead consistent, this would deadlock.
-      InconsistentReadDone.wait();
-      // This delays update B, preventing it from winning a race
-      // against the consistent read. The consistent read sees B
-      // only because it waits for it.
-      // If the second read was stale, it would usually see A.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    });
-    Inputs.Contents = "#include <B>";
-    Inputs.Version = "B";
-    S.update(Path, Inputs, WantDiagnostics::Yes);
-
-    S.runWithPreamble("StaleRead", Path, TUScheduler::Stale,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "A");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<A>"));
-                        InconsistentReadDone.notify();
-                        ++CallbackCount;
-                      });
-    S.runWithPreamble("ConsistentRead", Path, TUScheduler::Consistent,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "B");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<B>"));
-                        ++CallbackCount;
-                      });
-    S.blockUntilIdle(timeoutSeconds(10));
-  }
-  EXPECT_EQ(2, CallbackCount);
-}
-
 TEST_F(TUSchedulerTests, Cancellation) {
   // We have the following update/read sequence
   //   U0

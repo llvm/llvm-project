@@ -1186,6 +1186,31 @@ TEST(SignatureHelpTest, OpeningParen) {
   }
 }
 
+TEST(SignatureHelpTest, StalePreamble) {
+  TestTU TU;
+  TU.Code = "";
+  IgnoreDiagnostics Diags;
+  auto Inputs = TU.inputs();
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto EmptyPreamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                                     /*InMemory=*/true, /*Callback=*/nullptr);
+  ASSERT_TRUE(EmptyPreamble);
+
+  TU.AdditionalFiles["a.h"] = "int foo(int x);";
+  const Annotations Test(R"cpp(
+    #include "a.h"
+    void bar() { foo(^2); })cpp");
+  TU.Code = Test.code().str();
+  Inputs = TU.inputs();
+  auto Results =
+      signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
+                    *EmptyPreamble, TU.Code, Test.point(), Inputs.FS, nullptr);
+  EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo([[int x]]) -> int")));
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
 class IndexRequestCollector : public SymbolIndex {
 public:
   bool

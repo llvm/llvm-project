@@ -59,6 +59,7 @@ add_unittest(ClangdUnitTests ClangdTests
   LSPClient.cpp
   ParsedASTTests.cpp
   PathMappingTests.cpp
+  PreambleTests.cpp
   PrintASTTests.cpp
   QualityTests.cpp
   RenameTests.cpp
