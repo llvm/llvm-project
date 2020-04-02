@@ -133,7 +133,7 @@ def parse_args():
             metavar="REGEX",
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
-            default=os.environ.get("LIT_FILTER"))
+            default=os.environ.get("LIT_FILTER", ".*"))
     selection_group.add_argument("--num-shards", # TODO(yln): --shards N/M
             dest="numShards",
             metavar="M",
