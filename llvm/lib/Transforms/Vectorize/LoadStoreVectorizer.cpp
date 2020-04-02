@@ -128,15 +128,9 @@ public:
 private:
   unsigned getPointerAddressSpace(Value *I);
 
-  /// TODO: Remove this function once transition to Align is over.
-  unsigned getAlignment(LoadInst *LI) const { return getAlign(LI).value(); }
-
   Align getAlign(LoadInst *LI) const {
     return DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
   }
-
-  /// TODO: Remove this function once transition to Align is over.
-  unsigned getAlignment(StoreInst *SI) const { return getAlign(SI).value(); }
 
   Align getAlign(StoreInst *SI) const {
     return DL.getValueOrABITypeAlignment(SI->getAlign(),
@@ -1109,7 +1103,7 @@ bool Vectorizer::vectorizeLoadChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
-  unsigned Alignment = getAlignment(L0);
+  Align Alignment = getAlign(L0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
@@ -1159,7 +1153,7 @@ bool Vectorizer::vectorizeLoadChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the load is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
+  if (accessIsMisaligned(SzInBytes, AS, Alignment.value())) {
     if (L0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
       return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
@@ -1168,13 +1162,13 @@ bool Vectorizer::vectorizeLoadChain(
 
     unsigned NewAlign = getOrEnforceKnownAlignment(
       L0->getPointerOperand(), StackAdjustedAlignment, DL, L0, nullptr, &DT);
-    if (NewAlign >= Alignment)
-      Alignment = NewAlign;
+    if (NewAlign >= Alignment.value())
+      Alignment = Align(NewAlign);
     else
       return false;
   }
 
-  if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
+  if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment.value(), AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
     return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
            vectorizeLoadChain(Chains.second, InstructionsProcessed);
