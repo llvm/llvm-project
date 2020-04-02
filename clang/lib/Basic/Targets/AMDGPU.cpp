@@ -233,28 +233,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec);
 }
 
-void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
-                                           TargetOptions &TargetOpts) const {
-  bool hasFP32Denormals = false;
-  bool hasFP64Denormals = false;
-
-  for (auto &I : TargetOpts.FeaturesAsWritten) {
-    if (I == "+fp32-denormals" || I == "-fp32-denormals")
-      hasFP32Denormals = true;
-    if (I == "+fp64-fp16-denormals" || I == "-fp64-fp16-denormals")
-      hasFP64Denormals = true;
-  }
-  if (!hasFP32Denormals)
-    TargetOpts.Features.push_back(
-      (Twine(hasFastFMAF() && hasFullRateDenormalsF32() &&
-             CGOpts.FP32DenormalMode.Output == llvm::DenormalMode::IEEE
-             ? '+' : '-') + Twine("fp32-denormals"))
-            .str());
-  // Always do not flush fp64 or fp16 denorms.
-  if (!hasFP64Denormals && hasFP64())
-    TargetOpts.Features.push_back("+fp64-fp16-denormals");
-}
-
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   if (isAMDGCN(getTriple()))

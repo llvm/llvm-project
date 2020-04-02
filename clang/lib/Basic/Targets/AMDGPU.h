@@ -208,9 +208,6 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeatureVec) const override;
 
-  void adjustTargetOptions(const CodeGenOptions &CGOpts,
-                           TargetOptions &TargetOpts) const override;
-
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
