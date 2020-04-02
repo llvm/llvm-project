@@ -26,7 +26,7 @@ struct S1 {
 template <typename T>
 class S7 : public T {
 protected:
-  T a, b, c[10], d[10];
+  T a, b;
   S7() : a(0) {}
 
 public:
@@ -34,7 +34,7 @@ public:
     omp_depend_t x;
     omp_event_handle_t evt;
 #pragma omp taskgroup allocate(b) task_reduction(+:b)
-#pragma omp task private(a) private(this->a) private(T::a) in_reduction(+:this->b) allocate(b) depend(depobj:x) detach(evt) depend(iterator(i=0:10:1, T *k = &a:&b), in: c[i], d[(int)(k-&a)])
+#pragma omp task private(a) private(this->a) private(T::a) in_reduction(+:this->b) allocate(b) depend(depobj:x) detach(evt)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -47,9 +47,9 @@ public:
 };
 
 // CHECK: #pragma omp taskgroup allocate(this->b) task_reduction(+: this->b)
-// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b) allocate(this->b) depend(depobj : x) detach(evt) depend(iterator(int i = 0:10, T * k = &this->a:&this->b), in : this->c[i],this->d[(int)(k - &this->a)]){{$}}
+// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b) allocate(this->b) depend(depobj : x) detach(evt){{$}}
 // CHECK: #pragma omp task private(this->a) private(this->a)
-// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a) in_reduction(+: this->b) allocate(this->b) depend(depobj : x) detach(evt) depend(iterator(int i = 0:10, S1 * k = &this->a:&this->b), in : this->c[i],this->d[(int)(k - &this->a)])
+// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
 
 class S8 : public S7<S1> {
   S8() {}
@@ -176,10 +176,10 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: foo();
 #pragma omp taskgroup task_reduction(min: arr1)
 #pragma omp parallel reduction(+:arr1)
-#pragma omp task in_reduction(min: arr1) depend(iterator(i=0:argc, unsigned j=argc:0:a), out: argv[i][j])
+#pragma omp task in_reduction(min: arr1)
   // CHECK-NEXT: #pragma omp taskgroup task_reduction(min: arr1)
   // CHECK-NEXT: #pragma omp parallel reduction(+: arr1)
-  // CHECK-NEXT: #pragma omp task in_reduction(min: arr1) depend(iterator(int i = 0:argc, unsigned int j = argc:0), out : argv[i][j])
+  // CHECK-NEXT: #pragma omp task in_reduction(min: arr1)
   foo();
   // CHECK-NEXT: foo();
   // CHECK-NEXT: #pragma omp task in_reduction(+: arr1)

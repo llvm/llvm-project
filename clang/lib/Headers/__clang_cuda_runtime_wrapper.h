@@ -143,11 +143,12 @@ inline __host__ double __signbitd(double x) {
 // to provide our own.
 #include <__clang_cuda_libdevice_declares.h>
 
-// Wrappers for many device-side standard library functions became compiler
-// builtins in CUDA-9 and have been removed from the CUDA headers. Clang now
-// provides its own implementation of the wrappers.
+// Wrappers for many device-side standard library functions, incl. math
+// functions, became compiler builtins in CUDA-9 and have been removed from the
+// CUDA headers. Clang now provides its own implementation of the wrappers.
 #if CUDA_VERSION >= 9000
 #include <__clang_cuda_device_functions.h>
+#include <__clang_cuda_math.h>
 #endif
 
 // __THROW is redefined to be empty by device_functions_decls.h in CUDA. Clang's

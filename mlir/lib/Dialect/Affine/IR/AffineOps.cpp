@@ -1383,7 +1383,10 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
   auto prevUbMap = ubMap;
 
   canonicalizeMapAndOperands(&lbMap, &lbOperands);
+  lbMap = removeDuplicateExprs(lbMap);
+
   canonicalizeMapAndOperands(&ubMap, &ubOperands);
+  ubMap = removeDuplicateExprs(ubMap);
 
   // Any canonicalization change always leads to updated map(s).
   if (lbMap == prevLbMap && ubMap == prevUbMap)

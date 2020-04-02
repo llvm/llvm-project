@@ -25,7 +25,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/LocInfoType.h"
 #include "clang/AST/MangleNumberingContext.h"
@@ -4904,21 +4903,6 @@ public:
                                       SourceLocation RParenLoc,
                                       ArrayRef<Expr *> Dims,
                                       ArrayRef<SourceRange> Brackets);
-
-  /// Data structure for iterator expression.
-  struct OMPIteratorData {
-    IdentifierInfo *DeclIdent = nullptr;
-    SourceLocation DeclIdentLoc;
-    ParsedType Type;
-    OMPIteratorExpr::IteratorRange Range;
-    SourceLocation AssignLoc;
-    SourceLocation ColonLoc;
-    SourceLocation SecColonLoc;
-  };
-
-  ExprResult ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
-                                  SourceLocation LLoc, SourceLocation RLoc,
-                                  ArrayRef<OMPIteratorData> Data);
 
   // This struct is for use by ActOnMemberAccess to allow
   // BuildMemberReferenceExpr to be able to reinvoke ActOnMemberAccess after
@@ -10588,7 +10572,7 @@ public:
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
 
   OMPClause *ActOnOpenMPVarListClause(
-      OpenMPClauseKind Kind, ArrayRef<Expr *> Vars, Expr *DepModOrTailExpr,
+      OpenMPClauseKind Kind, ArrayRef<Expr *> Vars, Expr *TailExpr,
       const OMPVarListLocTy &Locs, SourceLocation ColonLoc,
       CXXScopeSpec &ReductionOrMapperIdScopeSpec,
       DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
@@ -10686,10 +10670,10 @@ public:
                                      SourceLocation EndLoc);
   /// Called on well-formed 'depend' clause.
   OMPClause *
-  ActOnOpenMPDependClause(Expr *DepModifier, OpenMPDependClauseKind DepKind,
-                          SourceLocation DepLoc, SourceLocation ColonLoc,
-                          ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-                          SourceLocation LParenLoc, SourceLocation EndLoc);
+  ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind, SourceLocation DepLoc,
+                          SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
+                          SourceLocation StartLoc, SourceLocation LParenLoc,
+                          SourceLocation EndLoc);
   /// Called on well-formed 'device' clause.
   OMPClause *ActOnOpenMPDeviceClause(OpenMPDeviceClauseModifier Modifier,
                                      Expr *Device, SourceLocation StartLoc,

@@ -112,6 +112,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
@@ -601,6 +602,13 @@ struct InformationCache {
     return AG.getAnalysis<AAManager>(F);
   }
 
+  /// Return true if \p Arg is involved in a must-tail call, thus the argument
+  /// of the caller or callee.
+  bool isInvolvedInMustTailCall(const Argument &Arg) const {
+    return FunctionsCalledViaMustTail.count(Arg.getParent()) ||
+           FunctionsWithMustTailCall.count(Arg.getParent());
+  }
+
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
   typename AP::Result *getAnalysisResultForFunction(const Function &F) {
@@ -633,6 +641,12 @@ private:
 
   /// A map from functions to their instructions that may read or write memory.
   FuncRWInstsMapTy FuncRWInstsMap;
+
+  /// Functions called by a `musttail` call.
+  SmallPtrSet<Function *, 8> FunctionsCalledViaMustTail;
+
+  /// Functions containing a `musttail` call.
+  SmallPtrSet<Function *, 8> FunctionsWithMustTailCall;
 
   /// The datalayout used in the module.
   const DataLayout &DL;
@@ -700,11 +714,7 @@ struct Attributor {
       : Functions(Functions), InfoCache(InfoCache), CGUpdater(CGUpdater),
         DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
 
-  ~Attributor() {
-    DeleteContainerPointers(AllAbstractAttributes);
-    for (auto &It : ArgumentReplacementMap)
-      DeleteContainerPointers(It.second);
-  }
+  ~Attributor();
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
   ///
@@ -1069,6 +1079,9 @@ struct Attributor {
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
+
+  /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
+  BumpPtrAllocator Allocator;
 
 private:
   /// Check \p Pred on all call sites of \p Fn.

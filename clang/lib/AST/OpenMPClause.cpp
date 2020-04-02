@@ -900,19 +900,16 @@ OMPDepobjClause *OMPDepobjClause::CreateEmpty(const ASTContext &C) {
 OMPDependClause *
 OMPDependClause::Create(const ASTContext &C, SourceLocation StartLoc,
                         SourceLocation LParenLoc, SourceLocation EndLoc,
-                        Expr *DepModifier, OpenMPDependClauseKind DepKind,
-                        SourceLocation DepLoc, SourceLocation ColonLoc,
-                        ArrayRef<Expr *> VL, unsigned NumLoops) {
-  void *Mem = C.Allocate(
-      totalSizeToAlloc<Expr *>(VL.size() + /*depend-modifier*/ 1 + NumLoops),
-      alignof(OMPDependClause));
+                        OpenMPDependClauseKind DepKind, SourceLocation DepLoc,
+                        SourceLocation ColonLoc, ArrayRef<Expr *> VL,
+                        unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + NumLoops));
   OMPDependClause *Clause = new (Mem)
       OMPDependClause(StartLoc, LParenLoc, EndLoc, VL.size(), NumLoops);
   Clause->setVarRefs(VL);
   Clause->setDependencyKind(DepKind);
   Clause->setDependencyLoc(DepLoc);
   Clause->setColonLoc(ColonLoc);
-  Clause->setModifier(DepModifier);
   for (unsigned I = 0 ; I < NumLoops; ++I)
     Clause->setLoopData(I, nullptr);
   return Clause;
@@ -920,9 +917,7 @@ OMPDependClause::Create(const ASTContext &C, SourceLocation StartLoc,
 
 OMPDependClause *OMPDependClause::CreateEmpty(const ASTContext &C, unsigned N,
                                               unsigned NumLoops) {
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<Expr *>(N + /*depend-modifier*/ 1 + NumLoops),
-                 alignof(OMPDependClause));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + NumLoops));
   return new (Mem) OMPDependClause(N, NumLoops);
 }
 
@@ -932,7 +927,7 @@ void OMPDependClause::setLoopData(unsigned NumLoop, Expr *Cnt) {
          NumLoop < NumLoops &&
          "Expected sink or source depend + loop index must be less number of "
          "loops.");
-  auto *It = std::next(getVarRefs().end(), NumLoop + 1);
+  auto It = std::next(getVarRefs().end(), NumLoop);
   *It = Cnt;
 }
 
@@ -942,7 +937,7 @@ Expr *OMPDependClause::getLoopData(unsigned NumLoop) {
          NumLoop < NumLoops &&
          "Expected sink or source depend + loop index must be less number of "
          "loops.");
-  auto *It = std::next(getVarRefs().end(), NumLoop + 1);
+  auto It = std::next(getVarRefs().end(), NumLoop);
   return *It;
 }
 
@@ -952,14 +947,9 @@ const Expr *OMPDependClause::getLoopData(unsigned NumLoop) const {
          NumLoop < NumLoops &&
          "Expected sink or source depend + loop index must be less number of "
          "loops.");
-  const auto *It = std::next(getVarRefs().end(), NumLoop + 1);
+  auto It = std::next(getVarRefs().end(), NumLoop);
   return *It;
 }
-
-void OMPDependClause::setModifier(Expr *DepModifier) {
-  *getVarRefs().end() = DepModifier;
-}
-Expr *OMPDependClause::getModifier() { return *getVarRefs().end(); }
 
 unsigned OMPClauseMappableExprCommon::getComponentsTotalNumber(
     MappableExprComponentListsRef ComponentLists) {
@@ -1737,10 +1727,6 @@ void OMPClausePrinter::VisitOMPDepobjClause(OMPDepobjClause *Node) {
 
 void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {
   OS << "depend(";
-  if (Expr *DepModifier = Node->getModifier()) {
-    DepModifier->printPretty(OS, nullptr, Policy);
-    OS << ", ";
-  }
   OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
                                       Node->getDependencyKind());
   if (!Node->varlist_empty()) {

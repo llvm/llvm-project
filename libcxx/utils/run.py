@@ -14,14 +14,15 @@ program's error code.
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--codesign_identity', type=str, required=False)
-    parser.add_argument('--working_directory', type=str, required=True)
     parser.add_argument('--dependencies', type=str, nargs='*', required=True)
     parser.add_argument('--env', type=str, nargs='*', required=True)
     (args, remaining) = parser.parse_known_args(sys.argv[1:])
@@ -42,14 +43,23 @@ def main():
     # Extract environment variables into a dictionary
     env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
 
-    # Ensure the file dependencies exist
-    for file in args.dependencies:
-        if not os.path.exists(file):
-            sys.stderr.write('Missing file {} marked as a dependency of a test'.format(file))
-            exit(1)
+    try:
+        tmpDir = tempfile.mkdtemp()
 
-    # Run the executable with the given environment in the given working directory
-    return subprocess.call(' '.join(remaining), cwd=args.working_directory, env=env, shell=True)
+        # Ensure the file dependencies exist and copy them to a temporary directory.
+        for dep in args.dependencies:
+            if not os.path.exists(dep):
+                sys.stderr.write('Missing file or directory "{}" marked as a dependency of a test'.format(dep))
+                exit(1)
+            if os.path.isdir(dep):
+                shutil.copytree(dep, os.path.join(tmpDir, os.path.basename(dep)), symlinks=True)
+            else:
+                shutil.copy2(dep, tmpDir)
+
+        # Run the executable with the given environment in the temporary directory.
+        return subprocess.call(' '.join(remaining), cwd=tmpDir, env=env, shell=True)
+    finally:
+        shutil.rmtree(tmpDir)
 
 if __name__ == '__main__':
     exit(main())

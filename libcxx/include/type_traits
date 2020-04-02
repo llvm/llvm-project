@@ -852,18 +852,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_integral_v
 
 // is_floating_point
 
-#if __has_keyword(__is_floating_point)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_floating_point : _BoolConstant<__is_floating_point(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_floating_point_v = __is_floating_point(_Tp);
-#endif
-
-#else
-
 template <class _Tp> struct __libcpp_is_floating_point              : public false_type {};
 template <>          struct __libcpp_is_floating_point<float>       : public true_type {};
 template <>          struct __libcpp_is_floating_point<double>      : public true_type {};
@@ -877,8 +865,6 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_floating_point_v
     = is_floating_point<_Tp>::value;
 #endif
-
-#endif // __has_keyword(__is_floating_point)
 
 // is_array
 
@@ -1192,17 +1178,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_enum_v
 
 // is_arithmetic
 
-#if __has_keyword(__is_arithmetic)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_arithmetic : _BoolConstant<__is_arithmetic(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
-template <class _Tp>
-_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_arithmetic_v = __is_arithmetic(_Tp);
-#endif
-
-#else // __has_keyword(__is_arithmetic)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_arithmetic
     : public integral_constant<bool, is_integral<_Tp>::value      ||
@@ -1213,8 +1188,6 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_arithmetic_v
     = is_arithmetic<_Tp>::value;
 #endif
-
-#endif // __has_keyword(__is_arithmetic)
 
 // is_fundamental
 

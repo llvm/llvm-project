@@ -13,7 +13,7 @@ define internal i32 @callee(i1 %C, i32* %A) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       F:
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i32, i32* null, i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[A_2]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[A_2]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:

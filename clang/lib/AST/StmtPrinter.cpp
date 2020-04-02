@@ -1361,24 +1361,6 @@ void StmtPrinter::VisitOMPArrayShapingExpr(OMPArrayShapingExpr *Node) {
   PrintExpr(Node->getBase());
 }
 
-void StmtPrinter::VisitOMPIteratorExpr(OMPIteratorExpr *Node) {
-  OS << "iterator(";
-  for (unsigned I = 0, E = Node->numOfIterators(); I < E; ++I) {
-    auto *VD = cast<ValueDecl>(Node->getIteratorDecl(I));
-    VD->getType().print(OS, Policy);
-    const OMPIteratorExpr::IteratorRange Range = Node->getIteratorRange(I);
-    OS << " " << VD->getName() << " = ";
-    PrintExpr(Range.Begin);
-    OS << ":";
-    PrintExpr(Range.End);
-    if (Node->getSecondColonLoc(I).isValid())
-      PrintExpr(Range.Step);
-    if (I < E - 1)
-      OS << ", ";
-  }
-  OS << ")";
-}
-
 void StmtPrinter::PrintCallArgs(CallExpr *Call) {
   for (unsigned i = 0, e = Call->getNumArgs(); i != e; ++i) {
     if (isa<CXXDefaultArgExpr>(Call->getArg(i))) {

@@ -9760,14 +9760,6 @@ def note_omp_conversion_here : Note<
 def err_omp_ambiguous_conversion : Error<
   "ambiguous conversion from type %0 to an integral or unscoped "
   "enumeration type">;
-def err_omp_iterator_not_integral_or_pointer : Error<
-  "expected integral or pointer type as the iterator-type, not %0">;
-def err_omp_iterator_constant : Error<
-  "expected non-constant type as the iterator-type, constant %0 is provided">;
-def err_omp_iterator_step_not_integral : Error<
-  "iterator step expression %0 is not the integral expression">;
-def err_omp_iterator_step_constant_zero : Error<
-  "iterator step expression %0 evaluates to 0">;
 def err_omp_required_access : Error<
   "%0 variable must be %1">;
 def err_omp_const_variable : Error<
@@ -9961,7 +9953,6 @@ def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
 def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
 def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
-def err_omp_iterator_use : Error<"OpenMP iterator is not allowed here">;
 def err_omp_typecheck_section_value : Error<
   "subscripted value is not an array or pointer">;
 def err_omp_typecheck_section_not_integer : Error<
@@ -10040,10 +10031,6 @@ def err_omp_depend_sink_source_not_allowed : Error<
   "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
 def err_omp_depend_zero_length_array_section_not_allowed : Error<
   "zero-length array section is not allowed in 'depend' clause">;
-def err_omp_depend_sink_source_with_modifier : Error<
-  "depend modifier cannot be used with 'sink' or 'source' depend type">;
-def err_omp_depend_modifier_not_iterator : Error<
-  "expected iterator specification as depend modifier">;
 def err_omp_linear_ordered : Error<
   "'linear' clause cannot be specified along with 'ordered' clause with a parameter">;
 def err_omp_unexpected_schedule_modifier : Error<
