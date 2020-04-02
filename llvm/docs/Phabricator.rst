@@ -59,7 +59,8 @@ To get a full diff, use one of the following commands (or just use Arcanist
 to upload your patch):
 
 * ``git show HEAD -U999999 > mypatch.patch``
-* ``git format-patch -U999999 @{u}``
+* ``git diff -U999999 @{u} > mypatch.patch``
+* ``git diff HEAD~1 -U999999 > mypatch.patch``
 
 Before uploading your patch, please make sure it is formatted properly, as
 described in :ref:`How to Submit a Patch <format patches>`.
