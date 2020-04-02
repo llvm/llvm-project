@@ -4,14 +4,14 @@ import sys
 
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = path(r"@LLVM_TOOLS_DIR@")
+config.llvm_lib_dir = path(r"@LLVM_LIBRARY_DIR@")
+config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
-config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
@@ -63,4 +63,5 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLVM_SOURCE_DIR@/test/lit.cfg.py")
+lit_config.load_config(
+    config, os.path.join(config.llvm_src_root, "test/lit.cfg.py"))
