@@ -1087,6 +1087,7 @@ void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
     fun(position);
   }
 }
+////////////// End Support for Lowering operations on n-D vectors //////////////
 
 /// Replaces the given operaiton "op" with a new operation of type "targetOp"
 /// and given operands.
@@ -1127,29 +1128,6 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   rewriter.replaceOp(op, results);
   return success();
 }
-
-////////////// End Support for Lowering operations on n-D vectors //////////////
-namespace {
-template <typename SourceOp, unsigned OpCount>
-struct OpCountValidator {
-  static_assert(
-      std::is_base_of<
-          typename OpTrait::NOperands<OpCount>::template Impl<SourceOp>,
-          SourceOp>::value,
-      "wrong operand count");
-};
-
-template <typename SourceOp>
-struct OpCountValidator<SourceOp, 1> {
-  static_assert(std::is_base_of<OpTrait::OneOperand<SourceOp>, SourceOp>::value,
-                "expected a single operand");
-};
-
-template <typename SourceOp, unsigned OpCount>
-void ValidateOpCount() {
-  OpCountValidator<SourceOp, OpCount>();
-}
-} // namespace
 
 static LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
