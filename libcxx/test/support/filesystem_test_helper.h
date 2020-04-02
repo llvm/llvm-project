@@ -26,13 +26,13 @@
 
 // static test helpers
 
-#ifndef LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
-#warning "STATIC TESTS DISABLED"
-#else // LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
-
 namespace StaticEnv {
 
-static const fs::path Root = TEST_STRINGIZE(LIBCXX_FILESYSTEM_STATIC_TEST_ROOT);
+// Tests that use these utilities should add '<...>/Inputs/static_test_env'
+// to their FILE_DEPENDENCIES, to make sure the directory is made available
+// to the test. Assuming that, the 'static_test_env' will be available in the
+// directory where the test is run.
+static const fs::path Root = fs::current_path() / "static_test_env";
 
 inline fs::path makePath(fs::path const& p) {
     // env_path is expected not to contain symlinks.
@@ -106,8 +106,6 @@ static const fs::path RecDirFollowSymlinksIterationList[] = {
 };
 
 } // namespace StaticEnv
-
-#endif // LIBCXX_FILESYSTEM_STATIC_TEST_ROOT
 
 namespace random_utils {
 inline char to_hex(int ch) {
