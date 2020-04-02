@@ -5604,6 +5604,8 @@ GetArchetypeNames(swift::Type swift_type, swift::ASTContext &ast_ctx,
     if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
     auto *param = type->getAs<swift::GenericTypeParamType>();
+    if (!param)
+      return;
     auto it = names.find({param->getDepth(), param->getIndex()});
     if (it != names.end()) {
       swift::Identifier ident = ast_ctx.getIdentifier(it->second);
