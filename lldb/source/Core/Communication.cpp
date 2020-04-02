@@ -315,16 +315,12 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   Status error;
   ConnectionStatus status = eConnectionStatusSuccess;
   bool done = false;
+  bool disconnect = false;
   while (!done && comm->m_read_thread_enabled) {
     size_t bytes_read = comm->ReadFromConnection(
         buf, sizeof(buf), std::chrono::seconds(5), status, &error);
-    if (bytes_read > 0)
+    if (bytes_read > 0 || status == eConnectionStatusEndOfFile)
       comm->AppendBytesToCache(buf, bytes_read, true, status);
-    else if ((bytes_read == 0) && status == eConnectionStatusEndOfFile) {
-      if (comm->GetCloseOnEOF())
-        comm->Disconnect();
-      comm->AppendBytesToCache(buf, bytes_read, true, status);
-    }
 
     switch (status) {
     case eConnectionStatusSuccess:
@@ -332,11 +328,12 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
 
     case eConnectionStatusEndOfFile:
       done = true;
+      disconnect = comm->GetCloseOnEOF();
       break;
     case eConnectionStatusError: // Check GetError() for details
       if (error.GetType() == eErrorTypePOSIX && error.GetError() == EIO) {
         // EIO on a pipe is usually caused by remote shutdown
-        comm->Disconnect();
+        disconnect = comm->GetCloseOnEOF();
         done = true;
       }
       if (error.Fail())
@@ -365,9 +362,15 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   if (log)
     LLDB_LOGF(log, "%p Communication::ReadThread () thread exiting...", p);
 
-  comm->m_read_thread_did_exit = true;
-  // Let clients know that this thread is exiting
   comm->BroadcastEvent(eBroadcastBitNoMorePendingInput);
+  {
+    std::lock_guard<std::mutex> guard(comm->m_synchronize_mutex);
+    comm->m_read_thread_did_exit = true;
+    if (disconnect)
+      comm->Disconnect();
+  }
+
+  // Let clients know that this thread is exiting
   comm->BroadcastEvent(eBroadcastBitReadThreadDidExit);
   return {};
 }
