@@ -3639,6 +3639,8 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = 2;
+  // All GPR and vector loads can be unaligned.
+  Options.AllowOverlappingLoads = true;
   if (IsZeroCmp) {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
@@ -3646,8 +3648,6 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     if (PreferredWidth >= 512 && ST->hasAVX512()) Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
-    // All GPR and vector loads can be unaligned.
-    Options.AllowOverlappingLoads = true;
   }
   if (ST->is64Bit()) {
     Options.LoadSizes.push_back(8);
