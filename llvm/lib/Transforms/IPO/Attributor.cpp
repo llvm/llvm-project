@@ -7052,10 +7052,18 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
 struct AAValueConstantRangeArgument final
     : AAArgumentFromCallSiteArguments<
           AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState> {
-  AAValueConstantRangeArgument(const IRPosition &IRP)
-      : AAArgumentFromCallSiteArguments<
-            AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState>(
-            IRP) {}
+  using Base = AAArgumentFromCallSiteArguments<
+      AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState>;
+  AAValueConstantRangeArgument(const IRPosition &IRP) : Base(IRP) {}
+
+  /// See AbstractAttribute::initialize(..).
+  void initialize(Attributor &A) override {
+    if (!getAnchorScope() || getAnchorScope()->isDeclaration()) {
+      indicatePessimisticFixpoint();
+    } else {
+      Base::initialize(A);
+    }
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
