@@ -69,6 +69,7 @@ option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
 # FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
 # programs to due undefined references to new/delete in libc++abi. Once this
 # has been fixed or worked around the default value should be changed.
+# See https://reviews.llvm.org/D68269 for more details.
 option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
     "Build libc++abi with definitions for operator new/delete. Normally libc++
     provides these definitions" ON)
