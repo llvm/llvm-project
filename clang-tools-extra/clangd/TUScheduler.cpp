@@ -569,12 +569,10 @@ void ASTWorker::runWithAST(
       vlog("ASTWorker rebuilding evicted AST to run {0}: {1} version {2}", Name,
            FileName, CurrentInputs->Version);
       llvm::Optional<ParsedAST> NewAST =
-          Invocation
-              ? buildAST(FileName,
-                         std::make_unique<CompilerInvocation>(*Invocation),
-                         CompilerInvocationDiagConsumer.take(), *CurrentInputs,
-                         getPossiblyStalePreamble())
-              : None;
+          Invocation ? buildAST(FileName, std::move(Invocation),
+                                CompilerInvocationDiagConsumer.take(),
+                                *CurrentInputs, getPossiblyStalePreamble())
+                     : None;
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }
     // Make sure we put the AST back into the LRU cache.

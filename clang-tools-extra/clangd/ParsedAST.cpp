@@ -551,8 +551,7 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   }
 
   return ParsedAST::build(
-      Inputs.Version, std::make_unique<CompilerInvocation>(*Invocation),
-      CompilerInvocationDiags, Preamble,
+      Inputs.Version, std::move(Invocation), CompilerInvocationDiags, Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName),
       std::move(VFS), Inputs.Index, Inputs.Opts);
 }
