@@ -1,8 +1,8 @@
 ; Make sure we still form mad even when unsafe math or fp-contract is allowed instead of fma.
 
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD  -check-prefix=SI-STD-SAFE -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-SAFE -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-UNSAFE -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD  -check-prefix=SI-STD-SAFE -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fp32-denormals -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-SAFE -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fp32-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-UNSAFE -check-prefix=FUNC %s
 
 ; FIXME: Remove enable-unsafe-fp-math in RUN line and add flags to IR instrs
 

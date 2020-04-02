@@ -97,7 +97,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // denormals, but should be checked. Should we issue a warning somewhere
   // if someone tries to enable these?
   if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-    FullFS += "+fp64-fp16-denormals,";
+    FullFS += "+fp64-fp16-denormals,+fp32-denormals,";
   } else {
     FullFS += "-fp32-denormals,";
   }

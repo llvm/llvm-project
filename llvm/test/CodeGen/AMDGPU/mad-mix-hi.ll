@@ -143,5 +143,5 @@ declare float @llvm.maxnum.f32(float, float) #1
 declare float @llvm.fmuladd.f32(float, float, float) #1
 declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "target-features"="-fp32-denormals" }
 attributes #1 = { nounwind readnone speculatable }

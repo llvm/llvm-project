@@ -704,8 +704,8 @@ struct SIModeRegisterDefaults {
     SIModeRegisterDefaults Mode;
     Mode.DX10Clamp = true;
     Mode.IEEE = IsCompute;
-    Mode.FP32InputDenormals = false; // FIXME: Should be on by default.
-    Mode.FP32OutputDenormals = false; // FIXME: Should be on by default.
+    Mode.FP32InputDenormals = true;
+    Mode.FP32OutputDenormals = true;
     Mode.FP64FP16InputDenormals = true;
     Mode.FP64FP16OutputDenormals = true;
     return Mode;
