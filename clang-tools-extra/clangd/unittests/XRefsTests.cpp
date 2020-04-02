@@ -1121,6 +1121,30 @@ TEST(FindReferences, WithinAST) {
   }
 }
 
+TEST(FindReferences, MainFileReferencesOnly) {
+  llvm::StringRef Test =
+      R"cpp(
+        void test() {
+          int [[fo^o]] = 1;
+          // refs not from main file should not be included.
+          #include "foo.inc"
+        })cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  TU.AdditionalFiles["foo.inc"] = R"cpp(
+      foo = 3;
+    )cpp";
+  auto AST = TU.build();
+
+  std::vector<Matcher<Location>> ExpectedLocations;
+  for (const auto &R : Code.ranges())
+    ExpectedLocations.push_back(RangeIs(R));
+  EXPECT_THAT(findReferences(AST, Code.point(), 0).References,
+              ElementsAreArray(ExpectedLocations))
+      << Test;
+}
+
 TEST(FindReferences, ExplicitSymbols) {
   const char *Tests[] = {
       R"cpp(
