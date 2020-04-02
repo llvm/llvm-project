@@ -433,8 +433,13 @@ struct ClientCapabilities {
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
 
+  /// Client advertises support for the semanticTokens feature.
+  /// We support the textDocument/semanticTokens request in any case.
+  /// textDocument.semanticTokens
+  bool SemanticTokens = false;
   /// Client supports Theia semantic highlighting extension.
   /// https://github.com/microsoft/vscode-languageserver-node/pull/367
+  /// This will be ignored if the client also supports semanticTokens.
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
   /// FIXME: drop this support once clients support LSP 3.16 Semantic Tokens.
   bool TheiaSemanticHighlighting = false;

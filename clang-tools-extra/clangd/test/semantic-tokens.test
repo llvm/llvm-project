@@ -1,5 +1,10 @@
-# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s -implicit-check-not=semanticHighlight
+# Send capabilities for both Theia semanticHighlight & standard semanticTokens.
+# clangd should not use/acknowledge the Theia protocol in this case.
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"capabilities":{"textDocument":{
+  "semanticHighlightingCapabilities":{"semanticHighlighting":true},
+  "semanticTokens":{"dynamicRegistration":true}
+}}}}
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","text":"int x = 2;"}}}
 ---

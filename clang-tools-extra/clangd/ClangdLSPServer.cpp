@@ -480,6 +480,13 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   ClangdServerOpts.TheiaSemanticHighlighting =
       Params.capabilities.TheiaSemanticHighlighting;
+  if (Params.capabilities.TheiaSemanticHighlighting &&
+      Params.capabilities.SemanticTokens) {
+    log("Client supports legacy semanticHighlights notification and standard "
+        "semanticTokens request, choosing the latter (no notifications).");
+    ClangdServerOpts.TheiaSemanticHighlighting = false;
+  }
+
   if (Params.rootUri && *Params.rootUri)
     ClangdServerOpts.WorkspaceRoot = std::string(Params.rootUri->file());
   else if (Params.rootPath && !Params.rootPath->empty())
@@ -612,7 +619,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         }}}};
   if (NegotiatedOffsetEncoding)
     Result["offsetEncoding"] = *NegotiatedOffsetEncoding;
-  if (Params.capabilities.TheiaSemanticHighlighting)
+  if (ClangdServerOpts.TheiaSemanticHighlighting)
     Result.getObject("capabilities")
         ->insert(
             {"semanticHighlighting",
