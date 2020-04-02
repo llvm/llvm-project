@@ -424,22 +424,20 @@ static bool isPredicatedOnPHI(CallSite CS) {
   if (Instr != Parent->getFirstNonPHIOrDbg())
     return false;
 
-  for (auto &BI : *Parent) {
-    if (PHINode *PN = dyn_cast<PHINode>(&BI)) {
-      for (auto &I : CS.args())
-        if (&*I == PN) {
-          assert(PN->getNumIncomingValues() == 2 &&
-                 "Unexpected number of incoming values");
-          if (PN->getIncomingBlock(0) == PN->getIncomingBlock(1))
-            return false;
-          if (PN->getIncomingValue(0) == PN->getIncomingValue(1))
-            continue;
-          if (isa<Constant>(PN->getIncomingValue(0)) &&
-              isa<Constant>(PN->getIncomingValue(1)))
-            return true;
-        }
+  for (auto &PN : Parent->phis()) {
+    for (auto &Arg : CS.args()) {
+      if (&*Arg != &PN)
+        continue;
+      assert(PN.getNumIncomingValues() == 2 &&
+             "Unexpected number of incoming values");
+      if (PN.getIncomingBlock(0) == PN.getIncomingBlock(1))
+        return false;
+      if (PN.getIncomingValue(0) == PN.getIncomingValue(1))
+        continue;
+      if (isa<Constant>(PN.getIncomingValue(0)) &&
+          isa<Constant>(PN.getIncomingValue(1)))
+        return true;
     }
-    break;
   }
   return false;
 }
