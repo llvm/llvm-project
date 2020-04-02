@@ -876,21 +876,18 @@ protected:
     Stream &s = result.GetOutputStream();
 
     if (argc > 0) {
-
-      // TODO: Convert to entry-based iteration.  Requires converting
-      // DumpValueObject.
-      for (size_t idx = 0; idx < argc; ++idx) {
+      for (const Args::ArgEntry &arg : args) {
         VariableList variable_list;
         ValueObjectList valobj_list;
 
-        const char *arg = args.GetArgumentAtIndex(idx);
         size_t matches = 0;
         bool use_var_name = false;
         if (m_option_variable.use_regex) {
-          RegularExpression regex(llvm::StringRef::withNullAsEmpty(arg));
+          RegularExpression regex(
+              llvm::StringRef::withNullAsEmpty(arg.c_str()));
           if (!regex.IsValid()) {
             result.GetErrorStream().Printf(
-                "error: invalid regular expression: '%s'\n", arg);
+                "error: invalid regular expression: '%s'\n", arg.c_str());
             result.SetStatus(eReturnStatusFailed);
             return false;
           }
@@ -900,14 +897,14 @@ protected:
           matches = variable_list.GetSize();
         } else {
           Status error(Variable::GetValuesForVariableExpressionPath(
-              arg, m_exe_ctx.GetBestExecutionContextScope(),
+              arg.c_str(), m_exe_ctx.GetBestExecutionContextScope(),
               GetVariableCallback, target, variable_list, valobj_list));
           matches = variable_list.GetSize();
         }
 
         if (matches == 0) {
           result.GetErrorStream().Printf(
-              "error: can't find global variable '%s'\n", arg);
+              "error: can't find global variable '%s'\n", arg.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
@@ -923,7 +920,7 @@ protected:
               if (valobj_sp)
                 DumpValueObject(s, var_sp, valobj_sp,
                                 use_var_name ? var_sp->GetName().GetCString()
-                                             : arg);
+                                             : arg.c_str());
             }
           }
         }
@@ -3058,17 +3055,14 @@ protected:
           module_list_ptr = &target->GetImages();
         }
       } else {
-        // TODO: Convert to entry based iteration.  Requires converting
-        // FindModulesByName.
-        for (size_t i = 0; i < argc; ++i) {
+        for (const Args::ArgEntry &arg : command) {
           // Dump specified images (by basename or fullpath)
-          const char *arg_cstr = command.GetArgumentAtIndex(i);
           const size_t num_matches = FindModulesByName(
-              target, arg_cstr, module_list, use_global_module_list);
+              target, arg.c_str(), module_list, use_global_module_list);
           if (num_matches == 0) {
             if (argc == 1) {
               result.AppendErrorWithFormat("no modules found that match '%s'",
-                                           arg_cstr);
+                                           arg.c_str());
               result.SetStatus(eReturnStatusFailed);
               return false;
             }
