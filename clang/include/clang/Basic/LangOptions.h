@@ -229,6 +229,22 @@ public:
     All,
   };
 
+  enum class SignReturnAddressScopeKind {
+    /// No signing for any function.
+    None,
+    /// Sign the return address of functions that spill LR.
+    NonLeaf,
+    /// Sign the return address of all functions,
+    All
+  };
+
+  enum class SignReturnAddressKeyKind {
+    /// Return address signing uses APIA key.
+    AKey,
+    /// Return address signing uses APIB key.
+    BKey
+  };
+
 public:
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;

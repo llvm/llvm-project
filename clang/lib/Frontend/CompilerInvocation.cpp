@@ -1387,38 +1387,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.Addrsig = Args.hasArg(OPT_faddrsig);
 
-  if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
-    StringRef SignScope = A->getValue();
-
-    if (SignScope.equals_lower("none"))
-      Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::None);
-    else if (SignScope.equals_lower("all"))
-      Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::All);
-    else if (SignScope.equals_lower("non-leaf"))
-      Opts.setSignReturnAddress(
-          CodeGenOptions::SignReturnAddressScope::NonLeaf);
-    else
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << SignScope;
-
-    if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
-      StringRef SignKey = A->getValue();
-      if (!SignScope.empty() && !SignKey.empty()) {
-        if (SignKey.equals_lower("a_key"))
-          Opts.setSignReturnAddressKey(
-              CodeGenOptions::SignReturnAddressKeyValue::AKey);
-        else if (SignKey.equals_lower("b_key"))
-          Opts.setSignReturnAddressKey(
-              CodeGenOptions::SignReturnAddressKeyValue::BKey);
-        else
-          Diags.Report(diag::err_drv_invalid_value)
-              << A->getAsString(Args) << SignKey;
-      }
-    }
-  }
-
-  Opts.BranchTargetEnforcement = Args.hasArg(OPT_mbranch_target_enforce);
-
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
   Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
@@ -3348,6 +3316,40 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
 
   Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
+
+  if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
+    StringRef SignScope = A->getValue();
+
+    if (SignScope.equals_lower("none"))
+      Opts.setSignReturnAddressScope(
+          LangOptions::SignReturnAddressScopeKind::None);
+    else if (SignScope.equals_lower("all"))
+      Opts.setSignReturnAddressScope(
+          LangOptions::SignReturnAddressScopeKind::All);
+    else if (SignScope.equals_lower("non-leaf"))
+      Opts.setSignReturnAddressScope(
+          LangOptions::SignReturnAddressScopeKind::NonLeaf);
+    else
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << SignScope;
+
+    if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
+      StringRef SignKey = A->getValue();
+      if (!SignScope.empty() && !SignKey.empty()) {
+        if (SignKey.equals_lower("a_key"))
+          Opts.setSignReturnAddressKey(
+              LangOptions::SignReturnAddressKeyKind::AKey);
+        else if (SignKey.equals_lower("b_key"))
+          Opts.setSignReturnAddressKey(
+              LangOptions::SignReturnAddressKeyKind::BKey);
+        else
+          Diags.Report(diag::err_drv_invalid_value)
+              << A->getAsString(Args) << SignKey;
+      }
+    }
+  }
+
+  Opts.BranchTargetEnforcement = Args.hasArg(OPT_mbranch_target_enforce);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {

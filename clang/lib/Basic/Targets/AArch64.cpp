@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -121,15 +122,15 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
     return false;
 
   BPI.SignReturnAddr =
-      llvm::StringSwitch<CodeGenOptions::SignReturnAddressScope>(PBP.Scope)
-          .Case("non-leaf", CodeGenOptions::SignReturnAddressScope::NonLeaf)
-          .Case("all", CodeGenOptions::SignReturnAddressScope::All)
-          .Default(CodeGenOptions::SignReturnAddressScope::None);
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
 
   if (PBP.Key == "a_key")
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::AKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
   else
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::BKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   return true;
