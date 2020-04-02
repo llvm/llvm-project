@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8_9_10 %s
 
 ; Make sure fdiv is promoted to f32.
 
@@ -263,9 +263,9 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(half addrspace(1)* %out) #0 {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare half @llvm.sqrt.f16(half) #1
-declare half @llvm.fabs.f16(half) #1
+declare i32 @llvm.amdgcn.workitem.id.x() #2
+declare half @llvm.sqrt.f16(half) #2
+declare half @llvm.fabs.f16(half) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

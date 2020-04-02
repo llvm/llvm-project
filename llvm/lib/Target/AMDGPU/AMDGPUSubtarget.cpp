@@ -59,13 +59,6 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
   FullFS += FS;
   ParseSubtargetFeatures(GPU, FullFS);
 
-  // FIXME: I don't think think Evergreen has any useful support for
-  // denormals, but should be checked. Should we issue a warning somewhere
-  // if someone tries to enable these?
-  if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
-    FP32Denormals = false;
-  }
-
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();
 
@@ -76,9 +69,6 @@ GCNSubtarget &
 GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                               StringRef GPU, StringRef FS) {
   // Determine default and user-specified characteristics
-  // On SI+, we want FP64 denormals to be on by default. FP32 denormals can be
-  // enabled, but some instructions do not respect them and they run at the
-  // double precision rate, so don't enable by default.
   //
   // We want to be able to turn these off, but making this a subtarget feature
   // for SI has the unhelpful behavior that it unsets everything else if you
@@ -92,15 +82,6 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
-
-  // FIXME: I don't think think Evergreen has any useful support for
-  // denormals, but should be checked. Should we issue a warning somewhere
-  // if someone tries to enable these?
-  if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-    FullFS += "+fp64-fp16-denormals,+fp32-denormals,";
-  } else {
-    FullFS += "-fp32-denormals,";
-  }
 
   FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
@@ -172,7 +153,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   TargetTriple(TT),
   Has16BitInsts(false),
   HasMadMixInsts(false),
-  FP32Denormals(false),
   FPExceptions(false),
   HasSDWA(false),
   HasVOP3PInsts(false),
@@ -200,7 +180,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FastFMAF32(false),
     HalfRate64Ops(false),
 
-    FP64FP16Denormals(false),
     FlatForGlobal(false),
     AutoWaitcntBeforeBarrier(false),
     CodeObjectV3(false),
