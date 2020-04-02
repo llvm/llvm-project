@@ -100,11 +100,11 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     _Pragma("GCC diagnostic pop")
 #else // ^^^ clang / MSVC vvv
 #define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
-    _Pragma("warning(push)") \
-    _Pragma("warning(disable : 4996)") \
-    _Pragma("warning(disable : 5215)")
+    __pragma(warning(push)) \
+    __pragma(warning(disable : 4996)) \
+    __pragma(warning(disable : 5215))
 #define _LIBCPP_SUPPRESS_DEPRECATED_POP \
-    _Pragma("warning(pop)")
+    __pragma(warning(pop))
 #endif // __clang__
 
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H
