@@ -190,9 +190,10 @@ public:
 
 #define STUB_LOG()                                                             \
   do {                                                                         \
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |  \
-                                                    LIBLLDB_LOG_TYPES),        \
-             g_stub_log_message, GetStandardLibraryName(m_process));           \
+    LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | \
+                                                     LIBLLDB_LOG_TYPES),       \
+              g_stub_log_message,                                              \
+              GetStandardLibraryName(m_process).AsCString());                  \
     assert(false && "called into swift language runtime stub");                \
   } while (0)
 
