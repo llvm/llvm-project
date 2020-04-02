@@ -494,23 +494,6 @@ static bool hasInterruptDelaySlot(const MCInst &Inst) {
   return false;
 }
 
-/// \returns the fragment size if it has instructions, otherwise returns 0.
-static size_t getSizeForInstFragment(const MCFragment *F) {
-  if (!F)
-    return 0;
-  // MCEncodedFragmentWithContents being templated makes this tricky.
-  switch (F->getKind()) {
-  default:
-    llvm_unreachable("Unknown fragment with instructions!");
-  case MCFragment::FT_Data:
-    return cast<MCDataFragment>(*F).getContents().size();
-  case MCFragment::FT_Relaxable:
-    return cast<MCRelaxableFragment>(*F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
-  }
-}
-
 /// Check if the instruction to be emitted is right after any data.
 static bool
 isRightAfterData(MCFragment *CurrentFragment,
@@ -520,7 +503,7 @@ isRightAfterData(MCFragment *CurrentFragment,
   // added into the previous fragment, we need to skip them since they
   // have no contents.
   for (; isa_and_nonnull<MCDataFragment>(F); F = F->getPrevNode())
-    if (getSizeForInstFragment(F) != 0)
+    if (cast<MCDataFragment>(F)->getContents().size() != 0)
       break;
 
   // Since data is always emitted into a DataFragment, our check strategy is
@@ -535,9 +518,26 @@ isRightAfterData(MCFragment *CurrentFragment,
   //   - If the fragment is not a DataFragment, returns false.
   if (auto *DF = dyn_cast_or_null<MCDataFragment>(F))
     return DF != PrevInstPosition.first ||
-           getSizeForInstFragment(DF) != PrevInstPosition.second;
+           DF->getContents().size() != PrevInstPosition.second;
 
   return false;
+}
+
+/// \returns the fragment size if it has instructions, otherwise returns 0.
+static size_t getSizeForInstFragment(const MCFragment *F) {
+  if (!F || !F->hasInstructions())
+    return 0;
+  // MCEncodedFragmentWithContents being templated makes this tricky.
+  switch (F->getKind()) {
+  default:
+    llvm_unreachable("Unknown fragment with instructions!");
+  case MCFragment::FT_Data:
+    return cast<MCDataFragment>(*F).getContents().size();
+  case MCFragment::FT_Relaxable:
+    return cast<MCRelaxableFragment>(*F).getContents().size();
+  case MCFragment::FT_CompactEncodedInst:
+    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
+  }
 }
 
 /// Check if the instruction operand needs to be aligned.
@@ -880,7 +880,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   if (!isFullyRelaxed(RF))
     return false;
 
-  const unsigned OldSize = getSizeForInstFragment(&RF);
+  const unsigned OldSize = RF.getContents().size();
   if (OldSize == 15)
     return false;
 
@@ -922,7 +922,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
   SmallString<15> Code;
   raw_svector_ostream VecOS(Code);
   Emitter.encodeInstruction(Relaxed, VecOS, Fixups, *RF.getSubtargetInfo());
-  const unsigned OldSize = getSizeForInstFragment(&RF);
+  const unsigned OldSize = RF.getContents().size();
   const unsigned NewSize = Code.size();
   assert(NewSize >= OldSize && "size decrease during relaxation?");
   unsigned Delta = NewSize - OldSize;
