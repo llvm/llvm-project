@@ -306,7 +306,7 @@ class TargetRegisterClass;
     /// Return the correct alignment for the current calling convention.
     Align getABIAlignmentForCallingConv(Type *ArgTy,
                                         DataLayout DL) const override {
-      const Align ABIAlign(DL.getABITypeAlignment(ArgTy));
+      const Align ABIAlign = DL.getABITypeAlign(ArgTy);
       if (ArgTy->isVectorTy())
         return std::min(ABIAlign, Align(8));
       return ABIAlign;
