@@ -419,9 +419,8 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
       CompilerType uint16 =
           ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
       CompilerType dispatch_tsd_indexes_s = ast_ctx->CreateRecordType(
-          nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          "__lldb_dispatch_tsd_indexes_s", clang::TTK_Struct,
-          lldb::eLanguageTypeC);
+          nullptr, lldb::eAccessPublic, "__lldb_dispatch_tsd_indexes_s",
+          clang::TTK_Struct, lldb::eLanguageTypeC);
 
       TypeSystemClang::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);
       TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,

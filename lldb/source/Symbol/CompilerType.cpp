@@ -439,11 +439,11 @@ CompilerType CompilerType::AddRestrictModifier() const {
     return CompilerType();
 }
 
-CompilerType CompilerType::CreateTypedef(const char *name,
-                                         const CompilerDeclContext &decl_ctx,
-                                         uint32_t payload) const {
+CompilerType
+CompilerType::CreateTypedef(const char *name,
+                            const CompilerDeclContext &decl_ctx) const {
   if (IsValid())
-    return m_type_system->CreateTypedef(m_type, name, decl_ctx, payload);
+    return m_type_system->CreateTypedef(m_type, name, decl_ctx);
   else
     return CompilerType();
 }

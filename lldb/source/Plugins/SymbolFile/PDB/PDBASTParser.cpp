@@ -409,9 +409,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       metadata.SetUserID(type.getSymIndexId());
       metadata.SetIsDynamicCXXType(false);
 
-      clang_type = m_ast.CreateRecordType(
-          decl_context, OptionalClangModuleID(), access, name, tag_type_kind,
-          lldb::eLanguageTypeC_plus_plus, &metadata);
+      clang_type =
+          m_ast.CreateRecordType(decl_context, access, name, tag_type_kind,
+                                 lldb::eLanguageTypeC_plus_plus, &metadata);
       assert(clang_type.IsValid());
 
       auto record_decl =
@@ -497,8 +497,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       // Class). Set it false for now.
       bool isScoped = false;
 
-      ast_enum = m_ast.CreateEnumerationType(
-          name.c_str(), decl_context, OptionalClangModuleID(), decl, builtin_type, isScoped);
+      ast_enum = m_ast.CreateEnumerationType(name.c_str(), decl_context, decl,
+                                             builtin_type, isScoped);
 
       auto enum_decl = TypeSystemClang::GetAsEnumDecl(ast_enum);
       assert(enum_decl);
@@ -550,7 +550,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       CompilerType target_ast_type = target_type->GetFullCompilerType();
 
       ast_typedef = m_ast.CreateTypedefType(
-          target_ast_type, name.c_str(), m_ast.CreateDeclContext(decl_ctx), 0);
+          target_ast_type, name.c_str(), m_ast.CreateDeclContext(decl_ctx));
       if (!ast_typedef)
         return nullptr;
 
@@ -901,7 +901,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         return nullptr;
 
       decl = m_ast.CreateVariableDeclaration(
-          decl_context, OptionalClangModuleID(), name.c_str(),
+          decl_context, name.c_str(),
           ClangUtil::GetQualType(type->GetLayoutCompilerType()));
     }
 
@@ -927,8 +927,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
                                     : clang::StorageClass::SC_None;
 
     auto decl = m_ast.CreateFunctionDeclaration(
-        decl_context, OptionalClangModuleID(), name.c_str(), type->GetForwardCompilerType(),
-        storage, func->hasInlineAttribute());
+        decl_context, name.c_str(), type->GetForwardCompilerType(), storage,
+        func->hasInlineAttribute());
 
     std::vector<clang::ParmVarDecl *> params;
     if (std::unique_ptr<PDBSymbolTypeFunctionSig> sig = func->getSignature()) {
@@ -941,7 +941,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
             continue;
 
           clang::ParmVarDecl *param = m_ast.CreateParameterDeclaration(
-              decl, OptionalClangModuleID(), nullptr, arg_type->GetForwardCompilerType(),
+              decl, nullptr, arg_type->GetForwardCompilerType(),
               clang::SC_None, true);
           if (param)
             params.push_back(param);
@@ -1057,7 +1057,7 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
                                                    : namespace_name.data();
       clang::NamespaceDecl *namespace_decl =
           m_ast.GetUniqueNamespaceDeclaration(namespace_name_c_str,
-                                              curr_context, OptionalClangModuleID());
+                                              curr_context);
 
       m_parent_to_namespaces[curr_context].insert(namespace_decl);
       m_namespaces.insert(namespace_decl);

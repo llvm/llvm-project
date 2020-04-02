@@ -993,7 +993,7 @@ void ClangExpressionDeclMap::LookupLocalVarNamespace(
 
   clang::NamespaceDecl *namespace_decl =
       m_clang_ast_context->GetUniqueNamespaceDeclaration(
-          g_lldb_local_vars_namespace_cstr, nullptr, OptionalClangModuleID());
+          g_lldb_local_vars_namespace_cstr, nullptr);
   if (!namespace_decl)
     return;
 
