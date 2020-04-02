@@ -79,6 +79,32 @@ llvm.func internal @internal_func() {
 
 ```
 
+#### Attribute pass-through
+
+An LLVM IR dialect function provides a mechanism to forward function-level
+attributes to LLVM IR using the `passthrough` attribute. This is an array
+attribute containing either string attributes or array attributes. In the former
+case, the value of the string is interpreted as the name of LLVM IR function
+attribute. In the latter case, the array is expected to contain exactly two
+string attributes, the first corresponding to the name of LLVM IR function
+attribute, and the second corresponding to its value. Note that even integer
+LLVM IR function attributes have their value represented in the string form.
+
+Example:
+
+```mlir
+llvm.func @func() attributes {
+  passthrough = ["noinline",           // value-less attribute
+                 ["alignstack", "4"],  // integer attribute with value
+                 ["other", "attr"]]    // attrbute unknown to LLVM
+} {
+  llvm.return
+}
+```
+
+If the attribute is not known to LLVM IR, it will be attached as a string
+attribute.
+
 ### LLVM IR operations
 
 The following operations are currently supported. The semantics of these

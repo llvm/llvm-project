@@ -560,6 +560,83 @@ static llvm::SetVector<Block *> topologicalSort(LLVMFuncOp f) {
   return blocks;
 }
 
+/// Attempts to add an attribute identified by `key`, optionally with the given
+/// `value` to LLVM function `llvmFunc`. Reports errors at `loc` if any. If the
+/// attribute has a kind known to LLVM IR, create the attribute of this kind,
+/// otherwise keep it as a string attribute. Performs additional checks for
+/// attributes known to have or not have a value in order to avoid assertions
+/// inside LLVM upon construction.
+static LogicalResult checkedAddLLVMFnAttribute(Location loc,
+                                               llvm::Function *llvmFunc,
+                                               StringRef key,
+                                               StringRef value = StringRef()) {
+  auto kind = llvm::Attribute::getAttrKindFromName(key);
+  if (kind == llvm::Attribute::None) {
+    llvmFunc->addFnAttr(key, value);
+    return success();
+  }
+
+  if (llvm::Attribute::doesAttrKindHaveArgument(kind)) {
+    if (value.empty())
+      return emitError(loc) << "LLVM attribute '" << key << "' expects a value";
+
+    int result;
+    if (!value.getAsInteger(/*Radix=*/0, result))
+      llvmFunc->addFnAttr(
+          llvm::Attribute::get(llvmFunc->getContext(), kind, result));
+    else
+      llvmFunc->addFnAttr(key, value);
+    return success();
+  }
+
+  if (!value.empty())
+    return emitError(loc) << "LLVM attribute '" << key
+                          << "' does not expect a value, found '" << value
+                          << "'";
+
+  llvmFunc->addFnAttr(kind);
+  return success();
+}
+
+/// Attaches the attributes listed in the given array attribute to `llvmFunc`.
+/// Reports error to `loc` if any and returns immediately. Expects `attributes`
+/// to be an array attribute containing either string attributes, treated as
+/// value-less LLVM attributes, or array attributes containing two string
+/// attributes, with the first string being the name of the corresponding LLVM
+/// attribute and the second string beings its value. Note that even integer
+/// attributes are expected to have their values expressed as strings.
+static LogicalResult
+forwardPassthroughAttributes(Location loc, Optional<ArrayAttr> attributes,
+                             llvm::Function *llvmFunc) {
+  if (!attributes)
+    return success();
+
+  for (Attribute attr : *attributes) {
+    if (auto stringAttr = attr.dyn_cast<StringAttr>()) {
+      if (failed(
+              checkedAddLLVMFnAttribute(loc, llvmFunc, stringAttr.getValue())))
+        return failure();
+      continue;
+    }
+
+    auto arrayAttr = attr.dyn_cast<ArrayAttr>();
+    if (!arrayAttr || arrayAttr.size() != 2)
+      return emitError(loc)
+             << "expected 'passthrough' to contain string or array attributes";
+
+    auto keyAttr = arrayAttr[0].dyn_cast<StringAttr>();
+    auto valueAttr = arrayAttr[1].dyn_cast<StringAttr>();
+    if (!keyAttr || !valueAttr)
+      return emitError(loc)
+             << "expected arrays within 'passthrough' to contain two strings";
+
+    if (failed(checkedAddLLVMFnAttribute(loc, llvmFunc, keyAttr.getValue(),
+                                         valueAttr.getValue())))
+      return failure();
+  }
+  return success();
+}
+
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // Clear the block and value mappings, they are only relevant within one
   // function.
@@ -637,9 +714,13 @@ LogicalResult ModuleTranslation::convertFunctions() {
     llvm::FunctionCallee llvmFuncCst = llvmModule->getOrInsertFunction(
         function.getName(),
         cast<llvm::FunctionType>(function.getType().getUnderlyingType()));
-    assert(isa<llvm::Function>(llvmFuncCst.getCallee()));
-    functionMapping[function.getName()] =
-        cast<llvm::Function>(llvmFuncCst.getCallee());
+    llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
+    functionMapping[function.getName()] = llvmFunc;
+
+    // Forward the pass-through attributes to LLVM.
+    if (failed(forwardPassthroughAttributes(function.getLoc(),
+                                            function.passthrough(), llvmFunc)))
+      return failure();
   }
 
   // Convert functions.
