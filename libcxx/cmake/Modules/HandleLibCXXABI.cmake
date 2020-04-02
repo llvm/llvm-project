@@ -102,24 +102,12 @@ if ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libstdc++" OR
     "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_INCLUDE_FILES}" "bits"
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
-  if (LIBCXX_CXX_ABI_INTREE)
-    # Link against just-built "cxxabi" target.
-    set(CXXABI_SHARED_LIBNAME cxxabi_shared)
-    set(CXXABI_STATIC_LIBNAME cxxabi_static)
-  else()
-    # Assume c++abi is installed in the system, rely on -lc++abi link flag.
-    set(CXXABI_SHARED_LIBNAME "c++abi")
-    set(CXXABI_STATIC_LIBNAME "c++abi")
-  endif()
-  if (LIBCXX_CXX_ABI_SYSTEM)
-    set(HEADERS "")
-  else()
-    set(HEADERS "cxxabi.h;__cxxabi_config.h")
-  endif()
+  set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_SOURCE_DIR}/../libcxxabi/include")
   setup_abi_lib(
     "-DLIBCXX_BUILDING_LIBCXXABI"
-    "${CXXABI_SHARED_LIBNAME}" "${CXXABI_STATIC_LIBNAME}" "${HEADERS}" "")
+    "cxxabi_shared" "cxxabi_static" "cxxabi.h;__cxxabi_config.h" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
+  set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
   setup_abi_lib(
     "-DLIBCXXRT"
     "cxxrt" "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
