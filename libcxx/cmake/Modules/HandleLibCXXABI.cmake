@@ -103,9 +103,18 @@ if ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libstdc++" OR
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
   set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_SOURCE_DIR}/../libcxxabi/include")
+
+  if(LIBCXX_STANDALONE_BUILD)
+    set(shared c++abi)
+    set(static c++abi)
+  else()
+    set(shared cxxabi_shared)
+    set(static cxxabi_static)
+  endif()
+
   setup_abi_lib(
     "-DLIBCXX_BUILDING_LIBCXXABI"
-    "cxxabi_shared" "cxxabi_static" "cxxabi.h;__cxxabi_config.h" "")
+    "${shared}" "${static}" "cxxabi.h;__cxxabi_config.h" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
   setup_abi_lib(
