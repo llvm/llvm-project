@@ -4095,10 +4095,20 @@ struct AAAlignReturned final
 struct AAAlignArgument final
     : AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<AAAlign,
                                                               AAAlignImpl> {
-  AAAlignArgument(const IRPosition &IRP)
-      : AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<AAAlign,
-                                                                AAAlignImpl>(
-            IRP) {}
+  using Base =
+      AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<AAAlign,
+                                                              AAAlignImpl>;
+  AAAlignArgument(const IRPosition &IRP) : Base(IRP) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    // If the associated argument is involved in a must-tail call we give up
+    // because we would need to keep the argument alignments of caller and
+    // callee in-sync. Just does not seem worth the trouble right now.
+    if (A.getInfoCache().isInvolvedInMustTailCall(*getAssociatedArgument()))
+      return ChangeStatus::UNCHANGED;
+    return Base::manifest(A);
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(aligned) }
@@ -4109,6 +4119,12 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
+    // If the associated argument is involved in a must-tail call we give up
+    // because we would need to keep the argument alignments of caller and
+    // callee in-sync. Just does not seem worth the trouble right now.
+    if (Argument *Arg = getAssociatedArgument())
+      if (A.getInfoCache().isInvolvedInMustTailCall(*Arg))
+        return ChangeStatus::UNCHANGED;
     ChangeStatus Changed = AAAlignImpl::manifest(A);
     MaybeAlign InheritAlign =
         getAssociatedValue().getPointerAlignment(A.getDataLayout());
@@ -8379,17 +8395,18 @@ void Attributor::initializeInformationCache(Function &F) {
              "Attributor.");
       break;
     case Instruction::Call:
-      // Calls are interesting but for `llvm.assume` calls we also fill the
-      // KnowledgeMap as we find them.
+      // Calls are interesting on their own, additionally:
+      // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
+      // For `must-tail` calls we remember the caller and callee.
       if (IntrinsicInst *Assume = dyn_cast<IntrinsicInst>(&I)) {
         if (Assume->getIntrinsicID() == Intrinsic::assume)
           fillMapFromAssume(*Assume, InfoCache.KnowledgeMap);
+      } else if (cast<CallInst>(I).isMustTailCall()) {
+        InfoCache.FunctionsWithMustTailCall.insert(&F);
+        InfoCache.FunctionsCalledViaMustTail.insert(
+            cast<CallInst>(I).getCalledFunction());
       }
       LLVM_FALLTHROUGH;
-    case Instruction::Load:
-      // The alignment of a pointer is interesting for loads.
-    case Instruction::Store:
-      // The alignment of a pointer is interesting for stores.
     case Instruction::CallBr:
     case Instruction::Invoke:
     case Instruction::CleanupRet:
@@ -8399,6 +8416,10 @@ void Attributor::initializeInformationCache(Function &F) {
     case Instruction::Br:
     case Instruction::Resume:
     case Instruction::Ret:
+    case Instruction::Load:
+      // The alignment of a pointer is interesting for loads.
+    case Instruction::Store:
+      // The alignment of a pointer is interesting for stores.
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode)
@@ -8432,6 +8453,15 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     return;
   if (F.isDeclaration())
     return;
+
+  // In non-module runs we need to look at the call sites of a function to
+  // determine if it is part of a must-tail call edge. This will influence what
+  // attributes we can derive.
+  if (!isModulePass() && !InfoCache.FunctionsCalledViaMustTail.count(&F))
+    for (const Use &U : F.uses())
+      if (ImmutableCallSite ICS = ImmutableCallSite(U.getUser()))
+        if (ICS.isCallee(&U) && ICS.isMustTailCall())
+          InfoCache.FunctionsCalledViaMustTail.insert(&F);
 
   IRPosition FPos = IRPosition::function(F);
 

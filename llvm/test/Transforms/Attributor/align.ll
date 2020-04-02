@@ -552,6 +552,23 @@ define void @align_store_after_bc(i32* align 2048 %arg) {
   store i8 0, i8* %bc
   ret void
 }
+
+; Make sure we do not annotate the callee of a must-tail call with an alignment
+; we cannot also put on the caller.
+@cnd = external global i1
+define i32 @musttail_callee_1(i32* %p) {
+  %v = load i32, i32* %p, align 32
+  ret i32 %v
+}
+define i32 @musttail_caller_1(i32* %p) {
+  %c = load i1, i1* @cnd
+  br i1 %c, label %mt, label %exit
+mt:
+  %v = musttail call i32 @musttail_callee_1(i32* %p)
+  ret i32 %v
+exit:
+  ret i32 0
+}
 ; UTC_ARGS: --disable
 
 attributes #0 = { nounwind uwtable noinline }
