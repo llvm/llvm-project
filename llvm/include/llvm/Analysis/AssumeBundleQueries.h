@@ -1,4 +1,4 @@
-//===- KnowledgeRetention.h - utilities to preserve informations *- C++ -*-===//
+//===- AssumeBundleQueries.h - utilities to query assume bundles *- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contain tools to preserve informations. They should be used before
-// performing a transformation that may move and delete instructions as those
-// transformation may destroy or worsen information that can be derived from the
-// IR.
+// This file contain tools to query into assume bundles. assume bundles can be
+// built using utilities from Transform/Utils/AssumeBundleBuilder.h
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_ASSUMEBUILDER_H
-#define LLVM_TRANSFORMS_UTILS_ASSUMEBUILDER_H
+#ifndef LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
+#define LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
 
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
@@ -34,6 +31,14 @@ IntrinsicInst *buildAssumeFromInst(Instruction *I);
 /// if before I. This is usually what need to be done to salvage the knowledge
 /// contained in the instruction I.
 void salvageKnowledge(Instruction *I);
+
+/// Index of elements in the operand bundle.
+/// If the element exist it is guaranteed to be what is specified in this enum
+/// but it may not exist.
+enum AssumeBundleArg {
+  ABA_WasOn = 0,
+  ABA_Argument = 1,
+};
 
 /// It is possible to have multiple Value for the argument of an attribute in
 /// the same llvm.assume on the same llvm::Value. This is rare but need to be
@@ -134,16 +139,6 @@ inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
 /// the argument to the call of llvm.assume may still be useful even if the
 /// function returned true.
 bool isAssumeWithEmptyBundle(CallInst &Assume);
-
-//===----------------------------------------------------------------------===//
-// Utilities for testing
-//===----------------------------------------------------------------------===//
-
-/// This pass will try to build an llvm.assume for every instruction in the
-/// function. Its main purpose is testing.
-struct AssumeBuilderPass : public PassInfoMixin<AssumeBuilderPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
 
 } // namespace llvm
 
