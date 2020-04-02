@@ -22,10 +22,10 @@ define void @vld4_v2i32(<8 x i32> *%src, <2 x i32> *%dst) {
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    str r0, [r1, #4]
 ; CHECK-NEXT:    vmov.32 r2, q0[2]
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vdup.32 q1, r2
+; CHECK-NEXT:    str r0, [r1, #4]
+; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vmov r2, s4
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    vmov r2, s12
