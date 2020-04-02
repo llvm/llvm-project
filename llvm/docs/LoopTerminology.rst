@@ -55,46 +55,46 @@ is branched to).  They may have multiple predecessors, phis, etc...
 Key Terminology
 ===============
 
-Header Block - The basic block which dominates all other blocks
+**Header Block** - The basic block which dominates all other blocks
 contained within the loop.  As such, it is the first one executed if
 the loop executes at all.  Note that a block can be the header of
 two separate loops at the same time, but only if one is a sub-loop
 of the other.
 
-Exiting Block - A basic block contained within a given loop which has
+**Exiting Block** - A basic block contained within a given loop which has
 at least one successor outside of the loop and one successor inside the
 loop.  (The latter is a consequence of the block being contained within
 an SCC which is part of the loop.)  That is, it has a successor which
 is an Exit Block.  
 
-Exit Block - A basic block outside of the associated loop which has a
+**Exit Block** - A basic block outside of the associated loop which has a
 predecessor inside the loop.  That is, it has a predecessor which is
 an Exiting Block.
 
-Latch Block - A basic block within the loop whose successors include
+**Latch Block** - A basic block within the loop whose successors include
 the header block of the loop.  Thus, a latch is a source of backedge.
 A loop may have multiple latch blocks.  A latch block may be either
 conditional or unconditional.
 
-Backedge(s) - The edge(s) in the CFG from latch blocks to the header
+**Backedge(s)** - The edge(s) in the CFG from latch blocks to the header
 block.  Note that there can be multiple such edges, and even multiple
 such edges leaving a single latch block.  
 
-Loop Predecessor -  The predecessor blocks of the loop header which
+**Loop Predecessor** -  The predecessor blocks of the loop header which
 are not contained by the loop itself.  These are the only blocks
 through which execution can enter the loop.  When used in the
 singular form implies that there is only one such unique block. 
 
-Preheader Block - A preheader is a (singular) loop predecessor which
+**Preheader Block** - A preheader is a (singular) loop predecessor which
 ends in an unconditional transfer of control to the loop header.  Note
 that not all loops have such blocks.
 
-Backedge Taken Count - The number of times the backedge will execute
+**Backedge Taken Count** - The number of times the backedge will execute
 before some interesting event happens.  Commonly used without
 qualification of the event as a shorthand for when some exiting block
 branches to some exit block. May be zero, or not statically computable.
 
-Iteration Count - The number of times the header will execute before
+**Iteration Count** - The number of times the header will execute before
 some interesting event happens.  Commonly used without qualification to
 refer to the iteration count at which the loop exits.  Will always be
 one greater than the backedge taken count.  *Warning*: Preceding
