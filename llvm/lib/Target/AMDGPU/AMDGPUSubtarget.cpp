@@ -78,7 +78,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // unset everything else if it is disabled
 
   // Assuming ECC is enabled is the conservative default.
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+sram-ecc,+xnack,");
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,+sram-ecc,+xnack,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
