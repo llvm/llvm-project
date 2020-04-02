@@ -39,8 +39,8 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
 #define TYPE(DERIVED, BASE) { NKI_##BASE, #DERIVED "Type" },
 #include "clang/AST/TypeNodes.inc"
   { NKI_None, "OMPClause" },
-#define OPENMP_CLAUSE(TextualSpelling, Class) {NKI_OMPClause, #Class},
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
@@ -111,15 +111,13 @@ ASTNodeKind ASTNodeKind::getFromNode(const Type &T) {
 
 ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
   switch (C.getClauseKind()) {
-#define OPENMP_CLAUSE(Name, Class)                                             \
-    case OMPC_##Name: return ASTNodeKind(NKI_##Class);
-#include "clang/Basic/OpenMPKinds.def"
-  case OMPC_threadprivate:
-  case OMPC_uniform:
-  case OMPC_device_type:
-  case OMPC_match:
-  case OMPC_unknown:
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
+  case llvm::omp::Clause::Enum:                                                \
+    return ASTNodeKind(NKI_##Class);
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
+  case llvm::omp::Clause::Enum:                                                \
     llvm_unreachable("unexpected OpenMP clause kind");
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   llvm_unreachable("invalid stmt kind");
 }
