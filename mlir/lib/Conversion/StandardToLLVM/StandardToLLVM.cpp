@@ -932,6 +932,7 @@ protected:
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
+static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
   FuncOpConversion(LLVMTypeConverter &converter, bool emitCWrappers)
       : FuncOpConversionBase(converter), emitWrappers(emitCWrappers) {}
@@ -942,7 +943,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     auto funcOp = cast<FuncOp>(op);
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
-    if (emitWrappers) {
+    if (emitWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
                              newFuncOp);
@@ -2821,7 +2822,6 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
     if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
       signalPassFailure();
   }
-
 };
 } // end namespace
 
