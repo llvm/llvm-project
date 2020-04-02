@@ -2390,6 +2390,250 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
     EXPECT_EQ(apply(Case.first), Case.second);
   }
 }
+
+TWEAK_TEST(AddUsing);
+TEST_F(AddUsingTest, Prepare) {
+  const std::string Header = R"cpp(
+#define NS(name) one::two::name
+namespace one {
+void oo() {}
+namespace two {
+enum ee {};
+void ff() {}
+class cc {
+public:
+  struct st {};
+  static void mm() {}
+};
+}
+})cpp";
+
+  EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o^:^:^f^f(); }");
+  EXPECT_AVAILABLE(Header + "void fun() { o^n^e^::^o^o(); }");
+  EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o^:^:^e^e E; }");
+  EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o:^:^c^c C; }");
+  EXPECT_UNAVAILABLE(Header +
+                     "void fun() { o^n^e^:^:^t^w^o^:^:^c^c^:^:^m^m(); }");
+  EXPECT_UNAVAILABLE(Header +
+                     "void fun() { o^n^e^:^:^t^w^o^:^:^c^c^:^:^s^t inst; }");
+  EXPECT_UNAVAILABLE(Header +
+                     "void fun() { o^n^e^:^:^t^w^o^:^:^c^c^:^:^s^t inst; }");
+  EXPECT_UNAVAILABLE(Header + "void fun() { N^S(c^c) inst; }");
+}
+
+TEST_F(AddUsingTest, Apply) {
+  FileName = "test.cpp";
+  struct {
+    llvm::StringRef TestSource;
+    llvm::StringRef ExpectedSource;
+  } Cases[]{{
+                // Function, no other using, namespace.
+                R"cpp(
+#include "test.hpp"
+namespace {
+void fun() {
+  ^o^n^e^:^:^t^w^o^:^:^f^f();
+}
+})cpp",
+                R"cpp(
+#include "test.hpp"
+namespace {using one::two::ff;
+
+void fun() {
+  ff();
+}
+})cpp",
+            },
+            // Type, no other using, namespace.
+            {
+                R"cpp(
+#include "test.hpp"
+namespace {
+void fun() {
+  ::on^e::t^wo::c^c inst;
+}
+})cpp",
+                R"cpp(
+#include "test.hpp"
+namespace {using ::one::two::cc;
+
+void fun() {
+  cc inst;
+}
+})cpp",
+            },
+            // Type, no other using, no namespace.
+            {
+                R"cpp(
+#include "test.hpp"
+
+void fun() {
+  on^e::t^wo::e^e inst;
+})cpp",
+                R"cpp(
+#include "test.hpp"
+
+using one::two::ee;
+
+void fun() {
+  ee inst;
+})cpp"},
+            // Function, other usings.
+            {
+                R"cpp(
+#include "test.hpp"
+
+using one::two::cc;
+using one::two::ee;
+
+namespace {
+void fun() {
+  one::two::f^f();
+}
+})cpp",
+                R"cpp(
+#include "test.hpp"
+
+using one::two::cc;
+using one::two::ff;using one::two::ee;
+
+namespace {
+void fun() {
+  ff();
+}
+})cpp",
+            },
+            // Function, other usings inside namespace.
+            {
+                R"cpp(
+#include "test.hpp"
+
+using one::two::cc;
+
+namespace {
+
+using one::two::ff;
+
+void fun() {
+  o^ne::o^o();
+}
+})cpp",
+                R"cpp(
+#include "test.hpp"
+
+using one::two::cc;
+
+namespace {
+
+using one::oo;using one::two::ff;
+
+void fun() {
+  oo();
+}
+})cpp"},
+            // Using comes after cursor.
+            {
+                R"cpp(
+#include "test.hpp"
+
+namespace {
+
+void fun() {
+  one::t^wo::ff();
+}
+
+using one::two::cc;
+
+})cpp",
+                R"cpp(
+#include "test.hpp"
+
+namespace {using one::two::ff;
+
+
+void fun() {
+  ff();
+}
+
+using one::two::cc;
+
+})cpp"},
+            // Pointer type.
+            {R"cpp(
+#include "test.hpp"
+
+void fun() {
+  one::two::c^c *p;
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using one::two::cc;
+
+void fun() {
+  cc *p;
+})cpp"},
+            // Namespace declared via macro.
+            {R"cpp(
+#include "test.hpp"
+#define NS_BEGIN(name) namespace name {
+
+NS_BEGIN(foo)
+
+void fun() {
+  one::two::f^f();
+}
+})cpp",
+             R"cpp(
+#include "test.hpp"
+#define NS_BEGIN(name) namespace name {
+
+using one::two::ff;
+
+NS_BEGIN(foo)
+
+void fun() {
+  ff();
+}
+})cpp"},
+            // Inside macro argument.
+            {R"cpp(
+#include "test.hpp"
+#define CALL(name) name()
+
+void fun() {
+  CALL(one::t^wo::ff);
+})cpp",
+             R"cpp(
+#include "test.hpp"
+#define CALL(name) name()
+
+using one::two::ff;
+
+void fun() {
+  CALL(ff);
+})cpp"}};
+  llvm::StringMap<std::string> EditedFiles;
+  for (const auto &Case : Cases) {
+    for (const auto &SubCase : expandCases(Case.TestSource)) {
+      ExtraFiles["test.hpp"] = R"cpp(
+namespace one {
+void oo() {}
+namespace two {
+enum ee {};
+void ff() {}
+class cc {
+public:
+  struct st { struct nested {}; };
+  static void mm() {}
+};
+}
+})cpp";
+      EXPECT_EQ(apply(SubCase, &EditedFiles), Case.ExpectedSource);
+    }
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
