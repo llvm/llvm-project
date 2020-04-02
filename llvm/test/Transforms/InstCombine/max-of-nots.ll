@@ -358,3 +358,99 @@ define <2 x i32> @max_of_min_vec(<2 x i32> %a) {
   ret <2 x i32> %s1
 }
 
+declare void @use(i8, i8, i8, i8)
+
+define void @cmyk(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8 [[R:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[R]], i8 [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[TMP2]], [[G:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[G]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i8 [[TMP4]], -1
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[TMP4]], [[R]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[TMP4]], [[G]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[TMP4]], [[B]]
+; CHECK-NEXT:    call void @use(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[TMP5]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %cmp_gr = icmp slt i8 %g, %r
+  %cmp_br = icmp slt i8 %notr, %notb
+  %min_br = select i1 %cmp_br, i8 %notr, i8 %notb
+  %cmp_gb = icmp slt i8 %notg, %notb
+  %min_gb = select i1 %cmp_gb, i8 %notg, i8 %notb
+  %k = select i1 %cmp_gr, i8 %min_br, i8 %min_gb
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+define void @cmyk2(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk2(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP_GR:%.*]] = icmp slt i8 [[G]], [[R]]
+; CHECK-NEXT:    [[CMP_BR:%.*]] = icmp slt i8 [[B]], [[R]]
+; CHECK-NEXT:    [[MIN_BR:%.*]] = select i1 [[CMP_BR]], i8 [[NOTR]], i8 [[NOTB]]
+; CHECK-NEXT:    [[CMP_BG:%.*]] = icmp slt i8 [[B]], [[G]]
+; CHECK-NEXT:    [[MIN_BG:%.*]] = select i1 [[CMP_BG]], i8 [[NOTG]], i8 [[NOTB]]
+; CHECK-NEXT:    [[K:%.*]] = select i1 [[CMP_GR]], i8 [[MIN_BR]], i8 [[MIN_BG]]
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    call void @use(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %cmp_gr = icmp slt i8 %g, %r
+  %cmp_br = icmp slt i8 %b, %r
+  %min_br = select i1 %cmp_br, i8 %notr, i8 %notb
+  %cmp_bg = icmp slt i8 %b, %g
+  %min_bg = select i1 %cmp_bg, i8 %notg, i8 %notb
+  %k = select i1 %cmp_gr, i8 %min_br, i8 %min_bg
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+define void @cmyk3(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk3(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP_GR:%.*]] = icmp ult i8 [[G]], [[R]]
+; CHECK-NEXT:    [[CMP_BR:%.*]] = icmp ult i8 [[B]], [[R]]
+; CHECK-NEXT:    [[SEL_RB:%.*]] = select i1 [[CMP_BR]], i8 [[NOTR]], i8 [[NOTB]]
+; CHECK-NEXT:    [[CMP_BG:%.*]] = icmp ult i8 [[B]], [[G]]
+; CHECK-NEXT:    [[SEL_GB:%.*]] = select i1 [[CMP_BG]], i8 [[NOTG]], i8 [[NOTB]]
+; CHECK-NEXT:    [[K:%.*]] = select i1 [[CMP_GR]], i8 [[SEL_RB]], i8 [[SEL_GB]]
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    tail call void @use(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %cmp_gr = icmp ult i8 %g, %r
+  %cmp_br = icmp ult i8 %b, %r
+  %sel_rb = select i1 %cmp_br, i8 %notr, i8 %notb
+  %cmp_bg = icmp ult i8 %b, %g
+  %sel_gb = select i1 %cmp_bg, i8 %notg, i8 %notb
+  %k = select i1 %cmp_gr, i8 %sel_rb, i8 %sel_gb
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  tail call void @use(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}

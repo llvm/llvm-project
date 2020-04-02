@@ -5582,6 +5582,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBitCast(I, Builder))
     return Res;
 
+  // TODO: Hoist this above the min/max bailout.
   if (Instruction *R = foldICmpWithCastOp(I))
     return R;
 
