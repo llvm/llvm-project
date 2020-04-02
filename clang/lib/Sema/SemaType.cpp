@@ -2436,28 +2436,34 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                                VectorType::GenericVector);
 
-  unsigned VectorSize = static_cast<unsigned>(VecSize.getZExtValue() * 8);
+  // vecSize is specified in bytes - convert to bits.
+  if (!VecSize.isIntN(61)) {
+    // Bit size will overflow uint64.
+    Diag(AttrLoc, diag::err_attribute_size_too_large)
+        << SizeExpr->getSourceRange();
+    return QualType();
+  }
+  uint64_t VectorSizeBits = VecSize.getZExtValue() * 8;
   unsigned TypeSize = static_cast<unsigned>(Context.getTypeSize(CurType));
 
-  if (VectorSize == 0) {
+  if (VectorSizeBits == 0) {
     Diag(AttrLoc, diag::err_attribute_zero_size) << SizeExpr->getSourceRange();
     return QualType();
   }
 
-  // vecSize is specified in bytes - convert to bits.
-  if (VectorSize % TypeSize) {
+  if (VectorSizeBits % TypeSize) {
     Diag(AttrLoc, diag::err_attribute_invalid_size)
         << SizeExpr->getSourceRange();
     return QualType();
   }
 
-  if (VectorType::isVectorSizeTooLarge(VectorSize / TypeSize)) {
+  if (VectorSizeBits / TypeSize > std::numeric_limits<uint32_t>::max()) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange();
     return QualType();
   }
 
-  return Context.getVectorType(CurType, VectorSize / TypeSize,
+  return Context.getVectorType(CurType, VectorSizeBits / TypeSize,
                                VectorType::GenericVector);
 }
 
@@ -2489,6 +2495,11 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       return QualType();
     }
 
+    if (!vecSize.isIntN(32)) {
+      Diag(AttrLoc, diag::err_attribute_size_too_large)
+          << ArraySize->getSourceRange();
+      return QualType();
+    }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
     unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue());
@@ -2496,12 +2507,6 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
     if (vectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
       << ArraySize->getSourceRange();
-      return QualType();
-    }
-
-    if (VectorType::isVectorSizeTooLarge(vectorSize)) {
-      Diag(AttrLoc, diag::err_attribute_size_too_large)
-        << ArraySize->getSourceRange();
       return QualType();
     }
 
