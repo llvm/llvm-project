@@ -323,6 +323,23 @@ unsigned SystemZTTIImpl::getRegisterBitWidth(bool Vector) const {
   return 0;
 }
 
+unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
+                                              unsigned NumStridedMemAccesses,
+                                              unsigned NumPrefetches,
+                                              bool HasCall) const {
+  // Don't prefetch a loop with many far apart accesses.
+  if (NumPrefetches > 16)
+    return UINT_MAX;
+
+  // Emit prefetch instructions for smaller strides in cases where we think
+  // the hardware prefetcher might not be able to keep up.
+  if (NumStridedMemAccesses > 32 &&
+      NumStridedMemAccesses == NumMemAccesses && !HasCall)
+    return 1;
+
+  return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
+}
+
 bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
   EVT VT = TLI->getValueType(DL, DataType);
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));

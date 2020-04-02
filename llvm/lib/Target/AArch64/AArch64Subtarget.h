@@ -364,7 +364,12 @@ public:
   }
   unsigned getCacheLineSize() const override { return CacheLineSize; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
-  unsigned getMinPrefetchStride() const override { return MinPrefetchStride; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return MinPrefetchStride;
+  }
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
