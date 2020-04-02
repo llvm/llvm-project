@@ -3,6 +3,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -verify=report
@@ -12,6 +13,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -analyzer-output=text \
@@ -84,4 +86,31 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
     // report-warning{{Function argument constraint is not satisfied}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
+}
+
+int __two_constrained_args(int, int);
+void test_constraints_on_multiple_args(int x, int y) {
+  // State split should not happen here. I.e. x == 1 should not be evaluated
+  // FALSE.
+  __two_constrained_args(x, y);
+  clang_analyzer_eval(x == 1); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
+  clang_analyzer_eval(y == 1); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
+}
+
+int __arg_constrained_twice(int);
+void test_multiple_constraints_on_same_arg(int x) {
+  __arg_constrained_twice(x);
+  // Check that both constraints are applied and only one branch is there.
+  clang_analyzer_eval(x < 1 || x > 2); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{Assuming 'x' is < 1}} \
+  // bugpath-note{{Left side of '||' is true}}
 }

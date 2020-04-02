@@ -306,7 +306,11 @@ public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 
-  enum CheckKind { CK_StdCLibraryFunctionArgsChecker, CK_NumCheckKinds };
+  enum CheckKind {
+    CK_StdCLibraryFunctionArgsChecker,
+    CK_StdCLibraryFunctionsTesterChecker,
+    CK_NumCheckKinds
+  };
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
@@ -455,23 +459,26 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
   const Summary &Summary = *FoundSummary;
   ProgramStateRef State = C.getState();
 
+  ProgramStateRef NewState = State;
   for (const ValueConstraintPtr& VC : Summary.ArgConstraints) {
-    ProgramStateRef SuccessSt = VC->apply(State, Call, Summary);
-    ProgramStateRef FailureSt = VC->negate()->apply(State, Call, Summary);
+    ProgramStateRef SuccessSt = VC->apply(NewState, Call, Summary);
+    ProgramStateRef FailureSt = VC->negate()->apply(NewState, Call, Summary);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
-      if (ExplodedNode *N = C.generateErrorNode(State))
+      if (ExplodedNode *N = C.generateErrorNode(NewState))
         reportBug(Call, N, C);
       break;
     } else {
-      // Apply the constraint even if we cannot reason about the argument. This
-      // means both SuccessSt and FailureSt can be true. If we weren't applying
-      // the constraint that would mean that symbolic execution continues on a
-      // code whose behaviour is undefined.
+      // We will apply the constraint even if we cannot reason about the
+      // argument. This means both SuccessSt and FailureSt can be true. If we
+      // weren't applying the constraint that would mean that symbolic
+      // execution continues on a code whose behaviour is undefined.
       assert(SuccessSt);
-      C.addTransition(SuccessSt);
+      NewState = SuccessSt;
     }
   }
+  if (NewState && NewState != State)
+    C.addTransition(NewState);
 }
 
 void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
@@ -936,6 +943,32 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       {"getdelim", Summaries{Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                              Getline(LongLongTy, LongLongMax)}},
   };
+
+  // Functions for testing.
+  if (ChecksEnabled[CK_StdCLibraryFunctionsTesterChecker]) {
+    llvm::StringMap<Summaries> TestFunctionSummaryMap = {
+        {"__two_constrained_args",
+         Summaries{
+             Summary(ArgTypes{IntTy, IntTy}, RetType{IntTy}, EvalCallAsPure)
+                 .ArgConstraint(
+                     ArgumentCondition(0U, WithinRange, SingleValue(1)))
+                 .ArgConstraint(
+                     ArgumentCondition(1U, WithinRange, SingleValue(1)))}},
+        {"__arg_constrained_twice",
+         Summaries{Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+                       .ArgConstraint(
+                           ArgumentCondition(0U, OutOfRange, SingleValue(1)))
+                       .ArgConstraint(
+                           ArgumentCondition(0U, OutOfRange, SingleValue(2)))}},
+    };
+    for (auto &E : TestFunctionSummaryMap) {
+      auto InsertRes =
+          FunctionSummaryMap.insert({std::string(E.getKey()), E.getValue()});
+      assert(InsertRes.second &&
+             "Test functions must not clash with modeled functions");
+      (void)InsertRes;
+    }
+  }
 }
 
 void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
@@ -958,3 +991,4 @@ bool ento::shouldRegisterStdCLibraryFunctionsChecker(const CheckerManager &mgr) 
   bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
 REGISTER_CHECKER(StdCLibraryFunctionArgsChecker)
+REGISTER_CHECKER(StdCLibraryFunctionsTesterChecker)
