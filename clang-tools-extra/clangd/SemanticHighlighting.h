@@ -90,6 +90,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
 
 std::vector<SemanticToken> toSemanticTokens(llvm::ArrayRef<HighlightingToken>);
 llvm::StringRef toSemanticTokenType(HighlightingKind Kind);
+std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Before,
+                                           llvm::ArrayRef<SemanticToken> After);
 
 /// Converts a HighlightingKind to a corresponding TextMate scope
 /// (https://manual.macromates.com/en/language_grammars).

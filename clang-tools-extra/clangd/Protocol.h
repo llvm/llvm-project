@@ -1362,9 +1362,8 @@ struct SemanticToken {
   unsigned tokenType = 0;
   /// each set bit will be looked up in `SemanticTokensLegend.tokenModifiers`
   unsigned tokenModifiers = 0;
-
-  void encode(std::vector<unsigned> &Out) const;
 };
+bool operator==(const SemanticToken &, const SemanticToken &);
 
 /// A versioned set of tokens.
 struct SemanticTokens {
@@ -1372,12 +1371,12 @@ struct SemanticTokens {
   // the client will include the result id in the next semantic token request.
   // A server can then instead of computing all semantic tokens again simply
   // send a delta.
-  llvm::Optional<std::string> resultId;
+  std::string resultId;
 
   /// The actual tokens. For a detailed description about how the data is
   /// structured pls see
   /// https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
-  std::vector<SemanticToken> data;
+  std::vector<SemanticToken> tokens;
 };
 llvm::json::Value toJSON(const SemanticTokens &);
 
@@ -1386,6 +1385,37 @@ struct SemanticTokensParams {
   TextDocumentIdentifier textDocument;
 };
 bool fromJSON(const llvm::json::Value &, SemanticTokensParams &);
+
+/// Requests the changes in semantic tokens since a previous response.
+struct SemanticTokensEditsParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+  /// The previous result id.
+  std::string previousResultId;
+};
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensEditsParams &R);
+
+/// Describes a a replacement of a contiguous range of semanticTokens.
+struct SemanticTokensEdit {
+  // LSP specifies `start` and `deleteCount` which are relative to the array
+  // encoding of the previous tokens.
+  // We use token counts instead, and translate when serializing this struct.
+  unsigned startToken = 0;
+  unsigned deleteTokens = 0;
+  std::vector<SemanticToken> tokens;
+};
+llvm::json::Value toJSON(const SemanticTokensEdit &);
+
+/// This models LSP SemanticTokensEdits | SemanticTokens, which is the result of
+/// textDocument/semanticTokens/edits.
+struct SemanticTokensOrEdits {
+  std::string resultId;
+  /// Set if we computed edits relative to a previous set of tokens.
+  llvm::Optional<std::vector<SemanticTokensEdit>> edits;
+  /// Set if we computed a fresh set of tokens.
+  llvm::Optional<std::vector<SemanticToken>> tokens;
+};
+llvm::json::Value toJSON(const SemanticTokensOrEdits &);
 
 /// Represents a semantic highlighting information that has to be applied on a
 /// specific line of the text document.
