@@ -8979,9 +8979,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // assert(!CS.hasInAllocaArgument() &&
     //        "sret demotion is incompatible with inalloca");
     uint64_t TySize = DL.getTypeAllocSize(CLI.RetTy);
-    unsigned Align = DL.getPrefTypeAlignment(CLI.RetTy);
+    Align Alignment = DL.getPrefTypeAlign(CLI.RetTy);
     MachineFunction &MF = CLI.DAG.getMachineFunction();
-    DemoteStackIdx = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
+    DemoteStackIdx =
+        MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
     Type *StackSlotPtrType = PointerType::get(CLI.RetTy,
                                               DL.getAllocaAddrSpace());
 
@@ -8999,7 +9000,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.IsSwiftSelf = false;
     Entry.IsSwiftError = false;
     Entry.IsCFGuardTarget = false;
-    Entry.Alignment = Align;
+    Entry.Alignment = Alignment;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
@@ -9133,12 +9134,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setByValSize(FrameSize);
 
         // info is not there but there are cases it cannot get right.
-        unsigned FrameAlign;
-        if (Args[i].Alignment)
-          FrameAlign = Args[i].Alignment;
+        Align FrameAlign;
+        if (auto MA = Args[i].Alignment)
+          FrameAlign = *MA;
         else
-          FrameAlign = getByValTypeAlignment(ElementTy, DL);
-        Flags.setByValAlign(Align(FrameAlign));
+          FrameAlign = Align(getByValTypeAlignment(ElementTy, DL));
+        Flags.setByValAlign(FrameAlign);
       }
       if (Args[i].IsNest)
         Flags.setNest();
