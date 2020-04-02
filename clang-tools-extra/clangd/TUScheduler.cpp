@@ -423,10 +423,6 @@ private:
   Deadline scheduleLocked();
   /// Should the first task in the queue be skipped instead of run?
   bool shouldSkipHeadLocked() const;
-  /// This is private because `FileInputs.FS` is not thread-safe and thus not
-  /// safe to share. Callers should make sure not to expose `FS` via a public
-  /// interface.
-  std::shared_ptr<const ParseInputs> getCurrentFileInputs() const;
 
   struct Request {
     llvm::unique_function<void()> Action;
@@ -458,9 +454,9 @@ private:
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
   /// File inputs, currently being used by the worker.
-  /// Inputs are written and read by the worker thread, compile command can also
-  /// be consumed by clients of ASTWorker.
-  std::shared_ptr<const ParseInputs> FileInputs; /* GUARDED_BY(Mutex) */
+  /// Writes and reads from unknown threads are locked. Reads from the worker
+  /// thread are not locked, as it's the only writer.
+  ParseInputs FileInputs; /* GUARDED_BY(Mutex) */
   /// Times of recent AST rebuilds, used for UpdateDebounce computation.
   llvm::SmallVector<DebouncePolicy::clock::duration, 8>
       RebuildTimes; /* GUARDED_BY(Mutex) */
@@ -556,12 +552,10 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                    // FIXME: Run PreamblePeer asynchronously once ast patching
                    // is available.
                    /*RunSync=*/true, Status, *this) {
-  auto Inputs = std::make_shared<ParseInputs>();
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
-  Inputs->CompileCommand = CDB.getFallbackCommand(FileName);
-  FileInputs = std::move(Inputs);
+  FileInputs.CompileCommand = CDB.getFallbackCommand(FileName);
 }
 
 ASTWorker::~ASTWorker() {
@@ -590,7 +584,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       Inputs.CompileCommand = CDB.getFallbackCommand(FileName);
 
     bool InputsAreTheSame =
-        std::tie(FileInputs->CompileCommand, FileInputs->Contents) ==
+        std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
         std::tie(Inputs.CompileCommand, Inputs.Contents);
     // Cached AST is invalidated.
     if (!InputsAreTheSame) {
@@ -601,7 +595,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // Update current inputs so that subsequent reads can see them.
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      FileInputs = std::make_shared<ParseInputs>(Inputs);
+      FileInputs = Inputs;
     }
 
     log("ASTWorker building file {0} version {1} with command {2}\n[{3}]\n{4}",
@@ -655,21 +649,20 @@ void ASTWorker::runWithAST(
     if (isCancelled())
       return Action(llvm::make_error<CancelledError>());
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
-    auto CurrentInputs = getCurrentFileInputs();
     if (!AST) {
       StoreDiags CompilerInvocationDiagConsumer;
-      std::unique_ptr<CompilerInvocation> Invocation = buildCompilerInvocation(
-          *CurrentInputs, CompilerInvocationDiagConsumer);
+      std::unique_ptr<CompilerInvocation> Invocation =
+          buildCompilerInvocation(FileInputs, CompilerInvocationDiagConsumer);
       // Try rebuilding the AST.
       vlog("ASTWorker rebuilding evicted AST to run {0}: {1} version {2}", Name,
-           FileName, CurrentInputs->Version);
+           FileName, FileInputs.Version);
       // FIXME: We might need to build a patched ast once preamble thread starts
       // running async. Currently getPossiblyStalePreamble below will always
       // return a compatible preamble as ASTWorker::update blocks.
       llvm::Optional<ParsedAST> NewAST =
           Invocation ? buildAST(FileName, std::move(Invocation),
                                 CompilerInvocationDiagConsumer.take(),
-                                *CurrentInputs, getPossiblyStalePreamble())
+                                FileInputs, getPossiblyStalePreamble())
                      : None;
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }
@@ -681,8 +674,8 @@ void ASTWorker::runWithAST(
       return Action(llvm::make_error<llvm::StringError>(
           "invalid AST", llvm::errc::invalid_argument));
     vlog("ASTWorker running {0} on version {2} of {1}", Name, FileName,
-         CurrentInputs->Version);
-    Action(InputsAndAST{*CurrentInputs, **AST});
+         FileInputs.Version);
+    Action(InputsAndAST{FileInputs, **AST});
   };
   startTask(Name, std::move(Task), /*UpdateType=*/None, Invalidation);
 }
@@ -782,7 +775,7 @@ void ASTWorker::generateDiagnostics(
   }
   // Used to check whether we can update AST cache.
   bool InputsAreLatest =
-      std::tie(FileInputs->CompileCommand, FileInputs->Contents) ==
+      std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
       std::tie(Inputs.CompileCommand, Inputs.Contents);
   // Take a shortcut and don't report the diagnostics, since they should be the
   // same. All the clients should handle the lack of OnUpdated() call anyway to
@@ -899,14 +892,9 @@ void ASTWorker::getCurrentPreamble(
 
 void ASTWorker::waitForFirstPreamble() const { BuiltFirstPreamble.wait(); }
 
-std::shared_ptr<const ParseInputs> ASTWorker::getCurrentFileInputs() const {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  return FileInputs;
-}
-
 tooling::CompileCommand ASTWorker::getCurrentCompileCommand() const {
   std::unique_lock<std::mutex> Lock(Mutex);
-  return FileInputs->CompileCommand;
+  return FileInputs.CompileCommand;
 }
 
 std::size_t ASTWorker::getUsedBytes() const {
