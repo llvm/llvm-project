@@ -168,7 +168,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 // restored by the libcall, except it is zero-indexed - ID 0 corresponds to a
 // single register.
 static int getLibCallID(const MachineFunction &MF,
-                        const std::vector<CalleeSavedInfo> &CSI) {
+                        const std::vector<CalleeSavedInfo> &CSI,
+                        RISCVABI::ABI ABI) {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   if (CSI.empty() || !RVFI->useSaveRestoreLibCalls(MF))
@@ -183,6 +184,14 @@ static int getLibCallID(const MachineFunction &MF,
 
   if (MaxReg == RISCV::NoRegister)
     return -1;
+
+  // The libcall always save/restore ra/s0/s1 with the ABI ilp32e and lp64e.
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E) {
+    assert(
+        (MaxReg == RISCV::X1 || MaxReg == RISCV::X8 || MaxReg == RISCV::X9) &&
+        "Invalid MaxReg for ABI ilp32e and lp64e");
+    MaxReg = RISCV::X9;
+  }
 
   switch (MaxReg) {
   default:
@@ -205,9 +214,9 @@ static int getLibCallID(const MachineFunction &MF,
 
 // Get the name of the libcall used for spilling callee saved registers.
 // If this function will not use save/restore libcalls, then return a nullptr.
-static const char *
-getSpillLibCallName(const MachineFunction &MF,
-                    const std::vector<CalleeSavedInfo> &CSI) {
+static const char *getSpillLibCallName(const MachineFunction &MF,
+                                       const std::vector<CalleeSavedInfo> &CSI,
+                                       RISCVABI::ABI ABI) {
   static const char *const SpillLibCalls[] = {
     "__riscv_save_0",
     "__riscv_save_1",
@@ -224,7 +233,7 @@ getSpillLibCallName(const MachineFunction &MF,
     "__riscv_save_12"
   };
 
-  int LibCallID = getLibCallID(MF, CSI);
+  int LibCallID = getLibCallID(MF, CSI, ABI);
   if (LibCallID == -1)
     return nullptr;
   return SpillLibCalls[LibCallID];
@@ -234,7 +243,8 @@ getSpillLibCallName(const MachineFunction &MF,
 // If this function will not use save/restore libcalls, then return a nullptr.
 static const char *
 getRestoreLibCallName(const MachineFunction &MF,
-                      const std::vector<CalleeSavedInfo> &CSI) {
+                      const std::vector<CalleeSavedInfo> &CSI,
+                      RISCVABI::ABI ABI) {
   static const char *const RestoreLibCalls[] = {
     "__riscv_restore_0",
     "__riscv_restore_1",
@@ -251,7 +261,7 @@ getRestoreLibCallName(const MachineFunction &MF,
     "__riscv_restore_12"
   };
 
-  int LibCallID = getLibCallID(MF, CSI);
+  int LibCallID = getLibCallID(MF, CSI, ABI);
   if (LibCallID == -1)
     return nullptr;
   return RestoreLibCalls[LibCallID];
@@ -573,8 +583,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // For negative frame indices, the offset from the frame pointer will differ
   // depending on which of these groups the frame index applies to.
   // The following calculates the correct offset knowing the number of callee
-  // saved registers spilt by the two methods.
-  if (int LibCallRegs = getLibCallID(MF, MFI.getCalleeSavedInfo()) + 1) {
+  // saved registers spilt by the two methods.STI.getTargetABI()
+  if (int LibCallRegs =
+          getLibCallID(MF, MFI.getCalleeSavedInfo(), STI.getTargetABI()) + 1) {
     // Calculate the size of the frame managed by the libcall. The stack
     // alignment of these libcalls should be the same as how we set it in
     // getABIStackAlignment.
@@ -1463,7 +1474,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   if (RVFI->isPushable(MF)) {
     if (int64_t PushSize = RVFI->getRVPushStackSize())
       MFI.CreateFixedSpillStackObject(PushSize, -PushSize);
-  } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
+  } else if (int LibCallRegs = getLibCallID(MF, CSI, STI.getTargetABI()) + 1) {
     int64_t LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);
@@ -1500,7 +1511,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       for (unsigned i = 0; i < PushedRegNum; i++)
         PushBuilder.addUse(FixedCSRFIMap[i].first, RegState::Implicit);
     }
-  } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
+  } else if (const char *SpillLibCall =
+                 getSpillLibCallName(*MF, CSI, STI.getTargetABI())) {
     // Add spill libcall via non-callee-saved register t0.
     BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoCALLReg), RISCV::X5)
         .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
@@ -1625,7 +1637,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
         PopBuilder.addDef(FixedCSRFIMap[i].first, RegState::ImplicitDefine);
     }
   } else {
-    const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);
+    const char *RestoreLibCall =
+        getRestoreLibCallName(*MF, CSI, STI.getTargetABI());
     if (RestoreLibCall) {
       // Add restore libcall via tail call.
       MachineBasicBlock::iterator NewMI =
