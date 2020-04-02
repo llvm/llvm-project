@@ -11,8 +11,8 @@ define internal i32 @test(%T* %p) {
 ; CHECK-SAME: (%T* nocapture nofree readonly [[P:%.*]])
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* [[P]], i64 0, i32 2
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]]
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -71,7 +71,7 @@ define i32 @bar(%T* %p, i32 %v) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (%T* nocapture nofree nonnull writeonly dereferenceable(4) [[P:%.*]], i32 [[V:%.*]])
 ; CHECK-NEXT:    [[I32PTR:%.*]] = getelementptr [[T:%.*]], %T* [[P]], i64 0, i32 0
-; CHECK-NEXT:    store i32 [[V]], i32* [[I32PTR]]
+; CHECK-NEXT:    store i32 [[V]], i32* [[I32PTR]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   %i32ptr = getelementptr %T, %T* %p, i64 0, i32 0
@@ -84,8 +84,8 @@ define internal i32 @test2b(%T* %p, i32 %p2) {
 ; CHECK-SAME: (%T* nocapture nofree readonly [[P:%.*]], i32 [[P2:%.*]])
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* [[P]], i64 0, i32 2
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]]
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[CA:%.*]] = musttail call i32 @bar(%T* undef, i32 [[V]])
 ; CHECK-NEXT:    ret i32 [[CA]]

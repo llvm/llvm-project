@@ -89,9 +89,9 @@ entry:
 
 define internal void @foo(i32* %a) {
 ; ALL-LABEL: define {{[^@]+}}@foo
-; ALL-SAME: (i32* nocapture nofree nonnull writeonly dereferenceable(4) [[A:%.*]])
+; ALL-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A:%.*]])
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    store i32 0, i32* [[A]]
+; ALL-NEXT:    store i32 0, i32* [[A]], align 4
 ; ALL-NEXT:    ret void
 ;
 entry:
