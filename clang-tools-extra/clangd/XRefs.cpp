@@ -583,13 +583,11 @@ public:
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     assert(D->isCanonicalDecl() && "expect D to be a canonical declaration");
-    if (!CanonicalTargets.count(D))
+    const SourceManager &SM = AST.getSourceManager();
+    if (!CanonicalTargets.count(D) || !isInsideMainFile(Loc, SM))
       return true;
     const auto &TB = AST.getTokens();
-    const SourceManager &SM = AST.getSourceManager();
     Loc = SM.getFileLoc(Loc);
-    // We are only traversing decls *inside* the main file, so this should hold.
-    assert(isInsideMainFile(Loc, SM));
     if (const auto *Tok = TB.spelledTokenAt(Loc))
       References.push_back({*Tok, Roles});
     return true;
