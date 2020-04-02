@@ -1015,9 +1015,9 @@ void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
 }
 
 Status GDBRemoteCommunicationServerLLGS::InitializeConnection(
-    std::unique_ptr<Connection> &&connection) {
+    std::unique_ptr<Connection> connection) {
   IOObjectSP read_object_sp = connection->GetReadObject();
-  GDBRemoteCommunicationServer::SetConnection(connection.release());
+  GDBRemoteCommunicationServer::SetConnection(std::move(connection));
 
   Status error;
   m_network_handle_up = m_mainloop.RegisterReadObject(
@@ -1053,7 +1053,7 @@ Status GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
   }
 
   m_stdio_communication.SetCloseOnEOF(false);
-  m_stdio_communication.SetConnection(conn_up.release());
+  m_stdio_communication.SetConnection(std::move(conn_up));
   if (!m_stdio_communication.IsConnected()) {
     error.SetErrorString(
         "failed to set connection for inferior I/O communication");
