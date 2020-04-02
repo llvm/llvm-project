@@ -374,12 +374,14 @@ overridden by the user.*
 
 ### C-compatible wrapper emission
 
-In practical cases, it may be desirable to have externally-facing functions
-with a single attribute corresponding to a MemRef argument. When interfacing
-with LLVM IR produced from C, the code needs to respect the corresponding
-calling convention. The conversion to the LLVM dialect provides an option to
-generate wrapper functions that take memref descriptors as pointers-to-struct
-compatible with data types produced by Clang when compiling C sources.
+In practical cases, it may be desirable to have externally-facing functions with
+a single attribute corresponding to a MemRef argument. When interfacing with
+LLVM IR produced from C, the code needs to respect the corresponding calling
+convention. The conversion to the LLVM dialect provides an option to generate
+wrapper functions that take memref descriptors as pointers-to-struct compatible
+with data types produced by Clang when compiling C sources. The generation of
+such wrapper functions can additionally be controlled at a function granularity
+by setting the `llvm.emit_c_interface` unit attribute.
 
 More specifically, a memref argument is converted into a pointer-to-struct
 argument of type `{T*, T*, i64, i64[N], i64[N]}*` in the wrapper function, where
