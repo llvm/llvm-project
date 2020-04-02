@@ -844,18 +844,23 @@ public:
   /// instructions.
   unsigned getPrefetchDistance() const;
 
-  /// \return Some HW prefetchers can handle accesses up to a certain
-  /// constant stride.  This is the minimum stride in bytes where it
-  /// makes sense to start adding SW prefetches.  The default is 1,
-  /// i.e. prefetch with any stride.  Sometimes prefetching is beneficial
-  /// even below the HW prefetcher limit, and the arguments provided are
-  /// meant to serve as a basis for deciding this for a particular loop:
-  /// \param NumMemAccesses Number of memory accesses in the loop.
+  /// Some HW prefetchers can handle accesses up to a certain constant stride.
+  /// Sometimes prefetching is beneficial even below the HW prefetcher limit,
+  /// and the arguments provided are meant to serve as a basis for deciding this
+  /// for a particular loop.
+  ///
+  /// \param NumMemAccesses        Number of memory accesses in the loop.
   /// \param NumStridedMemAccesses Number of the memory accesses that
-  /// ScalarEvolution could find a known stride for.
-  /// \param NumPrefetches Number of software prefetches that will be emitted
-  /// as determined by the addresses involved and the cache line size.
-  /// \param HasCall True if the loop contains a call.
+  ///                              ScalarEvolution could find a known stride
+  ///                              for.
+  /// \param NumPrefetches         Number of software prefetches that will be
+  ///                              emitted as determined by the addresses
+  ///                              involved and the cache line size.
+  /// \param HasCall               True if the loop contains a call.
+  ///
+  /// \return This is the minimum stride in bytes where it makes sense to start
+  ///         adding SW prefetches. The default is 1, i.e. prefetch with any
+  ///         stride.
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
                                 unsigned NumPrefetches,
