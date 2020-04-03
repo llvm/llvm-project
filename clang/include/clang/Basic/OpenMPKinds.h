@@ -91,6 +91,10 @@ enum OpenMPMapModifierKind {
   OMPC_MAP_MODIFIER_last
 };
 
+  /// Number of allowed map-type-modifiers.
+static constexpr unsigned NumberOfOMPMapClauseModifiers =
+    OMPC_MAP_MODIFIER_last - OMPC_MAP_MODIFIER_unknown - 1;
+
 /// OpenMP modifier kind for 'to' clause.
 enum OpenMPToModifierKind {
 #define OPENMP_TO_MODIFIER_KIND(Name) \
