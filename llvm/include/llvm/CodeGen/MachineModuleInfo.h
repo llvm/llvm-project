@@ -165,9 +165,9 @@ public:
 
   /// Returns the MachineFunction constructed for the IR function \p F.
   /// Creates a new MachineFunction if none exists yet.
-  MachineFunction &getOrCreateMachineFunction(const Function &F);
+  MachineFunction &getOrCreateMachineFunction(Function &F);
 
-  /// \bried Returns the MachineFunction associated to IR function \p F if there
+  /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
   MachineFunction *getMachineFunction(const Function &F) const;
 
