@@ -12,6 +12,8 @@ add_libc_unittest(
     strcat
     strcpy
     strlen
+# TODO (sivachandra): remove redundant deps.
+    memcpy
 )
 
 add_libc_unittest(
@@ -23,6 +25,8 @@ add_libc_unittest(
   DEPENDS
     strcpy
     strlen
+# TODO (sivachandra): remove redundant deps.
+    memcpy
 )
 
 add_libc_unittest(

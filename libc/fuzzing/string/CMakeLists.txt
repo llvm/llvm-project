@@ -5,4 +5,5 @@ add_libc_fuzzer(
   DEPENDS
     strcpy
     strlen
+    memcpy
 )
