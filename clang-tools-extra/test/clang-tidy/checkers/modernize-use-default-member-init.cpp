@@ -432,3 +432,17 @@ private:
   // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: use default member initializer for 'k' [modernize-use-default-member-init]
   // CHECK-FIXES: int i{5}, k{8};
 };
+
+struct PR45363 {
+  // Ensure no warning is emitted here
+  PR45363(int i = 0) : m_i{i} {}
+  int m_i;
+};
+
+struct EmptyBracedIntDefault {
+  EmptyBracedIntDefault() : m_i{} {}
+  int m_i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'm_i' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}EmptyBracedIntDefault()  {}
+  // CHECK-FIXES-NEXT: {{^  }}int m_i{};
+};
