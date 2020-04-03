@@ -112,13 +112,21 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 // blocks are respectively the first/last block of the enclosing region. The
 // operations following the loop.if are split into a continuation (subgraph
 // exit) block. The condition is lowered to a chain of blocks that implement the
-// short-circuit scheme.  Condition blocks are created by splitting out an empty
-// block from the block that contains the loop.if operation.  They
-// conditionally branch to either the first block of the "then" region, or to
-// the first block of the "else" region.  If the latter is absent, they branch
-// to the continuation block instead.  The last blocks of "then" and "else"
-// regions (which are known to be exit blocks thanks to the invariant we
-// maintain).
+// short-circuit scheme. The "loop.if" operation is replaced with a conditional
+// branch to either the first block of the "then" region, or to the first block
+// of the "else" region. In these blocks, "loop.yield" is unconditional branches
+// to the post-dominating block. When the "loop.if" does not return values, the
+// post-dominating block is the same as the continuation block. When it returns
+// values, the post-dominating block is a new block with arguments that
+// correspond to the values returned by the "loop.if" that unconditionally
+// branches to the continuation block. This allows block arguments to dominate
+// any uses of the hitherto "loop.if" results that they replaced. (Inserting a
+// new block allows us to avoid modifying the argument list of an existing
+// block, which is illegal in a conversion pattern). When the "else" region is
+// empty, which is only allowed for "loop.if"s that don't return values, the
+// condition branches directly to the continuation block.
+//
+// CFG for a loop.if with else and without results.
 //
 //      +--------------------------------+
 //      | <code before the IfOp>         |
@@ -146,6 +154,42 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //      +--------------------------------+
 //      | continue:                      |
 //      |   <code after the IfOp>        |
+//      +--------------------------------+
+//
+// CFG for a loop.if with results.
+//
+//      +--------------------------------+
+//      | <code before the IfOp>         |
+//      | cond_br %cond, %then, %else    |
+//      +--------------------------------+
+//             |              |
+//             |              --------------|
+//             v                            |
+//      +--------------------------------+  |
+//      | then:                          |  |
+//      |   <then contents>              |  |
+//      |   br dom(%args...)             |  |
+//      +--------------------------------+  |
+//             |                            |
+//   |----------               |-------------
+//   |                         V
+//   |  +--------------------------------+
+//   |  | else:                          |
+//   |  |   <else contents>              |
+//   |  |   br dom(%args...)             |
+//   |  +--------------------------------+
+//   |         |
+//   ------|   |
+//         v   v
+//      +--------------------------------+
+//      | dom(%args...):                 |
+//      |   br continue                  |
+//      +--------------------------------+
+//             |
+//             v
+//      +--------------------------------+
+//      | continue:                      |
+//      | <code after the IfOp>          |
 //      +--------------------------------+
 //
 struct IfLowering : public OpRewritePattern<IfOp> {
@@ -238,15 +282,25 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   // continuation point.
   auto *condBlock = rewriter.getInsertionBlock();
   auto opPosition = rewriter.getInsertionPoint();
-  auto *continueBlock = rewriter.splitBlock(condBlock, opPosition);
+  auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+  Block *continueBlock;
+  if (ifOp.getNumResults() == 0) {
+    continueBlock = remainingOpsBlock;
+  } else {
+    continueBlock =
+        rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes());
+    rewriter.create<BranchOp>(loc, remainingOpsBlock);
+  }
 
   // Move blocks from the "then" region to the region containing 'loop.if',
   // place it before the continuation block, and branch to it.
   auto &thenRegion = ifOp.thenRegion();
   auto *thenBlock = &thenRegion.front();
-  rewriter.eraseOp(thenRegion.back().getTerminator());
+  Operation *thenTerminator = thenRegion.back().getTerminator();
+  ValueRange thenTerminatorOperands = thenTerminator->getOperands();
   rewriter.setInsertionPointToEnd(&thenRegion.back());
-  rewriter.create<BranchOp>(loc, continueBlock);
+  rewriter.create<BranchOp>(loc, continueBlock, thenTerminatorOperands);
+  rewriter.eraseOp(thenTerminator);
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
 
   // Move blocks from the "else" region (if present) to the region containing
@@ -256,9 +310,11 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   auto &elseRegion = ifOp.elseRegion();
   if (!elseRegion.empty()) {
     elseBlock = &elseRegion.front();
-    rewriter.eraseOp(elseRegion.back().getTerminator());
+    Operation *elseTerminator = elseRegion.back().getTerminator();
+    ValueRange elseTerminatorOperands = elseTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&elseRegion.back());
-    rewriter.create<BranchOp>(loc, continueBlock);
+    rewriter.create<BranchOp>(loc, continueBlock, elseTerminatorOperands);
+    rewriter.eraseOp(elseTerminator);
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
   }
 
@@ -268,7 +324,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                 /*falseArgs=*/ArrayRef<Value>());
 
   // Ok, we're done!
-  rewriter.eraseOp(ifOp);
+  rewriter.replaceOp(ifOp, continueBlock->getArguments());
   return success();
 }
 
