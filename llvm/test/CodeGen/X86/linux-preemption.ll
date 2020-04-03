@@ -73,9 +73,9 @@ define i32* @get_strong_preemptable_global() {
 define i32* @get_weak_preemptable_global() {
   ret i32* @weak_preemptable_global
 }
-; CHECK ;ADD_LABEL_BACK;  movq weak_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC ;ADD_LABEL_BACK; movq weak_preemptable_global@GOTPCREL, %rax
-; CHECK32 ;ADD_LABEL_BACK; movl weak_preemptable_global@GOT(%eax), %eax
+; CHECK: movq weak_preemptable_global@GOTPCREL(%rip), %rax
+; STATIC: movl $weak_preemptable_global, %eax
+; CHECK32: movl weak_preemptable_global@GOT(%eax), %eax
 
 @external_preemptable_global = external dso_preemptable global i32
 define i32* @get_external_preemptable_global() {
