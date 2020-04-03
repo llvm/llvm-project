@@ -9,6 +9,7 @@ add_entrypoint_object(
   DEPENDS
     strcpy
     string_h
+    strlen
 )
 
 add_entrypoint_object(
@@ -17,6 +18,17 @@ add_entrypoint_object(
     strcpy.cpp
   HDRS
     strcpy.h
+  DEPENDS
+    string_h
+    strlen
+)
+
+add_entrypoint_object(
+  strlen
+  SRCS
+    strlen.cpp
+  HDRS
+    strlen.h
   DEPENDS
     string_h
 )

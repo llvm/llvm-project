@@ -11,6 +11,7 @@ add_libc_unittest(
   DEPENDS
     strcat
     strcpy
+    strlen
 )
 
 add_libc_unittest(
@@ -21,6 +22,17 @@ add_libc_unittest(
     strcpy_test.cpp
   DEPENDS
     strcpy
+    strlen
+)
+
+add_libc_unittest(
+  strlen_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strlen_test.cpp
+  DEPENDS
+    strlen
 )
 
 # Tests all implementations of memcpy that can run on the host.
