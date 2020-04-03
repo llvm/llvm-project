@@ -862,7 +862,7 @@ static LogicalResult verify(ConvOp op) {
 }
 
 template <typename PoolingOp>
-LogicalResult verifySingleInputPoolingOp(PoolingOp op) {
+static LogicalResult verifySingleInputPoolingOp(PoolingOp op) {
   auto inputType = op.input().getType().template cast<MemRefType>();
   auto outputType = op.output().getType().template cast<MemRefType>();
   if (outputType.getElementType() != inputType.getElementType())
