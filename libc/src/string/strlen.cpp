@@ -1,4 +1,4 @@
-//===-------------------- Implementation of strcpy -----------------------===//
+//===-------------------- Implementation of strlen ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strcpy.h"
 #include "src/string/strlen.h"
 
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
-char *LLVM_LIBC_ENTRYPOINT(strcpy)(char *dest, const char *src) {
-  return reinterpret_cast<char *>(
-      ::memcpy(dest, src, __llvm_libc::strlen(src) + 1));
+// TODO: investigate the performance of this function.
+// There might be potential for compiler optmization.
+size_t LLVM_LIBC_ENTRYPOINT(strlen)(const char *src) {
+  const char *end = src;
+  while (*end != '\0')
+    ++end;
+  return end - src;
 }
 
 } // namespace __llvm_libc
