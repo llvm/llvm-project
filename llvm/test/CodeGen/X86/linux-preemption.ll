@@ -174,7 +174,7 @@ define void()* @get_strong_local_function() {
   ret void()* @strong_local_function
 }
 ; COMMON:     {{^}}strong_local_function:
-; COMMON-NEXT .Lstrong_local_function:
+; COMMON-NEXT: .Lstrong_local_function$local:
 ; CHECK: leaq .Lstrong_local_function$local(%rip), %rax
 ; STATIC: movl $.Lstrong_local_function$local, %eax
 ; CHECK32: leal .Lstrong_local_function$local@GOTOFF(%eax), %eax
@@ -227,7 +227,7 @@ define void()* @get_external_preemptable_function() {
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
 
 ; COMMON:     {{^}}strong_local_global:
-; COMMON-NEXT .Lstrong_local_global:
+; COMMON-NEXT: .Lstrong_local_global$local:
 
 ; COMMON:      .globl strong_default_alias
 ; COMMON-NEXT: .set strong_default_alias, aliasee
