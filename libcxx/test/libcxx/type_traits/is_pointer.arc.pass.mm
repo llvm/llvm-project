@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++98, c++03
 
+// UNSUPPORTED: c++98, c++03
+// REQUIRES: has-fobjc-arc
 // ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
 
 // <type_traits>
