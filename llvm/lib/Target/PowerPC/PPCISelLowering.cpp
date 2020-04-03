@@ -5135,14 +5135,14 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
         MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(
             Context.getOrCreateSymbol(Twine(".") + Twine(FuncName)));
 
-        if (IsDeclaration && !S->hasContainingCsect()) {
+        if (IsDeclaration && !S->hasRepresentedCsectSet()) {
           // On AIX, an undefined symbol needs to be associated with a
           // MCSectionXCOFF to get the correct storage mapping class.
           // In this case, XCOFF::XMC_PR.
           MCSectionXCOFF *Sec = Context.getXCOFFSection(
               S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
               SectionKind::getMetadata());
-          S->setContainingCsect(Sec);
+          S->setRepresentedCsect(Sec);
         }
 
         MVT PtrVT =

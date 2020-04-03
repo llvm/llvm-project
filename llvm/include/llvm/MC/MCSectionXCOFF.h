@@ -48,7 +48,7 @@ class MCSectionXCOFF final : public MCSection {
            "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
     QualName->setStorageClass(SC);
-    QualName->setContainingCsect(this);
+    QualName->setRepresentedCsect(this);
   }
 
 public:
