@@ -1484,9 +1484,14 @@ function(configure_lit_site_cfg site_in site_out)
 
   if (ARG_PATHS)
     # Walk ARG_PATHS and collect the current value of the variables in there.
+    # list(APPEND) ignores empty elements exactly if the list is empty,
+    # so start the list with a dummy element and drop it, to make sure that
+    # even empty values make it into the values list.
+    set(ARG_PATH_VALUES "dummy")
     foreach(path ${ARG_PATHS})
       list(APPEND ARG_PATH_VALUES "${${path}}")
     endforeach()
+    list(REMOVE_AT ARG_PATH_VALUES 0)
 
     # Compute paths relative to the directory containing output lit.site.cfg.py.
     # Passing ARG_PATH_VALUES as-is to execute_process() makes cmake strip
