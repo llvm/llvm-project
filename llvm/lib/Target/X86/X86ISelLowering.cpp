@@ -31972,6 +31972,11 @@ static const char *getIndirectThunkSymbol(const X86Subtarget &Subtarget,
     }
     llvm_unreachable("unexpected reg for retpoline");
   }
+
+  if (Subtarget.useLVIControlFlowIntegrity()) {
+    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+    return "__llvm_lvi_thunk_r11";
+  }
   llvm_unreachable("getIndirectThunkSymbol() invoked without thunk feature");
 }
 
