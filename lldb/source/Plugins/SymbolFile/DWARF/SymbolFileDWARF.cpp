@@ -2407,7 +2407,7 @@ void SymbolFileDWARF::FindTypes(
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by
   // dsymutil.
-  if (num_die_matches < max_matches) {
+  if (types.GetSize() < max_matches) {
     UpdateExternalModuleListIfNeeded();
 
     for (const auto &pair : m_external_type_modules)
