@@ -173,13 +173,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   auto LVIOpt = clang::driver::options::ID::OPT_INVALID;
-  if (Args.hasFlag(options::OPT_mlvi_hardening, options::OPT_mno_lvi_hardening,
-                   false)) {
-    Features.push_back("+lvi-load-hardening");
-    Features.push_back("+lvi-cfi"); // load hardening implies CFI protection
-    LVIOpt = options::OPT_mlvi_hardening;
-  } else if (Args.hasFlag(options::OPT_mlvi_cfi, options::OPT_mno_lvi_cfi,
-                          false)) {
+  if (Args.hasFlag(options::OPT_mlvi_cfi, options::OPT_mno_lvi_cfi, false)) {
     Features.push_back("+lvi-cfi");
     LVIOpt = options::OPT_mlvi_cfi;
   }
