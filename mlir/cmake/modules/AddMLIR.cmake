@@ -1,5 +1,5 @@
 function(mlir_tablegen ofn)
-  tablegen(MLIR ${ARGV})
+  tablegen(MLIR ${ARGV} "-I${MLIR_MAIN_SRC_DIR}" "-I${MLIR_INCLUDE_DIR}")
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
 endfunction()
