@@ -344,7 +344,9 @@ static std::string getSignature(FunctionType *FTy) {
   return Sig;
 }
 
-static void markAsImported(Function *F) {
+static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
+                                       Module *M) {
+  Function* F = Function::Create(Ty, GlobalValue::ExternalLinkage, Name, M);
   // Tell the linker that this function is expected to be imported from the
   // 'env' module.
   if (!F->hasFnAttribute("wasm-import-module")) {
@@ -357,6 +359,7 @@ static void markAsImported(Function *F) {
     B.addAttribute("wasm-import-name", F->getName());
     F->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
+  return F;
 }
 
 // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
@@ -372,10 +375,8 @@ WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
   PointerType *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
   SmallVector<Type *, 16> Args(NumClauses, Int8PtrTy);
   FunctionType *FTy = FunctionType::get(Int8PtrTy, Args, false);
-  Function *F = Function::Create(
-      FTy, GlobalValue::ExternalLinkage,
-      "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
-  markAsImported(F);
+  Function *F = getEmscriptenFunction(
+      FTy, "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
   FindMatchingCatches[NumClauses] = F;
   return F;
 }
@@ -483,9 +484,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallOrInvoke *CI) {
 
   FunctionType *FTy = FunctionType::get(CalleeFTy->getReturnType(), ArgTys,
                                         CalleeFTy->isVarArg());
-  Function *F =
-      Function::Create(FTy, GlobalValue::ExternalLinkage, "__invoke_" + Sig, M);
-  markAsImported(F);
+  Function *F = getEmscriptenFunction(FTy, "__invoke_" + Sig, M);
   InvokeWrappers[Sig] = F;
   return F;
 }
@@ -656,12 +655,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   // exception handling and setjmp/longjmp handling
   ThrewGV = getGlobalVariableI32(M, IRB, "__THREW__");
   ThrewValueGV = getGlobalVariableI32(M, IRB, "__threwValue");
-  GetTempRet0Func =
-      Function::Create(FunctionType::get(IRB.getInt32Ty(), false),
-                       GlobalValue::ExternalLinkage, "getTempRet0", &M);
-  SetTempRet0Func = Function::Create(
+  GetTempRet0Func = getEmscriptenFunction(
+      FunctionType::get(IRB.getInt32Ty(), false), "getTempRet0", &M);
+  SetTempRet0Func = getEmscriptenFunction(
       FunctionType::get(IRB.getVoidTy(), IRB.getInt32Ty(), false),
-      GlobalValue::ExternalLinkage, "setTempRet0", &M);
+      "setTempRet0", &M);
   GetTempRet0Func->setDoesNotThrow();
   SetTempRet0Func->setDoesNotThrow();
 
@@ -672,14 +670,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     // Register __resumeException function
     FunctionType *ResumeFTy =
         FunctionType::get(IRB.getVoidTy(), IRB.getInt8PtrTy(), false);
-    ResumeF = Function::Create(ResumeFTy, GlobalValue::ExternalLinkage,
-                               "__resumeException", &M);
+    ResumeF = getEmscriptenFunction(ResumeFTy, "__resumeException", &M);
 
     // Register llvm_eh_typeid_for function
     FunctionType *EHTypeIDTy =
         FunctionType::get(IRB.getInt32Ty(), IRB.getInt8PtrTy(), false);
-    EHTypeIDF = Function::Create(EHTypeIDTy, GlobalValue::ExternalLinkage,
-                                 "llvm_eh_typeid_for", &M);
+    EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
 
     for (Function &F : M) {
       if (F.isDeclaration())
@@ -695,10 +691,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (LongjmpF) {
       // Replace all uses of longjmp with emscripten_longjmp_jmpbuf, which is
       // defined in JS code
-      EmLongjmpJmpbufF = Function::Create(LongjmpF->getFunctionType(),
-                                          GlobalValue::ExternalLinkage,
-                                          "emscripten_longjmp_jmpbuf", &M);
-
+      EmLongjmpJmpbufF = getEmscriptenFunction(LongjmpF->getFunctionType(),
+                                               "emscripten_longjmp_jmpbuf", &M);
       LongjmpF->replaceAllUsesWith(EmLongjmpJmpbufF);
     }
 
@@ -710,20 +704,17 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
                             {SetjmpFTy->getParamType(0), IRB.getInt32Ty(),
                              Type::getInt32PtrTy(C), IRB.getInt32Ty()},
                             false);
-      SaveSetjmpF =
-          Function::Create(FTy, GlobalValue::ExternalLinkage, "saveSetjmp", &M);
+      SaveSetjmpF = getEmscriptenFunction(FTy, "saveSetjmp", &M);
 
       // Register testSetjmp function
       FTy = FunctionType::get(
           IRB.getInt32Ty(),
           {IRB.getInt32Ty(), Type::getInt32PtrTy(C), IRB.getInt32Ty()}, false);
-      TestSetjmpF =
-          Function::Create(FTy, GlobalValue::ExternalLinkage, "testSetjmp", &M);
+      TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
 
       FTy = FunctionType::get(IRB.getVoidTy(),
                               {IRB.getInt32Ty(), IRB.getInt32Ty()}, false);
-      EmLongjmpF = Function::Create(FTy, GlobalValue::ExternalLinkage,
-                                    "emscripten_longjmp", &M);
+      EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
 
       // Only traverse functions that uses setjmp in order not to insert
       // unnecessary prep / cleanup code in every function
