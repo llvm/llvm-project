@@ -959,7 +959,7 @@ void request_completions(const llvm::json::Object &request) {
   for (size_t i = 0; i < count; i++) {
     std::string match = matches.GetStringAtIndex(i);
     std::string description = descriptions.GetStringAtIndex(i);
-    
+
     llvm::json::Object item;
 
     llvm::StringRef match_ref = match;
@@ -1262,7 +1262,7 @@ void request_initialize(const llvm::json::Object &request) {
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", false);
   // We need to improve the current implementation of completions in order to
-  // enable it again. For some context, this is how VSCode works: 
+  // enable it again. For some context, this is how VSCode works:
   // - VSCode sends a completion request whenever chars are added, the user
   //   triggers completion manually via CTRL-space or similar mechanisms, but
   //   not when there's a deletion. Besides, VSCode doesn't let us know which
@@ -1595,6 +1595,24 @@ void request_scopes(const llvm::json::Object &request) {
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
   lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
+  // As the user selects different stack frames in the GUI, a "scopes" request
+  // will be sent to the DAP. This is the only way we know that the user has
+  // selected a frame in a thread. There are no other notifications that are
+  // sent and VS code doesn't allow multiple frames to show variables
+  // concurrently. If we select the thread and frame as the "scopes" requests
+  // are sent, this allows users to type commands in the debugger console
+  // with a backtick character to run lldb commands and these lldb commands
+  // will now have the right context selected as they are run. If the user
+  // types "`bt" into the debugger console and we had another thread selected
+  // in the LLDB library, we would show the wrong thing to the user. If the
+  // users switches threads with a lldb command like "`thread select 14", the
+  // GUI will not update as there are no "event" notification packets that
+  // allow us to change the currently selected thread or frame in the GUI that
+  // I am aware of.
+  if (frame.IsValid()) {
+    frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
+    frame.GetThread().SetSelectedFrame(frame.GetFrameID());
+  }
   g_vsc.variables.Clear();
   g_vsc.variables.Append(frame.GetVariables(true,   // arguments
                                             true,   // locals
