@@ -183,6 +183,41 @@ struct TestRegionRewriteUndo : public RewritePattern {
     return success();
   }
 };
+/// A simple pattern that creates a block at the end of the parent region of the
+/// matched operation.
+struct TestCreateBlock : public RewritePattern {
+  TestCreateBlock(MLIRContext *ctx)
+      : RewritePattern("test.create_block", /*benefit=*/1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const final {
+    Region &region = *op->getParentRegion();
+    Type i32Type = rewriter.getIntegerType(32);
+    rewriter.createBlock(&region, region.end(), {i32Type, i32Type});
+    rewriter.create<TerminatorOp>(op->getLoc());
+    rewriter.replaceOp(op, {});
+    return success();
+  }
+};
+
+/// A simple pattern that creates a block containing an invalid operaiton in
+/// order to trigger the block creation undo mechanism.
+struct TestCreateIllegalBlock : public RewritePattern {
+  TestCreateIllegalBlock(MLIRContext *ctx)
+      : RewritePattern("test.create_illegal_block", /*benefit=*/1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const final {
+    Region &region = *op->getParentRegion();
+    Type i32Type = rewriter.getIntegerType(32);
+    rewriter.createBlock(&region, region.end(), {i32Type, i32Type});
+    // Create an illegal op to ensure the conversion fails.
+    rewriter.create<ILLegalOpF>(op->getLoc(), i32Type);
+    rewriter.create<TerminatorOp>(op->getLoc());
+    rewriter.replaceOp(op, {});
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
@@ -373,12 +408,12 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
-    patterns
-        .insert<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
-                TestPassthroughInvalidOp, TestSplitReturnType,
-                TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-                TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-                TestNonRootReplacement>(&getContext());
+    patterns.insert<
+        TestRegionRewriteBlockMovement, TestRegionRewriteUndo, TestCreateBlock,
+        TestCreateIllegalBlock, TestPassthroughInvalidOp, TestSplitReturnType,
+        TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
+        TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
+        TestNonRootReplacement>(&getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
@@ -388,7 +423,8 @@ struct TestLegalizePatternDriver
     // Define the conversion target used for the test.
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-    target.addLegalOp<LegalOpA, LegalOpB, TestCastOp, TestValidOp>();
+    target.addLegalOp<LegalOpA, LegalOpB, TestCastOp, TestValidOp,
+                      TerminatorOp>();
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
