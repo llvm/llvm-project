@@ -746,22 +746,22 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
           if (GVar->isStrongDefinitionForLinker())
             return MaybeAlign(DL.getPreferredAlignment(GVar));
           else
-            return Align(DL.getABITypeAlignment(ObjectType));
+            return DL.getABITypeAlign(ObjectType);
         }
       }
     }
     return Alignment;
   } else if (const Argument *A = dyn_cast<Argument>(this)) {
-    const MaybeAlign Alignment(A->getParamAlignment());
+    const MaybeAlign Alignment = A->getParamAlign();
     if (!Alignment && A->hasStructRetAttr()) {
       // An sret parameter has at least the ABI alignment of the return type.
       Type *EltTy = cast<PointerType>(A->getType())->getElementType();
       if (EltTy->isSized())
-        return Align(DL.getABITypeAlignment(EltTy));
+        return DL.getABITypeAlign(EltTy);
     }
     return Alignment;
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
-    const MaybeAlign Alignment(AI->getAlignment());
+    const MaybeAlign Alignment = AI->getAlign();
     if (!Alignment) {
       Type *AllocatedType = AI->getAllocatedType();
       if (AllocatedType->isSized())
@@ -769,7 +769,7 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
     }
     return Alignment;
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    const MaybeAlign Alignment(Call->getRetAlignment());
+    const MaybeAlign Alignment = Call->getRetAlign();
     if (!Alignment && Call->getCalledFunction())
       return MaybeAlign(
           Call->getCalledFunction()->getAttributes().getRetAlignment());

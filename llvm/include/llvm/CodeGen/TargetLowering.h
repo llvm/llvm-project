@@ -278,7 +278,7 @@ public:
     bool IsSwiftSelf : 1;
     bool IsSwiftError : 1;
     bool IsCFGuardTarget : 1;
-    uint16_t Alignment = 0;
+    MaybeAlign Alignment = None;
     Type *ByValType = nullptr;
 
     ArgListEntry()
