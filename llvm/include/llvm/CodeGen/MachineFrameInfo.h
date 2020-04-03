@@ -460,8 +460,6 @@ public:
     Objects[ObjectIdx+NumFixedObjects].Size = Size;
   }
 
-  /// Return the alignment of the specified stack object.
-  /// FIXME: Remove this function once transition to Align is over.
   LLVM_ATTRIBUTE_DEPRECATED(inline unsigned getObjectAlignment(int ObjectIdx)
                                 const,
                             "Use getObjectAlign instead") {
@@ -486,8 +484,6 @@ public:
       ensureMaxAlignment(Alignment);
   }
 
-  /// setObjectAlignment - Change the alignment of the specified stack object.
-  /// FIXME: Remove this function once transition to Align is over.
   LLVM_ATTRIBUTE_DEPRECATED(inline void setObjectAlignment(int ObjectIdx,
                                                            unsigned Align),
                             "Use the version that takes Align instead") {
@@ -589,7 +585,7 @@ public:
 
   /// Make sure the function is at least Align bytes aligned.
   void ensureMaxAlignment(Align Alignment);
-  /// FIXME: Remove this once transition to Align is over.
+
   LLVM_ATTRIBUTE_DEPRECATED(inline void ensureMaxAlignment(unsigned Align),
                             "Use the version that uses Align instead") {
     ensureMaxAlignment(assumeAligned(Align));
