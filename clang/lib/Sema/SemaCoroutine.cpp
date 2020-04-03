@@ -502,8 +502,9 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
     return nullptr;
 
   auto *ScopeInfo = getCurFunction();
-  // Build a list of arguments, based on the coroutine functions arguments,
-  // that will be passed to the promise type's constructor.
+
+  // Build a list of arguments, based on the coroutine function's arguments,
+  // that if present will be passed to the promise type's constructor.
   llvm::SmallVector<Expr *, 4> CtorArgExprs;
 
   // Add implicit object parameter.
@@ -519,6 +520,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
     }
   }
 
+  // Add the coroutine function's parameters.
   auto &Moves = ScopeInfo->CoroutineParameterMoves;
   for (auto *PD : FD->parameters()) {
     if (PD->getType()->isDependentType())
@@ -540,28 +542,33 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
     CtorArgExprs.push_back(RefExpr.get());
   }
 
-  // Create an initialization sequence for the promise type using the
-  // constructor arguments, wrapped in a parenthesized list expression.
-  Expr *PLE = ParenListExpr::Create(Context, FD->getLocation(),
-                                    CtorArgExprs, FD->getLocation());
-  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
-  InitializationKind Kind = InitializationKind::CreateForInit(
-      VD->getLocation(), /*DirectInit=*/true, PLE);
-  InitializationSequence InitSeq(*this, Entity, Kind, CtorArgExprs,
-                                 /*TopLevelOfInitList=*/false,
-                                 /*TreatUnavailableAsInvalid=*/false);
+  // If we have a non-zero number of constructor arguments, try to use them.
+  // Otherwise, fall back to the promise type's default constructor.
+  if (!CtorArgExprs.empty()) {
+    // Create an initialization sequence for the promise type using the
+    // constructor arguments, wrapped in a parenthesized list expression.
+    Expr *PLE = ParenListExpr::Create(Context, FD->getLocation(),
+                                      CtorArgExprs, FD->getLocation());
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
+    InitializationKind Kind = InitializationKind::CreateForInit(
+        VD->getLocation(), /*DirectInit=*/true, PLE);
+    InitializationSequence InitSeq(*this, Entity, Kind, CtorArgExprs,
+                                   /*TopLevelOfInitList=*/false,
+                                   /*TreatUnavailableAsInvalid=*/false);
 
-  // Attempt to initialize the promise type with the arguments.
-  // If that fails, fall back to the promise type's default constructor.
-  if (InitSeq) {
-    ExprResult Result = InitSeq.Perform(*this, Entity, Kind, CtorArgExprs);
-    if (Result.isInvalid()) {
-      VD->setInvalidDecl();
-    } else if (Result.get()) {
-      VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
-      VD->setInitStyle(VarDecl::CallInit);
-      CheckCompleteVariableDeclaration(VD);
-    }
+    // Attempt to initialize the promise type with the arguments.
+    // If that fails, fall back to the promise type's default constructor.
+    if (InitSeq) {
+      ExprResult Result = InitSeq.Perform(*this, Entity, Kind, CtorArgExprs);
+      if (Result.isInvalid()) {
+        VD->setInvalidDecl();
+      } else if (Result.get()) {
+        VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
+        VD->setInitStyle(VarDecl::CallInit);
+        CheckCompleteVariableDeclaration(VD);
+      }
+    } else
+      ActOnUninitializedDecl(VD);
   } else
     ActOnUninitializedDecl(VD);
 
