@@ -2316,6 +2316,22 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       }
     }
 
+    Value *ExtSrc0;
+    Value *ExtSrc1;
+
+    // minnum (fpext x), (fpext y) -> minnum x, y
+    // maxnum (fpext x), (fpext y) -> maxnum x, y
+    if (match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc0)))) &&
+        match(II->getArgOperand(1), m_OneUse(m_FPExt(m_Value(ExtSrc1)))) &&
+        ExtSrc0->getType() == ExtSrc1->getType()) {
+      Value *F = Intrinsic::getDeclaration(II->getModule(), II->getIntrinsicID(),
+                                           { ExtSrc0->getType() });
+      CallInst *NewCall = Builder.CreateCall(F, { ExtSrc0, ExtSrc1 });
+      NewCall->copyFastMathFlags(II);
+      NewCall->takeName(II);
+      return new FPExtInst(NewCall, II->getType());
+    }
+
     break;
   }
   case Intrinsic::fmuladd: {
