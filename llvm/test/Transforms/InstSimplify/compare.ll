@@ -135,7 +135,6 @@ define i1 @gep9(i8* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i1 true
 ;
-
 entry:
   %first1 = getelementptr inbounds i8, i8* %ptr, i32 0
   %first2 = getelementptr inbounds i8, i8* %first1, i32 1
@@ -156,7 +155,6 @@ define i1 @gep10(i8* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i1 true
 ;
-
 entry:
   %first1 = getelementptr inbounds i8, i8* %ptr, i32 -2
   %first2 = getelementptr inbounds i8, i8* %first1, i32 44
@@ -173,7 +171,6 @@ define i1 @gep11(i8* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i1 true
 ;
-
 entry:
   %first1 = getelementptr inbounds i8, i8* %ptr, i32 -2
   %last1 = getelementptr inbounds i8, i8* %ptr, i32 48
@@ -191,7 +188,6 @@ define i1 @gep12(i8* %ptr) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8* [[FIRST1]], [[LAST2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-
 entry:
   %first1 = getelementptr inbounds i8, i8* %ptr, i32 -2
   %last1 = getelementptr inbounds i8, i8* %ptr, i32 48
@@ -278,7 +274,6 @@ define i1 @gep16_no_null_opt(i8* %ptr, i32 %a) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[X]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-; CHECK getelementptr inbounds i8, i8* %ptr, i32 %b
   %b = or i32 %a, 1
   %x = getelementptr inbounds i8, i8* %ptr, i32 %b
   %cmp = icmp eq i8* %x, null
