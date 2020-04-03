@@ -93,7 +93,7 @@ Error DWARFDebugMacro::parse(DataExtractor StringExtractor,
       if (IsMacro) {
         auto Err = M->Header.parseMacroHeader(Data, &Offset);
         if (Err)
-          return std::move(Err);
+          return Err;
       }
     }
     // A macro list entry consists of:
