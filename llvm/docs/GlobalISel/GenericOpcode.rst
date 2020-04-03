@@ -672,12 +672,9 @@ Other Operations
 G_DYN_STACKALLOC
 ^^^^^^^^^^^^^^^^
 
-Dynamically realign the stack pointer to the specified alignment
+Dynamically realigns the stack pointer to the specified size and alignment.
+An alignment value of `0` or `1` mean no specific alignment.
 
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
-
-.. caution::
-
-  What does it mean for the immediate to be 0? It happens in the tests
