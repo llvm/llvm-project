@@ -1494,8 +1494,14 @@ function(configure_lit_site_cfg site_in site_out)
     # outselves. cmake has no relpath function, so use Python for that.
     string(REPLACE ";" "\\;" ARG_PATH_VALUES_ESCAPED "${ARG_PATH_VALUES}")
     get_filename_component(OUTPUT_DIR ${site_out} DIRECTORY)
-    execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c"
-      "import os, sys; sys.stdout.write(';'.join(os.path.relpath(p, sys.argv[1]).replace(os.sep, '/') if p else '' for p in sys.argv[2].split(';')))"
+    execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "\n
+import os, sys\n
+drive = os.path.splitdrive(sys.argv[1])[0]\n
+def relpath(p):\n
+    if not p: return ''\n
+    if os.path.splitdrive(p)[0] != drive: return p\n
+    return os.path.relpath(p, sys.argv[1]).replace(os.sep, '/')\n
+sys.stdout.write(';'.join(relpath(p) for p in sys.argv[2].split(';')))"
       ${OUTPUT_DIR}
       ${ARG_PATH_VALUES_ESCAPED}
       OUTPUT_VARIABLE ARG_PATH_VALUES_RELATIVE)
