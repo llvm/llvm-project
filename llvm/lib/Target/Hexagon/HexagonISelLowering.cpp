@@ -1087,7 +1087,7 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   Constant *CVal = nullptr;
   bool isVTi1Type = false;
   if (auto *CV = dyn_cast<ConstantVector>(CPN->getConstVal())) {
-    if (CV->getType()->getVectorElementType()->isIntegerTy(1)) {
+    if (cast<VectorType>(CV->getType())->getElementType()->isIntegerTy(1)) {
       IRBuilder<> IRB(CV->getContext());
       SmallVector<Constant*, 128> NewConst;
       unsigned VecLen = CV->getNumOperands();
