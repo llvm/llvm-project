@@ -41,7 +41,7 @@ trap 'cleanup' INT HUP QUIT TERM EXIT
 if git rev-parse --git-dir >/dev/null; then
   arc_base_commit=$(arc which --show-base)
   # An alternative is to use git-clang-format.
-  >&2 git-clang-format --quiet --force --style LLVM "${arc_base_commit}"
+  >&2 git-clang-format --quiet --force --style file "${arc_base_commit}"
 else
   >&2 echo "repo is expected to be a git directory"
 fi
