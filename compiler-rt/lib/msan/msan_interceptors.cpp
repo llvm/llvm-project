@@ -1304,6 +1304,8 @@ int OnExit() {
       ForEachMappedRegion(map, __msan_unpoison);                               \
   } while (false)
 
+#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!msan_inited)
+
 #define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
   if (MsanThread *t = GetCurrentThread()) {                                    \
     *begin = t->tls_begin();                                                   \
