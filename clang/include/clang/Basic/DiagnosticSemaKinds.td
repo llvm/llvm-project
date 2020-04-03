@@ -9762,8 +9762,6 @@ def err_omp_ambiguous_conversion : Error<
   "enumeration type">;
 def err_omp_iterator_not_integral_or_pointer : Error<
   "expected integral or pointer type as the iterator-type, not %0">;
-def err_omp_iterator_constant : Error<
-  "expected non-constant type as the iterator-type, constant %0 is provided">;
 def err_omp_iterator_step_not_integral : Error<
   "iterator step expression %0 is not the integral expression">;
 def err_omp_iterator_step_constant_zero : Error<
