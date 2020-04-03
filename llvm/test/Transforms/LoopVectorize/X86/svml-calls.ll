@@ -28,6 +28,12 @@ declare float @logf(float) #0
 declare double @llvm.log.f64(double) #0
 declare float @llvm.log.f32(float) #0
 
+declare double @exp2(double) #0
+declare float @exp2f(float) #0
+declare double @llvm.exp2.f64(double) #0
+declare float @llvm.exp2.f32(float) #0
+declare double @__exp2_finite(double) #0
+declare float @__exp2f_finite(float) #0
 
 define void @sin_f64(double* nocapture %varray) {
 ; CHECK-LABEL: @sin_f64(
@@ -497,5 +503,142 @@ for.end:
   ret void
 }
 
-attributes #0 = { nounwind readnone }
+define void @exp2_f64(double* nocapture %varray) {
+; CHECK-LABEL: @exp2_f64(
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @__svml_exp24(<4 x double> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
 
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @exp2(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %iv
+  store double %call, double* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f32(float* nocapture %varray) {
+; CHECK-LABEL: @exp2_f32(
+; CHECK:    [[TMP5:%.*]] = call <4 x float> @__svml_exp2f4(<4 x float> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @exp2f(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %iv
+  store float %call, float* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f64_intrinsic(double* nocapture %varray) {
+; CHECK-LABEL: @exp2_f64_intrinsic(
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @__svml_exp24(<4 x double> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.exp2.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %iv
+  store double %call, double* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f32_intrinsic(float* nocapture %varray) {
+; CHECK-LABEL: @exp2_f32_intrinsic(
+; CHECK:    [[TMP5:%.*]] = call <4 x float> @__svml_exp2f4(<4 x float> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.exp2.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %iv
+  store float %call, float* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2f_finite(float* nocapture %varray) {
+; CHECK-LABEL: @exp2f_finite(
+; CHECK:    [[TMP5:%.*]] = call <4 x float> @__svml_exp2f4(<4 x float> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @__exp2f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %iv
+  store float %call, float* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_finite(double* nocapture %varray) {
+; CHECK-LABEL: @exp2_finite(
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @__svml_exp24(<4 x double> [[TMP4:%.*]])
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__exp2_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %iv
+  store double %call, double* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+attributes #0 = { nounwind readnone }
