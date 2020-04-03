@@ -22,9 +22,9 @@ import tempfile
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--codesign_identity', type=str, required=False)
-    parser.add_argument('--dependencies', type=str, nargs='*', required=True)
-    parser.add_argument('--env', type=str, nargs='*', required=True)
+    parser.add_argument('--codesign_identity', type=str, required=False, default=None)
+    parser.add_argument('--dependencies', type=str, nargs='*', required=False, default=[])
+    parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
     (args, remaining) = parser.parse_known_args(sys.argv[1:])
 
     if len(remaining) < 2:
