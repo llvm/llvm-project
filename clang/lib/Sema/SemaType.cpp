@@ -8060,10 +8060,10 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
   } else if (auto *ED = dyn_cast<EnumDecl>(D)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
       ED = Pattern;
-    if (OnlyNeedComplete && ED->isFixed()) {
-      // If the enum has a fixed underlying type, and we're only looking for a
-      // complete type (not a definition), any visible declaration of it will
-      // do.
+    if (OnlyNeedComplete && !ED->getIntegerType().isNull()) {
+      // If the enum has an integer type, it may have been forward declared.
+      // Since we're only looking for a complete type (not a definition), any
+      // visible declaration of it will do.
       *Suggested = nullptr;
       for (auto *Redecl : ED->redecls()) {
         if (isVisible(Redecl))
