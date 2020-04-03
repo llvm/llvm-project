@@ -5080,14 +5080,16 @@ define <4 x i8> @trunc_ssat_v4i32_v4i8(<4 x i32> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pminsd {{.*}}(%rip), %xmm0
 ; SSE41-NEXT:    pmaxsd {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    packssdw %xmm0, %xmm0
+; SSE41-NEXT:    packsswb %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_ssat_v4i32_v4i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpmaxsd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_ssat_v4i32_v4i8:
@@ -5096,7 +5098,8 @@ define <4 x i8> @trunc_ssat_v4i32_v4i8(<4 x i32> %a0) {
 ; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
 ; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_ssat_v4i32_v4i8:
@@ -5178,7 +5181,8 @@ define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pminsd {{.*}}(%rip), %xmm0
 ; SSE41-NEXT:    pmaxsd {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    packssdw %xmm0, %xmm0
+; SSE41-NEXT:    packsswb %xmm0, %xmm0
 ; SSE41-NEXT:    movd %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
 ;
@@ -5186,7 +5190,8 @@ define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpmaxsd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -5196,7 +5201,8 @@ define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
 ; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
