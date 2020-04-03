@@ -606,6 +606,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
       Changed = true;
     }
   };
+  RemoveUses("llvm.dbg.addr");
   RemoveUses("llvm.dbg.declare");
   RemoveUses("llvm.dbg.value");
 
