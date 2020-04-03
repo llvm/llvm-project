@@ -17,7 +17,8 @@ Configuring Style with clang-format
 :program:`clang-format` supports two ways to provide custom style options:
 directly specify style configuration in the ``-style=`` command line option or
 use ``-style=file`` and put style configuration in the ``.clang-format`` or
-``_clang-format`` file in the project directory.
+``_clang-format`` file in the project directory. Note that ``--style=[file path]``
+is invalid - ``file`` is instead a literal selecting behavior.
 
 When using ``-style=file``, :program:`clang-format` for each input file will
 try to find the ``.clang-format`` file located in the closest parent directory
