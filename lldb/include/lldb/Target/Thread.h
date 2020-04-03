@@ -28,6 +28,8 @@
 
 namespace lldb_private {
 
+class ThreadPlanStack;
+
 class ThreadProperties : public Properties {
 public:
   ThreadProperties(bool is_global);
@@ -119,7 +121,7 @@ public:
                            // bit of data.
     lldb::StopInfoSP stop_info_sp; // You have to restore the stop info or you
                                    // might continue with the wrong signals.
-    std::vector<lldb::ThreadPlanSP> m_completed_plan_stack;
+    size_t m_completed_plan_checkpoint;
     lldb::RegisterCheckpointSP
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
@@ -912,7 +914,7 @@ public:
   ///
   /// \return
   ///     A pointer to the next executed plan.
-  ThreadPlan *GetCurrentPlan();
+  ThreadPlan *GetCurrentPlan() const;
 
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
@@ -927,14 +929,14 @@ public:
   ///
   /// \return
   ///     A pointer to the last completed plan.
-  lldb::ThreadPlanSP GetCompletedPlan();
+  lldb::ThreadPlanSP GetCompletedPlan() const;
 
   /// Gets the outer-most return value from the completed plans
   ///
   /// \return
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject();
+  lldb::ValueObjectSP GetReturnValueObject() const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///
@@ -942,7 +944,7 @@ public:
   ///     A ExpressionVariableSP, either empty if there is no
   ///     plan completed an expression during the current stop
   ///     or the expression variable that was made for the completed expression.
-  lldb::ExpressionVariableSP GetExpressionVariable();
+  lldb::ExpressionVariableSP GetExpressionVariable() const;
 
   ///  Checks whether the given plan is in the completed plans for this
   ///  stop.
@@ -953,7 +955,7 @@ public:
   /// \return
   ///     Returns true if the input plan is in the completed plan stack,
   ///     false otherwise.
-  bool IsThreadPlanDone(ThreadPlan *plan);
+  bool IsThreadPlanDone(ThreadPlan *plan) const;
 
   ///  Checks whether the given plan is in the discarded plans for this
   ///  stop.
@@ -964,14 +966,14 @@ public:
   /// \return
   ///     Returns true if the input plan is in the discarded plan stack,
   ///     false otherwise.
-  bool WasThreadPlanDiscarded(ThreadPlan *plan);
+  bool WasThreadPlanDiscarded(ThreadPlan *plan) const;
 
   /// Check if we have completed plan to override breakpoint stop reason
   ///
   /// \return
   ///     Returns true if completed plan stack is not empty
   ///     false otherwise.
-  bool CompletedPlanOverridesBreakpoint();
+  bool CompletedPlanOverridesBreakpoint() const;
 
   /// Queues a generic thread plan.
   ///
@@ -1184,16 +1186,16 @@ protected:
   // thread is still in good shape to call virtual thread methods.  This must
   // be called by classes that derive from Thread in their destructor.
   virtual void DestroyThread();
+  
+  ThreadPlanStack &GetPlans() const;
 
-  void PushPlan(lldb::ThreadPlanSP &plan_sp);
+  void PushPlan(lldb::ThreadPlanSP plan_sp);
 
   void PopPlan();
 
   void DiscardPlan();
 
-  ThreadPlan *GetPreviousPlan(ThreadPlan *plan);
-
-  typedef std::vector<lldb::ThreadPlanSP> plan_stack;
+  ThreadPlan *GetPreviousPlan(ThreadPlan *plan) const;
 
   virtual Unwind &GetUnwinder();
 
@@ -1238,13 +1240,6 @@ protected:
   lldb::StateType m_state;                  ///< The state of our process.
   mutable std::recursive_mutex
       m_state_mutex;       ///< Multithreaded protection for m_state.
-  plan_stack m_plan_stack; ///< The stack of plans this thread is executing.
-  plan_stack m_completed_plan_stack; ///< Plans that have been completed by this
-                                     ///stop.  They get deleted when the thread
-                                     ///resumes.
-  plan_stack m_discarded_plan_stack; ///< Plans that have been discarded by this
-                                     ///stop.  They get deleted when the thread
-                                     ///resumes.
   mutable std::recursive_mutex
       m_frame_mutex; ///< Multithreaded protection for m_state.
   lldb::StackFrameListSP m_curr_frames_sp; ///< The stack frames that get lazily
@@ -1272,8 +1267,7 @@ private:
   StructuredData::ObjectSP m_extended_info; // The extended info for this thread
 
 private:
-  bool PlanIsBasePlan(ThreadPlan *plan_ptr);
-
+  
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
   DISALLOW_COPY_AND_ASSIGN(Thread);

@@ -34,6 +34,10 @@ ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
 // Destructor
 ThreadPlan::~ThreadPlan() = default;
 
+Target &ThreadPlan::GetTarget() { return m_process.GetTarget(); }
+
+const Target &ThreadPlan::GetTarget() const { return m_process.GetTarget(); }
+
 Thread &ThreadPlan::GetThread() {
   if (m_thread)
     return *m_thread;
