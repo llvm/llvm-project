@@ -415,11 +415,10 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
   // then try the runtime
   if (auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-    if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
+    if (auto *runtime_vendor = objc_language_runtime->GetDeclVendor()) {
       std::vector<CompilerDecl> compiler_decls;
-      if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
-                                    compiler_decls) > 0 &&
-          compiler_decls.size() > 0) {
+      runtime_vendor->FindDecls(class_name, false, UINT32_MAX, compiler_decls);
+      if (!compiler_decls.empty()) {
         auto *ctx =
             llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
         if (ctx) {
