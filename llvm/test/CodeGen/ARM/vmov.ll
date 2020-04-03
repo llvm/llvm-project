@@ -219,15 +219,10 @@ define arm_aapcs_vfpcc <4 x i32> @v_movQi32f() nounwind {
 }
 
 define arm_aapcs_vfpcc <2 x i64> @v_movQi64() nounwind {
-; CHECK-LE-LABEL: v_movQi64:
-; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vmov.i64 q0, #0xff0000ff0000ffff
-; CHECK-LE-NEXT:    mov pc, lr
-;
-; CHECK-BE-LABEL: v_movQi64:
-; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vmov.i64 q0, #0xffffff0000ff
-; CHECK-BE-NEXT:    mov pc, lr
+; CHECK-LABEL: v_movQi64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i64 q0, #0xff0000ff0000ffff
+; CHECK-NEXT:    mov pc, lr
 	ret <2 x i64> < i64 18374687574888349695, i64 18374687574888349695 >
 }
 

@@ -263,15 +263,10 @@ entry:
 }
 
 define arm_aapcs_vfpcc <2 x i64> @mov_int64_ff() {
-; CHECKLE-LABEL: mov_int64_ff:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i64 q0, #0xff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int64_ff:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q0, #0xff00000000
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int64_ff:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i64 q0, #0xff
+; CHECK-NEXT:    bx lr
 entry:
   ret <2 x i64> < i64 255, i64 255 >
 }
@@ -286,15 +281,10 @@ entry:
 }
 
 define arm_aapcs_vfpcc <2 x i64> @mov_int64_ff0000ff0000ffff() {
-; CHECKLE-LABEL: mov_int64_ff0000ff0000ffff:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i64 q0, #0xff0000ff0000ffff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int64_ff0000ff0000ffff:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q0, #0xffffff0000ff
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int64_ff0000ff0000ffff:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i64 q0, #0xff0000ff0000ffff
+; CHECK-NEXT:    bx lr
 entry:
   ret <2 x i64> < i64 18374687574888349695, i64 18374687574888349695 >
 }
@@ -338,7 +328,7 @@ define arm_aapcs_vfpcc <16 x i8> @mov_int64_0f000f0f() {
 ;
 ; CHECKBE-LABEL: mov_int64_0f000f0f:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q0, #0xff00ff00ff00
+; CHECKBE-NEXT:    vmov.i64 q0, #0xff00ff000000ff00
 ; CHECKBE-NEXT:    bx lr
 entry:
   ret <16 x i8> <i8 -1, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 -1, i8 0>
@@ -352,7 +342,7 @@ define arm_aapcs_vfpcc <8 x i16> @mov_int64_ff00ffff() {
 ;
 ; CHECKBE-LABEL: mov_int64_ff00ffff:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q0, #0xffffffffffff0000
+; CHECKBE-NEXT:    vmov.i64 q0, #0xffff0000ffffffff
 ; CHECKBE-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 -1, i16 0, i16 -1, i16 -1, i16 -1, i16 0, i16 -1, i16 -1>
@@ -494,7 +484,7 @@ define arm_aapcs_vfpcc <16 x i8> @test(<16 x i8> %i) {
 ;
 ; CHECKBE-LABEL: test:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q1, #0xff00ff00ff0000
+; CHECKBE-NEXT:    vmov.i64 q1, #0xff00ff000000ff00
 ; CHECKBE-NEXT:    vrev64.8 q2, q1
 ; CHECKBE-NEXT:    vrev64.8 q1, q0
 ; CHECKBE-NEXT:    vorr q1, q1, q2
@@ -514,7 +504,7 @@ define arm_aapcs_vfpcc <8 x i16> @test2(<8 x i16> %i) {
 ;
 ; CHECKBE-LABEL: test2:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i64 q1, #0xffffffffffff
+; CHECKBE-NEXT:    vmov.i64 q1, #0xffff0000ffffffff
 ; CHECKBE-NEXT:    vrev64.16 q2, q1
 ; CHECKBE-NEXT:    vrev64.16 q1, q0
 ; CHECKBE-NEXT:    vorr q1, q1, q2
