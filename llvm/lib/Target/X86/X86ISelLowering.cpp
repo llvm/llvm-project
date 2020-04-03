@@ -6609,20 +6609,26 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
 }
 
 /// Create a shuffle mask that matches the PACKSS/PACKUS truncation.
+/// A multi-stage pack shuffle mask is created by specifying NumStages > 1.
 /// Note: This ignores saturation, so inputs must be checked first.
 static void createPackShuffleMask(MVT VT, SmallVectorImpl<int> &Mask,
-                                  bool Unary) {
+                                  bool Unary, unsigned NumStages = 1) {
   assert(Mask.empty() && "Expected an empty shuffle mask vector");
   unsigned NumElts = VT.getVectorNumElements();
   unsigned NumLanes = VT.getSizeInBits() / 128;
   unsigned NumEltsPerLane = 128 / VT.getScalarSizeInBits();
   unsigned Offset = Unary ? 0 : NumElts;
+  unsigned Repetitions = 1u << (NumStages - 1);
+  unsigned Increment = 1u << NumStages;
+  assert((NumEltsPerLane >> NumStages) > 0 && "Illegal packing compaction");
 
   for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-    for (unsigned Elt = 0; Elt != NumEltsPerLane; Elt += 2)
-      Mask.push_back(Elt + (Lane * NumEltsPerLane));
-    for (unsigned Elt = 0; Elt != NumEltsPerLane; Elt += 2)
-      Mask.push_back(Elt + (Lane * NumEltsPerLane) + Offset);
+    for (unsigned Stage = 0; Stage != Repetitions; ++Stage) {
+      for (unsigned Elt = 0; Elt != NumEltsPerLane; Elt += Increment)
+        Mask.push_back(Elt + (Lane * NumEltsPerLane));
+      for (unsigned Elt = 0; Elt != NumEltsPerLane; Elt += Increment)
+        Mask.push_back(Elt + (Lane * NumEltsPerLane) + Offset);
+    }
   }
 }
 
@@ -11328,13 +11334,17 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
 
 // X86 has dedicated pack instructions that can handle specific truncation
 // operations: PACKSS and PACKUS.
+// Checks for compaction shuffle masks if MaxStages > 1.
 // TODO: Add support for matching multiple PACKSS/PACKUS stages.
 static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
                                  unsigned &PackOpcode, ArrayRef<int> TargetMask,
                                  SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget) {
+                                 const X86Subtarget &Subtarget,
+                                 unsigned MaxStages = 1) {
   unsigned NumElts = VT.getVectorNumElements();
   unsigned BitSize = VT.getScalarSizeInBits();
+  assert(0 < MaxStages && MaxStages <= 3 && (BitSize << MaxStages) <= 64 &&
+         "Illegal maximum compaction");
 
   auto MatchPACK = [&](SDValue N1, SDValue N2, MVT PackVT) {
     unsigned NumSrcBits = PackVT.getScalarSizeInBits();
@@ -11363,22 +11373,25 @@ static bool matchShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1, SDValue &V2,
     return false;
   };
 
-  MVT PackSVT = MVT::getIntegerVT(BitSize * 2);
-  MVT PackVT = MVT::getVectorVT(PackSVT, NumElts / 2);
+  // Attempt to match against wider and wider compaction patterns.
+  for (unsigned NumStages = 1; NumStages <= MaxStages; ++NumStages) {
+    MVT PackSVT = MVT::getIntegerVT(BitSize << NumStages);
+    MVT PackVT = MVT::getVectorVT(PackSVT, NumElts >> NumStages);
 
-  // Try binary shuffle.
-  SmallVector<int, 32> BinaryMask;
-  createPackShuffleMask(VT, BinaryMask, false);
-  if (isTargetShuffleEquivalent(TargetMask, BinaryMask, V1, V2))
-    if (MatchPACK(V1, V2, PackVT))
-      return true;
+    // Try binary shuffle.
+    SmallVector<int, 32> BinaryMask;
+    createPackShuffleMask(VT, BinaryMask, false, NumStages);
+    if (isTargetShuffleEquivalent(TargetMask, BinaryMask, V1, V2))
+      if (MatchPACK(V1, V2, PackVT))
+        return true;
 
-  // Try unary shuffle.
-  SmallVector<int, 32> UnaryMask;
-  createPackShuffleMask(VT, UnaryMask, true);
-  if (isTargetShuffleEquivalent(TargetMask, UnaryMask, V1))
-    if (MatchPACK(V1, V1, PackVT))
-      return true;
+    // Try unary shuffle.
+    SmallVector<int, 32> UnaryMask;
+    createPackShuffleMask(VT, UnaryMask, true, NumStages);
+    if (isTargetShuffleEquivalent(TargetMask, UnaryMask, V1))
+      if (MatchPACK(V1, V1, PackVT))
+        return true;
+  }
 
   return false;
 }
@@ -11388,12 +11401,44 @@ static SDValue lowerShuffleWithPACK(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
                                     const X86Subtarget &Subtarget) {
   MVT PackVT;
   unsigned PackOpcode;
-  if (matchShuffleWithPACK(VT, PackVT, V1, V2, PackOpcode, Mask, DAG,
-                           Subtarget))
-    return DAG.getNode(PackOpcode, DL, VT, DAG.getBitcast(PackVT, V1),
-                       DAG.getBitcast(PackVT, V2));
+  unsigned SizeBits = VT.getSizeInBits();
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned MaxStages = Log2_32(64 / EltBits);
+  if (!matchShuffleWithPACK(VT, PackVT, V1, V2, PackOpcode, Mask, DAG,
+                            Subtarget, MaxStages))
+    return SDValue();
 
-  return SDValue();
+  unsigned CurrentEltBits = PackVT.getScalarSizeInBits();
+  unsigned NumStages = Log2_32(CurrentEltBits / EltBits);
+
+  // Don't lower multi-stage packs on AVX512, truncation is better.
+  if (NumStages != 1 && SizeBits == 128 && Subtarget.hasVLX())
+    return SDValue();
+
+  // Pack to the largest type possible:
+  // vXi64/vXi32 -> PACK*SDW and vXi16 -> PACK*SWB.
+  unsigned MaxPackBits = 16;
+  if (CurrentEltBits > 16 &&
+      (PackOpcode == X86ISD::PACKSS || Subtarget.hasSSE41()))
+    MaxPackBits = 32;
+
+  // Repeatedly pack down to the target size.
+  SDValue Res;
+  for (unsigned i = 0; i != NumStages; ++i) {
+    unsigned SrcEltBits = std::min(MaxPackBits, CurrentEltBits);
+    unsigned NumSrcElts = SizeBits / SrcEltBits;
+    MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
+    MVT DstSVT = MVT::getIntegerVT(SrcEltBits / 2);
+    MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
+    MVT DstVT = MVT::getVectorVT(DstSVT, NumSrcElts * 2);
+    Res = DAG.getNode(PackOpcode, DL, DstVT, DAG.getBitcast(SrcVT, V1),
+                      DAG.getBitcast(SrcVT, V2));
+    V1 = V2 = Res;
+    CurrentEltBits /= 2;
+  }
+  assert(Res && Res.getValueType() == VT &&
+         "Failed to lower compaction shuffle");
+  return Res;
 }
 
 /// Try to emit a bitmask instruction for a shuffle.
