@@ -651,6 +651,28 @@ bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
   return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
 }
 
+void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
+  const auto &Ctx = ND.getASTContext();
+
+  if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
+    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
+      HI.Size = Size->getQuantity();
+    return;
+  }
+
+  if (const auto *FD = llvm::dyn_cast<FieldDecl>(&ND)) {
+    const auto *Record = FD->getParent()->getDefinition();
+    if (Record && !Record->isDependentType()) {
+      uint64_t OffsetBits = Ctx.getFieldOffset(FD);
+      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {
+        HI.Size = Size->getQuantity();
+        HI.Offset = OffsetBits / 8;
+      }
+    }
+    return;
+  }
+}
+
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
@@ -707,6 +729,9 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
       if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), Index);
+        // Layout info only shown when hovering on the field/class itself.
+        if (Decls.front() == N->ASTNode.get<Decl>())
+          addLayoutInfo(*Decls.front(), *HI);
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
           HI->Value = printExprValue(N, AST.getASTContext());
@@ -781,6 +806,13 @@ markup::Document HoverInfo::present() const {
     P.appendText("Value =");
     P.appendCode(*Value);
   }
+
+  if (Offset)
+    Output.addParagraph().appendText(
+        llvm::formatv("Offset: {0} byte{1}", *Offset, *Offset == 1 ? "" : "s"));
+  if (Size)
+    Output.addParagraph().appendText(
+        llvm::formatv("Size: {0} byte{1}", *Size, *Size == 1 ? "" : "s"));
 
   if (!Documentation.empty())
     parseDocumentation(Documentation, Output);
