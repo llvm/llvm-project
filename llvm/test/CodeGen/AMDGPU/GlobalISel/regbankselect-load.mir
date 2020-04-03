@@ -455,7 +455,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_v8i32_uniform
-    ; CHECK (<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
+    ; CHECK: (<8 x s32>) = G_LOAD %0(p4) :: (load 32, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
 ...
@@ -468,7 +468,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_v4i64_uniform
-    ; CHECK (<4 x s64>) = G_LOAD %0 :: (load 32, addrspace 4)
+    ; CHECK: (<4 x s64>) = G_LOAD %0(p4) :: (load 32, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<4 x s64>) = G_LOAD %0 :: (load 32, addrspace 4)
 ...
@@ -481,7 +481,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_v16i32_uniform
-    ; CHECK (<16 x s32>) = G_LOAD %0 :: (load 64, addrspace 4)
+    ; CHECK: (<16 x s32>) = G_LOAD %0(p4) :: (load 64, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<16 x s32>) = G_LOAD %0 :: (load 64, addrspace 4)
 ...
@@ -494,7 +494,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_v8i64_uniform
-    ; CHECK (<8 x s64>) = G_LOAD %0 :: (load 64, addrspace 4)
+    ; CHECK: (<8 x s64>) = G_LOAD %0(p4) :: (load 64, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<8 x s64>) = G_LOAD %0 :: (load 64, addrspace 4)
 ...
