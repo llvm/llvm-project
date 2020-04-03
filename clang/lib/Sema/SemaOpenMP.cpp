@@ -35,6 +35,8 @@
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <set>
+
 using namespace clang;
 using namespace llvm::omp;
 
@@ -5542,6 +5544,9 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
 
   FD->setParams(Params);
 }
+
+Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
+    : TI(&TI), NameSuffix(TI.getMangledName()) {}
 
 FunctionDecl *
 Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
@@ -17054,7 +17059,7 @@ OMPClause *Sema::ActOnOpenMPMapClause(
   OpenMPMapModifierKind Modifiers[] = {OMPC_MAP_MODIFIER_unknown,
                                        OMPC_MAP_MODIFIER_unknown,
                                        OMPC_MAP_MODIFIER_unknown};
-  SourceLocation ModifiersLoc[OMPMapClause::NumberOfModifiers];
+  SourceLocation ModifiersLoc[NumberOfOMPMapClauseModifiers];
 
   // Process map-type-modifiers, flag errors for duplicate modifiers.
   unsigned Count = 0;
@@ -17064,7 +17069,7 @@ OMPClause *Sema::ActOnOpenMPMapClause(
       Diag(MapTypeModifiersLoc[I], diag::err_omp_duplicate_map_type_modifier);
       continue;
     }
-    assert(Count < OMPMapClause::NumberOfModifiers &&
+    assert(Count < NumberOfOMPMapClauseModifiers &&
            "Modifiers exceed the allowed number of map type modifiers");
     Modifiers[Count] = MapTypeModifiers[I];
     ModifiersLoc[Count] = MapTypeModifiersLoc[I];
