@@ -319,7 +319,7 @@ DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
     break;
   }
   }
-  return std::move(Macro);
+  return Macro;
 }
 
 static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
@@ -1975,4 +1975,3 @@ uint8_t DWARFContext::getCUAddrSize() {
   unit_iterator_range CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
-
