@@ -120,7 +120,7 @@ FunctionPass *createX86DomainReassignmentPass();
 FunctionPass *createX86EvexToVexInsts();
 
 /// This pass creates the thunks for the retpoline feature.
-FunctionPass *createX86RetpolineThunksPass();
+FunctionPass *createX86IndirectThunksPass();
 
 /// This pass ensures instructions featuring a memory operand
 /// have distinctive <LineNumber, Discriminator> (with respect to eachother)

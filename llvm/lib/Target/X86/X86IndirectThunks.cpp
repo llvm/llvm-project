@@ -1,4 +1,4 @@
-//======- X86RetpolineThunks.cpp - Construct retpoline thunks for x86  --=====//
+//==- X86IndirectThunks.cpp - Construct indirect call/jump thunks for x86  --=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,17 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// Pass that injects an MI thunk implementing a "retpoline". This is
-/// a RET-implemented trampoline that is used to lower indirect calls in a way
+/// Pass that injects an MI thunk that is used to lower indirect calls in a way
 /// that prevents speculation on some x86 processors and can be used to mitigate
 /// security vulnerabilities due to targeted speculative execution and side
 /// channels such as CVE-2017-5715.
+///
+/// Currently supported thunks include:
+/// - Retpoline -- A RET-implemented trampoline that lowers indirect calls
+///
+/// Note that the reason that this is implemented as a MachineFunctionPass and
+/// not a ModulePass is that ModulePasses at this point in the LLVM X86 pipeline
+/// serialize all transformations, which can consume lots of memory.
 ///
 /// TODO(chandlerc): All of this code could use better comments and
 /// documentation.
@@ -37,21 +43,21 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-retpoline-thunks"
 
-static const char ThunkNamePrefix[] = "__llvm_retpoline_";
-static const char R11ThunkName[]    = "__llvm_retpoline_r11";
-static const char EAXThunkName[]    = "__llvm_retpoline_eax";
-static const char ECXThunkName[]    = "__llvm_retpoline_ecx";
-static const char EDXThunkName[]    = "__llvm_retpoline_edx";
-static const char EDIThunkName[]    = "__llvm_retpoline_edi";
+static const char RetpolineNamePrefix[] = "__llvm_retpoline_";
+static const char R11RetpolineName[]    = "__llvm_retpoline_r11";
+static const char EAXRetpolineName[]    = "__llvm_retpoline_eax";
+static const char ECXRetpolineName[]    = "__llvm_retpoline_ecx";
+static const char EDXRetpolineName[]    = "__llvm_retpoline_edx";
+static const char EDIRetpolineName[]    = "__llvm_retpoline_edi";
 
 namespace {
-class X86RetpolineThunks : public MachineFunctionPass {
+class X86IndirectThunks : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86RetpolineThunks() : MachineFunctionPass(ID) {}
+  X86IndirectThunks() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override { return "X86 Retpoline Thunks"; }
+  StringRef getPassName() const override { return "X86 Indirect Thunks"; }
 
   bool doInitialization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -72,24 +78,24 @@ private:
   bool InsertedThunks = false;
 
   void createThunkFunction(Module &M, StringRef Name);
-  void insertRegReturnAddrClobber(MachineBasicBlock &MBB, unsigned Reg);
-  void populateThunk(MachineFunction &MF, unsigned Reg);
+  void insertRegReturnAddrClobber(MachineBasicBlock &MBB, Register Reg);
+  void populateThunk(MachineFunction &MF, Register Reg);
 };
 
 } // end anonymous namespace
 
-FunctionPass *llvm::createX86RetpolineThunksPass() {
-  return new X86RetpolineThunks();
+FunctionPass *llvm::createX86IndirectThunksPass() {
+  return new X86IndirectThunks();
 }
 
-char X86RetpolineThunks::ID = 0;
+char X86IndirectThunks::ID = 0;
 
-bool X86RetpolineThunks::doInitialization(Module &M) {
+bool X86IndirectThunks::doInitialization(Module &M) {
   InsertedThunks = false;
   return false;
 }
 
-bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
+bool X86IndirectThunks::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << getPassName() << '\n');
 
   TM = &MF.getTarget();;
@@ -102,7 +108,7 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
 
   // If this function is not a thunk, check to see if we need to insert
   // a thunk.
-  if (!MF.getName().startswith(ThunkNamePrefix)) {
+  if (!MF.getName().startswith(RetpolineNamePrefix)) {
     // If we've already inserted a thunk, nothing else to do.
     if (InsertedThunks)
       return false;
@@ -124,10 +130,11 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
     // pass. We extract the module and insert a new function (and machine
     // function) directly into the module.
     if (Is64Bit)
-      createThunkFunction(M, R11ThunkName);
+      createThunkFunction(M, R11RetpolineName);
     else
       for (StringRef Name :
-           {EAXThunkName, ECXThunkName, EDXThunkName, EDIThunkName})
+           {EAXRetpolineName, ECXRetpolineName, EDXRetpolineName,
+            EDIRetpolineName})
         createThunkFunction(M, Name);
     InsertedThunks = true;
     return true;
@@ -177,13 +184,13 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
     //   ... # Same setup
     //         movl %edi, (%esp)
     //         retl
-    if (MF.getName() == EAXThunkName)
+    if (MF.getName() == EAXRetpolineName)
       populateThunk(MF, X86::EAX);
-    else if (MF.getName() == ECXThunkName)
+    else if (MF.getName() == ECXRetpolineName)
       populateThunk(MF, X86::ECX);
-    else if (MF.getName() == EDXThunkName)
+    else if (MF.getName() == EDXRetpolineName)
       populateThunk(MF, X86::EDX);
-    else if (MF.getName() == EDIThunkName)
+    else if (MF.getName() == EDIRetpolineName)
       populateThunk(MF, X86::EDI);
     else
       llvm_unreachable("Invalid thunk name on x86-32!");
@@ -192,8 +199,8 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-void X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
-  assert(Name.startswith(ThunkNamePrefix) &&
+void X86IndirectThunks::createThunkFunction(Module &M, StringRef Name) {
+  assert(Name.startswith(RetpolineNamePrefix) &&
          "Created a thunk with an unexpected prefix!");
 
   LLVMContext &Ctx = M.getContext();
@@ -226,16 +233,16 @@ void X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
   MF.insert(MF.end(), EntryMBB);
 }
 
-void X86RetpolineThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,
-                                                    unsigned Reg) {
+void X86IndirectThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,
+                                                   Register Reg) {
   const unsigned MovOpc = Is64Bit ? X86::MOV64mr : X86::MOV32mr;
-  const unsigned SPReg = Is64Bit ? X86::RSP : X86::ESP;
+  const Register SPReg = Is64Bit ? X86::RSP : X86::ESP;
   addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(MovOpc)), SPReg, false, 0)
       .addReg(Reg);
 }
 
-void X86RetpolineThunks::populateThunk(MachineFunction &MF,
-                                       unsigned Reg) {
+void X86IndirectThunks::populateThunk(MachineFunction &MF,
+                                      Register Reg) {
   // Set MF properties. We never use vregs...
   MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
 
@@ -246,8 +253,10 @@ void X86RetpolineThunks::populateThunk(MachineFunction &MF,
   while (MF.size() > 1)
     MF.erase(std::next(MF.begin()));
 
-  MachineBasicBlock *CaptureSpec = MF.CreateMachineBasicBlock(Entry->getBasicBlock());
-  MachineBasicBlock *CallTarget = MF.CreateMachineBasicBlock(Entry->getBasicBlock());
+  MachineBasicBlock *CaptureSpec =
+      MF.CreateMachineBasicBlock(Entry->getBasicBlock());
+  MachineBasicBlock *CallTarget =
+      MF.CreateMachineBasicBlock(Entry->getBasicBlock());
   MCSymbol *TargetSym = MF.getContext().createTempSymbol();
   MF.push_back(CaptureSpec);
   MF.push_back(CallTarget);

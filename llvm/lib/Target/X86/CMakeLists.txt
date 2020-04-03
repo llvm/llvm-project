@@ -44,6 +44,7 @@ set(sources
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
   X86IndirectBranchTracking.cpp
+  X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
   X86InsertPrefetch.cpp
   X86InstrFMA3Info.cpp
@@ -58,7 +59,6 @@ set(sources
   X86PadShortFunction.cpp
   X86RegisterBankInfo.cpp
   X86RegisterInfo.cpp
-  X86RetpolineThunks.cpp
   X86SelectionDAGInfo.cpp
   X86ShuffleDecodeConstantPool.cpp
   X86SpeculativeLoadHardening.cpp
