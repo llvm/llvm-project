@@ -292,6 +292,36 @@ static void dumpRnglistsSection(
   }
 }
 
+std::unique_ptr<DWARFDebugMacro>
+DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
+  auto Macro = std::make_unique<DWARFDebugMacro>();
+  auto ParseAndDump = [&](DWARFDataExtractor &Data, bool IsMacro) {
+    if (Error Err = Macro->parse(getStringExtractor(), Data, IsMacro)) {
+      RecoverableErrorHandler(std::move(Err));
+      Macro = nullptr;
+    }
+  };
+  switch (SectionType) {
+  case MacinfoSection: {
+    DWARFDataExtractor Data(DObj->getMacinfoSection(), isLittleEndian(), 0);
+    ParseAndDump(Data, /*IsMacro=*/false);
+    break;
+  }
+  case MacinfoDwoSection: {
+    DWARFDataExtractor Data(DObj->getMacinfoDWOSection(), isLittleEndian(), 0);
+    ParseAndDump(Data, /*IsMacro=*/false);
+    break;
+  }
+  case MacroSection: {
+    DWARFDataExtractor Data(*DObj, DObj->getMacroSection(), isLittleEndian(),
+                            0);
+    ParseAndDump(Data, /*IsMacro=*/true);
+    break;
+  }
+  }
+  return std::move(Macro);
+}
+
 static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                 DWARFDataExtractor Data,
                                 const MCRegisterInfo *MRI,
@@ -444,14 +474,22 @@ void DWARFContext::dump(
                                    DObj->getEHFrameSection().Data))
     getEHFrame()->dump(OS, getRegisterInfo(), *Off);
 
+  if (shouldDump(Explicit, ".debug_macro", DIDT_ID_DebugMacro,
+                 DObj->getMacroSection().Data)) {
+    if (auto Macro = getDebugMacro())
+      Macro->dump(OS);
+  }
+
   if (shouldDump(Explicit, ".debug_macinfo", DIDT_ID_DebugMacro,
                  DObj->getMacinfoSection())) {
-    getDebugMacinfo()->dump(OS);
+    if (auto Macinfo = getDebugMacinfo())
+      Macinfo->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_macinfo.dwo", DIDT_ID_DebugMacro,
                  DObj->getMacinfoDWOSection())) {
-    getDebugMacinfoDWO()->dump(OS);
+    if (auto MacinfoDWO = getDebugMacinfoDWO())
+      MacinfoDWO->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_aranges", DIDT_ID_DebugAranges,
@@ -815,25 +853,22 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
   return DebugFrame.get();
 }
 
-const DWARFDebugMacro *DWARFContext::getDebugMacinfoDWO() {
-  if (MacinfoDWO)
-    return MacinfoDWO.get();
-
-  DataExtractor MacinfoDWOData(DObj->getMacinfoDWOSection(), isLittleEndian(),
-                               0);
-  MacinfoDWO.reset(new DWARFDebugMacro());
-  MacinfoDWO->parse(MacinfoDWOData);
-  return MacinfoDWO.get();
+const DWARFDebugMacro *DWARFContext::getDebugMacro() {
+  if (!Macro)
+    Macro = parseMacroOrMacinfo(MacroSection);
+  return Macro.get();
 }
 
 const DWARFDebugMacro *DWARFContext::getDebugMacinfo() {
-  if (Macinfo)
-    return Macinfo.get();
-
-  DataExtractor MacinfoData(DObj->getMacinfoSection(), isLittleEndian(), 0);
-  Macinfo.reset(new DWARFDebugMacro());
-  Macinfo->parse(MacinfoData);
+  if (!Macinfo)
+    Macinfo = parseMacroOrMacinfo(MacinfoSection);
   return Macinfo.get();
+}
+
+const DWARFDebugMacro *DWARFContext::getDebugMacinfoDWO() {
+  if (!MacinfoDWO)
+    MacinfoDWO = parseMacroOrMacinfo(MacinfoDwoSection);
+  return MacinfoDWO.get();
 }
 
 template <typename T>
@@ -1476,6 +1511,7 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap PubtypesSection;
   DWARFSectionMap GnuPubnamesSection;
   DWARFSectionMap GnuPubtypesSection;
+  DWARFSectionMap MacroSection;
 
   DWARFSectionMap *mapNameToDWARFSection(StringRef Name) {
     return StringSwitch<DWARFSectionMap *>(Name)
@@ -1503,6 +1539,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("apple_namespaces", &AppleNamespacesSection)
         .Case("apple_namespac", &AppleNamespacesSection)
         .Case("apple_objc", &AppleObjCSection)
+        .Case("debug_macro", &MacroSection)
         .Default(nullptr);
   }
 
@@ -1847,6 +1884,7 @@ public:
   const DWARFSection &getRnglistsSection() const override {
     return RnglistsSection;
   }
+  const DWARFSection &getMacroSection() const override { return MacroSection; }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
   StringRef getMacinfoDWOSection() const override { return MacinfoDWOSection; }
   const DWARFSection &getPubnamesSection() const override { return PubnamesSection; }
