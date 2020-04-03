@@ -804,7 +804,7 @@ TEST_FUNC(affine_if_op) {
 }
 
 // clang-format off
-// CHECK-LABEL: func @linalg_pointwise
+// CHECK-LABEL: func @linalg_generic_pointwise
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
@@ -822,14 +822,14 @@ TEST_FUNC(affine_if_op) {
 //       CHECK:     tanh
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>
 // clang-format on
-TEST_FUNC(linalg_pointwise_test) {
+TEST_FUNC(linalg_generic_pointwise_test) {
   using namespace edsc;
   using namespace edsc::ops;
 
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
-  auto f = makeFunction("linalg_pointwise", {},
+  auto f = makeFunction("linalg_generic_pointwise", {},
                         {memrefType, memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
@@ -838,16 +838,16 @@ TEST_FUNC(linalg_pointwise_test) {
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
   StructuredIndexed SA(A), SB(B), SC(C);
-  linalg_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
-  linalg_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
-  linalg_pointwise_tanh(SA({i, j}), SC({i, j}));
+  linalg_generic_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_generic_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_generic_pointwise_tanh(SA({i, j}), SC({i, j}));
 
   f.print(llvm::outs());
   f.erase();
 }
 
 // clang-format off
-// CHECK-LABEL: func @linalg_matmul
+// CHECK-LABEL: func @linalg_generic_matmul
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]}
@@ -857,7 +857,7 @@ TEST_FUNC(linalg_pointwise_test) {
 //       CHECK:     linalg.yield %[[a4]] : f32
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
 // clang-format on
-TEST_FUNC(linalg_matmul_test) {
+TEST_FUNC(linalg_generic_matmul_test) {
   using namespace edsc;
   using namespace edsc::ops;
 
@@ -865,18 +865,18 @@ TEST_FUNC(linalg_matmul_test) {
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
   auto f =
-      makeFunction("linalg_matmul", {}, {memrefType, memrefType, memrefType});
+      makeFunction("linalg_generic_matmul", {}, {memrefType, memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())));
+  linalg_generic_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())));
 
   f.print(llvm::outs());
   f.erase();
 }
 
 // clang-format off
-// CHECK-LABEL: func @linalg_conv_nhwc
+// CHECK-LABEL: func @linalg_generic_conv_nhwc
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2 * 3 + d4 * 5, d3 * 4 + d5 * 6, d6)>,
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d1)>,
@@ -888,7 +888,7 @@ TEST_FUNC(linalg_matmul_test) {
 //       CHECK:     linalg.yield %[[a4]] : f32
 //       CHECK:   }: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
 // clang-format on
-TEST_FUNC(linalg_conv_nhwc) {
+TEST_FUNC(linalg_generic_conv_nhwc) {
   using namespace edsc;
   using namespace edsc::ops;
 
@@ -897,12 +897,12 @@ TEST_FUNC(linalg_conv_nhwc) {
       MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize,
                        ShapedType::kDynamicSize, ShapedType::kDynamicSize},
                       f32Type, {}, 0);
-  auto f = makeFunction("linalg_conv_nhwc", {},
+  auto f = makeFunction("linalg_generic_conv_nhwc", {},
                         {memrefType, memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
+  linalg_generic_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
                    /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
@@ -910,7 +910,7 @@ TEST_FUNC(linalg_conv_nhwc) {
 }
 
 // clang-format off
-// CHECK-LABEL: func @linalg_dilated_conv_nhwc
+// CHECK-LABEL: func @linalg_generic_dilated_conv_nhwc
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3 * 3 + d5 * 5, d4 * 4 + d6 * 6, d2)>,
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d2, d1)>,
@@ -922,7 +922,7 @@ TEST_FUNC(linalg_conv_nhwc) {
 //       CHECK:     linalg.yield %[[a4]] : f32
 //       CHECK:   }: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
 // clang-format on
-TEST_FUNC(linalg_dilated_conv_nhwc) {
+TEST_FUNC(linalg_generic_dilated_conv_nhwc) {
   using namespace edsc;
   using namespace edsc::ops;
 
@@ -931,12 +931,12 @@ TEST_FUNC(linalg_dilated_conv_nhwc) {
       MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize,
                        ShapedType::kDynamicSize, ShapedType::kDynamicSize},
                       f32Type, {}, 0);
-  auto f = makeFunction("linalg_dilated_conv_nhwc", {},
+  auto f = makeFunction("linalg_generic_dilated_conv_nhwc", {},
                         {memrefType, memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_dilated_conv_nhwc(makeValueHandles(f.getArguments()),
+  linalg_generic_dilated_conv_nhwc(makeValueHandles(f.getArguments()),
                            /*depth_multiplier=*/7,
                            /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
@@ -1019,11 +1019,11 @@ TEST_FUNC(linalg_tensors_test) {
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
   StructuredIndexed SA(A), SB(B), SC(tensorType);
-  linalg_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
-  linalg_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
-  linalg_pointwise_tanh(SA({i, j}), SC({i, j}));
-  Value o1 = linalg_matmul(A, B, tensorType)->getResult(0);
-  linalg_matmul(A, B, ValueHandle(o1), tensorType);
+  linalg_generic_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_generic_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_generic_pointwise_tanh(SA({i, j}), SC({i, j}));
+  Value o1 = linalg_generic_matmul(A, B, tensorType)->getResult(0);
+  linalg_generic_matmul(A, B, ValueHandle(o1), tensorType);
 
   f.print(llvm::outs());
   f.erase();
@@ -1067,9 +1067,9 @@ TEST_FUNC(memref_vector_matmul_test) {
   ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
   auto contractionBuilder = [](ArrayRef<BlockArgument> args) {
     assert(args.size() == 3 && "expected 3 block arguments");
-    (linalg_yield(vector_matmul(args[0], args[1], args[2])));
+    (linalg_yield(vector_contraction_matmul(args[0], args[1], args[2])));
   };
-  linalg_matmul(A, B, C, contractionBuilder);
+  linalg_generic_matmul(A, B, C, contractionBuilder);
 
   f.print(llvm::outs());
   f.erase();

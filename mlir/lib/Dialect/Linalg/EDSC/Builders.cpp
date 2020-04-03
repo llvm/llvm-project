@@ -221,9 +221,8 @@ void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgument> args) {
   linalg_yield((c + a * b).getValue());
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
-                                             StructuredIndexed I,
-                                             StructuredIndexed O) {
+Operation *mlir::edsc::ops::linalg_generic_pointwise(
+    UnaryPointwiseOpBuilder unaryOp, StructuredIndexed I, StructuredIndexed O) {
   SmallVector<IteratorType, 4> iterTypes(O.getExprs().size(),
                                          IteratorType::Parallel);
   if (O.getType().isa<RankedTensorType>()) {
@@ -242,18 +241,17 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
   return makeGenericLinalgOp(iterTypes, {I}, {O}, fun);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
-                                                  StructuredIndexed O) {
+Operation *mlir::edsc::ops::linalg_generic_pointwise_tanh(StructuredIndexed I,
+                                                          StructuredIndexed O) {
   UnaryPointwiseOpBuilder unOp(
       [](ValueHandle a) -> Value { return std_tanh(a); });
-  return linalg_pointwise(unOp, I, O);
+  return linalg_generic_pointwise(unOp, I, O);
 }
 
 /// Binary pointwise operation (with broadcast) entry point.
-Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
-                                             StructuredIndexed I1,
-                                             StructuredIndexed I2,
-                                             StructuredIndexed O) {
+Operation *mlir::edsc::ops::linalg_generic_pointwise(
+    BinaryPointwiseOpBuilder binaryOp, StructuredIndexed I1,
+    StructuredIndexed I2, StructuredIndexed O) {
   SmallVector<IteratorType, 4> iterTypes(O.getExprs().size(),
                                          IteratorType::Parallel);
   if (O.getType().isa<RankedTensorType>()) {
@@ -272,28 +270,29 @@ Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
   return makeGenericLinalgOp(iterTypes, {I1, I2}, {O}, fun);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_add(StructuredIndexed I1,
-                                                 StructuredIndexed I2,
-                                                 StructuredIndexed O) {
+Operation *mlir::edsc::ops::linalg_generic_pointwise_add(StructuredIndexed I1,
+                                                         StructuredIndexed I2,
+                                                         StructuredIndexed O) {
   using edsc::op::operator+;
   BinaryPointwiseOpBuilder binOp(
       [](ValueHandle a, ValueHandle b) -> Value { return a + b; });
-  return linalg_pointwise(binOp, I1, I2, O);
+  return linalg_generic_pointwise(binOp, I1, I2, O);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
-                                                 StructuredIndexed I2,
-                                                 StructuredIndexed O) {
+Operation *mlir::edsc::ops::linalg_generic_pointwise_max(StructuredIndexed I1,
+                                                         StructuredIndexed I2,
+                                                         StructuredIndexed O) {
   BinaryPointwiseOpBuilder binOp([](ValueHandle a, ValueHandle b) -> Value {
     using edsc::op::operator>;
     return std_select(a > b, a, b).getValue();
   });
-  return linalg_pointwise(binOp, I1, I2, O);
+  return linalg_generic_pointwise(binOp, I1, I2, O);
 }
 
-Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          ValueHandle vC,
-                                          MatmulRegionBuilder regionBuilder) {
+Operation *
+mlir::edsc::ops::linalg_generic_matmul(ValueHandle vA, ValueHandle vB,
+                                       ValueHandle vC,
+                                       MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -306,9 +305,10 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
   // clang-format on
 }
 
-Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          RankedTensorType tC,
-                                          MatmulRegionBuilder regionBuilder) {
+Operation *
+mlir::edsc::ops::linalg_generic_matmul(ValueHandle vA, ValueHandle vB,
+                                       RankedTensorType tC,
+                                       MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -321,9 +321,10 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
   // clang-format on
 }
 
-Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          ValueHandle vC, RankedTensorType tD,
-                                          MatmulRegionBuilder regionBuilder) {
+Operation *
+mlir::edsc::ops::linalg_generic_matmul(ValueHandle vA, ValueHandle vB,
+                                       ValueHandle vC, RankedTensorType tD,
+                                       MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -336,10 +337,11 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
   // clang-format on
 }
 
-Operation *mlir::edsc::ops::linalg_conv_nhwc(ValueHandle vI, ValueHandle vW,
-                                             ValueHandle vO,
-                                             ArrayRef<int> strides,
-                                             ArrayRef<int> dilations) {
+Operation *mlir::edsc::ops::linalg_generic_conv_nhwc(ValueHandle vI,
+                                                     ValueHandle vW,
+                                                     ValueHandle vO,
+                                                     ArrayRef<int> strides,
+                                                     ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
   // TODO(ntv) some template magic to make everything rank-polymorphic.
   assert((dilations.empty() || dilations.size() == 2) && "only 2-D conv atm");
@@ -370,7 +372,7 @@ Operation *mlir::edsc::ops::linalg_conv_nhwc(ValueHandle vI, ValueHandle vW,
   // clang-format on
 }
 
-Operation *mlir::edsc::ops::linalg_dilated_conv_nhwc(
+Operation *mlir::edsc::ops::linalg_generic_dilated_conv_nhwc(
     ValueHandle vI, ValueHandle vW, ValueHandle vO, int depth_multiplier,
     ArrayRef<int> strides, ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
