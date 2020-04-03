@@ -57,22 +57,19 @@ def main(builtin_params={}):
         print_suites_or_tests(discovered_tests, opts)
         return
 
-    if opts.filter:
-        filtered_tests = [t for t in discovered_tests if
-                          opts.filter.search(t.getFullName())]
-        if not filtered_tests:
-            sys.stderr.write('error: filter did not match any tests '
-                             '(of %d discovered).  ' % len(discovered_tests))
-            if opts.allow_empty_runs:
-                sys.stderr.write('Suppressing error because '
-                                 "'--allow-empty-runs' was specified.\n")
-                sys.exit(0)
-            else:
-                sys.stderr.write("Use '--allow-empty-runs' to suppress this "
-                                 'error.\n')
-                sys.exit(2)
-    else:
-        filtered_tests = discovered_tests
+    filtered_tests = [t for t in discovered_tests if
+                      opts.filter.search(t.getFullName())]
+    if not filtered_tests:
+        sys.stderr.write('error: filter did not match any tests '
+                         '(of %d discovered).  ' % len(discovered_tests))
+        if opts.allow_empty_runs:
+            sys.stderr.write("Suppressing error because '--allow-empty-runs' "
+                             'was specified.\n')
+            sys.exit(0)
+        else:
+            sys.stderr.write("Use '--allow-empty-runs' to suppress this "
+                             'error.\n')
+            sys.exit(2)
 
     determine_order(filtered_tests, opts.order)
 

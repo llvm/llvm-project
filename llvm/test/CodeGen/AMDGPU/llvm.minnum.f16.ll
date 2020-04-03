@@ -88,7 +88,7 @@ define amdgpu_kernel void @minnum_f16_ieee(
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
     half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    half addrspace(1)* %b) #0 {
 entry:
   %a.val = load volatile half, half addrspace(1)* %a
   %b.val = load volatile half, half addrspace(1)* %b
@@ -97,7 +97,7 @@ entry:
   ret void
 }
 
-define amdgpu_ps half @minnum_f16_no_ieee(half %a, half %b) {
+define amdgpu_ps half @minnum_f16_no_ieee(half %a, half %b) #0 {
 ; SI-LABEL: minnum_f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
@@ -180,7 +180,7 @@ define amdgpu_kernel void @minnum_f16_imm_a(
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
-    half addrspace(1)* %b) {
+    half addrspace(1)* %b) #0 {
 entry:
   %b.val = load half, half addrspace(1)* %b
   %r.val = call half @llvm.minnum.f16(half 3.0, half %b.val)
@@ -248,7 +248,7 @@ define amdgpu_kernel void @minnum_f16_imm_b(
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    half addrspace(1)* %a) #0 {
 entry:
   %a.val = load half, half addrspace(1)* %a
   %r.val = call half @llvm.minnum.f16(half %a.val, half 4.0)
@@ -331,7 +331,7 @@ define amdgpu_kernel void @minnum_v2f16_ieee(
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b) {
+    <2 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
@@ -340,7 +340,7 @@ entry:
   ret void
 }
 
-define amdgpu_ps <2 x half> @minnum_v2f16_no_ieee(<2 x half> %a, <2 x half> %b) {
+define amdgpu_ps <2 x half> @minnum_v2f16_no_ieee(<2 x half> %a, <2 x half> %b) #0 {
 ; SI-LABEL: minnum_v2f16_no_ieee:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
@@ -429,7 +429,7 @@ define amdgpu_kernel void @minnum_v2f16_imm_a(
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b) {
+    <2 x half> addrspace(1)* %b) #0 {
 entry:
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> <half 3.0, half 4.0>, <2 x half> %b.val)
@@ -496,7 +496,7 @@ define amdgpu_kernel void @minnum_v2f16_imm_b(
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    <2 x half> addrspace(1)* %a) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a.val, <2 x half> <half 4.0, half 3.0>)
@@ -595,7 +595,7 @@ define amdgpu_kernel void @minnum_v3f16(
 ; GFX9-NEXT:    s_endpgm
     <3 x half> addrspace(1)* %r,
     <3 x half> addrspace(1)* %a,
-    <3 x half> addrspace(1)* %b) {
+    <3 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <3 x half>, <3 x half> addrspace(1)* %a
   %b.val = load <3 x half>, <3 x half> addrspace(1)* %b
@@ -708,7 +708,7 @@ define amdgpu_kernel void @minnum_v4f16(
 ; GFX9-NEXT:    s_endpgm
     <4 x half> addrspace(1)* %r,
     <4 x half> addrspace(1)* %a,
-    <4 x half> addrspace(1)* %b) {
+    <4 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <4 x half>, <4 x half> addrspace(1)* %a
   %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
@@ -799,10 +799,12 @@ define amdgpu_kernel void @fmin_v4f16_imm_a(
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %b) {
+    <4 x half> addrspace(1)* %b) #0 {
 entry:
   %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
   %r.val = call <4 x half> @llvm.minnum.v4f16(<4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, <4 x half> %b.val)
   store <4 x half> %r.val, <4 x half> addrspace(1)* %r
   ret void
 }
+
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

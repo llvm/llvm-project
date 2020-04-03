@@ -245,6 +245,29 @@ TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf4", 4)
 TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf8", 8)
 TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf16", 16)
 
+TLI_DEFINE_VECFUNC("exp2", "__svml_exp22", 2)
+TLI_DEFINE_VECFUNC("exp2", "__svml_exp24", 4)
+TLI_DEFINE_VECFUNC("exp2", "__svml_exp28", 8)
+
+TLI_DEFINE_VECFUNC("exp2f", "__svml_exp2f4", 4)
+TLI_DEFINE_VECFUNC("exp2f", "__svml_exp2f8", 8)
+TLI_DEFINE_VECFUNC("exp2f", "__svml_exp2f16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "__svml_exp22", 2)
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "__svml_exp24", 4)
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "__svml_exp28", 8)
+
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "__svml_exp2f4", 4)
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "__svml_exp2f8", 8)
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "__svml_exp2f16", 16)
+
+TLI_DEFINE_VECFUNC("__exp2_finite", "__svml_exp22", 2)
+TLI_DEFINE_VECFUNC("__exp2_finite", "__svml_exp24", 4)
+TLI_DEFINE_VECFUNC("__exp2_finite", "__svml_exp28", 8)
+
+TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f4", 4)
+TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f8", 8)
+TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f16", 16)
 
 #else
 #error "Must choose which vector library functions are to be defined."

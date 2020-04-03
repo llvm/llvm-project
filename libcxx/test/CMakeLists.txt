@@ -139,9 +139,6 @@ if (LIBCXX_CONFIGURE_IDE)
           ${LIBCXX_TESTS} ${LIBCXX_TEST_HEADERS} ${LIBCXX_HEADERS})
   add_dependencies(libcxx_test_objects cxx)
 
-  set(STATIC_ROOT ${LIBCXX_SOURCE_DIR}/test/std/input.output/filesystems/Inputs/static_test_env)
-  add_definitions(-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="${STATIC_ROOT}")
-
   split_list(LIBCXX_COMPILE_FLAGS)
   split_list(LIBCXX_LINK_FLAGS)
 

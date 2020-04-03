@@ -85,7 +85,7 @@ class Run(object):
 
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
-                             callback=self._process_completed)
+                             callback=self.progress_callback)
             for test in self.tests]
         pool.close()
 
@@ -110,13 +110,6 @@ class Run(object):
                     self.failures += 1
                     if self.failures == self.max_failures:
                         raise MaxFailuresError()
-
-    def _process_completed(self, test):
-        # Avoid racing with the main thread, which is going to terminate the
-        # process pool soon.
-        if self.failures == self.max_failures:
-            return
-        self.progress_callback(test)
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these

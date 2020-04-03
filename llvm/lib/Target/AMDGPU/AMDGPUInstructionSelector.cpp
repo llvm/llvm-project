@@ -2826,7 +2826,8 @@ AMDGPUInstructionSelector::selectSmrdImm(MachineOperand &Root) const {
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-  Optional<int64_t> EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
+  Optional<int64_t> EncodedImm =
+      AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm, false);
   if (!EncodedImm)
     return None;
 
@@ -2872,7 +2873,8 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-  if (!GEPInfo.Imm || !isUInt<32>(GEPInfo.Imm))
+  // SGPR offset is unsigned.
+  if (!GEPInfo.Imm || GEPInfo.Imm < 0 || !isUInt<32>(GEPInfo.Imm))
     return None;
 
   // If we make it this far we have a load with an 32-bit immediate offset.
@@ -3512,7 +3514,8 @@ AMDGPUInstructionSelector::selectSMRDBufferImm(MachineOperand &Root) const {
   if (!OffsetVal)
     return {};
 
-  Optional<int64_t> EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, *OffsetVal);
+  Optional<int64_t> EncodedImm =
+      AMDGPU::getSMRDEncodedOffset(STI, *OffsetVal, true);
   if (!EncodedImm)
     return {};
 

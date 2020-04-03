@@ -88,13 +88,31 @@ static void emitPassDecl(const Pass &pass, raw_ostream &os) {
 static void emitRegistration(ArrayRef<Pass> passes, raw_ostream &os) {
   os << "#ifdef GEN_PASS_REGISTRATION\n";
   for (const Pass &pass : passes) {
+    os << llvm::formatv("#define GEN_PASS_REGISTRATION_{0}\n",
+                        pass.getDef()->getName());
+  }
+  os << "#endif // GEN_PASS_REGISTRATION\n";
+
+  for (const Pass &pass : passes) {
+    os << llvm::formatv("#ifdef GEN_PASS_REGISTRATION_{0}\n",
+                        pass.getDef()->getName());
     os << llvm::formatv("::mlir::registerPass(\"{0}\", \"{1}\", []() -> "
                         "std::unique_ptr<Pass> {{ return {2}; });\n",
                         pass.getArgument(), pass.getSummary(),
                         pass.getConstructor());
+    os << llvm::formatv("#endif // GEN_PASS_REGISTRATION_{0}\n",
+                        pass.getDef()->getName());
+    os << llvm::formatv("#undef GEN_PASS_REGISTRATION_{0}\n",
+                        pass.getDef()->getName());
   }
-  os << "#undef GEN_PASS_REGISTRATION\n";
+
+  os << "#ifdef GEN_PASS_REGISTRATION\n";
+  for (const Pass &pass : passes) {
+    os << llvm::formatv("#undef GEN_PASS_REGISTRATION_{0}\n",
+                        pass.getDef()->getName());
+  }
   os << "#endif // GEN_PASS_REGISTRATION\n";
+  os << "#undef GEN_PASS_REGISTRATION\n";
 }
 
 //===----------------------------------------------------------------------===//

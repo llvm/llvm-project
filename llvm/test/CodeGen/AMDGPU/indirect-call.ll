@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     granulated_workitem_vgpr_count = 7
 ; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
 ; GCN-NEXT:     priority = 0
-; GCN-NEXT:     float_mode = 192
+; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
 ; GCN-NEXT:     enable_dx10_clamp = 1
 ; GCN-NEXT:     debug_mode = 0
@@ -111,7 +111,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     granulated_workitem_vgpr_count = 7
 ; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
 ; GCN-NEXT:     priority = 0
-; GCN-NEXT:     float_mode = 192
+; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
 ; GCN-NEXT:     enable_dx10_clamp = 1
 ; GCN-NEXT:     debug_mode = 0

@@ -941,8 +941,8 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
   // no way to support merge for backend defined attributes.
-  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
-  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
+  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller);
+  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee);
   return CallerMode.isInlineCompatible(CalleeMode);
 }
 

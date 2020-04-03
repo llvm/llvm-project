@@ -1474,8 +1474,8 @@ namespace llvm {
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *EmitLoweredRetpoline(MachineInstr &MI,
-                                            MachineBasicBlock *BB) const;
+    MachineBasicBlock *EmitLoweredIndirectThunk(MachineInstr &MI,
+                                                MachineBasicBlock *BB) const;
 
     MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;

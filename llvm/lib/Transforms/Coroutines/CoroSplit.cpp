@@ -941,11 +941,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
         // If InitialInst is an unconditional branch,
         // remove PHI values that come from basic block of InitialInst
         if (UnconditionalSucc)
-          for (PHINode &PN : UnconditionalSucc->phis()) {
-            int idx = PN.getBasicBlockIndex(InitialInst->getParent());
-            if (idx != -1)
-              PN.removeIncomingValue(idx);
-          }
+          UnconditionalSucc->removePredecessor(InitialInst->getParent(), true);
         ReplaceInstWithInst(InitialInst, I->clone());
       }
       return true;
