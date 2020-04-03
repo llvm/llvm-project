@@ -154,6 +154,11 @@
 // SLH: "-mspeculative-load-hardening"
 // NO-SLH-NOT: retpoline
 
+// RUN: %clang -target i386-linux-gnu -mlvi-cfi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=LVICFI %s
+// RUN: %clang -target i386-linux-gnu -mno-lvi-cfi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-LVICFI %s
+// LVICFI: "-target-feature" "+lvi-cfi"
+// NO-LVICFI-NOT: lvi-cfi
+
 // RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WAITPKG %s
 // RUN: %clang -target i386-linux-gnu -mno-waitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
 // WAITPKG: "-target-feature" "+waitpkg"
