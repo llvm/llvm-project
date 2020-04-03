@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,8 +8,10 @@
 
 // REQUIRES: objective-c++
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
+// XFAIL: *
 
-int main(int, char**) { return 0; }
+// Make sure the test DOES NOT pass if it fails at runtime.
+
+int main() {
+    return 1;
+}

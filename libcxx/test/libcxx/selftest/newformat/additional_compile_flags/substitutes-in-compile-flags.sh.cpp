@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: objective-c++
+// Make sure that substitutions are performed inside additional compiler flags.
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
-
-int main(int, char**) { return 0; }
+// ADDITIONAL_COMPILE_FLAGS: -I %t.1
+// ADDITIONAL_COMPILE_FLAGS: -isystem %t.2 , -isysroot %t.3
+// RUN: echo "%{compile_flags}" | grep -e '-I %t.1 -isystem %t.2 -isysroot %t.3'

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: objective-c++
+// Make sure the test passes even if there's a link error, i.e. it isn't linked.
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
+extern void this_is_an_undefined_symbol();
 
-int main(int, char**) { return 0; }
+int main() {
+    this_is_an_undefined_symbol();
+}

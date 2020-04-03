@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: objective-c++
+// REQUIRES: verify-support
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
+// Make sure the test passes if it fails at compile-time
 
-int main(int, char**) { return 0; }
+struct Foo { };
+typedef Foo::x x; // expected-error{{no type named 'x' in 'Foo'}}
+
+int main() { }
