@@ -1588,8 +1588,6 @@ public:
   MaybeAlign getRetAlign() const { return Attrs.getRetAlignment(); }
 
   /// Extract the alignment for a call or parameter (0=unknown).
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
   LLVM_ATTRIBUTE_DEPRECATED(unsigned getParamAlignment(unsigned ArgNo) const,
                             "Use getParamAlign() instead") {
     if (const auto MA = Attrs.getParamAlignment(ArgNo))
