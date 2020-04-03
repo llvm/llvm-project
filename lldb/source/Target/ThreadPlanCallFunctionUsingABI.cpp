@@ -49,20 +49,18 @@ void ThreadPlanCallFunctionUsingABI::GetDescription(Stream *s,
   if (level == eDescriptionLevelBrief) {
     s->Printf("Function call thread plan using ABI instead of JIT");
   } else {
-    TargetSP target_sp(m_thread.CalculateTarget());
     s->Printf("Thread plan to call 0x%" PRIx64 " using ABI instead of JIT",
-              m_function_addr.GetLoadAddress(target_sp.get()));
+              m_function_addr.GetLoadAddress(&GetTarget()));
   }
 }
 
 void ThreadPlanCallFunctionUsingABI::SetReturnValue() {
-  ProcessSP process_sp(m_thread.GetProcess());
-  const ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
+  const ABI *abi = m_process.GetABI().get();
 
   // Ask the abi for the return value
   if (abi) {
     const bool persistent = false;
     m_return_valobj_sp =
-        abi->GetReturnValueObject(m_thread, m_return_type, persistent);
+        abi->GetReturnValueObject(GetThread(), m_return_type, persistent);
   }
 }
