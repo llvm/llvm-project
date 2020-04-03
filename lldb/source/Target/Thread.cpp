@@ -240,10 +240,6 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
             static_cast<void *>(this), GetID());
 
   CheckInWithManager();
-  
-  process.AddThreadPlansForThread(*this);
-  
-  QueueFundamentalPlan(true);
 }
 
 Thread::~Thread() {
@@ -781,7 +777,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
     LLDB_LOGF(log, "^^^^^^^^ Thread::ShouldStop Begin ^^^^^^^^");
     StreamString s;
     s.IndentMore();
-    DumpThreadPlans(&s);
+    GetProcess()->DumpThreadPlansForTID(
+        s, GetID(), eDescriptionLevelVerbose, true /* internal */,
+        false /* condense_trivial */, true /* skip_unreported */);
     LLDB_LOGF(log, "Plan stack initial state:\n%s", s.GetData());
   }
 
@@ -945,7 +943,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
   if (log) {
     StreamString s;
     s.IndentMore();
-    DumpThreadPlans(&s);
+    GetProcess()->DumpThreadPlansForTID(
+        s, GetID(), eDescriptionLevelVerbose, true /* internal */,
+        false /* condense_trivial */, true /* skip_unreported */);
     LLDB_LOGF(log, "Plan stack final state:\n%s", s.GetData());
     LLDB_LOGF(log, "vvvvvvvv Thread::ShouldStop End (returning %i) vvvvvvvv",
               should_stop);
@@ -1051,8 +1051,18 @@ bool Thread::MatchesSpec(const ThreadSpec *spec) {
 
 ThreadPlanStack &Thread::GetPlans() const {
   ThreadPlanStack *plans = GetProcess()->FindThreadPlans(GetID());
-  assert(plans && "Can't have a thread with no plans");
-  return *plans;
+  if (plans)
+    return *plans;
+
+  // History threads don't have a thread plan, but they do ask get asked to
+  // describe themselves, which usually involves pulling out the stop reason.
+  // That in turn will check for a completed plan on the ThreadPlanStack.
+  // Instead of special-casing at that point, we return a Stack with a
+  // ThreadPlanNull as its base plan.  That will give the right answers to the
+  // queries GetDescription makes, and only assert if you try to run the thread.
+  if (!m_null_plan_stack_up)
+    m_null_plan_stack_up.reset(new ThreadPlanStack(*this, true));
+  return *(m_null_plan_stack_up.get());
 }
 
 void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
@@ -1371,26 +1381,6 @@ lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
 }
 
 uint32_t Thread::GetIndexID() const { return m_index_id; }
-
-void Thread::DumpThreadPlans(Stream *s, lldb::DescriptionLevel desc_level,
-                             bool include_internal,
-                             bool ignore_boring_threads) const {
-  if (ignore_boring_threads) {
-    if (!GetPlans().AnyPlans() && !GetPlans().AnyCompletedPlans()
-        && !GetPlans().AnyDiscardedPlans()) {
-      s->Printf("thread #%u: tid = 0x%4.4" PRIx64 "\n", GetIndexID(), GetID());
-      s->IndentMore();
-      s->Indent();
-      s->Printf("No active thread plans\n");
-      s->IndentLess();
-      return;
-    }
-  }
-  
-  s->Indent();
-  s->Printf("thread #%u: tid = 0x%4.4" PRIx64 ":\n", GetIndexID(), GetID());
-  GetPlans().DumpThreadPlans(s, desc_level, include_internal);
-}
 
 TargetSP Thread::CalculateTarget() {
   TargetSP target_sp;

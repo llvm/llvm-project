@@ -1019,16 +1019,6 @@ public:
   ///    otherwise.
   bool DiscardUserThreadPlansUpToIndex(uint32_t thread_index);
 
-  /// Prints the current plan stack.
-  ///
-  /// \param[in] s
-  ///    The stream to which to dump the plan stack info.
-  ///
-  void DumpThreadPlans(
-      Stream *s,
-      lldb::DescriptionLevel desc_level = lldb::eDescriptionLevelVerbose,
-      bool include_internal = true, bool ignore_boring = false) const;
-
   virtual bool CheckpointThreadState(ThreadStateCheckpoint &saved_state);
 
   virtual bool
@@ -1186,7 +1176,7 @@ protected:
   // thread is still in good shape to call virtual thread methods.  This must
   // be called by classes that derive from Thread in their destructor.
   virtual void DestroyThread();
-  
+
   ThreadPlanStack &GetPlans() const;
 
   void PushPlan(lldb::ThreadPlanSP plan_sp);
@@ -1260,6 +1250,7 @@ protected:
   bool m_destroy_called; // This is used internally to make sure derived Thread
                          // classes call DestroyThread.
   LazyBool m_override_should_notify;
+  mutable std::unique_ptr<ThreadPlanStack> m_null_plan_stack_up;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info
@@ -1267,7 +1258,6 @@ private:
   StructuredData::ObjectSP m_extended_info; // The extended info for this thread
 
 private:
-  
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
   DISALLOW_COPY_AND_ASSIGN(Thread);

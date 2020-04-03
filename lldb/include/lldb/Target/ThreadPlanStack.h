@@ -32,14 +32,14 @@ class ThreadPlanStack {
   friend class lldb_private::Thread;
 
 public:
-  ThreadPlanStack(Thread &thread) {}
+  ThreadPlanStack(const Thread &thread, bool make_empty = false);
   ~ThreadPlanStack() {}
 
   enum StackKind { ePlans, eCompletedPlans, eDiscardedPlans };
 
   using PlanStack = std::vector<lldb::ThreadPlanSP>;
 
-  void DumpThreadPlans(Stream *s, lldb::DescriptionLevel desc_level,
+  void DumpThreadPlans(Stream &s, lldb::DescriptionLevel desc_level,
                        bool include_internal) const;
 
   size_t CheckpointCompletedPlans();
@@ -98,6 +98,10 @@ public:
 private:
   const PlanStack &GetStackOfKind(ThreadPlanStack::StackKind kind) const;
 
+  void PrintOneStack(Stream &s, llvm::StringRef stack_name,
+                     const PlanStack &stack, lldb::DescriptionLevel desc_level,
+                     bool include_internal) const;
+
   PlanStack m_plans;           ///< The stack of plans this thread is executing.
   PlanStack m_completed_plans; ///< Plans that have been completed by this
                                /// stop.  They get deleted when the thread
@@ -112,8 +116,12 @@ private:
 
 class ThreadPlanStackMap {
 public:
-  ThreadPlanStackMap() {}
+  ThreadPlanStackMap(Process &process) : m_process(process) {}
   ~ThreadPlanStackMap() {}
+
+  // Prune the map using the current_threads list.
+  void Update(ThreadList &current_threads, bool delete_missing,
+              bool check_for_new = true);
 
   void AddThread(Thread &thread) {
     lldb::tid_t tid = thread.GetID();
@@ -143,7 +151,19 @@ public:
     m_plans_list.clear();
   }
 
+  // Implements Process::DumpThreadPlans
+  void DumpPlans(Stream &strm, lldb::DescriptionLevel desc_level, bool internal,
+                 bool ignore_boring, bool skip_unreported);
+
+  // Implements Process::DumpThreadPlansForTID
+  bool DumpPlansForTID(Stream &strm, lldb::tid_t tid,
+                       lldb::DescriptionLevel desc_level, bool internal,
+                       bool ignore_boring, bool skip_unreported);
+                       
+  bool PrunePlansForTID(lldb::tid_t tid);
+
 private:
+  Process &m_process;
   using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack>;
   PlansList m_plans_list;
 };

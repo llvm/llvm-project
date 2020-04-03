@@ -188,7 +188,7 @@ void ThreadPlanStepOut::DidPush() {
 
 ThreadPlanStepOut::~ThreadPlanStepOut() {
   if (m_return_bp_id != LLDB_INVALID_BREAK_ID)
-    GetThread().CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
+    GetTarget().RemoveBreakpointByID(m_return_bp_id);
 }
 
 void ThreadPlanStepOut::GetDescription(Stream *s,
@@ -204,7 +204,7 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
       s->Printf("Stepping out from ");
       Address tmp_address;
       if (tmp_address.SetLoadAddress(m_step_from_insn, &GetTarget())) {
-        tmp_address.Dump(s, &GetThread(), Address::DumpStyleResolvedDescription,
+        tmp_address.Dump(s, &m_process, Address::DumpStyleResolvedDescription,
                          Address::DumpStyleLoadAddress);
       } else {
         s->Printf("address 0x%" PRIx64 "", (uint64_t)m_step_from_insn);
@@ -216,7 +216,7 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
 
       s->Printf(" returning to frame at ");
       if (tmp_address.SetLoadAddress(m_return_addr, &GetTarget())) {
-        tmp_address.Dump(s, &GetThread(), Address::DumpStyleResolvedDescription,
+        tmp_address.Dump(s, &m_process, Address::DumpStyleResolvedDescription,
                          Address::DumpStyleLoadAddress);
       } else {
         s->Printf("address 0x%" PRIx64 "", (uint64_t)m_return_addr);
@@ -226,6 +226,9 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
         s->Printf(" using breakpoint site %d", m_return_bp_id);
     }
   }
+
+  if (m_stepped_past_frames.empty())
+    return;
 
   s->Printf("\n");
   for (StackFrameSP frame_sp : m_stepped_past_frames) {
