@@ -4,91 +4,55 @@
 ; RUN: llc -mtriple=thumbebv8.1m.main-arm-none-eabi -mattr=+mve.fp -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKBE
 
 define arm_aapcs_vfpcc <16 x i8> @mov_int8_1() {
-; CHECKLE-LABEL: mov_int8_1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0x1
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int8_1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0x1
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int8_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0x1
+; CHECK-NEXT:    bx lr
 entry:
   ret <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 }
 
 define arm_aapcs_vfpcc <16 x i8> @mov_int8_m1() {
-; CHECKLE-LABEL: mov_int8_m1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0xff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int8_m1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0xff
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int8_m1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0xff
+; CHECK-NEXT:    bx lr
 entry:
   ret <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 }
 
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_1() {
-; CHECKLE-LABEL: mov_int16_1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i16 q0, #0x1
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int16_1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i16 q1, #0x1
-; CHECKBE-NEXT:    vrev64.16 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int16_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q0, #0x1
+; CHECK-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
 }
 
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_m1() {
-; CHECKLE-LABEL: mov_int16_m1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0xff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int16_m1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0xff
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int16_m1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0xff
+; CHECK-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 }
 
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_256() {
-; CHECKLE-LABEL: mov_int16_256:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i16 q0, #0x100
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int16_256:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i16 q1, #0x100
-; CHECKBE-NEXT:    vrev64.16 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int16_256:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q0, #0x100
+; CHECK-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
 }
 
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_257() {
-; CHECKLE-LABEL: mov_int16_257:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0x1
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int16_257:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0x1
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int16_257:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0x1
+; CHECK-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
 }
@@ -125,61 +89,37 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_1() {
-; CHECKLE-LABEL: mov_int32_1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x1
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x1
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x1
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_256() {
-; CHECKLE-LABEL: mov_int32_256:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x100
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_256:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x100
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_256:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x100
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 256, i32 256, i32 256, i32 256>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_65536() {
-; CHECKLE-LABEL: mov_int32_65536:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x10000
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_65536:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x10000
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_65536:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x10000
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 65536, i32 65536, i32 65536, i32 65536>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777216() {
-; CHECKLE-LABEL: mov_int32_16777216:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x1000000
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_16777216:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x1000000
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_16777216:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x1000000
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 16777216, i32 16777216, i32 16777216, i32 16777216>
 }
@@ -216,61 +156,37 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_17919() {
-; CHECKLE-LABEL: mov_int32_17919:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x45ff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_17919:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x45ff
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_17919:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x45ff
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 17919, i32 17919, i32 17919, i32 17919>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_4587519() {
-; CHECKLE-LABEL: mov_int32_4587519:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i32 q0, #0x45ffff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_4587519:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i32 q1, #0x45ffff
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_4587519:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q0, #0x45ffff
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 4587519, i32 4587519, i32 4587519, i32 4587519>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_m1() {
-; CHECKLE-LABEL: mov_int32_m1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0xff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_m1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0xff
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_m1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0xff
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_4294901760() {
-; CHECKLE-LABEL: mov_int32_4294901760:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmvn.i32 q0, #0xffff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_4294901760:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmvn.i32 q1, #0xffff
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_4294901760:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmvn.i32 q0, #0xffff
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
 }
@@ -307,16 +223,10 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278255615() {
-; CHECKLE-LABEL: mov_int32_4278255615:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmvn.i32 q0, #0xff0000
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int32_4278255615:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmvn.i32 q1, #0xff0000
-; CHECKBE-NEXT:    vrev64.32 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int32_4278255615:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmvn.i32 q0, #0xff0000
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 4278255615, i32 4278255615, i32 4278255615, i32 4278255615>
 }
@@ -367,16 +277,10 @@ entry:
 }
 
 define arm_aapcs_vfpcc <2 x i64> @mov_int64_m1() {
-; CHECKLE-LABEL: mov_int64_m1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i8 q0, #0xff
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_int64_m1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i8 q1, #0xff
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_int64_m1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0xff
+; CHECK-NEXT:    bx lr
 entry:
   ret <2 x i64> < i64 -1, i64 -1 >
 }
@@ -462,8 +366,7 @@ define arm_aapcs_vfpcc <16 x i8> @mov_int64_0f0f0f0f0f0f0f0f() {
 ;
 ; CHECKBE-LABEL: mov_int64_0f0f0f0f0f0f0f0f:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i16 q1, #0xff00
-; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    vmov.i16 q0, #0xff00
 ; CHECKBE-NEXT:    bx lr
 entry:
   ret <16 x i8> <i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 -1, i8 0>
@@ -532,32 +435,20 @@ entry:
 }
 
 define arm_aapcs_vfpcc <8 x half> @mov_float16_1() {
-; CHECKLE-LABEL: mov_float16_1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i16 q0, #0x3c00
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_float16_1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i16 q1, #0x3c00
-; CHECKBE-NEXT:    vrev64.16 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_float16_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q0, #0x3c00
+; CHECK-NEXT:    bx lr
 
 entry:
   ret <8 x half> <half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00>
 }
 
 define arm_aapcs_vfpcc <8 x half> @mov_float16_m3() {
-; CHECKLE-LABEL: mov_float16_m3:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    vmov.i16 q0, #0xc200
-; CHECKLE-NEXT:    bx lr
-;
-; CHECKBE-LABEL: mov_float16_m3:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vmov.i16 q1, #0xc200
-; CHECKBE-NEXT:    vrev64.16 q0, q1
-; CHECKBE-NEXT:    bx lr
+; CHECK-LABEL: mov_float16_m3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q0, #0xc200
+; CHECK-NEXT:    bx lr
 
 entry:
   ret <8 x half> <half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00>
