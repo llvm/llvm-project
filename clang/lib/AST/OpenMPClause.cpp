@@ -1754,7 +1754,7 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "map(";
     if (Node->getMapType() != OMPC_MAP_unknown) {
-      for (unsigned I = 0; I < OMPMapClause::NumberOfModifiers; ++I) {
+      for (unsigned I = 0; I < NumberOfOMPMapClauseModifiers; ++I) {
         if (Node->getMapTypeModifier(I) != OMPC_MAP_MODIFIER_unknown) {
           OS << getOpenMPSimpleClauseTypeName(OMPC_map,
                                               Node->getMapTypeModifier(I));
@@ -1934,14 +1934,14 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
 void OMPTraitInfo::print(llvm::raw_ostream &OS,
                          const PrintingPolicy &Policy) const {
   bool FirstSet = true;
-  for (const OMPTraitInfo::OMPTraitSet &Set : Sets) {
+  for (const OMPTraitSet &Set : Sets) {
     if (!FirstSet)
       OS << ", ";
     FirstSet = false;
     OS << getOpenMPContextTraitSetName(Set.Kind) << "={";
 
     bool FirstSelector = true;
-    for (const OMPTraitInfo::OMPTraitSelector &Selector : Set.Selectors) {
+    for (const OMPTraitSelector &Selector : Set.Selectors) {
       if (!FirstSelector)
         OS << ", ";
       FirstSelector = false;
@@ -1967,8 +1967,7 @@ void OMPTraitInfo::print(llvm::raw_ostream &OS,
         }
 
         bool FirstProperty = true;
-        for (const OMPTraitInfo::OMPTraitProperty &Property :
-             Selector.Properties) {
+        for (const OMPTraitProperty &Property : Selector.Properties) {
           if (!FirstProperty)
             OS << ", ";
           FirstProperty = false;
@@ -1984,9 +1983,9 @@ void OMPTraitInfo::print(llvm::raw_ostream &OS,
 std::string OMPTraitInfo::getMangledName() const {
   std::string MangledName;
   llvm::raw_string_ostream OS(MangledName);
-  for (const OMPTraitInfo::OMPTraitSet &Set : Sets) {
+  for (const OMPTraitSet &Set : Sets) {
     OS << '.' << 'S' << unsigned(Set.Kind);
-    for (const OMPTraitInfo::OMPTraitSelector &Selector : Set.Selectors) {
+    for (const OMPTraitSelector &Selector : Set.Selectors) {
 
       bool AllowsTraitScore = false;
       bool RequiresProperty = false;
@@ -1998,7 +1997,7 @@ std::string OMPTraitInfo::getMangledName() const {
           Selector.Kind == TraitSelector::user_condition)
         continue;
 
-      for (const OMPTraitInfo::OMPTraitProperty &Property : Selector.Properties)
+      for (const OMPTraitProperty &Property : Selector.Properties)
         OS << '.' << 'P'
            << getOpenMPContextTraitPropertyName(Property.Kind);
     }

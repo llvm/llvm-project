@@ -151,6 +151,11 @@ OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
   return llvm::None;
 }
 
+namespace clang {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
+}
+
 void OMPDeclareVariantAttr::printPrettyPragma(
     raw_ostream &OS, const PrintingPolicy &Policy) const {
   if (const Expr *E = getVariantFuncRef()) {
@@ -158,9 +163,7 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     E->printPretty(OS, nullptr, Policy);
     OS << ")";
   }
-  OS << " match(";
-  traitInfos->print(OS, Policy);
-  OS << ")";
+  OS << " match(" << traitInfos << ")";
 }
 
 #include "clang/AST/AttrImpl.inc"
