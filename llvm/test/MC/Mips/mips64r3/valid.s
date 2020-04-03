@@ -281,8 +281,7 @@ a:
         or        $12,$s0,$sp
         or        $2, 4                # CHECK: ori $2, $2, 4           # encoding: [0x34,0x42,0x00,0x04]
         pause                          # CHECK: pause # encoding:  [0x00,0x00,0x01,0x40]
-                                       # CHECK-NEXT:  # <MCInst #{{[0-9]+}} PAUSE
-                                       # CHECK-NOT    # <MCInst #{{[0-9}+}} PAUSE_MM
+                                       # CHECK-NEXT:  # <MCInst #{{[0-9]+}} PAUSE>
         pll.ps  $f26,$f10,$f30         # CHECK: pll.ps $f26, $f10, $f30  # encoding: [0x46,0xde,0x56,0xac]
                                        # CHECK:                          # <MCInst #{{[0-9]+}} PLL_PS64
         plu.ps  $f2,$f26,$f30          # CHECK: plu.ps $f2, $f26, $f30    # encoding: [0x46,0xde,0xd0,0xad]
