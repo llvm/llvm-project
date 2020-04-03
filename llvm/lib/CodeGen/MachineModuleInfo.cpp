@@ -105,15 +105,6 @@ ArrayRef<MCSymbol *> MMIAddrLabelMap::getAddrLabelSymbolToEmit(BasicBlock *BB) {
   Entry.Index = BBCallbacks.size() - 1;
   Entry.Fn = BB->getParent();
   MCSymbol *Sym = Context.createTempSymbol(!BB->hasAddressTaken());
-  if (Context.getObjectFileInfo()->getTargetTriple().isOSBinFormatXCOFF()) {
-    MCSymbol *FnEntryPointSym =
-        Context.lookupSymbol("." + Entry.Fn->getName());
-    assert(FnEntryPointSym && "The function entry pointer symbol should have"
-		              " already been initialized.");
-    MCSectionXCOFF *Csect =
-        cast<MCSymbolXCOFF>(FnEntryPointSym)->getContainingCsect();
-    cast<MCSymbolXCOFF>(Sym)->setContainingCsect(Csect);
-  }
   Entry.Symbols.push_back(Sym);
   return Entry.Symbols;
 }

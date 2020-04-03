@@ -44,6 +44,7 @@ add_llvm_component_library(LLVMMC
   MCSubtargetInfo.cpp
   MCSymbol.cpp
   MCSymbolELF.cpp
+  MCSymbolXCOFF.cpp
   MCTargetOptions.cpp
   MCTargetOptionsCommandFlags.cpp
   MCValue.cpp

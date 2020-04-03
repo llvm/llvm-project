@@ -1750,11 +1750,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     // Get the function entry point symbol.
     CurrentFnSym = OutContext.getOrCreateSymbol(
         "." + cast<MCSymbolXCOFF>(CurrentFnDescSym)->getUnqualifiedName());
-
-    // Set the containing csect.
-    MCSectionXCOFF *FnEntryPointSec =
-        cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
-    cast<MCSymbolXCOFF>(CurrentFnSym)->setContainingCsect(FnEntryPointSec);
   }
 
   CurrentFnSymForSize = CurrentFnSym;
@@ -1846,11 +1841,6 @@ void AsmPrinter::emitConstantPool() {
       MCSymbol *Sym = GetCPISymbol(CPI);
       if (!Sym->isUndefined())
         continue;
-
-      if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
-        cast<MCSymbolXCOFF>(Sym)->setContainingCsect(
-            cast<MCSectionXCOFF>(CPSections[i].S));
-      }
 
       if (CurSection != CPSections[i].S) {
         OutStreamer->SwitchSection(CPSections[i].S);
@@ -1946,10 +1936,6 @@ void AsmPrinter::emitJumpTableInfo() {
       OutStreamer->emitLabel(GetJTISymbol(JTI, true));
 
     MCSymbol* JTISymbol = GetJTISymbol(JTI);
-    if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
-      cast<MCSymbolXCOFF>(JTISymbol)->setContainingCsect(
-          cast<MCSectionXCOFF>(TLOF.getSectionForJumpTable(F, TM)));
-    }
     OutStreamer->emitLabel(JTISymbol);
 
     for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii)
