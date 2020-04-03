@@ -455,7 +455,7 @@ public:
                Dump(m_nopayload_elems_bitmask).c_str());
 
     for (auto enum_case : elements_with_no_payload) {
-      ConstString case_name(enum_case.decl->getName().str());
+      ConstString case_name(enum_case.decl->getBaseIdentifier().str());
       swift::ClusteredBitVector case_value =
           enum_impl_strategy.getBitPatternForNoPayloadElement(enum_case.decl);
 
@@ -588,7 +588,7 @@ public:
     auto module_ctx = enum_decl->getModuleContext();
     const bool has_payload = true;
     for (auto enum_case : elements_with_payload) {
-      ConstString case_name(enum_case.decl->getName().str());
+      ConstString case_name(enum_case.decl->getBaseIdentifier().str());
 
       swift::EnumElementDecl *case_decl = enum_case.decl;
       assert(case_decl);
@@ -6091,10 +6091,10 @@ TypeMemberFunctionImpl SwiftASTContext::GetMemberFunctionAtIndex(void *type,
                 swift::FuncDecl *func_decl =
                     llvm::dyn_cast<swift::FuncDecl>(*iter);
                 if (func_decl) {
-                  if (func_decl->getName().empty())
+                  if (func_decl->getBaseIdentifier().empty())
                     name.clear();
                   else
-                    name.assign(func_decl->getName().get());
+                    name.assign(func_decl->getBaseIdentifier().get());
                   if (func_decl->isStatic())
                     kind = lldb::eMemberFunctionKindStaticMethod;
                   else
