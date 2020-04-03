@@ -1313,6 +1313,8 @@ def warn_omp_ctx_incompatible_score_for_property
 def warn_omp_more_one_device_type_clause
     : Warning<"more than one 'device_type' clause is specified">,
       InGroup<OpenMPClauses>;
+def err_omp_variant_ctx_second_match_extension : Error<
+  "only a single match extension allowed per OpenMP context selector">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

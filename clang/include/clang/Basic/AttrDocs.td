@@ -3394,6 +3394,20 @@ where clause is one of the following:
 and where `variant-func-id` is the name of a function variant that is either a
 base language identifier or, for C++, a template-id.
 
+Clang provides the following context selector extensions, used via `implementation={extension(EXTENSION)}`:
+
+  .. code-block:: none
+
+    match_all
+    match_any
+    match_none
+
+The match extensions change when the *entire* context selector is considered a
+match for an OpenMP context. The default is `all`, with `none` no trait in the
+selector is allowed to be in the OpenMP context, with `any` a single trait in
+both the selector and OpenMP context is sufficient. Only a single match
+extension trait is allowed per context selector.
+
   }];
 }
 

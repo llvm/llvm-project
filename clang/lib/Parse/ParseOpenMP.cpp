@@ -935,6 +935,43 @@ void Parser::parseOMPTraitPropertyKind(
       << CONTEXT_TRAIT_LVL << listOpenMPContextTraitProperties(Set, Selector);
 }
 
+static bool checkExtensionProperty(Parser &P, SourceLocation Loc,
+                                   OMPTraitProperty &TIProperty,
+                                   OMPTraitSelector &TISelector,
+                                   llvm::StringMap<SourceLocation> &Seen) {
+  assert(TISelector.Kind ==
+             llvm::omp::TraitSelector::implementation_extension &&
+         "Only for extension properties, e.g., "
+         "`implementation={extension(PROPERTY)}`");
+  if (TIProperty.Kind == TraitProperty::invalid)
+    return false;
+
+  auto IsMatchExtension = [](OMPTraitProperty &TP) {
+    return (TP.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_all ||
+            TP.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_any ||
+            TP.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_none);
+  };
+
+  if (IsMatchExtension(TIProperty)) {
+    for (OMPTraitProperty &SeenProp : TISelector.Properties)
+      if (IsMatchExtension(SeenProp)) {
+        P.Diag(Loc, diag::err_omp_variant_ctx_second_match_extension);
+        StringRef SeenName =
+            llvm::omp::getOpenMPContextTraitPropertyName(SeenProp.Kind);
+        SourceLocation SeenLoc = Seen[SeenName];
+        P.Diag(SeenLoc, diag::note_omp_declare_variant_ctx_used_here)
+            << CONTEXT_TRAIT_LVL << SeenName;
+        return false;
+      }
+    return true;
+  }
+
+  llvm_unreachable("Unknown extension property!");
+}
+
 void Parser::parseOMPContextProperty(OMPTraitSelector &TISelector,
                                      llvm::omp::TraitSet Set,
                                      llvm::StringMap<SourceLocation> &Seen) {
@@ -944,6 +981,11 @@ void Parser::parseOMPContextProperty(OMPTraitSelector &TISelector,
   SourceLocation PropertyLoc = Tok.getLocation();
   OMPTraitProperty TIProperty;
   parseOMPTraitPropertyKind(TIProperty, Set, TISelector.Kind, Seen);
+
+  if (TISelector.Kind == llvm::omp::TraitSelector::implementation_extension)
+    if (!checkExtensionProperty(*this, Tok.getLocation(), TIProperty,
+                                TISelector, Seen))
+      TIProperty.Kind = TraitProperty::invalid;
 
   // If we have an invalid property here we already issued a warning.
   if (TIProperty.Kind == TraitProperty::invalid) {
@@ -955,6 +997,7 @@ void Parser::parseOMPContextProperty(OMPTraitSelector &TISelector,
 
   if (isValidTraitPropertyForTraitSetAndSelector(TIProperty.Kind,
                                                  TISelector.Kind, Set)) {
+
     // If we make it here the property, selector, set, score, condition, ... are
     // all valid (or have been corrected). Thus we can record the property.
     TISelector.Properties.push_back(TIProperty);
@@ -1783,11 +1826,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 
     VariantMatchInfo VMI;
     ASTContext &ASTCtx = Actions.getASTContext();
-    TI.getAsVariantMatchInfo(ASTCtx, VMI, /* DeviceSetOnly */ true);
+    TI.getAsVariantMatchInfo(ASTCtx, VMI);
     OMPContext OMPCtx(ASTCtx.getLangOpts().OpenMPIsDevice,
                       ASTCtx.getTargetInfo().getTriple());
 
-    if (isVariantApplicableInContext(VMI, OMPCtx)) {
+    if (isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ true)) {
       Actions.ActOnOpenMPBeginDeclareVariant(Loc, TI);
       break;
     }
