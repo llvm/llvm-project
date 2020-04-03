@@ -162,12 +162,12 @@ MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
 
 MachineInstrBuilder MachineIRBuilder::buildDynStackAlloc(const DstOp &Res,
                                                          const SrcOp &Size,
-                                                         unsigned Align) {
+                                                         Align Alignment) {
   assert(Res.getLLTTy(*getMRI()).isPointer() && "expected ptr dst type");
   auto MIB = buildInstr(TargetOpcode::G_DYN_STACKALLOC);
   Res.addDefToMIB(*getMRI(), MIB);
   Size.addSrcToMIB(MIB);
-  MIB.addImm(Align);
+  MIB.addImm(Alignment.value());
   return MIB;
 }
 
