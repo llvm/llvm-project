@@ -30696,8 +30696,8 @@ bool X86TargetLowering::isVectorClearMaskLegal(ArrayRef<int> Mask,
 }
 
 bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
-  // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpolineIndirectBranches())
+  // If the subtarget is using thunks, we need to not generate jump tables.
+  if (Subtarget.useIndirectThunkBranches())
     return false;
 
   // Otherwise, fallback on the generic logic.
@@ -31900,22 +31900,22 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
   return BB;
 }
 
-static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
+static unsigned getOpcodeForIndirectThunk(unsigned RPOpc) {
   switch (RPOpc) {
-  case X86::RETPOLINE_CALL32:
+  case X86::INDIRECT_THUNK_CALL32:
     return X86::CALLpcrel32;
-  case X86::RETPOLINE_CALL64:
+  case X86::INDIRECT_THUNK_CALL64:
     return X86::CALL64pcrel32;
-  case X86::RETPOLINE_TCRETURN32:
+  case X86::INDIRECT_THUNK_TCRETURN32:
     return X86::TCRETURNdi;
-  case X86::RETPOLINE_TCRETURN64:
+  case X86::INDIRECT_THUNK_TCRETURN64:
     return X86::TCRETURNdi64;
   }
-  llvm_unreachable("not retpoline opcode");
+  llvm_unreachable("not indirect thunk opcode");
 }
 
-static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
-                                      unsigned Reg) {
+static const char *getIndirectThunkSymbol(const X86Subtarget &Subtarget,
+                                          unsigned Reg) {
   if (Subtarget.useRetpolineExternalThunk()) {
     // When using an external thunk for retpolines, we pick names that match the
     // names GCC happens to use as well. This helps simplify the implementation
@@ -31947,39 +31947,43 @@ static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
       assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
       return "__x86_indirect_thunk_r11";
     }
-    llvm_unreachable("unexpected reg for retpoline");
+    llvm_unreachable("unexpected reg for external indirect thunk");
   }
 
-  // When targeting an internal COMDAT thunk use an LLVM-specific name.
-  switch (Reg) {
-  case X86::EAX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_eax";
-  case X86::ECX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_ecx";
-  case X86::EDX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edx";
-  case X86::EDI:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edi";
-  case X86::R11:
-    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
-    return "__llvm_retpoline_r11";
+  if (Subtarget.useRetpolineIndirectCalls() ||
+      Subtarget.useRetpolineIndirectBranches()) {
+    // When targeting an internal COMDAT thunk use an LLVM-specific name.
+    switch (Reg) {
+    case X86::EAX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_eax";
+    case X86::ECX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_ecx";
+    case X86::EDX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_edx";
+    case X86::EDI:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_edi";
+    case X86::R11:
+      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+      return "__llvm_retpoline_r11";
+    }
+    llvm_unreachable("unexpected reg for retpoline");
   }
-  llvm_unreachable("unexpected reg for retpoline");
+  llvm_unreachable("getIndirectThunkSymbol() invoked without thunk feature");
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const {
+X86TargetLowering::EmitLoweredIndirectThunk(MachineInstr &MI,
+                                            MachineBasicBlock *BB) const {
   // Copy the virtual register into the R11 physical register and
   // call the retpoline thunk.
   DebugLoc DL = MI.getDebugLoc();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   Register CalleeVReg = MI.getOperand(0).getReg();
-  unsigned Opc = getOpcodeForRetpoline(MI.getOpcode());
+  unsigned Opc = getOpcodeForIndirectThunk(MI.getOpcode());
 
   // Find an available scratch register to hold the callee. On 64-bit, we can
   // just use R11, but we scan for uses anyway to ensure we don't generate
@@ -32013,7 +32017,7 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
     report_fatal_error("calling convention incompatible with retpoline, no "
                        "available registers");
 
-  const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
+  const char *Symbol = getIndirectThunkSymbol(Subtarget, AvailableReg);
 
   BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
       .addReg(CalleeVReg);
@@ -32789,11 +32793,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
     return EmitLoweredTLSAddr(MI, BB);
-  case X86::RETPOLINE_CALL32:
-  case X86::RETPOLINE_CALL64:
-  case X86::RETPOLINE_TCRETURN32:
-  case X86::RETPOLINE_TCRETURN64:
-    return EmitLoweredRetpoline(MI, BB);
+  case X86::INDIRECT_THUNK_CALL32:
+  case X86::INDIRECT_THUNK_CALL64:
+  case X86::INDIRECT_THUNK_TCRETURN32:
+  case X86::INDIRECT_THUNK_TCRETURN64:
+    return EmitLoweredIndirectThunk(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
   case X86::SEG_ALLOCA_32:
