@@ -45,8 +45,7 @@
 ; The helper script uses this to find the optimization that inlines the call.
 ; CHECK-BISECT-INLINE-HELPER: call i32 @f2()
 ; These checks verifies that the optimization was found.
-; CHECK-BISECT-INLINE-RESULT-NOT: Last good count: 0
-; CHECK-BISECT-INLINE-RESULT: Last good count: {{[0-9]+}}
+; CHECK-BISECT-INLINE-RESULT: Last good count: {{[1-9][0-9]*}}
 
 
 ; Test a module pass.
