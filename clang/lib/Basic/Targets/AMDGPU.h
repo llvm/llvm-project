@@ -114,11 +114,14 @@ public:
   /// Accepted register names: (n, m is unsigned integer, n < m)
   /// v
   /// s
+  /// a
   /// {vn}, {v[n]}
   /// {sn}, {s[n]}
+  /// {an}, {a[n]}
   /// {S} , where S is a special register name
   ////{v[n:m]}
   /// {s[n:m]}
+  /// {a[n:m]}
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
     static const ::llvm::StringSet<> SpecialRegs({
@@ -135,7 +138,7 @@ public:
     }
     if (S.empty())
       return false;
-    if (S.front() != 'v' && S.front() != 's') {
+    if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
       if (!HasLeftParen)
         return false;
       auto E = S.find('}');
@@ -153,7 +156,7 @@ public:
     if (!HasLeftParen) {
       if (!S.empty())
         return false;
-      // Found s or v.
+      // Found s, v or a.
       Info.setAllowsRegister();
       Name = S.data() - 1;
       return true;
@@ -184,7 +187,8 @@ public:
     S = S.drop_front();
     if (!S.empty())
       return false;
-    // Found {vn}, {sn}, {v[n]}, {s[n]}, {v[n:m]}, or {s[n:m]}.
+    // Found {vn}, {sn}, {an}, {v[n]}, {s[n]}, {a[n]}, {v[n:m]}, {s[n:m]}
+    // or {a[n:m]}.
     Info.setAllowsRegister();
     Name = S.data() - 1;
     return true;
