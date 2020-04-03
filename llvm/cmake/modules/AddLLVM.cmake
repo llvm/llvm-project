@@ -1457,7 +1457,7 @@ function(configure_lit_site_cfg site_in site_out)
 
   string(CONCAT LIT_SITE_CFG_IN_HEADER "${LIT_SITE_CFG_IN_HEADER}\n\n"
     "# Allow generated lit.site.cfg.py to be relocatable.\n"
-    "def path(p): return os.path.join(os.path.dirname(__file__), p).replace(os.sep, '/') if p else ''\n"
+    "def path(p): return os.path.normpath(os.path.join(os.path.dirname(__file__), p)).replace(os.sep, '/') if p else ''\n"
     )
 
   # Override config_target_triple (and the env)
