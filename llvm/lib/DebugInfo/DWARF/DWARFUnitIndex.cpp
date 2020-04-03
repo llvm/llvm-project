@@ -154,7 +154,7 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
 }
 
 const DWARFUnitIndex::Entry::SectionContribution *
-DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
+DWARFUnitIndex::Entry::getContribution(DWARFSectionKind Sec) const {
   uint32_t i = 0;
   for (; i != Index->Header.NumColumns; ++i)
     if (Index->ColumnKinds[i] == Sec)
@@ -163,7 +163,7 @@ DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
 }
 
 const DWARFUnitIndex::Entry::SectionContribution *
-DWARFUnitIndex::Entry::getOffset() const {
+DWARFUnitIndex::Entry::getContribution() const {
   return &Contributions[Index->InfoColumn];
 }
 

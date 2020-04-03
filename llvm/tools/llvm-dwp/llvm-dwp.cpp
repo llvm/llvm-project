@@ -219,7 +219,7 @@ struct UnitIndexEntry {
 static StringRef getSubsection(StringRef Section,
                                const DWARFUnitIndex::Entry &Entry,
                                DWARFSectionKind Kind) {
-  const auto *Off = Entry.getOffset(Kind);
+  const auto *Off = Entry.getContribution(Kind);
   if (!Off)
     return StringRef();
   return Section.substr(Off->Offset, Off->Length);
@@ -231,7 +231,7 @@ static void addAllTypesFromDWP(
     const UnitIndexEntry &TUEntry, uint32_t &TypesOffset) {
   Out.SwitchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
-    auto *I = E.getOffsets();
+    auto *I = E.getContributions();
     if (!I)
       continue;
     auto P = TypeIndexEntries.insert(std::make_pair(E.getSignature(), TUEntry));
@@ -599,7 +599,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       return make_error<DWPError>("failed to parse cu_index");
 
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
-      auto *I = E.getOffsets();
+      auto *I = E.getContributions();
       if (!I)
         continue;
       auto P = IndexEntries.insert(std::make_pair(E.getSignature(), CurEntry));

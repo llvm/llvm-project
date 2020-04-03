@@ -56,10 +56,10 @@ public:
     friend class DWARFUnitIndex;
 
   public:
-    const SectionContribution *getOffset(DWARFSectionKind Sec) const;
-    const SectionContribution *getOffset() const;
+    const SectionContribution *getContribution(DWARFSectionKind Sec) const;
+    const SectionContribution *getContribution() const;
 
-    const SectionContribution *getOffsets() const {
+    const SectionContribution *getContributions() const {
       return Contributions.get();
     }
 
