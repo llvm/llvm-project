@@ -237,31 +237,26 @@ entry:
 
 ;;;;;;;;;;;;;; 32-bit __emutls_v. and __emutls_t.
 
-; X32       .section .data.rel.local,
 ; X32-LABEL: __emutls_v.i1:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 0
 ; X32-NEXT: .long __emutls_t.i1
 
-; X32       .section .rodata,
 ; X32-LABEL: __emutls_t.i1:
 ; X32-NEXT: .long 15
 
 ; X32-NOT:   __emutls_v.i2
 
-; X32       .section .data.rel.local,
 ; X32-LABEL: __emutls_v.i3:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 0
 ; X32-NEXT: .long __emutls_t.i3
 
-; X32       .section .rodata,
 ; X32-LABEL: __emutls_t.i3:
 ; X32-NEXT: .long 15
 
-; X32       .section .data.rel.local,
 ; X32-LABEL: __emutls_v.i4:
 ; X32-NEXT: .L__emutls_v.i4$local:
 ; X32-NEXT: .long 4
@@ -269,27 +264,23 @@ entry:
 ; X32-NEXT: .long 0
 ; X32-NEXT: .long __emutls_t.i4
 
-; X32       .section .rodata,
 ; X32-LABEL: __emutls_t.i4:
 ; X32-NEXT: .L__emutls_t.i4$local:
 ; X32-NEXT: .long 15
 
 ; X32-NOT:   __emutls_v.i5:
-; X32       .hidden __emutls_v.i5
+; X32:      .hidden __emutls_v.i5
 ; X32-NOT:   __emutls_v.i5:
 
-; X32 .section .data.rel.local,
 ; X32-LABEL: __emutls_v.s1:
 ; X32-NEXT: .long 2
 ; X32-NEXT: .long 2
 ; X32-NEXT: .long 0
 ; X32-NEXT: .long __emutls_t.s1
 
-; X32 .section .rodata,
 ; X32-LABEL: __emutls_t.s1:
 ; X32-NEXT: .short 15
 
-; X32 .section .data.rel.local,
 ; X32-LABEL: __emutls_v.b1:
 ; X32-NEXT: .long 1
 ; X32-NEXT: .long 1
@@ -300,31 +291,26 @@ entry:
 
 ;;;;;;;;;;;;;; 64-bit __emutls_v. and __emutls_t.
 
-; X64       .section .data.rel.local,
 ; X64-LABEL: __emutls_v.i1:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 0
 ; X64-NEXT: .quad __emutls_t.i1
 
-; X64       .section .rodata,
 ; X64-LABEL: __emutls_t.i1:
 ; X64-NEXT: .long 15
 
 ; X64-NOT:   __emutls_v.i2
 
-; X64       .section .data.rel.local,
 ; X64-LABEL: __emutls_v.i3:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 0
 ; X64-NEXT: .quad __emutls_t.i3
 
-; X64       .section .rodata,
 ; X64-LABEL: __emutls_t.i3:
 ; X64-NEXT: .long 15
 
-; X64       .section .data.rel.local,
 ; X64-LABEL: __emutls_v.i4:
 ; X64-NEXT: .L__emutls_v.i4$local:
 ; X64-NEXT: .quad 4
@@ -332,27 +318,23 @@ entry:
 ; X64-NEXT: .quad 0
 ; X64-NEXT: .quad __emutls_t.i4
 
-; X64       .section .rodata,
 ; X64-LABEL: __emutls_t.i4:
 ; X64-NEXT: .L__emutls_t.i4$local:
 ; X64-NEXT: .long 15
 
 ; X64-NOT:   __emutls_v.i5:
-; X64       .hidden __emutls_v.i5
+; X64:      .hidden __emutls_v.i5
 ; X64-NOT:   __emutls_v.i5:
 
-; X64       .section .data.rel.local,
 ; X64-LABEL: __emutls_v.s1:
 ; X64-NEXT: .quad 2
 ; X64-NEXT: .quad 2
 ; X64-NEXT: .quad 0
 ; X64-NEXT: .quad __emutls_t.s1
 
-; X64       .section .rodata,
 ; X64-LABEL: __emutls_t.s1:
 ; X64-NEXT: .short 15
 
-; X64       .section .data.rel.local,
 ; X64-LABEL: __emutls_v.b1:
 ; X64-NEXT: .quad 1
 ; X64-NEXT: .quad 1
