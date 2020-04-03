@@ -36,8 +36,8 @@ define void @test(i32 %m) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    tail call void @func(i32 [[TMP0]])
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @func(i32 [[ADD_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -70,8 +70,8 @@ define i32 @test2(i32 %m) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
@@ -102,8 +102,8 @@ define void @test3(i32 %m) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    tail call void @func(i32 [[TMP0]])
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @func(i32 [[ADD_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -142,8 +142,8 @@ define void @test4(i32 %m) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    [[SOFT_USE:%.*]] = add i32 [[TMP0]], 123
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SOFT_USE:%.*]] = add i32 [[ADD_LCSSA]], 123
 ; CHECK-NEXT:    tail call void @func(i32 [[SOFT_USE]])
 ; CHECK-NEXT:    ret void
 ;
@@ -179,8 +179,8 @@ define void @test5(i32 %m) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    tail call void @func(i32 [[TMP0]])
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @func(i32 [[ADD_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -216,8 +216,8 @@ define void @test6(i32 %m, i32* %p) nounwind uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 186
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[M]], 186
-; CHECK-NEXT:    tail call void @func(i32 [[TMP0]])
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @func(i32 [[ADD_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
