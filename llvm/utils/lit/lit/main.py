@@ -232,10 +232,6 @@ def execute_in_tmp_dir(run, lit_config):
                 'TEMP': tmp_dir,
                 'TEMPDIR': tmp_dir,
                 })
-    # FIXME: If Python does not exit cleanly, this directory will not be cleaned
-    # up. We should consider writing the lit pid into the temp directory,
-    # scanning for stale temp directories, and deleting temp directories whose
-    # lit process has died.
     try:
         run.execute()
     finally:
