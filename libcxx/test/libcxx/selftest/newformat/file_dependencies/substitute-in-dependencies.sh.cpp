@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: objective-c++
+// Make sure that lit substitutions are expanded inside FILE_DEPENDENCIES lines.
 
-#if __has_feature(objc_arc)
-#error "arc should *not* be enabled"
-#endif
-
-int main(int, char**) { return 0; }
+// FILE_DEPENDENCIES: %s
+// RUN: echo %{file_dependencies} | grep 'substitute-in-dependencies.sh.cpp'
