@@ -249,7 +249,7 @@ public:
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
 
   bool isCoalescableExtInstr(const MachineInstr &MI,
-                             unsigned &SrcReg, unsigned &DstReg,
+                             Register &SrcReg, Register &DstReg,
                              unsigned &SubIdx) const override;
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -279,12 +279,12 @@ public:
 
   // Select analysis.
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       unsigned, unsigned, unsigned, int &, int &,
+                       Register, Register, Register, int &, int &,
                        int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    const DebugLoc &DL, unsigned DstReg,
-                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
-                    unsigned FalseReg) const override;
+                    const DebugLoc &DL, Register DstReg,
+                    ArrayRef<MachineOperand> Cond, Register TrueReg,
+                    Register FalseReg) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
@@ -329,7 +329,7 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   // If conversion by predication (only supported by some branch instructions).
@@ -373,11 +373,11 @@ public:
 
   // Comparison optimization.
 
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &Mask, int &Value) const override;
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &Mask, int &Value) const override;
 
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int Mask, int Value,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int Mask, int Value,
                             const MachineRegisterInfo *MRI) const override;
 
 
