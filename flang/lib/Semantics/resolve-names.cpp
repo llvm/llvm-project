@@ -1387,6 +1387,8 @@ public:
   bool Pre(const parser::StmtFunctionStmt &);
   bool Pre(const parser::DefinedOpName &);
   bool Pre(const parser::ProgramUnit &);
+  void Post(const parser::AssignStmt &);
+  void Post(const parser::AssignedGotoStmt &);
 
   // These nodes should never be reached: they are handled in ProgramUnit
   bool Pre(const parser::MainProgram &) { DIE("unreachable"); }
@@ -6054,6 +6056,17 @@ bool ResolveNamesVisitor::Pre(const parser::DefinedOpName &x) {
     MakePlaceholder(name, MiscDetails::Kind::TypeBoundDefinedOp);
   }
   return false;
+}
+
+void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
+  if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
+    ConvertToObjectEntity(DEREF(name->symbol));
+  }
+}
+void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
+  if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
+    ConvertToObjectEntity(DEREF(name->symbol));
+  }
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {

@@ -2573,9 +2573,10 @@ struct CloseStmt {
 };
 
 // R1215 format -> default-char-expr | label | *
+// deprecated(ASSIGN): | scalar-int-name
 struct Format {
   UNION_CLASS_BOILERPLATE(Format);
-  std::variant<DefaultCharExpr, Label, Star> u;
+  std::variant<Expr, Label, Star> u;
 };
 
 // R1214 id-variable -> scalar-int-variable

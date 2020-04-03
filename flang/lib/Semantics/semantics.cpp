@@ -113,25 +113,49 @@ private:
   SemanticsContext &context_;
 };
 
-class EntryChecker : public virtual BaseChecker {
+class MiscChecker : public virtual BaseChecker {
 public:
-  explicit EntryChecker(SemanticsContext &context) : context_{context} {}
+  explicit MiscChecker(SemanticsContext &context) : context_{context} {}
   void Leave(const parser::EntryStmt &) {
     if (!context_.constructStack().empty()) { // C1571
       context_.Say("ENTRY may not appear in an executable construct"_err_en_US);
     }
   }
+  void Leave(const parser::AssignStmt &stmt) {
+    CheckAssignGotoName(std::get<parser::Name>(stmt.t));
+  }
+  void Leave(const parser::AssignedGotoStmt &stmt) {
+    CheckAssignGotoName(std::get<parser::Name>(stmt.t));
+  }
 
 private:
+  void CheckAssignGotoName(const parser::Name &name) {
+    if (context_.HasError(name.symbol)) {
+      return;
+    }
+    const Symbol &symbol{DEREF(name.symbol)};
+    auto type{evaluate::DynamicType::From(symbol)};
+    if (!IsVariableName(symbol) || symbol.Rank() != 0 || !type ||
+        type->category() != TypeCategory::Integer ||
+        type->kind() !=
+            context_.defaultKinds().GetDefaultKind(TypeCategory::Integer)) {
+      context_
+          .Say(name.source,
+              "'%s' must be a default integer scalar variable"_err_en_US,
+              name.source)
+          .Attach(symbol.name(), "Declaration of '%s'"_en_US, symbol.name());
+    }
+  }
+
   SemanticsContext &context_;
 };
 
 using StatementSemanticsPass1 = ExprChecker;
 using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
-    DataChecker, DeallocateChecker, DoForallChecker, EntryChecker,
-    IfStmtChecker, IoChecker, NamelistChecker, NullifyChecker,
-    OmpStructureChecker, PurityChecker, ReturnStmtChecker, StopChecker>;
+    DataChecker, DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
+    MiscChecker, NamelistChecker, NullifyChecker, OmpStructureChecker,
+    PurityChecker, ReturnStmtChecker, StopChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {

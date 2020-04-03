@@ -2,10 +2,10 @@
 ! negative test -- invalid labels, out of range
 
 ! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
-! CHECK: label '50' was not found
-! CHECK: label '55' is not in scope
-! CHECK: '70' not a branch target
-! CHECK: control flow use of '70'
+! CHECK: Label '50' was not found
+! CHECK: Label '55' is not in scope
+! CHECK: Label '70' is not a branch target
+! CHECK: Control flow use of '70'
 
 subroutine sub00(a,b,n,m)
   real a(n,m)

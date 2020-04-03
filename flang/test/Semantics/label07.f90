@@ -2,11 +2,11 @@
 ! negative test -- invalid labels, out of range
 
 ! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
-! CHECK: '30' not a branch target
-! CHECK: control flow use of '30'
-! CHECK: label '10' is not in scope
-! CHECK: label '20' was not found
-! CHECK: label '60' was not found
+! CHECK: Label '30' is not a branch target
+! CHECK: Control flow use of '30'
+! CHECK: Label '10' is not in scope
+! CHECK: Label '20' was not found
+! CHECK: Label '60' was not found
 
 subroutine sub00(n,m)
 30 format (i6,f6.2)

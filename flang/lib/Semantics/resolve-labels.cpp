@@ -154,16 +154,11 @@ static unsigned SayLabel(parser::Label label) {
 
 struct UnitAnalysis {
   UnitAnalysis() { scopeModel.push_back(0); }
-  UnitAnalysis(UnitAnalysis &&that)
-      : doStmtSources{std::move(that.doStmtSources)},
-        formatStmtSources{std::move(that.formatStmtSources)},
-        otherStmtSources{std::move(that.otherStmtSources)},
-        targetStmts{std::move(that.targetStmts)}, scopeModel{std::move(
-                                                      that.scopeModel)} {}
 
   SourceStmtList doStmtSources;
   SourceStmtList formatStmtSources;
   SourceStmtList otherStmtSources;
+  SourceStmtList assignStmtSources;
   TargetStmtMap targetStmts;
   std::vector<ProxyForScope> scopeModel;
 };
@@ -465,7 +460,7 @@ public:
     AddLabelReference(std::get<3>(arithmeticIfStmt.t));
   }
   void Post(const parser::AssignStmt &assignStmt) {
-    AddLabelReference(std::get<parser::Label>(assignStmt.t));
+    AddLabelReferenceFromAssignStmt(std::get<parser::Label>(assignStmt.t));
   }
   void Post(const parser::AssignedGotoStmt &assignedGotoStmt) {
     AddLabelReference(std::get<std::list<parser::Label>>(assignedGotoStmt.t));
@@ -726,7 +721,7 @@ private:
     if (label < 1 || label > 99999) {
       context_.Say(currentPosition_,
           parser::MessageFormattedText{
-              "label '%u' is out of range"_err_en_US, SayLabel(label)});
+              "Label '%u' is out of range"_err_en_US, SayLabel(label)});
     }
   }
 
@@ -742,7 +737,7 @@ private:
     if (!pair.second) {
       context_.Say(currentPosition_,
           parser::MessageFormattedText{
-              "label '%u' is not distinct"_err_en_US, SayLabel(label)});
+              "Label '%u' is not distinct"_err_en_US, SayLabel(label)});
     }
   }
 
@@ -755,6 +750,12 @@ private:
   void AddLabelReferenceToFormatStmt(parser::Label label) {
     CheckLabelInRange(label);
     programUnits_.back().formatStmtSources.emplace_back(
+        label, currentScope_, currentPosition_);
+  }
+
+  void AddLabelReferenceFromAssignStmt(parser::Label label) {
+    CheckLabelInRange(label);
+    programUnits_.back().assignStmtSources.emplace_back(
         label, currentScope_, currentPosition_);
   }
 
@@ -879,12 +880,12 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
       // C1133
       context.Say(position,
           parser::MessageFormattedText{
-              "label '%u' cannot be found"_err_en_US, SayLabel(label)});
+              "Label '%u' cannot be found"_err_en_US, SayLabel(label)});
     } else if (doTarget.parserCharBlock.begin() < position.begin()) {
       // R1119
       context.Say(position,
           parser::MessageFormattedText{
-              "label '%u' doesn't lexically follow DO stmt"_err_en_US,
+              "Label '%u' doesn't lexically follow DO stmt"_err_en_US,
               SayLabel(label)});
 
     } else if ((InInclusiveScope(scopes, scope, doTarget.proxyForScope) &&
@@ -905,7 +906,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
     } else if (!InInclusiveScope(scopes, scope, doTarget.proxyForScope)) {
       context.Say(position,
           parser::MessageFormattedText{
-              "label '%u' is not in DO loop scope"_err_en_US, SayLabel(label)});
+              "Label '%u' is not in DO loop scope"_err_en_US, SayLabel(label)});
     } else if (!doTarget.labeledStmtClassificationSet.test(
                    TargetStatementEnum::Do)) {
       context.Say(doTarget.parserCharBlock,
@@ -932,11 +933,11 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
     if (!HasScope(target.proxyForScope)) {
       context.Say(position,
           parser::MessageFormattedText{
-              "label '%u' was not found"_err_en_US, SayLabel(label)});
+              "Label '%u' was not found"_err_en_US, SayLabel(label)});
     } else if (!InInclusiveScope(scopes, scope, target.proxyForScope)) {
       context.Say(position,
           parser::MessageFormattedText{
-              "label '%u' is not in scope"_en_US, SayLabel(label)});
+              "Label '%u' is not in scope"_en_US, SayLabel(label)});
     }
   }
 }
@@ -950,23 +951,24 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
       if (!branchTarget.labeledStmtClassificationSet.test(
               TargetStatementEnum::Branch) &&
           !branchTarget.labeledStmtClassificationSet.test(
-              TargetStatementEnum::CompatibleBranch)) {
+              TargetStatementEnum::CompatibleBranch)) { // error
         context
             .Say(branchTarget.parserCharBlock,
                 parser::MessageFormattedText{
-                    "'%u' not a branch target"_err_en_US, SayLabel(label)})
+                    "Label '%u' is not a branch target"_err_en_US,
+                    SayLabel(label)})
             .Attach(stmt.parserCharBlock,
                 parser::MessageFormattedText{
-                    "control flow use of '%u'"_en_US, SayLabel(label)});
+                    "Control flow use of '%u'"_en_US, SayLabel(label)});
       } else if (!branchTarget.labeledStmtClassificationSet.test(
-                     TargetStatementEnum::Branch)) {
+                     TargetStatementEnum::Branch)) { // warning
         context
             .Say(branchTarget.parserCharBlock,
                 parser::MessageFormattedText{
-                    "'%u' not a branch target"_en_US, SayLabel(label)})
+                    "Label '%u' is not a branch target"_en_US, SayLabel(label)})
             .Attach(stmt.parserCharBlock,
                 parser::MessageFormattedText{
-                    "control flow use of '%u'"_en_US, SayLabel(label)});
+                    "Control flow use of '%u'"_en_US, SayLabel(label)});
       }
     }
   }
@@ -1006,6 +1008,36 @@ void CheckDataTransferConstraints(const SourceStmtList &dataTransfers,
   CheckDataXferTargetConstraints(dataTransfers, labels, context);
 }
 
+void CheckAssignTargetConstraints(const SourceStmtList &stmts,
+    const TargetStmtMap &labels, SemanticsContext &context) {
+  for (const auto &stmt : stmts) {
+    const auto &label{stmt.parserLabel};
+    auto target{GetLabel(labels, label)};
+    if (HasScope(target.proxyForScope) &&
+        !target.labeledStmtClassificationSet.test(
+            TargetStatementEnum::Branch) &&
+        !target.labeledStmtClassificationSet.test(
+            TargetStatementEnum::Format)) {
+      context
+          .Say(target.parserCharBlock,
+              target.labeledStmtClassificationSet.test(
+                  TargetStatementEnum::CompatibleBranch)
+                  ? "Label '%u' is not a branch target or FORMAT"_en_US
+                  : "Label '%u' is not a branch target or FORMAT"_err_en_US,
+              SayLabel(label))
+          .Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
+              SayLabel(label));
+    }
+  }
+}
+
+void CheckAssignConstraints(const SourceStmtList &assigns,
+    const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
+    SemanticsContext &context) {
+  CheckScopeConstraints(assigns, labels, scopes, context);
+  CheckAssignTargetConstraints(assigns, labels, context);
+}
+
 bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
   auto &context{parseTreeAnalysis.ErrorHandler()};
   for (const auto &programUnit : parseTreeAnalysis.ProgramUnits()) {
@@ -1017,6 +1049,8 @@ bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
     CheckBranchConstraints(branches, labels, scopes, context);
     const auto &dataTransfers{programUnit.formatStmtSources};
     CheckDataTransferConstraints(dataTransfers, labels, scopes, context);
+    const auto &assigns{programUnit.assignStmtSources};
+    CheckAssignConstraints(assigns, labels, scopes, context);
   }
   return !context.AnyFatalError();
 }

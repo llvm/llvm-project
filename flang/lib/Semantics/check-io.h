@@ -81,9 +81,9 @@ public:
 private:
   // Presence flag values.
   ENUM_CLASS(Flag, IoControlList, InternalUnit, NumberUnit, StarUnit, CharFmt,
-      LabelFmt, StarFmt, FmtOrNml, KnownAccess, AccessDirect, AccessStream,
-      AdvanceYes, AsynchronousYes, KnownStatus, StatusNew, StatusReplace,
-      StatusScratch, DataList)
+      LabelFmt, StarFmt, AssignFmt, FmtOrNml, KnownAccess, AccessDirect,
+      AccessStream, AdvanceYes, AsynchronousYes, KnownStatus, StatusNew,
+      StatusReplace, StatusScratch, DataList)
 
   template <typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
     using DefaultCharConstantType =

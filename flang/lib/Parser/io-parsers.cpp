@@ -240,8 +240,9 @@ TYPE_CONTEXT_PARSER("PRINT statement"_en_US,
         "PRINT" >> format, defaulted("," >> nonemptyList(outputItem))))
 
 // R1215 format -> default-char-expr | label | *
+// deprecated(ASSIGN): | scalar-int-name
 TYPE_PARSER(construct<Format>(label / !"_."_ch) ||
-    construct<Format>(defaultCharExpr / !"="_tok) || construct<Format>(star))
+    construct<Format>(expr / !"="_tok) || construct<Format>(star))
 
 // R1216 input-item -> variable | io-implied-do
 TYPE_PARSER(construct<InputItem>(variable) ||

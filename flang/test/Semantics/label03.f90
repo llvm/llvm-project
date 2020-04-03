@@ -4,9 +4,9 @@
 ! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
 ! CHECK: DO loop doesn't properly nest
 ! CHECK: DO loop conflicts
-! CHECK: label '30' cannot be found
-! CHECK: label '40' cannot be found
-! CHECK: label '50' doesn't lexically follow DO stmt
+! CHECK: Label '30' cannot be found
+! CHECK: Label '40' cannot be found
+! CHECK: Label '50' doesn't lexically follow DO stmt
 
 subroutine sub00(a,b,n,m)
   real a(n,m)

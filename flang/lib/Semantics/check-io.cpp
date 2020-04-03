@@ -195,7 +195,29 @@ void IoChecker::Enter(const parser::Format &spec) {
       common::visitors{
           [&](const parser::Label &) { flags_.set(Flag::LabelFmt); },
           [&](const parser::Star &) { flags_.set(Flag::StarFmt); },
-          [&](const parser::DefaultCharExpr &format) {
+          [&](const parser::Expr &format) {
+            const SomeExpr *expr{GetExpr(format)};
+            if (!expr) {
+              return;
+            }
+            auto type{expr->GetType()};
+            if (!type ||
+                (type->category() != TypeCategory::Integer &&
+                    type->category() != TypeCategory::Character) ||
+                type->kind() !=
+                    context_.defaultKinds().GetDefaultKind(type->category())) {
+              context_.Say(format.source,
+                  "Format expression must be default character or integer"_err_en_US);
+              return;
+            }
+            if (type->category() == TypeCategory::Integer) {
+              flags_.set(Flag::AssignFmt);
+              if (expr->Rank() != 0 || !IsVariable(*expr)) {
+                context_.Say(format.source,
+                    "Assigned format label must be a scalar variable"_err_en_US);
+              }
+              return;
+            }
             flags_.set(Flag::CharFmt);
             const std::optional<std::string> constantFormat{
                 GetConstExpr<std::string>(format)};
@@ -203,11 +225,10 @@ void IoChecker::Enter(const parser::Format &spec) {
               return;
             }
             // validate constant format -- 12.6.2.2
-            bool isFolded{constantFormat->size() !=
-                format.thing.value().source.size() - 2};
+            bool isFolded{constantFormat->size() != format.source.size() - 2};
             parser::CharBlock reporterCharBlock{isFolded
-                    ? parser::CharBlock{format.thing.value().source}
-                    : parser::CharBlock{format.thing.value().source.begin() + 1,
+                    ? parser::CharBlock{format.source}
+                    : parser::CharBlock{format.source.begin() + 1,
                           static_cast<std::size_t>(0)}};
             FormatErrorReporter reporter{context_, reporterCharBlock};
             auto reporterWrapper{
@@ -723,7 +744,8 @@ void IoChecker::LeaveReadWrite() const {
   CheckForProhibitedSpecifier(
       IoSpecKind::Rec, flags_.test(Flag::StarFmt), "FMT=*"); // C1220
   CheckForRequiredSpecifier(IoSpecKind::Advance,
-      flags_.test(Flag::CharFmt) || flags_.test(Flag::LabelFmt),
+      flags_.test(Flag::CharFmt) || flags_.test(Flag::LabelFmt) ||
+          flags_.test(Flag::AssignFmt),
       "an explicit format"); // C1221
   CheckForProhibitedSpecifier(IoSpecKind::Advance,
       flags_.test(Flag::InternalUnit), "UNIT=internal-file"); // C1221

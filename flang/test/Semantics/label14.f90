@@ -4,7 +4,7 @@
 !            Block Construct
 
 ! EXEC: ${F18} %s 2>&1 | ${FileCheck} %s
-! CHECK: label '20' is not in scope
+! CHECK: Label '20' is not in scope
 
 subroutine s1
   block
