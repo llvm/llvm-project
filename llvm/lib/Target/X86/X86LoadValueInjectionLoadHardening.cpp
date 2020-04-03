@@ -9,30 +9,7 @@
 /// Description: This pass finds Load Value Injection (LVI) gadgets consisting
 /// of a load from memory (i.e., SOURCE), and any operation that may transmit
 /// the value loaded from memory over a covert channel, or use the value loaded
-/// from memory to determine a branch/call target (i.e., SINK). After finding
-/// all such gadgets in a given function, the pass minimally inserts LFENCE
-/// instructions in such a manner that the following property is satisfied: for
-/// all SOURCE+SINK pairs, all paths in the CFG from SOURCE to SINK contain at
-/// least one LFENCE instruction. The algorithm that implements this minimal
-/// insertion is influenced by an academic paper that minimally inserts memory
-/// fences for high-performance concurrent programs:
-///         http://www.cs.ucr.edu/~lesani/companion/oopsla15/OOPSLA15.pdf
-/// The algorithm implemented in this pass is as follows:
-/// 1. Build a condensed CFG (i.e., a GadgetGraph) consisting only of the
-/// following components:
-///    - SOURCE instructions (also includes function arguments)
-///    - SINK instructions
-///    - Basic block entry points
-///    - Basic block terminators
-///    - LFENCE instructions
-/// 2. Analyze the GadgetGraph to determine which SOURCE+SINK pairs (i.e.,
-/// gadgets) are already mitigated by existing LFENCEs. If all gadgets have been
-/// mitigated, go to step 6.
-/// 3. Use a heuristic or plugin to approximate minimal LFENCE insertion.
-/// 4. Insert one LFENCE along each CFG edge that was cut in step 3.
-/// 5. Go to step 2.
-/// 6. If any LFENCEs were inserted, return `true` from runOnFunction() to tell
-/// LLVM that the function was modified.
+/// from memory to determine a branch/call target (i.e., SINK).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +37,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -69,15 +45,10 @@ using namespace llvm;
 #define PASS_KEY "x86-lvi-load"
 #define DEBUG_TYPE PASS_KEY
 
-STATISTIC(NumFences, "Number of LFENCEs inserted for LVI mitigation");
 STATISTIC(NumFunctionsConsidered, "Number of functions analyzed");
 STATISTIC(NumFunctionsMitigated, "Number of functions for which mitigations "
                                  "were deployed");
 STATISTIC(NumGadgets, "Number of LVI gadgets detected during analysis");
-
-static cl::opt<std::string> OptimizePluginPath(
-    PASS_KEY "-opt-plugin",
-    cl::desc("Specify a plugin to optimize LFENCE insertion"), cl::Hidden);
 
 static cl::opt<bool> NoConditionalBranches(
     PASS_KEY "-no-cbranch",
@@ -108,12 +79,6 @@ static cl::opt<bool> NoFixedLoads(
     cl::desc("Don't mitigate RIP-relative or RSP-relative loads. This "
              "may improve performance, at the cost of security."),
     cl::init(false), cl::Hidden);
-
-static llvm::sys::DynamicLibrary OptimizeDL{};
-typedef int (*OptimizeCutT)(unsigned int *nodes, unsigned int nodes_size,
-                            unsigned int *edges, int *edge_values,
-                            int *cut_edges /* out */, unsigned int edges_size);
-static OptimizeCutT OptimizeCut = nullptr;
 
 #define ARG_NODE nullptr
 #define GADGET_EDGE ((int)(-1))
@@ -174,11 +139,6 @@ private:
   getGadgetGraph(MachineFunction &MF, const MachineLoopInfo &MLI,
                  const MachineDominatorTree &MDT,
                  const MachineDominanceFrontier &MDF, bool FixedLoads) const;
-  std::unique_ptr<MachineGadgetGraph>
-  elimEdges(std::unique_ptr<MachineGadgetGraph> Graph) const;
-  void cutEdges(MachineGadgetGraph &G, EdgeSet &CutEdges /* out */) const;
-  int insertFences(MachineGadgetGraph &G,
-                   EdgeSet &CutEdges /* in, out */) const;
 
   bool instrUsesRegToAccessMemory(const MachineInstr &I, unsigned Reg) const;
   bool instrUsesRegToBranch(const MachineInstr &I, unsigned Reg) const;
@@ -281,17 +241,14 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   LLVM_DEBUG(dbgs() << "Hardening data-dependent loads...\n");
-  int FencesInserted = hardenLoads(MF, false);
+  hardenLoads(MF, false);
   LLVM_DEBUG(dbgs() << "Hardening data-dependent loads... Done\n");
   if (!NoFixedLoads) {
     LLVM_DEBUG(dbgs() << "Hardening fixed loads...\n");
-    FencesInserted += hardenLoads(MF, true);
+    hardenLoads(MF, true);
     LLVM_DEBUG(dbgs() << "Hardening fixed loads... Done\n");
   }
-  if (FencesInserted > 0)
-    ++NumFunctionsMitigated;
-  NumFences += FencesInserted;
-  return (FencesInserted > 0);
+  return false;
 }
 
 // Apply the mitigation to `MF`, return the number of fences inserted.
@@ -299,8 +256,6 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
 // loads; otherwise, mitigation will be applied to non-fixed loads.
 int X86LoadValueInjectionLoadHardeningPass::hardenLoads(MachineFunction &MF,
                                                         bool FixedLoads) const {
-  int FencesInserted = 0;
-
   LLVM_DEBUG(dbgs() << "Building gadget graph...\n");
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   const auto &MDT = getAnalysis<MachineDominatorTree>();
@@ -334,27 +289,7 @@ int X86LoadValueInjectionLoadHardeningPass::hardenLoads(MachineFunction &MF,
       return 0;
   }
 
-  do {
-    LLVM_DEBUG(dbgs() << "Eliminating mitigated paths...\n");
-    std::unique_ptr<MachineGadgetGraph> ElimGraph = elimEdges(std::move(Graph));
-    LLVM_DEBUG(dbgs() << "Eliminating mitigated paths... Done\n");
-    if (ElimGraph->NumGadgets == 0)
-      break;
-
-    EdgeSet CutEdges{*ElimGraph};
-    LLVM_DEBUG(dbgs() << "Cutting edges...\n");
-    cutEdges(*ElimGraph, CutEdges);
-    LLVM_DEBUG(dbgs() << "Cutting edges... Done\n");
-
-    LLVM_DEBUG(dbgs() << "Inserting LFENCEs...\n");
-    FencesInserted += insertFences(*ElimGraph, CutEdges);
-    LLVM_DEBUG(dbgs() << "Inserting LFENCEs... Done\n");
-
-    Graph.reset(GraphBuilder::trim(
-        *ElimGraph, MachineGadgetGraph::NodeSet{*ElimGraph}, CutEdges));
-  } while (true);
-
-  return FencesInserted;
+  return 0;
 }
 
 std::unique_ptr<X86LoadValueInjectionLoadHardeningPass::MachineGadgetGraph>
@@ -524,213 +459,6 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   std::unique_ptr<MachineGadgetGraph> G{Builder.get(FenceCount, GadgetCount)};
   LLVM_DEBUG(dbgs() << "Found " << GTraits::size(G.get()) << " nodes\n");
   return G;
-}
-
-std::unique_ptr<X86LoadValueInjectionLoadHardeningPass::MachineGadgetGraph>
-X86LoadValueInjectionLoadHardeningPass::elimEdges(
-    std::unique_ptr<MachineGadgetGraph> Graph) const {
-  MachineGadgetGraph::NodeSet ElimNodes{*Graph};
-  MachineGadgetGraph::EdgeSet ElimEdges{*Graph};
-
-  if (Graph->NumFences > 0) { // eliminate fences
-    for (auto EI = Graph->edges_begin(), EE = Graph->edges_end(); EI != EE;
-         ++EI) {
-      GTraits::NodeRef Dest = GTraits::edge_dest(*EI);
-      if (isFence(Dest->value())) {
-        ElimNodes.insert(Dest);
-        ElimEdges.insert(EI);
-        std::for_each(
-            GTraits::child_edge_begin(Dest), GTraits::child_edge_end(Dest),
-            [&ElimEdges](GTraits::EdgeRef E) { ElimEdges.insert(&E); });
-      }
-    }
-    LLVM_DEBUG(dbgs() << "Eliminated " << ElimNodes.count()
-                      << " fence nodes\n");
-  }
-
-  // eliminate gadget edges that are mitigated
-  int NumGadgets = 0;
-  MachineGadgetGraph::NodeSet Visited{*Graph}, GadgetSinks{*Graph};
-  MachineGadgetGraph::EdgeSet ElimGadgets{*Graph};
-  for (auto NI = GTraits::nodes_begin(Graph.get()),
-            NE = GTraits::nodes_end(Graph.get());
-       NI != NE; ++NI) {
-    // collect the gadgets for this node
-    for (auto EI = GTraits::child_edge_begin(*NI),
-              EE = GTraits::child_edge_end(*NI);
-         EI != EE; ++EI) {
-      if (MachineGadgetGraph::isGadgetEdge(*EI)) {
-        ++NumGadgets;
-        ElimGadgets.insert(EI);
-        GadgetSinks.insert(GTraits::edge_dest(*EI));
-      }
-    }
-    if (GadgetSinks.empty())
-      continue;
-    std::function<void(GTraits::NodeRef, bool)> TraverseDFS =
-        [&](GTraits::NodeRef N, bool FirstNode) {
-          if (!FirstNode) {
-            Visited.insert(N);
-            if (GadgetSinks.contains(N)) {
-              for (auto CEI = GTraits::child_edge_begin(*NI),
-                        CEE = GTraits::child_edge_end(*NI);
-                   CEI != CEE; ++CEI) {
-                if (MachineGadgetGraph::isGadgetEdge(*CEI) &&
-                    GTraits::edge_dest(*CEI) == N)
-                  ElimGadgets.erase(CEI);
-              }
-            }
-          }
-          for (auto CEI = GTraits::child_edge_begin(N),
-                    CEE = GTraits::child_edge_end(N);
-               CEI != CEE; ++CEI) {
-            GTraits::NodeRef Dest = GTraits::edge_dest(*CEI);
-            if (MachineGadgetGraph::isCFGEdge(*CEI) &&
-                !Visited.contains(Dest) && !ElimEdges.contains(CEI))
-              TraverseDFS(Dest, false);
-          }
-        };
-    TraverseDFS(*NI, true);
-    Visited.clear();
-    GadgetSinks.clear();
-  }
-  LLVM_DEBUG(dbgs() << "Eliminated " << ElimGadgets.count()
-                    << " gadget edges\n");
-  ElimEdges |= ElimGadgets;
-
-  if (!(ElimEdges.empty() && ElimNodes.empty())) {
-    int NumRemainingGadgets = NumGadgets - ElimGadgets.count();
-    Graph.reset(GraphBuilder::trim(*Graph, ElimNodes, ElimEdges,
-                                   0 /* NumFences */, NumRemainingGadgets));
-  } else {
-    Graph->NumFences = 0;
-    Graph->NumGadgets = NumGadgets;
-  }
-  return Graph;
-}
-
-void X86LoadValueInjectionLoadHardeningPass::cutEdges(
-    MachineGadgetGraph &G,
-    MachineGadgetGraph::EdgeSet &CutEdges /* out */) const {
-  if (!OptimizePluginPath.empty()) {
-    if (!OptimizeDL.isValid()) {
-      std::string ErrorMsg{};
-      OptimizeDL = llvm::sys::DynamicLibrary::getPermanentLibrary(
-          OptimizePluginPath.c_str(), &ErrorMsg);
-      if (!ErrorMsg.empty())
-        report_fatal_error("Failed to load opt plugin: \"" + ErrorMsg + '\"');
-      OptimizeCut = (OptimizeCutT)OptimizeDL.getAddressOfSymbol("optimize_cut");
-      if (!OptimizeCut)
-        report_fatal_error("Invalid optimization plugin");
-    }
-    auto *Nodes = new unsigned int[G.nodes_size() + 1 /* terminator node */];
-    auto *Edges = new unsigned int[G.edges_size()];
-    auto *EdgeCuts = new int[G.edges_size()];
-    auto *EdgeValues = new int[G.edges_size()];
-    for (auto *NI = G.nodes_begin(), *NE = G.nodes_end(); NI != NE; ++NI) {
-      Nodes[std::distance(G.nodes_begin(), NI)] =
-          std::distance(G.edges_begin(), GTraits::child_edge_begin(NI));
-    }
-    Nodes[G.nodes_size()] = G.edges_size(); // terminator node
-    for (auto *EI = G.edges_begin(), *EE = G.edges_end(); EI != EE; ++EI) {
-      Edges[std::distance(G.edges_begin(), EI)] =
-          std::distance(G.nodes_begin(), GTraits::edge_dest(*EI));
-      EdgeValues[std::distance(G.edges_begin(), EI)] = EI->value();
-    }
-    OptimizeCut(Nodes, G.nodes_size(), Edges, EdgeValues, EdgeCuts,
-                G.edges_size());
-    for (int I = 0; I < G.edges_size(); ++I) {
-      if (EdgeCuts[I])
-        CutEdges.set(I);
-    }
-    delete[] Nodes;
-    delete[] Edges;
-    delete[] EdgeCuts;
-    delete[] EdgeValues;
-  } else { // Use the default greedy heuristic
-    // Find the cheapest CFG edge that will eliminate a gadget (by being egress
-    // from a SOURCE node or ingress to a SINK node), and cut it.
-    MachineGadgetGraph::NodeSet GadgetSinks{G};
-    MachineGadgetGraph::Edge *CheapestSoFar = nullptr;
-    for (auto NI = GTraits::nodes_begin(&G), NE = GTraits::nodes_end(&G);
-         NI != NE; ++NI) {
-      for (auto EI = GTraits::child_edge_begin(*NI),
-                EE = GTraits::child_edge_end(*NI);
-           EI != EE; ++EI) {
-        if (MachineGadgetGraph::isGadgetEdge(*EI)) {
-          // NI is a SOURCE node. Look for a cheap egress edge
-          for (auto EEI = GTraits::child_edge_begin(*NI); EEI != EE; ++EEI) {
-            if (MachineGadgetGraph::isCFGEdge(*EEI)) {
-              if (!CheapestSoFar || EEI->value() < CheapestSoFar->value())
-                CheapestSoFar = EEI;
-            }
-          }
-          GadgetSinks.insert(GTraits::edge_dest(*EI));
-        } else { // EI is a CFG edge
-          if (GadgetSinks.contains(GTraits::edge_dest(*EI))) {
-            // The dest is a SINK node. Hence EI is an ingress edge
-            if (!CheapestSoFar || EI->value() < CheapestSoFar->value())
-              CheapestSoFar = EI;
-          }
-        }
-      }
-    }
-    assert(CheapestSoFar && "Failed to cut an edge");
-    CutEdges.insert(CheapestSoFar);
-  }
-  LLVM_DEBUG(dbgs() << "Cut " << CutEdges.count() << " edges\n");
-}
-
-int X86LoadValueInjectionLoadHardeningPass::insertFences(
-    MachineGadgetGraph &G, EdgeSet &CutEdges /* in, out */) const {
-  int FencesInserted = 0, AdditionalEdgesCut = 0;
-  auto CutAllCFGEdges = [&CutEdges, &AdditionalEdgesCut](GTraits::NodeRef N) {
-    for (auto CEI = GTraits::child_edge_begin(N),
-              CEE = GTraits::child_edge_end(N);
-         CEI != CEE; ++CEI) {
-      if (MachineGadgetGraph::isCFGEdge(*CEI) && !CutEdges.contains(CEI)) {
-        CutEdges.insert(CEI);
-        ++AdditionalEdgesCut;
-      }
-    }
-  };
-  for (auto NI = GTraits::nodes_begin(&G), NE = GTraits::nodes_end(&G);
-       NI != NE; ++NI) {
-    for (auto CEI = GTraits::child_edge_begin(*NI),
-              CEE = GTraits::child_edge_end(*NI);
-         CEI != CEE; ++CEI) {
-      if (CutEdges.contains(CEI)) {
-        MachineInstr *MI = (*NI)->value(), *Prev;
-        MachineBasicBlock *MBB;
-        MachineBasicBlock::iterator InsertionPt;
-        if (MI == ARG_NODE) { // insert LFENCE at beginning of entry block
-          MBB = &G.getMF().front();
-          InsertionPt = MBB->begin();
-          Prev = nullptr;
-        } else if (MI->isBranch()) { // insert the LFENCE before the branch
-          MBB = MI->getParent();
-          InsertionPt = MI;
-          Prev = MI->getPrevNode();
-          CutAllCFGEdges(*NI);
-        } else { // insert the LFENCE after the instruction
-          MBB = MI->getParent();
-          InsertionPt = MI->getNextNode() ? MI->getNextNode() : MBB->end();
-          Prev = InsertionPt == MBB->end()
-                     ? (MBB->empty() ? nullptr : &MBB->back())
-                     : InsertionPt->getPrevNode();
-        }
-        if ((InsertionPt == MBB->end() || !isFence(&*InsertionPt)) &&
-            (!Prev || !isFence(Prev))) {
-          BuildMI(*MBB, InsertionPt, DebugLoc(), TII->get(X86::LFENCE));
-          ++FencesInserted;
-        }
-      }
-    }
-  }
-  LLVM_DEBUG(dbgs() << "Inserted " << FencesInserted << " fences\n");
-  LLVM_DEBUG(dbgs() << "Cut an additional " << AdditionalEdgesCut
-                    << " edges during fence insertion\n");
-  return FencesInserted;
 }
 
 bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
