@@ -608,6 +608,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
   };
   RemoveUses("llvm.dbg.addr");
   RemoveUses("llvm.dbg.declare");
+  RemoveUses("llvm.dbg.label");
   RemoveUses("llvm.dbg.value");
 
   // Delete non-CU debug info named metadata nodes.
