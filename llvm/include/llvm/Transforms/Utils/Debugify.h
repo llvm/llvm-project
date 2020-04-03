@@ -17,6 +17,22 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/PassManager.h"
 
+namespace llvm {
+class DIBuilder;
+
+/// Add synthesized debug information to a module.
+///
+/// \param M The module to add debug information to.
+/// \param Functions A range of functions to add debug information to.
+/// \param Banner A prefix string to add to debug/error messages.
+/// \param ApplyToMF A call back that will add debug information to the
+///                  MachineFunction for a Function. If nullptr, then the
+///                  MachineFunction (if any) will not be modified.
+bool applyDebugifyMetadata(
+    Module &M, iterator_range<Module::iterator> Functions, StringRef Banner,
+    std::function<bool(DIBuilder &, Function &)> ApplyToMF);
+} // namespace llvm
+
 llvm::ModulePass *createDebugifyModulePass();
 llvm::FunctionPass *createDebugifyFunctionPass();
 

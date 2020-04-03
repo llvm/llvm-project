@@ -62,10 +62,11 @@ Instruction *findTerminatingInstruction(BasicBlock &BB) {
     return I;
   return BB.getTerminator();
 }
+} // end anonymous namespace
 
-bool applyDebugifyMetadata(Module &M,
-                           iterator_range<Module::iterator> Functions,
-                           StringRef Banner) {
+bool llvm::applyDebugifyMetadata(
+    Module &M, iterator_range<Module::iterator> Functions, StringRef Banner,
+    std::function<bool(DIBuilder &DIB, Function &F)> ApplyToMF) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
     dbg() << Banner << "Skipping module with debug info\n";
@@ -149,6 +150,8 @@ bool applyDebugifyMetadata(Module &M,
                                     InsertBefore);
       }
     }
+    if (ApplyToMF)
+      ApplyToMF(DIB, F);
     DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
@@ -173,6 +176,7 @@ bool applyDebugifyMetadata(Module &M,
   return true;
 }
 
+namespace {
 /// Return true if a mis-sized diagnostic is issued for \p DVI.
 bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
   // The size of a dbg.value's value operand should match the size of the
@@ -315,7 +319,8 @@ bool checkDebugifyMetadata(Module &M,
 /// legacy module pass manager.
 struct DebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    return applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+    return applyDebugifyMetadata(M, M.functions(),
+                                 "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyModulePass() : ModulePass(ID) {}
@@ -334,7 +339,7 @@ struct DebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                                 "FunctionDebugify: ");
+                                 "FunctionDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyFunctionPass() : FunctionPass(ID) {}
@@ -409,7 +414,8 @@ FunctionPass *createDebugifyFunctionPass() {
 }
 
 PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+  applyDebugifyMetadata(M, M.functions(),
+                        "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   return PreservedAnalyses::all();
 }
 

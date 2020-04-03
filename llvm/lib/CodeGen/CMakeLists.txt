@@ -71,6 +71,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineCombiner.cpp
   MachineCopyPropagation.cpp
   MachineCSE.cpp
+  MachineDebugify.cpp
   MachineDominanceFrontier.cpp
   MachineDominators.cpp
   MachineFrameInfo.cpp
