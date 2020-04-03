@@ -357,15 +357,11 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
       // the results of the parallel loop when it is fully rewritten.
       loopResults.assign(forOp.result_begin(), forOp.result_end());
       first = false;
-    } else {
-      // A loop is constructed with an empty "yield" terminator by default.
-      // Replace it with another "yield" that forwards the results of the nested
-      // loop to the parent loop. We need to explicitly make sure the new
-      // terminator is the last operation in the block because further
-      // transforms rely on this.
+    } else if (!forOp.getResults().empty()) {
+      // A loop is constructed with an empty "yield" terminator if there are
+      // no results.
       rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
-      rewriter.replaceOpWithNewOp<YieldOp>(
-          rewriter.getInsertionBlock()->getTerminator(), forOp.getResults());
+      rewriter.create<YieldOp>(loc, forOp.getResults());
     }
 
     rewriter.setInsertionPointToStart(forOp.getBody());
@@ -398,9 +394,10 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
         mapping.lookup(reduceBlock.getTerminator()->getOperand(0)));
   }
 
-  rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
-  rewriter.replaceOpWithNewOp<YieldOp>(
-      rewriter.getInsertionBlock()->getTerminator(), yieldOperands);
+  if (!yieldOperands.empty()) {
+    rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
+    rewriter.create<YieldOp>(loc, yieldOperands);
+  }
 
   rewriter.replaceOp(parallelOp, loopResults);
 
