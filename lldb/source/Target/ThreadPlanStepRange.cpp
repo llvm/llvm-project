@@ -41,8 +41,8 @@ ThreadPlanStepRange::ThreadPlanStepRange(ThreadPlanKind kind, const char *name,
       m_given_ranges_only(given_ranges_only) {
   m_use_fast_step = GetTarget().GetUseFastStepping();
   AddRange(range);
-  m_stack_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
-  StackFrameSP parent_stack = m_thread.GetStackFrameAtIndex(1);
+  m_stack_id = thread.GetStackFrameAtIndex(0)->GetStackID();
+  StackFrameSP parent_stack = thread.GetStackFrameAtIndex(1);
   if (parent_stack)
     m_parent_stack_id = parent_stack->GetStackID();
 }
@@ -86,15 +86,14 @@ void ThreadPlanStepRange::AddRange(const AddressRange &new_range) {
 }
 
 void ThreadPlanStepRange::DumpRanges(Stream *s) {
+  Thread &thread = GetThread();
   size_t num_ranges = m_address_ranges.size();
   if (num_ranges == 1) {
-    m_address_ranges[0].Dump(s, m_thread.CalculateTarget().get(),
-                             Address::DumpStyleLoadAddress);
+    m_address_ranges[0].Dump(s, &GetTarget(), Address::DumpStyleLoadAddress);
   } else {
     for (size_t i = 0; i < num_ranges; i++) {
       s->Printf(" %" PRIu64 ": ", uint64_t(i));
-      m_address_ranges[i].Dump(s, m_thread.CalculateTarget().get(),
-                               Address::DumpStyleLoadAddress);
+      m_address_ranges[i].Dump(s, &GetTarget(), Address::DumpStyleLoadAddress);
     }
   }
 }
@@ -102,20 +101,20 @@ void ThreadPlanStepRange::DumpRanges(Stream *s) {
 bool ThreadPlanStepRange::InRange() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   bool ret_value = false;
-
-  lldb::addr_t pc_load_addr = m_thread.GetRegisterContext()->GetPC();
+  Thread &thread = GetThread();
+  lldb::addr_t pc_load_addr = thread.GetRegisterContext()->GetPC();
 
   size_t num_ranges = m_address_ranges.size();
   for (size_t i = 0; i < num_ranges; i++) {
-    ret_value = m_address_ranges[i].ContainsLoadAddress(
-        pc_load_addr, m_thread.CalculateTarget().get());
+    ret_value = 
+        m_address_ranges[i].ContainsLoadAddress(pc_load_addr, &GetTarget());
     if (ret_value)
       break;
   }
 
   if (!ret_value && !m_given_ranges_only) {
     // See if we've just stepped to another part of the same line number...
-    StackFrame *frame = m_thread.GetStackFrameAtIndex(0).get();
+    StackFrame *frame = thread.GetStackFrameAtIndex(0).get();
 
     SymbolContext new_context(
         frame->GetSymbolContext(eSymbolContextEverything));
@@ -132,8 +131,8 @@ bool ThreadPlanStepRange::InRange() {
           ret_value = true;
           if (log) {
             StreamString s;
-            m_addr_context.line_entry.Dump(&s, m_thread.CalculateTarget().get(),
-                                           true, Address::DumpStyleLoadAddress,
+            m_addr_context.line_entry.Dump(&s, &GetTarget(), true,
+                                           Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
             LLDB_LOGF(
@@ -151,8 +150,8 @@ bool ThreadPlanStepRange::InRange() {
           ret_value = true;
           if (log) {
             StreamString s;
-            m_addr_context.line_entry.Dump(&s, m_thread.CalculateTarget().get(),
-                                           true, Address::DumpStyleLoadAddress,
+            m_addr_context.line_entry.Dump(&s, &GetTarget(), true,
+                                           Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
             LLDB_LOGF(log,
@@ -161,7 +160,7 @@ bool ThreadPlanStepRange::InRange() {
                       s.GetData());
           }
         } else if (new_context.line_entry.range.GetBaseAddress().GetLoadAddress(
-                       m_thread.CalculateTarget().get()) != pc_load_addr) {
+                       &GetTarget()) != pc_load_addr) {
           // Another thing that sometimes happens here is that we step out of
           // one line into the MIDDLE of another line.  So far I mostly see
           // this due to bugs in the debug information. But we probably don't
@@ -174,8 +173,8 @@ bool ThreadPlanStepRange::InRange() {
           ret_value = true;
           if (log) {
             StreamString s;
-            m_addr_context.line_entry.Dump(&s, m_thread.CalculateTarget().get(),
-                                           true, Address::DumpStyleLoadAddress,
+            m_addr_context.line_entry.Dump(&s, &GetTarget(), true,
+                                           Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
             LLDB_LOGF(log,
@@ -195,14 +194,14 @@ bool ThreadPlanStepRange::InRange() {
 }
 
 bool ThreadPlanStepRange::InSymbol() {
-  lldb::addr_t cur_pc = m_thread.GetRegisterContext()->GetPC();
+  lldb::addr_t cur_pc = GetThread().GetRegisterContext()->GetPC();
   if (m_addr_context.function != nullptr) {
     return m_addr_context.function->GetAddressRange().ContainsLoadAddress(
-        cur_pc, m_thread.CalculateTarget().get());
+        cur_pc, &GetTarget());
   } else if (m_addr_context.symbol && m_addr_context.symbol->ValueIsAddress()) {
     AddressRange range(m_addr_context.symbol->GetAddressRef(),
                        m_addr_context.symbol->GetByteSize());
-    return range.ContainsLoadAddress(cur_pc, m_thread.CalculateTarget().get());
+    return range.ContainsLoadAddress(cur_pc, &GetTarget());
   }
   return false;
 }
@@ -216,15 +215,15 @@ bool ThreadPlanStepRange::InSymbol() {
 
 lldb::FrameComparison ThreadPlanStepRange::CompareCurrentFrameToStartFrame() {
   FrameComparison frame_order;
-
-  StackID cur_frame_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
+  Thread &thread = GetThread();
+  StackID cur_frame_id = thread.GetStackFrameAtIndex(0)->GetStackID();
 
   if (cur_frame_id == m_stack_id) {
     frame_order = eFrameCompareEqual;
   } else if (cur_frame_id < m_stack_id) {
     frame_order = eFrameCompareYounger;
   } else {
-    StackFrameSP cur_parent_frame = m_thread.GetStackFrameAtIndex(1);
+    StackFrameSP cur_parent_frame = thread.GetStackFrameAtIndex(1);
     StackID cur_parent_id;
     if (cur_parent_frame)
       cur_parent_id = cur_parent_frame->GetStackID();
@@ -377,11 +376,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                     "ThreadPlanStepRange::SetNextBranchBreakpoint - Setting "
                     "breakpoint %d (site %d) to run to address 0x%" PRIx64,
                     m_next_branch_bp_sp->GetID(), bp_site_id,
-                    run_to_address.GetLoadAddress(
-                        &m_thread.GetProcess()->GetTarget()));
+                    run_to_address.GetLoadAddress(&m_process.GetTarget()));
         }
 
-        m_next_branch_bp_sp->SetThreadID(m_thread.GetID());
+        m_next_branch_bp_sp->SetThreadID(m_tid);
         m_next_branch_bp_sp->SetBreakpointKind("next-branch-location");
 
         return true;
@@ -400,7 +398,7 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
 
   break_id_t bp_site_id = stop_info_sp->GetValue();
   BreakpointSiteSP bp_site_sp =
-      m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id);
+      m_process.GetBreakpointSiteList().FindByID(bp_site_id);
   if (!bp_site_sp)
     return false;
   else if (!bp_site_sp->IsBreakpointAtThisSite(m_next_branch_bp_sp->GetID()))
@@ -487,11 +485,11 @@ bool ThreadPlanStepRange::IsPlanStale() {
     // check that we are in the same symbol.
     if (!InRange()) {
       // Set plan Complete when we reach next instruction just after the range
-      lldb::addr_t addr = m_thread.GetRegisterContext()->GetPC() - 1;
+      lldb::addr_t addr = GetThread().GetRegisterContext()->GetPC() - 1;
       size_t num_ranges = m_address_ranges.size();
       for (size_t i = 0; i < num_ranges; i++) {
-        bool in_range = m_address_ranges[i].ContainsLoadAddress(
-            addr, m_thread.CalculateTarget().get());
+        bool in_range = 
+            m_address_ranges[i].ContainsLoadAddress(addr, &GetTarget());
         if (in_range) {
           SetPlanComplete();
         }
