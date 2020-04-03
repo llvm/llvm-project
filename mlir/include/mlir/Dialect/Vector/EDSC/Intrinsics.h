@@ -16,6 +16,7 @@ namespace intrinsics {
 
 using vector_broadcast = ValueBuilder<vector::BroadcastOp>;
 using vector_contract = ValueBuilder<vector::ContractionOp>;
+using vector_matmul = ValueBuilder<vector::MatmulOp>;
 using vector_print = OperationBuilder<vector::PrintOp>;
 
 } // namespace intrinsics

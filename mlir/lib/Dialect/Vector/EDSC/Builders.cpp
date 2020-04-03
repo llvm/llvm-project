@@ -30,7 +30,7 @@ Value mlir::edsc::ops::vector_contraction(
       ArrayRef<StringRef>{functional::map(toString, iteratorTypes)});
 }
 
-Value mlir::edsc::ops::vector_matmul(Value A, Value B, Value C) {
+Value mlir::edsc::ops::vector_contraction_matmul(Value A, Value B, Value C) {
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
   return vector_contraction(StructuredIndexed(A, {m, k}),
