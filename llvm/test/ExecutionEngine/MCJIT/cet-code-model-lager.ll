@@ -1,5 +1,4 @@
 ; RUN: %lli -code-model=large %s > /dev/null
-target triple = "x86_64-unknown-linux-gnu"
 
 @a = dso_local local_unnamed_addr global i32 1, align 4
 
