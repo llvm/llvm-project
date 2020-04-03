@@ -361,3 +361,27 @@ define float @unary_neg_neg_extra_use_x_and_y(float %x, float %y) {
   call void @use(float %negy)
   ret float %r
 }
+
+define float @reduce_precision(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision(
+; CHECK-NEXT:    [[MAXIMUM:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MAXIMUM]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %maximum = call double @llvm.maximum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %maximum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_fmf(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision_fmf(
+; CHECK-NEXT:    [[MAXIMUM:%.*]] = call nnan float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MAXIMUM]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %maximum = call nnan double @llvm.maximum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %maximum to float
+  ret float %trunc
+}
