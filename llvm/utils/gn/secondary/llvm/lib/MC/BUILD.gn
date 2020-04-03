@@ -55,6 +55,7 @@ static_library("MC") {
     "MCSubtargetInfo.cpp",
     "MCSymbol.cpp",
     "MCSymbolELF.cpp",
+    "MCSymbolXCOFF.cpp",
     "MCTargetOptions.cpp",
     "MCTargetOptionsCommandFlags.cpp",
     "MCValue.cpp",
