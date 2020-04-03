@@ -191,7 +191,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     # Modified version of lit.TestRunner.executeShTest to handle custom parsers correctly.
     def _executeShTest(self, test, litConfig, steps, fileDependencies=None):
-        recursiveExpansionLimit = 10 # TODO: Use the value in litConfig once we set it.
         if test.config.unsupported:
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
 
@@ -229,7 +228,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # need to resolve %{file_dependencies} now, because otherwise we won't be able to
         # make all paths absolute below.
         fileDependencies = lit.TestRunner.applySubstitutions(fileDependencies, substitutions,
-                                                             recursion_limit=recursiveExpansionLimit)
+                                                             recursion_limit=test.config.recursiveExpansionLimit)
 
         # Add the %{file_dependencies} substitution before we perform substitutions
         # inside the script.
@@ -239,6 +238,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
         # Perform substitution in the script itself.
         script = lit.TestRunner.applySubstitutions(script, substitutions,
-                                                   recursion_limit=recursiveExpansionLimit)
+                                                   recursion_limit=test.config.recursiveExpansionLimit)
 
         return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)

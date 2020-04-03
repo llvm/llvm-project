@@ -2,7 +2,7 @@ import os
 import sys
 
 
-class TestingConfig:
+class TestingConfig(object):
     """"
     TestingConfig - Information on the tests inside a suite.
     """
@@ -126,6 +126,19 @@ class TestingConfig:
         # Whether the suite should be tested early in a given run.
         self.is_early = bool(is_early)
         self.parallelism_group = parallelism_group
+        self._recursiveExpansionLimit = None
+
+    @property
+    def recursiveExpansionLimit(self):
+        return self._recursiveExpansionLimit
+
+    @recursiveExpansionLimit.setter
+    def recursiveExpansionLimit(self, value):
+        if value is not None and not isinstance(value, int):
+            raise ValueError('recursiveExpansionLimit must be either None or an integer (got <{}>)'.format(value))
+        if isinstance(value, int) and value < 0:
+            raise ValueError('recursiveExpansionLimit must be a non-negative integer (got <{}>)'.format(value))
+        self._recursiveExpansionLimit = value
 
     def finish(self, litConfig):
         """finish() - Finish this config object, after loading is complete."""
