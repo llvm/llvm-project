@@ -34,7 +34,7 @@ private:
   bool isWave32;
   BitVector RegPressureIgnoredUnits;
 
-  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
+  void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
@@ -49,7 +49,7 @@ public:
 
   /// Return the end register initially reserved for the scratch buffer in case
   /// spilling is needed.
-  unsigned reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
+  MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
@@ -112,13 +112,13 @@ public:
 
   StringRef getRegAsmName(unsigned Reg) const override;
 
-  unsigned getHWRegIndex(unsigned Reg) const {
+  unsigned getHWRegIndex(MCRegister Reg) const {
     return getEncodingValue(Reg) & 0xff;
   }
 
   /// Return the 'base' register class for this register.
   /// e.g. SGPR0 => SReg_32, VGPR => VGPR_32 SGPR0_SGPR1 -> SReg_32, etc.
-  const TargetRegisterClass *getPhysRegClass(unsigned Reg) const;
+  const TargetRegisterClass *getPhysRegClass(MCRegister Reg) const;
 
   /// \returns true if this class contains only SGPR registers
   bool isSGPRClass(const TargetRegisterClass *RC) const {
@@ -191,15 +191,15 @@ public:
   /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
   bool opCanUseInlineConstant(unsigned OpType) const;
 
-  unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
-                              const TargetRegisterClass *RC,
-                              const MachineFunction &MF) const;
+  MCRegister findUnusedRegister(const MachineRegisterInfo &MRI,
+                                const TargetRegisterClass *RC,
+                                const MachineFunction &MF) const;
 
   const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
-                                               unsigned Reg) const;
-  bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
-  bool isAGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
-  bool isVectorRegister(const MachineRegisterInfo &MRI, unsigned Reg) const {
+                                               Register Reg) const;
+  bool isVGPR(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isAGPR(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isVectorRegister(const MachineRegisterInfo &MRI, Register Reg) const {
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
@@ -226,7 +226,7 @@ public:
 
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
-  unsigned getReturnAddressReg(const MachineFunction &MF) const;
+  MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
   getRegClassForSizeOnBank(unsigned Size,
@@ -254,12 +254,12 @@ public:
                     : &AMDGPU::SReg_64_XEXECRegClass;
   }
 
-  unsigned getVCC() const;
+  MCRegister getVCC() const;
 
   const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
-  MachineInstr *findReachingDef(unsigned Reg, unsigned SubReg,
+  MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
                                 MachineInstr &Use,
                                 MachineRegisterInfo &MRI,
                                 LiveIntervals *LIS) const;
@@ -292,10 +292,10 @@ private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,
                            int Index,
-                           unsigned ValueReg,
+                           Register ValueReg,
                            bool ValueIsKill,
-                           unsigned ScratchRsrcReg,
-                           unsigned ScratchOffsetReg,
+                           MCRegister ScratchRsrcReg,
+                           MCRegister ScratchOffsetReg,
                            int64_t InstrOffset,
                            MachineMemOperand *MMO,
                            RegScavenger *RS) const;
