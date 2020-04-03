@@ -165,9 +165,8 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
       // If we find the complete version we're done.
       offsets.push_back(*ref);
       return;
-    } else {
-      incomplete_types.push_back(*ref);
     }
+    incomplete_types.push_back(*ref);
   }
 
   offsets.insert(offsets.end(), incomplete_types.begin(),
