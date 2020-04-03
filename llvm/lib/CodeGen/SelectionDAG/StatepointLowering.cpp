@@ -482,8 +482,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   const bool LiveInDeopt =
     SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
 
-  auto isGCValue =[&](const Value *V) {
-    return is_contained(SI.Ptrs, V) || is_contained(SI.Bases, V);
+  auto isGCValue = [&](const Value *V) {
+    auto *Ty = V->getType();
+    if (!Ty->isPtrOrPtrVectorTy())
+      return false;
+    if (auto *GFI = Builder.GFI)
+      if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
+        return *IsManaged;
+    return true; // conservative
   };
 
   // Before we actually start lowering (and allocating spill slots for values),
