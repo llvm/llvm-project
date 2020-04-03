@@ -268,7 +268,7 @@ class StdLibraryFunctionsChecker
 
     /// Try our best to figure out if the call expression is the call of
     /// *the* library function to which this specification applies.
-    bool matchesCall(const CallExpr *CE) const;
+    bool matchesCall(const FunctionDecl *FD) const;
   };
 
   // The same function (as in, function identifier) may have different
@@ -316,7 +316,6 @@ public:
 
 private:
   Optional<Summary> findFunctionSummary(const FunctionDecl *FD,
-                                        const CallExpr *CE,
                                         CheckerContext &C) const;
   Optional<Summary> findFunctionSummary(const CallEvent &Call,
                                         CheckerContext &C) const;
@@ -532,13 +531,13 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
 }
 
 bool StdLibraryFunctionsChecker::Summary::matchesCall(
-    const CallExpr *CE) const {
+    const FunctionDecl *FD) const {
   // Check number of arguments:
-  if (CE->getNumArgs() != ArgTys.size())
+  if (FD->param_size() != ArgTys.size())
     return false;
 
   // Check return type if relevant:
-  if (!RetTy.isNull() && RetTy != CE->getType().getCanonicalType())
+  if (!RetTy.isNull() && RetTy != FD->getReturnType().getCanonicalType())
     return false;
 
   // Check argument types when relevant:
@@ -550,8 +549,7 @@ bool StdLibraryFunctionsChecker::Summary::matchesCall(
 
     assertTypeSuitableForSummary(FormalT);
 
-    QualType ActualT = StdLibraryFunctionsChecker::getArgType(CE, I);
-    assert(ActualT.isCanonical());
+    QualType ActualT = FD->getParamDecl(I)->getType().getCanonicalType();
     if (ActualT != FormalT)
       return false;
   }
@@ -561,12 +559,7 @@ bool StdLibraryFunctionsChecker::Summary::matchesCall(
 
 Optional<StdLibraryFunctionsChecker::Summary>
 StdLibraryFunctionsChecker::findFunctionSummary(const FunctionDecl *FD,
-                                                const CallExpr *CE,
                                                 CheckerContext &C) const {
-  // Note: we cannot always obtain FD from CE
-  // (eg. virtual call, or call by pointer).
-  assert(CE);
-
   if (!FD)
     return None;
 
@@ -590,7 +583,7 @@ StdLibraryFunctionsChecker::findFunctionSummary(const FunctionDecl *FD,
   // return values.
   const Summaries &SpecVariants = FSMI->second;
   for (const Summary &Spec : SpecVariants)
-    if (Spec.matchesCall(CE))
+    if (Spec.matchesCall(FD))
       return Spec;
 
   return None;
@@ -602,10 +595,7 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD)
     return None;
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return None;
-  return findFunctionSummary(FD, CE, C);
+  return findFunctionSummary(FD, C);
 }
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
@@ -630,9 +620,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType LongTy = ACtx.LongTy;
   const QualType LongLongTy = ACtx.LongLongTy;
   const QualType SizeTy = ACtx.getSizeType();
-  const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *T
+  const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *
+  const QualType VoidPtrRestrictTy =
+      ACtx.getRestrictType(VoidPtrTy); // void *restrict
   const QualType ConstVoidPtrTy =
-      ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *T
+      ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *
+  const QualType ConstCharPtrTy =
+      ACtx.getPointerType(ACtx.CharTy.withConst()); // const char *
+  const QualType ConstVoidPtrRestrictTy =
+      ACtx.getRestrictType(ConstVoidPtrTy); // const void *restrict
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
@@ -721,7 +717,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                ReturnValueCondition(WithinRange, Range(-1, Max))});
   };
   auto Fread = [&]() {
-    return Summary(ArgTypes{VoidPtrTy, Irrelevant, SizeTy, Irrelevant},
+    return Summary(ArgTypes{VoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
                    RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
@@ -729,8 +725,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         .ArgConstraint(NotNull(ArgNo(0)));
   };
   auto Fwrite = [&]() {
-    return Summary(ArgTypes{ConstVoidPtrTy, Irrelevant, SizeTy, Irrelevant},
-                   RetType{SizeTy}, NoEvalCall)
+    return Summary(
+               ArgTypes{ConstVoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
+               RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
         })
@@ -963,7 +960,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         {"__defaultparam", Summaries{Summary(ArgTypes{Irrelevant, IntTy},
                                              RetType{IntTy}, EvalCallAsPure)
                                          .ArgConstraint(NotNull(ArgNo(0)))}},
-    };
+        {"__variadic", Summaries{Summary(ArgTypes{VoidPtrTy, ConstCharPtrTy},
+                                         RetType{IntTy}, EvalCallAsPure)
+                                     .ArgConstraint(NotNull(ArgNo(0)))
+                                     .ArgConstraint(NotNull(ArgNo(1)))}}};
     for (auto &E : TestFunctionSummaryMap) {
       auto InsertRes =
           FunctionSummaryMap.insert({std::string(E.getKey()), E.getValue()});
