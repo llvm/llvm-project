@@ -203,8 +203,7 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
-  virtual bool
-  isDivergentRegClass(const TargetRegisterClass *RC) const override {
+  bool isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
   }
 
