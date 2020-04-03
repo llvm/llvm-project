@@ -21,19 +21,19 @@ void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
                                       DIEArray &die_offsets) {
   if (tag == 0) {
     ExtractDIEArray(die_info_array, die_offsets);
-  } else {
-    const size_t count = die_info_array.size();
-    for (size_t i = 0; i < count; ++i) {
-      const dw_tag_t die_tag = die_info_array[i].tag;
-      bool tag_matches = die_tag == 0 || tag == die_tag;
-      if (!tag_matches) {
-        if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
-          tag_matches =
-              tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
-      }
-      if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i]);
+    return;
+  }
+
+  const size_t count = die_info_array.size();
+  for (size_t i = 0; i < count; ++i) {
+    const dw_tag_t die_tag = die_info_array[i].tag;
+    bool tag_matches = die_tag == 0 || tag == die_tag;
+    if (!tag_matches) {
+      if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
+        tag_matches = tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
     }
+    if (tag_matches)
+      die_offsets.emplace_back(die_info_array[i]);
   }
 }
 
@@ -43,21 +43,21 @@ void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
                                       DIEArray &die_offsets) {
   if (tag == 0) {
     ExtractDIEArray(die_info_array, die_offsets);
-  } else {
-    const size_t count = die_info_array.size();
-    for (size_t i = 0; i < count; ++i) {
-      if (qualified_name_hash != die_info_array[i].qualified_name_hash)
-        continue;
-      const dw_tag_t die_tag = die_info_array[i].tag;
-      bool tag_matches = die_tag == 0 || tag == die_tag;
-      if (!tag_matches) {
-        if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
-          tag_matches =
-              tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
-      }
-      if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i]);
+    return;
+  }
+
+  const size_t count = die_info_array.size();
+  for (size_t i = 0; i < count; ++i) {
+    if (qualified_name_hash != die_info_array[i].qualified_name_hash)
+      continue;
+    const dw_tag_t die_tag = die_info_array[i].tag;
+    bool tag_matches = die_tag == 0 || tag == die_tag;
+    if (!tag_matches) {
+      if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
+        tag_matches = tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
     }
+    if (tag_matches)
+      die_offsets.emplace_back(die_info_array[i]);
   }
 }
 
@@ -67,22 +67,22 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i) {
     const dw_tag_t die_tag = die_info_array[i].tag;
-    if (die_tag == 0 || die_tag == DW_TAG_class_type ||
-        die_tag == DW_TAG_structure_type) {
-      if (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) {
-        if (return_implementation_only_if_available) {
-          // We found the one true definition for this class, so only return
-          // that
-          die_offsets.clear();
-          die_offsets.emplace_back(die_info_array[i]);
-          return;
-        } else {
-          // Put the one true definition as the first entry so it matches first
-          die_offsets.emplace(die_offsets.begin(), die_info_array[i]);
-        }
-      } else {
+    if (die_tag != 0 && die_tag != DW_TAG_class_type &&
+        die_tag != DW_TAG_structure_type)
+      continue;
+    if (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) {
+      if (return_implementation_only_if_available) {
+        // We found the one true definition for this class, so only return
+        // that
+        die_offsets.clear();
         die_offsets.emplace_back(die_info_array[i]);
+        return;
+      } else {
+        // Put the one true definition as the first entry so it matches first
+        die_offsets.emplace(die_offsets.begin(), die_info_array[i]);
       }
+    } else {
+      die_offsets.emplace_back(die_info_array[i]);
     }
   }
 }
@@ -548,24 +548,24 @@ size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
 size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
     llvm::StringRef name, DIEArray &die_offsets, bool must_be_implementation) {
   DIEInfoArray die_info_array;
-  if (FindByName(name, die_info_array)) {
-    if (must_be_implementation &&
-        GetHeader().header_data.ContainsAtom(eAtomTypeTypeFlags)) {
-      // If we have two atoms, then we have the DIE offset and the type flags
-      // so we can find the objective C class efficiently.
-      DWARFMappedHash::ExtractTypesFromDIEArray(die_info_array, UINT32_MAX,
-                                                eTypeFlagClassIsImplementation,
-                                                die_offsets);
-    } else {
-      // We don't only want the one true definition, so try and see what we can
-      // find, and only return class or struct DIEs. If we do have the full
-      // implementation, then return it alone, else return all possible
-      // matches.
-      const bool return_implementation_only_if_available = true;
-      DWARFMappedHash::ExtractClassOrStructDIEArray(
-          die_info_array, return_implementation_only_if_available, die_offsets);
-    }
+  if (!FindByName(name, die_info_array))
+    return 0;
+  if (must_be_implementation &&
+      GetHeader().header_data.ContainsAtom(eAtomTypeTypeFlags)) {
+    // If we have two atoms, then we have the DIE offset and the type flags
+    // so we can find the objective C class efficiently.
+    DWARFMappedHash::ExtractTypesFromDIEArray(die_info_array, UINT32_MAX,
+                                              eTypeFlagClassIsImplementation,
+                                              die_offsets);
+    return die_offsets.size();
   }
+  // We don't only want the one true definition, so try and see what we can
+  // find, and only return class or struct DIEs. If we do have the full
+  // implementation, then return it alone, else return all possible
+  // matches.
+  const bool return_implementation_only_if_available = true;
+  DWARFMappedHash::ExtractClassOrStructDIEArray(
+      die_info_array, return_implementation_only_if_available, die_offsets);
   return die_offsets.size();
 }
 
