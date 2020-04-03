@@ -1,4 +1,3 @@
-include_directories(include)
 add_subdirectory(include)
 
 set(LLVM_LINK_COMPONENTS
@@ -7,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
-mlir_tablegen(ToyCombine.inc -gen-rewriters)
+mlir_tablegen(ToyCombine.inc -gen-rewriters "-I${CMAKE_CURRENT_SOURCE_DIR}/include")
 add_public_tablegen_target(ToyCh6CombineIncGen)
 
 add_toy_chapter(toyc-ch6
@@ -26,6 +25,7 @@ add_toy_chapter(toyc-ch6
   ToyCh6CombineIncGen
   )
 
+include_directories(include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
