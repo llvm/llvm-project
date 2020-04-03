@@ -344,6 +344,10 @@ public:
   /// otherwise an assert will be issued.
   void eraseOp(Operation *op) override;
 
+  /// PatternRewriter hook for creating a new block with the given arguments.
+  Block *createBlock(Region *parent, Region::iterator insertPt = {},
+                     TypeRange argTypes = llvm::None) override;
+
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
 
