@@ -1566,6 +1566,55 @@ static LogicalResult verify(TransposeOp op) {
   return success();
 }
 
+namespace {
+
+// Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
+class TransposeFolder final : public OpRewritePattern<TransposeOp> {
+public:
+  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    // Wrapper around TransposeOp::getTransp() for cleaner code.
+    auto getPermutation = [](TransposeOp transpose) {
+      SmallVector<int64_t, 4> permutation;
+      transpose.getTransp(permutation);
+      return permutation;
+    };
+
+    // Composes two permutations: result[i] = permutation1[permutation2[i]].
+    auto composePermutations = [](ArrayRef<int64_t> permutation1,
+                                  ArrayRef<int64_t> permutation2) {
+      SmallVector<int64_t, 4> result;
+      for (auto index : permutation2)
+        result.push_back(permutation1[index]);
+      return result;
+    };
+
+    // Return if the input of 'transposeOp' is not defined by another transpose.
+    TransposeOp parentTransposeOp =
+        dyn_cast_or_null<TransposeOp>(transposeOp.vector().getDefiningOp());
+    if (!parentTransposeOp)
+      return failure();
+
+    SmallVector<int64_t, 4> permutation = composePermutations(
+        getPermutation(parentTransposeOp), getPermutation(transposeOp));
+    // Replace 'transposeOp' with a new transpose operation.
+    rewriter.replaceOpWithNewOp<TransposeOp>(
+        transposeOp, transposeOp.getResult().getType(),
+        parentTransposeOp.vector(),
+        vector::getVectorSubscriptAttr(rewriter, permutation));
+    return success();
+  }
+};
+
+} // end anonymous namespace
+
+void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results.insert<TransposeFolder>(context);
+}
+
 void TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(transp(), results);
 }
@@ -1704,7 +1753,8 @@ void CreateMaskOp::getCanonicalizationPatterns(
 
 void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<CreateMaskFolder, StridedSliceConstantMaskFolder>(context);
+  patterns.insert<CreateMaskFolder, StridedSliceConstantMaskFolder,
+                  TransposeFolder>(context);
 }
 
 namespace mlir {
