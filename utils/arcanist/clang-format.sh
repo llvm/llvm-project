@@ -10,11 +10,11 @@ set -euo pipefail
 
 # To skip running all linters when creating/updating a diff, use `arc diff --nolint`.
 
-if ! hash git-clang-format >/dev/null; then
+if ! hash clang-format-diff >/dev/null; then
   # advice severity level is completely non-disruptive.
   # switch to warning or error if you want to prompt the user.
   echo "advice"
-  echo "git-clang-format not found in user's PATH; not linting file."
+  echo "clang-format-diff not found in user's PATH; not linting file."
   echo "===="
   exit 0
 fi
@@ -37,13 +37,13 @@ trap 'cleanup' INT HUP QUIT TERM EXIT
 
 # Arcanist can filter out lint messages for unchanged lines, but for that, we
 # need to generate line by line lint messages. Instead, we generate one lint
-# message on line 1, char 1 with file content edited using git-clang-format.
+# message on line 1, char 1 with file content edited using clang-format-diff.
 if git rev-parse --git-dir >/dev/null; then
   arc_base_commit=$(arc which --show-base)
   # An alternative is to use git-clang-format.
-  >&2 git-clang-format --quiet --force --style file "${arc_base_commit}"
+  git diff -U0 --no-color "${arc_base_commit}"| clang-format-diff -style file -i -p1
 else
-  >&2 echo "repo is expected to be a git directory"
+  svn diff --diff-cmd=diff -x -U0 "${src_file}" | clang-format-diff -style LLVM -i
 fi
 
 cp -p "${src_file}" "${formatted_file}"
