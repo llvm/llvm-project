@@ -513,8 +513,8 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                                      unsigned &SrcReg2, int &Mask,
+bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                      Register &SrcReg2, int &Mask,
                                       int &Value) const {
   assert(MI.isCompare() && "Caller should have checked for a comparison");
 
@@ -532,8 +532,8 @@ bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
 
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Pred,
-                                       unsigned DstReg, unsigned TrueReg,
-                                       unsigned FalseReg, int &CondCycles,
+                                       Register DstReg, Register TrueReg,
+                                       Register FalseReg, int &CondCycles,
                                        int &TrueCycles,
                                        int &FalseCycles) const {
   // Not all subtargets have LOCR instructions.
@@ -566,10 +566,10 @@ bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
 void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
-                                    const DebugLoc &DL, unsigned DstReg,
+                                    const DebugLoc &DL, Register DstReg,
                                     ArrayRef<MachineOperand> Pred,
-                                    unsigned TrueReg,
-                                    unsigned FalseReg) const {
+                                    Register TrueReg,
+                                    Register FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
 
@@ -607,7 +607,7 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                     unsigned Reg,
+                                     Register Reg,
                                      MachineRegisterInfo *MRI) const {
   unsigned DefOpc = DefMI.getOpcode();
   if (DefOpc != SystemZ::LHIMux && DefOpc != SystemZ::LHI &&

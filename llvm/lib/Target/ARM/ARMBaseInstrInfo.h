@@ -232,7 +232,7 @@ public:
   bool shouldSink(const MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     unsigned DestReg, unsigned SubIdx,
+                     Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
 
@@ -296,16 +296,16 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &CmpMask,
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
 
   /// optimizeCompareInstr - Convert the instruction to set the zero flag so
   /// that we can remove a "comparison with zero"; Remove a redundant CMP
   /// instruction if the flags can be updated in the same way by an earlier
   /// instruction such as SUB.
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int CmpMask, int CmpValue,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   bool analyzeSelect(const MachineInstr &MI,
@@ -318,7 +318,7 @@ public:
 
   /// FoldImmediate - 'Reg' is known to be defined by a move immediate
   /// instruction, try to fold the immediate into the use instruction.
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   unsigned getNumMicroOps(const InstrItineraryData *ItinData,

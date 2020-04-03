@@ -297,19 +297,19 @@ public:
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
-                       ArrayRef<MachineOperand> Cond, unsigned DstReg,
-                       unsigned TrueReg, unsigned FalseReg, int &CondCycles,
+                       ArrayRef<MachineOperand> Cond, Register DstReg,
+                       Register TrueReg, Register FalseReg, int &CondCycles,
                        int &TrueCycles, int &FalseCycles) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                    unsigned TrueReg, unsigned FalseReg) const override;
+                    Register DstReg, ArrayRef<MachineOperand> Cond,
+                    Register TrueReg, Register FalseReg) const override;
 
   void insertVectorSelect(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator I, const DebugLoc &DL,
-                          unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                          unsigned TrueReg, unsigned FalseReg) const;
+                          Register DstReg, ArrayRef<MachineOperand> Cond,
+                          Register TrueReg, Register FalseReg) const;
 
   unsigned getAddressSpaceForPseudoSourceKind(
              unsigned Kind) const override;
@@ -320,7 +320,7 @@ public:
 
   bool isFoldableCopy(const MachineInstr &MI) const;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
