@@ -24,7 +24,7 @@ void test_fma(void) {
   // CHECK: fneg <2 x double> [[RESULT]]
 
   vf = __builtin_vsx_xvmsubasp(vf, vf, vf);
-  // CHECK: [[RESULT:%[^ ]+]] fneg <4 x float> %{{.*}}
+  // CHECK: [[RESULT:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK: @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[RESULT]])
 
   vd = __builtin_vsx_xvmsubadp(vd, vd, vd);
