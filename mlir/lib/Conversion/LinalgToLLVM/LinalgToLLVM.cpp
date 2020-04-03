@@ -400,8 +400,13 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   // Insert before module terminator.
   rewriter.setInsertionPoint(module.getBody(),
                              std::prev(module.getBody()->end()));
-  rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType,
-                          ArrayRef<NamedAttribute>{});
+  FuncOp funcOp =
+      rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType,
+                              ArrayRef<NamedAttribute>{});
+  // Insert a function attribute that will trigger the emission of the
+  // corresponding `_mlir_ciface_xxx` interface so that external libraries see
+  // a normalized ABI. This interface is added during std to llvm conversion.
+  funcOp.setAttr("llvm.emit_c_interface", UnitAttr::get(op->getContext()));
   return fnNameAttr;
 }
 
@@ -573,8 +578,7 @@ void ConvertLinalgToLLVMPass::runOnModule() {
   LLVMTypeConverter converter(&getContext());
   populateAffineToStdConversionPatterns(patterns, &getContext());
   populateLoopToStdConversionPatterns(patterns, &getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns, /*useAlloca=*/false,
-                                      /*emitCWrappers=*/true);
+  populateStdToLLVMConversionPatterns(converter, patterns);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateLinalgToStandardConversionPatterns(patterns, &getContext());
