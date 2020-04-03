@@ -107,6 +107,7 @@ static_library("LLVMX86CodeGen") {
     "X86InstructionSelector.cpp",
     "X86InterleavedAccess.cpp",
     "X86LegalizerInfo.cpp",
+    "X86LoadValueInjectionRetHardening.cpp",
     "X86MCInstLower.cpp",
     "X86MachineFunctionInfo.cpp",
     "X86MacroFusion.cpp",
