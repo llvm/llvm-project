@@ -1486,7 +1486,7 @@ function(configure_lit_site_cfg site_in site_out)
     string(REPLACE ";" "\\;" ARG_PATH_VALUES_ESCAPED "${ARG_PATH_VALUES}")
     get_filename_component(OUTPUT_DIR ${site_out} DIRECTORY)
     execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c"
-      "import os, sys; sys.stdout.write(';'.join(os.path.relpath(p, sys.argv[1]) if p else '' for p in sys.argv[2].split(';')))"
+      "import os, sys; sys.stdout.write(';'.join(os.path.relpath(p, sys.argv[1]).replace('\\\\', '/') if p else '' for p in sys.argv[2].split(';')))"
       ${OUTPUT_DIR}
       ${ARG_PATH_VALUES_ESCAPED}
       OUTPUT_VARIABLE ARG_PATH_VALUES_RELATIVE)
