@@ -14,6 +14,8 @@
 ///
 /// Currently supported thunks include:
 /// - Retpoline -- A RET-implemented trampoline that lowers indirect calls
+/// - LVI Thunk -- A CALL/JMP-implemented thunk that forces load serialization
+///   before making an indirect call/jump
 ///
 /// Note that the reason that this is implemented as a MachineFunctionPass and
 /// not a ModulePass is that ModulePasses at this point in the LLVM X86 pipeline
@@ -44,11 +46,14 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-retpoline-thunks"
 
 static const char RetpolineNamePrefix[] = "__llvm_retpoline_";
-static const char R11RetpolineName[]    = "__llvm_retpoline_r11";
-static const char EAXRetpolineName[]    = "__llvm_retpoline_eax";
-static const char ECXRetpolineName[]    = "__llvm_retpoline_ecx";
-static const char EDXRetpolineName[]    = "__llvm_retpoline_edx";
-static const char EDIRetpolineName[]    = "__llvm_retpoline_edi";
+static const char R11RetpolineName[] = "__llvm_retpoline_r11";
+static const char EAXRetpolineName[] = "__llvm_retpoline_eax";
+static const char ECXRetpolineName[] = "__llvm_retpoline_ecx";
+static const char EDXRetpolineName[] = "__llvm_retpoline_edx";
+static const char EDIRetpolineName[] = "__llvm_retpoline_edi";
+
+static const char LVIThunkNamePrefix[] = "__llvm_lvi_thunk_";
+static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 
 namespace {
 template <typename Derived> class ThunkInserter {
@@ -80,6 +85,38 @@ struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   void populateThunk(MachineFunction &MF);
 };
 
+struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
+  const char *getThunkPrefix() { return LVIThunkNamePrefix; }
+  bool mayUseThunk(const MachineFunction &MF) {
+    return MF.getSubtarget<X86Subtarget>().useLVIControlFlowIntegrity();
+  }
+  void insertThunks(MachineModuleInfo &MMI) {
+    createThunkFunction(MMI, R11LVIThunkName);
+  }
+  void populateThunk(MachineFunction &MF) {
+    // Grab the entry MBB and erase any other blocks. O0 codegen appears to
+    // generate two bbs for the entry block.
+    MachineBasicBlock *Entry = &MF.front();
+    Entry->clear();
+    while (MF.size() > 1)
+      MF.erase(std::next(MF.begin()));
+
+    // This code mitigates LVI by replacing each indirect call/jump with a
+    // direct call/jump to a thunk that looks like:
+    // ```
+    // lfence
+    // jmpq *%r11
+    // ```
+    // This ensures that if the value in register %r11 was loaded from memory,
+    // then the value in %r11 is (architecturally) correct prior to the jump.
+    const TargetInstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+    BuildMI(&MF.front(), DebugLoc(), TII->get(X86::LFENCE));
+    BuildMI(&MF.front(), DebugLoc(), TII->get(X86::JMP64r)).addReg(X86::R11);
+    MF.front().addLiveIn(X86::R11);
+    return;
+  }
+};
+
 class X86IndirectThunks : public MachineFunctionPass {
 public:
   static char ID;
@@ -98,7 +135,7 @@ public:
   }
 
 private:
-  std::tuple<RetpolineThunkInserter> TIs;
+  std::tuple<RetpolineThunkInserter, LVIThunkInserter> TIs;
 
   // FIXME: When LLVM moves to C++17, these can become folds
   template <typename... ThunkInserterT>
