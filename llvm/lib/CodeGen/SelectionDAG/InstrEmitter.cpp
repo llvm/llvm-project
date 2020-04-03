@@ -486,8 +486,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
   for (SDNode *User : Node->uses()) {
     if (User->getOpcode() == ISD::CopyToReg &&
         User->getOperand(2).getNode() == Node) {
-      unsigned DestReg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-      if (Register::isVirtualRegister(DestReg)) {
+      Register DestReg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+      if (DestReg.isVirtual()) {
         VRBase = DestReg;
         break;
       }
@@ -502,7 +502,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     const TargetRegisterClass *TRC =
       TLI->getRegClassFor(Node->getSimpleValueType(0), Node->isDivergent());
 
-    unsigned Reg;
+    Register Reg;
     MachineInstr *DefMI;
     RegisterSDNode *R = dyn_cast<RegisterSDNode>(Node->getOperand(0));
     if (R && Register::isPhysicalRegister(R->getReg())) {
@@ -513,7 +513,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       DefMI = MRI->getVRegDef(Reg);
     }
 
-    unsigned SrcReg, DstReg, DefSubIdx;
+    Register SrcReg, DstReg;
+    unsigned DefSubIdx;
     if (DefMI &&
         TII->isCoalescableExtInstr(*DefMI, SrcReg, DstReg, DefSubIdx) &&
         SubIdx == DefSubIdx &&
@@ -531,7 +532,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       // Reg may not support a SubIdx sub-register, and we may need to
       // constrain its register class or issue a COPY to a compatible register
       // class.
-      if (Register::isVirtualRegister(Reg))
+      if (Reg.isVirtual())
         Reg = ConstrainForSubReg(Reg, SubIdx,
                                  Node->getOperand(0).getSimpleValueType(),
                                  Node->isDivergent(), Node->getDebugLoc());
@@ -543,7 +544,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       MachineInstrBuilder CopyMI =
           BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
                   TII->get(TargetOpcode::COPY), VRBase);
-      if (Register::isVirtualRegister(Reg))
+      if (Reg.isVirtual())
         CopyMI.addReg(Reg, 0, SubIdx);
       else
         CopyMI.addReg(TRI->getSubReg(Reg, SubIdx));

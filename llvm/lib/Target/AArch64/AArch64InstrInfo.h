@@ -52,8 +52,8 @@ public:
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
-  bool isCoalescableExtInstr(const MachineInstr &MI, unsigned &SrcReg,
-                             unsigned &DstReg, unsigned &SubIdx) const override;
+  bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
+                             Register &DstReg, unsigned &SubIdx) const override;
 
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
@@ -197,12 +197,12 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       unsigned, unsigned, unsigned, int &, int &,
+                       Register, Register, Register, int &, int &,
                        int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    const DebugLoc &DL, unsigned DstReg,
-                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
-                    unsigned FalseReg) const override;
+                    const DebugLoc &DL, Register DstReg,
+                    ArrayRef<MachineOperand> Cond, Register TrueReg,
+                    Register FalseReg) const override;
   void getNoop(MCInst &NopInst) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -212,13 +212,13 @@ public:
   /// analyzeCompare - For a comparison instruction, return the source registers
   /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
   /// Return true if the comparison instruction can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &CmpMask,
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
   /// optimizeCompareInstr - Convert the instruction supplying the argument to
   /// the comparison into one that sets the zero bit in the flags register.
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int CmpMask, int CmpValue,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
   bool optimizeCondBranch(MachineInstr &MI) const override;
 
