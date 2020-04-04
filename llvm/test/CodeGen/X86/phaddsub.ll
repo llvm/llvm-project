@@ -290,10 +290,10 @@ define <8 x i16> @phsubw1_reverse(<8 x i16> %x, <8 x i16> %y) {
 ; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
 ; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1],xmm1[2],xmm3[3],xmm1[4],xmm3[5],xmm1[6],xmm3[7]
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm3[1],xmm0[2],xmm3[3],xmm0[4],xmm3[5],xmm0[6],xmm3[7]
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsubw %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    retq
   %a = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
