@@ -144,7 +144,8 @@ static T *coerceAvailableValueToLoadTypeHelper(T *StoredVal, Type *LoadedTy,
 ///
 /// If we can't do it, return null.
 Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilder<> &IRB, const DataLayout &DL) {
+                                      IRBuilderBase &IRB,
+                                      const DataLayout &DL) {
   return coerceAvailableValueToLoadTypeHelper(StoredVal, LoadedTy, IRB, DL);
 }
 

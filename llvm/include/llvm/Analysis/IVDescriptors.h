@@ -20,12 +20,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
@@ -37,6 +35,7 @@ class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
 class DataLayout;
+class DemandedBits;
 class Loop;
 class LoopInfo;
 class OptimizationRemarkEmitter;

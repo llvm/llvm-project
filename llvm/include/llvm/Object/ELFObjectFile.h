@@ -1027,8 +1027,12 @@ basic_symbol_iterator ELFObjectFile<ELFT>::symbol_end() const {
 
 template <class ELFT>
 elf_symbol_iterator ELFObjectFile<ELFT>::dynamic_symbol_begin() const {
-  DataRefImpl Sym = toDRI(DotDynSymSec, 0);
-  return symbol_iterator(SymbolRef(Sym, this));
+  if (!DotDynSymSec || DotDynSymSec->sh_size < sizeof(Elf_Sym))
+    // Ignore errors here where the dynsym is empty or sh_size less than the
+    // size of one symbol. These should be handled elsewhere.
+    return symbol_iterator(SymbolRef(toDRI(DotDynSymSec, 0), this));
+  // Skip 0-index NULL symbol.
+  return symbol_iterator(SymbolRef(toDRI(DotDynSymSec, 1), this));
 }
 
 template <class ELFT>

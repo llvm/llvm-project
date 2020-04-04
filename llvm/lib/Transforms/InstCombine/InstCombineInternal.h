@@ -724,11 +724,10 @@ public:
 
     // Make sure that we reprocess all operands now that we reduced their
     // use counts.
-    if (I.getNumOperands() < 8) {
-      for (Use &Operand : I.operands())
-        if (auto *Inst = dyn_cast<Instruction>(Operand))
-          Worklist.add(Inst);
-    }
+    for (Use &Operand : I.operands())
+      if (auto *Inst = dyn_cast<Instruction>(Operand))
+        Worklist.add(Inst);
+
     Worklist.remove(&I);
     I.eraseFromParent();
     MadeIRChange = true;
