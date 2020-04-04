@@ -16,7 +16,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -26,11 +25,6 @@
 
 using namespace mlir;
 using namespace mlir::detail;
-
-static llvm::cl::opt<bool> printStackTraceOnDiagnostic(
-    "mlir-print-stacktrace-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
-                   "as an attached note"));
 
 //===----------------------------------------------------------------------===//
 // DiagnosticArgument
@@ -278,13 +272,14 @@ void DiagnosticEngine::emit(Diagnostic diag) {
 /// diagnostic.
 static InFlightDiagnostic
 emitDiag(Location location, DiagnosticSeverity severity, const Twine &message) {
-  auto &diagEngine = location->getContext()->getDiagEngine();
+  MLIRContext *ctx = location->getContext();
+  auto &diagEngine = ctx->getDiagEngine();
   auto diag = diagEngine.emit(location, severity);
   if (!message.isTriviallyEmpty())
     diag << message;
 
   // Add the stack trace as a note if necessary.
-  if (printStackTraceOnDiagnostic) {
+  if (ctx->shouldPrintStackTraceOnDiagnostic()) {
     std::string bt;
     {
       llvm::raw_string_ostream stream(bt);
