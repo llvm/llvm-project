@@ -538,10 +538,10 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    packssdw %xmm6, %xmm0
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm1, %xmm3
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0],xmm1[1],xmm4[2],xmm1[3],xmm4[4],xmm1[5],xmm4[6],xmm1[7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm1[1],xmm3[2],xmm1[3],xmm3[4],xmm1[5],xmm3[6],xmm1[7]
+; SSE41-NEXT:    packusdw %xmm3, %xmm4
 ; SSE41-NEXT:    pandn %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -905,10 +905,10 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    packssdw %xmm6, %xmm4
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pshufb %xmm1, %xmm3
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm1[1],xmm3[2],xmm1[3],xmm3[4],xmm1[5],xmm3[6],xmm1[7]
+; SSE41-NEXT:    packusdw %xmm3, %xmm0
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1033,10 +1033,10 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    packssdw %xmm6, %xmm4
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pshufb %xmm1, %xmm3
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm1[1],xmm3[2],xmm1[3],xmm3[4],xmm1[5],xmm3[6],xmm1[7]
+; SSE41-NEXT:    packusdw %xmm3, %xmm0
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;

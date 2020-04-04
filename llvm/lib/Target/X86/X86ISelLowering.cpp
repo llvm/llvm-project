@@ -14713,6 +14713,29 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return V;
 
+  // Attempt to lower using compaction, SSE41 is necessary for PACKUSDW.
+  // We could use SIGN_EXTEND_INREG+PACKSSDW for older targets but this seems to
+  // be slower than a PSHUFLW+PSHUFHW+PSHUFD chain.
+  int NumEvenDrops = canLowerByDroppingEvenElements(Mask, false);
+  if ((NumEvenDrops == 1 || NumEvenDrops == 2) && Subtarget.hasSSE41() &&
+      !Subtarget.hasVLX()) {
+    SmallVector<SDValue, 8> DWordClearOps(4, DAG.getConstant(0, DL, MVT::i32));
+    for (unsigned i = 0; i != 4; i += 1 << (NumEvenDrops - 1))
+      DWordClearOps[i] = DAG.getConstant(0xFFFF, DL, MVT::i32);
+    SDValue DWordClearMask = DAG.getBuildVector(MVT::v4i32, DL, DWordClearOps);
+    V1 = DAG.getNode(ISD::AND, DL, MVT::v4i32, DAG.getBitcast(MVT::v4i32, V1),
+                     DWordClearMask);
+    V2 = DAG.getNode(ISD::AND, DL, MVT::v4i32, DAG.getBitcast(MVT::v4i32, V2),
+                     DWordClearMask);
+    // Now pack things back together.
+    SDValue Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v8i16, V1, V2);
+    if (NumEvenDrops == 2) {
+      Result = DAG.getBitcast(MVT::v4i32, Result);
+      Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v8i16, Result, Result);
+    }
+    return Result;
+  }
+
   // Try to lower by permuting the inputs into an unpack instruction.
   if (SDValue Unpack = lowerShuffleAsPermuteAndUnpack(DL, MVT::v8i16, V1, V2,
                                                       Mask, Subtarget, DAG))
