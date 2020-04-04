@@ -25,6 +25,20 @@
 
 using namespace llvm;
 
+StringRef ExpressionFormat::toString() const {
+  switch (Value) {
+  case Kind::NoFormat:
+    return StringRef("<none>");
+  case Kind::Unsigned:
+    return StringRef("%u");
+  case Kind::HexUpper:
+    return StringRef("%X");
+  case Kind::HexLower:
+    return StringRef("%x");
+  }
+  llvm_unreachable("unknown expression format");
+}
+
 Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
   switch (Value) {
   case Kind::Unsigned:
@@ -71,7 +85,7 @@ Expected<uint64_t> NumericVariableUse::eval() const {
   if (Value)
     return *Value;
 
-  return make_error<UndefVarError>(Name);
+  return make_error<UndefVarError>(getExpressionStr());
 }
 
 Expected<uint64_t> BinaryOperation::eval() const {
@@ -92,18 +106,31 @@ Expected<uint64_t> BinaryOperation::eval() const {
   return EvalBinop(*LeftOp, *RightOp);
 }
 
-ExpressionFormat BinaryOperation::getImplicitFormat() const {
-  ExpressionFormat LeftFormat = LeftOperand->getImplicitFormat();
-  ExpressionFormat RightFormat = RightOperand->getImplicitFormat();
+Expected<ExpressionFormat>
+BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
+  Expected<ExpressionFormat> LeftFormat = LeftOperand->getImplicitFormat(SM);
+  Expected<ExpressionFormat> RightFormat = RightOperand->getImplicitFormat(SM);
+  if (!LeftFormat || !RightFormat) {
+    Error Err = Error::success();
+    if (!LeftFormat)
+      Err = joinErrors(std::move(Err), LeftFormat.takeError());
+    if (!RightFormat)
+      Err = joinErrors(std::move(Err), RightFormat.takeError());
+    return std::move(Err);
+  }
 
-  ExpressionFormat Format =
-      LeftFormat != ExpressionFormat::Kind::NoFormat ? LeftFormat : RightFormat;
-  if (LeftFormat != ExpressionFormat::Kind::NoFormat &&
-      RightFormat != ExpressionFormat::Kind::NoFormat &&
-      LeftFormat != RightFormat)
-    Format = ExpressionFormat(ExpressionFormat::Kind::Conflict);
+  if (*LeftFormat != ExpressionFormat::Kind::NoFormat &&
+      *RightFormat != ExpressionFormat::Kind::NoFormat &&
+      *LeftFormat != *RightFormat)
+    return ErrorDiagnostic::get(
+        SM, getExpressionStr(),
+        "implicit format conflict between '" + LeftOperand->getExpressionStr() +
+            "' (" + LeftFormat->toString() + ") and '" +
+            RightOperand->getExpressionStr() + "' (" + RightFormat->toString() +
+            "), need an explicit format specifier");
 
-  return Format;
+  return *LeftFormat != ExpressionFormat::Kind::NoFormat ? *LeftFormat
+                                                         : *RightFormat;
 }
 
 Expected<std::string> NumericSubstitution::getResult() const {
@@ -262,9 +289,12 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
 
   // Otherwise, parse it as a literal.
   uint64_t LiteralValue;
+  StringRef OperandExpr = Expr;
   if (!Expr.consumeInteger((AO == AllowedOperand::LegacyLiteral) ? 10 : 0,
-                           LiteralValue))
-    return std::make_unique<ExpressionLiteral>(LiteralValue);
+                           LiteralValue)) {
+    return std::make_unique<ExpressionLiteral>(
+        OperandExpr.drop_back(Expr.size()), LiteralValue);
+  }
 
   return ErrorDiagnostic::get(SM, Expr,
                               "invalid operand format '" + Expr + "'");
@@ -279,17 +309,18 @@ static uint64_t sub(uint64_t LeftOp, uint64_t RightOp) {
 }
 
 Expected<std::unique_ptr<ExpressionAST>>
-Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
+Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
+                    std::unique_ptr<ExpressionAST> LeftOp,
                     bool IsLegacyLineExpr, Optional<size_t> LineNumber,
                     FileCheckPatternContext *Context, const SourceMgr &SM) {
-  Expr = Expr.ltrim(SpaceChars);
-  if (Expr.empty())
+  RemainingExpr = RemainingExpr.ltrim(SpaceChars);
+  if (RemainingExpr.empty())
     return std::move(LeftOp);
 
   // Check if this is a supported operation and select a function to perform
   // it.
-  SMLoc OpLoc = SMLoc::getFromPointer(Expr.data());
-  char Operator = popFront(Expr);
+  SMLoc OpLoc = SMLoc::getFromPointer(RemainingExpr.data());
+  char Operator = popFront(RemainingExpr);
   binop_eval_t EvalBinop;
   switch (Operator) {
   case '+':
@@ -304,19 +335,20 @@ Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
   }
 
   // Parse right operand.
-  Expr = Expr.ltrim(SpaceChars);
-  if (Expr.empty())
-    return ErrorDiagnostic::get(SM, Expr, "missing operand in expression");
+  RemainingExpr = RemainingExpr.ltrim(SpaceChars);
+  if (RemainingExpr.empty())
+    return ErrorDiagnostic::get(SM, RemainingExpr,
+                                "missing operand in expression");
   // The second operand in a legacy @LINE expression is always a literal.
   AllowedOperand AO =
       IsLegacyLineExpr ? AllowedOperand::LegacyLiteral : AllowedOperand::Any;
   Expected<std::unique_ptr<ExpressionAST>> RightOpResult =
-      parseNumericOperand(Expr, AO, LineNumber, Context, SM);
+      parseNumericOperand(RemainingExpr, AO, LineNumber, Context, SM);
   if (!RightOpResult)
     return RightOpResult;
 
-  Expr = Expr.ltrim(SpaceChars);
-  return std::make_unique<BinaryOperation>(EvalBinop, std::move(LeftOp),
+  Expr = Expr.drop_back(RemainingExpr.size());
+  return std::make_unique<BinaryOperation>(Expr, EvalBinop, std::move(LeftOp),
                                            std::move(*RightOpResult));
 }
 
@@ -370,8 +402,9 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
-  StringRef UseExpr = Expr;
   if (!Expr.empty()) {
+    Expr = Expr.rtrim(SpaceChars);
+    StringRef OuterBinOpExpr = Expr;
     // The first operand in a legacy @LINE expression is always the @LINE
     // pseudo variable.
     AllowedOperand AO =
@@ -379,8 +412,8 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     Expected<std::unique_ptr<ExpressionAST>> ParseResult =
         parseNumericOperand(Expr, AO, LineNumber, Context, SM);
     while (ParseResult && !Expr.empty()) {
-      ParseResult = parseBinop(Expr, std::move(*ParseResult), IsLegacyLineExpr,
-                               LineNumber, Context, SM);
+      ParseResult = parseBinop(OuterBinOpExpr, Expr, std::move(*ParseResult),
+                               IsLegacyLineExpr, LineNumber, Context, SM);
       // Legacy @LINE expressions only allow 2 operands.
       if (ParseResult && IsLegacyLineExpr && !Expr.empty())
         return ErrorDiagnostic::get(
@@ -396,19 +429,17 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   // otherwise (ii) its implicit format, if any, otherwise (iii) the default
   // format (unsigned). Error out in case of conflicting implicit format
   // without explicit format.
-  ExpressionFormat Format,
-      ImplicitFormat = ExpressionASTPointer
-                           ? ExpressionASTPointer->getImplicitFormat()
-                           : ExpressionFormat(ExpressionFormat::Kind::NoFormat);
-  if (bool(ExplicitFormat))
+  ExpressionFormat Format;
+  if (ExplicitFormat)
     Format = ExplicitFormat;
-  else if (ImplicitFormat == ExpressionFormat::Kind::Conflict)
-    return ErrorDiagnostic::get(
-        SM, UseExpr,
-        "variables with conflicting format specifier: need an explicit one");
-  else if (bool(ImplicitFormat))
-    Format = ImplicitFormat;
-  else
+  else if (ExpressionASTPointer) {
+    Expected<ExpressionFormat> ImplicitFormat =
+        ExpressionASTPointer->getImplicitFormat(SM);
+    if (!ImplicitFormat)
+      return ImplicitFormat.takeError();
+    Format = *ImplicitFormat;
+  }
+  if (!Format)
     Format = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
 
   std::unique_ptr<Expression> ExpressionPointer =
