@@ -81,6 +81,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -164,14 +165,14 @@ bool WasmEHPrepare::doInitialization(Module &M) {
 // Erase the specified BBs if the BB does not have any remaining predecessors,
 // and also all its dead children.
 template <typename Container>
-static void eraseDeadBBsAndChildren(const Container &BBs) {
+static void eraseDeadBBsAndChildren(const Container &BBs, DomTreeUpdater *DTU) {
   SmallVector<BasicBlock *, 8> WL(BBs.begin(), BBs.end());
   while (!WL.empty()) {
     auto *BB = WL.pop_back_val();
     if (pred_begin(BB) != pred_end(BB))
       continue;
     WL.append(succ_begin(BB), succ_end(BB));
-    DeleteDeadBlock(BB);
+    DeleteDeadBlock(BB, DTU);
   }
 }
 
@@ -184,6 +185,9 @@ bool WasmEHPrepare::runOnFunction(Function &F) {
 }
 
 bool WasmEHPrepare::prepareThrows(Function &F) {
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  DomTreeUpdater DTU(&DT, /*PostDominatorTree*/ nullptr,
+                     DomTreeUpdater::UpdateStrategy::Eager);
   Module &M = *F.getParent();
   IRBuilder<> IRB(F.getContext());
   bool Changed = false;
@@ -206,7 +210,7 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
-    eraseDeadBBsAndChildren(Succs);
+    eraseDeadBBsAndChildren(Succs, &DTU);
   }
 
   return Changed;
