@@ -5,6 +5,7 @@ Test that thread plan listing, and deleting works.
 
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -15,6 +16,7 @@ class TestThreadPlanCommands(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWindows
     def test_thread_plan_actions(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
@@ -32,9 +34,8 @@ class TestThreadPlanCommands(TestBase):
         num_discarded = len(discarded_plans)
 
         interp.HandleCommand(command, result)
-        if self.TraceOn():
-            print("Command: %s"%(command))
-            print(result.GetOutput())
+        print("Command: %s"%(command))
+        print(result.GetOutput())
 
         if num_active == 0 and num_completed == 0 and num_discarded == 0:
             self.assertFalse(result.Succeeded(), "command: '%s' succeeded when it should have failed: '%s'"%
