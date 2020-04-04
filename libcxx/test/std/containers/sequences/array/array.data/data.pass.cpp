@@ -24,6 +24,14 @@ struct NoDefault {
   NoDefault(int) {}
 };
 
+#if TEST_STD_VER < 11
+struct natural_alignment {
+    long t1;
+    long long t2;
+    double t3;
+    long double t4;
+};
+#endif
 
 int main(int, char**)
 {
@@ -52,13 +60,17 @@ int main(int, char**)
       LIBCPP_ASSERT(p != nullptr);
     }
   {
+#if TEST_STD_VER < 11
+      typedef natural_alignment T;
+#else
       typedef std::max_align_t T;
+#endif
       typedef std::array<T, 0> C;
       const C c = {};
       const T* p = c.data();
       LIBCPP_ASSERT(p != nullptr);
       std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
-      assert(pint % TEST_ALIGNOF(std::max_align_t) == 0);
+      assert(pint % TEST_ALIGNOF(T) == 0);
     }
     {
       typedef NoDefault T;
