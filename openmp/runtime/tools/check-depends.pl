@@ -23,7 +23,7 @@ my $target_os;
 my $target_arch;
 
 # --------------------------------------------------------------------------------------------------
-# Ouput parse error.
+# Output parse error.
 #     $tool -- Name of tool.
 #     @bulk -- Output of the tool.
 #     $n    -- Number of line caused parse error.

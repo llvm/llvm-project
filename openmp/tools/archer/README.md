@@ -71,7 +71,7 @@ To compile Fortran applications, compile with gfortran, link with clang:
 ## Runtime Flags
 
 TSan runtime flags are passed via **TSAN&#95;OPTIONS** environment variable,
-we highly recommend the following option to aviod false alerts for the
+we highly recommend the following option to avoid false alerts for the
 OpenMP or MPI runtime implementation:
 
     export TSAN_OPTIONS="ignore_noninstrumented_modules=1"
