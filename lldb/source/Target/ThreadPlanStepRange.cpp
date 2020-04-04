@@ -86,7 +86,6 @@ void ThreadPlanStepRange::AddRange(const AddressRange &new_range) {
 }
 
 void ThreadPlanStepRange::DumpRanges(Stream *s) {
-  Thread &thread = GetThread();
   size_t num_ranges = m_address_ranges.size();
   if (num_ranges == 1) {
     m_address_ranges[0].Dump(s, &GetTarget(), Address::DumpStyleLoadAddress);
