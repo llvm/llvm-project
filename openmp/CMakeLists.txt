@@ -91,5 +91,5 @@ if (OPENMP_ENABLE_OMPT_TOOLS)
   add_subdirectory(tools)
 endif()
 
-# Now that we have seen all testuites, create the check-openmp target.
+# Now that we have seen all testsuites, create the check-openmp target.
 construct_check_openmp_target()

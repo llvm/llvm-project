@@ -194,7 +194,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       KA_TRACE(trace_level, (" PSN"));
     }
     if ((buf.edx >> 19) & 1) {
-      /* CLFULSH - Cache Flush Instruction Available */
+      /* CLFLUSH - Cache Flush Instruction Available */
       cflush_size =
           data[1] * 8; /* Bits 15-08: CLFLUSH line size = 8 (64 bytes) */
       KA_TRACE(trace_level, (" CLFLUSH(%db)", cflush_size));
