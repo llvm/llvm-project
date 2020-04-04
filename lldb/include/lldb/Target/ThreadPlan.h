@@ -371,9 +371,9 @@ public:
   ///   A  pointer to the thread plan's owning thread.
   Thread &GetThread();
 
-  Target &GetTarget() { return m_process.GetTarget(); }
+  Target &GetTarget();
 
-  const Target &GetTarget() const { return m_process.GetTarget(); }
+  const Target &GetTarget() const;
 
   /// Print a description of this thread to the stream \a s.
   /// \a thread.
