@@ -76,6 +76,7 @@ static LogicalResult processBuffer(raw_ostream &os,
   // Parse the input file.
   MLIRContext context;
   context.allowUnregisteredDialects(allowUnregisteredDialects);
+  context.printOpOnDiagnostic(!verifyDiagnostics);
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
