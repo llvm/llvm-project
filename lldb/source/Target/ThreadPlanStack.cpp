@@ -16,48 +16,70 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void PrintPlanElement(Stream *s, const ThreadPlanSP &plan,
+static void PrintPlanElement(Stream &s, const ThreadPlanSP &plan,
                              lldb::DescriptionLevel desc_level,
                              int32_t elem_idx) {
-  s->IndentMore();
-  s->Indent();
-  s->Printf("Element %d: ", elem_idx);
-  plan->GetDescription(s, desc_level);
-  s->EOL();
-  s->IndentLess();
+  s.IndentMore();
+  s.Indent();
+  s.Printf("Element %d: ", elem_idx);
+  plan->GetDescription(&s, desc_level);
+  s.EOL();
+  s.IndentLess();
 }
 
-void ThreadPlanStack::DumpThreadPlans(Stream *s,
+ThreadPlanStack::ThreadPlanStack(const Thread &thread, bool make_null) {
+  if (make_null) {
+    // The ThreadPlanNull doesn't do anything to the Thread, so this is actually
+    // still a const operation.
+    m_plans.push_back(
+        ThreadPlanSP(new ThreadPlanNull(const_cast<Thread &>(thread))));
+  }
+}
+
+void ThreadPlanStack::DumpThreadPlans(Stream &s,
                                       lldb::DescriptionLevel desc_level,
                                       bool include_internal) const {
 
   uint32_t stack_size;
 
-  s->IndentMore();
-  s->Indent();
-  s->Printf("Active plan stack:\n");
-  int32_t print_idx = 0;
-  for (auto plan : m_plans) {
-    PrintPlanElement(s, plan, desc_level, print_idx++);
+  s.IndentMore();
+  PrintOneStack(s, "Active plan stack", m_plans, desc_level, include_internal);
+  PrintOneStack(s, "Completed plan stack", m_completed_plans, desc_level,
+                include_internal);
+  PrintOneStack(s, "Discarded plan stack", m_discarded_plans, desc_level,
+                include_internal);
+  s.IndentLess();
+}
+
+void ThreadPlanStack::PrintOneStack(Stream &s, llvm::StringRef stack_name,
+                                    const PlanStack &stack,
+                                    lldb::DescriptionLevel desc_level,
+                                    bool include_internal) const {
+  // If the stack is empty, just exit:
+  if (stack.empty())
+    return;
+
+  // Make sure there are public completed plans:
+  bool any_public = false;
+  if (!include_internal) {
+    for (auto plan : stack) {
+      if (!plan->GetPrivate()) {
+        any_public = true;
+        break;
+      }
+    }
   }
 
-  if (AnyCompletedPlans()) {
-    print_idx = 0;
-    s->Indent();
-    s->Printf("Completed Plan Stack:\n");
-    for (auto plan : m_completed_plans)
+  if (include_internal || any_public) {
+    int print_idx = 0;
+    s.Indent();
+    s.Printf("%s:\n", stack_name);
+    for (auto plan : stack) {
+      if (!include_internal && plan->GetPrivate())
+        continue;
       PrintPlanElement(s, plan, desc_level, print_idx++);
+    }
   }
-
-  if (AnyDiscardedPlans()) {
-    print_idx = 0;
-    s->Indent();
-    s->Printf("Discarded Plan Stack:\n");
-    for (auto plan : m_discarded_plans)
-      PrintPlanElement(s, plan, desc_level, print_idx++);
-  }
-
-  s->IndentLess();
 }
 
 size_t ThreadPlanStack::CheckpointCompletedPlans() {
@@ -367,4 +389,124 @@ ThreadPlanStack::GetStackOfKind(ThreadPlanStack::StackKind kind) const {
     return m_discarded_plans;
   }
   llvm_unreachable("Invalid StackKind value");
+}
+
+void ThreadPlanStackMap::Update(ThreadList &current_threads,
+                                bool delete_missing,
+                                bool check_for_new) {
+
+  // Now find all the new threads and add them to the map:
+  if (check_for_new) {
+    for (auto thread : current_threads.Threads()) {
+      lldb::tid_t cur_tid = thread->GetID();
+      if (!Find(cur_tid)) {
+        AddThread(*thread.get());
+        thread->QueueFundamentalPlan(true);
+      }
+    }
+  }
+
+  // If we aren't reaping missing threads at this point,
+  // we are done.
+  if (!delete_missing)
+    return;
+  // Otherwise scan for absent TID's.
+  std::vector<lldb::tid_t> missing_threads;
+  // If we are going to delete plans from the plan stack,
+  // then scan for absent TID's:
+  for (auto thread_plans : m_plans_list) {
+    lldb::tid_t cur_tid = thread_plans.first;
+    ThreadSP thread_sp = current_threads.FindThreadByID(cur_tid);
+    if (!thread_sp)
+      missing_threads.push_back(cur_tid);
+  }
+  for (lldb::tid_t tid : missing_threads) {
+    RemoveTID(tid);
+  }
+}
+
+void ThreadPlanStackMap::DumpPlans(Stream &strm,
+                                   lldb::DescriptionLevel desc_level,
+                                   bool internal, bool condense_if_trivial,
+                                   bool skip_unreported) {
+  for (auto elem : m_plans_list) {
+    lldb::tid_t tid = elem.first;
+    uint32_t index_id = 0;
+    ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(tid);
+
+    if (skip_unreported) {
+      if (!thread_sp)
+        continue;
+    }
+    if (thread_sp)
+      index_id = thread_sp->GetIndexID();
+
+    if (condense_if_trivial) {
+      if (!elem.second.AnyPlans() && !elem.second.AnyCompletedPlans() &&
+          !elem.second.AnyDiscardedPlans()) {
+        strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 "\n", index_id, tid);
+        strm.IndentMore();
+        strm.Indent();
+        strm.Printf("No active thread plans\n");
+        strm.IndentLess();
+        return;
+      }
+    }
+
+    strm.Indent();
+    strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 ":\n", index_id, tid);
+
+    elem.second.DumpThreadPlans(strm, desc_level, internal);
+  }
+}
+
+bool ThreadPlanStackMap::DumpPlansForTID(Stream &strm, lldb::tid_t tid,
+                                         lldb::DescriptionLevel desc_level,
+                                         bool internal,
+                                         bool condense_if_trivial,
+                                         bool skip_unreported) {
+  uint32_t index_id = 0;
+  ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(tid);
+
+  if (skip_unreported) {
+    if (!thread_sp) {
+      strm.Format("Unknown TID: {0}", tid);
+      return false;
+    }
+  }
+
+  if (thread_sp)
+    index_id = thread_sp->GetIndexID();
+  ThreadPlanStack *stack = Find(tid);
+  if (!stack) {
+    strm.Format("Unknown TID: {0}\n", tid);
+    return false;
+  }
+
+  if (condense_if_trivial) {
+    if (!stack->AnyPlans() && !stack->AnyCompletedPlans() &&
+        !stack->AnyDiscardedPlans()) {
+      strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 "\n", index_id, tid);
+      strm.IndentMore();
+      strm.Indent();
+      strm.Printf("No active thread plans\n");
+      strm.IndentLess();
+      return true;
+    }
+  }
+
+  strm.Indent();
+  strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 ":\n", index_id, tid);
+
+  stack->DumpThreadPlans(strm, desc_level, internal);
+  return true;
+}
+
+bool ThreadPlanStackMap::PrunePlansForTID(lldb::tid_t tid) {
+  // We only remove the plans for unreported TID's.
+  ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(tid);
+  if (thread_sp)
+    return false;
+
+  return RemoveTID(tid);
 }

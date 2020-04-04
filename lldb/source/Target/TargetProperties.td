@@ -7,6 +7,10 @@ let Definition = "experimental" in {
   def SwiftCreateModuleContextsInParallel : Property<"swift-create-module-contexts-in-parallel", "Boolean">,
     DefaultTrue,
     Desc<"Create the per-module Swift AST contexts in parallel.">;
+  def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
 }
 
 let Definition = "target" in {
