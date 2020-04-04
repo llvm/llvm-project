@@ -125,7 +125,7 @@ public:
 
   void AddThread(Thread &thread) {
     lldb::tid_t tid = thread.GetID();
-    auto result = m_plans_list.emplace(tid, thread);
+    m_plans_list.emplace(tid, thread);
   }
 
   bool RemoveTID(lldb::tid_t tid) {
