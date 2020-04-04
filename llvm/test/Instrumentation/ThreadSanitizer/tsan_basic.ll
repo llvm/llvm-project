@@ -78,5 +78,18 @@ define void @SwiftErrorCall(i8** swifterror) sanitize_thread {
   call void @SwiftError(i8** %0)
   ret void
 }
+
+; CHECK-LABEL: @NakedTest(i32* %a)
+; CHECK-NEXT:   call void @foo()
+; CHECK-NEXT:   %tmp1 = load i32, i32* %a, align 4
+; CHECK-NEXT:   ret i32 %tmp1
+define i32 @NakedTest(i32* %a) naked sanitize_thread {
+  call void @foo()
+  %tmp1 = load i32, i32* %a, align 4
+  ret i32 %tmp1
+}
+
+declare void @foo() nounwind
+
 ; CHECK: define internal void @tsan.module_ctor()
 ; CHECK: call void @__tsan_init()
