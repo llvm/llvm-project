@@ -313,7 +313,7 @@ private:
       operands.push_back(arg);
     }
 
-    // Builting calls have their custom operation, meaning this is a
+    // Builtin calls have their custom operation, meaning this is a
     // straightforward emission.
     if (callee == "transpose") {
       if (call.getArgs().size() != 1) {
@@ -324,9 +324,9 @@ private:
       return builder.create<TransposeOp>(location, operands[0]);
     }
 
-    // Otherwise this is a call to a user-defined function. Calls to ser-defined
-    // functions are mapped to a custom call that takes the callee name as an
-    // attribute.
+    // Otherwise this is a call to a user-defined function. Calls to
+    // user-defined functions are mapped to a custom call that takes the callee
+    // name as an attribute.
     return builder.create<GenericCallOp>(location, callee, operands);
   }
 
