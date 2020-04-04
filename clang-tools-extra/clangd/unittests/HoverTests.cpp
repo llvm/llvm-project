@@ -616,6 +616,58 @@ class Foo {})cpp";
          HI.LocalScope = "foo::";
          HI.Type = "int";
        }},
+
+      {// Getter
+       R"cpp(
+          struct X { int Y; float [[^y]]() { return Y; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+       }},
+      {// Setter
+       R"cpp(
+          struct X { int Y; void [[^setY]](float v) { Y = v; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+       }},
+      {// Setter (builder)
+       R"cpp(
+          struct X { int Y; X& [[^setY]](float v) { Y = v; return *this; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "X &setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "struct X &(float)";
+         HI.ReturnType = "struct X &";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
