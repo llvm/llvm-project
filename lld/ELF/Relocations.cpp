@@ -1334,7 +1334,10 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
       // stub type. It should be ignored if optimized to R_PC.
       if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
         addend &= ~0x8000;
-      expr = fromPlt(expr);
+      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
+      // call __tls_get_addr even if the symbol is non-preemptible.
+      if (!(config->emachine == EM_HEXAGON && type == R_HEX_GD_PLT_B22_PCREL))
+        expr = fromPlt(expr);
     }
   }
 

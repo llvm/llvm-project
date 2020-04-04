@@ -520,8 +520,6 @@ public:
   /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateElementUnorderedAtomicMemSet(
           Value *Ptr, Value *Val, uint64_t Size, unsigned Alignment,
@@ -544,8 +542,6 @@ public:
                                               TBAATag, ScopeTag, NoAliasTag);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateElementUnorderedAtomicMemSet(
           Value *Ptr, Value *Val, Value *Size, unsigned Alignment,
@@ -569,8 +565,6 @@ public:
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src,
                              unsigned SrcAlign, uint64_t Size,
@@ -595,8 +589,6 @@ public:
                         NoAliasTag);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src,
                              unsigned SrcAlign, Value *Size,
@@ -629,8 +621,6 @@ public:
       MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
       MDNode *NoAliasTag = nullptr);
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemCpy(
                                 Value *Dst, unsigned DstAlign, Value *Src,
                                 unsigned SrcAlign, uint64_t Size,
@@ -644,8 +634,6 @@ public:
         TBAATag, TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemCpy(
                                 Value *Dst, unsigned DstAlign, Value *Src,
                                 unsigned SrcAlign, Value *Size,
@@ -659,14 +647,6 @@ public:
         TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
-  /// Create and insert a memmove between the specified
-  /// pointers.
-  ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateMemMove(
           Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
@@ -685,8 +665,7 @@ public:
     return CreateMemMove(Dst, DstAlign, Src, SrcAlign, getInt64(Size),
                          isVolatile, TBAATag, ScopeTag, NoAliasTag);
   }
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
+
   LLVM_ATTRIBUTE_DEPRECATED(
       CallInst *CreateMemMove(
           Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
@@ -717,8 +696,6 @@ public:
       MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
       MDNode *NoAliasTag = nullptr);
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemMove(
                                 Value *Dst, unsigned DstAlign, Value *Src,
                                 unsigned SrcAlign, uint64_t Size,
@@ -732,8 +709,6 @@ public:
         TBAATag, TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes Align instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemMove(
                                 Value *Dst, unsigned DstAlign, Value *Src,
                                 unsigned SrcAlign, Value *Size,
@@ -1747,11 +1722,6 @@ public:
     return Insert(new StoreInst(Val, Ptr, isVolatile));
   }
 
-  /// Provided to resolve 'CreateAlignedLoad(Ptr, Align, "...")'
-  /// correctly, instead of converting the string to 'bool' for the isVolatile
-  /// parameter.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
                                                         unsigned Align,
                                                         const char *Name),
@@ -1764,8 +1734,7 @@ public:
     LI->setAlignment(Align);
     return LI;
   }
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
+
   LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
                                                         unsigned Align,
                                                         const Twine &Name = ""),
@@ -1778,8 +1747,7 @@ public:
     LI->setAlignment(Align);
     return LI;
   }
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
+
   LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
                                                         unsigned Align,
                                                         bool isVolatile,
@@ -1837,8 +1805,6 @@ public:
                              Align, isVolatile, Name);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
   LLVM_ATTRIBUTE_DEPRECATED(
       StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, unsigned Align,
                                     bool isVolatile = false),

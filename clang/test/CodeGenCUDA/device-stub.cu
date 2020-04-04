@@ -181,10 +181,10 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // Test that we've built a function to register kernels and global vars.
 // ALL: define internal void @__[[PREFIX]]_register_globals
 // ALL: call{{.*}}[[PREFIX]]RegisterFunction(i8** %0, {{.*}}kernelfunc{{[^,]*}}, {{[^@]*}}@0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}device_var{{[^,]*}}, {{[^@]*}}@1, {{.*}}i32 0, i32 4, i32 0, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{[^,]*}}, {{[^@]*}}@2, {{.*}}i32 0, i32 4, i32 1, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{[^,]*}}, {{[^@]*}}@3, {{.*}}i32 0, i32 4, i32 0, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{[^,]*}}, {{[^@]*}}@4, {{.*}}i32 0, i32 4, i32 1, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}device_var{{[^,]*}}, {{[^@]*}}@1, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{[^,]*}}, {{[^@]*}}@2, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{[^,]*}}, {{[^@]*}}@3, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
+// ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{[^,]*}}, {{[^@]*}}@4, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
 // ALL: ret void
 
 // Test that we've built a constructor.

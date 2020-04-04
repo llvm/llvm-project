@@ -34,17 +34,16 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
       m_should_stop(false), m_ran_analyze(false), m_explains_stop(false),
       m_until_points(), m_stop_others(stop_others) {
   // Stash away our "until" addresses:
-  TargetSP target_sp(m_thread.CalculateTarget());
+  TargetSP target_sp(thread.CalculateTarget());
 
-  StackFrameSP frame_sp(m_thread.GetStackFrameAtIndex(frame_idx));
+  StackFrameSP frame_sp(thread.GetStackFrameAtIndex(frame_idx));
   if (frame_sp) {
     m_step_from_insn = frame_sp->GetStackID().GetPC();
-    lldb::user_id_t thread_id = m_thread.GetID();
 
     // Find the return address and set a breakpoint there:
     // FIXME - can we do this more securely if we know first_insn?
 
-    StackFrameSP return_frame_sp(m_thread.GetStackFrameAtIndex(frame_idx + 1));
+    StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(frame_idx + 1));
     if (return_frame_sp) {
       // TODO: add inline functionality
       m_return_addr = return_frame_sp->GetStackID().GetPC();
@@ -54,7 +53,7 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
       if (return_bp != nullptr) {
         if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
           m_could_not_resolve_hw_bp = true;
-        return_bp->SetThreadID(thread_id);
+        return_bp->SetThreadID(m_tid);
         m_return_bp_id = return_bp->GetID();
         return_bp->SetBreakpointKind("until-return-backstop");
       }
@@ -67,7 +66,7 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
       Breakpoint *until_bp =
           target_sp->CreateBreakpoint(address_list[i], true, false).get();
       if (until_bp != nullptr) {
-        until_bp->SetThreadID(thread_id);
+        until_bp->SetThreadID(m_tid);
         m_until_points[address_list[i]] = until_bp->GetID();
         until_bp->SetBreakpointKind("until-target");
       } else {
@@ -80,17 +79,15 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
 ThreadPlanStepUntil::~ThreadPlanStepUntil() { Clear(); }
 
 void ThreadPlanStepUntil::Clear() {
-  TargetSP target_sp(m_thread.CalculateTarget());
-  if (target_sp) {
-    if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
-      target_sp->RemoveBreakpointByID(m_return_bp_id);
-      m_return_bp_id = LLDB_INVALID_BREAK_ID;
-    }
+  Target &target = GetTarget();
+  if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
+    target.RemoveBreakpointByID(m_return_bp_id);
+    m_return_bp_id = LLDB_INVALID_BREAK_ID;
+  }
 
-    until_collection::iterator pos, end = m_until_points.end();
-    for (pos = m_until_points.begin(); pos != end; pos++) {
-      target_sp->RemoveBreakpointByID((*pos).second);
-    }
+  until_collection::iterator pos, end = m_until_points.end();
+  for (pos = m_until_points.begin(); pos != end; pos++) {
+    target.RemoveBreakpointByID((*pos).second);
   }
   m_until_points.clear();
   m_could_not_resolve_hw_bp = false;
@@ -158,8 +155,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
       // If this is OUR breakpoint, we're fine, otherwise we don't know why
       // this happened...
       BreakpointSiteSP this_site =
-          m_thread.GetProcess()->GetBreakpointSiteList().FindByID(
-              stop_info_sp->GetValue());
+          m_process.GetBreakpointSiteList().FindByID(stop_info_sp->GetValue());
       if (!this_site) {
         m_explains_stop = false;
         return;
@@ -196,17 +192,17 @@ void ThreadPlanStepUntil::AnalyzeStop() {
         for (pos = m_until_points.begin(); pos != end; pos++) {
           if (this_site->IsBreakpointAtThisSite((*pos).second)) {
             // If we're at the right stack depth, then we're done.
-
+            Thread &thread = GetThread();
             bool done;
             StackID frame_zero_id =
-                m_thread.GetStackFrameAtIndex(0)->GetStackID();
+                thread.GetStackFrameAtIndex(0)->GetStackID();
 
             if (frame_zero_id == m_stack_id)
               done = true;
             else if (frame_zero_id < m_stack_id)
               done = false;
             else {
-              StackFrameSP older_frame_sp = m_thread.GetStackFrameAtIndex(1);
+              StackFrameSP older_frame_sp = thread.GetStackFrameAtIndex(1);
 
               // But if we can't even unwind one frame we should just get out
               // of here & stop...
@@ -280,20 +276,16 @@ StateType ThreadPlanStepUntil::GetPlanRunState() { return eStateRunning; }
 bool ThreadPlanStepUntil::DoWillResume(StateType resume_state,
                                        bool current_plan) {
   if (current_plan) {
-    TargetSP target_sp(m_thread.CalculateTarget());
-    if (target_sp) {
-      Breakpoint *return_bp =
-          target_sp->GetBreakpointByID(m_return_bp_id).get();
-      if (return_bp != nullptr)
-        return_bp->SetEnabled(true);
+    Target &target = GetTarget();
+    Breakpoint *return_bp = target.GetBreakpointByID(m_return_bp_id).get();
+    if (return_bp != nullptr)
+      return_bp->SetEnabled(true);
 
-      until_collection::iterator pos, end = m_until_points.end();
-      for (pos = m_until_points.begin(); pos != end; pos++) {
-        Breakpoint *until_bp =
-            target_sp->GetBreakpointByID((*pos).second).get();
-        if (until_bp != nullptr)
-          until_bp->SetEnabled(true);
-      }
+    until_collection::iterator pos, end = m_until_points.end();
+    for (pos = m_until_points.begin(); pos != end; pos++) {
+      Breakpoint *until_bp = target.GetBreakpointByID((*pos).second).get();
+      if (until_bp != nullptr)
+        until_bp->SetEnabled(true);
     }
   }
 
@@ -304,18 +296,16 @@ bool ThreadPlanStepUntil::DoWillResume(StateType resume_state,
 }
 
 bool ThreadPlanStepUntil::WillStop() {
-  TargetSP target_sp(m_thread.CalculateTarget());
-  if (target_sp) {
-    Breakpoint *return_bp = target_sp->GetBreakpointByID(m_return_bp_id).get();
-    if (return_bp != nullptr)
-      return_bp->SetEnabled(false);
+  Target &target = GetTarget();
+  Breakpoint *return_bp = target.GetBreakpointByID(m_return_bp_id).get();
+  if (return_bp != nullptr)
+    return_bp->SetEnabled(false);
 
-    until_collection::iterator pos, end = m_until_points.end();
-    for (pos = m_until_points.begin(); pos != end; pos++) {
-      Breakpoint *until_bp = target_sp->GetBreakpointByID((*pos).second).get();
-      if (until_bp != nullptr)
-        until_bp->SetEnabled(false);
-    }
+  until_collection::iterator pos, end = m_until_points.end();
+  for (pos = m_until_points.begin(); pos != end; pos++) {
+    Breakpoint *until_bp = target.GetBreakpointByID((*pos).second).get();
+    if (until_bp != nullptr)
+      until_bp->SetEnabled(false);
   }
   return true;
 }

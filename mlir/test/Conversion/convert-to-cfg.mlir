@@ -148,6 +148,83 @@ func @simple_std_for_loop_with_2_ifs(%arg0 : index, %arg1 : index, %arg2 : index
   return
 }
 
+// CHECK-LABEL: func @simple_if_yield
+func @simple_if_yield(%arg0: i1) -> (i1, i1) {
+// CHECK:   cond_br %{{.*}}, ^[[then:.*]], ^[[else:.*]]
+  %0:2 = loop.if %arg0 -> (i1, i1) {
+// CHECK: ^[[then]]:
+// CHECK:   %[[v0:.*]] = constant 0
+// CHECK:   %[[v1:.*]] = constant 1
+// CHECK:   br ^[[dom:.*]](%[[v0]], %[[v1]] : i1, i1)
+    %c0 = constant 0 : i1
+    %c1 = constant 1 : i1
+    loop.yield %c0, %c1 : i1, i1
+  } else {
+// CHECK: ^[[else]]:
+// CHECK:   %[[v2:.*]] = constant 0
+// CHECK:   %[[v3:.*]] = constant 1
+// CHECK:   br ^[[dom]](%[[v3]], %[[v2]] : i1, i1)
+    %c0 = constant 0 : i1
+    %c1 = constant 1 : i1
+    loop.yield %c1, %c0 : i1, i1
+  }
+// CHECK: ^[[dom]](%[[arg1:.*]]: i1, %[[arg2:.*]]: i1):
+// CHECK:   br ^[[cont:.*]]
+// CHECK: ^[[cont]]:
+// CHECK:   return %[[arg1]], %[[arg2]]
+  return %0#0, %0#1 : i1, i1
+}
+
+// CHECK-LABEL: func @nested_if_yield
+func @nested_if_yield(%arg0: i1) -> (index) {
+// CHECK:   cond_br %{{.*}}, ^[[first_then:.*]], ^[[first_else:.*]]
+  %0 = loop.if %arg0 -> i1 {
+// CHECK: ^[[first_then]]:
+    %1 = constant 1 : i1
+// CHECK:   br ^[[first_dom:.*]]({{.*}})
+    loop.yield %1 : i1
+  } else {
+// CHECK: ^[[first_else]]:
+    %2 = constant 0 : i1
+// CHECK:   br ^[[first_dom]]({{.*}})
+    loop.yield %2 : i1
+  }
+// CHECK: ^[[first_dom]](%[[arg1:.*]]: i1):
+// CHECK:   br ^[[first_cont:.*]]
+// CHECK: ^[[first_cont]]:
+// CHECK:   cond_br %[[arg1]], ^[[second_outer_then:.*]], ^[[second_outer_else:.*]]
+  %1 = loop.if %0 -> index {
+// CHECK: ^[[second_outer_then]]:
+// CHECK:   cond_br %arg0, ^[[second_inner_then:.*]], ^[[second_inner_else:.*]]
+    %3 = loop.if %arg0 -> index {
+// CHECK: ^[[second_inner_then]]:
+      %4 = constant 40 : index
+// CHECK:   br ^[[second_inner_dom:.*]]({{.*}})
+      loop.yield %4 : index
+    } else {
+// CHECK: ^[[second_inner_else]]:
+      %5 = constant 41 : index
+// CHECK:   br ^[[second_inner_dom]]({{.*}})
+      loop.yield %5 : index
+    }
+// CHECK: ^[[second_inner_dom]](%[[arg2:.*]]: index):
+// CHECK:   br ^[[second_inner_cont:.*]]
+// CHECK: ^[[second_inner_cont]]:
+// CHECK:   br ^[[second_outer_dom:.*]]({{.*}})
+    loop.yield %3 : index
+  } else {
+// CHECK: ^[[second_outer_else]]:
+    %6 = constant 42 : index
+// CHECK:   br ^[[second_outer_dom]]({{.*}}
+    loop.yield %6 : index
+  }
+// CHECK: ^[[second_outer_dom]](%[[arg3:.*]]: index):
+// CHECK:   br ^[[second_outer_cont:.*]]
+// CHECK: ^[[second_outer_cont]]:
+// CHECK:   return %[[arg3]] : index
+  return %1 : index
+}
+
 // CHECK-LABEL:   func @parallel_loop(
 // CHECK-SAME:                        [[VAL_0:%.*]]: index, [[VAL_1:%.*]]: index, [[VAL_2:%.*]]: index, [[VAL_3:%.*]]: index, [[VAL_4:%.*]]: index) {
 // CHECK:           [[VAL_5:%.*]] = constant 1 : index

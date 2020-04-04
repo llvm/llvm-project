@@ -408,7 +408,7 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
-                                    unsigned DestReg, unsigned SubIdx,
+                                    Register DestReg, unsigned SubIdx,
                                     const MachineInstr &Orig,
                                     const TargetRegisterInfo &TRI) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);

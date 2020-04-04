@@ -174,8 +174,8 @@ LanaiInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-bool LanaiInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                                    unsigned &SrcReg2, int &CmpMask,
+bool LanaiInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                    Register &SrcReg2, int &CmpMask,
                                     int &CmpValue) const {
   switch (MI.getOpcode()) {
   default:
@@ -183,7 +183,7 @@ bool LanaiInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case Lanai::SFSUB_F_RI_LO:
   case Lanai::SFSUB_F_RI_HI:
     SrcReg = MI.getOperand(0).getReg();
-    SrcReg2 = 0;
+    SrcReg2 = Register();
     CmpMask = ~0;
     CmpValue = MI.getOperand(1).getImm();
     return true;
@@ -281,7 +281,7 @@ inline static unsigned flagSettingOpcodeVariant(unsigned OldOpcode) {
 }
 
 bool LanaiInstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int /*CmpMask*/,
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int /*CmpMask*/,
     int CmpValue, const MachineRegisterInfo *MRI) const {
   // Get the unique definition of SrcReg.
   MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
@@ -454,9 +454,9 @@ bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
 
 // Identify instructions that can be folded into a SELECT instruction, and
 // return the defining instruction.
-static MachineInstr *canFoldIntoSelect(unsigned Reg,
+static MachineInstr *canFoldIntoSelect(Register Reg,
                                        const MachineRegisterInfo &MRI) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
     return nullptr;

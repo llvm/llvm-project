@@ -62,7 +62,7 @@ public:
     while (!opWorklist.empty()) {
       // Find the next operation ready for inference, that is an operation
       // with all operands already resolved (non-generic).
-      auto nextop = llvm::find_if(opWorklist, returnsDynamicShape);
+      auto nextop = llvm::find_if(opWorklist, allOperandsInferred);
       if (nextop == opWorklist.end())
         break;
 
@@ -86,6 +86,14 @@ public:
           << opWorklist.size() << " operations couldn't be inferred\n";
       signalPassFailure();
     }
+  }
+
+  /// A utility method that returns if the given operation has all of its
+  /// operands inferred.
+  static bool allOperandsInferred(Operation *op) {
+    return llvm::all_of(op->getOperandTypes(), [](Type operandType) {
+      return operandType.isa<RankedTensorType>();
+    });
   }
 
   /// A utility method that returns if the given operation has a dynamically

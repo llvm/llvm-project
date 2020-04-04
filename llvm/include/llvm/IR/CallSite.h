@@ -413,13 +413,27 @@ public:
   }
 
   /// Extract the alignment of the return value.
+  /// FIXME: Remove when the transition to Align is over.
   unsigned getRetAlignment() const {
-    CALLSITE_DELEGATE_GETTER(getRetAlignment());
+    if (auto MA = getRetAlign())
+      return MA->value();
+    return 0;
+  }
+
+  /// Extract the alignment of the return value.
+  MaybeAlign getRetAlign() const { CALLSITE_DELEGATE_GETTER(getRetAlign()); }
+
+  /// Extract the alignment for a call or parameter (0=unknown).
+  /// FIXME: Remove when the transition to Align is over.
+  unsigned getParamAlignment(unsigned ArgNo) const {
+    if (auto MA = getParamAlign(ArgNo))
+      return MA->value();
+    return 0;
   }
 
   /// Extract the alignment for a call or parameter (0=unknown).
-  unsigned getParamAlignment(unsigned ArgNo) const {
-    CALLSITE_DELEGATE_GETTER(getParamAlignment(ArgNo));
+  MaybeAlign getParamAlign(unsigned ArgNo) const {
+    CALLSITE_DELEGATE_GETTER(getParamAlign(ArgNo));
   }
 
   /// Extract the byval type for a call or parameter (nullptr=unknown).

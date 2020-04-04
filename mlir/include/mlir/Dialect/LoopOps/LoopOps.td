@@ -142,10 +142,10 @@ def ForOp : Loop_Op<"for",
     OpBuilder getBodyBuilder() {
       return OpBuilder(getBody(), std::prev(getBody()->end()));
     }
-    iterator_range<Block::args_iterator> getRegionIterArgs() {
+    Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    iterator_range<Operation::operand_iterator> getIterOperands() {
+    Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
 
@@ -313,7 +313,7 @@ def ParallelOp : Loop_Op<"parallel",
     unsigned getNumInductionVars() {
       return getBody()->getNumArguments();
     }
-    iterator_range<Block::args_iterator> getInductionVars() {
+    Block::BlockArgListType getInductionVars() {
       return getBody()->getArguments();
     }
     unsigned getNumLoops() { return step().size(); }

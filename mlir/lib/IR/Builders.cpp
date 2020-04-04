@@ -339,24 +339,28 @@ Operation *OpBuilder::insert(Operation *op) {
   return op;
 }
 
-/// Add new block and set the insertion point to the end of it. The block is
-/// inserted at the provided insertion point of 'parent'.
-Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt) {
+/// Add new block with 'argTypes' arguments and set the insertion point to the
+/// end of it. The block is inserted at the provided insertion point of
+/// 'parent'.
+Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
+                              TypeRange argTypes) {
   assert(parent && "expected valid parent region");
   if (insertPt == Region::iterator())
     insertPt = parent->end();
 
   Block *b = new Block();
+  b->addArguments(argTypes);
   parent->getBlocks().insert(insertPt, b);
   setInsertionPointToEnd(b);
   return b;
 }
 
-/// Add new block and set the insertion point to the end of it.  The block is
-/// placed before 'insertBefore'.
-Block *OpBuilder::createBlock(Block *insertBefore) {
+/// Add new block with 'argTypes' arguments and set the insertion point to the
+/// end of it.  The block is placed before 'insertBefore'.
+Block *OpBuilder::createBlock(Block *insertBefore, TypeRange argTypes) {
   assert(insertBefore && "expected valid insertion block");
-  return createBlock(insertBefore->getParent(), Region::iterator(insertBefore));
+  return createBlock(insertBefore->getParent(), Region::iterator(insertBefore),
+                     argTypes);
 }
 
 /// Create an operation given the fields represented as an OperationState.

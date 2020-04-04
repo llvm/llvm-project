@@ -344,7 +344,7 @@ body:             |
 ---
 # GCN-LABEL: name: shrink_addc_vop3{{$}}
 # GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def $vcc, implicit $vcc, implicit $exec
-# GCN %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
 
 name:            shrink_addc_vop3
 alignment:       1

@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -40,6 +41,17 @@ using namespace mlir::detail;
 
 using llvm::hash_combine;
 using llvm::hash_combine_range;
+
+static llvm::cl::opt<bool> clPrintOpOnDiagnostic(
+    "mlir-print-op-on-diagnostic",
+    llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
+                   "the operation as an attached note"),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool> clPrintStackTraceOnDiagnostic(
+    "mlir-print-stacktrace-on-diagnostic",
+    llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
+                   "as an attached note"));
 
 /// A utility function to safely get or create a uniqued instance within the
 /// given set container.
@@ -170,6 +182,13 @@ public:
   /// detect such use cases
   bool allowUnregisteredDialects = false;
 
+  /// If the operation should be attached to diagnostics printed via the
+  /// Operation::emit methods.
+  bool printOpOnDiagnostic;
+
+  /// If the current stack trace should be attached when emitting diagnostics.
+  bool printStackTraceOnDiagnostic;
+
   //===--------------------------------------------------------------------===//
   // Other
   //===--------------------------------------------------------------------===//
@@ -234,7 +253,10 @@ public:
   UnknownLoc unknownLocAttr;
 
 public:
-  MLIRContextImpl() : identifiers(identifierAllocator) {}
+  MLIRContextImpl()
+      : printOpOnDiagnostic(clPrintOpOnDiagnostic),
+        printStackTraceOnDiagnostic(clPrintStackTraceOnDiagnostic),
+        identifiers(identifierAllocator) {}
 };
 } // end namespace mlir
 
@@ -364,6 +386,34 @@ bool MLIRContext::allowsUnregisteredDialects() {
 
 void MLIRContext::allowUnregisteredDialects(bool allowing) {
   impl->allowUnregisteredDialects = allowing;
+}
+
+/// Return true if we should attach the operation to diagnostics emitted via
+/// Operation::emit.
+bool MLIRContext::shouldPrintOpOnDiagnostic() {
+  return impl->printOpOnDiagnostic;
+}
+
+/// Set the flag specifying if we should attach the operation to diagnostics
+/// emitted via Operation::emit.
+void MLIRContext::printOpOnDiagnostic(bool enable) {
+  // Let the command line option take priority.
+  if (!clPrintOpOnDiagnostic.getNumOccurrences())
+    impl->printOpOnDiagnostic = enable;
+}
+
+/// Return true if we should attach the current stacktrace to diagnostics when
+/// emitted.
+bool MLIRContext::shouldPrintStackTraceOnDiagnostic() {
+  return impl->printStackTraceOnDiagnostic;
+}
+
+/// Set the flag specifying if we should attach the current stacktrace when
+/// emitting diagnostics.
+void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
+  // Let the command line option take priority.
+  if (!clPrintStackTraceOnDiagnostic.getNumOccurrences())
+    impl->printStackTraceOnDiagnostic = enable;
 }
 
 /// Return information about all registered operations.  This isn't very

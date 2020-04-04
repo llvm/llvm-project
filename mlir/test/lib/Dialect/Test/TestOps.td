@@ -158,15 +158,8 @@ def TypeArrayAttrOp : TEST_Op<"type_array_attr"> {
   let arguments = (ins TypeArrayAttr:$attr);
 }
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
-  let arguments = (ins StrAttr:$attr);
-  let printer = [{ p << getAttr("attr"); }];
-  let parser = [{
-    Attribute attr;
-    Type stringType = OpaqueType::get(Identifier::get("foo",
-                                      result.getContext()), "string",
-                                      result.getContext());
-    return parser.parseAttribute(attr, stringType, "attr", result.attributes);
-  }];
+  let arguments = (ins TypedStrAttr<AnyType>:$attr);
+  let assemblyFormat = "$attr attr-dict";
 }
 
 def StrCaseA: StrEnumAttrCase<"A">;

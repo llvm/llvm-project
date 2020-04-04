@@ -1577,10 +1577,8 @@ public:
            dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
   }
 
-  /// Extract the alignment of the return value.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getRetAlign() instead.
-  unsigned getRetAlignment() const {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getRetAlignment() const,
+                            "Use getRetAlign() instead") {
     if (const auto MA = Attrs.getRetAlignment())
       return MA->value();
     return 0;
@@ -1590,9 +1588,8 @@ public:
   MaybeAlign getRetAlign() const { return Attrs.getRetAlignment(); }
 
   /// Extract the alignment for a call or parameter (0=unknown).
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
-  unsigned getParamAlignment(unsigned ArgNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getParamAlignment(unsigned ArgNo) const,
+                            "Use getParamAlign() instead") {
     if (const auto MA = Attrs.getParamAlignment(ArgNo))
       return MA->value();
     return 0;

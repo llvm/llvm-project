@@ -1830,8 +1830,7 @@ define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(<2 x i64> *%dest, <2 
 ; CHECK-BE-NEXT:    vldr d0, [r0]
 ; CHECK-BE-NEXT:    b .LBB49_3
 ; CHECK-BE-NEXT:  .LBB49_2:
-; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
-; CHECK-BE-NEXT:    vrev64.32 q0, q1
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-BE-NEXT:  .LBB49_3: @ %else
 ; CHECK-BE-NEXT:    lsls r1, r1, #30
 ; CHECK-BE-NEXT:    it mi
@@ -1924,8 +1923,7 @@ define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(<2 x double> *%des
 ; CHECK-BE-NEXT:    vldr d0, [r0]
 ; CHECK-BE-NEXT:    b .LBB50_3
 ; CHECK-BE-NEXT:  .LBB50_2:
-; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
-; CHECK-BE-NEXT:    vrev64.32 q0, q1
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-BE-NEXT:  .LBB50_3: @ %else
 ; CHECK-BE-NEXT:    lsls r1, r1, #30
 ; CHECK-BE-NEXT:    it mi

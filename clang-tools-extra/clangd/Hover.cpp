@@ -21,9 +21,11 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -370,6 +372,97 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
   return llvm::None;
 }
 
+llvm::Optional<StringRef> fieldName(const Expr *E) {
+  const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
+  if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
+    return llvm::None;
+  const auto *Field =
+      llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!Field || !Field->getDeclName().isIdentifier())
+    return llvm::None;
+  return Field->getDeclName().getAsIdentifierInfo()->getName();
+}
+
+// If CMD is of the form T foo() { return FieldName; } then returns "FieldName".
+llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->getNumParams() != 0 || CMD->isVariadic())
+    return llvm::None;
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  const auto *OnlyReturn = (Body && Body->size() == 1)
+                               ? llvm::dyn_cast<ReturnStmt>(Body->body_front())
+                               : nullptr;
+  if (!OnlyReturn || !OnlyReturn->getRetValue())
+    return llvm::None;
+  return fieldName(OnlyReturn->getRetValue());
+}
+
+// If CMD is one of the forms:
+//   void foo(T arg) { FieldName = arg; }
+//   R foo(T arg) { FieldName = arg; return *this; }
+// then returns "FieldName"
+llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
+    return llvm::None;
+  const ParmVarDecl *Arg = CMD->getParamDecl(0);
+  if (Arg->isParameterPack())
+    return llvm::None;
+
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  if (!Body || Body->size() == 0 || Body->size() > 2)
+    return llvm::None;
+  // If the second statement exists, it must be `return this` or `return *this`.
+  if (Body->size() == 2) {
+    auto *Ret = llvm::dyn_cast<ReturnStmt>(Body->body_back());
+    if (!Ret || !Ret->getRetValue())
+      return llvm::None;
+    const Expr *RetVal = Ret->getRetValue()->IgnoreCasts();
+    if (const auto *UO = llvm::dyn_cast<UnaryOperator>(RetVal)) {
+      if (UO->getOpcode() != UO_Deref)
+        return llvm::None;
+      RetVal = UO->getSubExpr()->IgnoreCasts();
+    }
+    if (!llvm::isa<CXXThisExpr>(RetVal))
+      return llvm::None;
+  }
+  // The first statement must be an assignment of the arg to a field.
+  const Expr *LHS, *RHS;
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(Body->body_front())) {
+    if (BO->getOpcode() != BO_Assign)
+      return llvm::None;
+    LHS = BO->getLHS();
+    RHS = BO->getRHS();
+  } else if (const auto *COCE =
+                 llvm::dyn_cast<CXXOperatorCallExpr>(Body->body_front())) {
+    if (COCE->getOperator() != OO_Equal || COCE->getNumArgs() != 2)
+      return llvm::None;
+    LHS = COCE->getArg(0);
+    RHS = COCE->getArg(1);
+  } else {
+    return llvm::None;
+  }
+  auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
+  if (!DRE || DRE->getDecl() != Arg)
+    return llvm::None;
+  return fieldName(LHS);
+}
+
+std::string synthesizeDocumentation(const NamedDecl *ND) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    // Is this an ordinary, non-static method whose definition is visible?
+    if (CMD->getDeclName().isIdentifier() && !CMD->isStatic() &&
+        (CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition())) &&
+        CMD->hasBody()) {
+      if (const auto GetterField = getterVariableName(CMD))
+        return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
+      if (const auto SetterField = setterVariableName(CMD))
+        return llvm::formatv("Trivial setter for `{0}`.", *SetterField);
+    }
+  }
+  return "";
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   HoverInfo HI;
@@ -387,6 +480,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
   enhanceFromIndex(HI, *CommentD, Index);
+  if (HI.Documentation.empty())
+    HI.Documentation = synthesizeDocumentation(D);
 
   HI.Kind = index::getSymbolInfo(D).Kind;
 

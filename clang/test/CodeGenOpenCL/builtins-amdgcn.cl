@@ -538,7 +538,7 @@ void test_get_local_id(int d, global int *out)
 void test_get_workgroup_size(int d, global int *out)
 {
 	switch (d) {
-	case 0: *out = __builtin_amdgcn_workgroup_size_x(); break;
+	case 0: *out = __builtin_amdgcn_workgroup_size_x() + 1; break;
 	case 1: *out = __builtin_amdgcn_workgroup_size_y(); break;
 	case 2: *out = __builtin_amdgcn_workgroup_size_z(); break;
 	default: *out = 0;
