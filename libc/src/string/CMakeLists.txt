@@ -21,6 +21,7 @@ add_entrypoint_object(
   DEPENDS
     string_h
     strlen
+    memcpy
 )
 
 add_entrypoint_object(
