@@ -199,40 +199,6 @@ public:
            MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
            BasicBlock *InsertAtEnd);
 
-  // Deprecated [opaque pointer types]
-  explicit LoadInst(Value *Ptr, const Twine &NameStr = "",
-                    Instruction *InsertBefore = nullptr)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, BasicBlock *InsertAtEnd)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 InsertAtEnd) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile,
-           Instruction *InsertBefore = nullptr)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile,
-           BasicBlock *InsertAtEnd)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, InsertAtEnd) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
-           Instruction *InsertBefore = nullptr)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, Align, InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
-           BasicBlock *InsertAtEnd)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, Align, InsertAtEnd) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
-           AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
-           Instruction *InsertBefore = nullptr)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, Align, Order, SSID, InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
-           AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd)
-      : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
-                 isVolatile, Align, Order, SSID, InsertAtEnd) {}
-
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassDataFromInstruction() & 1; }
 
@@ -1541,58 +1507,6 @@ public:
                           const Twine &NameStr, BasicBlock *InsertAtEnd) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
                   NameStr, InsertAtEnd);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, const Twine &NameStr = "",
-                          Instruction *InsertBefore = nullptr) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, NameStr, InsertBefore);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, ArrayRef<Value *> Args,
-                          const Twine &NameStr,
-                          Instruction *InsertBefore = nullptr) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, Args, NameStr, InsertBefore);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles = None,
-                          const Twine &NameStr = "",
-                          Instruction *InsertBefore = nullptr) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, Args, Bundles, NameStr, InsertBefore);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, const Twine &NameStr,
-                          BasicBlock *InsertAtEnd) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, NameStr, InsertAtEnd);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, ArrayRef<Value *> Args,
-                          const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, Args, NameStr, InsertAtEnd);
-  }
-
-  // Deprecated [opaque pointer types]
-  static CallInst *Create(Value *Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles,
-                          const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, Args, Bundles, NameStr, InsertAtEnd);
   }
 
   /// Create a clone of \p CI with a different set of operand bundles and
@@ -3802,49 +3716,6 @@ public:
                             const Twine &NameStr, BasicBlock *InsertAtEnd) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
                   IfException, Args, Bundles, NameStr, InsertAtEnd);
-  }
-
-  // Deprecated [opaque pointer types]
-  static InvokeInst *Create(Value *Func, BasicBlock *IfNormal,
-                            BasicBlock *IfException, ArrayRef<Value *> Args,
-                            const Twine &NameStr,
-                            Instruction *InsertBefore = nullptr) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, IfNormal, IfException, Args, None, NameStr,
-                  InsertBefore);
-  }
-
-  // Deprecated [opaque pointer types]
-  static InvokeInst *Create(Value *Func, BasicBlock *IfNormal,
-                            BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = None,
-                            const Twine &NameStr = "",
-                            Instruction *InsertBefore = nullptr) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, IfNormal, IfException, Args, Bundles, NameStr,
-                  InsertBefore);
-  }
-
-  // Deprecated [opaque pointer types]
-  static InvokeInst *Create(Value *Func, BasicBlock *IfNormal,
-                            BasicBlock *IfException, ArrayRef<Value *> Args,
-                            const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, IfNormal, IfException, Args, NameStr, InsertAtEnd);
-  }
-
-  // Deprecated [opaque pointer types]
-  static InvokeInst *Create(Value *Func, BasicBlock *IfNormal,
-                            BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles,
-                            const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(cast<FunctionType>(
-                      cast<PointerType>(Func->getType())->getElementType()),
-                  Func, IfNormal, IfException, Args, Bundles, NameStr,
-                  InsertAtEnd);
   }
 
   /// Create a clone of \p II with a different set of operand bundles and
