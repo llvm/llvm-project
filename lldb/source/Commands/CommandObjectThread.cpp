@@ -2061,7 +2061,6 @@ public:
       return true;  
     }
 
-    bool success;
     const size_t num_args = args.GetArgumentCount();
 
     std::lock_guard<std::recursive_mutex> guard(

@@ -39,9 +39,6 @@ ThreadPlanStack::ThreadPlanStack(const Thread &thread, bool make_null) {
 void ThreadPlanStack::DumpThreadPlans(Stream &s,
                                       lldb::DescriptionLevel desc_level,
                                       bool include_internal) const {
-
-  uint32_t stack_size;
-
   s.IndentMore();
   PrintOneStack(s, "Active plan stack", m_plans, desc_level, include_internal);
   PrintOneStack(s, "Completed plan stack", m_completed_plans, desc_level,
@@ -73,7 +70,7 @@ void ThreadPlanStack::PrintOneStack(Stream &s, llvm::StringRef stack_name,
   if (include_internal || any_public) {
     int print_idx = 0;
     s.Indent();
-    s.Printf("%s:\n", stack_name);
+    s << stack_name << ":\n";
     for (auto plan : stack) {
       if (!include_internal && plan->GetPrivate())
         continue;
@@ -270,7 +267,6 @@ lldb::ThreadPlanSP ThreadPlanStack::GetCompletedPlan(bool skip_private) const {
 lldb::ThreadPlanSP ThreadPlanStack::GetPlanByIndex(uint32_t plan_idx,
                                                    bool skip_private) const {
   uint32_t idx = 0;
-  ThreadPlan *up_to_plan_ptr = nullptr;
 
   for (lldb::ThreadPlanSP plan_sp : m_plans) {
     if (skip_private && plan_sp->GetPrivate())
