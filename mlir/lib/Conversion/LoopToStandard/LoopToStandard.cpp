@@ -244,7 +244,10 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   // place it before the continuation block, and branch to it.
   auto &thenRegion = ifOp.thenRegion();
   auto *thenBlock = &thenRegion.front();
-  rewriter.eraseOp(thenRegion.back().getTerminator());
+  auto thenTerminator = thenRegion.back().getTerminator();
+  continueBlock->addArguments(thenTerminator->getOperandTypes());
+  auto thenYieldValues = thenTerminator->getOperands();
+  rewriter.eraseOp(thenTerminator);
   rewriter.setInsertionPointToEnd(&thenRegion.back());
   rewriter.create<BranchOp>(loc, continueBlock);
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
@@ -256,9 +259,14 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   auto &elseRegion = ifOp.elseRegion();
   if (!elseRegion.empty()) {
     elseBlock = &elseRegion.front();
-    rewriter.eraseOp(elseRegion.back().getTerminator());
+    auto elseTerminator = elseRegion.back().getTerminator();
+    assert(elseTerminator->getOperandTypes() ==
+        thenTerminator->getOperandTypes() &&
+        "Yield values from thenBlock and elseBlock mismatch");
+    auto elseYieldValues = elseTerminator->getOperands();
+    rewriter.eraseOp(elseTerminator);
     rewriter.setInsertionPointToEnd(&elseRegion.back());
-    rewriter.create<BranchOp>(loc, continueBlock);
+    rewriter.create<BranchOp>(loc, continueBlock, elseYieldValues);
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
   }
 
