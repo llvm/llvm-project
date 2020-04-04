@@ -48,7 +48,11 @@ Requesting a review via the web interface
 The tool to create and review patches in Phabricator is called
 *Differential*.
 
-Note that you can upload patches created through git.
+Note that you can upload patches created through git, but using `arc` on the
+command line (see previous section) is prefered: it adds more metadata to
+Phabricator which are useful for the pre-merge testing system and for
+propagating attribution on commits when someone else has to push it for you.
+
 To make reviews easier, please always include **as much context as
 possible** with your diff! Don't worry, Phabricator
 will automatically send a diff with a smaller context in the review
