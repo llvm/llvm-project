@@ -26,7 +26,7 @@ kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
 std::mutex TargetOffloadMtx;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// manage the success or failure of a target constuct
+/// manage the success or failure of a target construct
 
 static void HandleDefaultTargetOffload() {
   TargetOffloadMtx.lock();

@@ -200,7 +200,7 @@ NOINLINE static void check(bool cond) { assert(cond); }
 
 #endif
 
-// for printing without worring about precision, pointers...
+// for printing without worrying about precision, pointers...
 #define P64(_x) ((unsigned long long)(_x))
 
 ////////////////////////////////////////////////////////////////////////////////

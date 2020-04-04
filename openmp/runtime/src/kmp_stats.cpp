@@ -270,7 +270,7 @@ void explicitTimer::stop(tsc_tick_count tick,
 /* ************* partitionedTimers member functions ************* */
 partitionedTimers::partitionedTimers() { timer_stack.reserve(8); }
 
-// initialize the paritioned timers to an initial timer
+// initialize the partitioned timers to an initial timer
 void partitionedTimers::init(explicitTimer timer) {
   KMP_DEBUG_ASSERT(this->timer_stack.size() == 0);
   timer_stack.push_back(timer);
@@ -609,7 +609,7 @@ void kmp_stats_output_module::printTimerStats(FILE *statsOut,
               totalStats[s].format(tag, true).c_str());
   }
 
-  // Print historgram of statistics
+  // Print histogram of statistics
   if (theStats[0].haveHist()) {
     fprintf(statsOut, "\nTimer distributions\n");
     for (int s = 0; s < TIMER_LAST; s++) {
