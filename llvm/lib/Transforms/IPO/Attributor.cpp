@@ -2355,14 +2355,21 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       assert(PtrOp &&
              "Expected pointer operand of memory accessing instruction");
 
+      // Either we stopped and the appropriate action was taken,
+      // or we got back a simplified value to continue.
+      Optional<Value *> SimplifiedPtrOp = stopOnUndefOrAssumed(A, PtrOp, &I);
+      if (!SimplifiedPtrOp.hasValue())
+        return true;
+      const Value *PtrOpVal = SimplifiedPtrOp.getValue();
+
       // A memory access through a pointer is considered UB
       // only if the pointer has constant null value.
       // TODO: Expand it to not only check constant values.
-      if (!isa<ConstantPointerNull>(PtrOp)) {
+      if (!isa<ConstantPointerNull>(PtrOpVal)) {
         AssumedNoUBInsts.insert(&I);
         return true;
       }
-      const Type *PtrTy = PtrOp->getType();
+      const Type *PtrTy = PtrOpVal->getType();
 
       // Because we only consider instructions inside functions,
       // assume that a parent function exists.

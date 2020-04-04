@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=5 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 ; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-annotate-decl-cs -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Copied from Transforms/FunctoinAttrs/read_write_returned_arguments_scc.ll
