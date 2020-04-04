@@ -1501,11 +1501,15 @@ function(configure_lit_site_cfg site_in site_out)
     get_filename_component(OUTPUT_DIR ${site_out} DIRECTORY)
     execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "\n
 import os, sys\n
-drive = os.path.splitdrive(sys.argv[1])[0]\n
+base = sys.argv[1]
+def haslink(p):\n
+    if not p or p == os.path.dirname(p): return False\n
+    return os.path.islink(p) or haslink(os.path.dirname(p))\n
 def relpath(p):\n
     if not p: return ''\n
-    if os.path.splitdrive(p)[0] != drive: return p\n
-    return os.path.relpath(p, sys.argv[1]).replace(os.sep, '/')\n
+    if os.path.splitdrive(p)[0] != os.path.splitdrive(base)[0]: return p\n
+    if haslink(p) or haslink(base): return p\n
+    return os.path.relpath(p, base).replace(os.sep, '/')\n
 sys.stdout.write(';'.join(relpath(p) for p in sys.argv[2].split(';')))"
       ${OUTPUT_DIR}
       ${ARG_PATH_VALUES_ESCAPED}
