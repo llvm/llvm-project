@@ -159,9 +159,7 @@ private:
   const SDValue &getSDValue(TableId &Id) {
     RemapId(Id);
     assert(Id && "TableId should be non-zero");
-    auto I = IdToValueMap.find(Id);
-    assert(I != IdToValueMap.end() && "cannot find Id in map");
-    return I->second;
+    return IdToValueMap[Id];
   }
 
 public:
@@ -178,30 +176,25 @@ public:
   bool run();
 
   void NoteDeletion(SDNode *Old, SDNode *New) {
-    assert(Old != New && "node replaced with self");
     for (unsigned i = 0, e = Old->getNumValues(); i != e; ++i) {
       TableId NewId = getTableId(SDValue(New, i));
       TableId OldId = getTableId(SDValue(Old, i));
 
-      if (OldId != NewId) {
+      if (OldId != NewId)
         ReplacedValues[OldId] = NewId;
 
-        // Delete Node from tables.  We cannot do this when OldId == NewId,
-        // because NewId can still have table references to it in
-        // ReplacedValues.
-        IdToValueMap.erase(OldId);
-        PromotedIntegers.erase(OldId);
-        ExpandedIntegers.erase(OldId);
-        SoftenedFloats.erase(OldId);
-        PromotedFloats.erase(OldId);
-        SoftPromotedHalfs.erase(OldId);
-        ExpandedFloats.erase(OldId);
-        ScalarizedVectors.erase(OldId);
-        SplitVectors.erase(OldId);
-        WidenedVectors.erase(OldId);
-      }
-
+      // Delete Node from tables.
       ValueToIdMap.erase(SDValue(Old, i));
+      IdToValueMap.erase(OldId);
+      PromotedIntegers.erase(OldId);
+      ExpandedIntegers.erase(OldId);
+      SoftenedFloats.erase(OldId);
+      PromotedFloats.erase(OldId);
+      SoftPromotedHalfs.erase(OldId);
+      ExpandedFloats.erase(OldId);
+      ScalarizedVectors.erase(OldId);
+      SplitVectors.erase(OldId);
+      WidenedVectors.erase(OldId);
     }
   }
 
