@@ -57,6 +57,7 @@ STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
 STATISTIC(NumFnWithoutExactDefinition,
           "Number of functions without exact definitions");
+STATISTIC(NumFnShallowWrapperCreated, "Number of shallow wrappers created");
 STATISTIC(NumAttributesTimedOut,
           "Number of abstract attributes timed out before fixpoint");
 STATISTIC(NumAttributesValidFixpoint,
@@ -183,6 +184,12 @@ static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
 
 static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
                                        cl::Hidden);
+
+static cl::opt<bool>
+    AllowShallowWrappers("attributor-allow-shallow-wrappers", cl::Hidden,
+                         cl::desc("Allow the Attributor to create shallow "
+                                  "wrappers for non-exact definitions."),
+                         cl::init(false));
 
 /// Logic operators for the change status enum class.
 ///
@@ -8139,6 +8146,69 @@ ChangeStatus Attributor::run() {
   return ManifestChange;
 }
 
+/// Create a shallow wrapper for \p F such that \p F has internal linkage
+/// afterwards. It also sets the original \p F 's name to anonymous
+///
+/// A wrapper is a function with the same type (and attributes) as \p F
+/// that will only call \p F and return the result, if any.
+///
+/// Assuming the declaration of looks like:
+///   rty F(aty0 arg0, ..., atyN argN);
+///
+/// The wrapper will then look as follows:
+///   rty wrapper(aty0 arg0, ..., atyN argN) {
+///     return F(arg0, ..., argN);
+///   }
+///
+static void createShallowWrapper(Function &F) {
+  assert(AllowShallowWrappers &&
+         "Cannot create a wrapper if it is not allowed!");
+  assert(!F.isDeclaration() && "Cannot create a wrapper around a declaration!");
+
+  Module &M = *F.getParent();
+  LLVMContext &Ctx = M.getContext();
+  FunctionType *FnTy = F.getFunctionType();
+
+  Function *Wrapper =
+      Function::Create(FnTy, F.getLinkage(), F.getAddressSpace(), F.getName());
+  F.setName(""); // set the inside function anonymous
+  M.getFunctionList().insert(F.getIterator(), Wrapper);
+
+  F.setLinkage(GlobalValue::InternalLinkage);
+
+  F.replaceAllUsesWith(Wrapper);
+  assert(F.getNumUses() == 0 && "Uses remained after wrapper was created!");
+
+  // Move the COMDAT section to the wrapper.
+  // TODO: Check if we need to keep it for F as well.
+  Wrapper->setComdat(F.getComdat());
+  F.setComdat(nullptr);
+
+  // Copy all metadata and attributes but keep them on F as well.
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  F.getAllMetadata(MDs);
+  for (auto MDIt : MDs)
+    Wrapper->addMetadata(MDIt.first, *MDIt.second);
+  Wrapper->setAttributes(F.getAttributes());
+
+  // Create the call in the wrapper.
+  BasicBlock *EntryBB = BasicBlock::Create(Ctx, "entry", Wrapper);
+
+  SmallVector<Value *, 8> Args;
+  auto FArgIt = F.arg_begin();
+  for (Argument &Arg : Wrapper->args()) {
+    Args.push_back(&Arg);
+    Arg.setName((FArgIt++)->getName());
+  }
+
+  CallInst *CI = CallInst::Create(&F, Args, "", EntryBB);
+  CI->setTailCall(true);
+  CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoInline);
+  ReturnInst::Create(Ctx, CI->getType()->isVoidTy() ? nullptr : CI, EntryBB);
+
+  NumFnShallowWrapperCreated++;
+}
+
 bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
 
@@ -8788,6 +8858,12 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // initialized for _all_ functions.
   for (Function *F : Functions)
     A.initializeInformationCache(*F);
+
+  // Create shallow wrappers for all functions that are not IPO amendable
+  if (AllowShallowWrappers)
+    for (Function *F : Functions)
+      if (!A.isFunctionIPOAmendable(*F))
+        createShallowWrapper(*F);
 
   for (Function *F : Functions) {
     if (F->hasExactDefinition())
