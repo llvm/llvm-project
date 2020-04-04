@@ -61,7 +61,7 @@ class TestThreadPlanCommands(TestBase):
             fudge = 5
 
         self.assertEqual(num_results, num_active + num_completed + num_discarded + fudge,
-                             "Too many elements in match arrays")
+                             "Too many elements in match arrays for: \n%s\n"%result.GetOutput())
             
         # Now iterate through the results array and pick out the results.
         result_idx = 0
