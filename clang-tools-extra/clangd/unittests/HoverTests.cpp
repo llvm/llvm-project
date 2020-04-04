@@ -1981,6 +1981,11 @@ TEST(Hover, DocCommentLineBreakConversion) {
                    "foo.\nbar",
                },
                {
+                   "foo. \nbar",
+                   "foo.  \nbar",
+                   "foo.\nbar",
+               },
+               {
                    "foo\n*bar",
                    "foo  \n\\*bar",
                    "foo\n*bar",
