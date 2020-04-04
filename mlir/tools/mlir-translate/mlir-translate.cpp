@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
                            raw_ostream &os) {
     MLIRContext context;
     context.allowUnregisteredDialects();
+    context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), llvm::SMLoc());
 
