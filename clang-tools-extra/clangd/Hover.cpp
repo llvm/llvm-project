@@ -616,46 +616,39 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
   return llvm::None;
 }
 
-bool isParagraphLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
-  return Str.substr(LineBreakIndex + 1)
-      .drop_while([](auto C) { return C == ' ' || C == '\t'; })
-      .startswith("\n");
+bool isParagraphBreak(llvm::StringRef Rest) {
+  return Rest.ltrim(" \t").startswith("\n");
 }
 
-bool isPunctuationLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
+bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
   constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
 
-  return LineBreakIndex > 0 && Punctuation.contains(Str[LineBreakIndex - 1]);
+  Line = Line.rtrim();
+  return !Line.empty() && Punctuation.contains(Line.back());
 }
 
-bool isFollowedByHardLineBreakIndicator(llvm::StringRef Str,
-                                        size_t LineBreakIndex) {
+bool isHardLineBreakIndicator(llvm::StringRef Rest) {
   // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
   // '#' headings, '`' code blocks
-  constexpr llvm::StringLiteral LinbreakIdenticators = R"txt(-*@\>#`)txt";
+  constexpr llvm::StringLiteral LinebreakIndicators = R"txt(-*@\>#`)txt";
 
-  auto NextNonSpaceCharIndex = Str.find_first_not_of(' ', LineBreakIndex + 1);
-
-  if (NextNonSpaceCharIndex == llvm::StringRef::npos) {
+  Rest = Rest.ltrim(" \t");
+  if (Rest.empty())
     return false;
+
+  if (LinebreakIndicators.contains(Rest.front()))
+    return true;
+
+  if (llvm::isDigit(Rest.front())) {
+    llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
+    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+      return true;
   }
-
-  auto FollowedBySingleCharIndicator =
-      LinbreakIdenticators.find(Str[NextNonSpaceCharIndex]) !=
-      llvm::StringRef::npos;
-
-  auto FollowedByNumberedListIndicator =
-      llvm::isDigit(Str[NextNonSpaceCharIndex]) &&
-      NextNonSpaceCharIndex + 1 < Str.size() &&
-      (Str[NextNonSpaceCharIndex + 1] == '.' ||
-       Str[NextNonSpaceCharIndex + 1] == ')');
-
-  return FollowedBySingleCharIndicator || FollowedByNumberedListIndicator;
+  return false;
 }
 
-bool isHardLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
-  return isPunctuationLineBreak(Str, LineBreakIndex) ||
-         isFollowedByHardLineBreakIndicator(Str, LineBreakIndex);
+bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
+  return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
 }
 
 } // namespace
@@ -814,42 +807,32 @@ markup::Document HoverInfo::present() const {
 }
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
+  std::vector<llvm::StringRef> ParagraphLines;
+  auto FlushParagraph = [&] {
+    if (ParagraphLines.empty())
+      return;
+    auto &P = Output.addParagraph();
+    for (llvm::StringRef Line : ParagraphLines)
+      P.appendText(Line.str());
+    ParagraphLines.clear();
+  };
 
-  constexpr auto WhiteSpaceChars = "\t\n\v\f\r ";
+  llvm::StringRef Line, Rest;
+  for (std::tie(Line, Rest) = Input.split('\n');
+       !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
 
-  auto TrimmedInput = Input.trim();
+    // After a linebreak remove spaces to avoid 4 space markdown code blocks.
+    // FIXME: make FlushParagraph handle this.
+    Line = Line.ltrim();
+    if (!Line.empty())
+      ParagraphLines.push_back(Line);
 
-  std::string CurrentLine;
-
-  for (size_t CharIndex = 0; CharIndex < TrimmedInput.size();) {
-    if (TrimmedInput[CharIndex] == '\n') {
-      // Trim whitespace infront of linebreak
-      const auto LastNonSpaceCharIndex =
-          CurrentLine.find_last_not_of(WhiteSpaceChars) + 1;
-      CurrentLine.erase(LastNonSpaceCharIndex);
-
-      if (isParagraphLineBreak(TrimmedInput, CharIndex) ||
-          isHardLineBreak(TrimmedInput, CharIndex)) {
-        // FIXME: maybe distinguish between line breaks and paragraphs
-        Output.addParagraph().appendText(CurrentLine);
-        CurrentLine = "";
-      } else {
-        // Ommit linebreak
-        CurrentLine += ' ';
-      }
-
-      CharIndex++;
-      // After a linebreak always remove spaces to avoid 4 space markdown code
-      // blocks, also skip all additional linebreaks since they have no effect
-      CharIndex = TrimmedInput.find_first_not_of(WhiteSpaceChars, CharIndex);
-    } else {
-      CurrentLine += TrimmedInput[CharIndex];
-      CharIndex++;
+    if (isParagraphBreak(Rest) || isHardLineBreakAfter(Line, Rest)) {
+      FlushParagraph();
     }
   }
-  if (!CurrentLine.empty()) {
-    Output.addParagraph().appendText(CurrentLine);
-  }
+  FlushParagraph();
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
