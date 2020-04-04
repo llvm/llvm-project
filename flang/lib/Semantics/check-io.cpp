@@ -166,7 +166,7 @@ void IoChecker::Enter(const parser::ConnectSpec::Recl &spec) {
     if (*recl <= 0) {
       context_.Say(parser::FindSourceLocation(spec),
           "RECL value (%jd) must be positive"_err_en_US,
-          std::move(static_cast<std::intmax_t>(*recl))); // 12.5.6.15
+          *recl); // 12.5.6.15
     }
   }
 }

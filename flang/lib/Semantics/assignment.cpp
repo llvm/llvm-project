@@ -242,7 +242,7 @@ void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
           Say(at,
               "Dimension %d must have extent %jd to match prior mask or"
               " assignment of WHERE construct"_err_en_US,
-              i + 1, static_cast<std::intmax_t>(*whereExtents_[i]));
+              i + 1, *whereExtents_[i]);
         }
       }
     }

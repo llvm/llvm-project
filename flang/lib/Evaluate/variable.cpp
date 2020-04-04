@@ -168,8 +168,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
   if (lbi && *lbi < 1) {
     context.messages().Say(
-        "Lower bound (%jd) on substring is less than one"_en_US,
-        static_cast<std::intmax_t>(*lbi));
+        "Lower bound (%jd) on substring is less than one"_en_US, *lbi);
     *lbi = 1;
     lower_ = AsExpr(Constant<SubscriptInteger>{1});
   }
@@ -200,8 +199,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
     } else if (length && *ubi > *length) {
       context.messages().Say("Upper bound (%jd) on substring is greater "
                              "than character length (%jd)"_en_US,
-          static_cast<std::intmax_t>(*ubi),
-          static_cast<std::intmax_t>(*length));
+          *ubi, *length);
       *ubi = *length;
     }
     if (lbi && literal) {

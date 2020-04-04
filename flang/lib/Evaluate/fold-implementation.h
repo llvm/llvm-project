@@ -275,7 +275,7 @@ std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
       if (at[j] < lbounds[j] || at[j] >= lbounds[j] + shape[j]) {
         context_.messages().Say(
             "Subscript value (%jd) is out of range on dimension %d in reference to a constant array value"_err_en_US,
-            static_cast<std::intmax_t>(at[j]), j + 1);
+            at[j], j + 1);
         return std::nullopt;
       }
     }

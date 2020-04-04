@@ -642,8 +642,7 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
             if (*leftDim != *rightDim) {
               messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
                            "but %4$s has extent %5$jd"_err_en_US,
-                  j + 1, leftIs, static_cast<std::intmax_t>(*leftDim), rightIs,
-                  static_cast<std::intmax_t>(*rightDim));
+                  j + 1, leftIs, *leftDim, rightIs, *rightDim);
               return false;
             }
           }

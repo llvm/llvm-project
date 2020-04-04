@@ -24,7 +24,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
                                    "rank-%d array"_en_US,
-                static_cast<std::intmax_t>(*dim64), rank);
+                *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
             dim = *dim64 - 1; // 1-based to 0-based
@@ -79,7 +79,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
                                    "rank-%d array"_en_US,
-                static_cast<std::intmax_t>(*dim64), rank);
+                *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
             dim = *dim64 - 1; // 1-based to 0-based
@@ -572,7 +572,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           } else {
             context.messages().Say(
                 "size(array,dim=%jd) dimension is out of range for rank-%d array"_en_US,
-                static_cast<std::intmax_t>(*dim), static_cast<int>(rank));
+                *dim, rank);
           }
         }
       } else if (auto extents{common::AllElementsPresent(std::move(*shape))}) {

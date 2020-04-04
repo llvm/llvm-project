@@ -100,6 +100,7 @@ private:
   const char *Convert(std::string &);
   const char *Convert(std::string &&);
   const char *Convert(CharBlock);
+  std::intmax_t Convert(std::int64_t x) { return x; }
 
   bool isFatal_{false};
   std::string string_;

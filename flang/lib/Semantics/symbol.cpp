@@ -571,7 +571,7 @@ static const DeclTypeSpec &InstantiateIntrinsicType(Scope &scope,
       foldingContext.messages().Say(
           "KIND parameter value (%jd) of intrinsic type %s "
           "did not resolve to a supported value"_err_en_US,
-          static_cast<std::intmax_t>(*value),
+          *value,
           parser::ToUpperCaseLetters(
               common::EnumToString(intrinsic.category())));
     }
