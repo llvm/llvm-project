@@ -92,13 +92,23 @@ public:
   }
   const VarT *getVar() { return var; }
 
-private:
+protected:
   const VarT *var;
 };
 
 /// This class represents a variable that refers to an attribute argument.
-using AttributeVariable =
-    VariableElement<NamedAttribute, Element::Kind::AttributeVariable>;
+struct AttributeVariable
+    : public VariableElement<NamedAttribute, Element::Kind::AttributeVariable> {
+  using VariableElement<NamedAttribute,
+                        Element::Kind::AttributeVariable>::VariableElement;
+
+  /// Return the constant builder call for the type of this attribute, or None
+  /// if it doesn't have one.
+  Optional<StringRef> getTypeBuilder() const {
+    Optional<Type> attrType = var->attr.getValueType();
+    return attrType ? attrType->getBuilderCall() : llvm::None;
+  }
+};
 
 /// This class represents a variable that refers to an operand argument.
 using OperandVariable =
@@ -574,11 +584,9 @@ static void genElementParser(Element *element, OpMethodBody &body,
     // If this attribute has a buildable type, use that when parsing the
     // attribute.
     std::string attrTypeStr;
-    if (Optional<Type> attrType = var->attr.getValueType()) {
-      if (Optional<StringRef> typeBuilder = attrType->getBuilderCall()) {
-        llvm::raw_string_ostream os(attrTypeStr);
-        os << ", " << tgfmt(*typeBuilder, &attrTypeCtx);
-      }
+    if (Optional<StringRef> typeBuilder = attr->getTypeBuilder()) {
+      llvm::raw_string_ostream os(attrTypeStr);
+      os << ", " << tgfmt(*typeBuilder, &attrTypeCtx);
     }
 
     body << formatv(attrParserCode, var->attr.getStorageType(), var->name,
@@ -932,8 +940,7 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
     }
 
     // Elide the attribute type if it is buildable.
-    Optional<Type> attrType = var->attr.getValueType();
-    if (attrType && attrType->getBuilderCall())
+    if (attr->getTypeBuilder())
       body << "  p.printAttributeWithoutType(" << var->name << "Attr());\n";
     else
       body << "  p.printAttribute(" << var->name << "Attr());\n";
@@ -1234,6 +1241,22 @@ private:
     Optional<StringRef> transformer;
   };
 
+  /// Verify the state of operation attributes within the format.
+  LogicalResult verifyAttributes(llvm::SMLoc loc);
+
+  /// Verify the state of operation operands within the format.
+  LogicalResult
+  verifyOperands(llvm::SMLoc loc,
+                 llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
+
+  /// Verify the state of operation results within the format.
+  LogicalResult
+  verifyResults(llvm::SMLoc loc,
+                llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
+
+  /// Verify the state of operation successors within the format.
+  LogicalResult verifySuccessors(llvm::SMLoc loc);
+
   /// Given the values of an `AllTypesMatch` trait, check for inferable type
   /// resolution.
   void handleAllTypesMatchConstraint(
@@ -1357,37 +1380,86 @@ LogicalResult FormatParser::parse() {
     }
   }
 
-  // Check that all of the result types can be inferred.
-  auto &buildableTypes = fmt.buildableTypes;
-  if (!fmt.allResultTypes) {
-    for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
-      if (seenResultTypes.test(i))
-        continue;
+  // Verify the state of the various operation components.
+  if (failed(verifyAttributes(loc)) ||
+      failed(verifyResults(loc, variableTyResolver)) ||
+      failed(verifyOperands(loc, variableTyResolver)) ||
+      failed(verifySuccessors(loc)))
+    return failure();
 
-      // Check to see if we can infer this type from another variable.
-      auto varResolverIt = variableTyResolver.find(op.getResultName(i));
-      if (varResolverIt != variableTyResolver.end()) {
-        fmt.resultTypes[i].setVariable(varResolverIt->second.type,
-                                       varResolverIt->second.transformer);
-        continue;
+  // Check to see if we are formatting all of the operands.
+  fmt.allOperands = llvm::any_of(fmt.elements, [](auto &elt) {
+    return isa<OperandsDirective>(elt.get());
+  });
+  return success();
+}
+
+LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
+  // Check that there are no `:` literals after an attribute without a constant
+  // type. The attribute grammar contains an optional trailing colon type, which
+  // can lead to unexpected and generally unintended behavior. Given that, it is
+  // better to just error out here instead.
+  using ElementsIterT = llvm::pointee_iterator<
+      std::vector<std::unique_ptr<Element>>::const_iterator>;
+  SmallVector<std::pair<ElementsIterT, ElementsIterT>, 1> iteratorStack;
+  iteratorStack.emplace_back(fmt.elements.begin(), fmt.elements.end());
+  while (!iteratorStack.empty()) {
+    auto &stackIt = iteratorStack.back();
+    ElementsIterT &it = stackIt.first, e = stackIt.second;
+    while (it != e) {
+      Element *element = &*(it++);
+
+      // Traverse into optional groups.
+      if (auto *optional = dyn_cast<OptionalElement>(element)) {
+        auto elements = optional->getElements();
+        iteratorStack.emplace_back(elements.begin(), elements.end());
+        break;
       }
 
-      // If the result is not variadic, allow for the case where the type has a
-      // builder that we can use.
-      NamedTypeConstraint &result = op.getResult(i);
-      Optional<StringRef> builder = result.constraint.getBuilderCall();
-      if (!builder || result.constraint.isVariadic()) {
-        return emitError(loc, "format missing instance of result #" + Twine(i) +
-                                  "('" + result.name + "') type");
+      // We are checking for an attribute element followed by a `:`, so there is
+      // no need to check the end.
+      if (it == e && iteratorStack.size() == 1)
+        break;
+
+      // Check for an attribute with a constant type builder, followed by a `:`.
+      auto *prevAttr = dyn_cast<AttributeVariable>(element);
+      if (!prevAttr || prevAttr->getTypeBuilder())
+        continue;
+
+      // Check the next iterator within the stack for literal elements.
+      for (auto &nextItPair : iteratorStack) {
+        ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
+        for (; nextIt != nextE; ++nextIt) {
+          // Skip any trailing optional groups or attribute dictionaries.
+          if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
+            continue;
+
+          // We are only interested in `:` literals.
+          auto *literal = dyn_cast<LiteralElement>(&*nextIt);
+          if (!literal || literal->getLiteral() != ":")
+            break;
+
+          // TODO: Use the location of the literal element itself.
+          return emitError(
+              loc, llvm::formatv("format ambiguity caused by `:` literal found "
+                                 "after attribute `{0}` which does not have "
+                                 "a buildable type",
+                                 prevAttr->getVar()->name));
+        }
       }
-      // Note in the format that this result uses the custom builder.
-      auto it = buildableTypes.insert({*builder, buildableTypes.size()});
-      fmt.resultTypes[i].setBuilderIdx(it.first->second);
     }
+    if (it == e)
+      iteratorStack.pop_back();
   }
+  return success();
+}
 
+LogicalResult FormatParser::verifyOperands(
+    llvm::SMLoc loc,
+    llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
   // Check that all of the operands are within the format, and their types can
   // be inferred.
+  auto &buildableTypes = fmt.buildableTypes;
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
 
@@ -1419,22 +1491,57 @@ LogicalResult FormatParser::parse() {
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
     fmt.operandTypes[i].setBuilderIdx(it.first->second);
   }
+  return success();
+}
 
+LogicalResult FormatParser::verifyResults(
+    llvm::SMLoc loc,
+    llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
+  // If we format all of the types together, there is nothing to check.
+  if (fmt.allResultTypes)
+    return success();
+
+  // Check that all of the result types can be inferred.
+  auto &buildableTypes = fmt.buildableTypes;
+  for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
+    if (seenResultTypes.test(i))
+      continue;
+
+    // Check to see if we can infer this type from another variable.
+    auto varResolverIt = variableTyResolver.find(op.getResultName(i));
+    if (varResolverIt != variableTyResolver.end()) {
+      fmt.resultTypes[i].setVariable(varResolverIt->second.type,
+                                     varResolverIt->second.transformer);
+      continue;
+    }
+
+    // If the result is not variadic, allow for the case where the type has a
+    // builder that we can use.
+    NamedTypeConstraint &result = op.getResult(i);
+    Optional<StringRef> builder = result.constraint.getBuilderCall();
+    if (!builder || result.constraint.isVariadic()) {
+      return emitError(loc, "format missing instance of result #" + Twine(i) +
+                                "('" + result.name + "') type");
+    }
+    // Note in the format that this result uses the custom builder.
+    auto it = buildableTypes.insert({*builder, buildableTypes.size()});
+    fmt.resultTypes[i].setBuilderIdx(it.first->second);
+  }
+  return success();
+}
+
+LogicalResult FormatParser::verifySuccessors(llvm::SMLoc loc) {
   // Check that all of the successors are within the format.
-  if (!hasAllSuccessors) {
-    for (unsigned i = 0, e = op.getNumSuccessors(); i != e; ++i) {
-      const NamedSuccessor &successor = op.getSuccessor(i);
-      if (!seenSuccessors.count(&successor)) {
-        return emitError(loc, "format missing instance of successor #" +
-                                  Twine(i) + "('" + successor.name + "')");
-      }
+  if (hasAllSuccessors)
+    return success();
+
+  for (unsigned i = 0, e = op.getNumSuccessors(); i != e; ++i) {
+    const NamedSuccessor &successor = op.getSuccessor(i);
+    if (!seenSuccessors.count(&successor)) {
+      return emitError(loc, "format missing instance of successor #" +
+                                Twine(i) + "('" + successor.name + "')");
     }
   }
-
-  // Check to see if we are formatting all of the operands.
-  fmt.allOperands = llvm::any_of(fmt.elements, [](auto &elt) {
-    return isa<OperandsDirective>(elt.get());
-  });
   return success();
 }
 
