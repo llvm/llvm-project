@@ -4,4 +4,5 @@ add_libc_fuzzer(
     strcpy_fuzz.cpp
   DEPENDS
     strcpy
+    strlen
 )
