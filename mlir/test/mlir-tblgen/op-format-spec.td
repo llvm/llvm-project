@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-op-decls -asmformat-error-is-fatal=false -I %S/../../include %s 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-tblgen -gen-op-decls -asmformat-error-is-fatal=false -I %S/../../include %s -o=%t 2>&1 | FileCheck %s --dump-input-on-failure
 
 // This file contains tests for the specification of the declarative op format.
 
@@ -275,6 +275,21 @@ def VariableInvalidG : TestFormat_Op<"variable_invalid_g", [{
 }]> {
   let successors = (successor AnySuccessor:$successor);
 }
+// CHECK: error: format ambiguity caused by `:` literal found after attribute `attr` which does not have a buildable type
+def VariableInvalidH : TestFormat_Op<"variable_invalid_h", [{
+  $attr `:` attr-dict
+}]>, Arguments<(ins ElementsAttr:$attr)>;
+// CHECK: error: format ambiguity caused by `:` literal found after attribute `attr` which does not have a buildable type
+def VariableInvalidI : TestFormat_Op<"variable_invalid_i", [{
+  (`foo` $attr^)? `:` attr-dict
+}]>, Arguments<(ins OptionalAttr<ElementsAttr>:$attr)>;
+// CHECK-NOT: error:
+def VariableInvalidJ : TestFormat_Op<"variable_invalid_j", [{
+  $attr `:` attr-dict
+}]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
+def VariableInvalidK : TestFormat_Op<"variable_invalid_k", [{
+  (`foo` $attr^)? `:` attr-dict
+}]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // Coverage Checks
