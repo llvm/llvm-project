@@ -19,7 +19,10 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 
@@ -201,6 +204,111 @@ Status PlatformWindows::DisconnectRemote() {
       error.SetErrorString("the platform is not currently connected");
   }
   return error;
+}
+
+Status PlatformWindows::EvaluateLoaderExpression(Process *process,
+                                                 const char *expression,
+                                                 ValueObjectSP &value) {
+  // FIXME(compnerd) `-fdeclspec` is not passed to the clang instance?
+  static const char kLoaderDecls[] =
+      R"(
+          // libloaderapi.h
+
+          // WINBASEAPI BOOL WINAPI FreeModule(HMODULE);
+          extern "C" /* __declspec(dllimport) */ BOOL __stdcall FreeModule(void *hLibModule);
+
+          // WINBASEAPI HMODULE WINAPI LoadLibraryA(LPCSTR);
+          extern "C" /* __declspec(dllimport) */ void * __stdcall LoadLibraryA(const char *);
+        )";
+
+  if (DynamicLoader *loader = process->GetDynamicLoader()) {
+    Status result = loader->CanLoadImage();
+    if (result.Fail())
+      return result;
+  }
+
+  ThreadSP thread = process->GetThreadList().GetExpressionExecutionThread();
+  if (!thread)
+    return Status("selected thread is invalid");
+
+  StackFrameSP frame = thread->GetStackFrameAtIndex(0);
+  if (!frame)
+    return Status("frame 0 is invalid");
+
+  ExecutionContext context;
+  frame->CalculateExecutionContext(context);
+
+  EvaluateExpressionOptions options;
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetExecutionPolicy(eExecutionPolicyAlways);
+  options.SetLanguage(eLanguageTypeC_plus_plus);
+  // LoadLibrary{A,W}/FreeLibrary cannot raise exceptions which we can handle.
+  // They may potentially throw SEH exceptions which we do not know how to
+  // handle currently.
+  options.SetTrapExceptions(false);
+  options.SetTimeout(process->GetUtilityExpressionTimeout());
+
+  Status error;
+  ExpressionResults result = UserExpression::Evaluate(
+      context, options, expression, kLoaderDecls, value, error);
+  if (result != eExpressionCompleted)
+    return error;
+
+  if (value->GetError().Fail())
+    return value->GetError();
+
+  return Status();
+}
+
+uint32_t PlatformWindows::DoLoadImage(Process *process,
+                                      const FileSpec &remote_file,
+                                      const std::vector<std::string> *paths,
+                                      Status &error, FileSpec *loaded_path) {
+  if (loaded_path)
+    loaded_path->Clear();
+
+  StreamString expression;
+  expression.Printf("LoadLibraryA(\"%s\")", remote_file.GetPath().c_str());
+
+  ValueObjectSP value;
+  Status result =
+      EvaluateLoaderExpression(process, expression.GetData(), value);
+  if (result.Fail())
+    return LLDB_INVALID_IMAGE_TOKEN;
+
+  Scalar scalar;
+  if (value->ResolveValue(scalar)) {
+    lldb::addr_t address = scalar.ULongLong();
+    if (address == 0)
+      return LLDB_INVALID_IMAGE_TOKEN;
+    return process->AddImageToken(address);
+  }
+  return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
+  const addr_t address = process->GetImagePtrFromToken(image_token);
+  if (address == LLDB_INVALID_ADDRESS)
+    return Status("invalid image token");
+
+  StreamString expression;
+  expression.Printf("FreeLibrary((HMODULE)0x%" PRIx64 ")", address);
+
+  ValueObjectSP value;
+  Status result =
+      EvaluateLoaderExpression(process, expression.GetData(), value);
+  if (result.Fail())
+    return result;
+
+  Scalar scalar;
+  if (value->ResolveValue(scalar)) {
+    if (scalar.UInt(1))
+      return Status("expression failed: \"%s\"", expression.GetData());
+    process->ResetImageToken(image_token);
+  }
+
+  return Status();
 }
 
 ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
