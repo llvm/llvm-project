@@ -85,6 +85,10 @@ combined with other commands:
 
   Display the symbol table.
 
+.. option:: -T, --dynamic-syms
+
+  Display the contents of the dynamic symbol table.
+
 .. option:: -u, --unwind-info
 
   Display the unwind info of the input(s).
