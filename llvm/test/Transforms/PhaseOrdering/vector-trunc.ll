@@ -4,8 +4,7 @@
 
 define <4 x i16> @truncate(<4 x i32> %x) {
 ; ANY-LABEL: @truncate(
-; ANY-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
-; ANY-NEXT:    [[V3:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ANY-NEXT:    [[V3:%.*]] = trunc <4 x i32> [[X:%.*]] to <4 x i16>
 ; ANY-NEXT:    ret <4 x i16> [[V3]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
