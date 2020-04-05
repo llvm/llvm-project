@@ -1,4 +1,5 @@
 ; RUN: opt < %s -attributor --attributor-disable=false -S | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt < %s -passes=attributor --attributor-disable=false -S | FileCheck %s --check-prefix=ATTRIBUTOR_CGSCC_NPM
 ; Copied from Transforms/InferFunctionAttrs/dereferenceable.ll
 
 ; Determine dereference-ability before unused loads get deleted:
@@ -353,4 +354,48 @@ define void @different_size2(i32* %arg) {
   %arg-cast = bitcast i32* %arg to double*
   store double 0.000000e+00, double* %arg-cast
   ret void
+}
+
+; Make use of MustBeExecuted Explorer
+;
+; [CFG]
+; entry
+;  / \
+; l1 l2
+; | X |
+; l3 l4
+;  \ /
+;  l5
+;  / \
+; l6 l7
+;  \ /
+;  end
+; According to the above CFG, we can see that instructions in l5 Block must be executed.
+; Therefore, %p must be dereferenced.
+;
+; ATTRIBUTOR_CGSCC_NPM-LABEL: define i32 @require_cfg_analysis(i32 %c, i32* {{.*}} dereferenceable(4) %p)
+define i32 @require_cfg_analysis(i32 %c, i32* %p) {
+  %tobool1 = icmp eq i32 %c, 0
+  br i1 %tobool1, label %l1, label %l2
+l1:                                       
+  %tobool2 = icmp eq i32 %c, 1
+  br i1 %tobool2, label %l3, label %l4
+l2:  
+  %tobool3 = icmp eq i32 %c, 2
+  br i1 %tobool3, label %l3, label %l4
+l3:
+  br label %l5
+l4:
+  br label %l5
+l5:
+  %tobool4 = icmp eq i32 %c, 4
+  br i1 %tobool4, label %l6, label %l7
+l6:
+  store i32 0, i32* %p
+  br label %end
+l7:
+  store i32 1, i32* %p
+  br label %end
+end:
+  ret i32 1
 }
