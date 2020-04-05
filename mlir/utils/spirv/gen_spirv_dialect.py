@@ -528,7 +528,7 @@ def snake_casify(name):
 
 
 def map_spec_operand_to_ods_argument(operand):
-  """Maps a operand in SPIR-V JSON spec to an op argument in ODS.
+  """Maps an operand in SPIR-V JSON spec to an op argument in ODS.
 
   Arguments:
     - A dict containing the operand's kind, quantifier, and name
@@ -842,7 +842,7 @@ def update_td_op_definitions(path, instructions, docs, filter_list,
   with open(path, 'r') as f:
     content = f.read()
 
-  # Split the file into chuncks, each containing one op.
+  # Split the file into chunks, each containing one op.
   ops = content.split(AUTOGEN_OP_DEF_SEPARATOR)
   header = ops[0]
   footer = ops[-1]

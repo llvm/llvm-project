@@ -127,7 +127,7 @@ public:
                                    Location loc) override;
 
   /// Gets the LLVM representation of the index type. The returned type is an
-  /// integer type with the size confgured for this type converter.
+  /// integer type with the size configured for this type converter.
   LLVM::LLVMType getIndexType();
 
   /// Gets the bitwidth of the index type when converted to LLVM.
@@ -417,7 +417,7 @@ public:
 
 namespace LLVM {
 namespace detail {
-/// Replaces the given operaiton "op" with a new operation of type "targetOp"
+/// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
 LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
@@ -435,7 +435,7 @@ LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
 /// "TargetOp" where the latter belongs to the LLVM dialect or an equivalent.
 /// Upholds a convention that multi-result operations get converted into an
 /// operation returning the LLVM IR structure type, in which case individual
-/// values must be extacted from using LLVM::ExtractValueOp before being used.
+/// values must be extracted from using LLVM::ExtractValueOp before being used.
 template <typename SourceOp, typename TargetOp>
 class OneToOneConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
 public:

@@ -349,7 +349,7 @@ def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
   let summary =
       "assertion that gives alignment information to the input memref";
   let description = [{
-    The `assume_alignment` operation takes a memref and a integer of alignment
+    The `assume_alignment` operation takes a memref and an integer of alignment
     value, and internally annotates the buffer with the given alignment. If
     the buffer isn't aligned to the given alignment, the behavior is undefined.
 

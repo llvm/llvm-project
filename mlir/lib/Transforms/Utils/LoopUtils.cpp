@@ -2123,7 +2123,7 @@ void mlir::gatherLoops(FuncOp func,
 // TODO: if necessary, this can be extended to also compose in any
 // affine.applys, fold to constant if all result dimensions of the map are
 // constant (canonicalizeMapAndOperands below already does this for single
-// result bound maps), and use simplifyMap to perform algebraic simplication.
+// result bound maps), and use simplifyMap to perform algebraic simplification.
 AffineForOp mlir::createCanonicalizedAffineForOp(
     OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
     ValueRange ubOperands, AffineMap ubMap, int64_t step) {
