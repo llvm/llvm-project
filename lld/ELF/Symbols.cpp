@@ -16,6 +16,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
 
@@ -514,6 +515,17 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // group assignment rule simulates the traditional linker's semantics.
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
+    if (backref) {
+      // Some libraries have known problems and can cause noise. Filter them out
+      // with --warn-backrefs-exclude=.
+      StringRef name =
+          !file->archiveName.empty() ? file->archiveName : file->getName();
+      for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
+        if (pat.match(name)) {
+          backref = false;
+          break;
+        }
+    }
     fetch();
 
     // We don't report backward references to weak symbols as they can be
