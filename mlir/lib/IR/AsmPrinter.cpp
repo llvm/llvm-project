@@ -1490,6 +1490,11 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
 }
 
 void ModulePrinter::printType(Type type) {
+  if (!type) {
+    os << "<<NULL TYPE>>";
+    return;
+  }
+
   // Check for an alias for this type.
   if (state) {
     StringRef alias = state->getAliasState().getTypeAlias(type);
