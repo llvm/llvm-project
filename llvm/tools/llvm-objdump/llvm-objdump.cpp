@@ -1071,7 +1071,7 @@ getRelocsMap(object::ObjectFile const &Obj) {
 // TODO: implement for other file formats.
 static bool shouldAdjustVA(const SectionRef &Section) {
   const ObjectFile *Obj = Section.getObject();
-  if (isa<object::ELFObjectFileBase>(Obj))
+  if (Obj->isELF())
     return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
   return false;
 }
@@ -1947,7 +1947,7 @@ void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   if ((Section != O->section_end() || Absolute) && !Weak)
     GlobLoc = Global ? 'g' : 'l';
   char IFunc = ' ';
-  if (isa<ELFObjectFileBase>(O)) {
+  if (O->isELF()) {
     if (ELFSymbolRef(Symbol).getELFType() == ELF::STT_GNU_IFUNC)
       IFunc = 'i';
     if (ELFSymbolRef(Symbol).getBinding() == ELF::STB_GNU_UNIQUE)
@@ -1986,7 +1986,7 @@ void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   } else if (Section == O->section_end()) {
     outs() << "*UND*";
   } else {
-    if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(O)) {
+    if (MachO) {
       DataRefImpl DR = Section->getRawDataRefImpl();
       StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
       outs() << SegmentName << ",";
@@ -1995,13 +1995,13 @@ void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
     outs() << SectionName;
   }
 
-  if (Common || isa<ELFObjectFileBase>(O)) {
+  if (Common || O->isELF()) {
     uint64_t Val =
         Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
     outs() << '\t' << format(Fmt, Val);
   }
 
-  if (isa<ELFObjectFileBase>(O)) {
+  if (O->isELF()) {
     uint8_t Other = ELFSymbolRef(Symbol).getOther();
     switch (Other) {
     case ELF::STV_DEFAULT:
@@ -2056,7 +2056,7 @@ void printRawClangAST(const ObjectFile *Obj) {
   }
 
   StringRef ClangASTSectionName("__clangast");
-  if (isa<COFFObjectFile>(Obj)) {
+  if (Obj->isCOFF()) {
     ClangASTSectionName = "clangast";
   }
 
@@ -2084,9 +2084,9 @@ void printRawClangAST(const ObjectFile *Obj) {
 static void printFaultMaps(const ObjectFile *Obj) {
   StringRef FaultMapSectionName;
 
-  if (isa<ELFObjectFileBase>(Obj)) {
+  if (Obj->isELF()) {
     FaultMapSectionName = ".llvm_faultmaps";
-  } else if (isa<MachOObjectFile>(Obj)) {
+  } else if (Obj->isMachO()) {
     FaultMapSectionName = "__llvm_faultmaps";
   } else {
     WithColor::error(errs(), ToolName)
