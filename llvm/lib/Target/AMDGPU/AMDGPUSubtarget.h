@@ -291,6 +291,7 @@ protected:
 
   // Possibly statically set by tablegen, but may want to be overridden.
   bool FastFMAF32;
+  bool FastDenormalF32;
   bool HalfRate64Ops;
 
   // Dynamially set bits that enable features.

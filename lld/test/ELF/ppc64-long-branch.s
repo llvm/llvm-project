@@ -9,12 +9,14 @@
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-LE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64 %s -o %t.o
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-BE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # SEC: Name       Type     Address          Off     Size   ES Flg Lk Inf Al
 # SEC: .got       PROGBITS 0000000002002028 2002028 000008 00  WA  0   0  8
@@ -80,3 +82,10 @@ addi 2, 2, .TOC.-high@l
 bl .text_low+8
 bl .text_low+8 # Need a thunk
 blr
+
+# NM:      d .TOC.
+# NM-NEXT: t __long_branch_high
+# NM-NEXT: t __long_branch_{{$}}
+# NM-NEXT: t __long_branch_{{$}}
+# NM-NEXT: T _start
+# NM-NEXT: T high

@@ -178,6 +178,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     MaxPrivateElementSize(0),
 
     FastFMAF32(false),
+    FastDenormalF32(false),
     HalfRate64Ops(false),
 
     FlatForGlobal(false),

@@ -2533,7 +2533,7 @@ static LogicalResult verify(spirv::UnreachableOp unreachableOp) {
   if (block->hasNoPredecessors())
     return success();
 
-  // TODO(antiagainst): further verification needs to analyze reachablility from
+  // TODO(antiagainst): further verification needs to analyze reachability from
   // the entry block.
 
   return success();

@@ -91,7 +91,7 @@ inline void emitVulkanError(const llvm::Twine &message, VkResult error) {
 /// SPIR-V shader, number of work groups and entry point. After the creation of
 /// VulkanRuntime, special methods must be called in the following
 /// sequence: initRuntime(), run(), updateHostMemoryBuffers(), destroy();
-/// each method in the sequence returns succes or failure depends on the Vulkan
+/// each method in the sequence returns success or failure depends on the Vulkan
 /// result code.
 class VulkanRuntime {
 public:

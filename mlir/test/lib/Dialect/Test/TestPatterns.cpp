@@ -499,7 +499,7 @@ static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
-// to get the remapped value of a original value that was replaced using
+// to get the remapped value of an original value that was replaced using
 // ConversionPatternRewriter.
 namespace {
 /// Converter that replaces a one-result one-operand OneVResOneVOperandOp1 with
