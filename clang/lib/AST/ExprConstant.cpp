@@ -8469,7 +8469,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
     // Give up on byte-oriented matching against multibyte elements.
     // FIXME: We can compare the bytes in the correct order.
-    if (IsRawByte && !CharTy->isCharType()) {
+    if (IsRawByte && !CharTy->isCharType() && !CharTy->isChar8Type()) {
       Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
           << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'")
           << CharTy;
