@@ -376,6 +376,10 @@ def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 
+def FeatureEnhancedCounterVirtualization :
+      SubtargetFeature<"ecv", "HasEnhancedCounterVirtualization",
+      "true", "Enable enhanced counter virtualization extension">;
+
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -408,7 +412,8 @@ def HasV8_5aOps : SubtargetFeature<
 def HasV8_6aOps : SubtargetFeature<
   "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
 
-  [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps]>;
+  [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
+   FeatureEnhancedCounterVirtualization]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description
