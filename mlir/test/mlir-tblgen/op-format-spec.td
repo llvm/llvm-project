@@ -19,7 +19,7 @@ class TestFormat_Op<string name, string fmt, list<OpTrait> traits = []>
 //===----------------------------------------------------------------------===//
 // attr-dict
 
-// CHECK: error: 'attr-dict' directive not found in custom assembly format
+// CHECK: error: 'attr-dict' directive not found
 def DirectiveAttrDictInvalidA : TestFormat_Op<"attrdict_invalid_a", [{
 }]>;
 // CHECK: error: 'attr-dict' directive has already been seen
@@ -300,7 +300,7 @@ def VariableInvalidK : TestFormat_Op<"variable_invalid_k", [{
 def ZCoverageInvalidA : TestFormat_Op<"variable_invalid_a", [{
   attr-dict
 }]>, Arguments<(ins AnyMemRef:$operand)>, Results<(outs AnyMemRef:$result)>;
-// CHECK: error: operand #0, named 'operand', not found in custom assembly format
+// CHECK: error: operand #0, named 'operand', not found
 // CHECK: note: suggest adding a '$operand' directive to the custom assembly format
 def ZCoverageInvalidB : TestFormat_Op<"variable_invalid_b", [{
   type($result) attr-dict
@@ -320,7 +320,7 @@ def ZCoverageInvalidD : TestFormat_Op<"variable_invalid_d", [{
 def ZCoverageInvalidE : TestFormat_Op<"variable_invalid_e", [{
   attr-dict
 }]>, Results<(outs Variadic<I64>:$result)>;
-// CHECK: error: successor #0, named 'successor', not found in custom assembly format
+// CHECK: error: successor #0, named 'successor', not found
 // CHECK: note: suggest adding a '$successor' directive to the custom assembly format
 def ZCoverageInvalidF : TestFormat_Op<"variable_invalid_f", [{
 	 attr-dict
