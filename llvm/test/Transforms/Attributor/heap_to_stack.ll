@@ -184,7 +184,7 @@ define void @test7() {
 define void @test8() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
@@ -199,7 +199,7 @@ define void @test8() {
 define void @test9() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
