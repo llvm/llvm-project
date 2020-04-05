@@ -870,7 +870,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm7
-; SSE2-NEXT:    packuswb %xmm7, %xmm7
+; SSE2-NEXT:    packuswb %xmm0, %xmm7
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm5
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm0, %xmm5
@@ -969,7 +969,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    packusdw %xmm7, %xmm6
 ; SSE4-NEXT:    packusdw %xmm6, %xmm1
-; SSE4-NEXT:    packuswb %xmm1, %xmm1
+; SSE4-NEXT:    packuswb %xmm0, %xmm1
 ; SSE4-NEXT:    pcmpeqd %xmm8, %xmm5
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm0, %xmm5
@@ -4364,7 +4364,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; SSE2-NEXT:    pandn %xmm9, %xmm6
 ; SSE2-NEXT:    por %xmm0, %xmm6
 ; SSE2-NEXT:    packuswb %xmm4, %xmm6
-; SSE2-NEXT:    packuswb %xmm6, %xmm6
+; SSE2-NEXT:    packuswb %xmm0, %xmm6
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm0, %xmm3
