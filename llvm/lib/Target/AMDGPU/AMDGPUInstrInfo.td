@@ -238,7 +238,7 @@ def AMDGPUdiv_scale : SDNode<"AMDGPUISD::DIV_SCALE", AMDGPUDivScaleOp>;
 
 //  Special case divide FMA with scale and flags (src0 = Quotient,
 //  src1 = Denominator, src2 = Numerator).
-def AMDGPUdiv_fmas : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
+def AMDGPUdiv_fmas_impl : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
                             [SDNPOptInGlue]>;
 
 // Single or double precision division fixup.
@@ -476,3 +476,7 @@ def AMDGPUfmul_legacy : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUfdot2 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$clamp),
   [(int_amdgcn_fdot2 node:$src0, node:$src1, node:$src2, node:$clamp),
    (AMDGPUfdot2_impl node:$src0, node:$src1, node:$src2, node:$clamp)]>;
+
+def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc),
+  [(int_amdgcn_div_fmas node:$src0, node:$src1, node:$src2, node:$vcc),
+   (AMDGPUdiv_fmas_impl node:$src0, node:$src1, node:$src2, node:$vcc)]>;
