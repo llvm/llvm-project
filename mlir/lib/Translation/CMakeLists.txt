@@ -8,4 +8,5 @@ target_link_libraries(MLIRTranslation
   PUBLIC
   LLVMSupport
   MLIRIR
+  MLIRParser
   )
