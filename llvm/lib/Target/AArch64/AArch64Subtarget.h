@@ -148,6 +148,7 @@ protected:
   // Armv8.6-A Extensions
   bool HasBF16 = false;
   bool HasAMVS = false;
+  bool HasFineGrainedTraps = false;
 
   // Arm SVE2 extensions
   bool HasSVE2AES = false;
@@ -415,6 +416,7 @@ public:
 
   // Armv8.6-A Extensions
   bool hasBF16() const { return HasBF16; }
+  bool hasFineGrainedTraps() const { return HasFineGrainedTraps; }
 
   bool isLittleEndian() const { return IsLittle; }
 
