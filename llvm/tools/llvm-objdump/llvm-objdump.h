@@ -133,7 +133,11 @@ void printDynamicRelocations(const object::ObjectFile *O);
 void printSectionHeaders(const object::ObjectFile *O);
 void printSectionContents(const object::ObjectFile *O);
 void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
-                      StringRef ArchitectureName = StringRef());
+                      StringRef ArchitectureName = StringRef(),
+                      bool DumpDynamic = false);
+void printSymbol(const object::ObjectFile *O, const object::SymbolRef &Symbol,
+                 StringRef FileName, StringRef ArchiveName,
+                 StringRef ArchitectureName, bool DumpDynamic);
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message);
 LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
                                          StringRef ArchiveName = "",

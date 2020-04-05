@@ -321,6 +321,15 @@ static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(SymbolTable));
 
+cl::opt<bool> DynamicSymbolTable(
+    "dynamic-syms",
+    cl::desc("Display the contents of the dynamic symbol table"),
+    cl::cat(ObjdumpCat));
+static cl::alias DynamicSymbolTableShort("T",
+                                         cl::desc("Alias for --dynamic-syms"),
+                                         cl::NotHidden, cl::Grouping,
+                                         cl::aliasopt(DynamicSymbolTable));
+
 cl::opt<std::string> TripleName("triple",
                                 cl::desc("Target triple to disassemble for, "
                                          "see -version for available targets"),
@@ -1857,143 +1866,167 @@ void printSectionContents(const ObjectFile *Obj) {
 }
 
 void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
-                      StringRef ArchitectureName) {
-  outs() << "SYMBOL TABLE:\n";
-
-  if (const COFFObjectFile *Coff = dyn_cast<const COFFObjectFile>(O)) {
-    printCOFFSymbolTable(Coff);
+                      StringRef ArchitectureName, bool DumpDynamic) {
+  if (O->isCOFF() && !DumpDynamic) {
+    outs() << "SYMBOL TABLE:\n";
+    printCOFFSymbolTable(cast<const COFFObjectFile>(O));
     return;
   }
 
   const StringRef FileName = O->getFileName();
-  const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(O);
-  for (auto I = O->symbol_begin(), E = O->symbol_end(); I != E; ++I) {
-    const SymbolRef &Symbol = *I;
-    uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName, ArchiveName,
-                                     ArchitectureName);
-    if ((Address < StartAddress) || (Address > StopAddress))
-      continue;
-    SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName,
-                                         ArchiveName, ArchitectureName);
-    uint32_t Flags = Symbol.getFlags();
 
-    // Don't ask a Mach-O STAB symbol for its section unless you know that 
-    // STAB symbol's section field refers to a valid section index. Otherwise
-    // the symbol may error trying to load a section that does not exist.
-    bool isSTAB = false;
-    if (MachO) {
-      DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
-      uint8_t NType = (MachO->is64Bit() ?
-                       MachO->getSymbol64TableEntry(SymDRI).n_type:
-                       MachO->getSymbolTableEntry(SymDRI).n_type);
-      if (NType & MachO::N_STAB)
-        isSTAB = true;
-    }
-    section_iterator Section = isSTAB ? O->section_end() :
-                               unwrapOrError(Symbol.getSection(), FileName,
-                                             ArchiveName, ArchitectureName);
-
-    StringRef Name;
-    if (Type == SymbolRef::ST_Debug && Section != O->section_end()) {
-      if (Expected<StringRef> NameOrErr = Section->getName())
-        Name = *NameOrErr;
-      else
-        consumeError(NameOrErr.takeError());
-
-    } else {
-      Name = unwrapOrError(Symbol.getName(), FileName, ArchiveName,
-                           ArchitectureName);
-    }
-
-    bool Global = Flags & SymbolRef::SF_Global;
-    bool Weak = Flags & SymbolRef::SF_Weak;
-    bool Absolute = Flags & SymbolRef::SF_Absolute;
-    bool Common = Flags & SymbolRef::SF_Common;
-    bool Hidden = Flags & SymbolRef::SF_Hidden;
-
-    char GlobLoc = ' ';
-    if ((Section != O->section_end() || Absolute) && !Weak)
-      GlobLoc = Global ? 'g' : 'l';
-    char IFunc = ' ';
-    if (isa<ELFObjectFileBase>(O)) {
-      if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
-        IFunc = 'i';
-      if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
-        GlobLoc = 'u';
-    }
-    char Debug = (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
-                 ? 'd' : ' ';
-    char FileFunc = ' ';
-    if (Type == SymbolRef::ST_File)
-      FileFunc = 'f';
-    else if (Type == SymbolRef::ST_Function)
-      FileFunc = 'F';
-    else if (Type == SymbolRef::ST_Data)
-      FileFunc = 'O';
-
-    const char *Fmt = O->getBytesInAddress() > 4 ? "%016" PRIx64 :
-                                                   "%08" PRIx64;
-
-    outs() << format(Fmt, Address) << " "
-           << GlobLoc // Local -> 'l', Global -> 'g', Neither -> ' '
-           << (Weak ? 'w' : ' ') // Weak?
-           << ' ' // Constructor. Not supported yet.
-           << ' ' // Warning. Not supported yet.
-           << IFunc
-           << Debug // Debugging (d) or dynamic (D) symbol.
-           << FileFunc // Name of function (F), file (f) or object (O).
-           << ' ';
-    if (Absolute) {
-      outs() << "*ABS*";
-    } else if (Common) {
-      outs() << "*COM*";
-    } else if (Section == O->section_end()) {
-      outs() << "*UND*";
-    } else {
-      if (const MachOObjectFile *MachO =
-          dyn_cast<const MachOObjectFile>(O)) {
-        DataRefImpl DR = Section->getRawDataRefImpl();
-        StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
-        outs() << SegmentName << ",";
-      }
-      StringRef SectionName =
-          unwrapOrError(Section->getName(), O->getFileName());
-      outs() << SectionName;
-    }
-
-    if (Common || isa<ELFObjectFileBase>(O)) {
-      uint64_t Val =
-          Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
-      outs() << '\t' << format(Fmt, Val);
-    }
-
-    if (isa<ELFObjectFileBase>(O)) {
-      uint8_t Other = ELFSymbolRef(Symbol).getOther();
-      switch (Other) {
-      case ELF::STV_DEFAULT:
-        break;
-      case ELF::STV_INTERNAL:
-        outs() << " .internal";
-        break;
-      case ELF::STV_HIDDEN:
-        outs() << " .hidden";
-        break;
-      case ELF::STV_PROTECTED:
-        outs() << " .protected";
-        break;
-      default:
-        outs() << format(" 0x%02x", Other);
-        break;
-      }
-    } else if (Hidden) {
-      outs() << " .hidden";
-    }
-
-    if (Demangle)
-      outs() << ' ' << demangle(std::string(Name)) << '\n';
-    else
-      outs() << ' ' << Name << '\n';
+  if (!DumpDynamic) {
+    outs() << "SYMBOL TABLE:\n";
+    for (auto I = O->symbol_begin(); I != O->symbol_end(); ++I)
+      printSymbol(O, *I, FileName, ArchiveName, ArchitectureName, DumpDynamic);
+    return;
   }
+
+  outs() << "DYNAMIC SYMBOL TABLE:\n";
+  if (!O->isELF()) {
+    reportWarning(
+        "this operation is not currently supported for this file format",
+        FileName);
+    return;
+  }
+
+  const ELFObjectFileBase *ELF = cast<const ELFObjectFileBase>(O);
+  for (auto I = ELF->getDynamicSymbolIterators().begin();
+       I != ELF->getDynamicSymbolIterators().end(); ++I)
+    printSymbol(O, *I, FileName, ArchiveName, ArchitectureName, DumpDynamic);
+}
+
+void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
+                 StringRef FileName, StringRef ArchiveName,
+                 StringRef ArchitectureName, bool DumpDynamic) {
+  const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(O);
+  uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName, ArchiveName,
+                                   ArchitectureName);
+  if ((Address < StartAddress) || (Address > StopAddress))
+    return;
+  SymbolRef::Type Type =
+      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
+  uint32_t Flags = Symbol.getFlags();
+
+  // Don't ask a Mach-O STAB symbol for its section unless you know that
+  // STAB symbol's section field refers to a valid section index. Otherwise
+  // the symbol may error trying to load a section that does not exist.
+  bool IsSTAB = false;
+  if (MachO) {
+    DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
+    uint8_t NType =
+        (MachO->is64Bit() ? MachO->getSymbol64TableEntry(SymDRI).n_type
+                          : MachO->getSymbolTableEntry(SymDRI).n_type);
+    if (NType & MachO::N_STAB)
+      IsSTAB = true;
+  }
+  section_iterator Section = IsSTAB
+                                 ? O->section_end()
+                                 : unwrapOrError(Symbol.getSection(), FileName,
+                                                 ArchiveName, ArchitectureName);
+
+  StringRef Name;
+  if (Type == SymbolRef::ST_Debug && Section != O->section_end()) {
+    if (Expected<StringRef> NameOrErr = Section->getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
+  } else {
+    Name = unwrapOrError(Symbol.getName(), FileName, ArchiveName,
+                         ArchitectureName);
+  }
+
+  bool Global = Flags & SymbolRef::SF_Global;
+  bool Weak = Flags & SymbolRef::SF_Weak;
+  bool Absolute = Flags & SymbolRef::SF_Absolute;
+  bool Common = Flags & SymbolRef::SF_Common;
+  bool Hidden = Flags & SymbolRef::SF_Hidden;
+
+  char GlobLoc = ' ';
+  if ((Section != O->section_end() || Absolute) && !Weak)
+    GlobLoc = Global ? 'g' : 'l';
+  char IFunc = ' ';
+  if (isa<ELFObjectFileBase>(O)) {
+    if (ELFSymbolRef(Symbol).getELFType() == ELF::STT_GNU_IFUNC)
+      IFunc = 'i';
+    if (ELFSymbolRef(Symbol).getBinding() == ELF::STB_GNU_UNIQUE)
+      GlobLoc = 'u';
+  }
+
+  char Debug = ' ';
+  if (DumpDynamic)
+    Debug = 'D';
+  else if (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
+    Debug = 'd';
+
+  char FileFunc = ' ';
+  if (Type == SymbolRef::ST_File)
+    FileFunc = 'f';
+  else if (Type == SymbolRef::ST_Function)
+    FileFunc = 'F';
+  else if (Type == SymbolRef::ST_Data)
+    FileFunc = 'O';
+
+  const char *Fmt = O->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
+
+  outs() << format(Fmt, Address) << " "
+         << GlobLoc            // Local -> 'l', Global -> 'g', Neither -> ' '
+         << (Weak ? 'w' : ' ') // Weak?
+         << ' '                // Constructor. Not supported yet.
+         << ' '                // Warning. Not supported yet.
+         << IFunc              // Indirect reference to another symbol.
+         << Debug              // Debugging (d) or dynamic (D) symbol.
+         << FileFunc           // Name of function (F), file (f) or object (O).
+         << ' ';
+  if (Absolute) {
+    outs() << "*ABS*";
+  } else if (Common) {
+    outs() << "*COM*";
+  } else if (Section == O->section_end()) {
+    outs() << "*UND*";
+  } else {
+    if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(O)) {
+      DataRefImpl DR = Section->getRawDataRefImpl();
+      StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
+      outs() << SegmentName << ",";
+    }
+    StringRef SectionName = unwrapOrError(Section->getName(), FileName);
+    outs() << SectionName;
+  }
+
+  if (Common || isa<ELFObjectFileBase>(O)) {
+    uint64_t Val =
+        Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
+    outs() << '\t' << format(Fmt, Val);
+  }
+
+  if (isa<ELFObjectFileBase>(O)) {
+    uint8_t Other = ELFSymbolRef(Symbol).getOther();
+    switch (Other) {
+    case ELF::STV_DEFAULT:
+      break;
+    case ELF::STV_INTERNAL:
+      outs() << " .internal";
+      break;
+    case ELF::STV_HIDDEN:
+      outs() << " .hidden";
+      break;
+    case ELF::STV_PROTECTED:
+      outs() << " .protected";
+      break;
+    default:
+      outs() << format(" 0x%02x", Other);
+      break;
+    }
+  } else if (Hidden) {
+    outs() << " .hidden";
+  }
+
+  if (Demangle)
+    outs() << ' ' << demangle(std::string(Name)) << '\n';
+  else
+    outs() << ' ' << Name << '\n';
 }
 
 static void printUnwindInfo(const ObjectFile *O) {
@@ -2237,6 +2270,9 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     printSectionHeaders(O);
   if (SymbolTable)
     printSymbolTable(O, ArchiveName);
+  if (DynamicSymbolTable)
+    printSymbolTable(O, ArchiveName, /*ArchitectureName=*/"",
+                     /*DumpDynamic=*/true);
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx = DWARFContext::create(*O);
     // Dump the complete DWARF structure.
@@ -2378,7 +2414,7 @@ int main(int argc, char **argv) {
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
-      !UnwindInfo && !FaultMapSection &&
+      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection &&
       !(MachOOpt &&
         (Bind || DataInCode || DylibId || DylibsUsed || ExportsTrie ||
          FirstPrivateHeader || IndirectSymbols || InfoPlist || LazyBind ||
