@@ -295,12 +295,10 @@ define void @shuffle_v32i16_to_v8i16(<32 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512F-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
-; AVX512F-NEXT:    vpackusdw %xmm1, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512F-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512F-NEXT:    retq
 ;
@@ -328,12 +326,10 @@ define void @shuffle_v32i16_to_v8i16(<32 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm1 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512BW-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
-; AVX512BW-NEXT:    vpackusdw %xmm1, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512BW-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512BW-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512BW-NEXT:    retq
 ;
@@ -352,12 +348,10 @@ define void @shuffle_v32i16_to_v8i16(<32 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX512VBMI-NEXT:    vpblendw {{.*#+}} xmm1 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512VBMI-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512VBMI-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
-; AVX512VBMI-NEXT:    vpackusdw %xmm1, %xmm0, %xmm1
 ; AVX512VBMI-NEXT:    vpblendw {{.*#+}} xmm2 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512VBMI-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0],xmm0[1,2,3],mem[4],xmm0[5,6,7]
 ; AVX512VBMI-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512VBMI-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512VBMI-NEXT:    retq
 ;
