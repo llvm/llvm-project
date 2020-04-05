@@ -241,7 +241,7 @@ private:
     };
   }
 
-  /// Returns an accumulator for comparaison such as min, max. T is the type
+  /// Returns an accumulator for comparison such as min, max. T is the type
   /// of the compare op.
   template <typename T, typename PredicateEnum, PredicateEnum predicate>
   AccumulatorFactory getCmpFactory() const {

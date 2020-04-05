@@ -407,24 +407,24 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
   return reinterpret_cast<Block *>(reinterpret_cast<char *>(Anchor) - Offset);
 }
 
-/// This is a trait method invoked when a operation is added to a block.  We
+/// This is a trait method invoked when an operation is added to a block.  We
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
-  assert(!op->getBlock() && "already in a operation block!");
+  assert(!op->getBlock() && "already in an operation block!");
   op->block = getContainingBlock();
 
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
 }
 
-/// This is a trait method invoked when a operation is removed from a block.
+/// This is a trait method invoked when an operation is removed from a block.
 /// We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::removeNodeFromList(Operation *op) {
-  assert(op->block && "not already in a operation block!");
+  assert(op->block && "not already in an operation block!");
   op->block = nullptr;
 }
 
-/// This is a trait method invoked when a operation is moved from one block
+/// This is a trait method invoked when an operation is moved from one block
 /// to another.  We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::transferNodesFromList(
     ilist_traits<Operation> &otherList, op_iterator first, op_iterator last) {

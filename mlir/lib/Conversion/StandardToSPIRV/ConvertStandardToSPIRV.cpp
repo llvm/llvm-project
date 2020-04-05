@@ -37,8 +37,8 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
-/// Converts the given `srcAttr` into a boolean attribute if it holds a integral
-/// value. Returns null attribute if conversion fails.
+/// Converts the given `srcAttr` into a boolean attribute if it holds an
+/// integral value. Returns null attribute if conversion fails.
 static BoolAttr convertBoolAttr(Attribute srcAttr, Builder builder) {
   if (auto boolAttr = srcAttr.dyn_cast<BoolAttr>())
     return boolAttr;
