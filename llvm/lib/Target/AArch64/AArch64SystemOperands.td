@@ -1512,6 +1512,17 @@ def : RWSysReg<"HDFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b100>;
 def : RWSysReg<"HDFGWTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b101>;
 }
 
+// v8.6a Enhanced Counter Virtualization
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureEnhancedCounterVirtualization} }] in {
+def : RWSysReg<"CNTSCALE_EL2",     0b11, 0b100, 0b1110, 0b0000, 0b100>;
+def : RWSysReg<"CNTISCALE_EL2",    0b11, 0b100, 0b1110, 0b0000, 0b101>;
+def : RWSysReg<"CNTPOFF_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b110>;
+def : RWSysReg<"CNTVFRQ_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b111>;
+def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
+def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
+}
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in
