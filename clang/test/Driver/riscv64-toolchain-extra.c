@@ -12,7 +12,7 @@
 // runtime if and only if they exist.
 //
 // REQUIRES: platform-linker
-// RUN: rm -rf %T/testroot-riscv64-baremetal-nogcc/bin
+// RUN: rm -rf %T/testroot-riscv64-baremetal-nogcc
 // RUN: mkdir -p %T/testroot-riscv64-baremetal-nogcc/bin
 // RUN: ln -s %clang %T/testroot-riscv64-baremetal-nogcc/bin/clang
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/bin/riscv64-unknown-elf-ld %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld
