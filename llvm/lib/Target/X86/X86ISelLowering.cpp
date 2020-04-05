@@ -5429,6 +5429,12 @@ static bool isInRange(int Val, int Low, int Hi) {
   return (Val >= Low && Val < Hi);
 }
 
+/// Return true if every element value in Mask falls within the specified
+/// range (L, H].
+static bool isInRange(ArrayRef<int> Mask, int Low, int Hi) {
+  return llvm::all_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
+}
+
 /// Return true if the value of any element in Mask falls within the specified
 /// range (L, H].
 static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
@@ -35358,31 +35364,43 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
 
+  bool IsUnary;
+  SmallVector<int, 64> TargetMask;
+  SmallVector<SDValue, 2> TargetOps;
+  if (isTargetShuffle(Opcode))
+    getTargetShuffleMask(N.getNode(), VT, false, TargetOps, TargetMask, IsUnary);
+
   // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
-  // single instruction.
-  if (VT.getScalarSizeInBits() == 64 &&
-      (Opcode == X86ISD::MOVSD || Opcode == X86ISD::UNPCKH ||
-       Opcode == X86ISD::UNPCKL)) {
-    auto BC0 = peekThroughBitcasts(N.getOperand(0));
-    auto BC1 = peekThroughBitcasts(N.getOperand(1));
-    EVT VT0 = BC0.getValueType();
-    EVT VT1 = BC1.getValueType();
-    unsigned Opcode0 = BC0.getOpcode();
-    unsigned Opcode1 = BC1.getOpcode();
-    if (Opcode0 == Opcode1 && VT0 == VT1 &&
-        (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
-         Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB ||
-         Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
-      SDValue Lo, Hi;
-      if (Opcode == X86ISD::MOVSD) {
-        Lo = BC1.getOperand(0);
-        Hi = BC0.getOperand(1);
-      } else {
-        Lo = BC0.getOperand(Opcode == X86ISD::UNPCKH ? 1 : 0);
-        Hi = BC1.getOperand(Opcode == X86ISD::UNPCKH ? 1 : 0);
+  // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
+  // represents the LHS/RHS inputs for the lower/upper halves.
+  SmallVector<int, 16> TargetMask128;
+  if (!TargetMask.empty() && TargetOps.size() == 2 &&
+      is128BitLaneRepeatedShuffleMask(VT, TargetMask, TargetMask128)) {
+    SmallVector<int, 16> WidenedMask128 = TargetMask128;
+    while (WidenedMask128.size() > 2) {
+      SmallVector<int, 16> WidenedMask;
+      if (!canWidenShuffleElements(WidenedMask128, WidenedMask))
+        break;
+      WidenedMask128 = std::move(WidenedMask);
+    }
+    if (WidenedMask128.size() == 2 && isInRange(WidenedMask128, 0, 4)) {
+      SDValue BC0 = peekThroughBitcasts(TargetOps[0]);
+      SDValue BC1 = peekThroughBitcasts(TargetOps[1]);
+      EVT VT0 = BC0.getValueType();
+      EVT VT1 = BC1.getValueType();
+      unsigned Opcode0 = BC0.getOpcode();
+      unsigned Opcode1 = BC1.getOpcode();
+      if (Opcode0 == Opcode1 && VT0 == VT1 &&
+          (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
+           Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB ||
+           Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
+        SDValue Lo = isInRange(WidenedMask128[0], 0, 2) ? BC0 : BC1;
+        SDValue Hi = isInRange(WidenedMask128[1], 0, 2) ? BC0 : BC1;
+        Lo = Lo.getOperand(WidenedMask128[0] & 1);
+        Hi = Hi.getOperand(WidenedMask128[1] & 1);
+        SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
+        return DAG.getBitcast(VT, Horiz);
       }
-      SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
-      return DAG.getBitcast(VT, Horiz);
     }
   }
 
