@@ -191,12 +191,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // SETOEQ and SETUNE require checking two conditions.
-  setCondCodeAction(ISD::SETOEQ, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETOEQ, MVT::f64, Expand);
-  setCondCodeAction(ISD::SETOEQ, MVT::f80, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f80, Expand);
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
+    setCondCodeAction(ISD::SETOEQ, VT, Expand);
+    setCondCodeAction(ISD::SETUNE, VT, Expand);
+  }
 
   // Integer absolute.
   if (Subtarget.hasCMov()) {
@@ -361,46 +359,27 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::CTLZ           , MVT::i8   , MVT::i32);
     setOperationPromotedToType(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
   } else {
-    setOperationAction(ISD::CTLZ           , MVT::i8   , Custom);
-    setOperationAction(ISD::CTLZ           , MVT::i16  , Custom);
-    setOperationAction(ISD::CTLZ           , MVT::i32  , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16  , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32  , Custom);
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::CTLZ         , MVT::i64  , Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
+    for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::CTLZ           , VT, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
     }
   }
 
-  // Special handling for half-precision floating point conversions.
-  // If we don't have F16C support, then lower half float conversions
-  // into library calls.
-  if (!Subtarget.useSoftFloat() && Subtarget.hasF16C()) {
-    setOperationAction(ISD::FP16_TO_FP,        MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Custom);
-    setOperationAction(ISD::FP_TO_FP16,        MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FP16_TO_FP,        MVT::f32, Expand);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Expand);
-    setOperationAction(ISD::FP_TO_FP16,        MVT::f32, Expand);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Expand);
+  for (auto Op : {ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP, ISD::FP_TO_FP16,
+                  ISD::STRICT_FP_TO_FP16}) {
+    // Special handling for half-precision floating point conversions.
+    // If we don't have F16C support, then lower half float conversions
+    // into library calls.
+    setOperationAction(
+        Op, MVT::f32,
+        (!Subtarget.useSoftFloat() && Subtarget.hasF16C()) ? Custom : Expand);
+    // There's never any support for operations beyond MVT::f32.
+    setOperationAction(Op, MVT::f64, Expand);
+    setOperationAction(Op, MVT::f80, Expand);
+    setOperationAction(Op, MVT::f128, Expand);
   }
-
-  // There's never any support for operations beyond MVT::f32.
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
-  setOperationAction(ISD::FP16_TO_FP, MVT::f80, Expand);
-  setOperationAction(ISD::FP16_TO_FP, MVT::f128, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f80, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f128, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f80, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f80, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f128, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
