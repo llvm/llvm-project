@@ -2289,8 +2289,8 @@ void IntegerSet::dump() const {
 }
 
 void AffineExpr::print(raw_ostream &os) const {
-  if (expr == nullptr) {
-    os << "null affine expr";
+  if (!expr) {
+    os << "<<NULL AFFINE EXPR>>";
     return;
   }
   ModulePrinter(os).printAffineExpr(*this);
@@ -2302,8 +2302,8 @@ void AffineExpr::dump() const {
 }
 
 void AffineMap::print(raw_ostream &os) const {
-  if (map == nullptr) {
-    os << "null affine map";
+  if (!map) {
+    os << "<<NULL AFFINE MAP>>";
     return;
   }
   ModulePrinter(os).printAffineMap(*this);
