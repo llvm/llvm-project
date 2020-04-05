@@ -35347,14 +35347,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   SmallVector<int, 64> TargetMask;
   SmallVector<SDValue, 2> TargetOps;
   if (isTargetShuffle(Opcode))
-    getTargetShuffleMask(N.getNode(), VT, false, TargetOps, TargetMask, IsUnary);
+    getTargetShuffleMask(N.getNode(), VT, true, TargetOps, TargetMask, IsUnary);
 
   // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
   // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
   // represents the LHS/RHS inputs for the lower/upper halves.
   SmallVector<int, 16> TargetMask128;
-  if (!TargetMask.empty() && TargetOps.size() == 2 &&
-      is128BitLaneRepeatedShuffleMask(VT, TargetMask, TargetMask128)) {
+  if (!TargetMask.empty() && 0 < TargetOps.size() && TargetOps.size() <= 2 &&
+      isRepeatedTargetShuffleMask(128, VT, TargetMask, TargetMask128)) {
     SmallVector<int, 16> WidenedMask128 = TargetMask128;
     while (WidenedMask128.size() > 2) {
       SmallVector<int, 16> WidenedMask;
@@ -35362,23 +35362,36 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         break;
       WidenedMask128 = std::move(WidenedMask);
     }
-    if (WidenedMask128.size() == 2 && isInRange(WidenedMask128, 0, 4)) {
-      SDValue BC0 = peekThroughBitcasts(TargetOps[0]);
-      SDValue BC1 = peekThroughBitcasts(TargetOps[1]);
+    if (WidenedMask128.size() == 2) {
+      assert(isUndefOrZeroOrInRange(WidenedMask128, 0, 4) && "Illegal shuffle");
+      SDValue BC0 = peekThroughBitcasts(TargetOps.front());
+      SDValue BC1 = peekThroughBitcasts(TargetOps.back());
       EVT VT0 = BC0.getValueType();
       EVT VT1 = BC1.getValueType();
       unsigned Opcode0 = BC0.getOpcode();
       unsigned Opcode1 = BC1.getOpcode();
+      bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
+                      Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB);
       if (Opcode0 == Opcode1 && VT0 == VT1 &&
-          (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
-           Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB ||
-           Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
-        SDValue Lo = isInRange(WidenedMask128[0], 0, 2) ? BC0 : BC1;
-        SDValue Hi = isInRange(WidenedMask128[1], 0, 2) ? BC0 : BC1;
-        Lo = Lo.getOperand(WidenedMask128[0] & 1);
-        Hi = Hi.getOperand(WidenedMask128[1] & 1);
-        SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
-        return DAG.getBitcast(VT, Horiz);
+          (isHoriz || Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
+        bool SingleOp = (TargetOps.size() == 1);
+        if (!isHoriz || shouldUseHorizontalOp(SingleOp, DAG, Subtarget)) {
+          SDValue Lo = isInRange(WidenedMask128[0], 0, 2) ? BC0 : BC1;
+          SDValue Hi = isInRange(WidenedMask128[1], 0, 2) ? BC0 : BC1;
+          Lo = Lo.getOperand(WidenedMask128[0] & 1);
+          Hi = Hi.getOperand(WidenedMask128[1] & 1);
+          if (SingleOp) {
+            MVT SrcVT = BC0.getOperand(0).getSimpleValueType();
+            SDValue Undef = DAG.getUNDEF(SrcVT);
+            SDValue Zero = getZeroVector(SrcVT, Subtarget, DAG, DL);
+            Lo = (WidenedMask128[0] == SM_SentinelZero ? Zero : Lo);
+            Hi = (WidenedMask128[1] == SM_SentinelZero ? Zero : Hi);
+            Lo = (WidenedMask128[0] == SM_SentinelUndef ? Undef : Lo);
+            Hi = (WidenedMask128[1] == SM_SentinelUndef ? Undef : Hi);
+          }
+          SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
+          return DAG.getBitcast(VT, Horiz);
+        }
       }
     }
   }

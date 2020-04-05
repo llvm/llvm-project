@@ -284,9 +284,9 @@ define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; SSE-FAST-LABEL: test11_undef:
 ; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    movaps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    haddps %xmm3, %xmm3
-; SSE-FAST-NEXT:    movddup {{.*#+}} xmm1 = xmm3[0,0]
+; SSE-FAST-NEXT:    haddps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-LABEL: test11_undef:
@@ -490,7 +490,6 @@ define <2 x double> @add_pd_010(<2 x double> %x) {
 ; AVX-FAST-LABEL: add_pd_010:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-FAST-NEXT:    retq
   %l = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 undef, i32 0>
   %add = fadd <2 x double> %l, %x
