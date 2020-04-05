@@ -471,7 +471,7 @@ TEST_F(MatchSelectPatternTest, NotNotSMin) {
       "  %A = select i1 %cmp, i8 %an, i8 %bn\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_SMIN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotSMinSwap) {
@@ -483,7 +483,7 @@ TEST_F(MatchSelectPatternTest, NotNotSMinSwap) {
       "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_SMIN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotSMax) {
@@ -495,7 +495,7 @@ TEST_F(MatchSelectPatternTest, NotNotSMax) {
       "  %A = select i1 %cmp, i8 %an, i8 %bn\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_SMAX, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotSMaxSwap) {
@@ -507,7 +507,7 @@ TEST_F(MatchSelectPatternTest, NotNotSMaxSwap) {
       "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_SMAX, SPNB_NA, false});
 }
 
 TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {

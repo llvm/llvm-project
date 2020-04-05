@@ -5124,6 +5124,21 @@ static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
+/// If the input value is the result of a 'not' op, constant integer, or vector
+/// splat of a constant integer, return the bitwise-not source value.
+/// TODO: This could be extended to handle non-splat vector integer constants.
+static Value *getNotValue(Value *V) {
+  Value *NotV;
+  if (match(V, m_Not(m_Value(NotV))))
+    return NotV;
+
+  const APInt *C;
+  if (match(V, m_APInt(C)))
+    return ConstantInt::get(V->getType(), ~(*C));
+
+  return nullptr;
+}
+
 /// Match non-obvious integer minimum and maximum sequences.
 static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
@@ -5159,6 +5174,17 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
       match(TrueVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
     return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
+  // Look through 'not' ops to find disguised signed min/max.
+  // (X >s Y) ? ~X : ~Y ==> (~X <s ~Y) ? ~X : ~Y ==> SMIN(~X, ~Y)
+  // (X <s Y) ? ~X : ~Y ==> (~X >s ~Y) ? ~X : ~Y ==> SMAX(~X, ~Y)
+  if (CmpLHS == getNotValue(TrueVal) && CmpRHS == getNotValue(FalseVal))
+    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
+
+  // (X >s Y) ? ~Y : ~X ==> (~X <s ~Y) ? ~Y : ~X ==> SMAX(~Y, ~X)
+  // (X <s Y) ? ~Y : ~X ==> (~X >s ~Y) ? ~Y : ~X ==> SMIN(~Y, ~X)
+  if (CmpLHS == getNotValue(FalseVal) && CmpRHS == getNotValue(TrueVal))
+    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
+
   const APInt *C1;
   if (!match(CmpRHS, m_APInt(C1)))
     return {SPF_UNKNOWN, SPNB_NA, false};
@@ -5181,19 +5207,6 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
         C2->isMinSignedValue())
       return {CmpLHS == FalseVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
   }
-
-  // Look through 'not' ops to find disguised signed min/max.
-  // (X >s C) ? ~X : ~C ==> (~X <s ~C) ? ~X : ~C ==> SMIN(~X, ~C)
-  // (X <s C) ? ~X : ~C ==> (~X >s ~C) ? ~X : ~C ==> SMAX(~X, ~C)
-  if (match(TrueVal, m_Not(m_Specific(CmpLHS))) &&
-      match(FalseVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
-
-  // (X >s C) ? ~C : ~X ==> (~X <s ~C) ? ~C : ~X ==> SMAX(~C, ~X)
-  // (X <s C) ? ~C : ~X ==> (~X >s ~C) ? ~C : ~X ==> SMIN(~C, ~X)
-  if (match(FalseVal, m_Not(m_Specific(CmpLHS))) &&
-      match(TrueVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
