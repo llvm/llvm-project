@@ -165,6 +165,7 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
       if (isOpTriviallyDead(op)) {
         notifyOperationRemoved(op);
         op->erase();
+        changed = true;
         continue;
       }
 
@@ -186,7 +187,7 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 
       // Try to fold this op.
       if (succeeded(folder.tryToFold(op, collectOps, preReplaceAction))) {
-        changed |= true;
+        changed = true;
         continue;
       }
 
