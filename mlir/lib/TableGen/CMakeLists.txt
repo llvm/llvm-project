@@ -11,6 +11,7 @@ add_llvm_library(LLVMMLIRTableGen
   Pass.cpp
   Pattern.cpp
   Predicate.cpp
+  Region.cpp
   SideEffects.cpp
   Successor.cpp
   Type.cpp
