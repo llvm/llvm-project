@@ -154,8 +154,11 @@ def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsNonAtomic = 0;
   let CheckMMOIsAtomic = 1;
 }
+def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;def : GINodeEquiv<G_LOAD, new_atomic_load> {
+  let CheckMMOIsNonAtomic = 0;
+  let CheckMMOIsAtomic = 1;
+}
 
-def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;
 def : GINodeEquiv<G_ATOMICRMW_XCHG, atomic_swap>;
 def : GINodeEquiv<G_ATOMICRMW_ADD, atomic_load_add>;
 def : GINodeEquiv<G_ATOMICRMW_SUB, atomic_load_sub>;

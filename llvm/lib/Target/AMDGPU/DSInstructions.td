@@ -659,6 +659,9 @@ foreach vt = Reg32Types.types in {
 defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 }
 
+//defm : DSReadPat_mc <DS_READ_B32, p3,  "atomic_load_iptr_local">;
+defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_iptr_local">;
+
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 

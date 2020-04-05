@@ -354,6 +354,10 @@ def AMDGPUatomic_ld_glue : SDNode <"ISD::ATOMIC_LOAD", SDTAtomicLoad,
   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
 >;
 
+def AMDGPUatomic_new_ld_glue : SDNode <"ISD::ATOMIC_LOAD", SDTNewAtomicLoad,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
+>;
+
 def unindexedload_glue : PatFrag <(ops node:$ptr), (AMDGPUld_glue node:$ptr)> {
   let IsLoad = 1;
   let IsUnindexed = 1;
@@ -374,6 +378,12 @@ def atomic_load_64_glue : PatFrag<(ops node:$ptr),
   (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
+}
+
+def atomic_load_iptr_glue : PatFrag<(ops node:$ptr),
+  (AMDGPUatomic_new_ld_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
 }
 
 def extload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr)> {
@@ -455,6 +465,12 @@ def load_align16_local_m0 : PatFrag<(ops node:$ptr),
 } // End IsLoad = 1
 
 let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
+
+def atomic_load_iptr_local_m0 : PatFrag<(ops node:$ptr),
+                                       (atomic_load_iptr_glue node:$ptr)> {
+ let MemoryVT = i32;
+}
+
 def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_32_glue node:$ptr)> {
   let MemoryVT = i32;

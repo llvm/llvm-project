@@ -133,6 +133,9 @@ def : GINodeEquiv<G_LOAD, AMDGPUatomic_ld_glue> {
   bit CheckMMOIsAtomic = 1;
 }
 
+def : GINodeEquiv<G_LOAD, AMDGPUatomic_new_ld_glue> {
+  bit CheckMMOIsAtomic = 1;
+}
 
 
 def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap_glue>;

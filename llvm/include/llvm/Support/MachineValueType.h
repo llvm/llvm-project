@@ -227,6 +227,9 @@ namespace llvm {
       // This value must be a multiple of 32.
       MAX_ALLOWED_VALUETYPE = 160,
 
+      // Match any 32-bit type. 
+      vtAny32        = 247,
+
       // A value of type llvm::TokenTy
       token          = 248,
 
@@ -387,7 +390,8 @@ namespace llvm {
     bool isOverloaded() const {
       return (SimpleTy==MVT::Any  ||
               SimpleTy==MVT::iAny || SimpleTy==MVT::fAny ||
-              SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny);
+              SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny ||
+              SimpleTy==MVT::vtAny32);
     }
 
     /// Return a VT for a vector type with the same element type but
