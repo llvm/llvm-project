@@ -47,7 +47,9 @@ void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
   for (Value v : iterArgs)
     result.addTypes(v.getType());
   Region *bodyRegion = result.addRegion();
-  ForOp::ensureTerminator(*bodyRegion, *builder, result.location);
+  bodyRegion->push_back(new Block());
+  if (iterArgs.empty())
+    ForOp::ensureTerminator(*bodyRegion, *builder, result.location);
   bodyRegion->front().addArgument(builder->getIndexType());
   for (Value v : iterArgs)
     bodyRegion->front().addArgument(v.getType());
@@ -201,7 +203,7 @@ ForOp mlir::loop::getForInductionVarOwner(Value val) {
 
 void IfOp::build(Builder *builder, OperationState &result, Value cond,
                  bool withElseRegion) {
-    build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
+  build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
 }
 
 void IfOp::build(Builder *builder, OperationState &result,
