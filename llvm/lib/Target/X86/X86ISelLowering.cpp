@@ -5408,12 +5408,6 @@ static bool isInRange(int Val, int Low, int Hi) {
   return (Val >= Low && Val < Hi);
 }
 
-/// Return true if every element value in Mask falls within the specified
-/// range (L, H].
-static bool isInRange(ArrayRef<int> Mask, int Low, int Hi) {
-  return llvm::all_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
-}
-
 /// Return true if the value of any element in Mask falls within the specified
 /// range (L, H].
 static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
