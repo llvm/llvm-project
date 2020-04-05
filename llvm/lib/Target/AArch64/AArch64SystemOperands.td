@@ -1488,6 +1488,20 @@ def : RWSysReg<"TRBTRG_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b110>;
 def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
 } // FeatureTRBE
 
+
+// v8.6a Activity Monitors Virtualization Support
+let Requires = [{ {AArch64::FeatureAMVS} }] in {
+foreach n = 0-15 in {
+  foreach x = 0-1 in {
+  def : RWSysReg<"AMEVCNTVOFF"#x#n#"_EL2",
+    0b11, 0b100, 0b1101, 0b1000, 0b000>{
+      let Encoding{4} = x;
+      let Encoding{3-0} = n;
+    }
+  }
+}
+}
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in
