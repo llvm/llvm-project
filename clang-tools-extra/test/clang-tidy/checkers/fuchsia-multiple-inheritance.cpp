@@ -45,16 +45,16 @@ public:
 class Bad_Child1;
 
 // Inherits from multiple concrete classes.
-// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: class Bad_Child1 : public Base_A, Base_B {};
 class Bad_Child1 : public Base_A, Base_B {};
 
-// CHECK-MESSAGES: [[@LINE+1]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+1]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 class Bad_Child2 : public Base_A, Interface_A_with_member {
   virtual int foo() override { return 0; }
 };
 
-// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: class Bad_Child3 : public Interface_with_A_Parent, Base_B {
 class Bad_Child3 : public Interface_with_A_Parent, Base_B {
   virtual int baz() override { return 0; }
@@ -83,7 +83,7 @@ class Good_Child3 : public Base_A_child, Interface_C, Interface_B {
 
 struct B1 { int x; };
 struct B2 { int x;};
-// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: struct D : B1, B2 {};
 struct D1 : B1, B2 {};
 
@@ -100,7 +100,7 @@ struct D3 : V3, V4 {};
 struct Base3 {};
 struct V5 : virtual Base3 { virtual void f(); };
 struct V6 : virtual Base3 { virtual void g(); };
-// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: struct D4 : V5, V6 {};
 struct D4 : V5, V6 {};
 
@@ -118,7 +118,7 @@ struct Base6 { virtual void f(); };
 struct Base7 { virtual void g(); };
 struct V15 : virtual Base6 { virtual void f() = 0; };
 struct V16 : virtual Base7 { virtual void g() = 0; };
-// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+// CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: struct D9 : V15, V16 {};
 struct D9 : V15, V16 {};
 

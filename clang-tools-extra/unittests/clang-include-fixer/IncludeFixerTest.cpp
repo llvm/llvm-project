@@ -269,7 +269,7 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
   EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar b;\n}\n",
             runIncludeFixer("namespace c {\nbar b;\n}\n"));
 
-  // Test common qualifers reduction.
+  // Test common qualifiers reduction.
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nnamespace d {\nb::bar b;\n}\n} "
             "// namespace a\n",
             runIncludeFixer("namespace a {\nnamespace d {\nbar b;\n}\n}\n"));

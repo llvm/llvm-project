@@ -244,7 +244,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
     bool HasErrors = true;
 
     // Clang allows duplicating virtual specifiers so check for multiple
-    // occurances.
+    // occurrences.
     for (const auto &Tok : TokBuf.expandedTokens(SpecRange)) {
       if (Tok.kind() != tok::kw_virtual)
         continue;
@@ -291,7 +291,7 @@ llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
 
   assert(!Region.EligiblePoints.empty());
   // FIXME: This selection can be made smarter by looking at the definition
-  // locations for adjacent decls to Source. Unfortunately psudeo parsing in
+  // locations for adjacent decls to Source. Unfortunately pseudo parsing in
   // getEligibleRegions only knows about namespace begin/end events so we
   // can't match function start/end positions yet.
   auto Offset = positionToOffset(Contents, Region.EligiblePoints.back());

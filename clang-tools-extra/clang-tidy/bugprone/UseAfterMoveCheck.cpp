@@ -110,7 +110,7 @@ bool UseAfterMoveFinder::find(Stmt *FunctionBody, const Expr *MovingCall,
                               UseAfterMove *TheUseAfterMove) {
   // Generate the CFG manually instead of through an AnalysisDeclContext because
   // it seems the latter can't be used to generate a CFG for the body of a
-  // labmda.
+  // lambda.
   //
   // We include implicit and temporary destructors in the CFG so that
   // destructors marked [[noreturn]] are handled correctly in the control flow

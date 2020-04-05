@@ -588,7 +588,7 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
   // FIXME: ExtractFunction should be unavailable inside loop construct
-  // initalizer/condition.
+  // initializer/condition.
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
   // Don't extract because needs hoisting.
   EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));

@@ -52,7 +52,7 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
     UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
   };
 
-  // Iterate through valid sequneces of three characters Fuzzy Matcher can
+  // Iterate through valid sequences of three characters Fuzzy Matcher can
   // process.
   for (size_t I = 0; I < LowercaseIdentifier.size(); ++I) {
     // Skip delimiters.

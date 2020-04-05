@@ -273,7 +273,7 @@ std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
   return AdjustedResult;
 }
 
-// Seperates two blocks with extra spacing. Note that it might render strangely
+// Separates two blocks with extra spacing. Note that it might render strangely
 // in vscode if the trailing block is a codeblock, see
 // https://github.com/microsoft/vscode/issues/88416 for details.
 class Ruler : public Block {
