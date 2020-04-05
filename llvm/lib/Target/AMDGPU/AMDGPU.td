@@ -33,6 +33,12 @@ def FeatureFastFMAF32 : SubtargetFeature<"fast-fmaf",
   "Assuming f32 fma is at least as fast as mul + add"
 >;
 
+def FeatureFastDenormalF32 : SubtargetFeature<"fast-denormal-f32",
+  "FastDenormalF32",
+  "true",
+  "Enabling denormals does not cause f32 instructions to run at f64 rates"
+>;
+
 def FeatureMIMG_R128 : SubtargetFeature<"mimg-r128",
   "MIMG_R128",
   "true",
@@ -632,7 +638,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC,
-   FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts
+   FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts, FeatureFastDenormalF32
   ]
 >;
 
@@ -647,8 +653,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
-   FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16
-  ]
+   FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
+   FeatureFastDenormalF32]
 >;
 
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
@@ -665,7 +671,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
-   FeatureGFX10A16
+   FeatureGFX10A16, FeatureFastDenormalF32
   ]
 >;
 
