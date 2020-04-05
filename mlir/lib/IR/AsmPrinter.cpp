@@ -2398,10 +2398,6 @@ void Block::printAsOperand(raw_ostream &os, bool printType) {
     os << "<<UNLINKED BLOCK>>\n";
     return;
   }
-  // Get the top-level op.
-  while (auto *nextOp = parentOp->getParentOp())
-    parentOp = nextOp;
-
   AsmState state(parentOp);
   printAsOperand(os, state);
 }
