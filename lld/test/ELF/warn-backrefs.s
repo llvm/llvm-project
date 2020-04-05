@@ -1,47 +1,49 @@
 # REQUIRES: x86
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
-# RUN: echo ".globl foo; foo:" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t2.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
+# RUN: echo '.globl foo; foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t2.o
 # RUN: rm -f %t2.a
 # RUN: llvm-ar rcs %t2.a %t2.o
 
-# RUN: ld.lld --fatal-warnings -o %t.exe %t1.o %t2.a
-# RUN: ld.lld --fatal-warnings -o %t.exe %t2.a %t1.o
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t1.o %t2.a
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t1.o --start-lib %t2.o --end-lib
+## A forward reference is accepted by a traditional Unix linker.
+# RUN: ld.lld --fatal-warnings %t1.o %t2.a -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o %t2.a -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t2.o --end-lib -o /dev/null
 
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe --start-group %t2.a %t1.o --end-group
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe "-(" %t2.a %t1.o "-)"
+# RUN: echo 'INPUT("%t1.o" "%t2.a")' > %t1.lds
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.lds -o /dev/null
 
-# RUN: echo "INPUT(\"%t1.o\" \"%t2.a\")" > %t1.script
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t1.script
+## A backward reference from %t1.o to %t2.a
+# RUN: ld.lld --fatal-warnings %t2.a %t1.o -o /dev/null
+# RUN: ld.lld --warn-backrefs %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --warn-backrefs %t2.a '-(' %t1.o '-)' -o /dev/null 2>&1 | FileCheck %s
 
-# RUN: echo "GROUP(\"%t2.a\" \"%t1.o\")" > %t2.script
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t2.script
+## Placing the definition and the backward reference in a group can suppress the warning.
+# RUN: echo 'GROUP("%t2.a" "%t1.o")' > %t2.lds
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t2.lds -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t2.a %t1.o '-)' -o /dev/null
 
-# RUN: not ld.lld --fatal-warnings --warn-backrefs -o /dev/null %t2.a %t1.o 2>&1 | FileCheck %s
-# RUN: not ld.lld --fatal-warnings --warn-backrefs -o /dev/null %t2.a "-(" %t1.o "-)" 2>&1 | FileCheck %s
-# RUN: not ld.lld --fatal-warnings --warn-backrefs -o /dev/null --start-group %t2.a --end-group %t1.o 2>&1 | FileCheck %s
+## A backward reference from %t1.o to %t2.a (added by %t3.lds).
+# RUN: echo 'GROUP("%t2.a")' > %t3.lds
+# RUN: ld.lld --warn-backrefs %t3.lds %t1.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t3.lds %t1.o '-)' -o /dev/null
 
-# RUN: echo "GROUP(\"%t2.a\")" > %t3.script
-# RUN: not ld.lld --fatal-warnings --warn-backrefs -o /dev/null %t3.script %t1.o 2>&1 | FileCheck %s
-# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe "-(" %t3.script %t1.o "-)"
+# CHECK: warning: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.a
 
-# CHECK: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.a
+## A backward reference from %t1.o to %t2.o
+# RUN: ld.lld --warn-backrefs --start-lib %t2.o --end-lib %t1.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=OBJECT %s
 
-# RUN: not ld.lld --fatal-warnings --start-group --start-group 2>&1 | FileCheck -check-prefix=START %s
-# START: nested --start-group
+# OBJECT: warning: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.o
 
-# RUN: not ld.lld --fatal-warnings --end-group 2>&1 | FileCheck -check-prefix=END %s
-# END: stray --end-group
-
-# RUN: echo ".globl bar; bar:" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t3.o
-# RUN: echo ".globl foo; foo: call bar" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t4.o
+## Don't warn if the definition and the backward reference are in a group.
+# RUN: echo '.globl bar; bar:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
+# RUN: echo '.globl foo; foo: call bar' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t3.o %t4.o --end-lib -o /dev/null
 
-# We don't report backward references to weak symbols as they can be overridden later.
-# RUN: echo ".weak foo; foo:" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t5.o
-# RUN: ld.lld --fatal-warnings --warn-backrefs --start-lib %t5.o --end-lib %t1.o %t2.o -o /dev/null
+## We don't report backward references to weak symbols as they can be overridden later.
+# RUN: echo '.weak foo; foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %tweak.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs --start-lib %tweak.o --end-lib %t1.o %t2.o -o /dev/null
 
 .globl _start, foo
 _start:
