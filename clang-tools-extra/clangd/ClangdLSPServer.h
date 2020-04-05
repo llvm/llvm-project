@@ -188,7 +188,7 @@ private:
             CB(std::move(Rsp));
           } else {
             elog("Failed to decode {0} response", *RawResponse);
-            CB(llvm::make_error<LSPError>("failed to decode reponse",
+            CB(llvm::make_error<LSPError>("failed to decode response",
                                           ErrorCode::InvalidParams));
           }
         };

@@ -279,7 +279,7 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
 // arguments for example. This function returns the default argument if it is
 // available.
 const Expr *getDefaultArg(const ParmVarDecl *PVD) {
-  // Default argument can be unparsed or uninstatiated. For the former we
+  // Default argument can be unparsed or uninstantiated. For the former we
   // can't do much, as token information is only stored in Sema and not
   // attached to the AST node. For the latter though, it is safe to proceed as
   // the expression is still valid.
@@ -550,7 +550,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HI.Name = std::string(Macro.Name);
   HI.Kind = index::SymbolKind::Macro;
   // FIXME: Populate documentation
-  // FIXME: Pupulate parameters
+  // FIXME: Populate parameters
 
   // Try to get the full definition, not just the name
   SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
@@ -791,7 +791,7 @@ markup::Document HoverInfo::present() const {
     // Drop trailing "::".
     if (!LocalScope.empty()) {
       // Container name, e.g. class, method, function.
-      // We might want to propogate some info about container type to print
+      // We might want to propagate some info about container type to print
       // function foo, class X, method X::bar, etc.
       ScopeComment =
           "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
