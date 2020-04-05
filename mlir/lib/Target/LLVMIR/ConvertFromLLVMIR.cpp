@@ -934,8 +934,11 @@ OwningModuleRef translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
   return translateLLVMIRToModule(std::move(llvmModule), context);
 }
 
-static TranslateToMLIRRegistration
-    fromLLVM("import-llvm",
-             [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
-               return translateLLVMIRToModule(sourceMgr, context);
-             });
+namespace mlir {
+void registerFromLLVMIRTranslation() {
+  TranslateToMLIRRegistration fromLLVM(
+      "import-llvm", [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
+        return ::translateLLVMIRToModule(sourceMgr, context);
+      });
+}
+} // namespace mlir
