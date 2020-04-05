@@ -1657,6 +1657,47 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   return NewBO;
 }
 
+/// Convert a narrowing shuffle of a bitcasted vector into a vector truncate.
+/// Example (little endian):
+/// shuf (bitcast <4 x i16> X to <8 x i8>), <0, 2, 4, 6> --> trunc X to <4 x i8>
+static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
+                                     bool IsBigEndian) {
+  // This must be a bitcasted shuffle of 1 vector integer operand.
+  Type *DestType = Shuf.getType();
+  Value *X;
+  if (!match(Shuf.getOperand(0), m_BitCast(m_Value(X))) ||
+      !match(Shuf.getOperand(1), m_Undef()) || !DestType->isIntOrIntVectorTy())
+    return nullptr;
+
+  // The source type must have the same number of elements as the shuffle,
+  // and the source element type must be larger than the shuffle element type.
+  Type *SrcType = X->getType();
+  if (!SrcType->isVectorTy() || !SrcType->isIntOrIntVectorTy() ||
+      SrcType->getVectorNumElements() != DestType->getVectorNumElements() ||
+      SrcType->getScalarSizeInBits() % DestType->getScalarSizeInBits() != 0)
+    return nullptr;
+
+  assert(Shuf.changesLength() && !Shuf.increasesLength() &&
+         "Expected a shuffle that decreases length");
+
+  // Last, check that the mask chooses the correct low bits for each narrow
+  // element in the result.
+  uint64_t TruncRatio =
+      SrcType->getScalarSizeInBits() / DestType->getScalarSizeInBits();
+  ArrayRef<int> Mask = Shuf.getShuffleMask();
+  for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
+    if (Mask[i] == UndefMaskElem)
+      continue;
+    uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
+    assert(LSBIndex <= std::numeric_limits<int32_t>::max() &&
+           "Overflowed 32-bits");
+    if (Mask[i] != (int)LSBIndex)
+      return nullptr;
+  }
+
+  return new TruncInst(X, DestType);
+}
+
 /// Match a shuffle-select-shuffle pattern where the shuffles are widening and
 /// narrowing (concatenating with undef and extracting back to the original
 /// length). This allows replacing the wide select with a narrow select.
@@ -1949,6 +1990,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+    return I;
+
+  if (Instruction *I = foldTruncShuffle(SVI, DL.isBigEndian()))
     return I;
 
   if (Instruction *I = narrowVectorSelect(SVI, Builder))
