@@ -289,7 +289,8 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
     for (Instruction &I : BB) {
       CallSite CS(&I);
       if (CS) {
-        Function *Callee = CS.getCalledFunction();
+        const Function *Callee
+          = dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
 
         // TODO: Do something with indirect calls.
         if (!Callee) {
