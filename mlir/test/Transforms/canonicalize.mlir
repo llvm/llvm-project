@@ -895,3 +895,25 @@ func @index_cast_fold() -> (i16, index) {
   // CHECK: return %[[C4_I16]], %[[C4]] : i16, index
   return %1, %2 : i16, index
 }
+
+// CHECK-LABEL: func @remove_dead_else
+func @remove_dead_else(%M : memref<100 x i32>) {
+  affine.for %i = 0 to 100 {
+    affine.load %M[%i] : memref<100xi32>
+    affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%i) {
+      affine.for %j = 0 to 100 {
+        affine.load %M[%j] : memref<100xi32>
+      }
+    } else {
+      // Nothing
+    }
+    affine.load %M[%i] : memref<100xi32>
+  }
+  return
+}
+// CHECK:      affine.if
+// CHECK-NEXT:   affine.for
+// CHECK-NEXT:     affine.load
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-NEXT: affine.load
