@@ -102,6 +102,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -2106,14 +2107,14 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
   /// determines (and caches) reachability.
   bool isAssumedReachable(const Instruction *From,
                           const Instruction *To) const {
-    return true;
+    return isPotentiallyReachable(From, To);
   }
 
   /// Returns true if 'From' instruction is known to reach, 'To' instruction.
   /// Users should provide two positions they are interested in, and the class
   /// determines (and caches) reachability.
   bool isKnownReachable(const Instruction *From, const Instruction *To) const {
-    return true;
+    return isPotentiallyReachable(From, To);
   }
 
   /// Return an IR position, see struct IRPosition.
