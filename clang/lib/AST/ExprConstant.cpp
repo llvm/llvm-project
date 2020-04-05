@@ -11154,9 +11154,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                 CharTy1, E->getArg(0)->getType()->getPointeeType()) &&
             Info.Ctx.hasSameUnqualifiedType(CharTy1, CharTy2)));
 
-    // For memcmp, allow comparing any arrays of '[[un]signed] char',
-    // but no other types.
-    if (IsRawByte && !(CharTy1->isCharType() && CharTy2->isCharType())) {
+    // For memcmp, allow comparing any arrays of '[[un]signed] char' or
+    // 'char8_t', but no other types.
+    bool IsChar = CharTy1->isCharType() && CharTy2->isCharType();
+    bool IsChar8 = CharTy1->isChar8Type() && CharTy2->isChar8Type();
+    if (IsRawByte && !IsChar && !IsChar8) {
       // FIXME: Consider using our bit_cast implementation to support this.
       Info.FFDiag(E, diag::note_constexpr_memcmp_unsupported)
           << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'")
