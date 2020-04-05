@@ -597,7 +597,7 @@ TEST(CompletionTest, ContextWords) {
   auto Finish = Color::^
   )cpp");
   // Yellow would normally sort last (alphabetic).
-  // But the recent mention shuold bump it up.
+  // But the recent mention should bump it up.
   ASSERT_THAT(Results.Completions,
               HasSubsequence(Named("YELLOW"), Named("BLUE")));
 }
@@ -663,7 +663,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
   Sym.IncludeHeaders.emplace_back(BarURI, 1);
-  // Shoten include path based on search directory and insert.
+  // Shorten include path based on search directory and insert.
   Annotations Test("int main() { ns::^ }");
   TU.Code = Test.code().str();
   auto Results = completions(TU, Test.point(), {Sym});
@@ -695,7 +695,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
   SymX.IncludeHeaders.emplace_back("<bar>", 1);
   SymY.IncludeHeaders.emplace_back("<bar>", 1);
-  // Shoten include path based on search directory and insert.
+  // Shorten include path based on search directory and insert.
   auto Results = completions(R"cpp(
           namespace ns {
             class X;
@@ -976,7 +976,7 @@ TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
 
     int foo(int param_in_foo) {
 #if 0
-  // In recorvery mode, "param_in_foo" will also be suggested among many other
+  // In recovery mode, "param_in_foo" will also be suggested among many other
   // unrelated symbols; however, this is really a special case where this works.
   // If the #if block is outside of the function, "param_in_foo" is still
   // suggested, but "bar" and "foo" are missing. So the recovery mode doesn't

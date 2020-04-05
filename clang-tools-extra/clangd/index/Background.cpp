@@ -234,7 +234,7 @@ void BackgroundIndex::update(
     // headers, since we don't even know what absolute path they should fall in.
     const auto AbsPath = URICache.resolve(IGN.URI);
     const auto DigestIt = ShardVersionsSnapshot.find(AbsPath);
-    // File has different contents, or indexing was successfull this time.
+    // File has different contents, or indexing was successful this time.
     if (DigestIt == ShardVersionsSnapshot.end() ||
         DigestIt->getValue().Digest != IGN.Digest ||
         (DigestIt->getValue().HadErrors && !HadErrors))

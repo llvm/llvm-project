@@ -114,7 +114,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
          "(previous was version {2})",
          FileName, Inputs.Version, OldPreamble->Version);
   else
-    vlog("Building first preamble for {0} verson {1}", FileName,
+    vlog("Building first preamble for {0} version {1}", FileName,
          Inputs.Version);
 
   trace::Span Tracer("BuildPreamble");

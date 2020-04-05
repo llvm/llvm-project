@@ -597,7 +597,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
         std::replace(Message.begin(), Message.end(), '\n', ' ');
       }
     }
-    if (Message.empty()) // either !SytheticMessage, or we failed to make one.
+    if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(
         Fix{std::string(Message.str()), std::move(Edits)});

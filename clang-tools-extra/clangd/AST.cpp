@@ -95,7 +95,7 @@ getUsingNamespaceDirectives(const DeclContext *DestContext,
   return VisibleNamespaceDecls;
 }
 
-// Goes over all parents of SourceContext until we find a comman ancestor for
+// Goes over all parents of SourceContext until we find a common ancestor for
 // DestContext and SourceContext. Any qualifier including and above common
 // ancestor is redundant, therefore we stop at lowest common ancestor.
 // In addition to that stops early whenever IsVisible returns true. This can be

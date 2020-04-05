@@ -604,7 +604,7 @@ protected:
   };
 
   /// Parses \p Code, finds function or namespace '::foo' and annotates its body
-  /// with results of findExplicitReferecnces.
+  /// with results of findExplicitReferences.
   /// See actual tests for examples of annotation format.
   AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
     TestTU TU;

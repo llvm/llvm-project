@@ -116,7 +116,7 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
 
 /// Reorders fields in the definition of a struct/class.
 ///
-/// At the moment reodering of fields with
+/// At the moment reordering of fields with
 /// different accesses (public/protected/private) is not supported.
 /// \returns true on success.
 static bool reorderFieldsInDefinition(
@@ -133,7 +133,7 @@ static bool reorderFieldsInDefinition(
   for (const auto *Field : Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
     if (Field->getAccess() != Fields[NewFieldsOrder[FieldIndex]]->getAccess()) {
-      llvm::errs() << "Currently reodering of fields with different accesses "
+      llvm::errs() << "Currently reordering of fields with different accesses "
                       "is not supported\n";
       return false;
     }

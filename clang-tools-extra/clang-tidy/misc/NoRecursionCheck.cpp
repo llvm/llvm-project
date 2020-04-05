@@ -202,7 +202,7 @@ void NoRecursionCheck::registerMatchers(MatchFinder *Finder) {
 void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
   assert(!SCC.empty() && "Empty SCC does not make sense.");
 
-  // First of all, call out every stongly connected function.
+  // First of all, call out every strongly connected function.
   for (CallGraphNode *N : SCC) {
     FunctionDecl *D = N->getDefinition();
     diag(D->getLocation(), "function %0 is within a recursive call chain") << D;
@@ -216,7 +216,7 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
   assert(!EventuallyCyclicCallStack.empty() && "We should've found the cycle");
 
   // While last node of the call stack does cause a loop, due to the way we
-  // pathfind the cycle, the loop does not nessesairly begin at the first node
+  // pathfind the cycle, the loop does not necessarily begin at the first node
   // of the call stack, so drop front nodes of the call stack until it does.
   const auto CyclicCallStack =
       ArrayRef<CallGraphNode::CallRecord>(EventuallyCyclicCallStack)
@@ -260,7 +260,7 @@ void NoRecursionCheck::check(const MatchFinder::MatchResult &Result) {
   CG.addToCallGraph(const_cast<TranslationUnitDecl *>(TU));
 
   // Look for cycles in call graph,
-  // by looking for Strongly Connected Comonents (SCC's)
+  // by looking for Strongly Connected Components (SCC's)
   for (llvm::scc_iterator<CallGraph *> SCCI = llvm::scc_begin(&CG),
                                        SCCE = llvm::scc_end(&CG);
        SCCI != SCCE; ++SCCI) {
