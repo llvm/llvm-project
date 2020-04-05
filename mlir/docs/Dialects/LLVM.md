@@ -96,7 +96,7 @@ Example:
 llvm.func @func() attributes {
   passthrough = ["noinline",           // value-less attribute
                  ["alignstack", "4"],  // integer attribute with value
-                 ["other", "attr"]]    // attrbute unknown to LLVM
+                 ["other", "attr"]]    // attribute unknown to LLVM
 } {
   llvm.return
 }

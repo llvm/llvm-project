@@ -56,7 +56,7 @@ public:
 };
 
 /// Pattern lowering GPU block/thread size/id to loading SPIR-V invocation
-/// builin variables.
+/// builtin variables.
 template <typename SourceOp, spirv::BuiltIn builtin>
 class LaunchConfigConversion : public SPIRVOpLowering<SourceOp> {
 public:

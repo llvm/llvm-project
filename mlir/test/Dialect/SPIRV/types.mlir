@@ -78,7 +78,7 @@ func @llvm_type(!spv.array<4x!llvm.i32>) -> ()
 // -----
 
 // expected-error @+1 {{ArrayStride must be greater than zero}}
-func @array_type_zero_stide(!spv.array<4xi32 [0]>) -> ()
+func @array_type_zero_stride(!spv.array<4xi32 [0]>) -> ()
 
 // -----
 

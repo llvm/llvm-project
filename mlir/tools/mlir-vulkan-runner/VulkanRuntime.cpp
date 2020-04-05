@@ -363,7 +363,7 @@ LogicalResult VulkanRuntime::createMemoryBuffers() {
           resourceStorageClassData.find(descriptorSetIndex);
       if (resourceStorageClassMapIt == resourceStorageClassData.end()) {
         llvm::errs()
-            << "cannot find storge class for resource in descriptor set: "
+            << "cannot find storage class for resource in descriptor set: "
             << descriptorSetIndex;
         return failure();
       }

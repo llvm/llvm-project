@@ -1013,7 +1013,7 @@ static LogicalResult verify(ReshapeOp op) {
     return op.emitError("invalid output shape for vector type ")
            << outputVectorType;
 
-  // Verify that the 'fixedVectorSizes' match a input/output vector shape
+  // Verify that the 'fixedVectorSizes' match an input/output vector shape
   // suffix.
   unsigned inputVectorRank = inputVectorType.getRank();
   for (unsigned i = 0; i < numFixedVectorSizes; ++i) {

@@ -1090,7 +1090,7 @@ void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
 }
 ////////////// End Support for Lowering operations on n-D vectors //////////////
 
-/// Replaces the given operaiton "op" with a new operation of type "targetOp"
+/// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
@@ -1698,7 +1698,7 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
       auto loadOp = rewriter.create<LLVM::LoadOp>(loc, castPtr);
       rewriter.replaceOp(op, loadOp.getResult());
     } else {
-      llvm_unreachable("Unsuppored unranked memref to unranked memref cast");
+      llvm_unreachable("Unsupported unranked memref to unranked memref cast");
     }
   }
 };
@@ -2285,7 +2285,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
   }
 };
 
-/// Conversion pattern that transforms a op into:
+/// Conversion pattern that transforms an op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
 ///      and stride.

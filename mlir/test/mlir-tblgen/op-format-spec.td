@@ -243,7 +243,7 @@ def OptionalInvalidK : TestFormat_Op<"optional_invalid_k", [{
 // Variables
 //===----------------------------------------------------------------------===//
 
-// CHECK: error: expected variable to refer to a argument, result, or successor
+// CHECK: error: expected variable to refer to an argument, result, or successor
 def VariableInvalidA : TestFormat_Op<"variable_invalid_a", [{
   $unknown_arg attr-dict
 }]>;

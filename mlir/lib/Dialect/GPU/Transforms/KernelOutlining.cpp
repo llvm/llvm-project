@@ -162,8 +162,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   // cleaner.
   launchOpBody.cloneInto(&outlinedFuncBody, map);
 
-  // Branch from enty of the gpu.func operation to the block that is cloned from
-  // the entry block of the gpu.launch operation.
+  // Branch from entry of the gpu.func operation to the block that is cloned
+  // from the entry block of the gpu.launch operation.
   Block &launchOpEntry = launchOpBody.front();
   Block *clonedLaunchOpEntry = map.lookup(&launchOpEntry);
   builder.setInsertionPointToEnd(&entryBlock);

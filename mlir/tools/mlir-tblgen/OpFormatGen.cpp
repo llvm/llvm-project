@@ -931,7 +931,7 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
   if (auto *attr = dyn_cast<AttributeVariable>(element)) {
     const NamedAttribute *var = attr->getVar();
 
-    // If we are formatting as a enum, symbolize the attribute as a string.
+    // If we are formatting as an enum, symbolize the attribute as a string.
     if (canFormatEnumAttr(var)) {
       const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
       body << "  p << \"\\\"\" << " << enumAttr.getSymbolToStringFnName() << "("
@@ -1656,7 +1656,7 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
     return success();
   }
   return emitError(
-      loc, "expected variable to refer to a argument, result, or successor");
+      loc, "expected variable to refer to an argument, result, or successor");
 }
 
 LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
