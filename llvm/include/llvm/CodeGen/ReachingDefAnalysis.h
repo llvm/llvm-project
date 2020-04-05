@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/CodeGen/LoopTraversal.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -31,6 +32,37 @@ namespace llvm {
 
 class MachineBasicBlock;
 class MachineInstr;
+
+/// Thin wrapper around "int" used to store reaching definitions,
+/// using an encoding that makes it compatible with TinyPtrVector.
+/// The 0th LSB is forced zero (and will be used for pointer union tagging),
+/// The 1st LSB is forced one (to make sure the value is non-zero).
+class ReachingDef {
+  uintptr_t Encoded;
+  friend struct PointerLikeTypeTraits<ReachingDef>;
+  explicit ReachingDef(uintptr_t Encoded) : Encoded(Encoded) {}
+
+public:
+  ReachingDef(int Instr) : Encoded((Instr << 2) | 2) {}
+  operator int() const { return ((int) Encoded) >> 2; }
+};
+
+template<>
+struct PointerLikeTypeTraits<ReachingDef> {
+  static constexpr int NumLowBitsAvailable = 1;
+
+  static inline void *getAsVoidPointer(const ReachingDef &RD) {
+    return reinterpret_cast<void *>(RD.Encoded);
+  }
+
+  static inline ReachingDef getFromVoidPointer(void *P) {
+    return ReachingDef(reinterpret_cast<uintptr_t>(P));
+  }
+
+  static inline ReachingDef getFromVoidPointer(const void *P) {
+    return ReachingDef(reinterpret_cast<uintptr_t>(P));
+  }
+};
 
 /// This class provides the reaching def analysis.
 class ReachingDefAnalysis : public MachineFunctionPass {
@@ -61,7 +93,7 @@ private:
   DenseMap<MachineInstr *, int> InstIds;
 
   /// All reaching defs of a given RegUnit for a given MBB.
-  using MBBRegUnitDefs = SmallVector<int, 1>;
+  using MBBRegUnitDefs = TinyPtrVector<ReachingDef>;
   /// All reaching defs of all reg units for a given MBB
   using MBBDefsInfo = std::vector<MBBRegUnitDefs>;
   /// All reaching defs of all reg units for a all MBBs
