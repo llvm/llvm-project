@@ -1816,7 +1816,8 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       if (TPList && CGM.getCodeGenOpts().DwarfVersion >= 5)
         if (auto *templateType =
                 dyn_cast_or_null<NonTypeTemplateParmDecl>(TPList->getParam(i)))
-          if (templateType->hasDefaultArgument())
+          if (templateType->hasDefaultArgument() &&
+              !templateType->getDefaultArgument()->isValueDependent())
             defaultParameter = llvm::APSInt::isSameValue(
                 templateType->getDefaultArgument()->EvaluateKnownConstInt(
                     CGM.getContext()),
