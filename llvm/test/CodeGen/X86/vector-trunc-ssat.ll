@@ -3637,7 +3637,7 @@ define <8 x i8> @trunc_ssat_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width"=
 ; SSE41-NEXT:    andpd %xmm0, %xmm1
 ; SSE41-NEXT:    packusdw %xmm4, %xmm1
 ; SSE41-NEXT:    packusdw %xmm3, %xmm1
-; SSE41-NEXT:    packuswb %xmm1, %xmm1
+; SSE41-NEXT:    packuswb %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;

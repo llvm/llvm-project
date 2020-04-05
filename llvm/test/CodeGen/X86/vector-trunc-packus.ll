@@ -3854,7 +3854,7 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm5
 ; SSE41-NEXT:    packusdw %xmm3, %xmm5
 ; SSE41-NEXT:    packusdw %xmm5, %xmm1
-; SSE41-NEXT:    packuswb %xmm1, %xmm1
+; SSE41-NEXT:    packuswb %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;

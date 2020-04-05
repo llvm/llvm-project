@@ -1171,7 +1171,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; SSE4-NEXT:    andpd %xmm0, %xmm6
 ; SSE4-NEXT:    packusdw %xmm7, %xmm6
 ; SSE4-NEXT:    packusdw %xmm2, %xmm6
-; SSE4-NEXT:    packuswb %xmm6, %xmm6
+; SSE4-NEXT:    packuswb %xmm0, %xmm6
 ; SSE4-NEXT:    pcmpeqd %xmm8, %xmm5
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm0, %xmm5
