@@ -557,6 +557,163 @@ MyPass
   (S) 21 testStat - A test statistic
 ```
 
+## Declarative Pass Specification
+
+Some aspects of a Pass may be specified declaratively, in a form similarly to
+[operations](OpDefinitions.md). This specification simiplifies several
+mechanisms related to defining passes. It can be used for generating pass
+registration calls, defining boiler plate pass utilities, and generating pass
+documentation.
+
+Consider the following pass specified in C++:
+
+```c++
+struct MyPass : OperationPass<MyPass> {
+  ...
+
+  /// Options.
+  Option<bool> option{
+      *this, "example-option",
+      llvm::cl::desc("An example option"), llvm::cl::init(true)};
+  ListOption<int64_t> listOption{
+      *this, "example-list",
+      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore,
+      llvm::cl::MiscFlags::CommaSeparated};
+
+  /// Statistics.
+  Statistic statistic{this, "example-statistic", "An example statistic"};
+};
+
+/// Expose this pass to the outside world.
+std::unique_ptr<Pass> foo::createMyPass() {
+  return std::make_unique<MyPass>();
+}
+
+static PassRegistration<MyPass> pass("my-pass", "My pass summary");
+```
+
+This pass may be specified declaratively as so:
+
+```tablegen
+def MyPass : Pass<"my-pass"> {
+  let summary = "My Pass Summary";
+  let description = [{
+    Here we can now give a much larger description of `MyPass`, including all of
+    its various constraints and behavior.
+  }];
+
+  // A constructor must be provided to specify how to create a default instance
+  // of MyPass.
+  let constructor = "foo::createMyPass()";
+
+  // Specify any options.
+  let options = [
+    Option<"option", "example-option", "bool", /*default=*/"true",
+           "An example option">,
+    ListOption<"listOption", "example-list", "int64_t",
+               "An example list option",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
+
+  // Specify any statistics.
+  let statistics = [
+    Statistic<"statistic", "example-statistic", "An example statistic">
+  ];
+}
+```
+
+We can include the generated registration calls via:
+
+```c++
+void registerMyPasses() {
+  // The generated registration is not static, so we need to include this in
+  // a location that we can call into.
+#define GEN_PASS_REGISTRATION
+#include "Passes.h.inc"
+}
+```
+
+We can then update the original C++ pass definition:
+
+```c++
+struct MyPass : OperationPass<MyPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_MyPass
+#include "Passes.h.inc"
+
+  ...
+};
+
+/// Expose this pass to the outside world.
+std::unique_ptr<Pass> foo::createMyPass() {
+  return std::make_unique<MyPass>();
+}
+```
+
+### Tablegen Specification
+
+The `Pass` class is used to begin a new pass definition. This class takes as an
+argument the command line argument to attribute to the pass. It contains the
+following fields:
+
+*   summary
+    -   A short one line summary of the pass, used as the description when
+        registering the pass.
+*   description
+    -   A longer, more detailed description of the pass. This is used when
+        generating pass documentation.
+*   constructor
+    -   A piece of C++ code used to create a default instance of the pass.
+*   options
+    -   A list of pass options used by the pass.
+*   statistics
+    -   A list of pass statistics used by the pass.
+
+#### Options
+
+Options can be specified by the `Option` and `ListOption` classes. The `Option`
+class takes the following fields:
+
+*   C++ variable name
+    -   A name to use for the generated option variable.
+*   argument
+    -   The command line argument of the option.
+*   type
+    -   The C++ type of the option.
+*   default value
+    -   The default option value.
+*   description
+    -   A one line description of the option.
+*   additional option flags
+    -   A string containing any additional options necessary to construct the
+        option.
+
+The `ListOption` class takes the following fields:
+
+*   C++ variable name
+    -   A name to use for the generated option variable.
+*   argument
+    -   The command line argument of the option.
+*   element type
+    -   The C++ type of the list element.
+*   description
+    -   A one line description of the option.
+*   additional option flags
+    -   A string containing any additional options necessary to construct the
+        option.
+
+#### Statistic
+
+Statistics can be specified via the `Statistic`, which takes the following
+fields:
+
+*   C++ variable name
+    -   A name to use for the generated statistic variable.
+*   display name
+    -   The name used when displaying the statistic.
+*   description
+    -   A one line description of the statistic.
+
 ## Pass Instrumentation
 
 MLIR provides a customizable framework to instrument pass execution and analysis
