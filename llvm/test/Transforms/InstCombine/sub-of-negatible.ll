@@ -429,9 +429,9 @@ define i8 @negate_shl_not_uses(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_shl_not_uses(
 ; CHECK-NEXT:    [[O:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[O]])
-; CHECK-NEXT:    [[S:%.*]] = shl i8 [[O]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[S]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[O_NEG:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[S_NEG:%.*]] = shl i8 [[O_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[S_NEG]]
 ;
   %o = xor i8 %x, -1
   call void @use8(i8 %o)
@@ -444,9 +444,9 @@ define <2 x i4> @negate_mul_not_uses_vec(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @negate_mul_not_uses_vec(
 ; CHECK-NEXT:    [[O:%.*]] = xor <2 x i4> [[X:%.*]], <i4 -1, i4 -1>
 ; CHECK-NEXT:    call void @use_v2i4(<2 x i4> [[O]])
-; CHECK-NEXT:    [[S:%.*]] = mul <2 x i4> [[O]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i4> zeroinitializer, [[S]]
-; CHECK-NEXT:    ret <2 x i4> [[R]]
+; CHECK-NEXT:    [[O_NEG:%.*]] = add <2 x i4> [[X]], <i4 1, i4 1>
+; CHECK-NEXT:    [[S_NEG:%.*]] = mul <2 x i4> [[O_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i4> [[S_NEG]]
 ;
   %o = xor <2 x i4> %x, <i4 -1, i4 -1>
   call void @use_v2i4(<2 x i4> %o)
