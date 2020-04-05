@@ -52,7 +52,7 @@ def ForOp : Loop_Op<"for",
     the lower bound but does not include the upper bound.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield".  Calling ForOp::build will create such a region and insert
+    "loop.yield". Calling ForOp::build will create such a region and insert
     the terminator implicitly if none is defined, so will the parsing even in
     cases when it is absent from the custom format. For example:
 
@@ -71,9 +71,11 @@ def ForOp : Loop_Op<"for",
 
     The region must terminate with a "loop.yield" that passes all the current
     iteration variables to the next iteration, or to the "loop.for" result, if
-    at the last iteration.  "loop.for" results hold the final values after the
-    last iteration.
+    at the last iteration. Note, that when the loop-carried variables are
+    present, calling ForOp::build will not insert the terminator implicitly.
+    The caller must insert "loop.yield" in that case.
 
+    "loop.for" results hold the final values after the last iteration.
     For example, to sum-reduce a memref:
 
     ```mlir
