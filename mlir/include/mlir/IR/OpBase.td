@@ -1533,6 +1533,10 @@ class SizedRegion<int numBlocks> : Region<
   CPred<"$_self.getBlocks().size() == " # numBlocks>,
   "region with " # numBlocks # " blocks">;
 
+// A variadic region constraint. It expands to zero or more of the base region.
+class VariadicRegion<Region region>
+  : Region<region.predicate, region.description>;
+
 //===----------------------------------------------------------------------===//
 // Successor definitions
 //===----------------------------------------------------------------------===//
