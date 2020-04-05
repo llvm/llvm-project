@@ -118,6 +118,9 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 6) == -1);
   static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 5) == 0);
 
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB4", 4) == 0);
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB3", 4) == 1);
+
   static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
   static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
   static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
