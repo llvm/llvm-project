@@ -37,8 +37,8 @@ public:
     worklist.reserve(64);
   }
 
-  /// Perform the rewrites. Return true if the rewrite converges in
-  /// `maxIterations`.
+  /// Perform the rewrites while folding and erasing any dead ops. Return true
+  /// if the rewrite converges in `maxIterations`.
   bool simplify(MutableArrayRef<Region> regions, int maxIterations);
 
   void addToWorklist(Operation *op) {
@@ -133,7 +133,7 @@ private:
 };
 } // end anonymous namespace
 
-/// Perform the rewrites.
+/// Perform the rewrites while folding and erasing any dead ops.
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
                                           int maxIterations) {
   // Add the given operation to the worklist.
@@ -213,14 +213,14 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 /// the result operation regions.
 /// Note: This does not apply patterns to the top-level operation itself.
 ///
-bool mlir::applyPatternsGreedily(Operation *op,
-                                 const OwningRewritePatternList &patterns) {
-  return applyPatternsGreedily(op->getRegions(), patterns);
+bool mlir::applyPatternsAndFoldGreedily(
+    Operation *op, const OwningRewritePatternList &patterns) {
+  return applyPatternsAndFoldGreedily(op->getRegions(), patterns);
 }
 
 /// Rewrite the given regions, which must be isolated from above.
-bool mlir::applyPatternsGreedily(MutableArrayRef<Region> regions,
-                                 const OwningRewritePatternList &patterns) {
+bool mlir::applyPatternsAndFoldGreedily(
+    MutableArrayRef<Region> regions, const OwningRewritePatternList &patterns) {
   if (regions.empty())
     return true;
 

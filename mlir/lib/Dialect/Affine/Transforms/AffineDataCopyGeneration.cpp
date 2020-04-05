@@ -225,6 +225,6 @@ void AffineDataCopyGeneration::runOnFunction() {
     OwningRewritePatternList patterns;
     AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
     AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
-    applyPatternsGreedily(f, std::move(patterns));
+    applyPatternsAndFoldGreedily(f, std::move(patterns));
   }
 }

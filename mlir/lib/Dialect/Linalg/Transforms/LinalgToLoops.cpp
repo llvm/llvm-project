@@ -688,7 +688,7 @@ static void lowerLinalgToLoopsImpl(Operation *op, MLIRContext *context) {
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.insert<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  applyPatternsGreedily(op, patterns);
+  applyPatternsAndFoldGreedily(op, patterns);
 }
 
 namespace {
