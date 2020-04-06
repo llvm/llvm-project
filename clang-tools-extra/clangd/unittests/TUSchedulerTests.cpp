@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <bits/stdint-uintn.h>
 #include <chrono>
 #include <utility>
 
@@ -40,13 +41,14 @@ using ::testing::IsEmpty;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P2(TUState, State, ActionName, "") {
-  if (arg.Action.S != State) {
-    *result_listener << "state is " << arg.Action.S;
+MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
+  if (arg.PreambleActivity != PreambleActivity) {
+    *result_listener << "preamblestate is "
+                     << static_cast<uint8_t>(arg.PreambleActivity);
     return false;
   }
-  if (arg.Action.Name != ActionName) {
-    *result_listener << "name is " << arg.Action.Name;
+  if (arg.ASTActivity.K != ASTActivity) {
+    *result_listener << "aststate is " << arg.ASTActivity.K;
     return false;
   }
   return true;
@@ -732,14 +734,13 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
 
   // Update the source contents, which should trigger an initial build with
   // the header file missing.
-  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
-                  [](std::vector<Diag> Diags) {
-    EXPECT_THAT(
-        Diags,
-        ElementsAre(
-            Field(&Diag::Message, "'foo.h' file not found"),
-            Field(&Diag::Message, "use of undeclared identifier 'a'")));
-  });
+  updateWithDiags(
+      S, Source, Inputs, WantDiagnostics::Yes, [](std::vector<Diag> Diags) {
+        EXPECT_THAT(Diags,
+                    ElementsAre(Field(&Diag::Message, "'foo.h' file not found"),
+                                Field(&Diag::Message,
+                                      "use of undeclared identifier 'a'")));
+      });
 
   // Add the header file. We need to recreate the inputs since we changed a
   // file from underneath the test FS.
@@ -749,18 +750,17 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
 
   // The addition of the missing header file shouldn't trigger a rebuild since
   // we don't track missing files.
-  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
-                  [](std::vector<Diag> Diags) {
-    ADD_FAILURE() << "Did not expect diagnostics for missing header update";
-  });
+  updateWithDiags(
+      S, Source, Inputs, WantDiagnostics::Yes, [](std::vector<Diag> Diags) {
+        ADD_FAILURE() << "Did not expect diagnostics for missing header update";
+      });
 
   // Forcing the reload should should cause a rebuild which no longer has any
   // errors.
   Inputs.ForceRebuild = true;
-  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
-                  [](std::vector<Diag> Diags) {
-    EXPECT_THAT(Diags, IsEmpty());
-  });
+  updateWithDiags(
+      S, Source, Inputs, WantDiagnostics::Yes,
+      [](std::vector<Diag> Diags) { EXPECT_THAT(Diags, IsEmpty()); });
 
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
 }
@@ -848,14 +848,21 @@ TEST_F(TUSchedulerTests, TUStatus) {
 
   EXPECT_THAT(CaptureTUStatus.allStatus(),
               ElementsAre(
-                  // Statuses of "Update" action.
-                  TUState(TUAction::RunningAction, "Update (1)"),
-                  TUState(TUAction::BuildingPreamble, "Update (1)"),
-                  TUState(TUAction::BuildingFile, "Update (1)"),
-
-                  // Statuses of "Definitions" action
-                  TUState(TUAction::RunningAction, "Definitions"),
-                  TUState(TUAction::Idle, /*No action*/ "")));
+                  // Everything starts with ASTWorker starting to execute an
+                  // update
+                  TUState(PreambleAction::Idle, ASTAction::RunningAction),
+                  // We build the preamble
+                  TUState(PreambleAction::Building, ASTAction::RunningAction),
+                  // Preamble worker goes idle
+                  TUState(PreambleAction::Idle, ASTAction::RunningAction),
+                  // We start building the ast
+                  TUState(PreambleAction::Idle, ASTAction::Building),
+                  // Built finished succesffully
+                  TUState(PreambleAction::Idle, ASTAction::Building),
+                  // Rnning go to def
+                  TUState(PreambleAction::Idle, ASTAction::RunningAction),
+                  // both workers go idle
+                  TUState(PreambleAction::Idle, ASTAction::Idle)));
 }
 
 TEST_F(TUSchedulerTests, CommandLineErrors) {
@@ -868,8 +875,7 @@ TEST_F(TUSchedulerTests, CommandLineErrors) {
   TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
-                  WantDiagnostics::Yes,
-                  [&](std::vector<Diag> D) {
+                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
                     Diagnostics = std::move(D);
                     Ready.notify();
                   });
@@ -893,8 +899,7 @@ TEST_F(TUSchedulerTests, CommandLineWarnings) {
   TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
-                  WantDiagnostics::Yes,
-                  [&](std::vector<Diag> D) {
+                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
                     Diagnostics = std::move(D);
                     Ready.notify();
                   });
