@@ -31,6 +31,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -562,6 +563,119 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
   return register_object;
 }
 
+static llvm::Optional<RegisterValue>
+GetRegisterValue(NativeRegisterContext &reg_ctx, uint32_t generic_regnum) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
+  uint32_t reg_num = reg_ctx.ConvertRegisterKindToRegisterNumber(
+      eRegisterKindGeneric, generic_regnum);
+  const RegisterInfo *const reg_info_p =
+      reg_ctx.GetRegisterInfoAtIndex(reg_num);
+
+  if (reg_info_p == nullptr || reg_info_p->value_regs != nullptr) {
+    LLDB_LOGF(log, "%s failed to get register info for register index %" PRIu32,
+              __FUNCTION__, reg_num);
+    return {};
+  }
+
+  RegisterValue reg_value;
+  Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
+  if (error.Fail()) {
+    LLDB_LOGF(log, "%s failed to read register '%s' index %" PRIu32 ": %s",
+              __FUNCTION__,
+              reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
+              reg_num, error.AsCString());
+    return {};
+  }
+  return reg_value;
+}
+
+static json::Object CreateMemoryChunk(json::Array &stack_memory_chunks,
+                                      addr_t address,
+                                      std::vector<uint8_t> &bytes) {
+  json::Object chunk;
+  chunk.try_emplace("address", static_cast<int64_t>(address));
+  StreamString stream;
+  for (uint8_t b : bytes)
+    stream.PutHex8(b);
+  chunk.try_emplace("bytes", stream.GetString().str());
+  return chunk;
+}
+
+static json::Array GetStackMemoryAsJSON(NativeProcessProtocol &process,
+                                        NativeThreadProtocol &thread) {
+  uint32_t address_size = process.GetArchitecture().GetAddressByteSize();
+  const size_t kStackTopMemoryInfoWordSize = 12;
+  size_t stack_top_memory_info_byte_size =
+      kStackTopMemoryInfoWordSize * address_size;
+  const size_t kMaxStackSize = 128 * 1024;
+  const size_t kMaxFrameSize = 4 * 1024;
+  size_t fp_and_ra_size = 2 * address_size;
+  const size_t kMaxFrameCount = 128;
+
+  NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
+
+  json::Array stack_memory_chunks;
+
+  lldb::addr_t sp_value;
+  if (llvm::Optional<RegisterValue> optional_sp_value =
+          GetRegisterValue(reg_ctx, LLDB_REGNUM_GENERIC_SP)) {
+    sp_value = optional_sp_value->GetAsUInt64();
+  } else {
+    return stack_memory_chunks;
+  }
+  lldb::addr_t fp_value;
+  if (llvm::Optional<RegisterValue> optional_fp_value =
+          GetRegisterValue(reg_ctx, LLDB_REGNUM_GENERIC_FP)) {
+    fp_value = optional_fp_value->GetAsUInt64();
+  } else {
+    return stack_memory_chunks;
+  }
+
+  // First, make sure we copy the top stack_top_memory_info_byte_size bytes
+  // from the stack.
+  size_t byte_count = std::min(stack_top_memory_info_byte_size,
+                               static_cast<size_t>(fp_value - sp_value));
+  std::vector<uint8_t> buf(byte_count, 0);
+
+  size_t bytes_read = 0;
+  Status error = process.ReadMemoryWithoutTrap(sp_value, buf.data(), byte_count,
+                                               bytes_read);
+  if (error.Success() && bytes_read > 0) {
+    buf.resize(bytes_read);
+    stack_memory_chunks.push_back(
+        std::move(CreateMemoryChunk(stack_memory_chunks, sp_value, buf)));
+  }
+
+  // Additionally, try to walk the frame pointer link chain. If the frame
+  // is too big or if the frame pointer points too far, stop the walk.
+  addr_t max_frame_pointer = sp_value + kMaxStackSize;
+  for (size_t i = 0; i < kMaxFrameCount; i++) {
+    if (fp_value < sp_value || fp_value > sp_value + kMaxFrameSize ||
+        fp_value > max_frame_pointer)
+      break;
+
+    std::vector<uint8_t> fp_ra_buf(fp_and_ra_size, 0);
+    bytes_read = 0;
+    error = process.ReadMemoryWithoutTrap(fp_value, fp_ra_buf.data(),
+                                          fp_and_ra_size, bytes_read);
+    if (error.Fail() || bytes_read != fp_and_ra_size)
+      break;
+
+    stack_memory_chunks.push_back(
+        std::move(CreateMemoryChunk(stack_memory_chunks, fp_value, fp_ra_buf)));
+
+    // Advance the stack pointer and the frame pointer.
+    sp_value = fp_value;
+    lldb_private::DataExtractor extractor(
+        fp_ra_buf.data(), fp_and_ra_size,
+        process.GetArchitecture().GetByteOrder(), address_size);
+    offset_t offset = 0;
+    fp_value = extractor.GetAddress(&offset);
+  }
+
+  return stack_memory_chunks;
+}
+
 static const char *GetStopReasonString(StopReason stop_reason) {
   switch (stop_reason) {
   case eStopReasonTrace:
@@ -626,6 +740,9 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
       } else {
         return registers.takeError();
       }
+      json::Array stack_memory = GetStackMemoryAsJSON(process, *thread);
+      if (!stack_memory.empty())
+        thread_obj.try_emplace("memory", std::move(stack_memory));
     }
 
     thread_obj.try_emplace("tid", static_cast<int64_t>(tid));
