@@ -1,4 +1,4 @@
-; RUN: %lli -code-model=large %s > /dev/null
+; RUN: %lli -mtriple=x86_64-unknown-unknown -code-model=large %s > /dev/null
 
 @a = dso_local local_unnamed_addr global i32 1, align 4
 
