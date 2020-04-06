@@ -41,7 +41,7 @@ and z falls into the ith one, then table entries are computed as
 	tab[i].logctail = (double)(log(c) - logc)
 
 where c is chosen near the center of the subinterval such that 1/c has only a
-few precision bits so z/c - 1 is exactly representible as double:
+few precision bits so z/c - 1 is exactly representable as double:
 
 	1/c = center < 1 ? round(N/center)/N : round(2*N/center)/N/2
 

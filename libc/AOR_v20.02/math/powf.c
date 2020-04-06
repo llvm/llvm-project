@@ -26,7 +26,7 @@ relerr_exp2: 1.69 * 2^-34 (Relative error of exp2(ylogx).)
 #define OFF 0x3f330000
 
 /* Subnormal input is normalized so ix has negative biased exponent.
-   Output is multiplied by N (POWF_SCALE) if TOINT_INTRINICS is set.  */
+   Output is multiplied by N (POWF_SCALE) if TOINT_INTRINSICS is set.  */
 static inline double_t
 log2_inline (uint32_t ix)
 {

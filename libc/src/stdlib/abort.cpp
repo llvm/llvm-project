@@ -19,9 +19,9 @@ void LLVM_LIBC_ENTRYPOINT(abort)() {
   // Unblock SIGABRT, raise it, if it was ignored or the handler returned,
   // change its action to SIG_DFL, raise it again.
   // TODO: When C11 mutexes land:
-  // Aquire recursive mutex (in case the current signal handler for SIGABRT
+  // Acquire recursive mutex (in case the current signal handler for SIGABRT
   // itself calls abort we don't want to deadlock on the same thread trying
-  // to aquire it's own mutex.)
+  // to acquire it's own mutex.)
   __llvm_libc::raise(SIGABRT);
   __llvm_libc::raise(SIGKILL);
   __llvm_libc::_Exit(127);

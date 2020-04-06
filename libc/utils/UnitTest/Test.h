@@ -25,7 +25,7 @@ class RunContext;
 // a TRUE or FALSE condition. That is because, C library funtions do not
 // return boolean values, but use integral return values to indicate true or
 // false conditions. Hence, it is more appropriate to use the other comparison
-// condtions for such cases.
+// conditions for such cases.
 enum TestCondition {
   Cond_None,
   Cond_EQ,
