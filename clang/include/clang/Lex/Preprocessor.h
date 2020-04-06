@@ -1562,6 +1562,12 @@ public:
   void EnterAnnotationToken(SourceRange Range, tok::TokenKind Kind,
                             void *AnnotationVal);
 
+  /// Determine whether it's possible for a future call to Lex to produce an
+  /// annotation token created by a previous call to EnterAnnotationToken.
+  bool mightHavePendingAnnotationTokens() {
+    return CurLexerKind != CLK_Lexer;
+  }
+
   /// Update the current token to represent the provided
   /// identifier, in order to cache an action performed by typo correction.
   void TypoCorrectToken(const Token &Tok) {

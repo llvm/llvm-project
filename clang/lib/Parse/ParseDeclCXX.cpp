@@ -3341,6 +3341,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       // Each iteration of this loop reads one member-declaration.
       ParseCXXClassMemberDeclarationWithPragmas(
           CurAS, AccessAttrs, static_cast<DeclSpec::TST>(TagType), TagDecl);
+      MaybeDestroyTemplateIds();
     }
     T.consumeClose();
   } else {
