@@ -476,12 +476,12 @@ TEST_F(MatchSelectPatternTest, NotNotSMin) {
 
 TEST_F(MatchSelectPatternTest, NotNotSMinSwap) {
   parseAssembly(
-      "define i8 @test(i8 %a, i8 %b) {\n"
-      "  %cmp = icmp slt i8 %a, %b\n"
-      "  %an = xor i8 %a, -1\n"
-      "  %bn = xor i8 %b, -1\n"
-      "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
-      "  ret i8 %A\n"
+      "define <2 x i8> @test(<2 x i8> %a, <2 x i8> %b) {\n"
+      "  %cmp = icmp slt <2 x i8> %a, %b\n"
+      "  %an = xor <2 x i8> %a, <i8 -1, i8-1>\n"
+      "  %bn = xor <2 x i8> %b, <i8 -1, i8-1>\n"
+      "  %A = select <2 x i1> %cmp, <2 x i8> %bn, <2 x i8> %an\n"
+      "  ret <2 x i8> %A\n"
       "}\n");
   expectPattern({SPF_SMIN, SPNB_NA, false});
 }
@@ -500,14 +500,86 @@ TEST_F(MatchSelectPatternTest, NotNotSMax) {
 
 TEST_F(MatchSelectPatternTest, NotNotSMaxSwap) {
   parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %a, <2 x i8> %b) {\n"
+      "  %cmp = icmp sgt <2 x i8> %a, %b\n"
+      "  %an = xor <2 x i8> %a, <i8 -1, i8-1>\n"
+      "  %bn = xor <2 x i8> %b, <i8 -1, i8-1>\n"
+      "  %A = select <2 x i1> %cmp, <2 x i8> %bn, <2 x i8> %an\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  expectPattern({SPF_SMAX, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotUMin) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %a, <2 x i8> %b) {\n"
+      "  %cmp = icmp ugt <2 x i8> %a, %b\n"
+      "  %an = xor <2 x i8> %a, <i8 -1, i8-1>\n"
+      "  %bn = xor <2 x i8> %b, <i8 -1, i8-1>\n"
+      "  %A = select <2 x i1> %cmp, <2 x i8> %an, <2 x i8> %bn\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotUMinSwap) {
+  parseAssembly(
       "define i8 @test(i8 %a, i8 %b) {\n"
-      "  %cmp = icmp sgt i8 %a, %b\n"
+      "  %cmp = icmp ult i8 %a, %b\n"
       "  %an = xor i8 %a, -1\n"
       "  %bn = xor i8 %b, -1\n"
       "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_SMAX, SPNB_NA, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotUMax) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %a, <2 x i8> %b) {\n"
+      "  %cmp = icmp ult <2 x i8> %a, %b\n"
+      "  %an = xor <2 x i8> %a, <i8 -1, i8-1>\n"
+      "  %bn = xor <2 x i8> %b, <i8 -1, i8-1>\n"
+      "  %A = select <2 x i1> %cmp, <2 x i8> %an, <2 x i8> %bn\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotUMaxSwap) {
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %cmp = icmp ugt i8 %a, %b\n"
+      "  %an = xor i8 %a, -1\n"
+      "  %bn = xor i8 %b, -1\n"
+      "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
+      "  ret i8 %A\n"
+      "}\n");
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotEq) {
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %cmp = icmp eq i8 %a, %b\n"
+      "  %an = xor i8 %a, -1\n"
+      "  %bn = xor i8 %b, -1\n"
+      "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
+      "  ret i8 %A\n"
+      "}\n");
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, NotNotNe) {
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %cmp = icmp ne i8 %a, %b\n"
+      "  %an = xor i8 %a, -1\n"
+      "  %bn = xor i8 %b, -1\n"
+      "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
+      "  ret i8 %A\n"
+      "}\n");
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
