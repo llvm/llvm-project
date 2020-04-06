@@ -89,7 +89,7 @@ PreambleData::PreambleData(const ParseInputs &Inputs,
 }
 
 std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation &CI,
+buildPreamble(PathRef FileName, CompilerInvocation CI,
               std::shared_ptr<const PreambleData> OldPreamble,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback) {

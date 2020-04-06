@@ -49,13 +49,16 @@
 #include "GlobalCompilationDatabase.h"
 #include "Logger.h"
 #include "ParsedAST.h"
+#include "Path.h"
 #include "Preamble.h"
+#include "Threading.h"
 #include "Trace.h"
 #include "index/CanonicalIncludes.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
@@ -149,6 +152,177 @@ private:
 };
 
 namespace {
+/// Responsible for building and providing access to the preamble of a TU.
+/// Whenever the thread is idle and the preamble is outdated, it starts to build
+/// a fresh preamble from the latest inputs. If RunSync is true, preambles are
+/// built synchronously in update() instead.
+class PreambleThread {
+public:
+  PreambleThread(llvm::StringRef FileName, ParsingCallbacks &Callbacks,
+                 bool StorePreambleInMemory, bool RunSync)
+      : FileName(FileName), Callbacks(Callbacks),
+        StoreInMemory(StorePreambleInMemory), RunSync(RunSync) {}
+
+  size_t getUsedBytes() const {
+    auto Preamble = latest();
+    return Preamble ? Preamble->Preamble.getSize() : 0;
+  }
+
+  /// It isn't guaranteed that each requested version will be built. If there
+  /// are multiple update requests while building a preamble, only the last one
+  /// will be built.
+  void update(CompilerInvocation *CI, ParseInputs PI) {
+    // If compiler invocation was broken, just fail out early.
+    if (!CI) {
+      TUStatus::BuildDetails Details;
+      Details.BuildFailed = true;
+      std::string TaskName = llvm::formatv("Update ({0})", PI.Version);
+      emitTUStatus({TUAction::BuildingPreamble, std::move(TaskName)}, &Details);
+      // Make sure anyone waiting for the preamble gets notified it could not be
+      // built.
+      BuiltFirst.notify();
+      return;
+    }
+    // Make possibly expensive copy while not holding the lock.
+    Request Req = {std::make_unique<CompilerInvocation>(*CI), std::move(PI)};
+    if (RunSync) {
+      build(std::move(Req));
+      return;
+    }
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      assert(!Done && "Build request to PreambleWorker after stop");
+      NextReq = std::move(Req);
+    }
+    // Let the worker thread know there's a request, notify_one is safe as there
+    // should be a single worker thread waiting on it.
+    ReqCV.notify_all();
+  }
+
+  /// Blocks until at least a single request has been processed. Note that it
+  /// will unblock even after an unsuccessful build.
+  void waitForFirst() const { BuiltFirst.wait(); }
+
+  /// Returns the latest built preamble, might be null if no preamble has been
+  /// built or latest attempt resulted in a failure.
+  std::shared_ptr<const PreambleData> latest() const {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    return LatestBuild;
+  }
+
+  void run() {
+    dlog("Starting preamble worker for {0}", FileName);
+    while (true) {
+      {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        assert(!CurrentReq && "Already processing a request?");
+        // Wait until stop is called or there is a request.
+        ReqCV.wait(Lock, [this] { return NextReq || Done; });
+        if (Done)
+          break;
+        CurrentReq = std::move(*NextReq);
+        NextReq.reset();
+      }
+      // Build the preamble and let the waiters know about it.
+      build(std::move(*CurrentReq));
+      {
+        std::lock_guard<std::mutex> Lock(Mutex);
+        CurrentReq.reset();
+      }
+      ReqCV.notify_all();
+    }
+    // We are no longer going to build any preambles, let the waiters know that.
+    BuiltFirst.notify();
+    dlog("Preamble worker for {0} finished", FileName);
+  }
+
+  /// Signals the run loop to exit.
+  void stop() {
+    dlog("Stopping preamble worker for {0}", FileName);
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Done = true;
+    }
+    // Let the worker thread know that it should stop.
+    ReqCV.notify_all();
+  }
+
+  bool blockUntilIdle(Deadline Timeout) const {
+    std::unique_lock<std::mutex> Lock(Mutex);
+    return wait(Lock, ReqCV, Timeout, [&] { return !NextReq && !CurrentReq; });
+  }
+
+private:
+  /// Holds inputs required for building a preamble. CI is guaranteed to be
+  /// non-null.
+  struct Request {
+    std::unique_ptr<CompilerInvocation> CI;
+    ParseInputs Inputs;
+  };
+
+  bool isDone() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    return Done;
+  }
+
+  /// Updates the TUStatus and emits it. Only called in the worker thread.
+  void emitTUStatus(TUAction Action,
+                    const TUStatus::BuildDetails *Details = nullptr) {
+    // Do not emit TU statuses when the worker is shutting down.
+    if (isDone())
+      return;
+    TUStatus Status({std::move(Action), {}});
+    if (Details)
+      Status.Details = *Details;
+    Callbacks.onFileUpdated(FileName, Status);
+  }
+
+  /// Builds a preamble for Req and caches it. Might re-use the latest built
+  /// preamble if it is valid for Req. Also signals waiters about the build.
+  /// FIXME: We shouldn't cache failed preambles, if we've got a successful
+  /// build before.
+  void build(Request Req) {
+    assert(Req.CI && "Got preamble request with null compiler invocation");
+    const ParseInputs &Inputs = Req.Inputs;
+    std::shared_ptr<const PreambleData> OldPreamble =
+        Inputs.ForceRebuild ? nullptr : latest();
+
+    std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
+    emitTUStatus({TUAction::BuildingPreamble, std::move(TaskName)});
+
+    auto Preamble = clang::clangd::buildPreamble(
+        FileName, std::move(*Req.CI), OldPreamble, Inputs, StoreInMemory,
+        [this, Version(Inputs.Version)](
+            ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
+            const CanonicalIncludes &CanonIncludes) {
+          Callbacks.onPreambleAST(FileName, Version, Ctx, std::move(PP),
+                                  CanonIncludes);
+        });
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      // LatestBuild might be the last reference to old preamble, do not trigger
+      // destructor while holding the lock.
+      std::swap(LatestBuild, Preamble);
+    }
+    BuiltFirst.notify();
+  }
+
+  mutable std::mutex Mutex;
+  bool Done = false;                  /* GUARDED_BY(Mutex) */
+  llvm::Optional<Request> NextReq;    /* GUARDED_BY(Mutex) */
+  llvm::Optional<Request> CurrentReq; /* GUARDED_BY(Mutex) */
+  // Signaled whenever a thread populates NextReq or worker thread builds a
+  // Preamble.
+  mutable std::condition_variable ReqCV;           /* GUARDED_BY(Mutex) */
+  std::shared_ptr<const PreambleData> LatestBuild; /* GUARDED_BY(Mutex) */
+
+  Notification BuiltFirst;
+  const Path FileName;
+  ParsingCallbacks &Callbacks;
+  const bool StoreInMemory;
+  const bool RunSync;
+};
+
 class ASTWorkerHandle;
 
 /// Owns one instance of the AST, schedules updates and reads of it.
@@ -251,8 +425,6 @@ private:
   /// File that ASTWorker is responsible for.
   const Path FileName;
   const GlobalCompilationDatabase &CDB;
-  /// Whether to keep the built preambles in memory or on disk.
-  const bool StorePreambleInMemory;
   /// Callback invoked when preamble or main file AST is built.
   ParsingCallbacks &Callbacks;
   /// Only accessed by the worker thread.
@@ -266,13 +438,10 @@ private:
   /// File inputs, currently being used by the worker.
   /// Inputs are written and read by the worker thread, compile command can also
   /// be consumed by clients of ASTWorker.
-  std::shared_ptr<const ParseInputs> FileInputs;         /* GUARDED_BY(Mutex) */
-  std::shared_ptr<const PreambleData> LastBuiltPreamble; /* GUARDED_BY(Mutex) */
+  std::shared_ptr<const ParseInputs> FileInputs; /* GUARDED_BY(Mutex) */
   /// Times of recent AST rebuilds, used for UpdateDebounce computation.
   llvm::SmallVector<DebouncePolicy::clock::duration, 8>
       RebuildTimes; /* GUARDED_BY(Mutex) */
-  /// Becomes ready when the first preamble build finishes.
-  Notification PreambleWasBuilt;
   /// Set to true to signal run() to finish processing.
   bool Done;                              /* GUARDED_BY(Mutex) */
   std::deque<Request> Requests;           /* GUARDED_BY(Mutex) */
@@ -288,6 +457,8 @@ private:
   // don't. When the old handle is destroyed, the old worker will stop reporting
   // any results to the user.
   bool CanPublishResults = true; /* GUARDED_BY(PublishMu) */
+
+  PreambleThread PW;
 };
 
 /// A smart-pointer-like class that points to an active ASTWorker.
@@ -340,9 +511,12 @@ ASTWorker::create(PathRef FileName, const GlobalCompilationDatabase &CDB,
   std::shared_ptr<ASTWorker> Worker(
       new ASTWorker(FileName, CDB, IdleASTs, Barrier, /*RunSync=*/!Tasks,
                     UpdateDebounce, StorePreamblesInMemory, Callbacks));
-  if (Tasks)
-    Tasks->runAsync("worker:" + llvm::sys::path::filename(FileName),
+  if (Tasks) {
+    Tasks->runAsync("ASTWorker:" + llvm::sys::path::filename(FileName),
                     [Worker]() { Worker->run(); });
+    Tasks->runAsync("PreambleWorker:" + llvm::sys::path::filename(FileName),
+                    [Worker]() { Worker->PW.run(); });
+  }
 
   return ASTWorkerHandle(std::move(Worker));
 }
@@ -353,10 +527,11 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                      bool StorePreamblesInMemory, ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(UpdateDebounce),
       FileName(FileName), CDB(CDB),
-      StorePreambleInMemory(StorePreamblesInMemory),
       Callbacks(Callbacks), Status{TUAction(TUAction::Idle, ""),
                                    TUStatus::BuildDetails()},
-      Barrier(Barrier), Done(false) {
+      Barrier(Barrier), Done(false),
+      // FIXME: Run preambleworker async.
+      PW(FileName, Callbacks, StorePreamblesInMemory, /*RunSync=*/true) {
   auto Inputs = std::make_shared<ParseInputs>();
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
@@ -409,7 +584,6 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       FileInputs = std::make_shared<ParseInputs>(Inputs);
     }
     RanASTCallback = false;
-    emitTUStatus({TUAction::BuildingPreamble, TaskName});
     log("ASTWorker building file {0} version {1} with command {2}\n[{3}]\n{4}",
         FileName, Inputs.Version, Inputs.CompileCommand.Heuristic,
         Inputs.CompileCommand.Directory,
@@ -419,6 +593,12 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     std::vector<std::string> CC1Args;
     std::unique_ptr<CompilerInvocation> Invocation = buildCompilerInvocation(
         Inputs, CompilerInvocationDiagConsumer, &CC1Args);
+    // This is true for now, as we always block until new preamble is build.
+    // Once we start to block preambles out-of-order we need to make sure
+    // OldPreamble refers to the preamble that was used to build last AST.
+    auto OldPreamble = PW.latest();
+    PW.update(Invocation.get(), Inputs);
+    auto NewPreamble = PW.latest();
     // Log cc1 args even (especially!) if creating invocation failed.
     if (!CC1Args.empty())
       vlog("Driver produced command: cc1 {0}", llvm::join(CC1Args, " "));
@@ -428,40 +608,17 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
       // Remove the old AST if it's still in cache.
       IdleASTs.take(this);
-      TUStatus::BuildDetails Details;
-      Details.BuildFailed = true;
-      emitTUStatus({TUAction::BuildingPreamble, TaskName}, &Details);
       // Report the diagnostics we collected when parsing the command line.
       Callbacks.onFailedAST(FileName, Inputs.Version,
                             std::move(CompilerInvocationDiags), RunPublish);
-      // Make sure anyone waiting for the preamble gets notified it could not
-      // be built.
-      PreambleWasBuilt.notify();
       return;
     }
 
-    std::shared_ptr<const PreambleData> OldPreamble =
-        Inputs.ForceRebuild ? std::shared_ptr<const PreambleData>()
-                            : getPossiblyStalePreamble();
-    std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
-        FileName, *Invocation, OldPreamble, Inputs, StorePreambleInMemory,
-        [this, Version(Inputs.Version)](
-            ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
-            const CanonicalIncludes &CanonIncludes) {
-          Callbacks.onPreambleAST(FileName, Version, Ctx, std::move(PP),
-                                  CanonIncludes);
-        });
-
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      LastBuiltPreamble = NewPreamble;
-    }
     // Before doing the expensive AST reparse, we want to release our reference
     // to the old preamble, so it can be freed if there are no other references
     // to it.
     OldPreamble.reset();
-    PreambleWasBuilt.notify();
     emitTUStatus({TUAction::BuildingFile, TaskName});
     if (!CanReuseAST) {
       IdleASTs.take(this); // Remove the old AST if it's still in cache.
@@ -591,8 +748,7 @@ void ASTWorker::runWithAST(
 
 std::shared_ptr<const PreambleData>
 ASTWorker::getPossiblyStalePreamble() const {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  return LastBuiltPreamble;
+  return PW.latest();
 }
 
 void ASTWorker::getCurrentPreamble(
@@ -625,7 +781,7 @@ void ASTWorker::getCurrentPreamble(
   RequestsCV.notify_all();
 }
 
-void ASTWorker::waitForFirstPreamble() const { PreambleWasBuilt.wait(); }
+void ASTWorker::waitForFirstPreamble() const { PW.waitForFirst(); }
 
 std::shared_ptr<const ParseInputs> ASTWorker::getCurrentFileInputs() const {
   std::unique_lock<std::mutex> Lock(Mutex);
@@ -713,6 +869,7 @@ void ASTWorker::emitTUStatus(TUAction Action,
 }
 
 void ASTWorker::run() {
+  auto _ = llvm::make_scope_exit([this] { PW.stop(); });
   while (true) {
     {
       std::unique_lock<std::mutex> Lock(Mutex);
