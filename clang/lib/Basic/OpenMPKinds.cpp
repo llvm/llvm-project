@@ -20,50 +20,6 @@
 using namespace clang;
 using namespace llvm::omp;
 
-OpenMPClauseKind clang::getOpenMPClauseKind(StringRef Str) {
-  // 'flush' clause cannot be specified explicitly, because this is an implicit
-  // clause for 'flush' directive. If the 'flush' clause is explicitly specified
-  // the Parser should generate a warning about extra tokens at the end of the
-  // directive.
-  // 'depobj' clause cannot be specified explicitly, because this is an implicit
-  // clause for 'depobj' directive. If the 'depobj' clause is explicitly
-  // specified the Parser should generate a warning about extra tokens at the
-  // end of the directive.
-  if (llvm::StringSwitch<bool>(Str)
-          .Case("flush", true)
-          .Case("depobj", true)
-          .Default(false))
-    return OMPC_unknown;
-  return llvm::StringSwitch<OpenMPClauseKind>(Str)
-#define OPENMP_CLAUSE(Name, Class) .Case(#Name, OMPC_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-      .Case("uniform", OMPC_uniform)
-      .Case("device_type", OMPC_device_type)
-      .Case("match", OMPC_match)
-      .Default(OMPC_unknown);
-}
-
-const char *clang::getOpenMPClauseName(OpenMPClauseKind Kind) {
-  assert(Kind <= OMPC_unknown);
-  switch (Kind) {
-  case OMPC_unknown:
-    return "unknown";
-#define OPENMP_CLAUSE(Name, Class)                                             \
-  case OMPC_##Name:                                                            \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
-  case OMPC_uniform:
-    return "uniform";
-  case OMPC_threadprivate:
-    return "threadprivate or thread local";
-  case OMPC_device_type:
-    return "device_type";
-  case OMPC_match:
-    return "match";
-  }
-  llvm_unreachable("Invalid OpenMP clause kind");
-}
-
 unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
                                           StringRef Str) {
   switch (Kind) {
