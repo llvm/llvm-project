@@ -219,15 +219,12 @@ define <4 x i32> @clamp_unsigned2(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
-define <4 x i32> @wrong_pred_for_smin_with_not(<4 x i32> %x) {
-; CHECK-LABEL: wrong_pred_for_smin_with_not:
+define <4 x i32> @umin_not_ops(<4 x i32> %x) {
+; CHECK-LABEL: umin_not_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [4294967291,4294967291,4294967291,4294967291]
-; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %cmp = icmp ugt <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>

@@ -519,7 +519,7 @@ TEST_F(MatchSelectPatternTest, NotNotUMin) {
       "  %A = select <2 x i1> %cmp, <2 x i8> %an, <2 x i8> %bn\n"
       "  ret <2 x i8> %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_UMIN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotUMinSwap) {
@@ -531,7 +531,7 @@ TEST_F(MatchSelectPatternTest, NotNotUMinSwap) {
       "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_UMIN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotUMax) {
@@ -543,7 +543,7 @@ TEST_F(MatchSelectPatternTest, NotNotUMax) {
       "  %A = select <2 x i1> %cmp, <2 x i8> %an, <2 x i8> %bn\n"
       "  ret <2 x i8> %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_UMAX, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotUMaxSwap) {
@@ -555,7 +555,7 @@ TEST_F(MatchSelectPatternTest, NotNotUMaxSwap) {
       "  %A = select i1 %cmp, i8 %bn, i8 %an\n"
       "  ret i8 %A\n"
       "}\n");
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  expectPattern({SPF_UMAX, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, NotNotEq) {
