@@ -343,6 +343,9 @@ void RegisterMethods<SBExpressionOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTopLevel, (bool));
   LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetAllowJIT, ());
   LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetAllowJIT, (bool));
+  LLDB_REGISTER_METHOD(uint64_t, SBExpressionOptions, GetRetriesWithFixIts, ());
+  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetRetriesWithFixIts,
+                       (uint64_t));
 }
 
 }
