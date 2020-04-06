@@ -19,6 +19,7 @@ class LinuxCoreTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    _aarch64_pid = 37688
     _i386_pid = 32306
     _x86_64_pid = 32259
     _s390x_pid = 1045
@@ -27,11 +28,19 @@ class LinuxCoreTestCase(TestBase):
     _mips_o32_pid = 3532
     _ppc64le_pid = 28147
 
+    _aarch64_regions = 4
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
     _mips_regions = 5
     _ppc64le_regions = 2
+
+
+    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64(self):
+        """Test that lldb can read the process information from an aarch64 linux core file."""
+        self.do_test("linux-aarch64", self._aarch64_pid, self._aarch64_regions, "a.out")
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
@@ -248,6 +257,61 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_regs(self):
+        # check 64 bit ARM core files
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-aarch64-neon.core")
+
+        values = {}
+        values["x1"] = "0x000000000000002f"
+        values["w1"] = "0x0000002f"
+        values["fp"] = "0x0000007fc5dd7f20"
+        values["lr"] = "0x0000000000400180"
+        values["sp"] = "0x0000007fc5dd7f00"
+        values["pc"] = "0x000000000040014c"
+        values["v0"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0xe0 0x3f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v1"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0xf8 0x3f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v2"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0x04 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v3"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0x0c 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v4"] = "{0x00 0x00 0x90 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v5"] = "{0x00 0x00 0xb0 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v6"] = "{0x00 0x00 0xd0 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v7"] = "{0x00 0x00 0xf0 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v8"] = "{0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11 0x11}"
+        values["v27"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v28"] = "{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
+        values["v31"] = "{0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30}"
+        values["s2"] = "0"
+        values["s3"] = "0"
+        values["s4"] = "4.5"
+        values["s5"] = "5.5"
+        values["s6"] = "6.5"
+        values["s7"] = "7.5"
+        values["s8"] = "1.14437e-28"
+        values["s30"] = "0"
+        values["s31"] = "6.40969e-10"
+        values["d0"] = "0.5"
+        values["d1"] = "1.5"
+        values["d2"] = "2.5"
+        values["d3"] = "3.5"
+        values["d4"] = "5.35161536149201e-315"
+        values["d5"] = "5.36197666906508e-315"
+        values["d6"] = "5.37233797663815e-315"
+        values["d7"] = "5.38269928421123e-315"
+        values["d8"] = "1.80107573659442e-226"
+        values["d30"] = "0"
+        values["d31"] = "1.39804328609529e-76"
+        values["fpsr"] = "0x00000000"
+        values["fpcr"] = "0x00000000"
+
+        for regname, value in values.items():
+            self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
+
+        self.expect("register read --all")
+
+    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("ARM")
     def test_arm_core(self):
         # check 32 bit ARM core file
@@ -275,6 +339,8 @@ class LinuxCoreTestCase(TestBase):
         values["cpsr"] = "0x00000010"
         for regname, value in values.items():
             self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
+
+        self.expect("register read --all")
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
