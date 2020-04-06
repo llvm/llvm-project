@@ -902,23 +902,38 @@ class VPBlendRecipe : public VPRecipeBase {
 private:
   PHINode *Phi;
 
-  /// The blend operation is a User of a mask, if not null.
-  std::unique_ptr<VPUser> User;
+  /// The blend operation is a User of the incoming values and of their
+  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
+  /// would be incoming with a full mask for which there is no VPValue.
+  VPUser User;
 
 public:
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Masks)
-      : VPRecipeBase(VPBlendSC), Phi(Phi) {
-    assert((Phi->getNumIncomingValues() == 1 ||
-            Phi->getNumIncomingValues() == Masks.size()) &&
-           "Expected the same number of incoming values and masks");
-    if (!Masks.empty())
-      User.reset(new VPUser(Masks));
+  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
+      : VPRecipeBase(VPBlendSC), Phi(Phi), User(Operands) {
+    assert(((Operands.size() == 1) ||
+            (Operands.size() > 2 && Operands.size() % 2 == 0)) &&
+           "Expected either a single incoming value or a greater than two and "
+           "even number of operands");
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPBlendSC;
   }
+
+  /// Return the number of incoming values, taking into account that a single
+  /// incoming value has no mask.
+  unsigned getNumIncomingValues() const {
+    return (User.getNumOperands() + 1) / 2;
+  }
+
+  /// Return incoming value number \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return User.getOperand(Idx * 2);
+  }
+
+  /// Return mask number \p Idx.
+  VPValue *getMask(unsigned Idx) const { return User.getOperand(Idx * 2 + 1); }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
