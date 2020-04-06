@@ -110,7 +110,8 @@ void ReachingDefAnalysis::leaveBasicBlock(
   // only cares about the clearance from the end of the block, so adjust
   // everything to be relative to the end of the basic block.
   for (int &OutLiveReg : MBBOutRegsInfos[MBBNumber])
-    OutLiveReg -= CurInstr;
+    if (OutLiveReg != ReachingDefDefaultVal)
+      OutLiveReg -= CurInstr;
   LiveRegs.clear();
 }
 
