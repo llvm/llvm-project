@@ -13,4 +13,4 @@ entry:
 
 declare void @foo(i32, i32, i32, i32, i32, i32, i32, i32, %struct.S* byval(%struct.S) align 1)
 
-; CHECK: LLVM ERROR: Pass-by-value arguments are only supported in a single register.
+; CHECK: LLVM ERROR: Pass-by-value arguments are only supported in registers.
