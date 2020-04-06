@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class SymbolInfoTy;
+struct SymbolInfoTy;
 
 namespace objdump {
 Optional<XCOFF::StorageMappingClass>
