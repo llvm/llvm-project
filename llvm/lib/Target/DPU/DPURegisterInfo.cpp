@@ -20,8 +20,11 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -72,6 +75,27 @@ BitVector DPURegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return reserved;
 }
 
+static bool isStoreImmInst(unsigned Opcode, unsigned &StoreRegOpcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case DPU::SBrii:
+    StoreRegOpcode = DPU::SBrir;
+    break;
+  case DPU::SHrii:
+    StoreRegOpcode = DPU::SHrir;
+    break;
+  case DPU::SWrii:
+    StoreRegOpcode = DPU::SWrir;
+    break;
+  case DPU::SDrii:
+    StoreRegOpcode = DPU::SDrir;
+    break;
+  }
+
+  return true;
+}
+
 void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS) const {
@@ -79,6 +103,8 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned FrameReg = getFrameRegister(MF);
@@ -93,7 +119,8 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     dbgs() << "\n";
   });
 
-  switch (MI.getOpcode()) {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
   case DPU::ADDrri: {
     // This is necessarily a reference to an object in the stack. Please refer
     // to DPUISelDATToDAG::Select, to see how we generate this machineInstr
@@ -106,8 +133,21 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   default: {
     Offset += MI.getOperand(FIOperandNum + 1).getImm();
 
-    MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
-    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    unsigned StoreRegInst;
+    if (!isInt<12>(Offset) && isStoreImmInst(Opcode, StoreRegInst)) {
+      unsigned ScratchReg = MRI.createVirtualRegister(&DPU::GP_REGRegClass);
+
+      BuildMI(*MI.getParent(), II, DL, TII->get(DPU::MOVEri), ScratchReg)
+          .addImm(MI.getOperand(FIOperandNum + 2).getImm());
+      BuildMI(*MI.getParent(), II, DL, TII->get(StoreRegInst))
+          .addReg(FrameReg)
+          .addImm(static_cast<uint32_t>(Offset))
+          .addReg(ScratchReg, RegState::Kill);
+      MI.eraseFromParent();
+    } else {
+      MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    }
   }
   }
 
