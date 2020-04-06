@@ -9,7 +9,11 @@
 // Lower matrix intrinsics to vector operations.
 //
 // TODO:
-//  * Implement multiply & add fusion
+//  * Improve fusion:
+//   * Support more cases, e.g. multiply-add, multiply-sub, operands/results
+//     transposed.
+//   * Improve cost-modeling, e.g. choose different number of rows/columns
+//     columns for tiles, consider cost of copies on alias.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +21,8 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -33,6 +39,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -44,6 +51,17 @@ static cl::opt<bool> EnableShapePropagation(
     cl::desc("Enable/disable shape propagation from matrix intrinsics to other "
              "instructions."));
 
+static cl::opt<bool>
+    FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
+               cl::desc("Enable/disable fusing matrix instructions."));
+// TODO: Allow and use non-square tiles.
+static cl::opt<unsigned> TileSize(
+    "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
+    cl::desc(
+        "Tile size for matrix instruction fusion using square-shaped tiles."));
+static cl::opt<bool> ForceFusion(
+    "force-fuse-matrix", cl::init(false), cl::Hidden,
+    cl::desc("Force matrix instruction fusion even if not profitable."));
 static cl::opt<bool> AllowContractEnabled(
     "matrix-allow-contract", cl::init(false), cl::Hidden,
     cl::desc("Allow the use of FMAs if available and profitable. This may "
@@ -146,6 +164,9 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
+  AliasAnalysis &AA;
+  DominatorTree &DT;
+  LoopInfo &LI;
   OptimizationRemarkEmitter &ORE;
 
   /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
@@ -299,8 +320,10 @@ class LowerMatrixIntrinsics {
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
+                        AliasAnalysis &AA, DominatorTree &DT, LoopInfo &LI,
                         OptimizationRemarkEmitter &ORE)
-      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), ORE(ORE) {}
+      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), AA(AA), DT(DT),
+        LI(LI), ORE(ORE) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<VectorType>(VT) && "Expected vector type");
@@ -586,24 +609,46 @@ public:
       }
     }
 
-    ReversePostOrderTraversal<Function *> RPOT(&Func);
     bool Changed = false;
-    for (auto *BB : RPOT) {
-      for (Instruction &Inst : make_early_inc_range(*BB)) {
-        IRBuilder<> Builder(&Inst);
+    SmallVector<CallInst *, 16> MaybeFusableInsts;
+    SmallVector<Instruction *, 16> MatrixInsts;
 
-        if (CallInst *CInst = dyn_cast<CallInst>(&Inst))
-          Changed |= VisitCallInst(CInst);
-
-        Value *Op1;
-        Value *Op2;
-        if (auto *BinOp = dyn_cast<BinaryOperator>(&Inst))
-          Changed |= VisitBinaryOperator(BinOp);
-        if (match(&Inst, m_Load(m_Value(Op1))))
-          Changed |= VisitLoad(&Inst, Op1, Builder);
-        else if (match(&Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-          Changed |= VisitStore(&Inst, Op1, Op2, Builder);
+    // First, collect all instructions with shape information and candidates for
+    // fusion (currently only matrix multiplies).
+    ReversePostOrderTraversal<Function *> RPOT(&Func);
+    for (auto *BB : RPOT)
+      for (Instruction &I : *BB) {
+        if (ShapeMap.find(&I) == ShapeMap.end())
+          continue;
+        if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()))
+          MaybeFusableInsts.push_back(cast<CallInst>(&I));
+        MatrixInsts.push_back(&I);
       }
+
+    // Second, try to fuse candidates.
+    SmallPtrSet<Instruction *, 16> FusedInsts;
+    for (CallInst *CI : MaybeFusableInsts)
+      LowerMatrixMultiplyFused(CI, FusedInsts);
+    Changed = !FusedInsts.empty();
+
+    // Third, lower remaining instructions with shape information.
+    for (Instruction *Inst : MatrixInsts) {
+      if (FusedInsts.find(Inst) != FusedInsts.end())
+        continue;
+
+      IRBuilder<> Builder(Inst);
+
+      if (CallInst *CInst = dyn_cast<CallInst>(Inst))
+        Changed |= VisitCallInst(CInst);
+
+      Value *Op1;
+      Value *Op2;
+      if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
+        Changed |= VisitBinaryOperator(BinOp);
+      if (match(Inst, m_Load(m_Value(Op1))))
+        Changed |= VisitLoad(Inst, Op1, Builder);
+      else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
+        Changed |= VisitStore(Inst, Op1, Op2, Builder);
     }
 
     RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, Func);
@@ -699,7 +744,7 @@ public:
     Value *TilePtr =
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
-    return loadMatrix(TileTy, TilePtr, Builder.getInt32(ResultShape.NumRows),
+    return loadMatrix(TileTy, TilePtr, Builder.getInt32(MatrixShape.NumRows),
                       ResultShape, Builder);
   }
 
@@ -743,7 +788,7 @@ public:
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
     storeMatrix(TileTy, StoreVal, TilePtr,
-                Builder.getInt32(StoreVal.getNumRows()), Builder);
+                Builder.getInt32(MatrixShape.NumRows), Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
@@ -912,6 +957,212 @@ public:
       }
 
       Result.addNumComputeOps(NumOps);
+    }
+  }
+
+  /// Ensure that the memory in \p Load does not alias \p Store by potentially
+  /// copying it to a new location.  This new or otherwise the original location
+  /// is returned.
+  Value *getNonAliasingPointer(LoadInst *Load, StoreInst *Store,
+                               CallInst *MatMul) {
+    MemoryLocation StoreLoc = MemoryLocation::get(Store);
+    MemoryLocation LoadLoc = MemoryLocation::get(Load);
+
+    AliasResult LdAliased = AA.alias(LoadLoc, StoreLoc);
+
+    // If we can statically determine noalias we're good.
+    if (!LdAliased)
+      return Load->getPointerOperand();
+
+    // Create code to check if the memory locations of the Load and Store
+    // overlap and if they do, copy Load's operand to a new buffer.
+
+    // First, create  new blocks for 2n part of the check and the copy.
+    BasicBlock *Check0 = MatMul->getParent();
+    // FIXME: Use lazy DTU and update SplitBlock to accept a DTU instead of a
+    // DT. Manually collect dominator tree updates, to avoid unnecessary work,
+    // as we adjust Check0 and Check1's branches.
+    SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
+    for (BasicBlock *Succ : successors(Check0))
+      DTUpdates.push_back({DT.Delete, Check0, Succ});
+
+    BasicBlock *Check1 = SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI,
+                                    nullptr, "alias_cont");
+    BasicBlock *Copy =
+        SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI, nullptr, "copy");
+    BasicBlock *Fusion = SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI,
+                                    nullptr, "no_alias");
+
+    // Check if the loaded memory location begins before the end of the store
+    // location. If the condition holds, they might overlap, otherwise they are
+    // guaranteed to not overlap.
+    IRBuilder<> Builder(MatMul);
+    Check0->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(Check0);
+    Type *IntPtrTy = Builder.getIntPtrTy(Load->getModule()->getDataLayout());
+    Value *StoreBegin = Builder.CreatePtrToInt(
+        const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
+    Value *StoreEnd = Builder.CreateAdd(
+        StoreBegin, ConstantInt::get(IntPtrTy, StoreLoc.Size.getValue()),
+        "store.end", true, true);
+    Value *LoadBegin = Builder.CreatePtrToInt(const_cast<Value *>(LoadLoc.Ptr),
+                                              IntPtrTy, "load.begin");
+    Builder.CreateCondBr(Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1,
+                         Fusion);
+
+    // Check if the store begins before the end of the load location. If the
+    // condition holds, they alias, otherwise they are guaranteed to not
+    // overlap.
+    Check1->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(Check1, Check1->begin());
+    Value *LoadEnd = Builder.CreateAdd(
+        LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
+        "load.end", true, true);
+    Builder.CreateCondBr(Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy,
+                         Fusion);
+
+    // Copy load operand to new alloca.
+    Builder.SetInsertPoint(Copy, Copy->begin());
+    AllocaInst *NewLd =
+        Builder.CreateAlloca(Load->getType(), Load->getPointerAddressSpace());
+    Builder.CreateMemCpy(NewLd, MaybeAlign(NewLd->getAlignment()),
+                         Load->getPointerOperand(), Load->getAlign(),
+                         LoadLoc.Size.getValue());
+    Builder.SetInsertPoint(Fusion, Fusion->begin());
+    PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
+    PHI->addIncoming(Load->getPointerOperand(), Check0);
+    PHI->addIncoming(Load->getPointerOperand(), Check1);
+    PHI->addIncoming(NewLd, Copy);
+
+    // Adjust DT.
+    DTUpdates.push_back({DT.Insert, Check0, Check1});
+    DTUpdates.push_back({DT.Insert, Check0, Fusion});
+    DTUpdates.push_back({DT.Insert, Check1, Copy});
+    DTUpdates.push_back({DT.Insert, Check1, Fusion});
+    DT.applyUpdates(DTUpdates);
+    return PHI;
+  }
+
+  bool isFusionProfitable(CallInst *MatMul) {
+    if (ForceFusion)
+      return true;
+
+    ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
+    ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
+
+    const unsigned R = LShape.NumRows;
+    const unsigned C = RShape.NumColumns;
+    const unsigned M = LShape.NumColumns;
+    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+
+    const unsigned VF =
+        std::max<unsigned>(TTI.getRegisterBitWidth(true) /
+                               EltType->getPrimitiveSizeInBits().getFixedSize(),
+                           1U);
+
+    // Cost model for tiling
+    //
+    // For tiling to be beneficial, we need reuse either along the R or
+    // the C axis.  We vectorize along the R axis so that means at least
+    // 3 elements.
+    // TODO: Also consider cost of copying if operands alias.
+    if (R <= VF && C == 1)
+      return false;
+    // Then we need enough elements to exceed the number of vector
+    // registers we have.  Note that this is an oversimplification since
+    // fusing also takes some extra loads which may exceed the number of
+    // reloads necessary.
+    unsigned Op0Regs = (R + VF - 1) / VF * M;
+    unsigned Op1Regs = (M + VF - 1) / VF * C;
+    return Op0Regs + Op1Regs > TTI.getNumberOfRegisters(true);
+  }
+
+  MatrixTy getZeroMatrix(Type *EltType, unsigned R, unsigned C) {
+    MatrixTy Res;
+    Type *ColumType = VectorType::get(EltType, R);
+    for (unsigned I = 0; I < C; ++I)
+      Res.addColumn(ConstantAggregateZero::get(ColumType));
+    return Res;
+  }
+
+  void emitSIMDTiling(CallInst *MatMul, LoadInst *LoadOp0, LoadInst *LoadOp1,
+                      StoreInst *Store,
+                      SmallPtrSetImpl<Instruction *> &FusedInsts) {
+    if (!isFusionProfitable(MatMul))
+      return;
+
+    ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
+    ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
+
+    const unsigned R = LShape.NumRows;
+    const unsigned C = RShape.NumColumns;
+    const unsigned M = LShape.NumColumns;
+    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+
+    Value *APtr = getNonAliasingPointer(LoadOp0, Store, MatMul);
+    Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
+    Value *CPtr = Store->getPointerOperand();
+
+    bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
+                                                  MatMul->hasAllowContract());
+    IRBuilder<> Builder(Store);
+    for (unsigned J = 0; J < C; J += TileSize)
+      for (unsigned I = 0; I < R; I += TileSize) {
+        const unsigned TileR = std::min(R - I, unsigned(TileSize));
+        const unsigned TileC = std::min(C - J, unsigned(TileSize));
+        MatrixTy Res = getZeroMatrix(EltType, TileR, TileC);
+
+        for (unsigned K = 0; K < M; K += TileSize) {
+          const unsigned TileM = std::min(M - K, unsigned(TileSize));
+          MatrixTy A =
+              loadMatrix(APtr, LShape, I, K, {TileR, TileM}, EltType, Builder);
+          MatrixTy B =
+              loadMatrix(BPtr, RShape, K, J, {TileM, TileC}, EltType, Builder);
+          emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
+        }
+        storeMatrix(Res, CPtr, {R, M}, I, J, EltType, Builder);
+      }
+
+    // Mark eliminated instructions as fused and remove them.
+    FusedInsts.insert(Store);
+    FusedInsts.insert(MatMul);
+    Store->eraseFromParent();
+    MatMul->eraseFromParent();
+    if (LoadOp0->hasNUses(0)) {
+      FusedInsts.insert(LoadOp0);
+      LoadOp0->eraseFromParent();
+    }
+    if (LoadOp1->hasNUses(0)) {
+      FusedInsts.insert(LoadOp1);
+      LoadOp1->eraseFromParent();
+    }
+  }
+
+  /// Try to lower matrix multiply chains by fusing operations.
+  ///
+  /// Currently we only lower {ld, ld} -> matmul -> st chains.
+  //
+  /// No need to return a MatrixTy object for the result of the operation, since
+  /// the single store user will be lowered as part of this. Instructions that
+  /// are completely eliminated by fusion are added to \p FusedInsts.
+  void LowerMatrixMultiplyFused(CallInst *MatMul,
+                                SmallPtrSetImpl<Instruction *> &FusedInsts) {
+    if (!FuseMatrix || !MatMul->hasOneUse())
+      return;
+
+    auto *LoadOp0 = dyn_cast<LoadInst>(MatMul->getOperand(0));
+    auto *LoadOp1 = dyn_cast<LoadInst>(MatMul->getOperand(1));
+    auto *Store = dyn_cast<StoreInst>(*MatMul->user_begin());
+    if (LoadOp0 && LoadOp1 && Store) {
+      // The store address must dominate the MatMul instruction, otherwise
+      // we create invalid IR.
+      // FIXME: See if we can hoist the store address computation.
+      auto *AddrI = dyn_cast<Instruction>(Store->getOperand(1));
+      if (AddrI && (!DT.dominates(AddrI, MatMul)))
+        return;
+
+      emitSIMDTiling(MatMul, LoadOp0, LoadOp1, Store, FusedInsts);
+      return;
     }
   }
 
@@ -1481,7 +1732,11 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  LowerMatrixIntrinsics LMT(F, TTI, ORE);
+  auto &AA = AM.getResult<AAManager>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+
+  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -1504,7 +1759,10 @@ public:
   bool runOnFunction(Function &F) override {
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    LowerMatrixIntrinsics LMT(F, TTI, ORE);
+    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
     bool C = LMT.Visit();
     return C;
   }
@@ -1512,7 +1770,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 };
 } // namespace
@@ -1522,6 +1784,9 @@ char LowerMatrixIntrinsicsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LowerMatrixIntrinsicsLegacyPass, DEBUG_TYPE, pass_name,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LowerMatrixIntrinsicsLegacyPass, DEBUG_TYPE, pass_name,
                     false, false)
 
