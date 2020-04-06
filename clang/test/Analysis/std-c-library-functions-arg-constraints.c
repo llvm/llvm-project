@@ -64,7 +64,7 @@ void test_alnum_symbolic2(int x) {
 
 typedef struct FILE FILE;
 typedef typeof(sizeof(int)) size_t;
-size_t fread(void *, size_t, size_t, FILE *);
+size_t fread(void *restrict, size_t, size_t, FILE *);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
   // report-warning{{Function argument constraint is not satisfied}} \
@@ -113,4 +113,12 @@ void test_multiple_constraints_on_same_arg(int x) {
   // bugpath-note{{TRUE}} \
   // bugpath-note{{Assuming 'x' is < 1}} \
   // bugpath-note{{Left side of '||' is true}}
+}
+
+int __variadic(void *stream, const char *format, ...);
+void test_arg_constraint_on_variadic_fun() {
+  __variadic(0, "%d%d", 1, 2); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
 }
