@@ -100,6 +100,9 @@ Clause getOpenMPClauseKind(StringRef Str);
 /// Return a textual representation of the clause \p C.
 StringRef getOpenMPClauseName(Clause C);
 
+/// Return true if \p C is a valid clause for \p D in version \p Version.
+bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+
 /// Forward declarations for LLVM-IR types (simple, function and structure) are
 /// generated below. Their names are defined and used in OpenMP/OMPKinds.def.
 /// Here we provide the forward declarations, the initializeTypes function will
