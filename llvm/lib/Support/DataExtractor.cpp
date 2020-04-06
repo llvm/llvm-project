@@ -152,23 +152,18 @@ DataExtractor::getSigned(uint64_t *offset_ptr, uint32_t byte_size) const {
   llvm_unreachable("getSigned unhandled case!");
 }
 
-const char *DataExtractor::getCStr(uint64_t *offset_ptr) const {
-  uint64_t offset = *offset_ptr;
-  StringRef::size_type pos = Data.find('\0', offset);
-  if (pos != StringRef::npos) {
-    *offset_ptr = pos + 1;
-    return Data.data() + offset;
-  }
-  return nullptr;
-}
+StringRef DataExtractor::getCStrRef(uint64_t *OffsetPtr, Error *Err) const {
+  ErrorAsOutParameter ErrAsOut(Err);
+  if (isError(Err))
+    return StringRef();
 
-StringRef DataExtractor::getCStrRef(uint64_t *offset_ptr) const {
-  uint64_t Start = *offset_ptr;
+  uint64_t Start = *OffsetPtr;
   StringRef::size_type Pos = Data.find('\0', Start);
   if (Pos != StringRef::npos) {
-    *offset_ptr = Pos + 1;
+    *OffsetPtr = Pos + 1;
     return StringRef(Data.data() + Start, Pos - Start);
   }
+  unexpectedEndReached(Err, Start);
   return StringRef();
 }
 

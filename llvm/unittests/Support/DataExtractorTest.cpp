@@ -14,7 +14,6 @@ using namespace llvm;
 namespace {
 
 const char numberData[] = "\x80\x90\xFF\xFF\x80\x00\x00\x00";
-const char stringData[] = "hellohello\0hello";
 const char leb128data[] = "\xA6\x49";
 const char bigleb128data[] = "\xAA\xA9\xFF\xAA\xFF\xAA\xFF\x4A";
 
@@ -89,6 +88,7 @@ TEST(DataExtractorTest, SignedNumbers) {
 }
 
 TEST(DataExtractorTest, Strings) {
+  const char stringData[] = "hellohello\0hello";
   DataExtractor DE(StringRef(stringData, sizeof(stringData)-1), false, 8);
   uint64_t offset = 0;
 
@@ -96,6 +96,14 @@ TEST(DataExtractorTest, Strings) {
   EXPECT_EQ(11U, offset);
   EXPECT_EQ(nullptr, DE.getCStr(&offset));
   EXPECT_EQ(11U, offset);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(stringData, DE.getCStr(C));
+  EXPECT_EQ(11U, C.tell());
+  EXPECT_EQ(nullptr, DE.getCStr(C));
+  EXPECT_EQ(11U, C.tell());
+  EXPECT_THAT_ERROR(C.takeError(),
+                    FailedWithMessage("unexpected end of data at offset 0xb"));
 }
 
 TEST(DataExtractorTest, LEB128) {
