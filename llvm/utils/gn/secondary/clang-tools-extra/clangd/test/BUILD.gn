@@ -21,8 +21,9 @@ write_lit_config("lit_site_cfg") {
   output = clangd_lit_site_cfg_file
 
   extra_values = [
-    "CMAKE_CURRENT_BINARY_DIR=" + rebase_path(
-            get_label_info("//clang-tools-extra/clangd/test", "target_out_dir")),
+    "CMAKE_CURRENT_BINARY_DIR=" +
+        rebase_path(get_label_info("//clang-tools-extra/clangd/test",
+                                   "target_out_dir")),
     "CMAKE_CURRENT_SOURCE_DIR=" +
         rebase_path("//clang-tools-extra/clangd/test"),
 
@@ -91,6 +92,10 @@ action("check-clangd") {
   }
   args = [
     "-sv",
+
+    # clangd doesn't put unittest configs in test/unit like every other project.
+    # Because of that, this needs to pass two folders here, while every other
+    # project only needs to pass CMAKE_CURRENT_BINARY_DIR.
     rebase_path(get_path_info(clangd_lit_site_cfg_file, "dir"), root_out_dir),
     rebase_path(get_path_info(clangd_lit_unit_site_cfg_file, "dir"),
                 root_out_dir),
