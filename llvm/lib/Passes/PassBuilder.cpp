@@ -972,6 +972,10 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
   OptimizePM.addPass(LoopDistributePass());
 
+  // Populates the VFABI attribute with the scalar-to-vector mappings
+  // from the TargetLibraryInfo.
+  OptimizePM.addPass(InjectTLIMappings());
+
   // Now run the core loop vectorizer.
   OptimizePM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
