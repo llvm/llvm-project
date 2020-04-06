@@ -10326,7 +10326,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     SDLoc DL(N);
 
     // Ensure that the shift amount is wide enough for the shifted value.
-    if (VT.getSizeInBits() >= 256)
+    if (Log2_32_Ceil(VT.getSizeInBits()) > ShAmt.getValueSizeInBits())
       ShAmt = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, ShAmt);
 
     return DAG.getNode(N0.getOpcode(), DL, VT,
