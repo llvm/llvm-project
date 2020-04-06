@@ -431,7 +431,7 @@ std::string RawComment::getFormattedText(const SourceManager &SourceMgr,
   };
 
   auto DropTrailingNewLines = [](std::string &Str) {
-    while (Str.back() == '\n')
+    while (!Str.empty() && Str.back() == '\n')
       Str.pop_back();
   };
 
