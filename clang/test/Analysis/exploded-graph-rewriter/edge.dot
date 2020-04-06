@@ -1,9 +1,6 @@
 // RUN: %exploded_graph_rewriter %s | FileCheck %s -check-prefix=LIGHT
 // RUN: %exploded_graph_rewriter --dark %s | FileCheck %s -check-prefixes=DARK
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 Node0x1 [shape=record,label=
  "{{ "state_id": 0, "program_state": null, "program_points": [
     {
