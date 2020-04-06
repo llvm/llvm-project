@@ -91,8 +91,6 @@ private:
   /// all registers that were disabled are removed from the list.
   SmallVector<MCPhysReg, 16> UpdatedCSRs;
 
-  void initUpdatedCSRs();
-
   /// RegAllocHints - This vector records register allocation hints for
   /// virtual registers. For each virtual register, it keeps a pair of hint
   /// type and hints vector making up the allocation hints. Only the first
@@ -233,17 +231,12 @@ public:
 
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
-  /// \see UpdatedCSRs.
-  void disableCalleeSavedRegister(Register Reg);
-
-  /// Enables the register from the list of CSRs.
-  /// I.e. the register will appear as part of the CSR mask.
-  /// \see UpdatedCSRs.
-  void enableCalleeSavedRegister(Register Reg);
+  /// \see UpdatedCalleeSavedRegs.
+  void disableCalleeSavedRegister(unsigned Reg);
 
   /// Returns list of callee saved registers.
   /// The function returns the updated CSR list (after taking into account
-  /// registers that are enabled/disabled from the CSR list).
+  /// registers that are disabled from the CSR list).
   const MCPhysReg *getCalleeSavedRegs() const;
 
   /// Sets the updated Callee Saved Registers list.
