@@ -58,7 +58,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[10:11], s[4:5]
-; GFX9-NEXT:    s_cbranch_execz BB1_3
+; GFX9-NEXT:    s_cbranch_execz BB1_4
 ; GFX9-NEXT:  ; %bb.1: ; %bb19
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, v6
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffffff, v6
@@ -100,7 +100,9 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_add_u32_e32 v3, v3, v6
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[12:13]
 ; GFX9-NEXT:    s_cbranch_execnz BB1_2
-; GFX9-NEXT:  BB1_3: ; %Flow3
+; GFX9-NEXT:  ; %bb.3: ; %Flow
+; GFX9-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GFX9-NEXT:  BB1_4: ; %Flow3
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

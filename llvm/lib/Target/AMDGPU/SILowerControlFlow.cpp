@@ -76,7 +76,7 @@ using namespace llvm;
 
 static cl::opt<bool>
 RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
-    cl::init(true), cl::ReallyHidden);
+    cl::init(false), cl::ReallyHidden);
 
 namespace {
 
