@@ -1555,7 +1555,7 @@ public:
       emitDeferredDiags(FD, Caller);
     // Do not revisit a function if the function body has been completely
     // visited before.
-    if (Done.count(FD))
+    if (!Done.insert(FD).second)
       return;
     InUsePath.insert(FD);
     UsePath.push_back(FD);
@@ -1564,7 +1564,6 @@ public:
     }
     UsePath.pop_back();
     InUsePath.erase(FD);
-    Done.insert(FD);
   }
 
   void checkRecordedDecl(Decl *D) {
