@@ -23,9 +23,30 @@ class ELFSectionRef;
 class MachOObjectFile;
 class MachOUniversalBinary;
 class RelocationRef;
-}
+} // namespace object
 
+namespace objdump {
+
+extern cl::opt<bool> ArchiveHeaders;
 extern cl::opt<bool> Demangle;
+extern cl::opt<bool> Disassemble;
+extern cl::opt<bool> DisassembleAll;
+extern cl::opt<DIDumpType> DwarfDumpType;
+extern cl::list<std::string> FilterSections;
+extern cl::list<std::string> MAttrs;
+extern cl::opt<std::string> MCPU;
+extern cl::opt<bool> NoShowRawInsn;
+extern cl::opt<bool> NoLeadingAddr;
+extern cl::opt<bool> PrintImmHex;
+extern cl::opt<bool> PrivateHeaders;
+extern cl::opt<bool> Relocations;
+extern cl::opt<bool> SectionHeaders;
+extern cl::opt<bool> SectionContents;
+extern cl::opt<bool> SymbolTable;
+extern cl::opt<std::string> TripleName;
+extern cl::opt<bool> UnwindInfo;
+
+} // namespace objdump
 
 typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
 
