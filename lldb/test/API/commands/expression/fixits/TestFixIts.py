@@ -61,6 +61,14 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.GetError().Success())
         self.assertEquals(value.GetValueAsUnsigned(), 20)
 
+        # Try a Fix-It that is stored in the 'note:' diagnostic of an error.
+        # The Fix-It here is adding parantheses around the ToStr parameters.
+        fixit_in_note_expr ="#define ToStr(x) #x\nToStr(0 {, })"
+        value = frame.EvaluateExpression(fixit_in_note_expr, options)
+        self.assertTrue(value.IsValid())
+        self.assertTrue(value.GetError().Success(), value.GetError())
+        self.assertEquals(value.GetSummary(), '"(0 {, })"')
+
         # Now turn off the fixits, and the expression should fail:
         options.SetAutoApplyFixIts(False)
         value = frame.EvaluateExpression(two_error_expression, options)
