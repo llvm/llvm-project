@@ -216,6 +216,10 @@ struct UnitIndexEntry {
   StringRef DWPName;
 };
 
+static bool isSupportedSectionKind(DWARFSectionKind Kind) {
+  return Kind != DW_SECT_EXT_unknown;
+}
+
 // Convert an internal section identifier into the index to use with
 // UnitIndexEntry::Contributions.
 static unsigned getContributionIndex(DWARFSectionKind Kind) {
@@ -255,6 +259,8 @@ static void addAllTypesFromDWP(
     // Zero out the debug_info contribution
     Entry.Contributions[0] = {};
     for (auto Kind : TUIndex.getColumnKinds()) {
+      if (!isSupportedSectionKind(Kind))
+        continue;
       auto &C = Entry.Contributions[getContributionIndex(Kind)];
       C.Offset += I->Offset;
       C.Length = I->Length;
@@ -633,6 +639,8 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       NewEntry.DWOName = ID.DWOName;
       NewEntry.DWPName = Input;
       for (auto Kind : CUIndex.getColumnKinds()) {
+        if (!isSupportedSectionKind(Kind))
+          continue;
         auto &C = NewEntry.Contributions[getContributionIndex(Kind)];
         C.Offset += I->Offset;
         C.Length = I->Length;
