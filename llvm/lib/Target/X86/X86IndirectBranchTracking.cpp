@@ -18,7 +18,6 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -103,16 +102,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   // Check that the cf-protection-branch is enabled.
   Metadata *isCFProtectionSupported =
       MF.getMMI().getModule()->getModuleFlag("cf-protection-branch");
-  // NB: We need to enable IBT in jitted code if JIT compiler is CET
-  // enabled.
-  const X86TargetMachine *TM =
-      static_cast<const X86TargetMachine *>(&MF.getTarget());
-#ifdef __CET__
-  bool isJITwithCET = TM->isJIT();
-#else
-  bool isJITwithCET = false;
-#endif
-  if (!isCFProtectionSupported && !IndirectBranchTracking && !isJITwithCET)
+  if (!isCFProtectionSupported && !IndirectBranchTracking)
     return false;
 
   // True if the current MF was changed and false otherwise.
@@ -121,11 +111,10 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   TII = SubTarget.getInstrInfo();
   EndbrOpcode = SubTarget.is64Bit() ? X86::ENDBR64 : X86::ENDBR32;
 
-  // Large code model, non-internal function or function whose address
-  // was taken, can be accessed through indirect calls. Mark the first
-  // BB with ENDBR instruction unless nocf_check attribute is used.
-  if ((TM->getCodeModel() == CodeModel::Large ||
-       MF.getFunction().hasAddressTaken() ||
+  // Non-internal function or function whose address was taken, can be
+  // accessed through indirect calls. Mark the first BB with ENDBR instruction
+  // unless nocf_check attribute is used.
+  if ((MF.getFunction().hasAddressTaken() ||
        !MF.getFunction().hasLocalLinkage()) &&
       !MF.getFunction().doesNoCfCheck()) {
     auto MBB = MF.begin();
@@ -147,8 +136,8 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
         Changed |= addENDBR(MBB, std::next(I));
 
       if (EHPadIBTNeeded && I->isEHLabel()) {
-        Changed |= addENDBR(MBB, std::next(I));
-        EHPadIBTNeeded = false;
+          Changed |= addENDBR(MBB, std::next(I));
+          EHPadIBTNeeded = false;
       }
     }
   }
