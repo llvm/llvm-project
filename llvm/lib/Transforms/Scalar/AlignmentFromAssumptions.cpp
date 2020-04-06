@@ -90,9 +90,9 @@ FunctionPass *llvm::createAlignmentFromAssumptionsPass() {
 // to a constant. Using SCEV to compute alignment handles the case where
 // DiffSCEV is a recurrence with constant start such that the aligned offset
 // is constant. e.g. {16,+,32} % 32 -> 16.
-static MaybeAlign getNewAlignmentDiff(const SCEV *DiffSCEV,
-                                      const SCEV *AlignSCEV,
-                                      ScalarEvolution *SE) {
+static unsigned getNewAlignmentDiff(const SCEV *DiffSCEV,
+                                    const SCEV *AlignSCEV,
+                                    ScalarEvolution *SE) {
   // DiffUnits = Diff % int64_t(Alignment)
   const SCEV *DiffUnitsSCEV = SE->getURemExpr(DiffSCEV, AlignSCEV);
 
@@ -107,24 +107,25 @@ static MaybeAlign getNewAlignmentDiff(const SCEV *DiffSCEV,
     // displaced pointer has the same alignment as the aligned pointer, so
     // return the alignment value.
     if (!DiffUnits)
-      return cast<SCEVConstant>(AlignSCEV)->getValue()->getAlignValue();
+      return (unsigned)
+        cast<SCEVConstant>(AlignSCEV)->getValue()->getSExtValue();
 
     // If the displacement is not an exact multiple, but the remainder is a
     // constant, then return this remainder (but only if it is a power of 2).
     uint64_t DiffUnitsAbs = std::abs(DiffUnits);
     if (isPowerOf2_64(DiffUnitsAbs))
-      return Align(DiffUnitsAbs);
+      return (unsigned) DiffUnitsAbs;
   }
 
-  return None;
+  return 0;
 }
 
 // There is an address given by an offset OffSCEV from AASCEV which has an
 // alignment AlignSCEV. Use that information, if possible, to compute a new
 // alignment for Ptr.
-static MaybeAlign getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
-                                  const SCEV *OffSCEV, Value *Ptr,
-                                  ScalarEvolution *SE) {
+static unsigned getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
+                                const SCEV *OffSCEV, Value *Ptr,
+                                ScalarEvolution *SE) {
   const SCEV *PtrSCEV = SE->getSCEV(Ptr);
   // On a platform with 32-bit allocas, but 64-bit flat/global pointer sizes
   // (*cough* AMDGPU), the effective SCEV type of AASCEV and PtrSCEV
@@ -145,12 +146,13 @@ static MaybeAlign getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
                     << *AlignSCEV << " and offset " << *OffSCEV
                     << " using diff " << *DiffSCEV << "\n");
 
-  if (MaybeAlign NewAlignment = getNewAlignmentDiff(DiffSCEV, AlignSCEV, SE)) {
-    LLVM_DEBUG(dbgs() << "\tnew alignment: " << DebugStr(NewAlignment) << "\n");
-    return *NewAlignment;
-  }
+  unsigned NewAlignment = getNewAlignmentDiff(DiffSCEV, AlignSCEV, SE);
+  LLVM_DEBUG(dbgs() << "\tnew alignment: " << NewAlignment << "\n");
 
-  if (const SCEVAddRecExpr *DiffARSCEV = dyn_cast<SCEVAddRecExpr>(DiffSCEV)) {
+  if (NewAlignment) {
+    return NewAlignment;
+  } else if (const SCEVAddRecExpr *DiffARSCEV =
+             dyn_cast<SCEVAddRecExpr>(DiffSCEV)) {
     // The relative offset to the alignment assumption did not yield a constant,
     // but we should try harder: if we assume that a is 32-byte aligned, then in
     // for (i = 0; i < 1024; i += 4) r += a[i]; not all of the loads from a are
@@ -168,34 +170,34 @@ static MaybeAlign getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
     // first iteration, and also the alignment using the per-iteration delta.
     // If these are the same, then use that answer. Otherwise, use the smaller
     // one, but only if it divides the larger one.
-    MaybeAlign NewAlignment = getNewAlignmentDiff(DiffStartSCEV, AlignSCEV, SE);
-    MaybeAlign NewIncAlignment =
-        getNewAlignmentDiff(DiffIncSCEV, AlignSCEV, SE);
+    NewAlignment = getNewAlignmentDiff(DiffStartSCEV, AlignSCEV, SE);
+    unsigned NewIncAlignment = getNewAlignmentDiff(DiffIncSCEV, AlignSCEV, SE);
 
-    LLVM_DEBUG(dbgs() << "\tnew start alignment: " << DebugStr(NewAlignment)
-                      << "\n");
-    LLVM_DEBUG(dbgs() << "\tnew inc alignment: " << DebugStr(NewIncAlignment)
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "\tnew start alignment: " << NewAlignment << "\n");
+    LLVM_DEBUG(dbgs() << "\tnew inc alignment: " << NewIncAlignment << "\n");
 
-    // Both None or set to the same value.
-    if (NewAlignment == NewIncAlignment) {
-      LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: "
-                        << DebugStr(NewAlignment) << "\n");
-      return NewAlignment;
-    }
-    if (NewAlignment > NewIncAlignment) {
-      LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: "
-                        << DebugStr(NewIncAlignment) << "\n");
-      return NewIncAlignment;
-    }
-    if (NewIncAlignment > NewAlignment) {
-      LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: "
-                        << DebugStr(NewAlignment) << "\n");
+    if (!NewAlignment || !NewIncAlignment) {
+      return 0;
+    } else if (NewAlignment > NewIncAlignment) {
+      if (NewAlignment % NewIncAlignment == 0) {
+        LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: " << NewIncAlignment
+                          << "\n");
+        return NewIncAlignment;
+      }
+    } else if (NewIncAlignment > NewAlignment) {
+      if (NewIncAlignment % NewAlignment == 0) {
+        LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: " << NewAlignment
+                          << "\n");
+        return NewAlignment;
+      }
+    } else if (NewIncAlignment == NewAlignment) {
+      LLVM_DEBUG(dbgs() << "\tnew start/inc alignment: " << NewAlignment
+                        << "\n");
       return NewAlignment;
     }
   }
 
-  return None;
+  return 0;
 }
 
 bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
@@ -321,27 +323,26 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
     Instruction *J = WorkList.pop_back_val();
 
     if (LoadInst *LI = dyn_cast<LoadInst>(J)) {
-      MaybeAlign NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
-                                                LI->getPointerOperand(), SE);
+      unsigned NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
+        LI->getPointerOperand(), SE);
 
       if (NewAlignment > LI->getAlignment()) {
         LI->setAlignment(MaybeAlign(NewAlignment));
         ++NumLoadAlignChanged;
       }
     } else if (StoreInst *SI = dyn_cast<StoreInst>(J)) {
-      MaybeAlign NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
-                                                SI->getPointerOperand(), SE);
+      unsigned NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
+        SI->getPointerOperand(), SE);
 
       if (NewAlignment > SI->getAlignment()) {
         SI->setAlignment(MaybeAlign(NewAlignment));
         ++NumStoreAlignChanged;
       }
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(J)) {
-      MaybeAlign NewDestAlignment =
-          getNewAlignment(AASCEV, AlignSCEV, OffSCEV, MI->getDest(), SE);
+      unsigned NewDestAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
+        MI->getDest(), SE);
 
-      LLVM_DEBUG(dbgs() << "\tmem inst: " << DebugStr(NewDestAlignment)
-                        << "\n";);
+      LLVM_DEBUG(dbgs() << "\tmem inst: " << NewDestAlignment << "\n";);
       if (NewDestAlignment > MI->getDestAlignment()) {
         MI->setDestAlignment(NewDestAlignment);
         ++NumMemIntAlignChanged;
@@ -350,11 +351,10 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
       // For memory transfers, there is also a source alignment that
       // can be set.
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
-        MaybeAlign NewSrcAlignment =
-            getNewAlignment(AASCEV, AlignSCEV, OffSCEV, MTI->getSource(), SE);
+        unsigned NewSrcAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
+          MTI->getSource(), SE);
 
-        LLVM_DEBUG(dbgs() << "\tmem trans: " << DebugStr(NewSrcAlignment)
-                          << "\n";);
+        LLVM_DEBUG(dbgs() << "\tmem trans: " << NewSrcAlignment << "\n";);
 
         if (NewSrcAlignment > MTI->getSourceAlignment()) {
           MTI->setSourceAlignment(NewSrcAlignment);

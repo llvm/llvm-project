@@ -41,9 +41,8 @@ static inline Align clampStackAlignment(bool ShouldClamp, Align Alignment,
                                         Align StackAlignment) {
   if (!ShouldClamp || Alignment <= StackAlignment)
     return Alignment;
-  LLVM_DEBUG(dbgs() << "Warning: requested alignment " << DebugStr(Alignment)
-                    << " exceeds the stack alignment "
-                    << DebugStr(StackAlignment)
+  LLVM_DEBUG(dbgs() << "Warning: requested alignment " << Alignment.value()
+                    << " exceeds the stack alignment " << StackAlignment.value()
                     << " when stack realignment is off" << '\n');
   return StackAlignment;
 }
