@@ -3,9 +3,6 @@
 // RUN: %exploded_graph_rewriter -t %s \
 // RUN:     | FileCheck -check-prefixes=TOPOLOGY %s
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 // NORMAL: Program point
 // TOPOLOGY-NOT: Program point
 // NORMAL: Checker State
