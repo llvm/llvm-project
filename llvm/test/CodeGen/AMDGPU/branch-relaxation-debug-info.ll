@@ -7,11 +7,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 define amdgpu_kernel void @long_branch_dbg_value(float addrspace(1)* nocapture %arg, float %arg1) #1 !dbg !5 {
 ; GCN-LABEL: long_branch_dbg_value:
-; GCN:  BB0_5: ; %bb
+; GCN:  BB0_4: ; %bb
 ; GCN-NEXT:    ;DEBUG_VALUE: test_debug_value:globalptr_arg <- [DW_OP_plus_uconst 12, DW_OP_stack_value]
 ; GCN-NEXT:    .loc 1 0 42 is_stmt 0 ; /tmp/test_debug_value.cl:0:42
 ; GCN-NEXT:    s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; GCN-NEXT:    s_add_u32 s[[PC_LO]], s[[PC_LO]], BB0_4-(BB0_5+4)
+; GCN-NEXT:    s_add_u32 s[[PC_LO]], s[[PC_LO]], BB0_3-(BB0_4+4)
 ; GCN-NEXT:    s_addc_u32 s[[PC_HI]], s[[PC_HI]], 0
 ; GCN-NEXT:    s_setpc_b64
 bb:
