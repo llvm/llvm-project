@@ -17,7 +17,7 @@ class TestThreadPlanCommands(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
-    @expectedFailureAll(oslist=["linux"])
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64"])
     def test_thread_plan_actions(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
