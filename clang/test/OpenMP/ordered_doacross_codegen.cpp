@@ -25,6 +25,12 @@ void bar() {
   for (i = 0; i < n; ++i)
   for (j = 0; j < n; ++j)
     a[i] = b[i] + 1;
+// CHECK: call void @__kmpc_doacross_init(
+// CHECK: call void @__kmpc_doacross_fini(
+ #pragma omp for collapse(2) ordered(2)
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      ;
 }
 
 // CHECK-LABEL: @main()
