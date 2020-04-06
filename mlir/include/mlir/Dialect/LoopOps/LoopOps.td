@@ -312,10 +312,7 @@ def ParallelOp : Loop_Op<"parallel",
 
   let extraClassDeclaration = [{
     Block *getBody() { return &region().front(); }
-    unsigned getNumInductionVars() {
-      return getBody()->getNumArguments();
-    }
-    Block::BlockArgListType getInductionVars() {
+    ValueRange getInductionVars() {
       return getBody()->getArguments();
     }
     unsigned getNumLoops() { return step().size(); }
