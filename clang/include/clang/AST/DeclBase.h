@@ -465,6 +465,10 @@ public:
 
   ASTContext &getASTContext() const LLVM_READONLY;
 
+  /// Helper to get the language options from the ASTContext.
+  /// Defined out of line to avoid depending on ASTContext.h.
+  const LangOptions &getLangOpts() const LLVM_READONLY;
+
   void setAccess(AccessSpecifier AS) {
     Access = AS;
     assert(AccessDeclContextSanity());
