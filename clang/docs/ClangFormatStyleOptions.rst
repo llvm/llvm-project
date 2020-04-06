@@ -2072,8 +2072,8 @@ the configuration (without a prefix: ``Auto``).
      - (void)_aMethod
      {
         [self.test1 t:self
-                     w:self
-            callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+                    w:self
+             callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
                  u = c;
              }]
      }
