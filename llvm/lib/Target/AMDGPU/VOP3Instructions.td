@@ -718,9 +718,9 @@ let SubtargetPredicate = isGFX10Plus in {
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
-                      (VOP3Mods vt:$src1, i32:$src1_modifiers),
-                      (VOP3Mods vt:$src2, i32:$src2_modifiers),
-                      (i1 CondReg)),
+                  (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
+                  (vt (VOP3Mods vt:$src2, i32:$src2_modifiers)),
+                  (i1 CondReg)),
   (inst $src0_modifiers, $src0, $src1_modifiers, $src1, $src2_modifiers, $src2)
 >;
 
