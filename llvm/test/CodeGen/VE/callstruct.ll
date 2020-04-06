@@ -8,8 +8,8 @@
 define void @fun(%struct.a* noalias nocapture sret %a, i32 %p1, i32 %p2) {
 ; CHECK-LABEL: fun:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    stl %s1, (,%s0)
-; CHECK-NEXT:    stl %s2, 4(,%s0)
+; CHECK-NEXT:    stl %s1, (, %s0)
+; CHECK-NEXT:    stl %s2, 4(, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a.zero = getelementptr inbounds %struct.a, %struct.a* %a, i64 0, i32 0
   store i32 %p1, i32* %a.zero, align 4
@@ -24,16 +24,16 @@ define void @caller() {
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea %s0, callee@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, callee@hi(%s0)
-; CHECK-NEXT:    lea %s0,-8(,%s9)
+; CHECK-NEXT:    lea.sl %s12, callee@hi(, %s0)
+; CHECK-NEXT:    lea %s0, -8(, %s9)
 ; CHECK-NEXT:    or %s1, 3, (0)1
 ; CHECK-NEXT:    or %s2, 4, (0)1
 ; CHECK-NEXT:    bsic %lr, (,%s12)
-; CHECK-NEXT:    ld %s0, -8(,%s9)
+; CHECK-NEXT:    ld %s0, -8(, %s9)
 ; CHECK-NEXT:    lea %s1, A@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s1, A@hi(%s1)
-; CHECK-NEXT:    st %s0, (,%s1)
+; CHECK-NEXT:    lea.sl %s1, A@hi(, %s1)
+; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i64, align 8
   %a.bc = bitcast i64* %a to %struct.a*
