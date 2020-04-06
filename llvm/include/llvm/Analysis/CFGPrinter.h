@@ -18,11 +18,14 @@
 #ifndef LLVM_ANALYSIS_CFGPRINTER_H
 #define LLVM_ANALYSIS_CFGPRINTER_H
 
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 
 namespace llvm {
@@ -50,20 +53,61 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-template<>
-struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
+class DOTFuncInfo {
+private:
+  const Function *F;
+  const BlockFrequencyInfo *BFI;
+  const BranchProbabilityInfo *BPI;
+
+public:
+  DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr) {}
+
+  DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
+             BranchProbabilityInfo *BPI)
+      : F(F), BFI(BFI), BPI(BPI) {
+  }
+
+  const BlockFrequencyInfo *getBFI() { return BFI; }
+
+  const BranchProbabilityInfo *getBPI() { return BPI; }
+
+  const Function *getFunction() { return this->F; }
+};
+
+template <>
+struct GraphTraits<DOTFuncInfo *> : public GraphTraits<const BasicBlock *> {
+  static NodeRef getEntryNode(DOTFuncInfo *CFGInfo) {
+    return &(CFGInfo->getFunction()->getEntryBlock());
+  }
+
+  // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
+  using nodes_iterator = pointer_iterator<Function::const_iterator>;
+
+  static nodes_iterator nodes_begin(DOTFuncInfo *CFGInfo) {
+    return nodes_iterator(CFGInfo->getFunction()->begin());
+  }
+
+  static nodes_iterator nodes_end(DOTFuncInfo *CFGInfo) {
+    return nodes_iterator(CFGInfo->getFunction()->end());
+  }
+
+  static size_t size(DOTFuncInfo *CFGInfo) {
+    return CFGInfo->getFunction()->size();
+  }
+};
+
+template <> struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   // Cache for is hidden property
   llvm::DenseMap <const BasicBlock *, bool> isHiddenBasicBlock;
 
   DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
 
-  static std::string getGraphName(const Function *F) {
-    return "CFG for '" + F->getName().str() + "' function";
+  static std::string getGraphName(DOTFuncInfo *CFGInfo) {
+    return "CFG for '" + CFGInfo->getFunction()->getName().str() + "' function";
   }
 
-  static std::string getSimpleNodeLabel(const BasicBlock *Node,
-                                        const Function *) {
+  static std::string getSimpleNodeLabel(const BasicBlock *Node, DOTFuncInfo *) {
     if (!Node->getName().empty())
       return Node->getName().str();
 
@@ -75,7 +119,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   }
 
   static std::string getCompleteNodeLabel(const BasicBlock *Node,
-                                          const Function *) {
+                                          DOTFuncInfo *) {
     enum { MaxColumns = 80 };
     std::string Str;
     raw_string_ostream OS(Str);
@@ -120,11 +164,12 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   }
 
   std::string getNodeLabel(const BasicBlock *Node,
-                           const Function *Graph) {
+                           DOTFuncInfo *CFGInfo) {
+
     if (isSimple())
-      return getSimpleNodeLabel(Node, Graph);
+      return getSimpleNodeLabel(Node, CFGInfo);
     else
-      return getCompleteNodeLabel(Node, Graph);
+      return getCompleteNodeLabel(Node, CFGInfo);
   }
 
   static std::string getEdgeSourceLabel(const BasicBlock *Node,
@@ -151,11 +196,10 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
 
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
-                                const Function *F) {
+                                DOTFuncInfo *CFGInfo) {
     const Instruction *TI = Node->getTerminator();
     if (TI->getNumSuccessors() == 1)
       return "";
-
     MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
     if (!WeightsNode)
       return "";
@@ -163,7 +207,6 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
     MDString *MDName = cast<MDString>(WeightsNode->getOperand(0));
     if (MDName->getString() != "branch_weights")
       return "";
-
     unsigned OpNo = I.getSuccessorIndex() + 1;
     if (OpNo >= WeightsNode->getNumOperands())
       return "";
