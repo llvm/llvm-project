@@ -2412,6 +2412,11 @@ TEST_F(FormatTestJS, CppKeywords) {
   verifyFormat("using!;");
   verifyFormat("virtual!;");
   verifyFormat("wchar_t!;");
+
+  // Positive tests:
+  verifyFormat("x.type!;");
+  verifyFormat("x.get!;");
+  verifyFormat("x.set!;");
 }
 
 TEST_F(FormatTestJS, NullPropagatingOperator) {
