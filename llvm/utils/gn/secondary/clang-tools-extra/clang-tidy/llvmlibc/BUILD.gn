@@ -12,6 +12,7 @@ static_library("llvmlibc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "ImplementationInNamespaceCheck.cpp",
     "LLVMLibcTidyModule.cpp",
     "RestrictSystemLibcHeadersCheck.cpp",
   ]
