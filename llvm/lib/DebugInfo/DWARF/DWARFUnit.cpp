@@ -488,9 +488,17 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
   // describe address ranges.
   if (getVersion() >= 5) {
-    if (IsDWO)
-      setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
-    else
+    // In case of DWP, the base offset from the index has to be added.
+    uint64_t ContributionBaseOffset = 0;
+    if (IsDWO) {
+      if (auto *IndexEntry = Header.getIndexEntry())
+        if (auto *Contrib = IndexEntry->getContribution(DW_SECT_RNGLISTS))
+          ContributionBaseOffset = Contrib->Offset;
+      setRangesSection(
+          &Context.getDWARFObj().getRnglistsDWOSection(),
+          ContributionBaseOffset +
+              DWARFListTableHeader::getHeaderSize(Header.getFormat()));
+    } else
       setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
                        toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
     if (RangeSection->Data.size()) {
@@ -510,7 +518,8 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
       // Adjust RangeSectionBase to point past the table header.
       if (IsDWO && RngListTable)
-        RangeSectionBase = RngListTable->getHeaderSize();
+        RangeSectionBase =
+            ContributionBaseOffset + RngListTable->getHeaderSize();
     }
 
     // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
