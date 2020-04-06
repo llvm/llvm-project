@@ -819,17 +819,9 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     return resultValue;
   }
 
-  // TODO: Remove once broadcastable has been updated. This query here is not
-  // really about broadcastable or not, it is about which build method to invoke
-  // and that requires knowledge of whether ODS generated a builder that need
-  // not take return types. That knowledge should be captured in one place
-  // rather than duplicated.
-  bool isResultsBroadcastableShape =
-      resultOp.getTrait("OpTrait::ResultsBroadcastableShape");
   bool usePartialResults = valuePackName != resultValue;
 
-  if (isResultsBroadcastableShape || usePartialResults || depth > 0 ||
-      resultIndex < 0) {
+  if (usePartialResults || depth > 0 || resultIndex < 0) {
     // For these cases (broadcastable ops, op results used both as auxiliary
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
