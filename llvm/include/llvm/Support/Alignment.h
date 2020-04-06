@@ -22,10 +22,11 @@
 #define LLVM_SUPPORT_ALIGNMENT_H_
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
-#include <limits>
+#ifndef NDEBUG
+#include <string>
+#endif // NDEBUG
 
 namespace llvm {
 
@@ -395,6 +396,16 @@ inline bool operator>(MaybeAlign Lhs, Align Rhs) {
   return Lhs && (*Lhs).value() > Rhs.value();
 }
 
+inline Align operator*(Align Lhs, uint64_t Rhs) {
+  assert(Rhs > 0 && "Rhs must be positive");
+  return Align(Lhs.value() * Rhs);
+}
+
+inline MaybeAlign operator*(MaybeAlign Lhs, uint64_t Rhs) {
+  assert(Rhs > 0 && "Rhs must be positive");
+  return Lhs ? Lhs.getValue() * Rhs : MaybeAlign();
+}
+
 inline Align operator/(Align Lhs, uint64_t Divisor) {
   assert(llvm::isPowerOf2_64(Divisor) &&
          "Divisor must be positive and a power of 2");
@@ -415,6 +426,19 @@ inline Align max(MaybeAlign Lhs, Align Rhs) {
 inline Align max(Align Lhs, MaybeAlign Rhs) {
   return Rhs && *Rhs > Lhs ? *Rhs : Lhs;
 }
+
+#ifndef NDEBUG
+// For usage in LLVM_DEBUG macros.
+inline std::string DebugStr(const Align &A) {
+  return std::to_string(A.value());
+}
+// For usage in LLVM_DEBUG macros.
+inline std::string DebugStr(const MaybeAlign &MA) {
+  if (MA)
+    return std::to_string(MA->value());
+  return "None";
+}
+#endif // NDEBUG
 
 #undef ALIGN_CHECK_ISPOSITIVE
 #undef ALIGN_CHECK_ISSET
