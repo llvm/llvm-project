@@ -29,7 +29,6 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     Infer set function attributes
-; CHECK-NEXT:     Deduce and propagate attributes
 ; CHECK-NEXT:     Interprocedural Sparse Conditional Constant Propagation
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -59,7 +58,6 @@
 ; CHECK-NEXT:     Call Graph SCC Pass Manager
 ; CHECK-NEXT:       Remove unused exception handling info
 ; CHECK-NEXT:       Function Integration/Inlining
-; CHECK-NEXT:       Deduce and propagate attributes (CGSCC pass)
 ; CHECK-NEXT:       OpenMP specific optimizations
 ; CHECK-NEXT:       Deduce function attributes
 ; CHECK-NEXT:       FunctionPass Manager

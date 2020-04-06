@@ -160,11 +160,6 @@ static cl::opt<bool> VerifyMaxFixpointIterations(
     cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
     cl::init(false));
 
-static cl::opt<bool> DisableAttributor(
-    "attributor-disable", cl::Hidden,
-    cl::desc("Disable the attributor inter-procedural deduction pass."),
-    cl::init(true));
-
 static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
@@ -8849,7 +8844,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
                                      AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater) {
-  if (DisableAttributor || Functions.empty())
+  if (Functions.empty())
     return false;
 
   LLVM_DEBUG(dbgs() << "[Attributor] Run on module with " << Functions.size()

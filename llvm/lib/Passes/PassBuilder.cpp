@@ -258,6 +258,8 @@ extern cl::opt<bool> EnableOrderFileInstrumentation;
 
 extern cl::opt<bool> FlattenedProfileUsed;
 
+extern cl::opt<bool> DisableAttributor;
+
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
     /*SizeLevel*/ 0};
@@ -765,7 +767,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       MPM.addPass(PGOIndirectCallPromotion(Phase == ThinLTOPhase::PostLink,
                                            true /* SamplePGO */));
   }
-  MPM.addPass(AttributorPass());
+
+  if (!DisableAttributor)
+    MPM.addPass(AttributorPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
@@ -848,7 +852,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     IP.HotCallSiteThreshold = 0;
   MainCGPipeline.addPass(InlinerPass(IP));
 
-  MainCGPipeline.addPass(AttributorCGSCCPass());
+  if (!DisableAttributor)
+    MainCGPipeline.addPass(AttributorCGSCCPass());
 
   if (PTO.Coroutines)
     MainCGPipeline.addPass(CoroSplitPass());
