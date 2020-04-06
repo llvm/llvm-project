@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 // TODO: investigate the performance of this function.
-// There might be potential for compiler optmization.
+// There might be potential for compiler optimization.
 size_t LLVM_LIBC_ENTRYPOINT(strlen)(const char *src) {
   const char *end = src;
   while (*end != '\0')

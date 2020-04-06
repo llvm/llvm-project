@@ -57,7 +57,7 @@ FUNC:
 	ret
 
 	/* First fault failed: only some of the vector is valid.
-	   Perform the comparision only on the valid bytes.  */
+	   Perform the comparison only on the valid bytes.  */
 2:	cmpeq	p2.b, p0/z, z0.b, z1.b		/* search for c */
 	cmpeq	p3.b, p0/z, z0.b, 0		/* search for 0 */
 	orrs	p4.b, p0/z, p2.b, p3.b		/* c | 0 */
