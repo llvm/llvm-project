@@ -538,6 +538,9 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
                                  " list table with base = 0x%" PRIx64 "\n",
                                  Offset);
       Offset -= HeaderSize;
+      if (auto *IndexEntry = Header.getIndexEntry())
+        if (const auto *Contrib = IndexEntry->getContribution(DW_SECT_LOCLISTS))
+          Offset += Contrib->Offset;
       if (Error E = LoclistTableHeader->extract(Data, &Offset))
         return createStringError(errc::invalid_argument,
                                  "parsing a loclist table: " +
