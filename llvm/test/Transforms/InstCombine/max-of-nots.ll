@@ -507,18 +507,14 @@ define void @cmyk5(i8 %r, i8 %g, i8 %b) {
 
 define void @cmyk6(i8 %r, i8 %g, i8 %b) {
 ; CHECK-LABEL: @cmyk6(
-; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
-; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
-; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
-; CHECK-NEXT:    [[CMP_GR:%.*]] = icmp ult i8 [[G]], [[R]]
-; CHECK-NEXT:    [[CMP_BR:%.*]] = icmp ult i8 [[B]], [[R]]
-; CHECK-NEXT:    [[SEL_RB:%.*]] = select i1 [[CMP_BR]], i8 [[NOTR]], i8 [[NOTB]]
-; CHECK-NEXT:    [[CMP_BG:%.*]] = icmp ult i8 [[B]], [[G]]
-; CHECK-NEXT:    [[SEL_GB:%.*]] = select i1 [[CMP_BG]], i8 [[NOTG]], i8 [[NOTB]]
-; CHECK-NEXT:    [[K:%.*]] = select i1 [[CMP_GR]], i8 [[SEL_RB]], i8 [[SEL_GB]]
-; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
-; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
-; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[R:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[R]], i8 [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[TMP2]], [[G:%.*]]
+; CHECK-NEXT:    [[K_V:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[G]]
+; CHECK-NEXT:    [[K:%.*]] = xor i8 [[K_V]], -1
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K_V]], [[R]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K_V]], [[G]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K_V]], [[B]]
 ; CHECK-NEXT:    tail call void @use(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
 ; CHECK-NEXT:    ret void
 ;
