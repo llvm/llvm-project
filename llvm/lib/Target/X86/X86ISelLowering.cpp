@@ -43489,11 +43489,15 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   MVT InSVT = InVT.getScalarType();
 
   // Check we have a truncation suited for PACKSS/PACKUS.
-  if (!VT.is128BitVector() && !VT.is256BitVector())
+  if (!isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
   if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32)
     return SDValue();
   if (InSVT != MVT::i16 && InSVT != MVT::i32 && InSVT != MVT::i64)
+    return SDValue();
+
+  // Truncation to sub-128bit vXi32 can be better handled with shuffles.
+  if (SVT == MVT::i32 && VT.getSizeInBits() < 128)
     return SDValue();
 
   // AVX512 has fast truncate, but if the input is already going to be split,
