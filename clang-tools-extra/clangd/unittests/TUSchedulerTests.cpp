@@ -25,8 +25,8 @@
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <atomic>
-#include <bits/stdint-uintn.h>
 #include <chrono>
+#include <cstdint>
 #include <utility>
 
 namespace clang {
