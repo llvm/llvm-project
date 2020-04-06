@@ -134,6 +134,14 @@ TEST(DataExtractorTest, LEB128_error) {
   Offset = 0;
   EXPECT_EQ(0U, DE.getSLEB128(&Offset));
   EXPECT_EQ(0U, Offset);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(0U, DE.getULEB128(C));
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
+
+  C = DataExtractor::Cursor(0);
+  EXPECT_EQ(0U, DE.getSLEB128(C));
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
 }
 
 TEST(DataExtractorTest, Cursor_tell) {
@@ -250,6 +258,16 @@ TEST(DataExtractorTest, getU8_vector) {
   EXPECT_EQ("AB", toStringRef(S));
 }
 
+TEST(DataExtractorTest, getU24) {
+  DataExtractor DE(StringRef("ABCD"), false, 8);
+  DataExtractor::Cursor C(0);
+
+  EXPECT_EQ(0x414243u, DE.getU24(C));
+  EXPECT_EQ(0u, DE.getU24(C));
+  EXPECT_EQ(3u, C.tell());
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
+}
+
 TEST(DataExtractorTest, skip) {
   DataExtractor DE(StringRef("AB"), false, 8);
   DataExtractor::Cursor C(0);
@@ -331,6 +349,14 @@ TEST(DataExtractorTest, GetBytes) {
   EXPECT_EQ(Offset, 4u);
   EXPECT_EQ(Str.size(), 4u);
   EXPECT_EQ(Str, Bytes);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(StringRef("\x01\x02"), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef("\x00\x04", 2), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef(), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef(), DE.getBytes(C, 2));
+  EXPECT_EQ(4u, C.tell());
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
 }
 
 }
