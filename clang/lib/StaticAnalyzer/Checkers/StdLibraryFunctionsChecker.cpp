@@ -960,6 +960,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                            ArgumentCondition(0U, OutOfRange, SingleValue(1)))
                        .ArgConstraint(
                            ArgumentCondition(0U, OutOfRange, SingleValue(2)))}},
+        {"__defaultparam", Summaries{Summary(ArgTypes{Irrelevant, IntTy},
+                                             RetType{IntTy}, EvalCallAsPure)
+                                         .ArgConstraint(NotNull(ArgNo(0)))}},
     };
     for (auto &E : TestFunctionSummaryMap) {
       auto InsertRes =
