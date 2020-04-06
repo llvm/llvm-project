@@ -34,7 +34,7 @@ public:
 
   /// Return whether the DarwinLog functionality is enabled.
   ///
-  /// The DarwinLog functionality is enabled if the user expicitly enabled
+  /// The DarwinLog functionality is enabled if the user explicitly enabled
   /// it with the enable command, or if the user has the setting set
   /// that controls if we always enable it for newly created/attached
   /// processes.

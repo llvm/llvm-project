@@ -642,7 +642,7 @@ class Base(unittest2.TestCase):
         lldb.remote_platform.SetWorkingDirectory(remote_test_dir)
 
         # This function removes all files from the current working directory while leaving
-        # the directories in place. The cleaup is required to reduce the disk space required
+        # the directories in place. The cleanup is required to reduce the disk space required
         # by the test suite while leaving the directories untouched is neccessary because
         # sub-directories might belong to an other test
         def clean_working_directory():
@@ -942,12 +942,12 @@ class Base(unittest2.TestCase):
     # =======================================================================
 
     def setTearDownCleanup(self, dictionary=None):
-        """Register a cleanup action at tearDown() time with a dictinary"""
+        """Register a cleanup action at tearDown() time with a dictionary"""
         self.dict = dictionary
         self.doTearDownCleanup = True
 
     def addTearDownCleanup(self, dictionary):
-        """Add a cleanup action at tearDown() time with a dictinary"""
+        """Add a cleanup action at tearDown() time with a dictionary"""
         self.dicts.append(dictionary)
         self.doTearDownCleanups = True
 
@@ -1152,7 +1152,7 @@ class Base(unittest2.TestCase):
 
         # We are here because self.tearDown() detected that this test instance
         # either errored or failed.  The lldb.test_result singleton contains
-        # two lists (erros and failures) which get populated by the unittest
+        # two lists (errors and failures) which get populated by the unittest
         # framework.  Look over there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding

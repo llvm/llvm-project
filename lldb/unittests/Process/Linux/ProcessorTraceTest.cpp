@@ -31,7 +31,7 @@ TEST(CyclicBuffer, EdgeCases) {
   uint8_t cyclic_buffer[6] = {'l', 'i', 'c', 'c', 'y', 'c'};
 
   // We will always leave the last bytes untouched
-  // so that string comparisions work.
+  // so that string comparisons work.
   char smaller_buffer[4] = {};
 
   // empty buffer to read into
@@ -70,7 +70,7 @@ TEST(CyclicBuffer, EqualSizeBuffer) {
   char cyclic[] = "cyclic";
   for (size_t i = 0; i < sizeof(cyclic); i++) {
     // We will always leave the last bytes untouched
-    // so that string comparisions work.
+    // so that string comparisons work.
     char equal_size_buffer[7] = {};
     bytes_read =
         ReadCylicBufferWrapper(equal_size_buffer, sizeof(cyclic_buffer),
@@ -85,7 +85,7 @@ TEST(CyclicBuffer, SmallerSizeBuffer) {
   uint8_t cyclic_buffer[6] = {'l', 'i', 'c', 'c', 'y', 'c'};
 
   // We will always leave the last bytes untouched
-  // so that string comparisions work.
+  // so that string comparisons work.
   char smaller_buffer[4] = {};
   bytes_read =
       ReadCylicBufferWrapper(smaller_buffer, (sizeof(smaller_buffer) - 1),
@@ -136,7 +136,7 @@ TEST(CyclicBuffer, BiggerSizeBuffer) {
   char cyclic[] = "cyclic";
   for (size_t i = 0; i < sizeof(cyclic); i++) {
     // We will always leave the last bytes untouched
-    // so that string comparisions work.
+    // so that string comparisons work.
     char bigger_buffer[10] = {};
     bytes_read =
         ReadCylicBufferWrapper(bigger_buffer, (sizeof(bigger_buffer) - 1),

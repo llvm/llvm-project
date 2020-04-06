@@ -48,7 +48,7 @@ def verify_api(all_args):
         type='string',
         action='append',
         dest='archs',
-        help='architecure to use when checking the api')
+        help='architecture to use when checking the api')
     parser.add_option(
         '-r',
         '--api-regex',

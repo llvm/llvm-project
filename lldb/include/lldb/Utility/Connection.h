@@ -125,7 +125,7 @@ public:
   /// Subclasses must override this function.
   ///
   /// \param[in] dst
-  ///     A desination buffer that must be at least \a dst_len bytes
+  ///     A destination buffer that must be at least \a dst_len bytes
   ///     long.
   ///
   /// \param[in] dst_len

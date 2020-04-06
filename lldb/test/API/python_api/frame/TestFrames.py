@@ -114,7 +114,7 @@ class FrameAPITestCase(TestBase):
         if self.TraceOn():
             print("Full stack traces when stopped on the breakpoint 'c':")
             print(session.getvalue())
-        self.expect(session.getvalue(), "Argugment values displayed correctly",
+        self.expect(session.getvalue(), "Argument values displayed correctly",
                     exe=False,
                     substrs=["a((int)val=1, (char)ch='A')",
                              "a((int)val=3, (char)ch='A')"])

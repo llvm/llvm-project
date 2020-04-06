@@ -346,7 +346,7 @@ class LoadUnloadTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 1'])
 
-        # Issue the 'contnue' command.  We should stop agaian at a_function.
+        # Issue the 'continue' command.  We should stop agaian at a_function.
         # The stop reason of the thread should be breakpoint and at a_function.
         self.runCmd("continue")
 

@@ -274,7 +274,7 @@ int main (int argc, char **argv)
 
     int header_and_load_cmd_room = sizeof (struct mach_header_64) + size_of_load_commands;
 
-    // Erease the load commands / payload now that we know how much space is needed,
+    // Erase the load commands / payload now that we know how much space is needed,
     // redo it.
     load_commands.clear();
     payload.clear();

@@ -161,7 +161,7 @@ class DebugCommunication(object):
            indicate a new packet is available. Returns True if the caller
            should keep calling this function for more packets.
         '''
-        # If EOF, notify the read thread by enqueing a None.
+        # If EOF, notify the read thread by enqueuing a None.
         if not packet:
             self.enqueue_recv_packet(None)
             return False
@@ -788,7 +788,7 @@ class DebugCommunication(object):
             self.threads = body['threads']
             for thread in self.threads:
                 # Copy the thread dictionary so we can add key/value pairs to
-                # it without affecfting the original info from the "threads"
+                # it without affecting the original info from the "threads"
                 # command.
                 tid = thread['id']
                 if tid in self.thread_stop_reasons:
@@ -1018,7 +1018,7 @@ def main():
         dest='attach',
         default=False,
         help=('Specify this option to attach to a process by name. The '
-              'process name is the basanme of the executable specified with '
+              'process name is the basename of the executable specified with '
               'the --program option.'))
 
     parser.add_option(

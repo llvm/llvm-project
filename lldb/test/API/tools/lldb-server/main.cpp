@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
     } else if (std::strstr(argv[i], CALL_FUNCTION_PREFIX)) {
       void (*func_p)() = nullptr;
 
-      // Defaut to providing the address of main.
+      // Default to providing the address of main.
       if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX), "hello") == 0)
         func_p = hello;
       else if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX),

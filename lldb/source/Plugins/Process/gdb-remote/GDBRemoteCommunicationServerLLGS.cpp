@@ -947,7 +947,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
                   reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
                   *reg_num_p);
       } else if (reg_info_p->value_regs == nullptr) {
-        // Only expediate registers that are not contained in other registers.
+        // Only expedite registers that are not contained in other registers.
         RegisterValue reg_value;
         Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
         if (error.Success()) {
