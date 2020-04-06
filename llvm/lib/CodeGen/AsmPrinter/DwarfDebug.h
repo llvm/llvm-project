@@ -528,6 +528,9 @@ class DwarfDebug : public DebugHandlerBase {
   void emitDebugMacinfoImpl(MCSection *Section);
   void emitMacro(DIMacro &M);
   void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
+  void emitMacroFileImpl(DIMacroFile &F, DwarfCompileUnit &U,
+                         unsigned StartFile, unsigned EndFile,
+                         StringRef (*MacroFormToString)(unsigned Form));
   void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
