@@ -57,15 +57,20 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 
 namespace clang {
@@ -152,6 +157,39 @@ private:
 };
 
 namespace {
+/// Threadsafe manager for updating a TUStatus and emitting it after each
+/// update.
+class SynchronizedTUStatus {
+public:
+  SynchronizedTUStatus(PathRef FileName, ParsingCallbacks &Callbacks)
+      : FileName(FileName), Callbacks(Callbacks) {}
+
+  void update(llvm::function_ref<void(TUStatus &)> Mutator) {
+    std::lock_guard<std::mutex> Lock(StatusMu);
+    Mutator(Status);
+    emitStatusLocked();
+  }
+
+  /// Prevents emitting of further updates.
+  void stop() {
+    std::lock_guard<std::mutex> Lock(StatusMu);
+    CanPublish = false;
+  }
+
+private:
+  void emitStatusLocked() {
+    if (CanPublish)
+      Callbacks.onFileUpdated(FileName, Status);
+  }
+
+  const Path FileName;
+
+  std::mutex StatusMu;
+  TUStatus Status;
+  bool CanPublish = true;
+  ParsingCallbacks &Callbacks;
+};
+
 /// Responsible for building and providing access to the preamble of a TU.
 /// Whenever the thread is idle and the preamble is outdated, it starts to build
 /// a fresh preamble from the latest inputs. If RunSync is true, preambles are
@@ -159,9 +197,11 @@ namespace {
 class PreambleThread {
 public:
   PreambleThread(llvm::StringRef FileName, ParsingCallbacks &Callbacks,
-                 bool StorePreambleInMemory, bool RunSync)
+                 bool StorePreambleInMemory, bool RunSync,
+                 SynchronizedTUStatus &Status)
       : FileName(FileName), Callbacks(Callbacks),
-        StoreInMemory(StorePreambleInMemory), RunSync(RunSync) {}
+        StoreInMemory(StorePreambleInMemory), RunSync(RunSync), Status(Status) {
+  }
 
   size_t getUsedBytes() const {
     auto Preamble = latest();
@@ -174,10 +214,6 @@ public:
   void update(CompilerInvocation *CI, ParseInputs PI) {
     // If compiler invocation was broken, just fail out early.
     if (!CI) {
-      TUStatus::BuildDetails Details;
-      Details.BuildFailed = true;
-      std::string TaskName = llvm::formatv("Update ({0})", PI.Version);
-      emitTUStatus({TUAction::BuildingPreamble, std::move(TaskName)}, &Details);
       // Make sure anyone waiting for the preamble gets notified it could not be
       // built.
       BuiltFirst.notify();
@@ -187,6 +223,9 @@ public:
     Request Req = {std::make_unique<CompilerInvocation>(*CI), std::move(PI)};
     if (RunSync) {
       build(std::move(Req));
+      Status.update([](TUStatus &Status) {
+        Status.PreambleActivity = PreambleAction::Idle;
+      });
       return;
     }
     {
@@ -225,9 +264,19 @@ public:
       }
       // Build the preamble and let the waiters know about it.
       build(std::move(*CurrentReq));
+      bool IsEmpty = false;
       {
         std::lock_guard<std::mutex> Lock(Mutex);
         CurrentReq.reset();
+        IsEmpty = !NextReq.hasValue();
+      }
+      if (IsEmpty) {
+        // We don't perform this above, before waiting for a request to make
+        // tests more deterministic. As there can be a race between this thread
+        // and client thread(clangdserver).
+        Status.update([](TUStatus &Status) {
+          Status.PreambleActivity = PreambleAction::Idle;
+        });
       }
       ReqCV.notify_all();
     }
@@ -265,18 +314,6 @@ private:
     return Done;
   }
 
-  /// Updates the TUStatus and emits it. Only called in the worker thread.
-  void emitTUStatus(TUAction Action,
-                    const TUStatus::BuildDetails *Details = nullptr) {
-    // Do not emit TU statuses when the worker is shutting down.
-    if (isDone())
-      return;
-    TUStatus Status({std::move(Action), {}});
-    if (Details)
-      Status.Details = *Details;
-    Callbacks.onFileUpdated(FileName, Status);
-  }
-
   /// Builds a preamble for Req and caches it. Might re-use the latest built
   /// preamble if it is valid for Req. Also signals waiters about the build.
   /// FIXME: We shouldn't cache failed preambles, if we've got a successful
@@ -287,8 +324,9 @@ private:
     std::shared_ptr<const PreambleData> OldPreamble =
         Inputs.ForceRebuild ? nullptr : latest();
 
-    std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
-    emitTUStatus({TUAction::BuildingPreamble, std::move(TaskName)});
+    Status.update([&](TUStatus &Status) {
+      Status.PreambleActivity = PreambleAction::Building;
+    });
 
     auto Preamble = clang::clangd::buildPreamble(
         FileName, std::move(*Req.CI), OldPreamble, Inputs, StoreInMemory,
@@ -321,6 +359,8 @@ private:
   ParsingCallbacks &Callbacks;
   const bool StoreInMemory;
   const bool RunSync;
+
+  SynchronizedTUStatus &Status;
 };
 
 class ASTWorkerHandle;
@@ -391,9 +431,6 @@ private:
   void startTask(llvm::StringRef Name, llvm::unique_function<void()> Task,
                  llvm::Optional<WantDiagnostics> UpdateType,
                  TUScheduler::ASTActionInvalidation);
-  /// Updates the TUStatus and emits it. Only called in the worker thread.
-  void emitTUStatus(TUAction FAction,
-                    const TUStatus::BuildDetails *Detail = nullptr);
 
   /// Determines the next action to perform.
   /// All actions that should never run are discarded.
@@ -427,8 +464,6 @@ private:
   const GlobalCompilationDatabase &CDB;
   /// Callback invoked when preamble or main file AST is built.
   ParsingCallbacks &Callbacks;
-  /// Only accessed by the worker thread.
-  TUStatus Status;
 
   Semaphore &Barrier;
   /// Whether the 'onMainAST' callback ran for the current FileInputs.
@@ -458,6 +493,7 @@ private:
   // any results to the user.
   bool CanPublishResults = true; /* GUARDED_BY(PublishMu) */
 
+  SynchronizedTUStatus Status;
   PreambleThread PW;
 };
 
@@ -526,12 +562,11 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                      bool RunSync, DebouncePolicy UpdateDebounce,
                      bool StorePreamblesInMemory, ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(UpdateDebounce),
-      FileName(FileName), CDB(CDB),
-      Callbacks(Callbacks), Status{TUAction(TUAction::Idle, ""),
-                                   TUStatus::BuildDetails()},
-      Barrier(Barrier), Done(false),
+      FileName(FileName), CDB(CDB), Callbacks(Callbacks), Barrier(Barrier),
+      Done(false), Status(FileName, Callbacks),
       // FIXME: Run preambleworker async.
-      PW(FileName, Callbacks, StorePreamblesInMemory, /*RunSync=*/true) {
+      PW(FileName, Callbacks, StorePreamblesInMemory, /*RunSync=*/true,
+         Status) {
   auto Inputs = std::make_shared<ParseInputs>();
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
@@ -619,7 +654,10 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // to the old preamble, so it can be freed if there are no other references
     // to it.
     OldPreamble.reset();
-    emitTUStatus({TUAction::BuildingFile, TaskName});
+    Status.update([&](TUStatus &Status) {
+      Status.ASTActivity.K = ASTAction::Building;
+      Status.ASTActivity.Name = std::move(TaskName);
+    });
     if (!CanReuseAST) {
       IdleASTs.take(this); // Remove the old AST if it's still in cache.
     } else {
@@ -635,9 +673,11 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         // current file at this point?
         log("Skipping rebuild of the AST for {0}, inputs are the same.",
             FileName);
-        TUStatus::BuildDetails Details;
-        Details.ReuseAST = true;
-        emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
+
+        Status.update([](TUStatus &Status) {
+          Status.Details.ReuseAST = true;
+          Status.Details.BuildFailed = false;
+        });
         return;
       }
     }
@@ -661,17 +701,18 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       llvm::Optional<ParsedAST> NewAST =
           buildAST(FileName, std::move(Invocation), CompilerInvocationDiags,
                    Inputs, NewPreamble);
+      // buildAST fails.
+      Status.update([&](TUStatus &Status) {
+        Status.Details.ReuseAST = false;
+        Status.Details.BuildFailed = !NewAST.hasValue();
+      });
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
-      if (!(*AST)) { // buildAST fails.
-        TUStatus::BuildDetails Details;
-        Details.BuildFailed = true;
-        emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
-      }
     } else {
       // We are reusing the AST.
-      TUStatus::BuildDetails Details;
-      Details.ReuseAST = true;
-      emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
+      Status.update([](TUStatus &Status) {
+        Status.Details.ReuseAST = true;
+        Status.Details.BuildFailed = false;
+      });
     }
 
     // We want to report the diagnostics even if this update was cancelled.
@@ -815,6 +856,7 @@ void ASTWorker::stop() {
     assert(!Done && "stop() called twice");
     Done = true;
   }
+  Status.stop();
   RequestsCV.notify_all();
 }
 
@@ -856,18 +898,6 @@ void ASTWorker::startTask(llvm::StringRef Name,
   RequestsCV.notify_all();
 }
 
-void ASTWorker::emitTUStatus(TUAction Action,
-                             const TUStatus::BuildDetails *Details) {
-  Status.Action = std::move(Action);
-  if (Details)
-    Status.Details = *Details;
-  std::lock_guard<std::mutex> Lock(PublishMu);
-  // Do not emit TU statuses when the ASTWorker is shutting down.
-  if (CanPublishResults) {
-    Callbacks.onFileUpdated(FileName, Status);
-  }
-}
-
 void ASTWorker::run() {
   auto _ = llvm::make_scope_exit([this] { PW.stop(); });
   while (true) {
@@ -891,7 +921,10 @@ void ASTWorker::run() {
           Tracer.emplace("Debounce");
           SPAN_ATTACH(*Tracer, "next_request", Requests.front().Name);
           if (!(Wait == Deadline::infinity())) {
-            emitTUStatus({TUAction::Queued, Requests.front().Name});
+            Status.update([&](TUStatus &Status) {
+              Status.ASTActivity.K = ASTAction::Queued;
+              Status.ASTActivity.Name = Requests.front().Name;
+            });
             SPAN_ATTACH(*Tracer, "sleep_ms",
                         std::chrono::duration_cast<std::chrono::milliseconds>(
                             Wait.time() - steady_clock::now())
@@ -910,12 +943,18 @@ void ASTWorker::run() {
     {
       std::unique_lock<Semaphore> Lock(Barrier, std::try_to_lock);
       if (!Lock.owns_lock()) {
-        emitTUStatus({TUAction::Queued, CurrentRequest->Name});
+        Status.update([&](TUStatus &Status) {
+          Status.ASTActivity.K = ASTAction::Queued;
+          Status.ASTActivity.Name = CurrentRequest->Name;
+        });
         Lock.lock();
       }
       WithContext Guard(std::move(CurrentRequest->Ctx));
       trace::Span Tracer(CurrentRequest->Name);
-      emitTUStatus({TUAction::RunningAction, CurrentRequest->Name});
+      Status.update([&](TUStatus &Status) {
+        Status.ASTActivity.K = ASTAction::RunningAction;
+        Status.ASTActivity.Name = CurrentRequest->Name;
+      });
       CurrentRequest->Action();
     }
 
@@ -925,8 +964,12 @@ void ASTWorker::run() {
       CurrentRequest.reset();
       IsEmpty = Requests.empty();
     }
-    if (IsEmpty)
-      emitTUStatus({TUAction::Idle, /*Name*/ ""});
+    if (IsEmpty) {
+      Status.update([&](TUStatus &Status) {
+        Status.ASTActivity.K = ASTAction::Idle;
+        Status.ASTActivity.Name = "";
+      });
+    }
     RequestsCV.notify_all();
   }
 }
@@ -1010,27 +1053,33 @@ bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
 // TUAction represents clangd-internal states, we don't intend to expose them
 // to users (say C++ programmers) directly to avoid confusion, we use terms that
 // are familiar by C++ programmers.
-std::string renderTUAction(const TUAction &Action) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  switch (Action.S) {
-  case TUAction::Queued:
-    OS << "file is queued";
+std::string renderTUAction(const PreambleAction PA, const ASTAction &AA) {
+  llvm::SmallVector<std::string, 2> Result;
+  switch (PA) {
+  case PreambleAction::Building:
+    Result.push_back("parsing includes");
     break;
-  case TUAction::RunningAction:
-    OS << "running " << Action.Name;
-    break;
-  case TUAction::BuildingPreamble:
-    OS << "parsing includes";
-    break;
-  case TUAction::BuildingFile:
-    OS << "parsing main file";
-    break;
-  case TUAction::Idle:
-    OS << "idle";
+  case PreambleAction::Idle:
+    // We handle idle specially below.
     break;
   }
-  return OS.str();
+  switch (AA.K) {
+  case ASTAction::Queued:
+    Result.push_back("file is queued");
+    break;
+  case ASTAction::RunningAction:
+    Result.push_back("running " + AA.Name);
+    break;
+  case ASTAction::Building:
+    Result.push_back("parsing main file");
+    break;
+  case ASTAction::Idle:
+    // We handle idle specially below.
+    break;
+  }
+  if (Result.empty())
+    return "idle";
+  return llvm::join(Result, ",");
 }
 
 } // namespace
@@ -1042,7 +1091,7 @@ unsigned getDefaultAsyncThreadsCount() {
 FileStatus TUStatus::render(PathRef File) const {
   FileStatus FStatus;
   FStatus.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
-  FStatus.state = renderTUAction(Action);
+  FStatus.state = renderTUAction(PreambleActivity, ASTActivity);
   return FStatus;
 }
 
