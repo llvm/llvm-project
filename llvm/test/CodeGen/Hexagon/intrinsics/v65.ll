@@ -8,7 +8,7 @@ define i32 @A6_vcmpbeq_notany(i64 %a, i64 %b) {
   %c = call i32 @llvm.hexagon.A6.vcmpbeq.notany(i64 %a, i64 %b)
   ret i32 %c
 }
-; CHECK = !any8(vcmpb.eq(r1:0,r3:2))
+; CHECK: = !any8(vcmpb.eq(r1:0,r3:2))
 
 declare <16 x i32> @llvm.hexagon.V6.vabsb(<16 x i32>)
 define <16 x i32> @V6_vabsb(<16 x i32> %a) {

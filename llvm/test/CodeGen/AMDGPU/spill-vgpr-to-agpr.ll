@@ -12,7 +12,7 @@
 ; GFX900:     buffer_load_dword v{{[0-9]}},
 ; GFX900:     buffer_load_dword v{{[0-9]}},
 ; GFX908-NOT: buffer_
-; GFX908-DAG  v_accvgpr_read_b32 v{{[0-9]}}, a0
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a0
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a1
 
 ; GCN:    NumVgprs: 10
@@ -126,7 +126,7 @@ define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #0 {
 ; GCN-DAG:    buffer_store_dword v{{[0-9]}},
 ; GFX900:     buffer_load_dword v{{[0-9]}},
 ; GCN-DAG:    buffer_load_dword v{{[0-9]}},
-; GFX908-DAG  v_accvgpr_read_b32 v{{[0-9]}}, a1
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a1
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a2
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a3
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a4
@@ -192,7 +192,7 @@ define amdgpu_kernel void @max_10_vgprs_spill_v32(<32 x float> addrspace(1)* %p)
 ; GFX900:     buffer_store_dword v
 ; GFX900:     buffer_load_dword v
 ; GFX908-NOT: buffer_
-; GFX908-DAG  v_accvgpr_read_b32
+; GFX908-DAG: v_accvgpr_read_b32
 
 ; GCN:    NumVgprs: 256
 ; GFX900: ScratchSize: 148

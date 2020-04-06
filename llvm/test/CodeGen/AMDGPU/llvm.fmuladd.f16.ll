@@ -95,14 +95,14 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 
 ; VI-DENORM: s_movk_i32 [[KA:s[0-9]+]], 0x4200
 ; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], v[[A_F16]], [[KA]], v[[C_F16]]
-; VI-DENORM buffer_store_short [[RESULT]]
+; VI-DENORM: buffer_store_short [[RESULT]]
 
 ; GFX10-FLUSH: v_mul_f16_e32 [[MUL:v[0-9]+]], 0x4200, v[[A_F16]]
 ; GFX10-FLUSH: v_add_f16_e32 [[ADD:v[0-9]+]], [[MUL]], v[[C_F16]]
 ; GFX10-FLUSH: buffer_store_short [[ADD]]
 
 ; GFX10-DENORM: v_fmac_f16_e32 v[[C_F16]], 0x4200, v[[A_F16]]
-; GFX10-DENORM buffer_store_short v[[C_F16]],
+; GFX10-DENORM: buffer_store_short v[[C_F16]],
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmuladd_f16_imm_b(

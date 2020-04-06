@@ -7,7 +7,7 @@
 ;
 ; which will load two floats at once into scalar registers.
 
-; CHECK-LABEL foo
+; CHECK-LABEL: foo
 define void @foo(<2 x float>* %a) {
 ; CHECK: ld.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = load <2 x float>, <2 x float>* %a
@@ -16,7 +16,7 @@ define void @foo(<2 x float>* %a) {
   ret void
 }
 
-; CHECK-LABEL foo2
+; CHECK-LABEL: foo2
 define void @foo2(<4 x float>* %a) {
 ; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = load <4 x float>, <4 x float>* %a
@@ -25,7 +25,7 @@ define void @foo2(<4 x float>* %a) {
   ret void
 }
 
-; CHECK-LABEL foo3
+; CHECK-LABEL: foo3
 define void @foo3(<8 x float>* %a) {
 ; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
 ; CHECK-NEXT: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
@@ -37,7 +37,7 @@ define void @foo3(<8 x float>* %a) {
 
 
 
-; CHECK-LABEL foo4
+; CHECK-LABEL: foo4
 define void @foo4(<2 x i32>* %a) {
 ; CHECK: ld.v2.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <2 x i32>, <2 x i32>* %a
@@ -46,7 +46,7 @@ define void @foo4(<2 x i32>* %a) {
   ret void
 }
 
-; CHECK-LABEL foo5
+; CHECK-LABEL: foo5
 define void @foo5(<4 x i32>* %a) {
 ; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <4 x i32>, <4 x i32>* %a
@@ -55,7 +55,7 @@ define void @foo5(<4 x i32>* %a) {
   ret void
 }
 
-; CHECK-LABEL foo6
+; CHECK-LABEL: foo6
 define void @foo6(<8 x i32>* %a) {
 ; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
 ; CHECK-NEXT: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
@@ -69,7 +69,7 @@ define void @foo6(<8 x i32>* %a) {
 ; computation was still too complex when LSV was called.
 declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #0
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #0
-; CHECK-LABEL foo_complex
+; CHECK-LABEL: foo_complex
 define void @foo_complex(i8* nocapture readonly align 16 dereferenceable(134217728) %alloc0) {
   %targ0.1.typed = bitcast i8* %alloc0 to [1024 x [131072 x i8]]*
   %t0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x(), !range !1

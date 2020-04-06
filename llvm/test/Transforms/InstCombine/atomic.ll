@@ -314,7 +314,7 @@ define void @pr27490b(i8** %p1, i8** %p2) {
 ;; not representable in the IR.  This was pr29121.  The right long term
 ;; solution is to extend the IR to handle this case.
 define <2 x float> @no_atomic_vector_load(i64* %p) {
-; CHECK-LABEL @no_atomic_vector_load
+; CHECK-LABEL: @no_atomic_vector_load
 ; CHECK: load atomic i64, i64* %p unordered, align 8
   %load = load atomic i64, i64* %p unordered, align 8
   %.cast = bitcast i64 %load to <2 x float>
