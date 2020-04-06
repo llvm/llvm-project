@@ -712,6 +712,12 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, Value *V) {
   O << DOT::EscapeString(IngredientString);
 }
 
+void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << " +\n"
+    << Indent << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient) << "\\l\"";
+}
+
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << " +\n" << Indent << "\"WIDEN\\l\"";
