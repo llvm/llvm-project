@@ -62,8 +62,8 @@ struct S baz(int i, volatile int *j) {
     // O1-NEWPM: %[[TMP3:.*]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1-NEWPM: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[P]])
     //
-    // O1-LEGACY: call void @foo_int(%struct.S* sret %[[TMP1_ALLOCA]],
-    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret %[[TMP1_ALLOCA]],
+    // O1-LEGACY: call void @foo_int(%struct.S* sret align 4 %[[TMP1_ALLOCA]],
+    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
     // O1-LEGACY: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
@@ -71,8 +71,8 @@ struct S baz(int i, volatile int *j) {
     // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1-LEGACY: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
     // O1-NEWPM: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP3]])
-    // O1-LEGACY: call void @foo_int(%struct.S* sret %[[TMP2_ALLOCA]],
-    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret %[[TMP2_ALLOCA]],
+    // O1-LEGACY: call void @foo_int(%struct.S* sret align 4 %[[TMP2_ALLOCA]],
+    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1-LEGACY: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])

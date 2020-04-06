@@ -168,8 +168,8 @@ typedef void (Derived0::*MethodTy1)();
 // Check that the sret pointer passed to the caller is forwarded to the musttail
 // call.
 
-// CHECK: define linkonce_odr hidden void @_ZN8Derived04sretEv_vfpthunk_(%[[STRUCT_A1]]* noalias sret %[[AGG_RESULT:.*]], %[[STRUCT_DERIVED0]]* %{{.*}})
-// CHECK: musttail call void %{{.*}}(%[[STRUCT_A1]]* sret %[[AGG_RESULT]], %[[STRUCT_DERIVED0]]* %{{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK: define linkonce_odr hidden void @_ZN8Derived04sretEv_vfpthunk_(%[[STRUCT_A1]]* noalias sret align 4 %[[AGG_RESULT:.*]], %[[STRUCT_DERIVED0]]* %{{.*}})
+// CHECK: musttail call void %{{.*}}(%[[STRUCT_A1]]* sret align 4 %[[AGG_RESULT]], %[[STRUCT_DERIVED0]]* %{{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
 // CHECK-NEXT: ret void
 
 // Check that the thunk function doesn't destruct the trivial_abi argument.
