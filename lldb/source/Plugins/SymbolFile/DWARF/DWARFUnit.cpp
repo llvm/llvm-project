@@ -480,7 +480,7 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   const DWARFDataExtractor &data =
       GetVersion() >= 5 ? Ctx.getOrLoadLocListsData() : Ctx.getOrLoadLocData();
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
-    if (const auto *contribution = entry->getContribution(llvm::DW_SECT_LOC))
+    if (const auto *contribution = entry->getContribution(llvm::DW_SECT_EXT_LOC))
       return DWARFDataExtractor(data, contribution->Offset,
                                 contribution->Length);
     return DWARFDataExtractor();

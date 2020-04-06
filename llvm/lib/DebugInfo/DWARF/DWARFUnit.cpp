@@ -183,7 +183,7 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
     // data based on the index entries.
     StringRef Data = LocSection->Data;
     if (auto *IndexEntry = Header.getIndexEntry())
-      if (const auto *C = IndexEntry->getContribution(DW_SECT_LOC))
+      if (const auto *C = IndexEntry->getContribution(DW_SECT_EXT_LOC))
         Data = Data.substr(C->Offset, C->Length);
 
     DWARFDataExtractor DWARFData =
@@ -276,7 +276,7 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     FormParams.AddrSize = debug_info.getU8(offset_ptr, &Err);
     // Fake a unit type based on the section type.  This isn't perfect,
     // but distinguishing compile and type units is generally enough.
-    if (SectionKind == DW_SECT_TYPES)
+    if (SectionKind == DW_SECT_EXT_TYPES)
       UnitType = DW_UT_type;
     else
       UnitType = DW_UT_compile;
@@ -759,7 +759,7 @@ const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
                                               DWARFSectionKind Kind) {
   if (Kind == DW_SECT_INFO)
     return Context.getCUIndex();
-  assert(Kind == DW_SECT_TYPES);
+  assert(Kind == DW_SECT_EXT_TYPES);
   return Context.getTUIndex();
 }
 
