@@ -193,34 +193,14 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_mov_b32 s7, -1
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s2
-; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[4:5], 0
-; CHECK-NEXT:    s_cbranch_vccnz BB1_2
+; CHECK-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[4:5], 0
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[6:7], 0, 1
+; CHECK-NEXT:    s_xor_b64 vcc, s[4:5], s[6:7]
+; CHECK-NEXT:    s_mov_b32 s4, 1
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    s_cbranch_vccz BB1_2
 ; CHECK-NEXT:  ; %bb.1:
-; CHECK-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f800000, v0
-; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; CHECK-NEXT:    v_mul_lo_u32 v1, v0, s2
-; CHECK-NEXT:    v_mul_hi_u32 v2, v0, s2
-; CHECK-NEXT:    v_sub_i32_e32 v3, vcc, 0, v1
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v1, v1, v0
-; CHECK-NEXT:    v_add_i32_e64 v2, s[4:5], v0, v1
-; CHECK-NEXT:    v_sub_i32_e64 v0, s[4:5], v0, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v0, v0, s0
-; CHECK-NEXT:    v_mul_lo_u32 v1, v0, s2
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
-; CHECK-NEXT:    v_subrev_i32_e32 v3, vcc, 1, v0
-; CHECK-NEXT:    v_sub_i32_e32 v4, vcc, s0, v1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, s0, v1
-; CHECK-NEXT:    v_cmp_le_u32_e64 s[0:1], s2, v4
-; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[0:1]
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
-; CHECK-NEXT:    s_branch BB1_3
-; CHECK-NEXT:  BB1_2:
+; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s3
 ; CHECK-NEXT:    s_sub_u32 s6, 0, s2
@@ -328,11 +308,11 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v2, v7
 ; CHECK-NEXT:    v_sub_i32_e32 v5, vcc, s0, v5
 ; CHECK-NEXT:    v_subb_u32_e64 v3, s[4:5], v3, v2, vcc
-; CHECK-NEXT:    v_sub_i32_e64 v2, s[0:1], s1, v2
-; CHECK-NEXT:    v_cmp_le_u32_e64 s[0:1], s2, v5
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[0:1]
-; CHECK-NEXT:    v_cmp_le_u32_e64 s[0:1], s3, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[0:1]
+; CHECK-NEXT:    v_sub_i32_e64 v2, s[4:5], s1, v2
+; CHECK-NEXT:    v_cmp_le_u32_e64 s[4:5], s2, v5
+; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[4:5]
+; CHECK-NEXT:    v_cmp_le_u32_e64 s[4:5], s3, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[4:5]
 ; CHECK-NEXT:    v_subb_u32_e32 v1, vcc, v2, v1, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s3, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v7, v6, vcc
@@ -348,7 +328,36 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v8, v4, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CHECK-NEXT:  BB1_3:
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:  BB1_2: ; %Flow
+; CHECK-NEXT:    s_and_b32 s1, s4, 1
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc0 BB1_4
+; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s2
+; CHECK-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f800000, v0
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; CHECK-NEXT:    v_mul_lo_u32 v1, v0, s2
+; CHECK-NEXT:    v_mul_hi_u32 v2, v0, s2
+; CHECK-NEXT:    v_sub_i32_e32 v3, vcc, 0, v1
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; CHECK-NEXT:    v_mul_hi_u32 v1, v1, v0
+; CHECK-NEXT:    v_add_i32_e64 v2, s[4:5], v0, v1
+; CHECK-NEXT:    v_sub_i32_e64 v0, s[4:5], v0, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; CHECK-NEXT:    v_mul_hi_u32 v0, v0, s0
+; CHECK-NEXT:    v_mul_lo_u32 v1, v0, s2
+; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; CHECK-NEXT:    v_subrev_i32_e32 v3, vcc, 1, v0
+; CHECK-NEXT:    v_sub_i32_e32 v4, vcc, s0, v1
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, s0, v1
+; CHECK-NEXT:    v_cmp_le_u32_e64 s[0:1], s2, v4
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[0:1]
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
+; CHECK-NEXT:  BB1_4:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    ; return to shader part epilog
