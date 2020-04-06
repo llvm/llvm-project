@@ -3740,6 +3740,12 @@ bool TargetProperties::GetEnableAutoApplyFixIts() const {
       nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+uint64_t TargetProperties::GetNumberOfRetriesWithFixits() const {
+  const uint32_t idx = ePropertyRetriesWithFixIts;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
 bool TargetProperties::GetEnableNotifyAboutFixIts() const {
   const uint32_t idx = ePropertyNotifyAboutFixIts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
