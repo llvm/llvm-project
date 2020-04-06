@@ -1,4 +1,4 @@
-//===- tools/dsymutil/DwarfStreamer.cpp - Dwarf Streamer ------------------===//
+//===- DwarfStreamer.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,24 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DwarfStreamer.h"
-#include "LinkUtils.h"
-#include "MachOUtils.h"
+#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
 
 static mc::RegisterMCTargetOptionsFlags MOF;
-
-namespace dsymutil {
 
 bool DwarfStreamer::init(Triple TheTriple) {
   std::string ErrorStr;
@@ -34,18 +38,19 @@ bool DwarfStreamer::init(Triple TheTriple) {
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TripleName, TheTriple, ErrorStr);
   if (!TheTarget)
-    return error(ErrorStr, Context);
+    return error(ErrorStr, Context), false;
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
   MRI.reset(TheTarget->createMCRegInfo(TripleName));
   if (!MRI)
-    return error(Twine("no register info for target ") + TripleName, Context);
+    return error(Twine("no register info for target ") + TripleName, Context),
+           false;
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
-    return error("no asm info for target " + TripleName, Context);
+    return error("no asm info for target " + TripleName, Context), false;
 
   MOFI.reset(new MCObjectFileInfo);
   MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
@@ -53,21 +58,21 @@ bool DwarfStreamer::init(Triple TheTriple) {
 
   MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
   if (!MSTI)
-    return error("no subtarget info for target " + TripleName, Context);
+    return error("no subtarget info for target " + TripleName, Context), false;
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
-    return error("no asm backend for target " + TripleName, Context);
+    return error("no asm backend for target " + TripleName, Context), false;
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    return error("no instr info info for target " + TripleName, Context);
+    return error("no instr info info for target " + TripleName, Context), false;
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
   if (!MCE)
-    return error("no code emitter for target " + TripleName, Context);
+    return error("no code emitter for target " + TripleName, Context), false;
 
-  switch (Options.FileType) {
+  switch (OutFileType) {
   case OutputFileType::Assembly: {
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
@@ -88,17 +93,17 @@ bool DwarfStreamer::init(Triple TheTriple) {
   }
 
   if (!MS)
-    return error("no object streamer for target " + TripleName, Context);
+    return error("no object streamer for target " + TripleName, Context), false;
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
   TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
                                           None));
   if (!TM)
-    return error("no target machine for target " + TripleName, Context);
+    return error("no target machine for target " + TripleName, Context), false;
 
   Asm.reset(TheTarget->createAsmPrinter(*TM, std::unique_ptr<MCStreamer>(MS)));
   if (!Asm)
-    return error("no asm printer for target " + TripleName, Context);
+    return error("no asm printer for target " + TripleName, Context), false;
 
   RangesSectionSize = 0;
   LocSectionSize = 0;
@@ -109,15 +114,7 @@ bool DwarfStreamer::init(Triple TheTriple) {
   return true;
 }
 
-bool DwarfStreamer::finish(const DebugMap &DM, SymbolMapTranslator &T) {
-  bool Result = true;
-  if (DM.getTriple().isOSDarwin() && !DM.getBinaryPath().empty() &&
-      Options.FileType == OutputFileType::Object)
-    Result = MachOUtils::generateDsymCompanion(DM, T, *MS, OutFile);
-  else
-    MS->Finish();
-  return Result;
-}
+void DwarfStreamer::finish() { MS->Finish(); }
 
 void DwarfStreamer::switchToDebugInfoSection(unsigned DwarfVersion) {
   MS->SwitchSection(MOFI->getDwarfInfoSection());
@@ -660,7 +657,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
     if (Dir[0] == 0)
       break;
 
-    StringRef Translated = Options.Translator(Dir);
+    StringRef Translated = Translator(Dir);
     Asm->OutStreamer->emitBytes(Translated);
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
@@ -672,7 +669,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
     if (File[0] == 0)
       break;
 
-    StringRef Translated = Options.Translator(File);
+    StringRef Translated = Translator(File);
     Asm->OutStreamer->emitBytes(Translated);
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
@@ -740,7 +737,7 @@ void DwarfStreamer::emitPubSectionForUnit(
 
 /// Emit .debug_pubnames for \p Unit.
 void DwarfStreamer::emitPubNamesForUnit(const CompileUnit &Unit) {
-  if (Options.Minimize)
+  if (Minimize)
     return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubNamesSection(),
                         "names", Unit, Unit.getPubnames());
@@ -748,7 +745,7 @@ void DwarfStreamer::emitPubNamesForUnit(const CompileUnit &Unit) {
 
 /// Emit .debug_pubtypes for \p Unit.
 void DwarfStreamer::emitPubTypesForUnit(const CompileUnit &Unit) {
-  if (Options.Minimize)
+  if (Minimize)
     return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubTypesSection(),
                         "types", Unit, Unit.getPubtypes());
@@ -776,5 +773,4 @@ void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
   FrameSectionSize += FDEBytes.size() + 8 + AddrSize;
 }
 
-} // namespace dsymutil
 } // namespace llvm
