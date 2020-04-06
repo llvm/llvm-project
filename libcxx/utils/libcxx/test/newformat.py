@@ -41,12 +41,13 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         %{cxx}           - A command that can be used to invoke the compiler
         %{compile_flags} - Flags to use when compiling a test case
         %{link_flags}    - Flags to use when linking a test case
+        %{flags}         - Flags to use either when compiling or linking a test case
         %{exec}          - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
-    file), both %{compile_flags} and %{link_flags} will be used in the same
-    command line. In other words, the test format doesn't perform separate
-    compilation and linking steps in this case.
+    file), all three of ${flags}, %{compile_flags} and %{link_flags} will be used
+    in the same command line. In other words, the test format doesn't perform
+    separate compilation and linking steps in this case.
 
 
     In addition to everything that's supported in Lit ShTests, this test format
@@ -103,7 +104,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     def _checkSubstitutions(self, substitutions):
         substitutions = [s for (s, _) in substitutions]
-        for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{exec}']:
+        for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
             assert s in substitutions, "Required substitution {} was not provided".format(s)
 
     # Determine whether -verify should be used for a given test. We use -verify
@@ -135,28 +136,28 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.pass.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} -fsyntax-only"
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} -fsyntax-only " + VERIFY_FLAGS
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only " + VERIFY_FLAGS
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.link.pass.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} %{link_flags} -o %t.exe"
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.link.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} -c -o %t.o",
-                "%dbg(LINKED WITH) ! %{cxx} %t.o %{link_flags} -o %t.exe"
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
+                "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.run.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} %{link_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} ! %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
@@ -164,7 +165,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # suffixes above too.
         elif filename.endswith('.pass.cpp') or filename.endswith('.pass.mm'):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} %{link_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
@@ -173,11 +174,11 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         elif filename.endswith('.fail.cpp') or filename.endswith('.fail.mm'):
             if self._useVerify(test, litConfig):
                 steps = [
-                    "%dbg(COMPILED WITH) %{cxx} %s %{compile_flags} -fsyntax-only " + VERIFY_FLAGS
+                    "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only " + VERIFY_FLAGS
                 ]
             else:
                 steps = [
-                    "%dbg(COMPILED WITH) ! %{cxx} %s %{compile_flags} -fsyntax-only"
+                    "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
                 ]
             return self._executeShTest(test, litConfig, steps)
         else:
