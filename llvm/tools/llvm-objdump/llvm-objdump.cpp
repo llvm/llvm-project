@@ -17,6 +17,7 @@
 
 #include "llvm-objdump.h"
 #include "COFFDump.h"
+#include "XCOFFDump.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -46,7 +47,6 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -145,6 +145,12 @@ static cl::alias DisassembleAllShort("D",
                                      cl::desc("Alias for --disassemble-all"),
                                      cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(DisassembleAll));
+
+cl::opt<bool>
+    SymbolDescription("symbol-description",
+                      cl::desc("Add symbol description for disassembly. This "
+                               "option is for XCOFF files only"),
+                      cl::init(false), cl::cat(ObjdumpCat));
 
 static cl::list<std::string>
     DisassembleSymbols("disassemble-symbols", cl::CommaSeparated,
@@ -1158,6 +1164,34 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
   }
 }
 
+SymbolInfoTy createSymbolInfo(const ObjectFile *Obj, const SymbolRef &Symbol) {
+  const StringRef FileName = Obj->getFileName();
+  const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
+  const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
+
+  if (Obj->isXCOFF() && SymbolDescription) {
+    const auto *XCOFFObj = cast<XCOFFObjectFile>(Obj);
+    DataRefImpl SymbolDRI = Symbol.getRawDataRefImpl();
+
+    const uint32_t SymbolIndex = XCOFFObj->getSymbolIndex(SymbolDRI.p);
+    Optional<XCOFF::StorageMappingClass> Smc =
+        getXCOFFSymbolCsectSMC(XCOFFObj, Symbol);
+    return SymbolInfoTy(Addr, Name, Smc, SymbolIndex,
+                        isLabel(XCOFFObj, Symbol));
+  } else
+    return SymbolInfoTy(Addr, Name,
+                        Obj->isELF() ? getElfSymbolType(Obj, Symbol)
+                                     : (uint8_t)ELF::STT_NOTYPE);
+}
+
+SymbolInfoTy createDummySymbolInfo(const ObjectFile *Obj, const uint64_t Addr,
+                                   StringRef &Name, uint8_t Type) {
+  if (Obj->isXCOFF() && SymbolDescription)
+    return SymbolInfoTy(Addr, Name, None, None, false);
+  else
+    return SymbolInfoTy(Addr, Name, Type);
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
@@ -1184,20 +1218,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   const StringRef FileName = Obj->getFileName();
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj);
   for (const SymbolRef &Symbol : Obj->symbols()) {
-    uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName);
-
     StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    if (Name.empty())
+    if (Name.empty() && !(Obj->isXCOFF() && SymbolDescription))
       continue;
 
-    uint8_t SymbolType = ELF::STT_NOTYPE;
-    if (Obj->isELF()) {
-      SymbolType = getElfSymbolType(Obj, Symbol);
-      if (SymbolType == ELF::STT_SECTION)
-        continue;
-    }
+    if (Obj->isELF() && getElfSymbolType(Obj, Symbol) == ELF::STT_SECTION)
+      continue;
 
-    // Don't ask a Mach-O STAB symbol for its section unless you know that 
+    // Don't ask a Mach-O STAB symbol for its section unless you know that
     // STAB symbol's section field refers to a valid section index. Otherwise
     // the symbol may error trying to load a section that does not exist.
     if (MachO) {
@@ -1211,10 +1239,11 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
     if (SecI != Obj->section_end())
-      AllSymbols[*SecI].emplace_back(Address, Name, SymbolType);
+      AllSymbols[*SecI].push_back(createSymbolInfo(Obj, Symbol));
     else
-      AbsoluteSymbols.emplace_back(Address, Name, SymbolType);
+      AbsoluteSymbols.push_back(createSymbolInfo(Obj, Symbol));
   }
+
   if (AllSymbols.empty() && Obj->isELF())
     addDynamicElfSymbols(Obj, AllSymbols);
 
@@ -1316,10 +1345,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     StringRef SectionName = unwrapOrError(Section.getName(), Obj->getFileName());
     // If the section has no symbol at the start, just insert a dummy one.
     if (Symbols.empty() || Symbols[0].Addr != 0) {
-      Symbols.insert(
-          Symbols.begin(),
-           SymbolInfoTy(SectionAddr, SectionName,
-                          Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT));
+      Symbols.insert(Symbols.begin(),
+                     createDummySymbolInfo(Obj, SectionAddr, SectionName,
+                                           Section.isText() ? ELF::STT_FUNC
+                                                            : ELF::STT_OBJECT));
     }
 
     SmallString<40> Comments;
@@ -1394,8 +1423,11 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       if (!NoLeadingAddr)
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
-
-      outs() << '<' << SymbolName << ">:\n";
+      if (Obj->isXCOFF() && SymbolDescription) {
+        printXCOFFSymbolDescription(Symbols[SI], SymbolName);
+        outs() << ":\n";
+      } else
+        outs() << '<' << SymbolName << ">:\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
