@@ -14,7 +14,10 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB0_1: # %normal
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .Ltmp0: # Address of block that was removed by CodeGen
+; CHECK-NEXT:  .Ltmp0: # Block address taken
+; CHECK-NEXT:  .LBB0_2: # %abnormal
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
 entry:
   %add = add nsw i32 %x, 4
   %ret = callbr i32 asm "xorl $1, $0; jmp ${2:l}", "=r,r,X,~{dirflag},~{fpsr},~{flags}"(i32 %add, i8* blockaddress(@test1, %abnormal))
@@ -47,25 +50,29 @@ define i32 @test2(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:    testl %edi, %esi
 ; CHECK-NEXT:    jne .Ltmp1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:  .LBB1_3: # %if.else
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    testl %esi, %edi
-; CHECK-NEXT:    testl %esi, %edi
-; CHECK-NEXT:    jne .Ltmp2
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:  .LBB1_2: # %if.then
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:  .Ltmp2: # Block address taken
-; CHECK-NEXT:  # %bb.5: # %return
+; CHECK-NEXT:  .LBB1_6: # %return
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .Ltmp1: # Address of block that was removed by CodeGen
+; CHECK-NEXT:  .LBB1_3: # %if.else
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    jne .Ltmp2
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  .LBB1_4: # %if.else
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .Ltmp1: # Block address taken
+; CHECK-NEXT:  .LBB1_5: # %label_true
+; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:    jmp .LBB1_6
 entry:
   %cmp = icmp slt i32 %out1, %out2
   br i1 %cmp, label %if.then, label %if.else
@@ -109,7 +116,7 @@ define i32 @test3(i1 %cmp) {
 ; CHECK-NEXT:    .short %esi
 ; CHECK-NEXT:    .short %edi
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB2_2: # %true
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    jmp .LBB2_5
 ; CHECK-NEXT:  .LBB2_3: # %false
@@ -117,7 +124,7 @@ define i32 @test3(i1 %cmp) {
 ; CHECK-NEXT:    .short %eax
 ; CHECK-NEXT:    .short %edx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_4: # %false
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:  .LBB2_5: # %asm.fallthrough
 ; CHECK-NEXT:    popl %esi
@@ -125,7 +132,11 @@ define i32 @test3(i1 %cmp) {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .Ltmp3: # Address of block that was removed by CodeGen
+; CHECK-NEXT:  .Ltmp3: # Block address taken
+; CHECK-NEXT:  .LBB2_6: # %indirect
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    jmp .LBB2_5
 entry:
   br i1 %cmp, label %true, label %false
 
@@ -161,13 +172,16 @@ define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:    testl %ecx, %edx
 ; CHECK-NEXT:    jne .Ltmp5
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB3_2: # %asm.fallthrough2
+; CHECK-NEXT:  .LBB3_2: # %asm.fallthrough
 ; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:  .Ltmp5: # Block address taken
-; CHECK-NEXT:  # %bb.3: # %return
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .Ltmp4: # Address of block that was removed by CodeGen
+; CHECK-NEXT:  .Ltmp4: # Block address taken
+; CHECK-NEXT:  .LBB3_3: # %label_true
+; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:  .Ltmp5: # Block address taken
+; CHECK-NEXT:  .LBB3_4: # %return
+; CHECK-NEXT:    retl
 entry:
   %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i8* blockaddress(@test4, %label_true), i8* blockaddress(@test4, %return))
           to label %asm.fallthrough [label %label_true, label %return]
