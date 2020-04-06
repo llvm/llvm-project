@@ -79,8 +79,8 @@ llvm::Optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::OpenMPClauseKind>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
-#define OPENMP_CLAUSE(TextualSpelling, Class) "OMPC_" #TextualSpelling,
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) #Enum,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   };
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
