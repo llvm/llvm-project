@@ -120,10 +120,6 @@ unsigned GlobalValue::getAddressSpace() const {
   return PtrTy->getAddressSpace();
 }
 
-void GlobalObject::setAlignment(unsigned Align) {
-  setAlignment(MaybeAlign(Align));
-}
-
 void GlobalObject::setAlignment(MaybeAlign Align) {
   assert((!Align || Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");

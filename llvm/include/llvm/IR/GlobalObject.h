@@ -82,8 +82,6 @@ public:
     return decodeMaybeAlign(AlignmentData);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(void setAlignment(unsigned Align),
-                            "Please use `void setAlignment(MaybeAlign Align)`");
   void setAlignment(MaybeAlign Align);
 
   unsigned getGlobalObjectSubClassData() const {
