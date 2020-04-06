@@ -78,11 +78,10 @@ using PreambleParsedCallback =
 /// building the preamble. Note that if the old preamble was reused, no AST is
 /// built and, therefore, the callback will not be executed.
 std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation &CI,
+buildPreamble(PathRef FileName, CompilerInvocation CI,
               std::shared_ptr<const PreambleData> OldPreamble,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback);
-
 
 } // namespace clangd
 } // namespace clang
