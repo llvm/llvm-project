@@ -259,7 +259,7 @@ static void addAllTypesFromDWP(
       C.Length = I->Length;
       ++I;
     }
-    unsigned TypesIndex = getContributionIndex(DW_SECT_TYPES);
+    unsigned TypesIndex = getContributionIndex(DW_SECT_EXT_TYPES);
     auto &C = Entry.Contributions[TypesIndex];
     Out.emitBytes(Types.substr(
         C.Offset - TUEntry.Contributions[TypesIndex].Offset, C.Length));
@@ -281,7 +281,7 @@ static void addAllTypes(MCStreamer &Out,
       UnitIndexEntry Entry = CUEntry;
       // Zero out the debug_info contribution
       Entry.Contributions[0] = {};
-      auto &C = Entry.Contributions[getContributionIndex(DW_SECT_TYPES)];
+      auto &C = Entry.Contributions[getContributionIndex(DW_SECT_EXT_TYPES)];
       C.Offset = TypesOffset;
       auto PrevOffset = Offset;
       // Length of the unit, including the 4 byte length field.
@@ -452,7 +452,7 @@ static Error handleSection(
 
   if (DWARFSectionKind Kind = SectionPair->second.second) {
     auto Index = getContributionIndex(Kind);
-    if (Kind != DW_SECT_TYPES) {
+    if (Kind != DW_SECT_EXT_TYPES) {
       CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
       ContributionOffsets[Index] +=
           (CurEntry.Contributions[Index].Length = Contents.size());
@@ -536,10 +536,10 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   MCSection *const TUIndexSection = MCOFI.getDwarfTUIndexSection();
   const StringMap<std::pair<MCSection *, DWARFSectionKind>> KnownSections = {
       {"debug_info.dwo", {MCOFI.getDwarfInfoDWOSection(), DW_SECT_INFO}},
-      {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_TYPES}},
+      {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_EXT_TYPES}},
       {"debug_str_offsets.dwo", {StrOffsetSection, DW_SECT_STR_OFFSETS}},
       {"debug_str.dwo", {StrSection, static_cast<DWARFSectionKind>(0)}},
-      {"debug_loc.dwo", {MCOFI.getDwarfLocDWOSection(), DW_SECT_LOC}},
+      {"debug_loc.dwo", {MCOFI.getDwarfLocDWOSection(), DW_SECT_EXT_LOC}},
       {"debug_line.dwo", {MCOFI.getDwarfLineDWOSection(), DW_SECT_LINE}},
       {"debug_abbrev.dwo", {MCOFI.getDwarfAbbrevDWOSection(), DW_SECT_ABBREV}},
       {"debug_cu_index", {CUIndexSection, static_cast<DWARFSectionKind>(0)}},
@@ -603,7 +603,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       P.first->second.DWOName = ID.DWOName;
       addAllTypes(Out, TypeIndexEntries, TypesSection, CurTypesSection,
                   CurEntry,
-                  ContributionOffsets[getContributionIndex(DW_SECT_TYPES)]);
+                  ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES)]);
       continue;
     }
 
@@ -642,13 +642,14 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     if (!CurTypesSection.empty()) {
       if (CurTypesSection.size() != 1)
         return make_error<DWPError>("multiple type unit sections in .dwp file");
-      DWARFUnitIndex TUIndex(DW_SECT_TYPES);
+      DWARFUnitIndex TUIndex(DW_SECT_EXT_TYPES);
       DataExtractor TUIndexData(CurTUIndexSection, Obj.isLittleEndian(), 0);
       if (!TUIndex.parse(TUIndexData))
         return make_error<DWPError>("failed to parse tu_index");
       addAllTypesFromDWP(
           Out, TypeIndexEntries, TUIndex, TypesSection, CurTypesSection.front(),
-          CurEntry, ContributionOffsets[getContributionIndex(DW_SECT_TYPES)]);
+          CurEntry,
+          ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES)]);
     }
   }
 
@@ -659,7 +660,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
              TypeIndexEntries);
 
   // Lie about the type contribution
-  ContributionOffsets[getContributionIndex(DW_SECT_TYPES)] = 0;
+  ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES)] = 0;
   // Unlie about the info contribution
   ContributionOffsets[0] = 1;
 

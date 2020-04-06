@@ -763,7 +763,7 @@ const DWARFUnitIndex &DWARFContext::getTUIndex() {
 
   DataExtractor TUIndexData(DObj->getTUIndexSection(), isLittleEndian(), 0);
 
-  TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_TYPES);
+  TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_EXT_TYPES);
   TUIndex->parse(TUIndexData);
   return *TUIndex;
 }
@@ -959,7 +959,7 @@ void DWARFContext::parseNormalUnits() {
   });
   NormalUnits.finishedInfoUnits();
   DObj->forEachTypesSections([&](const DWARFSection &S) {
-    NormalUnits.addUnitsForSection(*this, S, DW_SECT_TYPES);
+    NormalUnits.addUnitsForSection(*this, S, DW_SECT_EXT_TYPES);
   });
 }
 
@@ -971,7 +971,7 @@ void DWARFContext::parseDWOUnits(bool Lazy) {
   });
   DWOUnits.finishedInfoUnits();
   DObj->forEachTypesDWOSections([&](const DWARFSection &S) {
-    DWOUnits.addUnitsForDWOSection(*this, S, DW_SECT_TYPES, Lazy);
+    DWOUnits.addUnitsForDWOSection(*this, S, DW_SECT_EXT_TYPES, Lazy);
   });
 }
 
