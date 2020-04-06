@@ -47,6 +47,7 @@ catclose U
 catgets U
 catopen U
 ceil U
+ceilf U
 clock_gettime U
 cfgetospeed U
 dl_iterate_phdr U
