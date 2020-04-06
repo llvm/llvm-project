@@ -38,8 +38,8 @@
 /// %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0 // Do the IF block of the branch
 ///
 /// label0:
-/// %sgpr0 = S_OR_SAVEEXEC_B64 %exec   // Restore the exec mask for the Then block
-/// %exec = S_XOR_B64 %sgpr0, %exec    // Clear live bits from saved exec mask
+/// %sgpr0 = S_OR_SAVEEXEC_B64 %sgpr0  // Restore the exec mask for the Then block
+/// %exec = S_XOR_B64 %sgpr0, %exec    // Update the exec mask
 /// S_BRANCH_EXECZ label1              // Use our branch optimization
 ///                                    // instruction again.
 /// %vgpr0 = V_SUB_F32 %vgpr0, %vgpr   // Do the THEN block
