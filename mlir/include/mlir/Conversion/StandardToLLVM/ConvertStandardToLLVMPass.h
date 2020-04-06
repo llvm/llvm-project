@@ -20,8 +20,9 @@ class OwningRewritePatternList;
 /// Collect a set of patterns to convert memory-related operations from the
 /// Standard dialect to the LLVM dialect, excluding non-memory-related
 /// operations and FuncOp.
-void populateStdToLLVMMemoryConversionPatters(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateStdToLLVMMemoryConversionPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlignedAlloc);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
@@ -40,13 +41,15 @@ void populateStdToLLVMDefaultFuncOpConversionPattern(
 /// LLVM.
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns,
-                                         bool emitCWrappers = false);
+                                         bool emitCWrappers = false,
+                                         bool useAlignedAlloc = false);
 
 /// Collect a set of patterns to convert from the Standard dialect to
 /// LLVM using the bare pointer calling convention for MemRef function
 /// arguments.
 void populateStdToLLVMBarePtrConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlignedAlloc);
 
 /// Value to pass as bitwidth for the index type when the converter is expected
 /// to derive the bitwidth from the LLVM data layout.
@@ -56,15 +59,18 @@ struct LowerToLLVMOptions {
   bool useBarePtrCallConv = false;
   bool emitCWrappers = false;
   unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout;
+  /// Use aligned_alloc for heap allocations.
+  bool useAlignedAlloc = false;
 };
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
-/// stdlib malloc/free is used for allocating memrefs allocated with std.alloc,
-/// while LLVM's alloca is used for those allocated with std.alloca.
-std::unique_ptr<OperationPass<ModuleOp>> createLowerToLLVMPass(
-    const LowerToLLVMOptions &options = {
-        /*useBarePtrCallConv=*/false, /*emitCWrappers=*/false,
-        /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout});
+/// stdlib malloc/free is used by default for allocating memrefs allocated with
+/// std.alloc, while LLVM's alloca is used for those allocated with std.alloca.
+std::unique_ptr<OperationPass<ModuleOp>>
+createLowerToLLVMPass(const LowerToLLVMOptions &options = {
+                          /*useBarePtrCallConv=*/false, /*emitCWrappers=*/false,
+                          /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout,
+                          /*useAlignedAlloc=*/false});
 
 } // namespace mlir
 
