@@ -15,7 +15,6 @@ def map_config(source_dir, site_config):
 
 # Variables configured at build time.
 llvm_source_root = "@LLVM_SOURCE_DIR@"
-llvm_obj_root = "@LLVM_BINARY_DIR@"
 
 # Make sure we can find the lit package.
 sys.path.insert(0, os.path.join(llvm_source_root, 'utils', 'lit'))
