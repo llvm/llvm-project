@@ -2944,6 +2944,16 @@ void SelectionDAGBuilder::UpdateSplitBlock(MachineBasicBlock *First,
   for (unsigned i = 0, e = SL->BitTestCases.size(); i != e; ++i)
     if (SL->BitTestCases[i].Parent == First)
       SL->BitTestCases[i].Parent = Last;
+
+  // SelectionDAGISel::FinishBasicBlock will add PHI operands for the
+  // successors of the fallthrough block. Here, we add PHI operands for the
+  // successors of the INLINEASM_BR block itself.
+  if (First->getFirstTerminator()->getOpcode() == TargetOpcode::INLINEASM_BR)
+    for (std::pair<MachineInstr *, unsigned> &pair : FuncInfo.PHINodesToUpdate)
+      if (First->isSuccessor(pair.first->getParent()))
+        MachineInstrBuilder(*First->getParent(), pair.first)
+            .addReg(pair.second)
+            .addMBB(First);
 }
 
 void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
