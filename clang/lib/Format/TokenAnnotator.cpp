@@ -1522,9 +1522,11 @@ private:
     if (Style.Language == FormatStyle::LK_JavaScript) {
       if (Current.is(tok::exclaim)) {
         if (Current.Previous &&
-            (Keywords.IsJavaScriptIdentifier(*Current.Previous) ||
-             Current.Previous->isOneOf(tok::kw_namespace, tok::r_paren,
-                                       tok::r_square, tok::r_brace) ||
+            (Keywords.IsJavaScriptIdentifier(
+                 *Current.Previous, /* AcceptIdentifierName= */ true) ||
+             Current.Previous->isOneOf(
+                 tok::kw_namespace, tok::r_paren, tok::r_square, tok::r_brace,
+                 Keywords.kw_type, Keywords.kw_get, Keywords.kw_set) ||
              Current.Previous->Tok.isLiteral())) {
           Current.Type = TT_JsNonNullAssertion;
           return;
@@ -3071,7 +3073,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     // In tagged template literals ("html`bar baz`"), there is no space between
     // the tag identifier and the template string.
-    if (Keywords.IsJavaScriptIdentifier(Left) && Right.is(TT_TemplateString))
+    if (Keywords.IsJavaScriptIdentifier(Left,
+                                        /* AcceptIdentifierName= */ false) &&
+        Right.is(TT_TemplateString))
       return false;
     if (Right.is(tok::star) &&
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
