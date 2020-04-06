@@ -4695,9 +4695,22 @@ SourceLocation OMPIteratorExpr::getSecondColonLoc(unsigned I) const {
                         static_cast<int>(RangeLocOffset::SecondColonLoc)];
 }
 
+void OMPIteratorExpr::setHelper(unsigned I, const OMPIteratorHelperData &D) {
+  getTrailingObjects<OMPIteratorHelperData>()[I] = D;
+}
+
+OMPIteratorHelperData &OMPIteratorExpr::getHelper(unsigned I) {
+  return getTrailingObjects<OMPIteratorHelperData>()[I];
+}
+
+const OMPIteratorHelperData &OMPIteratorExpr::getHelper(unsigned I) const {
+  return getTrailingObjects<OMPIteratorHelperData>()[I];
+}
+
 OMPIteratorExpr::OMPIteratorExpr(
     QualType ExprTy, SourceLocation IteratorKwLoc, SourceLocation L,
-    SourceLocation R, ArrayRef<OMPIteratorExpr::IteratorDefinition> Data)
+    SourceLocation R, ArrayRef<OMPIteratorExpr::IteratorDefinition> Data,
+    ArrayRef<OMPIteratorHelperData> Helpers)
     : Expr(OMPIteratorExprClass, ExprTy, VK_LValue, OK_Ordinary),
       IteratorKwLoc(IteratorKwLoc), LPLoc(L), RPLoc(R),
       NumIterators(Data.size()) {
@@ -4707,6 +4720,7 @@ OMPIteratorExpr::OMPIteratorExpr(
     setAssignmentLoc(I, D.AssignmentLoc);
     setIteratorRange(I, D.Range.Begin, D.ColonLoc, D.Range.End,
                      D.SecondColonLoc, D.Range.Step);
+    setHelper(I, Helpers[I]);
   }
   setDependence(computeDependence(this));
 }
@@ -4715,21 +4729,25 @@ OMPIteratorExpr *
 OMPIteratorExpr::Create(const ASTContext &Context, QualType T,
                         SourceLocation IteratorKwLoc, SourceLocation L,
                         SourceLocation R,
-                        ArrayRef<OMPIteratorExpr::IteratorDefinition> Data) {
+                        ArrayRef<OMPIteratorExpr::IteratorDefinition> Data,
+                        ArrayRef<OMPIteratorHelperData> Helpers) {
+  assert(Data.size() == Helpers.size() &&
+         "Data and helpers must have the same size.");
   void *Mem = Context.Allocate(
-      totalSizeToAlloc<Decl *, Expr *, SourceLocation>(
+      totalSizeToAlloc<Decl *, Expr *, SourceLocation, OMPIteratorHelperData>(
           Data.size(), Data.size() * static_cast<int>(RangeExprOffset::Total),
-          Data.size() * static_cast<int>(RangeLocOffset::Total)),
+          Data.size() * static_cast<int>(RangeLocOffset::Total),
+          Helpers.size()),
       alignof(OMPIteratorExpr));
-  return new (Mem) OMPIteratorExpr(T, IteratorKwLoc, L, R, Data);
+  return new (Mem) OMPIteratorExpr(T, IteratorKwLoc, L, R, Data, Helpers);
 }
 
 OMPIteratorExpr *OMPIteratorExpr::CreateEmpty(const ASTContext &Context,
                                               unsigned NumIterators) {
   void *Mem = Context.Allocate(
-      totalSizeToAlloc<Decl *, Expr *, SourceLocation>(
+      totalSizeToAlloc<Decl *, Expr *, SourceLocation, OMPIteratorHelperData>(
           NumIterators, NumIterators * static_cast<int>(RangeExprOffset::Total),
-          NumIterators * static_cast<int>(RangeLocOffset::Total)),
+          NumIterators * static_cast<int>(RangeLocOffset::Total), NumIterators),
       alignof(OMPIteratorExpr));
   return new (Mem) OMPIteratorExpr(EmptyShell(), NumIterators);
 }

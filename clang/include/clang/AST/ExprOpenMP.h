@@ -206,6 +206,21 @@ public:
   }
 };
 
+/// Helper expressions and declaration for OMPIteratorExpr class for each
+/// iteration space.
+struct OMPIteratorHelperData {
+  /// Internal normalized counter.
+  VarDecl *CounterVD = nullptr;
+  /// Normalized upper bound. Normalized loop iterates from 0 to Upper with
+  /// step 1.
+  Expr *Upper = nullptr;
+  /// Update expression for the originally specified iteration variable,
+  /// calculated as VD = Begin + CounterVD * Step;
+  Expr *Update = nullptr;
+  /// Updater for the internal counter: ++CounterVD;
+  Expr *CounterUpdate = nullptr;
+};
+
 /// OpenMP 5.0 [2.1.6 Iterators]
 /// Iterators are identifiers that expand to multiple values in the clause on
 /// which they appear.
@@ -233,7 +248,7 @@ public:
 class OMPIteratorExpr final
     : public Expr,
       private llvm::TrailingObjects<OMPIteratorExpr, Decl *, Expr *,
-                                    SourceLocation> {
+                                    SourceLocation, OMPIteratorHelperData> {
 public:
   /// Iterator range representation begin:end[:step].
   struct IteratorRange {
@@ -280,7 +295,8 @@ private:
 
   OMPIteratorExpr(QualType ExprTy, SourceLocation IteratorKwLoc,
                   SourceLocation L, SourceLocation R,
-                  ArrayRef<OMPIteratorExpr::IteratorDefinition> Data);
+                  ArrayRef<IteratorDefinition> Data,
+                  ArrayRef<OMPIteratorHelperData> Helpers);
 
   /// Construct an empty expression.
   explicit OMPIteratorExpr(EmptyShell Shell, unsigned NumIterators)
@@ -298,6 +314,9 @@ private:
   void setIteratorRange(unsigned I, Expr *Begin, SourceLocation ColonLoc,
                         Expr *End, SourceLocation SecondColonLoc, Expr *Step);
 
+  /// Sets helpers for the specified iteration space.
+  void setHelper(unsigned I, const OMPIteratorHelperData &D);
+
   unsigned numTrailingObjects(OverloadToken<Decl *>) const {
     return NumIterators;
   }
@@ -306,11 +325,16 @@ private:
     return NumIterators * static_cast<int>(RangeExprOffset::Total);
   }
 
+  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return NumIterators * static_cast<int>(RangeLocOffset::Total);
+  }
+
 public:
   static OMPIteratorExpr *Create(const ASTContext &Context, QualType T,
                                  SourceLocation IteratorKwLoc, SourceLocation L,
                                  SourceLocation R,
-                                 ArrayRef<IteratorDefinition> Data);
+                                 ArrayRef<IteratorDefinition> Data,
+                                 ArrayRef<OMPIteratorHelperData> Helpers);
 
   static OMPIteratorExpr *CreateEmpty(const ASTContext &Context,
                                       unsigned NumIterators);
@@ -349,6 +373,10 @@ public:
 
   /// Returns number of iterator definitions.
   unsigned numOfIterators() const { return NumIterators; }
+
+  /// Fetches helper data for the specified iteration space.
+  OMPIteratorHelperData &getHelper(unsigned I);
+  const OMPIteratorHelperData &getHelper(unsigned I) const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPIteratorExprClass;
