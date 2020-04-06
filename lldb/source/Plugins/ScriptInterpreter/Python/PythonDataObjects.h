@@ -36,7 +36,7 @@
 //   can never fail to assert instead, such as the creation of
 //   PythonString from a string literal.
 //
-// * Elimintate Reset(), and make all non-default constructors private.
+// * Eliminate Reset(), and make all non-default constructors private.
 //   Python objects should be created with Retain<> or Take<>, and they
 //   should be assigned with operator=
 //

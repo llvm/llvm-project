@@ -963,7 +963,7 @@ public:
   ///
   /// \param[in] set_platform
   ///     If \b true, then the platform will be adjusted if the currently
-  ///     selected platform is not compatible with the archicture being set.
+  ///     selected platform is not compatible with the architecture being set.
   ///     If \b false, then just the architecture will be set even if the
   ///     currently selected platform isn't compatible (in case it might be
   ///     manually set following this function call).

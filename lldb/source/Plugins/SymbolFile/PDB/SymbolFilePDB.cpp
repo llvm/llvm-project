@@ -1939,13 +1939,13 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     mangled.SetMangledName(ConstString(func_decorated_name));
 
     // For MSVC, format of C funciton's decorated name depends on calling
-    // conventon. Unfortunately none of the format is recognized by current
+    // convention. Unfortunately none of the format is recognized by current
     // LLDB. For example, `_purecall` is a __cdecl C function. From PDB,
     // `__purecall` is retrieved as both its decorated and undecorated name
     // (using PDBSymbolFunc::getUndecoratedName method). However `__purecall`
     // string is not treated as mangled in LLDB (neither `?` nor `_Z` prefix).
     // Mangled::GetDemangledName method will fail internally and caches an
-    // empty string as its undecorated name. So we will face a contradition
+    // empty string as its undecorated name. So we will face a contradiction
     // here for the same symbol:
     //   non-empty undecorated name from PDB
     //   empty undecorated name from LLDB

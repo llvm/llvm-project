@@ -7,7 +7,7 @@ the tests where None is passed to SB API which expects (const char *) in the
 C++ API counterpart.  Passing None should not crash lldb!
 
 There are three exceptions to the above general rules, though; API objects
-SBCommadnReturnObject, SBStream, and SBSymbolContextList, are all valid objects
+SBCommandReturnObject, SBStream, and SBSymbolContextList, are all valid objects
 after default construction.
 """
 

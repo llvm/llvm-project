@@ -330,7 +330,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         second_line = line_number(source, '// breakpoint 2')
         lines = [first_line, second_line]
 
-        # Set 2 breakoints so we can verify that "stopCommands" get run as the
+        # Set 2 breakpoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEquals(len(breakpoint_ids), len(lines),
@@ -369,7 +369,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')
         second_line = line_number(source, '// breakpoint 2')
-        # Set target binary and 2 breakoints
+        # Set target binary and 2 breakpoints
         # then we can varify the "launchCommands" get run
         # also we can verify that "stopCommands" get run as the
         # breakpoints get hit

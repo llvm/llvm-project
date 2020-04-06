@@ -477,7 +477,7 @@ Status ProcessMachCore::DoLoadCore() {
     // segments are usually meaningless, they may be just "read", because we're
     // dealing with kernel coredumps or early startup coredumps and the dumper
     // is grabbing pages of memory without knowing what they are.  If they
-    // aren't marked as "exeuctable", that can break the unwinder which will
+    // aren't marked as "executable", that can break the unwinder which will
     // check a pc value to see if it is in an executable segment and stop the
     // backtrace early if it is not ("executable" and "unknown" would both be
     // fine, but "not executable" will break the unwinder).

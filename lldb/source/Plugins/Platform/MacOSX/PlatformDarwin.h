@@ -106,7 +106,7 @@ public:
   static lldb_private::FileSpec GetXcodeContentsDirectory();
   static lldb_private::FileSpec GetXcodeDeveloperDirectory();
 
-  /// Return the toolchain directroy the current LLDB instance is located in.
+  /// Return the toolchain directory the current LLDB instance is located in.
   static lldb_private::FileSpec GetCurrentToolchainDirectory();
 
   /// Return the command line tools directory the current LLDB instance is
