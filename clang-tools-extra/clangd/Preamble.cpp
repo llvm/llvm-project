@@ -90,7 +90,6 @@ PreambleData::PreambleData(const ParseInputs &Inputs,
 
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
-              std::shared_ptr<const PreambleData> OldPreamble,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback) {
   // Note that we don't need to copy the input contents, preamble can live
@@ -99,23 +98,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
   auto Bounds =
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
-
-  if (OldPreamble &&
-      compileCommandsAreEqual(Inputs.CompileCommand,
-                              OldPreamble->CompileCommand) &&
-      OldPreamble->Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
-                                     Inputs.FS.get())) {
-    vlog("Reusing preamble version {0} for version {1} of {2}",
-         OldPreamble->Version, Inputs.Version, FileName);
-    return OldPreamble;
-  }
-  if (OldPreamble)
-    vlog("Rebuilding invalidated preamble for {0} version {1} "
-         "(previous was version {2})",
-         FileName, Inputs.Version, OldPreamble->Version);
-  else
-    vlog("Building first preamble for {0} version {1}", FileName,
-         Inputs.Version);
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
@@ -172,5 +154,17 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   }
 }
 
+bool isPreambleCompatible(const PreambleData &Preamble,
+                          const ParseInputs &Inputs, PathRef FileName,
+                          const CompilerInvocation &CI) {
+  auto ContentsBuffer =
+      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
+  auto Bounds =
+      ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
+  return compileCommandsAreEqual(Inputs.CompileCommand,
+                                 Preamble.CompileCommand) &&
+         Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
+                                    Inputs.FS.get());
+}
 } // namespace clangd
 } // namespace clang
