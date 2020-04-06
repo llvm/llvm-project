@@ -629,7 +629,12 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
 AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  Options.AllowOverlappingLoads = !ST->requiresStrictAlign();
+  if (ST->requiresStrictAlign()) {
+    // TODO: Add cost modeling for strict align. Misaligned loads expand to
+    // a bunch of instructions when strict align is enabled.
+    return Options;
+  }
+  Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   // TODO: Though vector loads usually perform well on AArch64, in some targets
