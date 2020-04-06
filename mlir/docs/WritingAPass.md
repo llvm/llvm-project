@@ -559,10 +559,10 @@ MyPass
 
 ## Declarative Pass Specification
 
-Some aspects of a Pass may be specified declaratively, in a form similarly to
-[operations](OpDefinitions.md). This specification simiplifies several
-mechanisms related to defining passes. It can be used for generating pass
-registration calls, defining boiler plate pass utilities, and generating pass
+Some aspects of a Pass may be specified declaratively, in a form similar to
+[operations](OpDefinitions.md). This specification simplifies several
+mechanisms used when defining passes. It can be used for generating pass
+registration calls, defining boilerplate pass utilities, and generating pass
 documentation.
 
 Consider the following pass specified in C++:
