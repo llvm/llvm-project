@@ -132,13 +132,13 @@ class LibcxxTestFormat(object):
 
         # Apply substitutions in FILE_DEPENDENCIES markup
         data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
-                                                       recursion_limit=10)
+                                                       recursion_limit=test.config.recursiveExpansionLimit)
         local_cwd = os.path.dirname(test.getSourcePath())
         data_files = [f if os.path.isabs(f) else os.path.join(local_cwd, f) for f in data_files]
         substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
 
         script = lit.TestRunner.applySubstitutions(script, substitutions,
-                                                   recursion_limit=10)
+                                                   recursion_limit=test.config.recursiveExpansionLimit)
 
         test_cxx = copy.deepcopy(self.cxx)
         if is_fail_test:
