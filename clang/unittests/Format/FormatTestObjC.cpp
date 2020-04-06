@@ -1420,6 +1420,10 @@ TEST_F(FormatTestObjC, BreakLineBeforeNestedBlockParam) {
                "*b, NSNumber *c) {\n"
                "  b = c;\n"
                "}]");
+  verifyFormat("[self.test1 t:self w:self callback:^(typeof(self) self, "
+               "NSNumber *u, NSNumber *v) {\n"
+               "  u = v;\n"
+               "} z:self]");
 
   Style.ColumnLimit = 80;
   verifyFormat(
