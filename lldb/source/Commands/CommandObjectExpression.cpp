@@ -385,6 +385,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
     auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
   options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
 
   if (m_command_options.top_level)
     options.SetExecutionPolicy(eExecutionPolicyTopLevel);

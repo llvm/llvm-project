@@ -55,6 +55,9 @@ let Definition = "target" in {
   def AutoApplyFixIts: Property<"auto-apply-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Automatically apply fix-it hints to expressions.">;
+  def RetriesWithFixIts: Property<"retries-with-fixits", "UInt64">,
+    DefaultUnsignedValue<1>,
+    Desc<"Maximum number of attempts to fix an expression with Fix-Its">;
   def NotifyAboutFixIts: Property<"notify-about-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Print the fixed expression text.">;
