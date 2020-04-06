@@ -112,9 +112,8 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
     ADD_FAILURE() << "Couldn't build CompilerInvocation";
     return {};
   }
-  auto Preamble =
-      buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
-                    /*InMemory=*/true, /*Callback=*/nullptr);
+  auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                                /*InMemory=*/true, /*Callback=*/nullptr);
   return codeComplete(testPath(TU.Filename), Inputs.CompileCommand,
                       Preamble.get(), TU.Code, Point, Inputs.FS, Opts);
 }
@@ -518,16 +517,16 @@ TEST(CompletionTest, Kinds) {
           AllOf(Named("complete_static_member"),
                 Kind(CompletionItemKind::Property))));
 
-   Results = completions(
+  Results = completions(
       R"cpp(
         enum Color {
           Red
         };
         Color u = ^
       )cpp");
-   EXPECT_THAT(Results.Completions,
-               Contains(
-                   AllOf(Named("Red"), Kind(CompletionItemKind::EnumMember))));
+  EXPECT_THAT(
+      Results.Completions,
+      Contains(AllOf(Named("Red"), Kind(CompletionItemKind::EnumMember))));
 }
 
 TEST(CompletionTest, NoDuplicates) {
@@ -1046,9 +1045,8 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     ADD_FAILURE() << "Couldn't build CompilerInvocation";
     return {};
   }
-  auto Preamble =
-      buildPreamble(testPath(TU.Filename), *CI, /*OldPreamble=*/nullptr, Inputs,
-                    /*InMemory=*/true, /*Callback=*/nullptr);
+  auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                                /*InMemory=*/true, /*Callback=*/nullptr);
   if (!Preamble) {
     ADD_FAILURE() << "Couldn't build Preamble";
     return {};
@@ -1712,7 +1710,7 @@ TEST(CompletionTest, FixItForArrowToDot) {
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
-  const char* Code =
+  const char *Code =
       R"cpp(
         class Auxilary {
          public:
@@ -1746,7 +1744,7 @@ TEST(CompletionTest, FixItForArrowToDot) {
 TEST(CompletionTest, FixItForDotToArrow) {
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
-  const char* Code =
+  const char *Code =
       R"cpp(
         class Auxilary {
          public:
@@ -1850,7 +1848,7 @@ TEST(CompletionTest, CompletionTokenRange) {
       R"cpp(
         #include "foo/abc/[[fo^o.h"]]
       )cpp",
-      };
+  };
   for (const auto &Text : TestCodes) {
     Annotations TestCode(Text);
     TU.Code = TestCode.code().str();
@@ -2222,10 +2220,9 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
   Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
-  EXPECT_THAT(
-      completions(TU, Test.point(), {Sym}).Completions,
-      UnorderedElementsAre(
-          AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
+  EXPECT_THAT(completions(TU, Test.point(), {Sym}).Completions,
+              UnorderedElementsAre(AllOf(Named("Func"), HasInclude("\"foo.h\""),
+                                         Not(InsertInclude()))));
 }
 
 TEST(CompletionTest, MergeMacrosFromIndexAndSema) {
