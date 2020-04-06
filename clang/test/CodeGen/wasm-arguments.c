@@ -34,8 +34,8 @@ typedef struct {
   int dd;
 } s3;
 // Structs should be returned sret and not simplified by the frontend.
-// WEBASSEMBLY32: define void @f3(%struct.s3* noalias sret %agg.result)
-// WEBASSEMBLY64: define void @f3(%struct.s3* noalias sret %agg.result)
+// WEBASSEMBLY32: define void @f3(%struct.s3* noalias sret align 4 %agg.result)
+// WEBASSEMBLY64: define void @f3(%struct.s3* noalias sret align 4 %agg.result)
 s3 f3(void) {
   s3 foo;
   return foo;

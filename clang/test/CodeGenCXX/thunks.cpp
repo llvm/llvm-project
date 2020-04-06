@@ -206,13 +206,13 @@ namespace Test6 {
   // CHECK-LABEL: define void @_ZThn16_N5Test66Thunks1fEv
 	// CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
-  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret}}
+  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret align 1}}
   // CHECK: ret void
   X Thunks::f() { return X(); }
 
-  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret %{{.*}})
+  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
   // WIN64-NOT: memcpy
-  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret %{{.*}})
+  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
 }
 
 namespace Test7 {

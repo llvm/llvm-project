@@ -126,7 +126,7 @@ void testIgnoredSmall() {
 void testParamLarge(Large a) noexcept {
 }
 
-// CHECK: define void @_Z15testReturnLargev(%[[STRUCT_LARGE:.*]]* noalias sret %[[AGG_RESULT:.*]])
+// CHECK: define void @_Z15testReturnLargev(%[[STRUCT_LARGE:.*]]* noalias sret align 8 %[[AGG_RESULT:.*]])
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }
@@ -153,7 +153,7 @@ void testCallLarge0() {
 
 // CHECK: define void @_Z14testCallLarge1v()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
-// CHECK: call void @_Z15testReturnLargev(%[[STRUCT_LARGE]]* sret %[[AGG_TMP]])
+// CHECK: call void @_Z15testReturnLargev(%[[STRUCT_LARGE]]* sret align 8 %[[AGG_TMP]])
 // CHECK: call void @_Z14testParamLarge5Large(%[[STRUCT_LARGE]]* %[[AGG_TMP]])
 // CHECK: ret void
 // CHECK: }
@@ -164,7 +164,7 @@ void testCallLarge1() {
 
 // CHECK: define void @_Z16testIgnoredLargev()
 // CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
-// CHECK: call void @_Z15testReturnLargev(%[[STRUCT_LARGE]]* sret %[[AGG_TMP_ENSURED]])
+// CHECK: call void @_Z15testReturnLargev(%[[STRUCT_LARGE]]* sret align 8 %[[AGG_TMP_ENSURED]])
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeD1Ev(%[[STRUCT_LARGE]]* %[[AGG_TMP_ENSURED]])
 // CHECK: ret void
 // CHECK: }
@@ -186,7 +186,7 @@ Trivial testReturnHasTrivial() {
   return t;
 }
 
-// CHECK: define void @_Z23testReturnHasNonTrivialv(%[[STRUCT_NONTRIVIAL:.*]]* noalias sret %[[AGG_RESULT:.*]])
+// CHECK: define void @_Z23testReturnHasNonTrivialv(%[[STRUCT_NONTRIVIAL:.*]]* noalias sret align 4 %[[AGG_RESULT:.*]])
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialC1Ev(%[[STRUCT_NONTRIVIAL]]* %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }
