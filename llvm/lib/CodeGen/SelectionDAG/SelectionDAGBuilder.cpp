@@ -9498,8 +9498,8 @@ static void tryToElideArgumentCopy(
   if (MFI.getObjectAlign(FixedIndex) < RequiredAlignment) {
     LLVM_DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
                          "greater than stack argument alignment ("
-                      << DebugStr(RequiredAlignment) << " vs "
-                      << DebugStr(MFI.getObjectAlign(FixedIndex)) << ")\n");
+                      << RequiredAlignment.value() << " vs "
+                      << MFI.getObjectAlign(FixedIndex).value() << ")\n");
     return;
   }
 
