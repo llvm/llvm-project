@@ -95,12 +95,23 @@ public:
 };
 }
 
+static bool hasReservedReturnType(const FunctionDecl *D) {
+  if (isa<CXXConstructorDecl>(D))
+    return true;
+
+  // operators delete and delete[] are required to have 'void' return type
+  auto OperatorKind = D->getOverloadedOperator();
+  return OperatorKind == OO_Delete || OperatorKind == OO_Array_Delete;
+}
+
 void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
                                         AnalysisManager &mgr,
                                         BugReporter &BR) const {
   if (!D->doesThisDeclarationHaveABody())
     return;
   if (!D->getReturnType()->isVoidType())
+    return;
+  if (hasReservedReturnType(D))
     return;
 
   if (!II)
