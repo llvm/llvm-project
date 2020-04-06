@@ -3166,7 +3166,7 @@ TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
     DWARFDataExtractor Data(Obj, Sec, /* IsLittleEndian = */ true,
                             /* AddressSize = */ 4);
     uint64_t Offset = 0;
-    EXPECT_FALSE(Header.extract(*Context, Data, &Offset));
+    EXPECT_FALSE(Header.extract(*Context, Data, &Offset, DW_SECT_INFO));
     // Header.extract() returns false because there is not enough space
     // in the section for the declared length. Anyway, we can check that
     // the properties are read correctly.
