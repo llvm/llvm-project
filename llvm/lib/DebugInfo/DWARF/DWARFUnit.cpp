@@ -181,20 +181,17 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
   if (IsDWO) {
     // If we are reading a package file, we need to adjust the location list
     // data based on the index entries.
-    StringRef Data = LocSection->Data;
+    StringRef Data = Header.getVersion() >= 5
+                         ? Context.getDWARFObj().getLoclistsDWOSection().Data
+                         : LocSection->Data;
     if (auto *IndexEntry = Header.getIndexEntry())
-      if (const auto *C = IndexEntry->getContribution(DW_SECT_EXT_LOC))
+      if (const auto *C = IndexEntry->getContribution(
+              Header.getVersion() >= 5 ? DW_SECT_LOCLISTS : DW_SECT_EXT_LOC))
         Data = Data.substr(C->Offset, C->Length);
 
-    DWARFDataExtractor DWARFData =
-        Header.getVersion() >= 5
-            ? DWARFDataExtractor(Context.getDWARFObj(),
-                                 Context.getDWARFObj().getLoclistsDWOSection(),
-                                 isLittleEndian, getAddressByteSize())
-            : DWARFDataExtractor(Data, isLittleEndian, getAddressByteSize());
+    DWARFDataExtractor DWARFData(Data, isLittleEndian, getAddressByteSize());
     LocTable =
         std::make_unique<DWARFDebugLoclists>(DWARFData, Header.getVersion());
-
   } else if (Header.getVersion() >= 5) {
     LocTable = std::make_unique<DWARFDebugLoclists>(
         DWARFDataExtractor(Context.getDWARFObj(),
