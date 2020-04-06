@@ -866,7 +866,7 @@ bool GCNPassConfig::addPreISel() {
     if (EnableStructurizerWorkarounds) {
       addPass(createUnifyLoopExitsPass());
     }
-    addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
+    addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
   addPass(createSinkingPass());
   addPass(createAMDGPUAnnotateUniformValues());
