@@ -252,12 +252,7 @@ class LibcxxTestFormat(object):
                        b'expected-no-diagnostics']
         use_verify = self.use_verify_for_fail and \
                      any([tag in contents for tag in verify_tags])
-        # FIXME(EricWF): GCC 5 does not evaluate static assertions that
-        # are dependant on a template parameter when '-fsyntax-only' is passed.
-        # This is fixed in GCC 6. However for now we only pass "-fsyntax-only"
-        # when using Clang.
-        if test_cxx.type != 'gcc':
-            test_cxx.flags += ['-fsyntax-only']
+        test_cxx.flags += ['-fsyntax-only']
         if use_verify:
             test_cxx.useVerify()
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)

@@ -9,6 +9,9 @@
 // UNSUPPORTED: c++98, c++03
 // The test requires access control SFINAE.
 
+// GCC 5 does not evaluate static assertions dependent on a template parameter.
+// UNSUPPORTED: gcc-5
+
 // <unordered_map>
 
 // Check that std::unordered_map fails to instantiate if the comparison predicate is
