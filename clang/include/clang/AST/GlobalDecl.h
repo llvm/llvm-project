@@ -150,9 +150,8 @@ public:
   }
 
   static KernelReferenceKind getDefaultKernelReference(const FunctionDecl *D) {
-    return D->getASTContext().getLangOpts().CUDAIsDevice
-               ? KernelReferenceKind::Kernel
-               : KernelReferenceKind::Stub;
+    return D->getLangOpts().CUDAIsDevice ? KernelReferenceKind::Kernel
+                                         : KernelReferenceKind::Stub;
   }
 
   GlobalDecl getWithDecl(const Decl *D) {
