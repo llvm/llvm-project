@@ -178,8 +178,10 @@ $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."
 nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefined.new
-(diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
-  (echo "Failed: unexpected symbols"; exit 1)
+if diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]"; then
+  echo "Failed: unexpected symbols"
+  exit 1
+fi
 
 arch() {
   objdump -f $1 | grep -m1 -Po "(?<=file format ).*$"
