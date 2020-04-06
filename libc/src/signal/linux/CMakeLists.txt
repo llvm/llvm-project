@@ -22,7 +22,7 @@ add_object_library(
     -Wframe-larger-than=0
     -Werror
     -Wno-attributes
-    # asan creates asan.module_ctor which uses stack space, causing warinngs.
+    # asan creates asan.module_ctor which uses stack space, causing warnings.
     -fno-sanitize=address
   DEPENDS
     linux_syscall_h

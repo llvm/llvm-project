@@ -1,6 +1,6 @@
 FROM debian:10
 
-# Installing dependecies.
+# Installing dependencies.
 RUN dpkg --add-architecture i386
 RUN apt-get update
 RUN apt-get install -y build-essential clang subversion git vim \
@@ -8,7 +8,7 @@ RUN apt-get install -y build-essential clang subversion git vim \
   ninja-build
 RUN python -m pip install buildbot-slave==0.8.12
 
-# Temporary dependecies for AOR tests.
+# Temporary dependencies for AOR tests.
 RUN apt-get install -y libmpfr-dev libmpc-dev
 
 # Change linker to gold.

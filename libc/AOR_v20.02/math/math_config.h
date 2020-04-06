@@ -108,7 +108,7 @@ roundtoint (double_t x)
 }
 
 /* Convert x to nearest int in all rounding modes, ties have to be rounded
-   consistently with roundtoint.  If the result is not representible in an
+   consistently with roundtoint.  If the result is not representable in an
    int32_t then the semantics is unspecified.  */
 static inline int32_t
 converttoint (double_t x)
@@ -360,7 +360,7 @@ extern const struct powf_log2_data
    needed for good precision in non-nearest rounding and !TOINT_INTRINSICS.  */
 #define EXP_POLY_WIDE 0
 /* Use close to nearest rounding toint when !TOINT_INTRINSICS.  This may be
-   needed for good precision in non-nearest rouning and !EXP_POLY_WIDE.  */
+   needed for good precision in non-nearest rounding and !EXP_POLY_WIDE.  */
 #define EXP_USE_TOINT_NARROW 0
 #define EXP2_POLY_ORDER 5
 #define EXP2_POLY_WIDE 0
