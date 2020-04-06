@@ -72,36 +72,20 @@ enum class CudaArch {
   GFX1012,
   LAST,
 };
+
+static inline bool IsNVIDIAGpuArch(CudaArch A) {
+  return A >= CudaArch::SM_20 && A < CudaArch::GFX600;
+}
+
+static inline bool IsAMDGpuArch(CudaArch A) {
+  return A >= CudaArch::GFX600 && A < CudaArch::LAST;
+}
+
 const char *CudaArchToString(CudaArch A);
+const char *CudaArchToVirtualArchString(CudaArch A);
 
 // The input should have the form "sm_20".
 CudaArch StringToCudaArch(llvm::StringRef S);
-
-enum class CudaVirtualArch {
-  UNKNOWN,
-  COMPUTE_20,
-  COMPUTE_30,
-  COMPUTE_32,
-  COMPUTE_35,
-  COMPUTE_37,
-  COMPUTE_50,
-  COMPUTE_52,
-  COMPUTE_53,
-  COMPUTE_60,
-  COMPUTE_61,
-  COMPUTE_62,
-  COMPUTE_70,
-  COMPUTE_72,
-  COMPUTE_75,
-  COMPUTE_AMDGCN,
-};
-const char *CudaVirtualArchToString(CudaVirtualArch A);
-
-// The input should have the form "compute_20".
-CudaVirtualArch StringToCudaVirtualArch(llvm::StringRef S);
-
-/// Get the compute_xx corresponding to an sm_yy.
-CudaVirtualArch VirtualArchForCudaArch(CudaArch A);
 
 /// Get the earliest CudaVersion that supports the given CudaArch.
 CudaVersion MinVersionForCudaArch(CudaArch A);
