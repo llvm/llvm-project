@@ -409,6 +409,9 @@ public:
   /// Widen a single instruction within the innermost loop.
   void widenInstruction(Instruction &I);
 
+  /// Widen a single call instruction within the innermost loop.
+  void widenCallInstruction(CallInst &I);
+
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop();
 
@@ -4224,6 +4227,7 @@ static bool mayDivideByZero(Instruction &I) {
 
 void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   switch (I.getOpcode()) {
+  case Instruction::Call:
   case Instruction::Br:
   case Instruction::PHI:
   case Instruction::GetElementPtr:
@@ -4348,54 +4352,62 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
     }
     break;
   }
+  default:
+    // This instruction is not vectorized by simple widening.
+    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
+    llvm_unreachable("Unhandled instruction!");
+  } // end of switch.
+}
 
-  case Instruction::Call: {
-    // Ignore dbg intrinsics.
-    if (isa<DbgInfoIntrinsic>(I))
-      break;
-    setDebugLocFromInst(Builder, &I);
+void InnerLoopVectorizer::widenCallInstruction(CallInst &I) {
+  // Ignore dbg intrinsics.
+  // TODO: Debug intrinsics should be skipped/handled during VPlan construction
+  // rather than dropping them here.
+  if (isa<DbgInfoIntrinsic>(I))
+    return;
+  setDebugLocFromInst(Builder, &I);
 
-    Module *M = I.getParent()->getParent()->getParent();
-    auto *CI = cast<CallInst>(&I);
+  Module *M = I.getParent()->getParent()->getParent();
+  auto *CI = cast<CallInst>(&I);
 
-    SmallVector<Type *, 4> Tys;
-    for (Value *ArgOperand : CI->arg_operands())
-      Tys.push_back(ToVectorTy(ArgOperand->getType(), VF));
+  SmallVector<Type *, 4> Tys;
+  for (Value *ArgOperand : CI->arg_operands())
+    Tys.push_back(ToVectorTy(ArgOperand->getType(), VF));
 
-    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
-    // The flag shows whether we use Intrinsic or a usual Call for vectorized
-    // version of the instruction.
-    // Is it beneficial to perform intrinsic call compared to lib call?
-    bool NeedToScalarize = false;
-    unsigned CallCost = Cost->getVectorCallCost(CI, VF, NeedToScalarize);
-    bool UseVectorIntrinsic =
-        ID && Cost->getVectorIntrinsicCost(CI, VF) <= CallCost;
-    assert((UseVectorIntrinsic || !NeedToScalarize) &&
-           "Instruction should be scalarized elsewhere.");
+  // The flag shows whether we use Intrinsic or a usual Call for vectorized
+  // version of the instruction.
+  // Is it beneficial to perform intrinsic call compared to lib call?
+  bool NeedToScalarize = false;
+  unsigned CallCost = Cost->getVectorCallCost(CI, VF, NeedToScalarize);
+  bool UseVectorIntrinsic =
+      ID && Cost->getVectorIntrinsicCost(CI, VF) <= CallCost;
+  assert((UseVectorIntrinsic || !NeedToScalarize) &&
+         "Instruction should be scalarized elsewhere.");
 
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      SmallVector<Value *, 4> Args;
-      for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i) {
-        Value *Arg = CI->getArgOperand(i);
-        // Some intrinsics have a scalar argument - don't replace it with a
-        // vector.
-        if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, i))
-          Arg = getOrCreateVectorValue(CI->getArgOperand(i), Part);
-        Args.push_back(Arg);
-      }
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    SmallVector<Value *, 4> Args;
+    for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i) {
+      Value *Arg = CI->getArgOperand(i);
+      // Some intrinsics have a scalar argument - don't replace it with a
+      // vector.
+      if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, i))
+        Arg = getOrCreateVectorValue(CI->getArgOperand(i), Part);
+      Args.push_back(Arg);
+    }
 
-      Function *VectorF;
-      if (UseVectorIntrinsic) {
-        // Use vector version of the intrinsic.
-        Type *TysForDecl[] = {CI->getType()};
-        if (VF > 1)
-          TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
-        VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
-      } else {
-        // Use vector version of the function call.
-        const VFShape Shape =
-            VFShape::get(*CI, {VF, false} /*EC*/, false /*HasGlobalPred*/);
+    Function *VectorF;
+    if (UseVectorIntrinsic) {
+      // Use vector version of the intrinsic.
+      Type *TysForDecl[] = {CI->getType()};
+      if (VF > 1)
+        TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
+      VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
+    } else {
+      // Use vector version of the function call.
+      const VFShape Shape =
+          VFShape::get(*CI, {VF, false} /*EC*/, false /*HasGlobalPred*/);
 #ifndef NDEBUG
         const SmallVector<VFInfo, 8> Infos = VFDatabase::getMappings(*CI);
         assert(std::find_if(Infos.begin(), Infos.end(),
@@ -4405,7 +4417,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
                "Vector function shape is missing from the database.");
 #endif
         VectorF = VFDatabase(*CI).getVectorizedFunction(Shape);
-      }
+    }
       assert(VectorF && "Can't create vector function.");
 
       SmallVector<OperandBundleDef, 1> OpBundles;
@@ -4417,16 +4429,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
 
       VectorLoopValueMap.setVectorValue(&I, Part, V);
       addMetadata(V, &I);
-    }
-
-    break;
   }
-
-  default:
-    // This instruction is not vectorized by simple widening.
-    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
-    llvm_unreachable("Unhandled instruction!");
-  } // end of switch.
 }
 
 void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
@@ -6884,8 +6887,42 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   return new VPBlendRecipe(Phi, Masks);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
+VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(Instruction *I,
+                                                   VFRange &Range) {
 
+  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
+
+  CallInst *CI = dyn_cast<CallInst>(I);
+  if (IsPredicated || !CI)
+    return nullptr;
+
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+  if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
+             ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect))
+    return nullptr;
+
+  auto willWiden = [&](unsigned VF) -> bool {
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+    // The following case may be scalarized depending on the VF.
+    // The flag shows whether we use Intrinsic or a usual Call for vectorized
+    // version of the instruction.
+    // Is it beneficial to perform intrinsic call compared to lib call?
+    bool NeedToScalarize;
+    unsigned CallCost = CM.getVectorCallCost(CI, VF, NeedToScalarize);
+    bool UseVectorIntrinsic =
+        ID && CM.getVectorIntrinsicCost(CI, VF) <= CallCost;
+    return UseVectorIntrinsic || !NeedToScalarize;
+  };
+
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
+    return nullptr;
+
+  // Success: widen this call.
+  return new VPWidenCallRecipe(*CI);
+}
+
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
 
@@ -6899,7 +6936,6 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
     case Instruction::AShr:
     case Instruction::BitCast:
     case Instruction::Br:
-    case Instruction::Call:
     case Instruction::FAdd:
     case Instruction::FCmp:
     case Instruction::FDiv:
@@ -6941,29 +6977,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
   if (!IsVectorizableOpcode(I->getOpcode()))
     return nullptr;
 
-  if (CallInst *CI = dyn_cast<CallInst>(I)) {
-    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-    if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
-               ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect))
-      return nullptr;
-  }
-
   auto willWiden = [&](unsigned VF) -> bool {
     if (!isa<PHINode>(I) && (CM.isScalarAfterVectorization(I, VF) ||
                              CM.isProfitableToScalarize(I, VF)))
       return false;
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-      // The following case may be scalarized depending on the VF.
-      // The flag shows whether we use Intrinsic or a usual Call for vectorized
-      // version of the instruction.
-      // Is it beneficial to perform intrinsic call compared to lib call?
-      bool NeedToScalarize;
-      unsigned CallCost = CM.getVectorCallCost(CI, VF, NeedToScalarize);
-      bool UseVectorIntrinsic =
-          ID && CM.getVectorIntrinsicCost(CI, VF) <= CallCost;
-      return UseVectorIntrinsic || !NeedToScalarize;
-    }
     if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
       assert(CM.getWideningDecision(I, VF) ==
                  LoopVectorizationCostModel::CM_Scalarize &&
@@ -7052,9 +7069,10 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
                                         VPlanPtr &Plan, VPBasicBlock *VPBB) {
   VPRecipeBase *Recipe = nullptr;
 
-  // First, check for specific widening recipes that deal with memory
+  // First, check for specific widening recipes that deal with calls, memory
   // operations, inductions and Phi nodes.
-  if ((Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
+  if ((Recipe = tryToWidenCall(Instr, Range)) ||
+      (Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
       (Recipe = tryToOptimizeInduction(Instr, Range)) ||
       (Recipe = tryToBlend(Instr, Plan)) ||
       (isa<PHINode>(Instr) &&
@@ -7369,6 +7387,10 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
     if (Instruction *I = IG->getMember(i))
       O << " +\n"
         << Indent << "\"  " << VPlanIngredient(I) << " " << i << "\\l\"";
+}
+
+void VPWidenCallRecipe::execute(VPTransformState &State) {
+  State.ILV->widenCallInstruction(Ingredient);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
