@@ -30,8 +30,6 @@ __interceptor_pthread_once w
 __interceptor_pthread_setspecific w
 __interceptor_read w
 __interceptor_realpath w
-__isoc99_sscanf U
-__isoc99_vsscanf U
 __moddi3 U
 __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
