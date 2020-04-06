@@ -16,7 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1138,10 +1138,10 @@ public:
   }
 
   struct BranchProtectionInfo {
-    CodeGenOptions::SignReturnAddressScope SignReturnAddr =
-        CodeGenOptions::SignReturnAddressScope::None;
-    CodeGenOptions::SignReturnAddressKeyValue SignKey =
-        CodeGenOptions::SignReturnAddressKeyValue::AKey;
+    LangOptions::SignReturnAddressScopeKind SignReturnAddr =
+        LangOptions::SignReturnAddressScopeKind::None;
+    LangOptions::SignReturnAddressKeyKind SignKey =
+        LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
   };
 

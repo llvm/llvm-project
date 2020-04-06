@@ -19,7 +19,7 @@ namespace __llvm_libc {
 // The futex data has to be exactly 4 bytes long. However, we use a uint type
 // here as we do not want to use `_Atomic uint32_t` as the _Atomic keyword which
 // is C only. The header stdatomic.h does not define an atomic type
-// corresponding to `uint32_t` or to something which is exaclty 4 bytes wide.
+// corresponding to `uint32_t` or to something which is exactly 4 bytes wide.
 using FutexData = atomic_uint;
 
 // We use a tri-state mutex because we want to avoid making syscalls

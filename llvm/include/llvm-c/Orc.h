@@ -36,6 +36,11 @@ typedef uint64_t LLVMOrcJITTargetAddress;
 
 /**
  * Create a ThreadSafeContext containing a new LLVMContext.
+ *
+ * Ownership of the underlying ThreadSafeContext data is shared: Clients
+ * can and should dispose of their ThreadSafeContext as soon as they no longer
+ * need to refer to it directly. Other references (e.g. from ThreadSafeModules
+ * will keep the data alive as long as it is needed.
  */
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void);
 
@@ -54,6 +59,11 @@ void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx);
  * Create a ThreadSafeModule wrapper around the given LLVM module. This takes
  * ownership of the M argument which should not be disposed of or referenced
  * after this function returns.
+ *
+ * Ownership of the ThreadSafeModule is unique: If it is transferred to the JIT
+ * (e.g. by LLVMOrcLLJITAddLLVMIRModule), in which case the client is no longer
+ * responsible for it. If it is not transferred to the JIT then the client
+ * should call LLVMOrcDisposeThreadSafeModule to dispose of it.
  */
 LLVMOrcThreadSafeModuleRef
 LLVMOrcCreateNewThreadSafeModule(LLVMModuleRef M,
@@ -66,6 +76,12 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM);
 
 /**
  * Create an LLJIT instance using all default values.
+ *
+ * The LLJIT instance is uniquely owned by the client and automatically manages
+ * the memory of all JIT'd code and all modules that are transferred to it
+ * (e.g. via LLVMOrcLLJITAddLLVMIRModule). Disposing of the LLJIT instance will
+ * free all memory managed by the JIT, including JIT'd code and not-yet
+ * compiled modules.
  */
 LLVMErrorRef LLVMOrcCreateDefaultLLJIT(LLVMOrcLLJITRef *Result);
 

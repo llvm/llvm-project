@@ -119,7 +119,7 @@ private:
                       MachineRegisterInfo &MRI,
                       MachineInstr &Inst) const;
 
-  void addUsersToMoveToVALUWorklist(unsigned Reg, MachineRegisterInfo &MRI,
+  void addUsersToMoveToVALUWorklist(Register Reg, MachineRegisterInfo &MRI,
                                     SetVectorType &Worklist) const;
 
   void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
@@ -132,7 +132,7 @@ private:
   bool checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                     const MachineInstr &MIb) const;
 
-  unsigned findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
+  Register findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
 protected:
   bool swapSourceModifiers(MachineInstr &MI,
@@ -211,13 +211,13 @@ public:
   const TargetRegisterClass *getPreferredSelectRegClass(
                                unsigned Size) const;
 
-  unsigned insertNE(MachineBasicBlock *MBB,
+  Register insertNE(MachineBasicBlock *MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    unsigned SrcReg, int Value) const;
+                    Register SrcReg, int Value) const;
 
-  unsigned insertEQ(MachineBasicBlock *MBB,
+  Register insertEQ(MachineBasicBlock *MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    unsigned SrcReg, int Value)  const;
+                    Register SrcReg, int Value)  const;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, Register SrcReg,
@@ -297,19 +297,19 @@ public:
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
-                       ArrayRef<MachineOperand> Cond, unsigned DstReg,
-                       unsigned TrueReg, unsigned FalseReg, int &CondCycles,
+                       ArrayRef<MachineOperand> Cond, Register DstReg,
+                       Register TrueReg, Register FalseReg, int &CondCycles,
                        int &TrueCycles, int &FalseCycles) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                    unsigned TrueReg, unsigned FalseReg) const override;
+                    Register DstReg, ArrayRef<MachineOperand> Cond,
+                    Register TrueReg, Register FalseReg) const override;
 
   void insertVectorSelect(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator I, const DebugLoc &DL,
-                          unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                          unsigned TrueReg, unsigned FalseReg) const;
+                          Register DstReg, ArrayRef<MachineOperand> Cond,
+                          Register TrueReg, Register FalseReg) const;
 
   unsigned getAddressSpaceForPseudoSourceKind(
              unsigned Kind) const override;
@@ -320,7 +320,7 @@ public:
 
   bool isFoldableCopy(const MachineInstr &MI) const;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
@@ -877,7 +877,7 @@ public:
   /// be used when it is know that the value in SrcReg is same across all
   /// threads in the wave.
   /// \returns The SGPR register that \p SrcReg was copied to.
-  unsigned readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr &UseMI,
+  Register readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
                               MachineRegisterInfo &MRI) const;
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -998,7 +998,7 @@ public:
   MachineInstrBuilder getAddNoCarry(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     const DebugLoc &DL,
-                                    unsigned DestReg) const;
+                                    Register DestReg) const;
 
   MachineInstrBuilder getAddNoCarry(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,

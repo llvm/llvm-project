@@ -76,6 +76,26 @@ define void @test3a(i8* %p) {
   ret void
 }
 
+declare noalias i8* @aligned_alloc(i64, i64)
+
+define void @test3b(i8* %p) {
+  %1 = tail call noalias i8* @aligned_alloc(i64 32, i64 128)
+  ; CHECK: %1 = alloca i8, i64 128, align 32
+  ; CHECK-NEXT: tail call void @nofree_arg_only
+  tail call void @nofree_arg_only(i8* %1, i8* %p)
+  ; CHECK-NOT: @free(i8* %1)
+  tail call void @free(i8* %1)
+  ret void
+}
+
+; leave alone non-constant alignments.
+define void @test3c(i64 %alignment) {
+  %1 = tail call noalias i8* @aligned_alloc(i64 %alignment, i64 128)
+  ; CHECK: tail call noalias i8* @aligned_alloc
+  tail call void @free(i8* %1)
+  ret void
+}
+
 declare noalias i8* @calloc(i64, i64)
 
 define void @test0() {
@@ -90,7 +110,7 @@ define void @test0() {
   ret void
 }
 
-; TEST 4 
+; TEST 4
 define void @test4() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
@@ -164,13 +184,13 @@ define void @test7() {
 define void @test8() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo(i32* %2)
-  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
+  ; CHECK: @free(i8* nonnull align 4 dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -179,13 +199,13 @@ define void @test8() {
 define void @test9() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo_nounw(i32* %2)
-  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
+  ; CHECK: @free(i8* nonnull align 4 dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -219,7 +239,7 @@ define i32 @test_lifetime() {
   ret i32 %3
 }
 
-; TEST 11 
+; TEST 11
 
 define void @test11() {
   %1 = tail call noalias i8* @malloc(i64 4)
@@ -307,7 +327,7 @@ define i32 @test13() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -320,7 +340,7 @@ define i32 @test_sle() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -333,7 +353,7 @@ define i32 @test_overflow() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull align 4 dereferenceable(4) %1)
   ret i32 %3
 }
 

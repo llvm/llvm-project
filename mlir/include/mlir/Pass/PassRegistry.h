@@ -122,7 +122,7 @@ void registerPassPipeline(
 
 /// Register a specific dialect pass allocator function with the system,
 /// typically used through the PassRegistration template.
-void registerPass(StringRef arg, StringRef description, const PassID *passID,
+void registerPass(StringRef arg, StringRef description,
                   const PassAllocatorFunction &function);
 
 /// PassRegistration provides a global initializer that registers a Pass
@@ -138,7 +138,7 @@ void registerPass(StringRef arg, StringRef description, const PassID *passID,
 template <typename ConcretePass> struct PassRegistration {
   PassRegistration(StringRef arg, StringRef description,
                    const PassAllocatorFunction &constructor) {
-    registerPass(arg, description, PassID::getID<ConcretePass>(), constructor);
+    registerPass(arg, description, constructor);
   }
 
   PassRegistration(StringRef arg, StringRef description)

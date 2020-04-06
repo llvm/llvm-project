@@ -48,7 +48,7 @@ __memchr_aarch64_sve:
 	ret
 
 	/* First fault failed: only some of the vector is valid.
-	   Perform the comparision only on the valid bytes.  */
+	   Perform the comparison only on the valid bytes.  */
 2:	cmpeq	p2.b, p0/z, z0.b, z1.b
 	b.any	1b
 

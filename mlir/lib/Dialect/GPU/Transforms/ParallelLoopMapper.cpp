@@ -130,8 +130,8 @@ static void mapParallelOp(ParallelOp parallelOp,
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
   SmallVector<ParallelLoopDimMapping, 4> attrs;
-  attrs.reserve(parallelOp.getNumInductionVars());
-  for (int i = 0, e = parallelOp.getNumInductionVars(); i < e; ++i) {
+  attrs.reserve(parallelOp.getNumLoops());
+  for (int i = 0, e = parallelOp.getNumLoops(); i < e; ++i) {
     attrs.push_back(getParallelLoopDimMappingAttr(
         getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
         b.getDimIdentityMap()));

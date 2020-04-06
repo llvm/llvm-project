@@ -2,16 +2,16 @@
 
 import sys
 
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_src_root = path("@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path("@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = path("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = path("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = path("@SHLIBDIR@")
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
-config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.clang_obj_root = "@CLANG_BINARY_DIR@"
-config.clang_src_dir = "@CLANG_SOURCE_DIR@"
-config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
+config.lit_tools_dir = path("@LLVM_LIT_TOOLS_DIR@")
+config.clang_obj_root = path("@CLANG_BINARY_DIR@")
+config.clang_src_dir = path("@CLANG_SOURCE_DIR@")
+config.clang_tools_dir = path("@CLANG_TOOLS_DIR@")
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.host_cxx = "@CMAKE_CXX_COMPILER@"
@@ -50,4 +50,5 @@ if not "@CLANG_DEFAULT_LINKER@":
     config.available_features.add('platform-linker')
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@CLANG_SOURCE_DIR@/test/lit.cfg.py")
+lit_config.load_config(
+    config, os.path.join(config.clang_src_dir, "test/lit.cfg.py"))

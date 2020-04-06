@@ -457,12 +457,12 @@ INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
 bool PeepholeOptimizer::
 optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                  SmallPtrSetImpl<MachineInstr*> &LocalMIs) {
-  unsigned SrcReg, DstReg, SubIdx;
+  Register SrcReg, DstReg;
+  unsigned SubIdx;
   if (!TII->isCoalescableExtInstr(MI, SrcReg, DstReg, SubIdx))
     return false;
 
-  if (Register::isPhysicalRegister(DstReg) ||
-      Register::isPhysicalRegister(SrcReg))
+  if (DstReg.isPhysical() || SrcReg.isPhysical())
     return false;
 
   if (MRI->hasOneNonDBGUse(SrcReg))
@@ -607,11 +607,10 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
 bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
-  unsigned SrcReg, SrcReg2;
+  Register SrcReg, SrcReg2;
   int CmpMask, CmpValue;
   if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
-      Register::isPhysicalRegister(SrcReg) ||
-      (SrcReg2 != 0 && Register::isPhysicalRegister(SrcReg2)))
+      SrcReg.isPhysical() || SrcReg2.isPhysical())
     return false;
 
   // Attempt to optimize the comparison instruction.
@@ -663,8 +662,8 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
-  unsigned Reg = RegSubReg.Reg;
-  if (Register::isPhysicalRegister(Reg))
+  Register Reg = RegSubReg.Reg;
+  if (Reg.isPhysical())
     return false;
   const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
 

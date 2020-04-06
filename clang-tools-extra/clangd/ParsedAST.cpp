@@ -253,6 +253,10 @@ ParsedAST::build(llvm::StringRef Version,
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
+  // Recovery expression currently only works for C++.
+  if (CI->getLangOpts()->CPlusPlus)
+    CI->getLangOpts()->RecoveryAST = Opts.BuildRecoveryAST;
+
   StoreDiags ASTDiags;
   std::string Content = std::string(Buffer->getBuffer());
   std::string Filename =
@@ -272,7 +276,7 @@ ParsedAST::build(llvm::StringRef Version,
   }
 
   // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.
-  // Clang-tidy has some limitiations to ensure reasonable performance:
+  // Clang-tidy has some limitations to ensure reasonable performance:
   //  - checks don't see all preprocessor events in the preamble
   //  - matchers run only over the main-file top-level decls (and can't see
   //    ancestors outside this scope).
@@ -482,7 +486,7 @@ std::size_t ParsedAST::getUsedBytes() const {
   // FIXME: the rest of the function is almost a direct copy-paste from
   // libclang's clang_getCXTUResourceUsage. We could share the implementation.
 
-  // Sum up variaous allocators inside the ast context and the preprocessor.
+  // Sum up various allocators inside the ast context and the preprocessor.
   Total += AST.getASTAllocatedMemory();
   Total += AST.getSideTableAllocatedMemory();
   Total += AST.Idents.getAllocator().getTotalMemory();
@@ -547,8 +551,7 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   }
 
   return ParsedAST::build(
-      Inputs.Version, std::make_unique<CompilerInvocation>(*Invocation),
-      CompilerInvocationDiags, Preamble,
+      Inputs.Version, std::move(Invocation), CompilerInvocationDiags, Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName),
       std::move(VFS), Inputs.Index, Inputs.Opts);
 }

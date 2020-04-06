@@ -447,8 +447,8 @@ either via emailing to llvm-commits, or, preferably, via :ref:`Phabricator
 You'll generally want to make sure your branch has a single commit,
 corresponding to the review you wish to send, up-to-date with the upstream
 ``origin/master`` branch, and doesn't contain merges. Once you have that, you
-can use ``git show`` or ``git format-patch`` to output the diff, and attach it
-to a Phabricator review (or to an email message).
+can start `a Phabricator review <Phabricator.html>`_ (or use ``git show`` or
+``git format-patch`` to output the diff, and attach it to an email message).
 
 However, using the "Arcanist" tool is often easier. After `installing
 arcanist`_, you can upload the latest commit using:

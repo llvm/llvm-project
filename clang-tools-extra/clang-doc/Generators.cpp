@@ -82,7 +82,7 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
     // pointing.
     auto It = std::find(I->Children.begin(), I->Children.end(), R.USR);
     if (It != I->Children.end()) {
-      // If it is found, just change I to point the namespace refererence found.
+      // If it is found, just change I to point the namespace reference found.
       I = &*It;
     } else {
       // If it is not found a new reference is created

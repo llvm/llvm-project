@@ -10,3 +10,9 @@ set(LLVM_TARGET_DEFINITIONS ParallelLoopMapperAttr.td)
 mlir_tablegen(ParallelLoopMapperEnums.h.inc -gen-enum-decls)
 mlir_tablegen(ParallelLoopMapperEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRParallelLoopMapperEnumsGen)
+
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls)
+add_public_tablegen_target(MLIRGPUPassIncGen)
+
+add_mlir_doc(Passes -gen-pass-doc GPUPasses ./)

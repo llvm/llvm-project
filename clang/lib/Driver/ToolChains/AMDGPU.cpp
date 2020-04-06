@@ -109,11 +109,10 @@ bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
 
   // Default to enabling f32 denormals by default on subtargets where fma is
   // fast with denormals
-  const bool DefaultDenormsAreZeroForTarget =
+  const bool BothDenormAndFMAFast =
       (ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
       (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
-
-  return DefaultDenormsAreZeroForTarget;
+  return !BothDenormAndFMAFast;
 }
 
 llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
@@ -137,7 +136,7 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
-             !getDefaultDenormsAreZeroForTarget(Kind);
+             getDefaultDenormsAreZeroForTarget(Kind);
   // Outputs are flushed to zero, preserving sign
   return DAZ ? llvm::DenormalMode::getPreserveSign() :
                llvm::DenormalMode::getIEEE();

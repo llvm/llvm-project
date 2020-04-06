@@ -8,8 +8,10 @@ add_llvm_library(LLVMMLIRTableGen
   OpClass.cpp
   OpInterfaces.cpp
   OpTrait.cpp
+  Pass.cpp
   Pattern.cpp
   Predicate.cpp
+  Region.cpp
   SideEffects.cpp
   Successor.cpp
   Type.cpp

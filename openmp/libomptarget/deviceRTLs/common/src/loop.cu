@@ -221,7 +221,7 @@ public:
      * When it is we'll want to look at them somewhere here and use that
      * information to add to our schedule choice. We shouldn't need to pass
      * them on, they merely affect which schedule we can legally choose for
-     * various dynamic cases. (In paritcular, whether or not a stealing scheme
+     * various dynamic cases. (In particular, whether or not a stealing scheme
      * is legal).
      */
     schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);

@@ -21,9 +21,11 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -277,7 +279,7 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
 // arguments for example. This function returns the default argument if it is
 // available.
 const Expr *getDefaultArg(const ParmVarDecl *PVD) {
-  // Default argument can be unparsed or uninstatiated. For the former we
+  // Default argument can be unparsed or uninstantiated. For the former we
   // can't do much, as token information is only stored in Sema and not
   // attached to the AST node. For the latter though, it is safe to proceed as
   // the expression is still valid.
@@ -370,6 +372,97 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
   return llvm::None;
 }
 
+llvm::Optional<StringRef> fieldName(const Expr *E) {
+  const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
+  if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
+    return llvm::None;
+  const auto *Field =
+      llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!Field || !Field->getDeclName().isIdentifier())
+    return llvm::None;
+  return Field->getDeclName().getAsIdentifierInfo()->getName();
+}
+
+// If CMD is of the form T foo() { return FieldName; } then returns "FieldName".
+llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->getNumParams() != 0 || CMD->isVariadic())
+    return llvm::None;
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  const auto *OnlyReturn = (Body && Body->size() == 1)
+                               ? llvm::dyn_cast<ReturnStmt>(Body->body_front())
+                               : nullptr;
+  if (!OnlyReturn || !OnlyReturn->getRetValue())
+    return llvm::None;
+  return fieldName(OnlyReturn->getRetValue());
+}
+
+// If CMD is one of the forms:
+//   void foo(T arg) { FieldName = arg; }
+//   R foo(T arg) { FieldName = arg; return *this; }
+// then returns "FieldName"
+llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
+    return llvm::None;
+  const ParmVarDecl *Arg = CMD->getParamDecl(0);
+  if (Arg->isParameterPack())
+    return llvm::None;
+
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  if (!Body || Body->size() == 0 || Body->size() > 2)
+    return llvm::None;
+  // If the second statement exists, it must be `return this` or `return *this`.
+  if (Body->size() == 2) {
+    auto *Ret = llvm::dyn_cast<ReturnStmt>(Body->body_back());
+    if (!Ret || !Ret->getRetValue())
+      return llvm::None;
+    const Expr *RetVal = Ret->getRetValue()->IgnoreCasts();
+    if (const auto *UO = llvm::dyn_cast<UnaryOperator>(RetVal)) {
+      if (UO->getOpcode() != UO_Deref)
+        return llvm::None;
+      RetVal = UO->getSubExpr()->IgnoreCasts();
+    }
+    if (!llvm::isa<CXXThisExpr>(RetVal))
+      return llvm::None;
+  }
+  // The first statement must be an assignment of the arg to a field.
+  const Expr *LHS, *RHS;
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(Body->body_front())) {
+    if (BO->getOpcode() != BO_Assign)
+      return llvm::None;
+    LHS = BO->getLHS();
+    RHS = BO->getRHS();
+  } else if (const auto *COCE =
+                 llvm::dyn_cast<CXXOperatorCallExpr>(Body->body_front())) {
+    if (COCE->getOperator() != OO_Equal || COCE->getNumArgs() != 2)
+      return llvm::None;
+    LHS = COCE->getArg(0);
+    RHS = COCE->getArg(1);
+  } else {
+    return llvm::None;
+  }
+  auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
+  if (!DRE || DRE->getDecl() != Arg)
+    return llvm::None;
+  return fieldName(LHS);
+}
+
+std::string synthesizeDocumentation(const NamedDecl *ND) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    // Is this an ordinary, non-static method whose definition is visible?
+    if (CMD->getDeclName().isIdentifier() && !CMD->isStatic() &&
+        (CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition())) &&
+        CMD->hasBody()) {
+      if (const auto GetterField = getterVariableName(CMD))
+        return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
+      if (const auto SetterField = setterVariableName(CMD))
+        return llvm::formatv("Trivial setter for `{0}`.", *SetterField);
+    }
+  }
+  return "";
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   HoverInfo HI;
@@ -387,6 +480,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
   enhanceFromIndex(HI, *CommentD, Index);
+  if (HI.Documentation.empty())
+    HI.Documentation = synthesizeDocumentation(D);
 
   HI.Kind = index::getSymbolInfo(D).Kind;
 
@@ -455,7 +550,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HI.Name = std::string(Macro.Name);
   HI.Kind = index::SymbolKind::Macro;
   // FIXME: Populate documentation
-  // FIXME: Pupulate parameters
+  // FIXME: Populate parameters
 
   // Try to get the full definition, not just the name
   SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
@@ -521,46 +616,39 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
   return llvm::None;
 }
 
-bool isParagraphLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
-  return Str.substr(LineBreakIndex + 1)
-      .drop_while([](auto C) { return C == ' ' || C == '\t'; })
-      .startswith("\n");
+bool isParagraphBreak(llvm::StringRef Rest) {
+  return Rest.ltrim(" \t").startswith("\n");
 }
 
-bool isPunctuationLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
+bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
   constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
 
-  return LineBreakIndex > 0 && Punctuation.contains(Str[LineBreakIndex - 1]);
+  Line = Line.rtrim();
+  return !Line.empty() && Punctuation.contains(Line.back());
 }
 
-bool isFollowedByHardLineBreakIndicator(llvm::StringRef Str,
-                                        size_t LineBreakIndex) {
+bool isHardLineBreakIndicator(llvm::StringRef Rest) {
   // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
   // '#' headings, '`' code blocks
-  constexpr llvm::StringLiteral LinbreakIdenticators = R"txt(-*@\>#`)txt";
+  constexpr llvm::StringLiteral LinebreakIndicators = R"txt(-*@\>#`)txt";
 
-  auto NextNonSpaceCharIndex = Str.find_first_not_of(' ', LineBreakIndex + 1);
-
-  if (NextNonSpaceCharIndex == llvm::StringRef::npos) {
+  Rest = Rest.ltrim(" \t");
+  if (Rest.empty())
     return false;
+
+  if (LinebreakIndicators.contains(Rest.front()))
+    return true;
+
+  if (llvm::isDigit(Rest.front())) {
+    llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
+    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+      return true;
   }
-
-  auto FollowedBySingleCharIndicator =
-      LinbreakIdenticators.find(Str[NextNonSpaceCharIndex]) !=
-      llvm::StringRef::npos;
-
-  auto FollowedByNumberedListIndicator =
-      llvm::isDigit(Str[NextNonSpaceCharIndex]) &&
-      NextNonSpaceCharIndex + 1 < Str.size() &&
-      (Str[NextNonSpaceCharIndex + 1] == '.' ||
-       Str[NextNonSpaceCharIndex + 1] == ')');
-
-  return FollowedBySingleCharIndicator || FollowedByNumberedListIndicator;
+  return false;
 }
 
-bool isHardLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
-  return isPunctuationLineBreak(Str, LineBreakIndex) ||
-         isFollowedByHardLineBreakIndicator(Str, LineBreakIndex);
+bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
+  return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
 }
 
 } // namespace
@@ -703,7 +791,7 @@ markup::Document HoverInfo::present() const {
     // Drop trailing "::".
     if (!LocalScope.empty()) {
       // Container name, e.g. class, method, function.
-      // We might want to propogate some info about container type to print
+      // We might want to propagate some info about container type to print
       // function foo, class X, method X::bar, etc.
       ScopeComment =
           "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
@@ -719,42 +807,32 @@ markup::Document HoverInfo::present() const {
 }
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
+  std::vector<llvm::StringRef> ParagraphLines;
+  auto FlushParagraph = [&] {
+    if (ParagraphLines.empty())
+      return;
+    auto &P = Output.addParagraph();
+    for (llvm::StringRef Line : ParagraphLines)
+      P.appendText(Line.str());
+    ParagraphLines.clear();
+  };
 
-  constexpr auto WhiteSpaceChars = "\t\n\v\f\r ";
+  llvm::StringRef Line, Rest;
+  for (std::tie(Line, Rest) = Input.split('\n');
+       !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
 
-  auto TrimmedInput = Input.trim();
+    // After a linebreak remove spaces to avoid 4 space markdown code blocks.
+    // FIXME: make FlushParagraph handle this.
+    Line = Line.ltrim();
+    if (!Line.empty())
+      ParagraphLines.push_back(Line);
 
-  std::string CurrentLine;
-
-  for (size_t CharIndex = 0; CharIndex < TrimmedInput.size();) {
-    if (TrimmedInput[CharIndex] == '\n') {
-      // Trim whitespace infront of linebreak
-      const auto LastNonSpaceCharIndex =
-          CurrentLine.find_last_not_of(WhiteSpaceChars) + 1;
-      CurrentLine.erase(LastNonSpaceCharIndex);
-
-      if (isParagraphLineBreak(TrimmedInput, CharIndex) ||
-          isHardLineBreak(TrimmedInput, CharIndex)) {
-        // FIXME: maybe distinguish between line breaks and paragraphs
-        Output.addParagraph().appendText(CurrentLine);
-        CurrentLine = "";
-      } else {
-        // Ommit linebreak
-        CurrentLine += ' ';
-      }
-
-      CharIndex++;
-      // After a linebreak always remove spaces to avoid 4 space markdown code
-      // blocks, also skip all additional linebreaks since they have no effect
-      CharIndex = TrimmedInput.find_first_not_of(WhiteSpaceChars, CharIndex);
-    } else {
-      CurrentLine += TrimmedInput[CharIndex];
-      CharIndex++;
+    if (isParagraphBreak(Rest) || isHardLineBreakAfter(Line, Rest)) {
+      FlushParagraph();
     }
   }
-  if (!CurrentLine.empty()) {
-    Output.addParagraph().appendText(CurrentLine);
-  }
+  FlushParagraph();
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,

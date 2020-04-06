@@ -42,7 +42,7 @@ public:
           for (const StmtSequence &Arg : {A, B}) {
             if (const auto *D =
                     dyn_cast<const FunctionDecl>(Arg.getContainingDecl())) {
-              if (StringRef(D->getNameAsString()).startswith("bar"))
+              if (D->getName().startswith("bar"))
                 return false;
             }
           }

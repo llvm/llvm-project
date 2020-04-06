@@ -1114,14 +1114,36 @@ public:
   /// INTRINSIC_W_CHAIN, or a target-specific opcode with a value not
   /// less than FIRST_TARGET_MEMORY_OPCODE.
   SDValue getMemIntrinsicNode(
-    unsigned Opcode, const SDLoc &dl, SDVTList VTList,
-    ArrayRef<SDValue> Ops, EVT MemVT,
-    MachinePointerInfo PtrInfo,
-    unsigned Align = 0,
-    MachineMemOperand::Flags Flags
-    = MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
-    uint64_t Size = 0,
-    const AAMDNodes &AAInfo = AAMDNodes());
+      unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
+      EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
+                                       MachineMemOperand::MOStore,
+      uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+
+  inline SDValue getMemIntrinsicNode(
+      unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
+      EVT MemVT, MachinePointerInfo PtrInfo, MaybeAlign Alignment = None,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
+                                       MachineMemOperand::MOStore,
+      uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+    // Ensure that codegen never sees alignment 0
+    return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
+                               Alignment.getValueOr(getEVTAlign(MemVT)), Flags,
+                               Size, AAInfo);
+  }
+
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline SDValue getMemIntrinsicNode(
+          unsigned Opcode, const SDLoc &dl, SDVTList VTList,
+          ArrayRef<SDValue> Ops, EVT MemVT, MachinePointerInfo PtrInfo,
+          unsigned Alignment,
+          MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
+                                           MachineMemOperand::MOStore,
+          uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes()),
+      "") {
+    return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
+                               MaybeAlign(Alignment), Flags, Size, AAInfo);
+  }
 
   SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl, SDVTList VTList,
                               ArrayRef<SDValue> Ops, EVT MemVT,
@@ -1793,9 +1815,17 @@ public:
   bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                       unsigned Bytes, int Dist) const;
 
-  /// Infer alignment of a load / store address. Return 0 if
-  /// it cannot be inferred.
-  unsigned InferPtrAlignment(SDValue Ptr) const;
+  /// Infer alignment of a load / store address. Return None if it cannot be
+  /// inferred.
+  MaybeAlign InferPtrAlign(SDValue Ptr) const;
+
+  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned InferPtrAlignment(SDValue Ptr)
+                                const,
+                            "Use InferPtrAlign instead") {
+    if (auto A = InferPtrAlign(Ptr))
+      return A->value();
+    return 0;
+  }
 
   /// Compute the VTs needed for the low/hi parts of a type
   /// which is split (or expanded) into two not necessarily identical pieces.

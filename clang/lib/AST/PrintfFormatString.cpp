@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/OSLog.h"
-#include "FormatStringParsing.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/Regex.h"
 
 using clang::analyze_format_string::ArgType;
 using clang::analyze_format_string::FormatStringHandler;

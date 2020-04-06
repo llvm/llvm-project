@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: c++98, c++03
+// REQUIRES: has-fblocks
+// ADDITIONAL_COMPILE_FLAGS: -fblocks
 
 // <type_traits>
 

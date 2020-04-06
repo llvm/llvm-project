@@ -9,6 +9,8 @@
 import copy
 import errno
 import os
+import shutil
+import tempfile
 import time
 import random
 
@@ -125,8 +127,8 @@ class LibcxxTestFormat(object):
             lit_config.fatal('Unsupported RUN line found in test %s' % name)
 
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
-        substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
-                                                               tmpBase)
+        substitutions = lit.TestRunner.getDefaultSubstitutions(
+            test, tmpDir, tmpBase, normalize_slashes=self.execute_external)
 
         # Apply substitutions in FILE_DEPENDENCIES markup
         data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
@@ -209,16 +211,21 @@ class LibcxxTestFormat(object):
                 report += "Compilation failed unexpectedly!"
                 return lit.Test.Result(lit.Test.FAIL, report)
             # Run the test
-            local_cwd = os.path.dirname(source_path)
             env = None
             if self.exec_env:
                 env = self.exec_env
 
             max_retry = test.allowed_retries + 1
             for retry_count in range(max_retry):
-                cmd, out, err, rc = self.executor.run(exec_path, [exec_path],
-                                                      local_cwd, data_files,
-                                                      env)
+                # Create a temporary directory just for that test and run the
+                # test in that directory
+                try:
+                    execDirTmp = tempfile.mkdtemp(dir=execDir)
+                    cmd, out, err, rc = self.executor.run(exec_path, [exec_path],
+                                                          execDirTmp, data_files,
+                                                          env)
+                finally:
+                    shutil.rmtree(execDirTmp)
                 report = "Compiled With: '%s'\n" % ' '.join(compile_cmd)
                 report += libcxx.util.makeReport(cmd, out, err, rc)
                 if rc == 0:

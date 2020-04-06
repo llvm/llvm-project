@@ -264,6 +264,3 @@ std::unique_ptr<OpPassBase<spirv::ModuleOp>>
 mlir::spirv::createLowerABIAttributesPass() {
   return std::make_unique<LowerABIAttributesPass>();
 }
-
-static PassRegistration<LowerABIAttributesPass>
-    pass("spirv-lower-abi-attrs", "Lower SPIR-V ABI Attributes");

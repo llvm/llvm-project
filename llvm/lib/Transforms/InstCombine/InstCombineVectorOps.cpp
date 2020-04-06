@@ -1657,6 +1657,47 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   return NewBO;
 }
 
+/// Convert a narrowing shuffle of a bitcasted vector into a vector truncate.
+/// Example (little endian):
+/// shuf (bitcast <4 x i16> X to <8 x i8>), <0, 2, 4, 6> --> trunc X to <4 x i8>
+static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
+                                     bool IsBigEndian) {
+  // This must be a bitcasted shuffle of 1 vector integer operand.
+  Type *DestType = Shuf.getType();
+  Value *X;
+  if (!match(Shuf.getOperand(0), m_BitCast(m_Value(X))) ||
+      !match(Shuf.getOperand(1), m_Undef()) || !DestType->isIntOrIntVectorTy())
+    return nullptr;
+
+  // The source type must have the same number of elements as the shuffle,
+  // and the source element type must be larger than the shuffle element type.
+  Type *SrcType = X->getType();
+  if (!SrcType->isVectorTy() || !SrcType->isIntOrIntVectorTy() ||
+      SrcType->getVectorNumElements() != DestType->getVectorNumElements() ||
+      SrcType->getScalarSizeInBits() % DestType->getScalarSizeInBits() != 0)
+    return nullptr;
+
+  assert(Shuf.changesLength() && !Shuf.increasesLength() &&
+         "Expected a shuffle that decreases length");
+
+  // Last, check that the mask chooses the correct low bits for each narrow
+  // element in the result.
+  uint64_t TruncRatio =
+      SrcType->getScalarSizeInBits() / DestType->getScalarSizeInBits();
+  ArrayRef<int> Mask = Shuf.getShuffleMask();
+  for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
+    if (Mask[i] == UndefMaskElem)
+      continue;
+    uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
+    assert(LSBIndex <= std::numeric_limits<int32_t>::max() &&
+           "Overflowed 32-bits");
+    if (Mask[i] != (int)LSBIndex)
+      return nullptr;
+  }
+
+  return new TruncInst(X, DestType);
+}
+
 /// Match a shuffle-select-shuffle pattern where the shuffles are widening and
 /// narrowing (concatenating with undef and extracting back to the original
 /// length). This allows replacing the wide select with a narrow select.
@@ -1889,9 +1930,9 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
-  if (auto *V =
-          SimplifyShuffleVectorInst(LHS, RHS, SVI.getShuffleMask(),
-                                    SVI.getType(), SQ.getWithInstruction(&SVI)))
+  SimplifyQuery ShufQuery = SQ.getWithInstruction(&SVI);
+  if (auto *V = SimplifyShuffleVectorInst(LHS, RHS, SVI.getShuffleMask(),
+                                          SVI.getType(), ShufQuery))
     return replaceInstUsesWith(SVI, V);
 
   // shuffle x, x, mask --> shuffle x, undef, mask'
@@ -1899,6 +1940,32 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   unsigned LHSWidth = LHS->getType()->getVectorNumElements();
   ArrayRef<int> Mask = SVI.getShuffleMask();
   Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
+
+  // Peek through a bitcasted shuffle operand by scaling the mask. If the
+  // simulated shuffle can simplify, then this shuffle is unnecessary:
+  // shuf (bitcast X), undef, Mask --> bitcast X'
+  // TODO: This could be extended to allow length-changing shuffles and/or casts
+  //       to narrower elements. The transform might also be obsoleted if we
+  //       allowed canonicalization of bitcasted shuffles.
+  Value *X;
+  if (match(LHS, m_BitCast(m_Value(X))) && match(RHS, m_Undef()) &&
+      X->getType()->isVectorTy() && VWidth == LHSWidth &&
+      X->getType()->getVectorNumElements() >= VWidth) {
+    // Create the scaled mask constant.
+    Type *XType = X->getType();
+    unsigned XNumElts = XType->getVectorNumElements();
+    assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
+    unsigned ScaleFactor = XNumElts / VWidth;
+    SmallVector<int, 16> ScaledMask;
+    scaleShuffleMask(ScaleFactor, Mask, ScaledMask);
+
+    // If the shuffled source vector simplifies, cast that value to this
+    // shuffle's type.
+    if (auto *V = SimplifyShuffleVectorInst(X, UndefValue::get(XType),
+                                            ScaledMask, XType, ShufQuery))
+      return BitCastInst::Create(Instruction::BitCast, V, SVI.getType());
+  }
+
   if (LHS == RHS) {
     assert(!isa<UndefValue>(RHS) && "Shuffle with 2 undef ops not simplified?");
     // Remap any references to RHS to use LHS.
@@ -1923,6 +1990,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+    return I;
+
+  if (Instruction *I = foldTruncShuffle(SVI, DL.isBigEndian()))
     return I;
 
   if (Instruction *I = narrowVectorSelect(SVI, Builder))

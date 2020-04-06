@@ -782,6 +782,9 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
   if (!data_dir_exception.vmaddr)
     return {};
 
+  if (m_coff_header.machine != llvm::COFF::IMAGE_FILE_MACHINE_AMD64)
+    return {};
+
   return std::make_unique<PECallFrameInfo>(*this, data_dir_exception.vmaddr,
                                            data_dir_exception.vmsize);
 }

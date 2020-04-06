@@ -440,13 +440,19 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     Builder.CreateCall(RegisterFunc, Args);
   }
 
+  llvm::Type *VarSizeTy = IntTy;
+  // For HIP or CUDA 9.0+, device variable size is type of `size_t`.
+  if (CGM.getLangOpts().HIP ||
+      ToCudaVersion(CGM.getTarget().getSDKVersion()) >= CudaVersion::CUDA_90)
+    VarSizeTy = SizeTy;
+
   // void __cudaRegisterVar(void **, char *, char *, const char *,
   //                        int, int, int, int)
   llvm::Type *RegisterVarParams[] = {VoidPtrPtrTy, CharPtrTy, CharPtrTy,
-                                     CharPtrTy,    IntTy,     IntTy,
+                                     CharPtrTy,    IntTy,     VarSizeTy,
                                      IntTy,        IntTy};
   llvm::FunctionCallee RegisterVar = CGM.CreateRuntimeFunction(
-      llvm::FunctionType::get(IntTy, RegisterVarParams, false),
+      llvm::FunctionType::get(VoidTy, RegisterVarParams, false),
       addUnderscoredPrefixToName("RegisterVar"));
   // void __cudaRegisterSurface(void **, const struct surfaceReference *,
   //                            const void **, const char *, int, int);
@@ -476,7 +482,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
           VarName,
           VarName,
           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
-          llvm::ConstantInt::get(IntTy, VarSize),
+          llvm::ConstantInt::get(VarSizeTy, VarSize),
           llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
           llvm::ConstantInt::get(IntTy, 0)};
       Builder.CreateCall(RegisterVar, Args);

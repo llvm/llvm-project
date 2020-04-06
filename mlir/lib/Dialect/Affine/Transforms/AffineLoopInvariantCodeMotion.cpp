@@ -42,6 +42,10 @@ namespace {
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.
 struct LoopInvariantCodeMotion : public FunctionPass<LoopInvariantCodeMotion> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineLoopInvariantCodeMotion
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   void runOnFunction() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
@@ -232,7 +236,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createAffineLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }
-
-static PassRegistration<LoopInvariantCodeMotion>
-    pass("affine-loop-invariant-code-motion",
-         "Hoist loop invariant instructions outside of the loop");

@@ -102,7 +102,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation Loc = AfterRBrace;
   SourceLocation LBraceLoc = ND->getBeginLoc();
 
-  // Currently for nested namepsace (n1::n2::...) the AST matcher will match foo
+  // Currently for nested namespace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
   for (const auto &EndOfNameLocation : Ends) {

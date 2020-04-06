@@ -359,6 +359,7 @@ def AffineIfOp : Affine_Op<"if",
     }
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

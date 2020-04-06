@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
-; RUN: llc -march=amdgcn -mcpu=gfx906 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
-; RUN: llc -march=amdgcn -mcpu=gfx1011 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -march=amdgcn -mcpu=gfx1012 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=-fp64-fp16-denormals,-fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=+fp64-fp16-denormals,+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
+; RUN: llc -march=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
+; RUN: llc -march=amdgcn -mcpu=gfx1011 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx1012 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
+; RUN: llc -march=amdgcn -mcpu=gfx906 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx906 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
 ; (fadd (fmul S1.x, S2.x), (fadd (fmul (S1.y, S2.y), z))) -> (fdot2 S1, S2, z)
 
 ; Tests to make sure fdot2 is not generated when vector elements of dot-product expressions

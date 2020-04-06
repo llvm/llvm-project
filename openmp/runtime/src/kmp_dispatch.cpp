@@ -1250,7 +1250,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
             pr->u.p.parm4 = (victimIdx + 1) % nproc; // next victim
             continue; // not enough chunks to steal
           }
-          // stealing succeded, reduce victim's ub by 1/4 of undone chunks or
+          // stealing succeeded, reduce victim's ub by 1/4 of undone chunks or
           // by 1
           if (remaining > 3) {
             // steal 1/4 of remaining
@@ -1357,7 +1357,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
                     (volatile kmp_int64 *)&victim->u.p.count,
                     *VOLATILE_CAST(kmp_int64 *) & vold.b,
                     *VOLATILE_CAST(kmp_int64 *) & vnew.b)) {
-              // stealing succedded
+              // stealing succeeded
               KMP_COUNT_DEVELOPER_VALUE(FOR_static_steal_stolen,
                                         vold.p.ub - vnew.p.ub);
               status = 1;
@@ -1372,7 +1372,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
 #endif
               break;
             } // if (check CAS result)
-            KMP_CPU_PAUSE(); // CAS failed, repeate attempt
+            KMP_CPU_PAUSE(); // CAS failed, repeatedly attempt
           } // while (try to steal from particular victim)
         } // while (search for victim)
       } // if (try to find victim and steal)
@@ -1532,7 +1532,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
       }
       if ((T)remaining <
           pr->u.p.parm2) { // compare with K*nproc*(chunk+1), K=2 by default
-        // use dynamic-style shcedule
+        // use dynamic-style schedule
         // atomically increment iterations, get old value
         init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                  (ST)chunkspec);
@@ -1601,7 +1601,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
       KMP_DEBUG_ASSERT(init % chunk == 0);
       // compare with K*nproc*(chunk+1), K=2 by default
       if ((T)remaining < pr->u.p.parm2) {
-        // use dynamic-style shcedule
+        // use dynamic-style schedule
         // atomically increment iterations, get old value
         init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                  (ST)chunk);
@@ -1892,7 +1892,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
   // This is potentially slightly misleading, schedule(runtime) will appear here
-  // even if the actual runtme schedule is static. (Which points out a
+  // even if the actual runtime schedule is static. (Which points out a
   // disadvantage of schedule(runtime): even when static scheduling is used it
   // costs more than a compile time choice to use static scheduling would.)
   KMP_TIME_PARTITIONED_BLOCK(OMP_loop_dynamic_scheduling);
@@ -1909,7 +1909,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
        gtid, p_lb, p_ub, p_st, p_last));
 
   if (team->t.t_serialized) {
-    /* NOTE: serialize this dispatch becase we are not at the active level */
+    /* NOTE: serialize this dispatch because we are not at the active level */
     pr = reinterpret_cast<dispatch_private_info_template<T> *>(
         th->th.th_dispatch->th_disp_buffer); /* top of the stack */
     KMP_DEBUG_ASSERT(pr);

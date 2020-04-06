@@ -367,6 +367,14 @@ public:
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName);
 
+  /// Try to create a StaticLibraryDefinitionGenerator from the given path.
+  ///
+  /// This call will succeed if the file at the given path is a static library
+  /// or a MachO universal binary containing a static library that is compatible
+  /// with the given triple. Otherwise it will return an error.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Load(ObjectLayer &L, const char *FileName, const Triple &TT);
+
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   /// This call will succeed if the buffer contains a valid archive, otherwise
   /// it will return an error.

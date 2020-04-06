@@ -19,10 +19,12 @@ using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
-
-class ConvertSimulatedQuantPass
+struct ConvertSimulatedQuantPass
     : public FunctionPass<ConvertSimulatedQuantPass> {
-public:
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantConvertSimulatedQuant
+#include "mlir/Dialect/Quant/Passes.h.inc"
+
   void runOnFunction() override;
 };
 
@@ -142,8 +144,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::quant::createConvertSimulatedQuantPass() {
   return std::make_unique<ConvertSimulatedQuantPass>();
 }
-
-static PassRegistration<ConvertSimulatedQuantPass>
-    pass("quant-convert-simulated-quantization",
-         "Converts training-time simulated quantization ops to corresponding "
-         "quantize/dequantize casts.");

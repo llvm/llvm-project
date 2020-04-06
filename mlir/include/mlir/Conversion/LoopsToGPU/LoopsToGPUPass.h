@@ -27,6 +27,7 @@ class Pass;
 /// calling the conversion.
 std::unique_ptr<OpPassBase<FuncOp>>
 createSimpleLoopsToGPUPass(unsigned numBlockDims, unsigned numThreadDims);
+std::unique_ptr<OpPassBase<FuncOp>> createSimpleLoopsToGPUPass();
 
 /// Create a pass that converts every loop operation within the body of the
 /// FuncOp into a GPU launch. The number of workgroups and workgroup size for
@@ -37,6 +38,7 @@ createSimpleLoopsToGPUPass(unsigned numBlockDims, unsigned numThreadDims);
 std::unique_ptr<OpPassBase<FuncOp>>
 createLoopToGPUPass(ArrayRef<int64_t> numWorkGroups,
                     ArrayRef<int64_t> workGroupSize);
+std::unique_ptr<OpPassBase<FuncOp>> createLoopToGPUPass();
 
 /// Creates a pass that converts loop.parallel operations into a gpu.launch
 /// operation. The mapping of loop dimensions to launch dimensions is derived

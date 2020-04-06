@@ -21,9 +21,11 @@ using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
+struct ConvertConstPass : public FunctionPass<ConvertConstPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantConvertConst
+#include "mlir/Dialect/Quant/Passes.h.inc"
 
-class ConvertConstPass : public FunctionPass<ConvertConstPass> {
-public:
   void runOnFunction() override;
 };
 
@@ -106,7 +108,3 @@ void ConvertConstPass::runOnFunction() {
 std::unique_ptr<OpPassBase<FuncOp>> mlir::quant::createConvertConstPass() {
   return std::make_unique<ConvertConstPass>();
 }
-
-static PassRegistration<ConvertConstPass>
-    pass("quant-convert-const",
-         "Converts constants followed by qbarrier to actual quantized values");

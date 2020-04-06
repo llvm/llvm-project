@@ -52,7 +52,7 @@ def ForOp : Loop_Op<"for",
     the lower bound but does not include the upper bound.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield".  Calling ForOp::build will create such a region and insert
+    "loop.yield". Calling ForOp::build will create such a region and insert
     the terminator implicitly if none is defined, so will the parsing even in
     cases when it is absent from the custom format. For example:
 
@@ -71,9 +71,11 @@ def ForOp : Loop_Op<"for",
 
     The region must terminate with a "loop.yield" that passes all the current
     iteration variables to the next iteration, or to the "loop.for" result, if
-    at the last iteration.  "loop.for" results hold the final values after the
-    last iteration.
+    at the last iteration. Note, that when the loop-carried variables are
+    present, calling ForOp::build will not insert the terminator implicitly.
+    The caller must insert "loop.yield" in that case.
 
+    "loop.for" results hold the final values after the last iteration.
     For example, to sum-reduce a memref:
 
     ```mlir
@@ -142,10 +144,10 @@ def ForOp : Loop_Op<"for",
     OpBuilder getBodyBuilder() {
       return OpBuilder(getBody(), std::prev(getBody()->end()));
     }
-    iterator_range<Block::args_iterator> getRegionIterArgs() {
+    Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    iterator_range<Operation::operand_iterator> getIterOperands() {
+    Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
 
@@ -246,7 +248,9 @@ def IfOp : Loop_Op<"if",
 }
 
 def ParallelOp : Loop_Op<"parallel",
-    [AttrSizedOperandSegments, SingleBlockImplicitTerminator<"YieldOp">]> {
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
     The "loop.parallel" operation represents a loop nest taking 4 groups of SSA
@@ -308,10 +312,7 @@ def ParallelOp : Loop_Op<"parallel",
 
   let extraClassDeclaration = [{
     Block *getBody() { return &region().front(); }
-    unsigned getNumInductionVars() {
-      return getBody()->getNumArguments();
-    }
-    iterator_range<Block::args_iterator> getInductionVars() {
+    ValueRange getInductionVars() {
       return getBody()->getArguments();
     }
     unsigned getNumLoops() { return step().size(); }

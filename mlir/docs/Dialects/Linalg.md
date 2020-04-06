@@ -29,7 +29,7 @@ performed on the Linalg IR and that have influenced its design:
 1. Tiled Producer-Consumer Fusion with Parametric Tile-And-Fuse.
 1. Map to Parallel and Reduction Loops and Hardware.
 1. Vectorization: Rewrite in Vector Form.
-1. Lower to Loops (Affine and/or Generic).
+1. Lower to Loops (Affine, Generic and Parallel).
 1. Lower to Library Calls or Special Instructions, Intrinsics or ISA.
 1. Partially Lower to Iterations Over a Finer-Grained Linalg Op.
 
@@ -241,7 +241,7 @@ example:
   (i, j) -> (i, j),
   (i, j) -> (i, j)
 }
-#attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps}
+#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs (%A, %B, %C) {
     ^bb0(%a: f32, %b: f32):
@@ -295,7 +295,7 @@ example:
   (i, j) -> (i, j),
   (i, j) -> (i, j)
 }
-#attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
+#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs (%A, %B, %C) {
     ^bb0(%a: f32, %b: f32):

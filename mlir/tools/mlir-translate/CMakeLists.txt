@@ -24,4 +24,4 @@ add_llvm_tool(mlir-translate
 )
 llvm_update_compile_flags(mlir-translate)
 whole_archive_link(mlir-translate ${FULL_LIBS})
-target_link_libraries(mlir-translate PRIVATE MLIRIR MLIRTranslateClParser ${LIBS} LLVMSupport)
+target_link_libraries(mlir-translate PRIVATE MLIRIR MLIRTranslation ${LIBS} LLVMSupport)

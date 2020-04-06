@@ -441,7 +441,7 @@ static Optional<WalkResult> walkSymbolUses(
   return WalkResult::advance();
 }
 /// Walk all of the uses, for any symbol, that are nested within the given
-/// operaion 'from', invoking the provided callback for each. This does not
+/// operation 'from', invoking the provided callback for each. This does not
 /// traverse into any nested symbol tables.
 static Optional<WalkResult> walkSymbolUses(
     Operation *from,

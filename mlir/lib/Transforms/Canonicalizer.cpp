@@ -20,6 +20,10 @@ using namespace mlir;
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public OperationPass<Canonicalizer> {
+/// Include the generated pass utilities.
+#define GEN_PASS_Canonicalizer
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override {
     OwningRewritePatternList patterns;
 
@@ -40,6 +44,3 @@ struct Canonicalizer : public OperationPass<Canonicalizer> {
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
   return std::make_unique<Canonicalizer>();
 }
-
-static PassRegistration<Canonicalizer> pass("canonicalize",
-                                            "Canonicalize operations");

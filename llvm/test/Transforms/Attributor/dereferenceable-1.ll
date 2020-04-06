@@ -124,28 +124,28 @@ define i32* @f7_0(i32* %ptr) {
   ret i32* %ptr
 }
 
-; ATTRIBUTOR: define void @f7_1(i32* nonnull dereferenceable(4) %ptr, i1 %c)
+; ATTRIBUTOR: define void @f7_1(i32* nonnull align 4 dereferenceable(4) %ptr, i1 %c)
 define void @f7_1(i32* %ptr, i1 %c) {
 
-; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) %ptr)
   %A = tail call i32 @unkown_f(i32* %ptr)
 
   %ptr.0 = load i32, i32* %ptr
   ; deref 4 hold
 
 ; FIXME: this should be %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
-; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) %ptr)
   %B = tail call i32 @unkown_f(i32* dereferenceable(1) %ptr)
 
   br i1%c, label %if.true, label %if.false
 if.true:
-; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
   %C = tail call i32 @unkown_f(i32* %ptr)
 
-; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
   %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
 
-; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
   %E = tail call i32 @unkown_f(i32* %ptr)
 
   ret void
@@ -159,26 +159,26 @@ define void @f7_2(i1 %c) {
 
   %ptr =  tail call i32* @unkown_ptr()
 
-; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) %ptr)
   %A = tail call i32 @unkown_f(i32* %ptr)
 
   %arg_a.0 = load i32, i32* %ptr
   ; deref 4 hold
 
-; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) %ptr)
   %B = tail call i32 @unkown_f(i32* dereferenceable(1) %ptr)
 
   br i1%c, label %if.true, label %if.false
 if.true:
 
-; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
   %C = tail call i32 @unkown_f(i32* %ptr)
 
-; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
   %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
 
   %E = tail call i32 @unkown_f(i32* %ptr)
-; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) %ptr)
 
   ret void
 
@@ -195,14 +195,14 @@ define i32* @f7_3() {
 
 define i32* @test_for_minus_index(i32* %p) {
 ; FIXME: This should have a return dereferenceable(8) but we need to make sure it will work in loops as well.
-; ATTRIBUTOR: define nonnull i32* @test_for_minus_index(i32* nofree nonnull writeonly "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define nonnull align 4 i32* @test_for_minus_index(i32* nofree nonnull writeonly align 4 "no-capture-maybe-returned" %p)
   %q = getelementptr inbounds i32, i32* %p, i32 -2
   store i32 1, i32* %q
   ret i32* %q
 }
 
 define void @deref_or_null_and_nonnull(i32* dereferenceable_or_null(100) %0) {
-; ATTRIBUTOR: define void @deref_or_null_and_nonnull(i32* nocapture nofree nonnull writeonly dereferenceable(100) %0)
+; ATTRIBUTOR: define void @deref_or_null_and_nonnull(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(100) %0)
   store i32 1, i32* %0
   ret void
 }

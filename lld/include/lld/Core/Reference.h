@@ -91,7 +91,7 @@ public:
   /// Some relocations require a symbol and a value (e.g. foo + 4).
   virtual Addend addend() const = 0;
 
-  /// During linking, some optimzations may change addend value.
+  /// During linking, some optimizations may change addend value.
   virtual void setAddend(Addend) = 0;
 
   /// Returns target specific attributes of the reference.

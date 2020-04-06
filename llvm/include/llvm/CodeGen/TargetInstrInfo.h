@@ -235,8 +235,8 @@ public:
   /// destination. e.g. X86::MOVSX64rr32. If this returns true, then it's
   /// expected the pre-extension value is available as a subreg of the result
   /// register. This also returns the sub-register index in SubIdx.
-  virtual bool isCoalescableExtInstr(const MachineInstr &MI, unsigned &SrcReg,
-                                     unsigned &DstReg, unsigned &SubIdx) const {
+  virtual bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
+                                     Register &DstReg, unsigned &SubIdx) const {
     return false;
   }
 
@@ -368,7 +368,7 @@ public:
   /// DestReg:SubIdx. Any existing subreg index is preserved or composed with
   /// SubIdx.
   virtual void reMaterialize(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MI, unsigned DestReg,
+                             MachineBasicBlock::iterator MI, Register DestReg,
                              unsigned SubIdx, const MachineInstr &Orig,
                              const TargetRegisterInfo &TRI) const;
 
@@ -448,10 +448,10 @@ public:
   /// A pair composed of a register and a sub-register index.
   /// Used to give some type checking when modeling Reg:SubReg.
   struct RegSubRegPair {
-    unsigned Reg;
+    Register Reg;
     unsigned SubReg;
 
-    RegSubRegPair(unsigned Reg = 0, unsigned SubReg = 0)
+    RegSubRegPair(Register Reg = Register(), unsigned SubReg = 0)
         : Reg(Reg), SubReg(SubReg) {}
 
     bool operator==(const RegSubRegPair& P) const {
@@ -468,7 +468,7 @@ public:
   struct RegSubRegPairAndIdx : RegSubRegPair {
     unsigned SubIdx;
 
-    RegSubRegPairAndIdx(unsigned Reg = 0, unsigned SubReg = 0,
+    RegSubRegPairAndIdx(Register Reg = Register(), unsigned SubReg = 0,
                         unsigned SubIdx = 0)
         : RegSubRegPair(Reg, SubReg), SubIdx(SubIdx) {}
   };
@@ -845,8 +845,8 @@ public:
   /// @param TrueCycles  Latency from TrueReg to select output.
   /// @param FalseCycles Latency from FalseReg to select output.
   virtual bool canInsertSelect(const MachineBasicBlock &MBB,
-                               ArrayRef<MachineOperand> Cond, unsigned DstReg,
-                               unsigned TrueReg, unsigned FalseReg,
+                               ArrayRef<MachineOperand> Cond, Register DstReg,
+                               Register TrueReg, Register FalseReg,
                                int &CondCycles, int &TrueCycles,
                                int &FalseCycles) const {
     return false;
@@ -869,8 +869,8 @@ public:
   /// @param FalseReg Virtual register to copy when Cons is false.
   virtual void insertSelect(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
-                            unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                            unsigned TrueReg, unsigned FalseReg) const {
+                            Register DstReg, ArrayRef<MachineOperand> Cond,
+                            Register TrueReg, Register FalseReg) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertSelect!");
   }
 
@@ -1416,16 +1416,16 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  virtual bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                              unsigned &SrcReg2, int &Mask, int &Value) const {
+  virtual bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                              Register &SrcReg2, int &Mask, int &Value) const {
     return false;
   }
 
   /// See if the comparison instruction can be converted
   /// into something more efficient. E.g., on ARM most instructions can set the
   /// flags register, obviating the need for a separate CMP.
-  virtual bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                                    unsigned SrcReg2, int Mask, int Value,
+  virtual bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                                    Register SrcReg2, int Mask, int Value,
                                     const MachineRegisterInfo *MRI) const {
     return false;
   }
@@ -1452,7 +1452,7 @@ public:
   /// block. The caller may assume that it will not be erased by this
   /// function otherwise.
   virtual bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                             unsigned Reg, MachineRegisterInfo *MRI) const {
+                             Register Reg, MachineRegisterInfo *MRI) const {
     return false;
   }
 

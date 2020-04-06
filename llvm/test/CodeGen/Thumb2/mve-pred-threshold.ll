@@ -19,11 +19,9 @@ define arm_aapcs_vfpcc void @thres_i32(i32* %data, i16 zeroext %N, i32 %T) {
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vpt.s32 ge, q1, r2
+; CHECK-NEXT:    vpte.s32 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s32 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
+; CHECK-NEXT:    vstrwe.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -77,11 +75,9 @@ define arm_aapcs_vfpcc void @thresh_i16(i16* %data, i16 zeroext %N, i16 signext 
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vpt.s16 ge, q1, r2
+; CHECK-NEXT:    vpte.s16 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s16 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r0], #16
+; CHECK-NEXT:    vstrhe.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -135,11 +131,9 @@ define arm_aapcs_vfpcc void @thresh_i8(i8* %data, i16 zeroext %N, i8 signext %T)
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
-; CHECK-NEXT:    vpt.s8 ge, q1, r2
+; CHECK-NEXT:    vpte.s8 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s8 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r0], #16
+; CHECK-NEXT:    vstrbe.8 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -195,11 +189,9 @@ define arm_aapcs_vfpcc void @thresh_f32(float* %data, i16 zeroext %N, float %T) 
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vpt.f32 ge, q1, r2
+; CHECK-NEXT:    vpte.f32 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.f32 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
+; CHECK-NEXT:    vstrwe.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -255,11 +247,9 @@ define arm_aapcs_vfpcc void @thresh_f16(half* %data, i16 zeroext %N, float %T.co
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vpt.f16 ge, q1, r2
+; CHECK-NEXT:    vpte.f16 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.f16 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r0], #16
+; CHECK-NEXT:    vstrhe.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -318,11 +308,9 @@ define arm_aapcs_vfpcc void @thres_rev_i32(i32* %data, i16 zeroext %N, i32 %T) {
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vpt.s32 ge, q1, r2
+; CHECK-NEXT:    vpte.s32 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s32 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
+; CHECK-NEXT:    vstrwe.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB5_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -376,11 +364,9 @@ define arm_aapcs_vfpcc void @thresh_rev_i16(i16* %data, i16 zeroext %N, i16 sign
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vpt.s16 ge, q1, r2
+; CHECK-NEXT:    vpte.s16 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s16 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r0], #16
+; CHECK-NEXT:    vstrhe.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -434,11 +420,9 @@ define arm_aapcs_vfpcc void @thresh_rev_i8(i8* %data, i16 zeroext %N, i8 signext
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
-; CHECK-NEXT:    vpt.s8 ge, q1, r2
+; CHECK-NEXT:    vpte.s8 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.s8 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r0], #16
+; CHECK-NEXT:    vstrbe.8 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -494,11 +478,9 @@ define arm_aapcs_vfpcc void @thresh_rev_f32(float* %data, i16 zeroext %N, float 
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vpt.f32 ge, q1, r2
+; CHECK-NEXT:    vpte.f32 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.f32 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
+; CHECK-NEXT:    vstrwe.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -554,11 +536,9 @@ define arm_aapcs_vfpcc void @thresh_rev_f16(half* %data, i16 zeroext %N, float %
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vpt.f16 ge, q1, r2
+; CHECK-NEXT:    vpte.f16 ge, q1, r2
 ; CHECK-NEXT:    vcmpt.f16 le, q1, r1
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r0], #16
+; CHECK-NEXT:    vstrhe.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB9_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}

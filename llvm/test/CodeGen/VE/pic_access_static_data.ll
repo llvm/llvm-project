@@ -13,17 +13,15 @@ define void @func() {
 ; CHECK-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
 ; CHECK-NEXT:    lea %s0, src@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, src@gotoff_hi(%s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
-; CHECK-NEXT:    ld1b.zx %s0, (,%s0)
+; CHECK-NEXT:    lea.sl %s0, src@gotoff_hi(, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (%s0, %s15)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, 100
 ; CHECK-NEXT:    cmov.w.ne %s1, %s2, %s0
 ; CHECK-NEXT:    lea %s0, dst@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(%s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
-; CHECK-NEXT:    stl %s1, (,%s0)
+; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
+; CHECK-NEXT:    stl %s1, (%s0, %s15)
 ; CHECK-NEXT:    or %s11, 0, %s9
 
   %1 = load i1, i1* @src, align 4
@@ -42,10 +40,9 @@ define i32 @main() {
 ; CHECK-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
 ; CHECK-NEXT:    lea %s0, src@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, src@gotoff_hi(%s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
+; CHECK-NEXT:    lea.sl %s0, src@gotoff_hi(, %s0)
 ; CHECK-NEXT:    or %s1, 1, (0)1
-; CHECK-NEXT:    st1b %s1, (,%s0)
+; CHECK-NEXT:    st1b %s1, (%s0, %s15)
 ; CHECK-NEXT:    lea %s12, func@plt_lo(-24)
 ; CHECK-NEXT:    and %s12, %s12, (32)0
 ; CHECK-NEXT:    sic %s16
@@ -53,19 +50,18 @@ define i32 @main() {
 ; CHECK-NEXT:    bsic %lr, (,%s12)
 ; CHECK-NEXT:    lea %s0, dst@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(%s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
-; CHECK-NEXT:    ldl.sx %s1, (,%s0)
-; CHECK-NEXT:    stl %s1, 184(,%s11)
+; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
+; CHECK-NEXT:    ldl.sx %s1, (%s0, %s15)
+; CHECK-NEXT:    stl %s1, 184(, %s11)
 ; CHECK-NEXT:    lea %s0, .L.str@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, .L.str@gotoff_hi(%s0)
+; CHECK-NEXT:    lea.sl %s0, .L.str@gotoff_hi(, %s0)
 ; CHECK-NEXT:    adds.l %s0, %s15, %s0
 ; CHECK-NEXT:    lea %s12, printf@plt_lo(-24)
 ; CHECK-NEXT:    and %s12, %s12, (32)0
 ; CHECK-NEXT:    sic %s16
 ; CHECK-NEXT:    lea.sl %s12, printf@plt_hi(%s16, %s12)
-; CHECK-NEXT:    st %s0, 176(,%s11)
+; CHECK-NEXT:    st %s0, 176(, %s11)
 ; CHECK-NEXT:    bsic %lr, (,%s12)
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9

@@ -830,7 +830,7 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
 bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI,
                                             CombineInfo &Paired) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  MachineBasicBlock::iterator E = MBB->end();
+  MachineBasicBlock::iterator MBBE = MBB->end();
   MachineBasicBlock::iterator MBBI = CI.I;
 
   const unsigned Opc = CI.I->getOpcode();
@@ -853,7 +853,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI,
   DenseSet<unsigned> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
-  for (; MBBI != E; ++MBBI) {
+  for (; MBBI != MBBE; ++MBBI) {
 
     if ((getInstClass(MBBI->getOpcode(), *TII) != InstClass) ||
         (getInstSubclass(MBBI->getOpcode(), *TII) != InstSubclass)) {

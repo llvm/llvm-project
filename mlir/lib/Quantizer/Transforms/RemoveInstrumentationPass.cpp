@@ -23,9 +23,12 @@ using namespace mlir::quantizer;
 using namespace mlir::quant;
 
 namespace {
-
 class RemoveInstrumentationPass
     : public FunctionPass<RemoveInstrumentationPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_QuantizerRemoveInstrumentation
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
+
   void runOnFunction() override;
 };
 
@@ -61,8 +64,3 @@ std::unique_ptr<OpPassBase<FuncOp>>
 mlir::quantizer::createRemoveInstrumentationPass() {
   return std::make_unique<RemoveInstrumentationPass>();
 }
-
-static PassRegistration<RemoveInstrumentationPass>
-    pass("quantizer-remove-instrumentation",
-         "Removes instrumentation and hints which have no effect on final "
-         "execution");

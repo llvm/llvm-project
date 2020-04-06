@@ -57,22 +57,19 @@ def main(builtin_params={}):
         print_suites_or_tests(discovered_tests, opts)
         return
 
-    if opts.filter:
-        filtered_tests = [t for t in discovered_tests if
-                          opts.filter.search(t.getFullName())]
-        if not filtered_tests:
-            sys.stderr.write('error: filter did not match any tests '
-                             '(of %d discovered).  ' % len(discovered_tests))
-            if opts.allow_empty_runs:
-                sys.stderr.write('Suppressing error because '
-                                 "'--allow-empty-runs' was specified.\n")
-                sys.exit(0)
-            else:
-                sys.stderr.write("Use '--allow-empty-runs' to suppress this "
-                                 'error.\n')
-                sys.exit(2)
-    else:
-        filtered_tests = discovered_tests
+    filtered_tests = [t for t in discovered_tests if
+                      opts.filter.search(t.getFullName())]
+    if not filtered_tests:
+        sys.stderr.write('error: filter did not match any tests '
+                         '(of %d discovered).  ' % len(discovered_tests))
+        if opts.allow_empty_runs:
+            sys.stderr.write("Suppressing error because '--allow-empty-runs' "
+                             'was specified.\n')
+            sys.exit(0)
+        else:
+            sys.stderr.write("Use '--allow-empty-runs' to suppress this "
+                             'error.\n')
+            sys.exit(2)
 
     determine_order(filtered_tests, opts.order)
 
@@ -189,8 +186,8 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
-def run_tests(tests, lit_config, opts, numTotalTests):
-    display = lit.display.create_display(opts, len(tests), numTotalTests,
+def run_tests(tests, lit_config, opts, discovered_tests):
+    display = lit.display.create_display(opts, len(tests), discovered_tests,
                                          opts.workers)
     def progress_callback(test):
         display.update(test)
@@ -201,12 +198,22 @@ def run_tests(tests, lit_config, opts, numTotalTests):
                       opts.max_failures, opts.timeout)
 
     display.print_header()
+
+    interrupted = False
+    error = None
     try:
         execute_in_tmp_dir(run, lit_config)
-        display.clear(interrupted=False)
     except KeyboardInterrupt:
-        display.clear(interrupted=True)
-        print(' [interrupted by user]')
+        interrupted = True
+        error = '  interrupted by user'
+    except lit.run.MaxFailuresError:
+        error = 'warning: reached maximum number of test failures'
+    except lit.run.TimeoutError:
+        error = 'warning: reached timeout'
+
+    display.clear(interrupted)
+    if error:
+        sys.stderr.write('%s, skipping remaining tests\n' % error)
 
 
 def execute_in_tmp_dir(run, lit_config):
@@ -225,10 +232,6 @@ def execute_in_tmp_dir(run, lit_config):
                 'TEMP': tmp_dir,
                 'TEMPDIR': tmp_dir,
                 })
-    # FIXME: If Python does not exit cleanly, this directory will not be cleaned
-    # up. We should consider writing the lit pid into the temp directory,
-    # scanning for stale temp directories, and deleting temp directories whose
-    # lit process has died.
     try:
         run.execute()
     finally:

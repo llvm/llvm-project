@@ -68,7 +68,7 @@ using FilterType = std::vector<std::pair<llvm::GlobPattern, bool>>;
 /// callbacks of no interest that might clutter the output.
 ///
 /// Following the constructor and destructor function declarations, the
-/// overidden callback functions are defined.  The remaining functions are
+/// overridden callback functions are defined.  The remaining functions are
 /// helpers for recording the trace data, to reduce the coupling between it
 /// and the recorded data structure.
 class PPCallbacksTracker : public PPCallbacks {
@@ -84,7 +84,7 @@ public:
 
   ~PPCallbacksTracker() override;
 
-  // Overidden callback functions.
+  // Overridden callback functions.
 
   void FileChanged(SourceLocation Loc, PPCallbacks::FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,

@@ -308,7 +308,7 @@ public:
   const_iterator find(StringRef key) const;
 
   // Returns the number of static values of the given `symbol` corresponds to.
-  // A static value is a operand/result declared in ODS. Normally a symbol only
+  // A static value is an operand/result declared in ODS. Normally a symbol only
   // represents one static value, but symbols bound to op results can represent
   // more than one if the op is a multi-result op.
   int getStaticValueCount(StringRef symbol) const;

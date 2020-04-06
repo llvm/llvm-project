@@ -635,7 +635,7 @@ readtrace (const char *name)
 	FILE *f = strcmp (name, "-") == 0 ? stdin : fopen (name, "r");
 	if (!f)
 	  {
-	    printf ("openning \"%s\" failed: %m\n", name);
+	    printf ("opening \"%s\" failed: %m\n", name);
 	    exit (1);
 	  }
 	for (;;)

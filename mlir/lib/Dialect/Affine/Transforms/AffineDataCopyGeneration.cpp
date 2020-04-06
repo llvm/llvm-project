@@ -75,6 +75,10 @@ namespace {
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
     : public FunctionPass<AffineDataCopyGeneration> {
+/// Include the generated pass utilities.
+#define GEN_PASS_AffineDataCopyGeneration
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
   explicit AffineDataCopyGeneration(
       unsigned slowMemorySpace = 0,
       unsigned fastMemorySpace = clFastMemorySpace, unsigned tagMemorySpace = 0,
@@ -135,6 +139,9 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass(
   return std::make_unique<AffineDataCopyGeneration>(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
+}
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass() {
+  return std::make_unique<AffineDataCopyGeneration>();
 }
 
 /// Generate copies for this block. The block is partitioned into separate
@@ -261,7 +268,3 @@ void AffineDataCopyGeneration::runOnFunction() {
     nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
   }
 }
-
-static PassRegistration<AffineDataCopyGeneration>
-    pass("affine-data-copy-generate",
-         "Generate explicit copying for memory operations");

@@ -1065,10 +1065,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
   }
 
-  support::endian::write<uint32_t>(OS, Section.Bucket->size(),
-                                   ELFT::TargetEndianness);
-  support::endian::write<uint32_t>(OS, Section.Chain->size(),
-                                   ELFT::TargetEndianness);
+  support::endian::write<uint32_t>(
+      OS, Section.NBucket.getValueOr(llvm::yaml::Hex64(Section.Bucket->size())),
+      ELFT::TargetEndianness);
+  support::endian::write<uint32_t>(
+      OS, Section.NChain.getValueOr(llvm::yaml::Hex64(Section.Chain->size())),
+      ELFT::TargetEndianness);
+
   for (uint32_t Val : *Section.Bucket)
     support::endian::write<uint32_t>(OS, Val, ELFT::TargetEndianness);
   for (uint32_t Val : *Section.Chain)

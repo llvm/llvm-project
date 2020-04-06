@@ -19,9 +19,9 @@ bl:
   bl .+4
 
 # CHECK-LABEL: <b>:
-# CHECK-NEXT:   b .+67108860
-# CHECK-NEXT:   b .+0
-# CHECK-NEXT:   b .+4
+# CHECK-NEXT:   b 0x8
+# CHECK-NEXT:   b 0x10
+# CHECK-NEXT:   b 0x18
 
 b:
   b .-4

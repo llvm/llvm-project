@@ -4,7 +4,7 @@
 define double @loadf64(double* nocapture readonly %0) {
 ; CHECK-LABEL: loadf64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, (,%s0)
+; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load double, double* %0, align 16
   ret double %2
@@ -14,7 +14,7 @@ define double @loadf64(double* nocapture readonly %0) {
 define float @loadf32(float* nocapture readonly %0) {
 ; CHECK-LABEL: loadf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldu %s0, (,%s0)
+; CHECK-NEXT:    ldu %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load float, float* %0, align 16
   ret float %2
@@ -24,7 +24,7 @@ define float @loadf32(float* nocapture readonly %0) {
 define i64 @loadi64(i64* nocapture readonly %0) {
 ; CHECK-LABEL: loadi64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, (,%s0)
+; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i64, i64* %0, align 16
   ret i64 %2
@@ -34,7 +34,7 @@ define i64 @loadi64(i64* nocapture readonly %0) {
 define i32 @loadi32(i32* nocapture readonly %0) {
 ; CHECK-LABEL: loadi32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldl.sx %s0, (,%s0)
+; CHECK-NEXT:    ldl.sx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i32, i32* %0, align 16
   ret i32 %2
@@ -44,7 +44,7 @@ define i32 @loadi32(i32* nocapture readonly %0) {
 define i64 @loadi32sext(i32* nocapture readonly %0) {
 ; CHECK-LABEL: loadi32sext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldl.sx %s0, (,%s0)
+; CHECK-NEXT:    ldl.sx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i32, i32* %0, align 16
   %3 = sext i32 %2 to i64
@@ -55,7 +55,7 @@ define i64 @loadi32sext(i32* nocapture readonly %0) {
 define i64 @loadi32zext(i32* nocapture readonly %0) {
 ; CHECK-LABEL: loadi32zext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldl.zx %s0, (,%s0)
+; CHECK-NEXT:    ldl.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i32, i32* %0, align 16
   %3 = zext i32 %2 to i64
@@ -66,7 +66,7 @@ define i64 @loadi32zext(i32* nocapture readonly %0) {
 define i16 @loadi16(i16* nocapture readonly %0) {
 ; CHECK-LABEL: loadi16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld2b.zx %s0, (,%s0)
+; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i16, i16* %0, align 16
   ret i16 %2
@@ -76,7 +76,7 @@ define i16 @loadi16(i16* nocapture readonly %0) {
 define i64 @loadi16sext(i16* nocapture readonly %0) {
 ; CHECK-LABEL: loadi16sext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld2b.sx %s0, (,%s0)
+; CHECK-NEXT:    ld2b.sx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i16, i16* %0, align 16
   %3 = sext i16 %2 to i64
@@ -87,7 +87,7 @@ define i64 @loadi16sext(i16* nocapture readonly %0) {
 define i64 @loadi16zext(i16* nocapture readonly %0) {
 ; CHECK-LABEL: loadi16zext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld2b.zx %s0, (,%s0)
+; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i16, i16* %0, align 16
   %3 = zext i16 %2 to i64
@@ -98,7 +98,7 @@ define i64 @loadi16zext(i16* nocapture readonly %0) {
 define i8 @loadi8(i8* nocapture readonly %0) {
 ; CHECK-LABEL: loadi8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.zx %s0, (,%s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i8, i8* %0, align 16
   ret i8 %2
@@ -108,7 +108,7 @@ define i8 @loadi8(i8* nocapture readonly %0) {
 define i64 @loadi8sext(i8* nocapture readonly %0) {
 ; CHECK-LABEL: loadi8sext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.sx %s0, (,%s0)
+; CHECK-NEXT:    ld1b.sx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i8, i8* %0, align 16
   %3 = sext i8 %2 to i64
@@ -119,7 +119,7 @@ define i64 @loadi8sext(i8* nocapture readonly %0) {
 define i64 @loadi8zext(i8* nocapture readonly %0) {
 ; CHECK-LABEL: loadi8zext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.zx %s0, (,%s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load i8, i8* %0, align 16
   %3 = zext i8 %2 to i64
@@ -130,7 +130,7 @@ define i64 @loadi8zext(i8* nocapture readonly %0) {
 define double @loadf64stk() {
 ; CHECK-LABEL: loadf64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, 176(,%s11)
+; CHECK-NEXT:    ld %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca double, align 16
   %1 = load double, double* %addr, align 16
@@ -141,7 +141,7 @@ define double @loadf64stk() {
 define float @loadf32stk() {
 ; CHECK-LABEL: loadf32stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldu %s0, 176(,%s11)
+; CHECK-NEXT:    ldu %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca float, align 16
   %1 = load float, float* %addr, align 16
@@ -152,7 +152,7 @@ define float @loadf32stk() {
 define i64 @loadi64stk() {
 ; CHECK-LABEL: loadi64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, 176(,%s11)
+; CHECK-NEXT:    ld %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca i64, align 16
   %1 = load i64, i64* %addr, align 16
@@ -163,7 +163,7 @@ define i64 @loadi64stk() {
 define i32 @loadi32stk() {
 ; CHECK-LABEL: loadi32stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldl.sx %s0, 176(,%s11)
+; CHECK-NEXT:    ldl.sx %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca i32, align 16
   %1 = load i32, i32* %addr, align 16
@@ -174,7 +174,7 @@ define i32 @loadi32stk() {
 define i16 @loadi16stk() {
 ; CHECK-LABEL: loadi16stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld2b.zx %s0, 176(,%s11)
+; CHECK-NEXT:    ld2b.zx %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca i16, align 16
   %1 = load i16, i16* %addr, align 16
@@ -185,7 +185,7 @@ define i16 @loadi16stk() {
 define i8 @loadi8stk() {
 ; CHECK-LABEL: loadi8stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.zx %s0, 176(,%s11)
+; CHECK-NEXT:    ld1b.zx %s0, 176(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca i8, align 16
   %1 = load i8, i8* %addr, align 16

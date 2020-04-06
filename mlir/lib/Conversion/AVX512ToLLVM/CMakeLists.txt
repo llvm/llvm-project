@@ -3,6 +3,9 @@ add_mlir_conversion_library(MLIRAVX512ToLLVM
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/AVX512ToLLVM
+
+  DEPENDS
+  MLIRConversionPassIncGen
 )
 
 set(LIBS

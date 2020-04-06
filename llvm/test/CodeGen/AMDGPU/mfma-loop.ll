@@ -487,5 +487,52 @@ exit:
   ret void
 }
 
+; GCN-LABEL: {{^}}test_mfma_nested_loop_zeroinit:
+
+; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
+
+; Check that we do not copy agprs to vgprs and back in an outer loop.
+
+; GCN: [[OUTER_LOOP:BB[0-9_]+]]:
+; GCN-NOT: v_accvgpr
+; GCN: [[INNER_LOOP:BB[0-9_]+]]:
+; GCN-NOT: v_accvgpr
+; GCN: v_mfma_f32_32x32x1f32
+; GCN-NOT: v_accvgpr
+; GCN: s_cbranch_scc1 [[INNER_LOOP]]
+; GCN-NOT: v_accvgpr
+; GCN: s_cbranch_scc1 [[OUTER_LOOP]]
+
+; Final result should be read only once after the loop.
+
+; GCN-COUNT-32: v_accvgpr_read_b32
+
+define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(<32 x float> addrspace(1)* %arg) {
+entry:
+  br label %for.cond.preheader
+
+for.cond.preheader:
+  %phi.0 = phi <32 x float> [ zeroinitializer, %entry ], [ %mai.1, %inner.exit ]
+  %c.0 = phi i32 [ 0, %entry ], [ %inc.0, %inner.exit ]
+  br label %inner.for.cond.preheader
+
+inner.for.cond.preheader:
+  %phi = phi <32 x float> [ %phi.0, %for.cond.preheader ], [ %mai.1, %inner.for.cond.preheader ]
+  %c = phi i32 [ 0, %for.cond.preheader ], [ %inc, %inner.for.cond.preheader ]
+  %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %phi, i32 0, i32 0, i32 0)
+  %inc = add nuw nsw i32 %c, 1
+  %cc = icmp eq i32 %inc, 16
+  br i1 %cc, label %inner.exit, label %inner.for.cond.preheader
+
+inner.exit:
+  %inc.0 = add nuw nsw i32 %c.0, 1
+  %cc.0 = icmp eq i32 %inc.0, 16
+  br i1 %cc.0, label %exit, label %for.cond.preheader
+
+exit:
+  store <32 x float> %mai.1, <32 x float> addrspace(1)* %arg
+  ret void
+}
+
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()

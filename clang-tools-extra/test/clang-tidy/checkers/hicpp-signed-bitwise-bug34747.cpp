@@ -12,7 +12,7 @@ template <typename C>
 struct foo {
   typedef OutputStream<C> stream_type;
   foo(stream_type &o) {
-    o << 'x'; // warning occured here, fixed now
+    o << 'x'; // warning occurred here, fixed now
   }
 };
 

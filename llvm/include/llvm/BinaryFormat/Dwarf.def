@@ -22,7 +22,7 @@
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
-    defined HANDLE_DW_END)
+    defined HANDLE_DW_END || defined HANDLE_DW_SECT)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -126,6 +126,10 @@
 
 #ifndef HANDLE_DW_END
 #define HANDLE_DW_END(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_SECT
+#define HANDLE_DW_SECT(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -957,6 +961,15 @@ HANDLE_DW_IDX(0x03, die_offset)
 HANDLE_DW_IDX(0x04, parent)
 HANDLE_DW_IDX(0x05, type_hash)
 
+// DWARF package file section identifiers.
+// DWARFv5, section 7.3.5.3, table 7.1.
+HANDLE_DW_SECT(1, INFO)
+HANDLE_DW_SECT(3, ABBREV)
+HANDLE_DW_SECT(4, LINE)
+HANDLE_DW_SECT(5, LOCLISTS)
+HANDLE_DW_SECT(6, STR_OFFSETS)
+HANDLE_DW_SECT(7, MACRO)
+HANDLE_DW_SECT(8, RNGLISTS)
 
 #undef HANDLE_DW_TAG
 #undef HANDLE_DW_AT
@@ -981,3 +994,4 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DWARF_SECTION
 #undef HANDLE_DW_IDX
 #undef HANDLE_DW_END
+#undef HANDLE_DW_SECT

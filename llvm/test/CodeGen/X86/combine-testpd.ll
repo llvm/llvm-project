@@ -9,10 +9,8 @@ define i32 @testpdz_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdz_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestpd %xmm1, %xmm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = bitcast <2 x double> %c to <2 x i64>
   %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
@@ -27,11 +25,8 @@ define i32 @testpdz_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdz_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestpd %ymm1, %ymm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t0 = bitcast <4 x double> %c to <4 x i64>
@@ -51,10 +46,8 @@ define i32 @testpdz_128_invert1(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdz_128_invert1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vtestpd %xmm1, %xmm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vtestpd %xmm0, %xmm1
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = bitcast <2 x double> %d to <2 x i64>
   %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
@@ -69,11 +62,8 @@ define i32 @testpdz_256_invert1(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdz_256_invert1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; CHECK-NEXT:    vtestpd %ymm1, %ymm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vtestpd %ymm0, %ymm1
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t0 = bitcast <4 x double> %d to <4 x i64>
@@ -93,10 +83,8 @@ define i32 @testpdc_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestpd %xmm1, %xmm0
-; CHECK-NEXT:    cmovael %esi, %eax
+; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = bitcast <2 x double> %c to <2 x i64>
   %t1 = xor <2 x i64> %t0, <i64 -1, i64 -1>
@@ -111,11 +99,8 @@ define i32 @testpdc_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpdc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestpd %ymm1, %ymm0
-; CHECK-NEXT:    cmovael %esi, %eax
+; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t0 = bitcast <4 x double> %c to <4 x i64>
@@ -135,8 +120,6 @@ define i32 @testpdnzc_128_invert0(<2 x double> %c, <2 x double> %d, i32 %a, i32 
 ; CHECK-LABEL: testpdnzc_128_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestpd %xmm1, %xmm0
 ; CHECK-NEXT:    cmovbel %esi, %eax
 ; CHECK-NEXT:    retq
@@ -153,9 +136,6 @@ define i32 @testpdnzc_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 
 ; CHECK-LABEL: testpdnzc_256_invert0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestpd %ymm1, %ymm0
 ; CHECK-NEXT:    cmovbel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
