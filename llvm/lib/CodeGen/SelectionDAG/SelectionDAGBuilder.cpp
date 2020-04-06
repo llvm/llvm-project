@@ -10537,22 +10537,19 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
 }
 
 void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {
-  SDNodeFlags Flags;
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), I.getType(),
+                  ValueVTs);
+  unsigned NumValues = ValueVTs.size();
+  if (NumValues == 0) return;
 
+  SmallVector<SDValue, 4> Values(NumValues);
   SDValue Op = getValue(I.getOperand(0));
-  if (I.getOperand(0)->getType()->isAggregateType()) {
-    EVT VT = Op.getValueType();
-    SmallVector<SDValue, 1> Values;
-    for (unsigned i = 0; i < Op.getNumOperands(); ++i) {
-      SDValue Arg(Op.getNode(), i);
-      SDValue UnNodeValue = DAG.getNode(ISD::FREEZE, getCurSDLoc(), VT, Arg, Flags);
-      Values.push_back(UnNodeValue);
-    }
-    SDValue MergedValue = DAG.getMergeValues(Values, getCurSDLoc());
-    setValue(&I, MergedValue);
-  } else {
-    SDValue UnNodeValue = DAG.getNode(ISD::FREEZE, getCurSDLoc(), Op.getValueType(),
-                                      Op, Flags);
-    setValue(&I, UnNodeValue);
-  }
+
+  for (unsigned i = 0; i != NumValues; ++i)
+    Values[i] = DAG.getNode(ISD::FREEZE, getCurSDLoc(), ValueVTs[i],
+                            SDValue(Op.getNode(), Op.getResNo() + i));
+
+  setValue(&I, DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
+                           DAG.getVTList(ValueVTs), Values));
 }
