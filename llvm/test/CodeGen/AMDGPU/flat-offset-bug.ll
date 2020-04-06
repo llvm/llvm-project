@@ -26,7 +26,7 @@ define void @global_inst_offset(i32 addrspace(1)* nocapture %p) {
 }
 
 ; GCN-LABEL: load_i16_lo:
-; GFX9 : flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
+; GFX9:  flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
 ; GFX10: flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_i16_lo(i16* %arg, <2 x i16>* %out) {
   %gep = getelementptr inbounds i16, i16* %arg, i32 4

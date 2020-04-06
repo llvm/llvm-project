@@ -841,10 +841,10 @@
 #CHECK: vabsdub 2, 3, 4
 0x10 0x43 0x24 0x03
 
-#CHECK vabsduh 2, 3, 4
+#CHECK: vabsduh 2, 3, 4
 0x10 0x43 0x24 0x43
 
-#CHECK vabsduw 2, 3, 4
+#CHECK: vabsduw 2, 3, 4
 0x10 0x43 0x24 0x83
 
 # CHECK: bcdcfn. 27, 31, 1

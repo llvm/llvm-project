@@ -43,7 +43,6 @@ define float @test_fmul(float %a, float %b) {
   entry:
   %v = fmul float %a, %b
   ret float %v
-; CHECK-LABEL @test_fmul
 }
 
 define float @test_fadd(float %a, float %b) {
@@ -54,7 +53,6 @@ define float @test_fadd(float %a, float %b) {
   entry:
   %v = fadd float %a, %b
   ret float %v
-; CHECK-LABEL @test_fadd
 }
 
 define float @test_fsub(float %a, float %b) {
@@ -65,7 +63,6 @@ define float @test_fsub(float %a, float %b) {
   entry:
   %v = fsub float %a, %b
   ret float %v
-; CHECK-LABEL @test_fsub
 }
 
 define float @test_fneg(float %a) {
@@ -76,8 +73,6 @@ define float @test_fneg(float %a) {
   entry:
   %v = fsub float -0.0, %a
   ret float %v
-
-; CHECK-LABEL @test_fneg
 }
 
 define float @test_dtos(double %a) {

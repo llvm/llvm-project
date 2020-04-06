@@ -37,10 +37,10 @@ tcommit  sp
 
 tcancel
 // CHECK: error: too few operands for instruction
-// CHECK-NEXT tcancel
+// CHECK-NEXT: tcancel
 tcancel x0
 // CHECK: error: immediate must be an integer in range [0, 65535]
-// CHECK-NEXT tcancel
+// CHECK-NEXT: tcancel
 tcancel #65536
 // CHECK: error: immediate must be an integer in range [0, 65535]
 // CHECK-NEXT: tcancel #65536

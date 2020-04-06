@@ -534,7 +534,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
 ; GCN-DAG: v_mov_b32_e32 v2, 3
 ; GCN-DAG: v_mov_b32_e32 v3, 4
 ; GCN-DAG: v_mov_b32_e32 v4, 5
-; GCN-NOT v5,
+; GCN-NOT: v5,
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
   call void @external_void_func_v5i32(<5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5>)
