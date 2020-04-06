@@ -457,10 +457,10 @@ modules :ref:`local-configuration-files`.
 By default, substitutions are expanded exactly once, so that if e.g. a
 substitution ``%build`` is defined in top of another substitution ``%cxx``,
 ``%build`` will expand to ``%cxx`` textually, not to what ``%cxx`` expands to.
-However, if the ``recursiveExpansionLimit`` property of the ``LitConfig`` is
-set to a non-negative integer, substitutions will be expanded recursively until
-that limit is reached. It is an error if the limit is reached and expanding
-substitutions again would yield a different result.
+However, if the ``recursiveExpansionLimit`` property of the ``TestingConfig``
+is set to a non-negative integer, substitutions will be expanded recursively
+until that limit is reached. It is an error if the limit is reached and
+expanding substitutions again would yield a different result.
 
 More detailed information on substitutions can be found in the
 :doc:`../TestingGuide`.
