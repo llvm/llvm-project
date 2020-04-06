@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTRECORDREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTRECORDREADER_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/AbstractBasicReader.h"
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTReader.h"
