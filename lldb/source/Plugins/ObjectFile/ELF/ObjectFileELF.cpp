@@ -2781,7 +2781,7 @@ Symtab *ObjectFileELF::GetSymtab() {
       m_symtab_up.reset(new Symtab(this));
 
     // In the event that there's no symbol entry for the entry point we'll
-    // artifically create one. We delegate to the symtab object the figuring
+    // artificially create one. We delegate to the symtab object the figuring
     // out of the proper size, this will usually make it span til the next
     // symbol it finds in the section. This means that if there are missing
     // symbols the entry point might span beyond its function definition.
@@ -2878,7 +2878,7 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
     return;
 
   // First we save the new symbols into a separate list and add them to the
-  // symbol table after we colleced all symbols we want to add. This is
+  // symbol table after we collected all symbols we want to add. This is
   // neccessary because adding a new symbol invalidates the internal index of
   // the symtab what causing the next lookup to be slow because it have to
   // recalculate the index first.

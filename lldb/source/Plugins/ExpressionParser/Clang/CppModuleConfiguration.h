@@ -56,7 +56,7 @@ class CppModuleConfiguration {
   bool analyzeFile(const FileSpec &f);
 
 public:
-  /// Creates a configuraiton by analyzing the given list of used source files.
+  /// Creates a configuration by analyzing the given list of used source files.
   ///
   /// Currently only looks at the used paths and doesn't actually access the
   /// files on the disk.

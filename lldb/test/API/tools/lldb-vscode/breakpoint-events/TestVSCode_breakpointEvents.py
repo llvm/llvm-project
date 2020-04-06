@@ -28,7 +28,7 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
             breakpoint event that informs us that the breakpoint in the shared
             library is "changed" and the correct line number should be
             supplied. We also set a breakpoint using a LLDB command using the
-            "preRunCommands" when launching our program. Any breapoints set via
+            "preRunCommands" when launching our program. Any breakpoints set via
             the command interpreter should not be have breakpoint events sent
             back to VS Code as the UI isn't able to add new breakpoints to
             their UI. Code has been added that tags breakpoints set from VS Code
@@ -62,7 +62,7 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
                               preRunCommands=[bp_command])
         main_bp_id = 0
         foo_bp_id = 0
-        # Set breakoints and verify that they got set correctly
+        # Set breakpoints and verify that they got set correctly
         vscode_breakpoint_ids = []
         response = self.vscode.request_setBreakpoints(main_source_path,
                                                       [main_bp_line])

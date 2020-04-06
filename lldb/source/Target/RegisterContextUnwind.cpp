@@ -602,7 +602,7 @@ bool RegisterContextUnwind::CheckIfLoopingStack() {
   // multiple times, we compare the
   // CFA of the current
   // frame with the 2nd next frame because in some specail case (e.g. signal
-  // hanlders, hand written assembly without ABI compiance) we can have 2
+  // hanlders, hand written assembly without ABI compliance) we can have 2
   // frames with the same
   // CFA (in theory we
   // can have arbitrary number of frames with the same CFA, but more then 2 is
@@ -1094,7 +1094,7 @@ bool RegisterContextUnwind::IsValid() const {
 
 // After the final stack frame in a stack walk we'll get one invalid
 // (eNotAValidFrame) stack frame -- one past the end of the stack walk.  But
-// higher-level code will need to tell the differnece between "the unwind plan
+// higher-level code will need to tell the difference between "the unwind plan
 // below this frame failed" versus "we successfully completed the stack walk"
 // so this method helps to disambiguate that.
 
