@@ -23,7 +23,6 @@ class ELFSectionRef;
 class MachOObjectFile;
 class MachOUniversalBinary;
 class RelocationRef;
-class XCOFFObjectFile;
 }
 
 extern cl::opt<bool> Demangle;
@@ -99,9 +98,6 @@ Error getWasmRelocationValueString(const object::WasmObjectFile *Obj,
                                    const object::RelocationRef &RelRef,
                                    llvm::SmallVectorImpl<char> &Result);
 Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
-                                    const object::RelocationRef &RelRef,
-                                    llvm::SmallVectorImpl<char> &Result);
-Error getXCOFFRelocationValueString(const object::XCOFFObjectFile *Obj,
                                     const object::RelocationRef &RelRef,
                                     llvm::SmallVectorImpl<char> &Result);
 
