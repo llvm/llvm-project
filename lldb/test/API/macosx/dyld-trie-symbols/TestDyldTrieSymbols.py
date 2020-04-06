@@ -85,3 +85,24 @@ class DyldTrieSymbolsTestCase(TestBase):
         stripped_bar_symbols = stripped_target.FindSymbols("bar")
         self.assertEqual(stripped_bar_symbols.GetSize(), 0)
 
+        # confirm that we classified objc runtime symbols correctly and
+        # stripped off the objc prefix from the symbol names.
+        syms_ctx = stripped_target.FindSymbols("SourceBase")
+        self.assertEqual(syms_ctx.GetSize(), 2)
+        sym1 = syms_ctx.GetContextAtIndex(0).GetSymbol()
+        sym2 = syms_ctx.GetContextAtIndex(1).GetSymbol()
+
+        # one of these should be a lldb.eSymbolTypeObjCClass, the other
+        # should be lldb.eSymbolTypeObjCMetaClass.
+        if sym1.GetType() == lldb.eSymbolTypeObjCMetaClass:
+            self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCClass)
+        else:
+            if sym1.GetType() == lldb.eSymbolTypeObjCClass:
+                self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCMetaClass)
+            else:
+                self.assertTrue(sym1.GetType() == lldb.eSymbolTypeObjCMetaClass or sym1.GetType() == lldb.eSymbolTypeObjCClass)
+
+        syms_ctx = stripped_target.FindSymbols("SourceDerived._derivedValue")
+        self.assertEqual(syms_ctx.GetSize(), 1)
+        sym = syms_ctx.GetContextAtIndex(0).GetSymbol()
+        self.assertEqual(sym.GetType(), lldb.eSymbolTypeObjCIVar)
