@@ -266,22 +266,33 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     execution_results = lldb::eExpressionParseError;
     if (fixed_expression && !fixed_expression->empty() &&
         options.GetAutoApplyFixIts()) {
-      lldb::UserExpressionSP fixed_expression_sp(
-          target->GetUserExpressionForLanguage(fixed_expression->c_str(),
-                                               full_prefix, language,
-                                               desired_type, options, ctx_obj,
-                                               error));
-      DiagnosticManager fixed_diagnostic_manager;
-      parse_success = fixed_expression_sp->Parse(
-          fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info);
-      if (parse_success) {
-        diagnostic_manager.Clear();
-        user_expression_sp = fixed_expression_sp;
-      } else {
-        // If the fixed expression failed to parse, don't tell the user about,
-        // that won't help.
-        fixed_expression->clear();
+      const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
+      for (uint64_t i = 0; i < max_fix_retries; ++i) {
+        // Try parsing the fixed expression.
+        lldb::UserExpressionSP fixed_expression_sp(
+            target->GetUserExpressionForLanguage(
+                fixed_expression->c_str(), full_prefix, language, desired_type,
+                options, ctx_obj, error));
+        DiagnosticManager fixed_diagnostic_manager;
+        parse_success = fixed_expression_sp->Parse(
+            fixed_diagnostic_manager, exe_ctx, execution_policy,
+            keep_expression_in_memory, generate_debug_info);
+        if (parse_success) {
+          diagnostic_manager.Clear();
+          user_expression_sp = fixed_expression_sp;
+          break;
+        } else {
+          // The fixed expression also didn't parse. Let's check for any new
+          // Fix-Its we could try.
+          if (fixed_expression_sp->GetFixedText()) {
+            *fixed_expression = fixed_expression_sp->GetFixedText();
+          } else {
+            // Fixed expression didn't compile without a fixit, don't retry and
+            // don't tell the user about it.
+            fixed_expression->clear();
+            break;
+          }
+        }
       }
     }
 

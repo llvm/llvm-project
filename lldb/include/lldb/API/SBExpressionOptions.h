@@ -94,6 +94,10 @@ public:
 
   bool GetAutoApplyFixIts();
 
+  void SetRetriesWithFixIts(uint64_t retries);
+
+  uint64_t GetRetriesWithFixIts();
+
   bool GetTopLevel();
 
   void SetTopLevel(bool b = true);
