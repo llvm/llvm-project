@@ -3532,11 +3532,22 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
       (DL.getTypeAllocSize(Ty).getFixedSize() - Offset) < Size)
     return nullptr;
 
-  if (SequentialType *SeqTy = dyn_cast<SequentialType>(Ty)) {
-    Type *ElementTy = SeqTy->getElementType();
+  if (isa<ArrayType>(Ty) || isa<VectorType>(Ty)) {
+     Type *ElementTy;
+     uint64_t TyNumElements;
+     if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+       ElementTy = AT->getElementType();
+       TyNumElements = AT->getNumElements();
+     } else {
+       // FIXME: This isn't right for vectors with non-byte-sized or
+       // non-power-of-two sized elements.
+       auto *VT = cast<VectorType>(Ty);
+       ElementTy = VT->getElementType();
+       TyNumElements = VT->getNumElements();
+    }
     uint64_t ElementSize = DL.getTypeAllocSize(ElementTy).getFixedSize();
     uint64_t NumSkippedElements = Offset / ElementSize;
-    if (NumSkippedElements >= SeqTy->getNumElements())
+    if (NumSkippedElements >= TyNumElements)
       return nullptr;
     Offset -= NumSkippedElements * ElementSize;
 

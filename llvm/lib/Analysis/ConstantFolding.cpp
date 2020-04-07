@@ -463,15 +463,18 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C)) {
-    Type *EltTy = C->getType()->getSequentialElementType();
+    uint64_t NumElts;
+    Type *EltTy;
+    if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
+      NumElts = AT->getNumElements();
+      EltTy = AT->getElementType();
+    } else {
+      NumElts = C->getType()->getVectorNumElements();
+      EltTy = C->getType()->getVectorElementType();
+    }
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
     uint64_t Offset = ByteOffset - Index * EltSize;
-    uint64_t NumElts;
-    if (auto *AT = dyn_cast<ArrayType>(C->getType()))
-      NumElts = AT->getNumElements();
-    else
-      NumElts = C->getType()->getVectorNumElements();
 
     for (; Index != NumElts; ++Index) {
       if (!ReadDataFromGlobal(C->getAggregateElement(Index), Offset, CurPtr,
@@ -936,11 +939,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         // Only handle pointers to sized types, not pointers to functions.
         if (!Ty->isSized())
           return nullptr;
-      } else if (auto *ATy = dyn_cast<SequentialType>(Ty)) {
-        Ty = ATy->getElementType();
       } else {
-        // We've reached some non-indexable type.
-        break;
+        Type *NextTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
+        if (!NextTy)
+          break;
+        Ty = NextTy;
       }
 
       // Determine which element of the array the offset points into.
