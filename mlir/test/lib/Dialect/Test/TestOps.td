@@ -502,6 +502,20 @@ def StringAttrPrettyNameOp
 }
 
 //===----------------------------------------------------------------------===//
+// Test Locations
+//===----------------------------------------------------------------------===//
+
+def TestLocationSrcOp : TEST_Op<"loc_src"> {
+  let arguments = (ins I32:$input);
+  let results = (outs I32:$output);
+}
+
+def TestLocationDstOp : TEST_Op<"loc_dst", [SameOperandsAndResultType]> {
+  let arguments = (ins I32:$input);
+  let results = (outs I32:$output);
+}
+
+//===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//
 
@@ -994,6 +1008,18 @@ def : Pat<(OneI32ResultOp),
               (replaceWithValue $results__1),
               (replaceWithValue $results__2),
               ConstantAttr<I32Attr, "2">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Patterns (Location)
+
+// Test that we can specify locations for generated ops.
+def : Pat<(TestLocationSrcOp:$res1
+           (TestLocationSrcOp:$res2
+            (TestLocationSrcOp:$res3 $input))),
+          (TestLocationDstOp
+            (TestLocationDstOp
+              (TestLocationDstOp $input, (location $res1))),
+	    (location $res2, $res3))>;
 
 //===----------------------------------------------------------------------===//
 // Test Legalization
