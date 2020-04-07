@@ -154,7 +154,7 @@ body:             |
     $x1 = STDU $x1, -32, $x1
     CFI_INSTRUCTION def_cfa_offset 32
     CFI_INSTRUCTION offset $lr8, 16
-    BL8_NOP @__cxa_rethrow, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_rethrow, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
 
 ...
 ---
@@ -220,7 +220,7 @@ body:             |
     liveins: $r29
   
     EH_LABEL <mcsymbol .Ltmp0>
-    BL8_NOP @__cxa_rethrow, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_rethrow, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
     EH_LABEL <mcsymbol .Ltmp1>
   
   bb.2..noexc:
@@ -240,9 +240,9 @@ body:             |
     successors: %bb.11(0x7ffff800), %bb.6(0x00000800)
     liveins: $r29, $x3
   
-    BL8_NOP @__cxa_begin_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+    BL8_NOP @__cxa_begin_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
     EH_LABEL <mcsymbol .Ltmp3>
-    BL8_NOP @__cxa_rethrow, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_rethrow, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
     EH_LABEL <mcsymbol .Ltmp4>
     B %bb.11
   
@@ -250,7 +250,7 @@ body:             |
     successors: %bb.8(0x80000000)
     liveins: $r29, $x3, $x30
   
-    BL8_NOP @__cxa_begin_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+    BL8_NOP @__cxa_begin_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
     renamable $cr0 = CMPLWI killed renamable $r30, 2, implicit $x30
     B %bb.8
   
@@ -268,14 +268,14 @@ body:             |
     liveins: $r29, $x30
   
     $x3 = OR8 killed $x30, $x30
-    BL8_NOP @__cxa_begin_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit-def $r1, implicit-def dead $x3
-    BL8_NOP @__cxa_end_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_begin_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit-def $r1, implicit-def dead $x3
+    BL8_NOP @__cxa_end_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
   
   bb.8.for.inc:
     successors: %bb.9(0x04000000), %bb.1(0x7c000000)
     liveins: $r29
   
-    BL8_NOP @__cxa_end_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_end_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
     renamable $r29 = nsw ADDI killed renamable $r29, -1
     renamable $cr0 = CMPLWI renamable $r29, 0
     BCC 68, killed renamable $cr0, %bb.1
@@ -292,9 +292,9 @@ body:             |
     successors: 
     liveins: $x30
   
-    BL8_NOP @__cxa_end_catch, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
+    BL8_NOP @__cxa_end_catch, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit-def $r1
     $x3 = OR8 killed $x30, $x30
-    BL8_NOP @_Unwind_Resume, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit-def $r1
+    BL8_NOP @_Unwind_Resume, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit-def $r1
   
   bb.11.unreachable:
 

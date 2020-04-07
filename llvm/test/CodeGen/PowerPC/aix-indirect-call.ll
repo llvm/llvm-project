@@ -43,7 +43,7 @@ define signext i32 @callThroughPtr(i32 ()* nocapture) {
 ; MIR64-DAG:  renamable $[[REG:x[0-9]+]] = LD 0, renamable $x3 :: (dereferenceable invariant load 8 from %ir.0)
 ; MIR64-DAG:  $x2 = LD 8, killed renamable $x3 :: (dereferenceable invariant load 8 from %ir.0 + 8)
 ; MIR64-DAG:  MTCTR8 killed renamable $[[REG]], implicit-def $ctr8
-; MIR64-NEXT: BCTRL8_LDinto_toc 40, $x1, csr_aix64, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x11, implicit $x2, implicit-def $r1, implicit-def $x3
+; MIR64-NEXT: BCTRL8_LDinto_toc 40, $x1, csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x11, implicit $x2, implicit-def $r1, implicit-def $x3
 ; MIR64-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .callThroughPtr:
@@ -110,7 +110,7 @@ define void @callThroughPtrWithArgs(void (i32, i16, i64)* nocapture) {
 ; MIR64-DAG:  $x3 = LI8 1
 ; MIR64-DAG:  $x4 = LI8 2
 ; MIR64-DAG:  $x5 = LI8 3
-; MIR64-NEXT: BCTRL8_LDinto_toc 40, $x1, csr_aix64, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1
+; MIR64-NEXT: BCTRL8_LDinto_toc 40, $x1, csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1
 ; MIR64-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .callThroughPtrWithArgs:

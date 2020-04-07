@@ -174,10 +174,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // Standard calling convention CSRs.
   if (TM.isPPC64()) {
     if (Subtarget.hasAltivec())
-      return SaveR2 ? CSR_SVR464_R2_Altivec_SaveList
-                    : CSR_SVR464_Altivec_SaveList;
-    return SaveR2 ? CSR_SVR464_R2_SaveList
-                  : CSR_SVR464_SaveList;
+      return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
+                    : CSR_PPC64_Altivec_SaveList;
+    return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
   if (Subtarget.hasAltivec())
@@ -224,7 +223,7 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
   if (Subtarget.isAIXABI()) {
     assert(!Subtarget.hasAltivec() && "Altivec is not implemented on AIX yet.");
-    return TM.isPPC64() ? CSR_AIX64_RegMask : CSR_AIX32_RegMask;
+    return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
   }
 
   if (CC == CallingConv::Cold) {
@@ -236,12 +235,12 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                                   : CSR_SVR32_ColdCC_RegMask));
   }
 
-  return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_SVR464_Altivec_RegMask
-                                                : CSR_SVR464_RegMask)
-                      : (Subtarget.hasAltivec() ? CSR_SVR432_Altivec_RegMask
-                                                : (Subtarget.hasSPE()
-                                                  ? CSR_SVR432_SPE_RegMask
-                                                  : CSR_SVR432_RegMask));
+  return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
+                                                : CSR_PPC64_RegMask)
+                      : (Subtarget.hasAltivec()
+                             ? CSR_SVR432_Altivec_RegMask
+                             : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
+                                                   : CSR_SVR432_RegMask));
 }
 
 const uint32_t*
