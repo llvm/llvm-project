@@ -224,7 +224,7 @@ struct LandingPadInfo {
 };
 
 class MachineFunction {
-  const Function &F;
+  Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
@@ -435,7 +435,7 @@ public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
-  MachineFunction(const Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
   MachineFunction(const MachineFunction &) = delete;
@@ -482,6 +482,9 @@ public:
 
   /// Return the DataLayout attached to the Module associated to this MF.
   const DataLayout &getDataLayout() const;
+
+  /// Return the LLVM function that this machine code represents
+  Function &getFunction() { return F; }
 
   /// Return the LLVM function that this machine code represents
   const Function &getFunction() const { return F; }
