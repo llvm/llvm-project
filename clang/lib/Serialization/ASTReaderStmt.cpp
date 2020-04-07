@@ -944,6 +944,13 @@ void ASTStmtReader::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
     if (Step)
       SecColonLoc = readSourceLocation();
     E->setIteratorRange(I, Begin, ColonLoc, End, SecColonLoc, Step);
+    // Deserialize helpers
+    OMPIteratorHelperData HD;
+    HD.CounterVD = cast_or_null<VarDecl>(Record.readDeclRef());
+    HD.Upper = Record.readSubExpr();
+    HD.Update = Record.readSubExpr();
+    HD.CounterUpdate = Record.readSubExpr();
+    E->setHelper(I, HD);
   }
 }
 

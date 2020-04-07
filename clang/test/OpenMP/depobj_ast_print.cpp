@@ -19,6 +19,7 @@ T tmain(T argc) {
   static T a;
   int *b;
 #pragma omp depobj(a) depend(in:argc, ([4][*b][4])b)
+#pragma omp depobj(a) depend(iterator(i=0:*b), in: b[i])
 #pragma omp depobj(argc) destroy
 #pragma omp depobj(argc) update(inout)
   return argc;
@@ -26,11 +27,13 @@ T tmain(T argc) {
 // CHECK:      static T a;
 // CHECK-NEXT: int *b;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc,([4][*b][4])b){{$}}
+// CHECK-NEXT: #pragma omp depobj (a) depend(iterator(int i = 0:*b), in : b[i]){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 // CHECK:      static void *a;
 // CHECK-NEXT: int *b;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc,([4][*b][4])b){{$}}
+// CHECK-NEXT: #pragma omp depobj (a) depend(iterator(int i = 0:*b), in : b[i]){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 
