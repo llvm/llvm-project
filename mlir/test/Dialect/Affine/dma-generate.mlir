@@ -13,7 +13,6 @@
 // -----
 
 // Index of the buffer for the second DMA is remapped.
-// CHECK-DAG: [[MAP_PLUS_256:#map[0-9]+]] = affine_map<(d0) -> (d0 + 256)>
 // CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @loop_nest_1d() {
@@ -36,14 +35,13 @@ func @loop_nest_1d() {
   // Second DMA transfer.
   // CHECK:       affine.dma_start %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}} : memref<512xf32>, memref<256xf32, 2>, memref<1xi32>
   // CHECK-NEXT:  affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}} : memref<1xi32>
-  // CHECK: affine.for %{{.*}} = 0 to 256 {
+  // CHECK: affine.for %[[IV:.*]] = 0 to 256 {
       // CHECK-NEXT: affine.load %{{.*}}[%{{.*}}] : memref<256xf32, 2>
-      // CHECK:      affine.apply [[MAP_PLUS_256]](%{{.*}})
-      // Buffer for '%{{.*}}' in faster memref space is smaller size: 256xf32
-      // Affine map for 'affine.load %{{.*}}' is composed: %{{.*}} + 256 - 256 = %{{.*}}.
-      // CHECK-NEXT: %{{.*}} = affine.load %{{.*}}[%{{.*}}] : memref<256xf32, 2>
+      // Buffer for '%{{.*}}' in faster memref space is of smaller size: 256xf32
+      // Affine map for load on B is composed and becomes identity.
+      // CHECK:      affine.load %{{.*}}[%[[IV]]] : memref<256xf32, 2>
       // Already in faster memory space.
-      // CHECK:     affine.load %{{.*}}[%{{.*}}] : memref<256xf32, 2>
+      // CHECK:     affine.load %{{.*}}[%[[IV]]] : memref<256xf32, 2>
   // CHECK-NEXT: }
   // CHECK-NEXT: dealloc %{{.*}} : memref<1xi32>
   // CHECK-NEXT: dealloc %{{.*}} : memref<256xf32, 2>
@@ -83,19 +81,16 @@ func @loop_nest_1d() {
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to 32 {
 // CHECK-NEXT:      affine.for %{{.*}} = 0 to 32 {
 // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
-// CHECK-NEXT:          affine.apply #map{{[0-9]+}}(%{{.*}}, %{{.*}})
-// CHECK-NEXT:          %{{.*}} = affine.load [[BUFB]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
+// CHECK:               affine.load [[BUFB]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
 // CHECK-NEXT:          "foo"(%{{.*}}) : (f32) -> ()
 // CHECK-NEXT:        }
 // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
-// CHECK-NEXT:          affine.apply #map{{[0-9]+}}(%{{.*}}, %{{.*}})
-// CHECK-NEXT:          affine.load [[BUFA]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
+// CHECK:               affine.load [[BUFA]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
 // CHECK-NEXT:          "bar"(%{{.*}}) : (f32) -> ()
 // CHECK-NEXT:        }
 // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
 // CHECK-NEXT:          "abc_compute"() : () -> f32
-// CHECK-NEXT:          affine.apply #map{{[0-9]+}}(%{{.*}}, %{{.*}})
-// CHECK-NEXT:          affine.load [[BUFC]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
+// CHECK:               affine.load [[BUFC]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
 // CHECK-NEXT:          "addf32"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
 // CHECK-NEXT:          affine.store %{{.*}}, [[BUFC]][%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<512x32xf32, 2>
 // CHECK-NEXT:        }
@@ -155,8 +150,7 @@ func @loop_nest_high_d(%A: memref<512 x 32 x f32>,
 // CHECK-LABEL: func @loop_nest_modulo() {
 // CHECK:       alloc() : memref<256x8xf32>
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to 32 step 4 {
-// CHECK-NEXT:      affine.apply #map{{[0-9]+}}(%{{.*}})
-// CHECK-NEXT:      alloc() : memref<1x2xf32, 2>
+// CHECK:           alloc() : memref<1x2xf32, 2>
 // CHECK-NEXT:      alloc() : memref<1xi32>
 // Composition of the affine map for '%{{.*}}' causes '%{{.*}}' to be added as a symbol.
 // CHECK-NEXT:      affine.dma_start %{{.*}}[%{{.*}}, 0], %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}], %{{.*}} : memref<256x8xf32>, memref<1x2xf32, 2>, memref<1xi32>
@@ -231,8 +225,6 @@ func @dma_constant_dim_access(%A : memref<100x100xf32>) {
 
 // -----
 
-// CHECK-DAG: [[MAP_SYM_SHIFT:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d1 + s0 + s1)>
-
 // CHECK-LABEL: func @dma_with_symbolic_accesses
 func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
   %N = constant 9 : index
@@ -247,10 +239,9 @@ func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
 // CHECK-NEXT:  alloc() : memref<1xi32>
 // CHECK-NEXT:  affine.dma_start %{{.*}}[0, symbol(%{{.*}}) + 9], %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}
 // CHECK-NEXT:  affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}}
-// CHECK-NEXT:  affine.for %{{.*}} = 0 to 100 {
-// CHECK-NEXT:    affine.for %{{.*}} = 0 to 100 {
-// CHECK-NEXT:      affine.apply [[MAP_SYM_SHIFT]](%{{.*}}, %{{.*}})[%{{.*}}, %{{.*}}]
-// CHECK-NEXT:      affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<100x100xf32, 2>
+// CHECK-NEXT:  affine.for %[[IV0:.*]] = 0 to 100 {
+// CHECK-NEXT:    affine.for %[[IV1:.*]] = 0 to 100 {
+// CHECK:           affine.load %{{.*}}[%[[IV0]], %[[IV1]]] : memref<100x100xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 // CHECK:       return
@@ -317,11 +308,6 @@ func @dma_memref_3d(%arg0: memref<1024x1024x1024xf32>) {
 
 // -----
 
-// CHECK-DAG: [[MAP_PLUS_64:#map[0-9]+]] = affine_map<(d0) -> (d0 + 64)>
-// CHECK-DAG: [[MAP_PLUS_128:#map[0-9]+]] = affine_map<(d0) -> (d0 + 128)>
-// CHECK-DAG: [[MAP_PLUS_2:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
-// CHECK-DAG: [[MAP_PLUS_192:#map[0-9]+]] = affine_map<(d0) -> (d0 + 192)>
-
 // The first load accesses ([2,258), [128,384))
 // The second load accesses ([64,320), [2,258))
 // The first store writes to ([2,258), [192,448))
@@ -359,15 +345,9 @@ func @multi_load_store_union() {
 // CHECK-NEXT:  alloc() : memref<1xi32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 256 {
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to 256 {
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_64]](%{{.*}})
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_128]](%{{.*}})
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_2]](%{{.*}})
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_2]](%{{.*}})
-// CHECK-NEXT:      affine.load %{{.*}}[%{{.*}}, %{{.*}} + 126] : memref<382x446xf32, 2>
+// CHECK:           affine.load %{{.*}}[%{{.*}}, %{{.*}} + 126] : memref<382x446xf32, 2>
 // CHECK-NEXT:      affine.load %{{.*}}[%{{.*}} + 62, %{{.*}}] : memref<382x446xf32, 2>
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_128]](%{{.*}})
-// CHECK-NEXT:      affine.apply [[MAP_PLUS_192]](%{{.*}})
-// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}} + 190] : memref<382x446xf32, 2>
+// CHECK:           affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}} + 190] : memref<382x446xf32, 2>
 // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}} + 126, %{{.*}}] : memref<382x446xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -468,18 +448,14 @@ func @relative_loop_bounds(%arg0: memref<1027xf32>) {
 // CHECK:      [[BUF:%[0-9]+]] = alloc() : memref<1027xf32, 2>
 // CHECK-NEXT: [[MEM:%[0-9]+]] = alloc() : memref<1xi32>
 // CHECK-NEXT: affine.for %{{.*}} = 0 to 1024 {
-// CHECK-NEXT:    affine.for %{{.*}} = {{#map[0-9]+}}(%{{.*}}) to {{#map[0-9]+}}(%{{.*}}) {
-// CHECK-NEXT:      constant 0.000000e+00 : f32
-// CHECK-NEXT:      affine.store %{{.*}}, [[BUF]][%{{.*}}] : memref<1027xf32, 2>
+// CHECK-NEXT:    affine.for %[[I2:.*]] = {{#map[0-9]+}}(%{{.*}}) to {{#map[0-9]+}}(%{{.*}}) {
+// CHECK:           affine.store %{{.*}}, [[BUF]][%[[I2]]] : memref<1027xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 // CHECK-NEXT:  affine.dma_start [[BUF]][%{{.*}}], %{{.*}}[%{{.*}}], [[MEM]][%{{.*}}], %{{.*}}  : memref<1027xf32, 2>, memref<1027xf32>, memref<1xi32>
 // CHECK-NEXT:  affine.dma_wait [[MEM]][%{{.*}}], %{{.*}} : memref<1xi32>
 
 // -----
-
-// CHECK-DAG: [[MAP_READ_OFFSET:#map[0-9]+]] = affine_map<(d0) -> (d0 + 100)>
-// CHECK-DAG: [[MAP_WRITE_OFFSET:#map[0-9]+]] = affine_map<(d0) -> (d0 + 25)>
 
 func @test_read_write_region_union() {
   %0 = alloc() : memref<256xf32>
@@ -503,9 +479,7 @@ func @test_read_write_region_union() {
 // CHECK-NEXT:  affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}} : memref<1xi32>
 // CHECK-NEXT:  alloc() : memref<1xi32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
-// CHECK-NEXT:    affine.apply [[MAP_READ_OFFSET]](%{{.*}})
-// CHECK-NEXT:    affine.apply [[MAP_WRITE_OFFSET]](%{{.*}})
-// CHECK-NEXT:    affine.load %{{.*}}[%{{.*}} + 75] : memref<85xf32, 2>
+// CHECK:         affine.load %{{.*}}[%{{.*}} + 75] : memref<85xf32, 2>
 // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<85xf32, 2>
 // CHECK-NEXT:  }
 // CHECK-NEXT:  affine.dma_start %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}} : memref<85xf32, 2>, memref<256xf32>, memref<1xi32>

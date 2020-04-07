@@ -481,13 +481,13 @@ public:
   /// one; None otherwise.
   Optional<int64_t> getConstantUpperBound(unsigned pos) const;
 
-  /// Gets the lower and upper bound of the pos^th identifier treating
-  /// [0, offset) U [offset + num, symStartPos) as dimensions and
-  /// [symStartPos, getNumDimAndSymbolIds) as symbols. The returned
-  /// multi-dimensional maps in the pair represent the max and min of
-  /// potentially multiple affine expressions. The upper bound is exclusive.
-  /// 'localExprs' holds pre-computed AffineExpr's for all local identifiers in
-  /// the system.
+  /// Gets the lower and upper bound of the `offset` + `pos`th identifier
+  /// treating [0, offset) U [offset + num, symStartPos) as dimensions and
+  /// [symStartPos, getNumDimAndSymbolIds) as symbols, and `pos` lies in
+  /// [0, num). The multi-dimensional maps in the returned pair represent the
+  /// max and min of potentially multiple affine expressions. The upper bound is
+  /// exclusive. `localExprs` holds pre-computed AffineExpr's for all local
+  /// identifiers in the system.
   std::pair<AffineMap, AffineMap>
   getLowerAndUpperBound(unsigned pos, unsigned offset, unsigned num,
                         unsigned symStartPos, ArrayRef<AffineExpr> localExprs,

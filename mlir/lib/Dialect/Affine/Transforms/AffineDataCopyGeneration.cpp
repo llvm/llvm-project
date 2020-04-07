@@ -21,8 +21,9 @@
 
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -264,7 +265,19 @@ void AffineDataCopyGeneration::runOnFunction() {
     runOnBlock(&block, copyNests);
 
   // Promote any single iteration loops in the copy nests.
-  for (auto nest : copyNests) {
+  for (auto nest : copyNests)
     nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
+
+  // Promoting single iteration loops could lead to simplification of
+  // load's/store's. We will run canonicalization patterns on load/stores.
+  // TODO: this whole function load/store canonicalization should be replaced by
+  // canonicalization that is limited to only the load/store ops
+  // introduced/touched by this pass (those inside 'copyNests'). This would be
+  // possible once the necessary support is available in the pattern rewriter.
+  if (!copyNests.empty()) {
+    OwningRewritePatternList patterns;
+    AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
+    AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
+    applyPatternsGreedily(f, std::move(patterns));
   }
 }
