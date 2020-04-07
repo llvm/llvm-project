@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/NestedMatcher.h"
 #include "mlir/Analysis/SliceAnalysis.h"
@@ -24,7 +25,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -573,13 +573,8 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public PassWrapper<Vectorize, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineVectorize
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct Vectorize : public AffineVectorizeBase<Vectorize> {
   Vectorize() = default;
-  Vectorize(const Vectorize &) {}
   Vectorize(ArrayRef<int64_t> virtualVectorSize);
   void runOnFunction() override;
 };

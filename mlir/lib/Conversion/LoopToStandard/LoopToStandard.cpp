@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -19,7 +20,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -31,11 +31,7 @@ using namespace mlir::loop;
 namespace {
 
 struct LoopToStandardPass
-    : public PassWrapper<LoopToStandardPass, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertLoopToStandard
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public ConvertLoopToStandardBase<LoopToStandardPass> {
   void runOnOperation() override;
 };
 

@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
+#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -577,11 +578,7 @@ void mlir::populateAffineToStdConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass : public PassWrapper<LowerAffinePass, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertAffineToStandard
-#include "mlir/Conversion/Passes.h.inc"
-
+class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateAffineToStdConversionPatterns(patterns, &getContext());

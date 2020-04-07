@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def LinalgFusion : Pass<"linalg-fusion"> {
+def LinalgFusion : FunctionPass<"linalg-fusion"> {
   let summary = "Fuse operations in the linalg dialect";
   let constructor = "mlir::createLinalgFusionPass()";
 }
@@ -21,24 +21,25 @@ def LinalgFusionOfTensorOps : Pass<"linalg-fusion-for-tensor-ops"> {
   let constructor = "mlir::createLinalgFusionOfTensorOpsPass()";
 }
 
-def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops"> {
+def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
   let constructor = "mlir::createConvertLinalgToAffineLoopsPass()";
 }
 
-def LinalgLowerToLoops : Pass<"convert-linalg-to-loops"> {
+def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let summary = "Lower the operations from the linalg dialect into loops";
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
 }
 
-def LinalgLowerToParallelLoops : Pass<"convert-linalg-to-parallel-loops"> {
+def LinalgLowerToParallelLoops
+    : FunctionPass<"convert-linalg-to-parallel-loops"> {
   let summary = "Lower the operations from the linalg dialect into parallel "
                 "loops";
   let constructor = "mlir::createConvertLinalgToParallelLoopsPass()";
 }
 
-def LinalgPromotion : Pass<"linalg-promote-subviews"> {
+def LinalgPromotion : FunctionPass<"linalg-promote-subviews"> {
   let summary = "Promote subview ops to local buffers";
   let constructor = "mlir::createLinalgPromotionPass()";
   let options = [
@@ -47,7 +48,7 @@ def LinalgPromotion : Pass<"linalg-promote-subviews"> {
   ];
 }
 
-def LinalgTiling : Pass<"linalg-tile"> {
+def LinalgTiling : FunctionPass<"linalg-tile"> {
   let summary = "Tile operations in the linalg dialect";
   let constructor = "mlir::createLinalgTilingPass()";
   let options = [
@@ -57,7 +58,8 @@ def LinalgTiling : Pass<"linalg-tile"> {
   ];
 }
 
-def LinalgTilingToParallelLoops : Pass<"linalg-tile-to-parallel-loops"> {
+def LinalgTilingToParallelLoops
+    : FunctionPass<"linalg-tile-to-parallel-loops"> {
   let summary = "Tile operations in the linalg dialect to parallel loops";
   let constructor = "mlir::createLinalgTilingToParallelLoopsPass()";
   let options = [

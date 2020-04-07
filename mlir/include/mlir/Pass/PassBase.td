@@ -62,9 +62,12 @@ class Statistic<string varName, string statName, string desc> {
 // Pass
 //===----------------------------------------------------------------------===//
 
-class Pass<string passArg> {
+class PassBase<string passArg, string base> {
   // The command line argument of the pass.
   string argument = passArg;
+
+  // The C++ base class for the pass.
+  string baseClass = base;
 
   // A short 1-line summary of the pass.
   string summary = "";
@@ -81,5 +84,12 @@ class Pass<string passArg> {
   // A set of statistics provided by this pass.
   list<Statistic> statistics = [];
 }
+
+// This class represents an mlir::OperationPass.
+class Pass<string passArg, string operation = "">
+  : PassBase<passArg, "::mlir::OperationPass<" # operation # ">">;
+
+// This class represents an mlir::FunctionPass.
+class FunctionPass<string passArg> : PassBase<passArg, "::mlir::FunctionPass">;
 
 #endif // MLIR_PASS_PASSBASE

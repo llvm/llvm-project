@@ -11,17 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Pass/Pass.h"
+#include "PassDetail.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
 namespace {
-struct SymbolDCE : public PassWrapper<SymbolDCE, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_SymbolDCE
-#include "mlir/Transforms/Passes.h.inc"
-
+struct SymbolDCE : public SymbolDCEBase<SymbolDCE> {
   void runOnOperation() override;
 
   /// Compute the liveness of the symbols within the given symbol table.

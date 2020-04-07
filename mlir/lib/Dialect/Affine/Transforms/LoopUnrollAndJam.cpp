@@ -32,6 +32,8 @@
 // Note: 'if/else' blocks are not jammed. So, if there are loops inside if
 // op's, bodies of those loops will not be jammed.
 //===----------------------------------------------------------------------===//
+
+#include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -39,7 +41,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,11 +61,7 @@ static llvm::cl::opt<unsigned>
 namespace {
 /// Loop unroll jam pass. Currently, this just unroll jams the first
 /// outer loop in a Function.
-struct LoopUnrollAndJam : public PassWrapper<LoopUnrollAndJam, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopUnrollAndJam
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct LoopUnrollAndJam : public AffineLoopUnrollAndJamBase<LoopUnrollAndJam> {
   Optional<unsigned> unrollJamFactor;
   static const unsigned kDefaultUnrollJamFactor = 4;
 

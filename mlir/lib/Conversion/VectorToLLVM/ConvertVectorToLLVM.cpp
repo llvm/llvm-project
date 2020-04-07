@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -21,8 +22,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1119,11 +1118,7 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
 
 namespace {
 struct LowerVectorToLLVMPass
-    : public PassWrapper<LowerVectorToLLVMPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertVectorToLLVM
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

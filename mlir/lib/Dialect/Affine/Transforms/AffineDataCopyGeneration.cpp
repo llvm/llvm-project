@@ -19,12 +19,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -75,11 +75,7 @@ namespace {
 // TODO(bondhugula): We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
-    : public PassWrapper<AffineDataCopyGeneration, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineDataCopyGeneration
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+    : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
   explicit AffineDataCopyGeneration(
       unsigned slowMemorySpace = 0,
       unsigned fastMemorySpace = clFastMemorySpace, unsigned tagMemorySpace = 0,
@@ -96,7 +92,8 @@ struct AffineDataCopyGeneration
         skipNonUnitStrideLoops(skipNonUnitStrideLoops) {}
 
   explicit AffineDataCopyGeneration(const AffineDataCopyGeneration &other)
-      : slowMemorySpace(other.slowMemorySpace),
+      : AffineDataCopyGenerationBase<AffineDataCopyGeneration>(other),
+        slowMemorySpace(other.slowMemorySpace),
         fastMemorySpace(other.fastMemorySpace),
         tagMemorySpace(other.tagMemorySpace),
         minDmaTransferSize(other.minDmaTransferSize),

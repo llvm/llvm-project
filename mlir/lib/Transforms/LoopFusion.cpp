@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/LoopAnalysis.h"
@@ -18,7 +19,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopFusionUtils.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
@@ -77,11 +77,7 @@ namespace {
 // TODO(andydavis) Extend this pass to check for fusion preventing dependences,
 // and add support for more general loop fusion algorithms.
 
-struct LoopFusion : public PassWrapper<LoopFusion, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopFusion
-#include "mlir/Transforms/Passes.h.inc"
-
+struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
   LoopFusion(unsigned fastMemorySpace = 0, uint64_t localBufSizeThreshold = 0,
              bool maximalFusion = false)
       : localBufSizeThreshold(localBufSizeThreshold),

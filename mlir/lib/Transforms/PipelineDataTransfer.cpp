@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/Analysis/AffineAnalysis.h"
@@ -17,7 +18,6 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -29,11 +29,7 @@ using namespace mlir;
 
 namespace {
 struct PipelineDataTransfer
-    : public PassWrapper<PipelineDataTransfer, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffinePipelineDataTransfer
-#include "mlir/Transforms/Passes.h.inc"
-
+    : public AffinePipelineDataTransferBase<PipelineDataTransfer> {
   void runOnFunction() override;
   void runOnAffineForOp(AffineForOp forOp);
 

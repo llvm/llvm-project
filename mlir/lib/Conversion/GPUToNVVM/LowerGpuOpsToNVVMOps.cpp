@@ -18,12 +18,12 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
+#include "../PassDetail.h"
 
 using namespace mlir;
 
@@ -246,13 +246,8 @@ struct GPUReturnOpLowering : public ConvertToLLVMPattern {
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
 class LowerGpuOpsToNVVMOpsPass
-    : public PassWrapper<LowerGpuOpsToNVVMOpsPass,
-                         OperationPass<gpu::GPUModuleOp>> {
+    : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
 public:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertGpuOpsToNVVMOps
-#include "mlir/Conversion/Passes.h.inc"
-
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 

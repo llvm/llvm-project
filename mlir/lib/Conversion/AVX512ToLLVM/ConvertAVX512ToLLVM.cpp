@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/AVX512ToLLVM/ConvertAVX512ToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -164,11 +165,7 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
 
 namespace {
 struct ConvertAVX512ToLLVMPass
-    : public PassWrapper<ConvertAVX512ToLLVMPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertAVX512ToLLVM
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public ConvertAVX512ToLLVMBase<ConvertAVX512ToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
@@ -18,12 +18,7 @@
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass
-    : public PassWrapper<PrintOpStatsPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_PrintOpStats
-#include "mlir/Transforms/Passes.h.inc"
-
+struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os = llvm::errs()) : os(os) {}
 
   // Prints the resultant operation statistics post iterating over the module.

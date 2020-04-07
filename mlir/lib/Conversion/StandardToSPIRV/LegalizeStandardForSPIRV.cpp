@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -161,11 +161,7 @@ void mlir::populateStdLegalizationPatternsForSPIRVLowering(
 
 namespace {
 struct SPIRVLegalization final
-    : public PassWrapper<SPIRVLegalization, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LegalizeStandardForSPIRV
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public LegalizeStandardForSPIRVBase<SPIRVLegalization> {
   void runOnOperation() override;
 };
 } // namespace

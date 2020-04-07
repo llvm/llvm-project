@@ -12,21 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
-    : public PassWrapper<ConvertStandardToSPIRVPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertStandardToSPIRV
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public ConvertStandardToSPIRVBase<ConvertStandardToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
