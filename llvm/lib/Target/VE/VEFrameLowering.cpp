@@ -305,7 +305,7 @@ bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
 }
 
 int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                            unsigned &FrameReg) const {
+                                            Register &FrameReg) const {
   const VESubtarget &Subtarget = MF.getSubtarget<VESubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const VERegisterInfo *RegInfo = Subtarget.getRegisterInfo();
