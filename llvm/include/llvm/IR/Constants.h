@@ -44,7 +44,6 @@ namespace llvm {
 class ArrayType;
 class IntegerType;
 class PointerType;
-class SequentialType;
 class StructType;
 class VectorType;
 template <class ConstantClass> struct ConstantAggrKeyType;
@@ -630,12 +629,6 @@ public:
   /// Note that this has to compute a new constant to return, so it isn't as
   /// efficient as getElementAsInteger/Float/Double.
   Constant *getElementAsConstant(unsigned i) const;
-
-  /// Specialize the getType() method to always return a SequentialType, which
-  /// reduces the amount of casting needed in parts of the compiler.
-  inline SequentialType *getType() const {
-    return cast<SequentialType>(Value::getType());
-  }
 
   /// Return the element type of the array/vector.
   Type *getElementType() const;

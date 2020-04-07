@@ -923,7 +923,9 @@ void ConstantFP::destroyConstantImpl() {
 //===----------------------------------------------------------------------===//
 
 Constant *ConstantAggregateZero::getSequentialElement() const {
-  return Constant::getNullValue(getType()->getSequentialElementType());
+  if (auto *AT = dyn_cast<ArrayType>(getType()))
+    return Constant::getNullValue(AT->getElementType());
+  return Constant::getNullValue(cast<VectorType>(getType())->getElementType());
 }
 
 Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
@@ -931,13 +933,13 @@ Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
 }
 
 Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
-  if (isa<SequentialType>(getType()))
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
 Constant *ConstantAggregateZero::getElementValue(unsigned Idx) const {
-  if (isa<SequentialType>(getType()))
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
 }
@@ -956,7 +958,9 @@ unsigned ConstantAggregateZero::getNumElements() const {
 //===----------------------------------------------------------------------===//
 
 UndefValue *UndefValue::getSequentialElement() const {
-  return UndefValue::get(getType()->getSequentialElementType());
+  if (ArrayType *ATy = dyn_cast<ArrayType>(getType()))
+    return UndefValue::get(ATy->getElementType());
+  return UndefValue::get(cast<VectorType>(getType())->getElementType());
 }
 
 UndefValue *UndefValue::getStructElement(unsigned Elt) const {
@@ -964,21 +968,23 @@ UndefValue *UndefValue::getStructElement(unsigned Elt) const {
 }
 
 UndefValue *UndefValue::getElementValue(Constant *C) const {
-  if (isa<SequentialType>(getType()))
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
 UndefValue *UndefValue::getElementValue(unsigned Idx) const {
-  if (isa<SequentialType>(getType()))
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
 }
 
 unsigned UndefValue::getNumElements() const {
   Type *Ty = getType();
-  if (auto *ST = dyn_cast<SequentialType>(Ty))
-    return ST->getNumElements();
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return AT->getNumElements();
+  if (auto *VT = dyn_cast<VectorType>(Ty))
+    return VT->getNumElements();
   return Ty->getStructNumElements();
 }
 
@@ -2536,7 +2542,9 @@ Type *GetElementPtrConstantExpr::getResultElementType() const {
 //                       ConstantData* implementations
 
 Type *ConstantDataSequential::getElementType() const {
-  return getType()->getElementType();
+  if (ArrayType *ATy = dyn_cast<ArrayType>(getType()))
+    return ATy->getElementType();
+  return cast<VectorType>(getType())->getElementType();
 }
 
 StringRef ConstantDataSequential::getRawDataValues() const {
@@ -2589,7 +2597,12 @@ static bool isAllZeros(StringRef Arr) {
 /// the correct element type.  We take the bytes in as a StringRef because
 /// we *want* an underlying "char*" to avoid TBAA type punning violations.
 Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
-  assert(isElementTypeCompatible(Ty->getSequentialElementType()));
+#ifndef NDEBUG
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty))
+    assert(isElementTypeCompatible(ATy->getElementType()));
+  else
+    assert(isElementTypeCompatible(cast<VectorType>(Ty)->getElementType()));
+#endif
   // If the elements are all zero or there are no elements, return a CAZ, which
   // is more dense and canonical.
   if (isAllZeros(Elements))

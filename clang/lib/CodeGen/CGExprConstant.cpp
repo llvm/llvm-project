@@ -318,12 +318,17 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
   CharUnits Offset = Offsets[Index];
 
   if (auto *CA = dyn_cast<llvm::ConstantAggregate>(C)) {
+    // Expand the sequence into its contained elements.
+    // FIXME: This assumes vector elements are byte-sized.
     replace(Elems, Index, Index + 1,
             llvm::map_range(llvm::seq(0u, CA->getNumOperands()),
                             [&](unsigned Op) { return CA->getOperand(Op); }));
-    if (auto *Seq = dyn_cast<llvm::SequentialType>(CA->getType())) {
+    if (isa<llvm::ArrayType>(CA->getType()) ||
+        isa<llvm::VectorType>(CA->getType())) {
       // Array or vector.
-      CharUnits ElemSize = getSize(Seq->getElementType());
+      llvm::Type *ElemTy =
+          llvm::GetElementPtrInst::getTypeAtIndex(CA->getType(), (uint64_t)0);
+      CharUnits ElemSize = getSize(ElemTy);
       replace(
           Offsets, Index, Index + 1,
           llvm::map_range(llvm::seq(0u, CA->getNumOperands()),
@@ -344,6 +349,8 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
   }
 
   if (auto *CDS = dyn_cast<llvm::ConstantDataSequential>(C)) {
+    // Expand the sequence into its contained elements.
+    // FIXME: This assumes vector elements are byte-sized.
     // FIXME: If possible, split into two ConstantDataSequentials at Hint.
     CharUnits ElemSize = getSize(CDS->getElementType());
     replace(Elems, Index, Index + 1,
@@ -359,6 +366,7 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
   }
 
   if (isa<llvm::ConstantAggregateZero>(C)) {
+    // Split into two zeros at the hinted offset.
     CharUnits ElemSize = getSize(C);
     assert(Hint > Offset && Hint < Offset + ElemSize && "nothing to split");
     replace(Elems, Index, Index + 1,
@@ -368,6 +376,7 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
   }
 
   if (isa<llvm::UndefValue>(C)) {
+    // Drop undef; it doesn't contribute to the final layout.
     replace(Elems, Index, Index + 1, {});
     replace(Offsets, Index, Index + 1, {});
     return true;

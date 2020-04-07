@@ -364,8 +364,13 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     return false;
   }
 
-  Type *AT = Alloca->getAllocatedType();
-  SequentialType *AllocaTy = dyn_cast<SequentialType>(AT);
+  Type *AllocaTy = Alloca->getAllocatedType();
+  VectorType *VectorTy = dyn_cast<VectorType>(AllocaTy);
+  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
+    if (VectorType::isValidElementType(ArrayTy->getElementType()) &&
+        ArrayTy->getNumElements() > 0)
+      VectorTy = arrayTypeToVecType(ArrayTy);
+  }
 
   LLVM_DEBUG(dbgs() << "Alloca candidate for vectorization\n");
 
@@ -373,10 +378,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   // are just being conservative for now.
   // FIXME: We also reject alloca's of the form [ 2 x [ 2 x i32 ]] or equivalent. Potentially these
   // could also be promoted but we don't currently handle this case
-  if (!AllocaTy ||
-      AllocaTy->getNumElements() > 16 ||
-      AllocaTy->getNumElements() < 2 ||
-      !VectorType::isValidElementType(AllocaTy->getElementType())) {
+  if (!VectorTy || VectorTy->getNumElements() > 16 ||
+      VectorTy->getNumElements() < 2) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
@@ -412,10 +415,6 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     }
   }
 
-  VectorType *VectorTy = dyn_cast<VectorType>(AllocaTy);
-  if (!VectorTy)
-    VectorTy = arrayTypeToVecType(cast<ArrayType>(AllocaTy));
-
   LLVM_DEBUG(dbgs() << "  Converting alloca to vector " << *AllocaTy << " -> "
                     << *VectorTy << '\n');
 
@@ -424,7 +423,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     IRBuilder<> Builder(Inst);
     switch (Inst->getOpcode()) {
     case Instruction::Load: {
-      if (Inst->getType() == AT)
+      if (Inst->getType() == AllocaTy)
         break;
 
       Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
@@ -440,7 +439,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     }
     case Instruction::Store: {
       StoreInst *SI = cast<StoreInst>(Inst);
-      if (SI->getValueOperand()->getType() == AT)
+      if (SI->getValueOperand()->getType() == AllocaTy)
         break;
 
       Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);

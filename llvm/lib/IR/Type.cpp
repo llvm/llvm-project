@@ -553,7 +553,11 @@ bool StructType::indexValid(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 ArrayType::ArrayType(Type *ElType, uint64_t NumEl)
-  : SequentialType(ArrayTyID, ElType, NumEl) {}
+    : Type(ElType->getContext(), ArrayTyID), ContainedType(ElType),
+      NumElements(NumEl) {
+  ContainedTys = &ContainedType;
+  NumContainedTys = 1;
+}
 
 ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
   assert(isValidElementType(ElementType) && "Invalid type for array element!");
@@ -580,7 +584,11 @@ bool ArrayType::isValidElementType(Type *ElemTy) {
 //===----------------------------------------------------------------------===//
 
 VectorType::VectorType(Type *ElType, ElementCount EC)
-  : SequentialType(VectorTyID, ElType, EC.Min), Scalable(EC.Scalable) {}
+    : Type(ElType->getContext(), VectorTyID), ContainedType(ElType),
+      NumElements(EC.Min), Scalable(EC.Scalable) {
+  ContainedTys = &ContainedType;
+  NumContainedTys = 1;
+}
 
 VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
   assert(EC.Min > 0 && "#Elements of a VectorType must be greater than 0");

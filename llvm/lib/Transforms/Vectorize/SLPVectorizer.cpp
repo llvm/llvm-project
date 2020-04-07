@@ -3131,7 +3131,8 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
   unsigned N = 1;
   Type *EltTy = T;
 
-  while (isa<StructType>(EltTy) || isa<SequentialType>(EltTy)) {
+  while (isa<StructType>(EltTy) || isa<ArrayType>(EltTy) ||
+         isa<VectorType>(EltTy)) {
     if (auto *ST = dyn_cast<StructType>(EltTy)) {
       // Check that struct is homogeneous.
       for (const auto *Ty : ST->elements())
@@ -3139,10 +3140,13 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
           return 0;
       N *= ST->getNumElements();
       EltTy = *ST->element_begin();
+    } else if (auto *AT = dyn_cast<ArrayType>(EltTy)) {
+      N *= AT->getNumElements();
+      EltTy = AT->getElementType();
     } else {
-      auto *SeqT = cast<SequentialType>(EltTy);
-      N *= SeqT->getNumElements();
-      EltTy = SeqT->getElementType();
+      auto *VT = cast<VectorType>(EltTy);
+      N *= VT->getNumElements();
+      EltTy = VT->getElementType();
     }
   }
 
