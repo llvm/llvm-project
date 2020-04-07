@@ -13,6 +13,7 @@
 
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
@@ -76,8 +77,8 @@ void TestAffineDataCopy::runOnFunction() {
                                    /*fastMemorySpace=*/0,
                                    /*tagMemorySpace=*/0,
                                    /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
+  DenseSet<Operation *> copyNests;
   if (clMemRefFilter) {
-    DenseSet<Operation *> copyNests;
     affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(), copyNests);
   } else if (clTestGenerateCopyForMemRegion) {
     CopyGenerateResult result;
@@ -85,6 +86,17 @@ void TestAffineDataCopy::runOnFunction() {
     region.compute(load, /*loopDepth=*/0);
     generateCopyForMemRegion(region, loopNest, copyOptions, result);
   }
+
+  // Promote any single iteration loops in the copy nests.
+  for (auto nest : copyNests)
+    nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
+
+  // Promoting single iteration loops could lead to simplification
+  // of load's/store's. We will run the canonicalization patterns again.
+  OwningRewritePatternList patterns;
+  AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
+  AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
+  applyPatternsGreedily(getFunction(), std::move(patterns));
 }
 
 namespace mlir {
