@@ -177,7 +177,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
         return false;
       payload_sp = anyobject_sp->GetChildAtIndex(0, true); // "instance"
     } else {
-      lldbassert(false && "Uknown variant");
+      // Unknown variant.
       return false;
     }
     if (!payload_sp)
@@ -195,7 +195,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       raw1 = pointerBits | (discriminator << 56);
     }
   } else {
-    lldbassert(false && "Unsupported arch?");
+    lldbassert(false && "Unsupported pointer bit-width");
     return false;
   }
 
@@ -292,8 +292,9 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   uint16_t flags = raw0 >> 48;
   lldb::addr_t objectAddress = (raw1 & 0x0FFFFFFFFFFFFFFF);
   if ((flags & 0x1000) != 0) { // Tail-allocated / biased address
-    lldbassert((discriminator & 0x70) == 0 &&
-      "tail-allocation is only for natively stored or literals");
+    // Tail-allocation is only for natively stored or literals.
+    if ((discriminator & 0x70) != 0)
+      return false;
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
     auto address = objectAddress + bias;
     return readStringFromAddress(
@@ -302,7 +303,9 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
   if ((discriminator & 0xF0) == 0x00) { // Shared string
     // FIXME: Verify that there is a __SharedStringStorage instance at `address`.
-    lldbassert((flags & 0x3000) == 0);
+    // Shared strings must not be tail-allocated or natively stored.
+    if ((flags & 0x3000) != 0)
+      return false;
     uint64_t startOffset = (ptrSize == 8 ? 24 : 12);
     auto address = objectAddress + startOffset;
     lldb::addr_t start = process->ReadPointerFromMemory(address, error);
@@ -313,8 +316,9 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       start, count, process, stream, summary_options, read_options);
   }
 
-  lldbassert((discriminator & 0x70) != 0 &&
-    "native/shared strings already handled");
+  // Native/shared strings should already have been handled.
+  if ((discriminator & 0x70) == 0)
+    return false;
 
   if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
     TypeSystemClang *clang_ast_context =
@@ -336,13 +340,12 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   }
 
   if ((discriminator & 0xF8) == 0x18) { // 0001xxxx: Foreign
-    // Not currently generated
-    lldbassert(
-      false && "Foreign non-bridged strings are not currently used in Swift");
+    // Not currently generated: Foreign non-bridged strings are not currently
+    // used in Swift.
     return false;
   }
 
-  lldbassert(false && "Invalid discriminator");
+  // Invalid discriminator.
   return false;
 }
 
