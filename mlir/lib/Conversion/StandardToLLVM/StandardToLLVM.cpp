@@ -2847,7 +2847,7 @@ LLVMTypeConverter::promoteMemRefDescriptors(Location loc, ValueRange opOperands,
 
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
-struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
+struct LLVMLoweringPass : public OperationPass<LLVMLoweringPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertStandardToLLVM
 #include "mlir/Conversion/Passes.h.inc"
@@ -2863,16 +2863,16 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   LLVMLoweringPass(const LLVMLoweringPass &pass) {}
 
   /// Run the dialect converter on the module.
-  void runOnModule() override {
+  void runOnOperation() override {
     if (useBarePtrCallConv && emitCWrappers) {
-      getModule().emitError()
+      getOperation().emitError()
           << "incompatible conversion options: bare-pointer calling convention "
              "and C wrapper emission";
       signalPassFailure();
       return;
     }
 
-    ModuleOp m = getModule();
+    ModuleOp m = getOperation();
 
     LLVMTypeConverterCustomization customs;
     customs.funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter

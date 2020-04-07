@@ -398,13 +398,13 @@ struct TestTypeConverter : public TypeConverter {
 };
 
 struct TestLegalizePatternDriver
-    : public ModulePass<TestLegalizePatternDriver> {
+    : public OperationPass<TestLegalizePatternDriver, ModuleOp> {
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
 
   TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
-  void runOnModule() override {
+  void runOnOperation() override {
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
@@ -450,7 +450,8 @@ struct TestLegalizePatternDriver
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
-      (void)applyPartialConversion(getModule(), target, patterns, &converter);
+      (void)applyPartialConversion(getOperation(), target, patterns,
+                                   &converter);
       return;
     }
 
@@ -461,7 +462,7 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      (void)applyFullConversion(getModule(), target, patterns, &converter);
+      (void)applyFullConversion(getOperation(), target, patterns, &converter);
       return;
     }
 
@@ -470,7 +471,7 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
-    if (failed(applyAnalysisConversion(getModule(), target, patterns,
+    if (failed(applyAnalysisConversion(getOperation(), target, patterns,
                                        legalizedOps, &converter)))
       return signalPassFailure();
 

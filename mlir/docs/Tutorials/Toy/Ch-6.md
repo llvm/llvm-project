@@ -105,7 +105,7 @@ We want to completely lower to LLVM, so we use a `FullConversion`. This ensures
 that only legal operations will remain after the conversion.
 
 ```c++
-  mlir::ModuleOp module = getModule();
+  mlir::ModuleOp module = getOperation();
   if (mlir::failed(mlir::applyFullConversion(module, target, patterns,
                                              &typeConverter)))
     signalPassFailure();

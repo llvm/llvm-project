@@ -163,16 +163,17 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
 }
 
 namespace {
-struct ConvertAVX512ToLLVMPass : public ModulePass<ConvertAVX512ToLLVMPass> {
+struct ConvertAVX512ToLLVMPass
+    : public OperationPass<ConvertAVX512ToLLVMPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertAVX512ToLLVM
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void ConvertAVX512ToLLVMPass::runOnModule() {
+void ConvertAVX512ToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect.
   OwningRewritePatternList patterns;
   LLVMTypeConverter converter(&getContext());
@@ -186,8 +187,8 @@ void ConvertAVX512ToLLVMPass::runOnModule() {
   target.addIllegalDialect<avx512::AVX512Dialect>();
   target.addDynamicallyLegalOp<FuncOp>(
       [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
-  if (failed(
-          applyPartialConversion(getModule(), target, patterns, &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns,
+                                    &converter))) {
     signalPassFailure();
   }
 }

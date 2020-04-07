@@ -100,7 +100,7 @@ namespace {
 // PrintOpPass is simple pass to write graph per function.
 // Note: this is a module pass only to avoid interleaving on the same ostream
 // due to multi-threading over functions.
-struct PrintOpPass : public ModulePass<PrintOpPass> {
+struct PrintOpPass : public OperationPass<PrintOpPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_PrintOpGraph
 #include "mlir/Transforms/Passes.h.inc"
@@ -140,7 +140,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
     }
   }
 
-  void runOnModule() override { processModule(getModule()); }
+  void runOnOperation() override { processModule(getOperation()); }
 
 private:
   raw_ostream &os;

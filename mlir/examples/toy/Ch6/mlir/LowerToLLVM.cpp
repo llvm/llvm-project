@@ -153,12 +153,13 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct ToyToLLVMLoweringPass : public ModulePass<ToyToLLVMLoweringPass> {
-  void runOnModule() final;
+struct ToyToLLVMLoweringPass
+    : public OperationPass<ToyToLLVMLoweringPass, ModuleOp> {
+  void runOnOperation() final;
 };
 } // end anonymous namespace
 
-void ToyToLLVMLoweringPass::runOnModule() {
+void ToyToLLVMLoweringPass::runOnOperation() {
   // The first thing to define is the conversion target. This will define the
   // final target for this lowering. For this lowering, we are only targeting
   // the LLVM dialect.
@@ -191,7 +192,7 @@ void ToyToLLVMLoweringPass::runOnModule() {
 
   // We want to completely lower to LLVM, so we use a `FullConversion`. This
   // ensures that only legal operations will remain after the conversion.
-  auto module = getModule();
+  auto module = getOperation();
   if (failed(applyFullConversion(module, target, patterns, &typeConverter)))
     signalPassFailure();
 }

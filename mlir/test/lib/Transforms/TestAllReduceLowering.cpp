@@ -18,11 +18,11 @@ using namespace mlir;
 
 namespace {
 struct TestAllReduceLoweringPass
-    : public ModulePass<TestAllReduceLoweringPass> {
-  void runOnModule() override {
+    : public OperationPass<TestAllReduceLoweringPass, ModuleOp> {
+  void runOnOperation() override {
     OwningRewritePatternList patterns;
     populateGpuRewritePatterns(&getContext(), patterns);
-    applyPatternsGreedily(getModule(), patterns);
+    applyPatternsGreedily(getOperation(), patterns);
   }
 };
 } // namespace
