@@ -323,60 +323,61 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
   MachineOperand *SrcReg = Src0;
   MachineOperand *SrcImm = Src1;
 
-  if (SrcImm->isImm() &&
-      !AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST.hasInv2PiInlineImm())) {
-    uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
-    uint32_t NewImm = 0;
+  if (!SrcImm->isImm() ||
+      AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST.hasInv2PiInlineImm()))
+    return false;
 
-    if (Opc == AMDGPU::S_AND_B32) {
-      if (isPowerOf2_32(~Imm)) {
-        NewImm = countTrailingOnes(Imm);
-        Opc = AMDGPU::S_BITSET0_B32;
-      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_ANDN2_B32;
-      }
-    } else if (Opc == AMDGPU::S_OR_B32) {
-      if (isPowerOf2_32(Imm)) {
-        NewImm = countTrailingZeros(Imm);
-        Opc = AMDGPU::S_BITSET1_B32;
-      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_ORN2_B32;
-      }
-    } else if (Opc == AMDGPU::S_XOR_B32) {
-      if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_XNOR_B32;
-      }
-    } else {
-      llvm_unreachable("unexpected opcode");
+  uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
+  uint32_t NewImm = 0;
+
+  if (Opc == AMDGPU::S_AND_B32) {
+    if (isPowerOf2_32(~Imm)) {
+      NewImm = countTrailingOnes(Imm);
+      Opc = AMDGPU::S_BITSET0_B32;
+    } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_ANDN2_B32;
+    }
+  } else if (Opc == AMDGPU::S_OR_B32) {
+    if (isPowerOf2_32(Imm)) {
+      NewImm = countTrailingZeros(Imm);
+      Opc = AMDGPU::S_BITSET1_B32;
+    } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_ORN2_B32;
+    }
+  } else if (Opc == AMDGPU::S_XOR_B32) {
+    if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_XNOR_B32;
+    }
+  } else {
+    llvm_unreachable("unexpected opcode");
+  }
+
+  if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
+      SrcImm == Src0) {
+    if (!TII->commuteInstruction(MI, false, 1, 2))
+      NewImm = 0;
+  }
+
+  if (NewImm != 0) {
+    if (Register::isVirtualRegister(Dest->getReg()) && SrcReg->isReg()) {
+      MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
+      MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
+      return true;
     }
 
-    if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
-        SrcImm == Src0) {
-      if (!TII->commuteInstruction(MI, false, 1, 2))
-        NewImm = 0;
-    }
-
-    if (NewImm != 0) {
-      if (Register::isVirtualRegister(Dest->getReg()) && SrcReg->isReg()) {
-        MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
-        MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
-        return true;
-      }
-
-      if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
-        MI.setDesc(TII->get(Opc));
-        if (Opc == AMDGPU::S_BITSET0_B32 ||
-            Opc == AMDGPU::S_BITSET1_B32) {
-          Src0->ChangeToImmediate(NewImm);
-          // Remove the immediate and add the tied input.
-          MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
-          MI.tieOperands(0, 2);
-        } else {
-          SrcImm->setImm(NewImm);
-        }
+    if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
+      MI.setDesc(TII->get(Opc));
+      if (Opc == AMDGPU::S_BITSET0_B32 ||
+          Opc == AMDGPU::S_BITSET1_B32) {
+        Src0->ChangeToImmediate(NewImm);
+        // Remove the immediate and add the tied input.
+        MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
+        MI.tieOperands(0, 2);
+      } else {
+        SrcImm->setImm(NewImm);
       }
     }
   }
