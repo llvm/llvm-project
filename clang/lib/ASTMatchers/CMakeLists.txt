@@ -1,6 +1,7 @@
 add_subdirectory(Dynamic)
 
 set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
   Support
 )
 
@@ -14,5 +15,3 @@ add_clang_library(clangASTMatchers
   clangBasic
   clangLex
   )
-
-target_link_libraries(clangASTMatchers PUBLIC LLVMFrontendOpenMP)

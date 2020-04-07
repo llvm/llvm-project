@@ -1,5 +1,7 @@
 set(LLVM_LINK_COMPONENTS
-  Support)
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyOpenMPModule
   ExceptionEscapeCheck.cpp
