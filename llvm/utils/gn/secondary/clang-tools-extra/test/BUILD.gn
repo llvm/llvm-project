@@ -90,12 +90,6 @@ action("check-clang-tools") {
   }
   args = [
     "-sv",
-    "--param",
-    "clang_site_config=" +
-        rebase_path(clang_tools_extra_lit_site_cfg_file, root_out_dir),
-    "--param",
-    "clang_unit_site_config=" +
-        rebase_path(clang_tools_extra_lit_unit_site_cfg_file, root_out_dir),
     rebase_path(".", root_out_dir),
   ]
   outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it
