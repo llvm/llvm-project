@@ -4976,6 +4976,13 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     return false;
   }
 
+  if (const auto *CtorDecl = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
+    for (const auto *InitExpr : CtorDecl->inits()) {
+      if (InitExpr->getInit() && InitExpr->getInit()->containsErrors())
+        return false;
+    }
+  }
+
   // Can we evaluate this function call?
   if (Definition && Definition->isConstexpr() && Body)
     return true;
@@ -14709,6 +14716,15 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   if (FD->isDependentContext())
     return true;
 
+  // Bail out if a constexpr constructor has an initializer that contains an
+  // error. We deliberately don't produce a diagnostic, as we have produced a
+  // relevant diagnostic when parsing the error initializer.
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+    for (const auto *InitExpr : Ctor->inits()) {
+      if (InitExpr->getInit() && InitExpr->getInit()->containsErrors())
+        return false;
+    }
+  }
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
