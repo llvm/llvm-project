@@ -72,7 +72,7 @@ public:
   void setComdat(bool isComdat) { IsComdat = isComdat; }
 
   bool hasImportModule() const { return ImportModule != nullptr; }
-  const StringRef getImportModule() const {
+  StringRef getImportModule() const {
     if (ImportModule)
       return StringRef(*ImportModule);
     // Use a default module name of "env" for now, for compatibility with
@@ -84,7 +84,7 @@ public:
   void setImportModule(std::string *Name) { ImportModule = Name; }
 
   bool hasImportName() const { return ImportName != nullptr; }
-  const StringRef getImportName() const {
+  StringRef getImportName() const {
     if (ImportName)
       return StringRef(*ImportName);
     return getName();
@@ -92,7 +92,7 @@ public:
   void setImportName(std::string *Name) { ImportName = Name; }
 
   bool hasExportName() const { return ExportName != nullptr; }
-  const StringRef getExportName() const {
+  StringRef getExportName() const {
     assert(ExportName);
     return StringRef(*ExportName);
   }
