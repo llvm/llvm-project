@@ -401,7 +401,7 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(unsigned Reg, unsigned RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, unsigned RegUnit) const {
     for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
       if (*Units == RegUnit)
         return true;
@@ -412,7 +412,7 @@ public:
   /// operation, in which case we chain backwards through all such operations
   /// to the ultimate source register.  If a physical register is encountered,
   /// we stop the search.
-  virtual unsigned lookThruCopyLike(unsigned SrcReg,
+  virtual Register lookThruCopyLike(Register SrcReg,
                                     const MachineRegisterInfo *MRI) const;
 
   /// Return a null-terminated list of all of the callee-saved registers on
@@ -485,13 +485,13 @@ public:
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
   virtual bool isAsmClobberable(const MachineFunction &MF,
-                               unsigned PhysReg) const {
+                                MCRegister PhysReg) const {
     return true;
   }
 
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
-  virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
+  virtual bool isConstantPhysReg(MCRegister PhysReg) const { return false; }
 
   /// Returns true if the register class is considered divergent.
   virtual bool isDivergentRegClass(const TargetRegisterClass *RC) const {
@@ -503,14 +503,14 @@ public:
   /// have call sequences where a GOT register may be updated by the caller
   /// prior to a call and is guaranteed to be restored (also by the caller)
   /// after the call.
-  virtual bool isCallerPreservedPhysReg(unsigned PhysReg,
+  virtual bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                         const MachineFunction &MF) const {
     return false;
   }
 
   /// This is a wrapper around getCallPreservedMask().
   /// Return true if the register is preserved after the call.
-  virtual bool isCalleeSavedPhysReg(unsigned PhysReg,
+  virtual bool isCalleeSavedPhysReg(MCRegister PhysReg,
                                     const MachineFunction &MF) const;
 
   /// Prior to adding the live-out mask to a stackmap or patchpoint
@@ -520,7 +520,7 @@ public:
 
   /// Return a super-register of the specified register
   /// Reg so its sub-register of index SubIdx is Reg.
-  unsigned getMatchingSuperReg(unsigned Reg, unsigned SubIdx,
+  unsigned getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
                                const TargetRegisterClass *RC) const {
     return MCRegisterInfo::getMatchingSuperReg(Reg, SubIdx, RC->MC);
   }

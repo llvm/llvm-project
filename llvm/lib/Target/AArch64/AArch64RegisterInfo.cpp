@@ -222,7 +222,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
-                                      unsigned Reg) const {
+                                        MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
 }
 
@@ -240,11 +240,11 @@ void AArch64RegisterInfo::emitReservedArgRegCallError(
 }
 
 bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
-                                          unsigned PhysReg) const {
+                                          MCRegister PhysReg) const {
   return !isReservedReg(MF, PhysReg);
 }
 
-bool AArch64RegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+bool AArch64RegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   return PhysReg == AArch64::WZR || PhysReg == AArch64::XZR;
 }
 

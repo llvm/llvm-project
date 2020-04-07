@@ -407,10 +407,10 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                           const VirtRegMap *VRM,
                                           const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<unsigned, SmallVector<unsigned, 4>> &Hints_MRI =
+  const std::pair<Register, SmallVector<Register, 4>> &Hints_MRI =
     MRI.getRegAllocationHints(VirtReg);
 
-  SmallSet<unsigned, 32> HintedRegs;
+  SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI.first != 0);
   for (auto Reg : Hints_MRI.second) {
@@ -420,8 +420,8 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     }
 
     // Target-independent hints are either a physical or a virtual register.
-    unsigned Phys = Reg;
-    if (VRM && Register::isVirtualRegister(Phys))
+    Register Phys = Reg;
+    if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
     // Don't add the same reg twice (Hints_MRI may contain multiple virtual
@@ -429,7 +429,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     if (!HintedRegs.insert(Phys).second)
       continue;
     // Check that Phys is a valid hint in VirtReg's register class.
-    if (!Register::isPhysicalRegister(Phys))
+    if (!Phys.isPhysical())
       continue;
     if (MRI.isReserved(Phys))
       continue;
@@ -446,7 +446,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 }
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
-    unsigned PhysReg, const MachineFunction &MF) const {
+    MCRegister PhysReg, const MachineFunction &MF) const {
   if (PhysReg == 0)
     return false;
   const uint32_t *callerPreservedRegs =
@@ -511,15 +511,15 @@ unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
   return getRegSizeInBits(*RC);
 }
 
-unsigned
-TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
+Register
+TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
     if (!MI->isCopyLike())
       return SrcReg;
 
-    unsigned CopySrcReg;
+    Register CopySrcReg;
     if (MI->isCopy())
       CopySrcReg = MI->getOperand(1).getReg();
     else {
@@ -527,7 +527,7 @@ TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
       CopySrcReg = MI->getOperand(2).getReg();
     }
 
-    if (!Register::isVirtualRegister(CopySrcReg))
+    if (!CopySrcReg.isVirtual())
       return CopySrcReg;
 
     SrcReg = CopySrcReg;
