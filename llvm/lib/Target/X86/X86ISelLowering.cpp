@@ -33998,6 +33998,7 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
+  SDLoc DL(Root);
   APInt UndefElts(NumMaskElts, 0);
   APInt ZeroElts(NumMaskElts, 0);
   APInt ConstantElts(NumMaskElts, 0);
@@ -34035,6 +34036,10 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
   }
   assert((UndefElts | ZeroElts | ConstantElts).isAllOnesValue());
 
+  // Attempt to create a zero vector.
+  if ((UndefElts | ZeroElts).isAllOnesValue())
+    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG, DL);
+
   // Create the constant data.
   MVT MaskSVT;
   if (VT.isFloatingPoint() && (MaskSizeInBits == 32 || MaskSizeInBits == 64))
@@ -34043,8 +34048,9 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     MaskSVT = MVT::getIntegerVT(MaskSizeInBits);
 
   MVT MaskVT = MVT::getVectorVT(MaskSVT, NumMaskElts);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(MaskVT))
+    return SDValue();
 
-  SDLoc DL(Root);
   SDValue CstOp = getConstVector(ConstantBitData, UndefElts, MaskVT, DAG, DL);
   return DAG.getBitcast(VT, CstOp);
 }
