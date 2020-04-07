@@ -89,7 +89,6 @@ class TestGdbRemoteThreadsInfoMemory(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(encode_hex(next_fp) + encode_hex(0xf00d),
                          chunks[2]["bytes"])
 
-    @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     @llgs_test
     def test_g_returns_correct_data_with_suffix_llgs(self):
