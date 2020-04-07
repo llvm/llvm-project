@@ -497,11 +497,28 @@ file './input.cpp'
   mappings:
     ['#'_0, 'int'_7) => ['int'_0, 'int'_0)
     ['FOO'_10, '<eof>'_11) => ['10'_3, '<eof>'_7)
-)"}};
+)"},
+      {R"cpp(
+         #define NUM 42
+         #define ID(a) a
+         #define M 1 + ID
+         M(NUM)
+       )cpp",
+       R"(expanded tokens:
+  1 + 42
+file './input.cpp'
+  spelled tokens:
+    # define NUM 42 # define ID ( a ) a # define M 1 + ID M ( NUM )
+  mappings:
+    ['#'_0, 'M'_17) => ['1'_0, '1'_0)
+    ['M'_17, '<eof>'_21) => ['1'_0, '<eof>'_3)
+)"},
+  };
 
-  for (auto &Test : TestCases)
-    EXPECT_EQ(Test.second, collectAndDump(Test.first))
-        << collectAndDump(Test.first);
+  for (auto &Test : TestCases) {
+    std::string Dump = collectAndDump(Test.first);
+    EXPECT_EQ(Test.second, Dump) << Dump;
+  }
 }
 
 TEST_F(TokenCollectorTest, SpecialTokens) {
