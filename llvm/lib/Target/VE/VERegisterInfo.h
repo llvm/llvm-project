@@ -30,7 +30,7 @@ public:
   const uint32_t *getNoPreservedMask() const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  bool isConstantPhysReg(unsigned PhysReg) const override;
+  bool isConstantPhysReg(MCRegister PhysReg) const override;
 
   const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
                                                 unsigned Kind) const override;

@@ -44,7 +44,7 @@ public:
                             RegScavenger *RS = nullptr) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
 
   const SpillSlot *
   getCalleeSavedSpillSlots(unsigned &NumEntries) const override {
