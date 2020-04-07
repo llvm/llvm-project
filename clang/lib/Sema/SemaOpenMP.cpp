@@ -2107,6 +2107,9 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     // Threadprivate variables must not be captured.
     if (isOpenMPThreadPrivate(DVarPrivate.CKind))
       return nullptr;
+    // Global shared must not be captured.
+    if (VD && !VD->hasLocalStorage() && DVarPrivate.CKind == OMPC_shared)
+      return nullptr;
     // The variable is not private or it is the variable in the directive with
     // default(none) clause and not used in any clause.
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
