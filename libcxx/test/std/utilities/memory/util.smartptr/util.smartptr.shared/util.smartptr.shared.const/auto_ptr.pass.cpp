@@ -46,9 +46,10 @@ int A::count = 0;
 
 int main(int, char**)
 {
-    {
-        std::auto_ptr<A> ptr(new A);
-        A* raw_ptr = ptr.get();
+  globalMemCounter.reset();
+  {
+    std::auto_ptr<A> ptr(new A);
+    A* raw_ptr = ptr.get();
 #if TEST_STD_VER >= 11
         std::shared_ptr<B> p(std::move(ptr));
 #else
@@ -59,7 +60,7 @@ int main(int, char**)
         assert(p.use_count() == 1);
         assert(p.get() == raw_ptr);
         assert(ptr.get() == 0);
-    }
+  }
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
 #if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(DISABLE_NEW_COUNT)

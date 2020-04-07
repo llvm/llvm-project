@@ -110,10 +110,11 @@ void test_for_alloc(Alloc& alloc) {
 
 int main(int, char**)
 {
-    {
-        bare_allocator<DummyClass> bare_alloc;
-        test_for_alloc(bare_alloc);
-    }
+  globalMemCounter.reset();
+  {
+    bare_allocator<DummyClass> bare_alloc;
+    test_for_alloc(bare_alloc);
+  }
     {
         non_default_test_allocator<DummyClass> non_default_alloc(42);
         test_for_alloc(non_default_alloc);
