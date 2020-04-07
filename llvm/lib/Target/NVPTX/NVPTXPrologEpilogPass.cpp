@@ -67,7 +67,7 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
         if (MI.isDebugValue()) {
           assert(i == 0 && "Frame indices can only appear as the first "
                            "operand of a DBG_VALUE machine instruction");
-          unsigned Reg;
+          Register Reg;
           int64_t Offset =
               TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
           MI.getOperand(0).ChangeToRegister(Reg, /*isDef=*/false);

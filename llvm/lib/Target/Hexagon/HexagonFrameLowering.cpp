@@ -1103,7 +1103,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       // Instead, get the offset (relative to the FP) directly.
       Offset = MFI.getObjectOffset(F->getFrameIdx());
     } else {
-      unsigned FrameReg;
+      Register FrameReg;
       Offset = getFrameIndexReference(MF, F->getFrameIdx(), FrameReg);
     }
     // Subtract 8 to make room for R30 and R31, which are added above.
@@ -1257,7 +1257,8 @@ static const char *getSpillFunctionFor(unsigned MaxReg, SpillKind SpillType,
 }
 
 int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-      int FI, unsigned &FrameReg) const {
+                                                 int FI,
+                                                 Register &FrameReg) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
@@ -1268,9 +1269,9 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
 
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize();
-  unsigned SP = HRI.getStackRegister();
-  unsigned FP = HRI.getFrameRegister();
-  unsigned AP = HMFI.getStackAlignBasePhysReg();
+  Register SP = HRI.getStackRegister();
+  Register FP = HRI.getFrameRegister();
+  Register AP = HMFI.getStackAlignBasePhysReg();
   // It may happen that AP will be absent even HasAlloca && HasExtraAlign
   // is true. HasExtraAlign may be set because of vector spills, without
   // aligned locals or aligned outgoing function arguments. Since vector

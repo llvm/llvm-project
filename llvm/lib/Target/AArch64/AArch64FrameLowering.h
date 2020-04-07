@@ -39,13 +39,13 @@ public:
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
-                                         unsigned &FrameReg, bool PreferFP,
+                                         Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, unsigned &FrameReg,
+                                          bool isSVE, Register &FrameReg,
                                           bool PreferFP, bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
@@ -87,7 +87,7 @@ public:
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
 
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
-                                     unsigned &FrameReg,
+                                     Register &FrameReg,
                                      bool IgnoreSPUpdates) const override;
   int getNonLocalFrameIndexReference(const MachineFunction &MF,
                                int FI) const override;

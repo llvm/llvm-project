@@ -864,7 +864,7 @@ LiveDebugValues::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
          "Inconsistent memory operand in spill instruction");
   int FI = cast<FixedStackPseudoSourceValue>(PVal)->getFrameIndex();
   const MachineBasicBlock *MBB = MI.getParent();
-  unsigned Reg;
+  Register Reg;
   int Offset = TFI->getFrameIndexReference(*MBB->getParent(), FI, Reg);
   return {Reg, Offset};
 }
