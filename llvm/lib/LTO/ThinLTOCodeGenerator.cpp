@@ -152,8 +152,9 @@ generateModuleMap(std::vector<std::unique_ptr<lto::InputFile>> &Modules) {
   return ModuleMap;
 }
 
-static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
-  if (renameModuleForThinLTO(TheModule, Index))
+static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index,
+                          bool ClearDSOLocalOnDeclarations) {
+  if (renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations))
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
@@ -205,15 +206,16 @@ static std::unique_ptr<Module> loadModuleFromInput(lto::InputFile *Input,
 
 static void
 crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
-                      StringMap<lto::InputFile*> &ModuleMap,
-                      const FunctionImporter::ImportMapTy &ImportList) {
+                      StringMap<lto::InputFile *> &ModuleMap,
+                      const FunctionImporter::ImportMapTy &ImportList,
+                      bool ClearDSOLocalOnDeclarations) {
   auto Loader = [&](StringRef Identifier) {
     auto &Input = ModuleMap[Identifier];
     return loadModuleFromInput(Input, TheModule.getContext(),
                                /*Lazy=*/true, /*IsImporting*/ true);
   };
 
-  FunctionImporter Importer(Index, Loader);
+  FunctionImporter Importer(Index, Loader, ClearDSOLocalOnDeclarations);
   Expected<bool> Result = Importer.importFunctions(TheModule, ImportList);
   if (!Result) {
     handleAllErrors(Result.takeError(), [&](ErrorInfoBase &EIB) {
@@ -411,8 +413,15 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   // "Benchmark"-like optimization: single-source case
   bool SingleModule = (ModuleMap.size() == 1);
 
+  // When linking an ELF shared object, dso_local should be dropped. We
+  // conservatively do this for -fpic.
+  bool ClearDSOLocalOnDeclarations =
+      TM.getTargetTriple().isOSBinFormatELF() &&
+      TM.getRelocationModel() != Reloc::Static &&
+      TheModule.getPIELevel() == PIELevel::Default;
+
   if (!SingleModule) {
-    promoteModule(TheModule, Index);
+    promoteModule(TheModule, Index, ClearDSOLocalOnDeclarations);
 
     // Apply summary-based prevailing-symbol resolution decisions.
     thinLTOResolvePrevailingInModule(TheModule, DefinedGlobals);
@@ -432,7 +441,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   saveTempBitcode(TheModule, SaveTempsDir, count, ".2.internalized.bc");
 
   if (!SingleModule) {
-    crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
+    crossImportIntoModule(TheModule, Index, ModuleMap, ImportList,
+                          ClearDSOLocalOnDeclarations);
 
     // Save temps: after cross-module import.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
@@ -673,7 +683,8 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
       Index, IsExported(ExportLists, GUIDPreservedSymbols),
       IsPrevailing(PrevailingCopy));
 
-  promoteModule(TheModule, Index);
+  // FIXME Set ClearDSOLocalOnDeclarations.
+  promoteModule(TheModule, Index, /*ClearDSOLocalOnDeclarations=*/false);
 }
 
 /**
@@ -705,7 +716,9 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
                            ExportLists);
   auto &ImportList = ImportLists[TheModule.getModuleIdentifier()];
 
-  crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
+  // FIXME Set ClearDSOLocalOnDeclarations.
+  crossImportIntoModule(TheModule, Index, ModuleMap, ImportList,
+                        /*ClearDSOLocalOnDeclarations=*/false);
 }
 
 /**
@@ -832,7 +845,8 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
       Index, IsExported(ExportLists, GUIDPreservedSymbols),
       IsPrevailing(PrevailingCopy));
 
-  promoteModule(TheModule, Index);
+  // FIXME Set ClearDSOLocalOnDeclarations.
+  promoteModule(TheModule, Index, /*ClearDSOLocalOnDeclarations=*/false);
 
   // Internalization
   thinLTOResolvePrevailingInModule(
