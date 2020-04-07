@@ -169,13 +169,6 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagMD5Name = (1 << 0)
 };
-enum class SecProfSummaryFlags : uint32_t {
-  SecFlagInValid = 0,
-  /// SecFlagPartial means the profile is for common/shared code.
-  /// The common profile is usually merged from profiles collected
-  /// from running other targets.
-  SecFlagPartial = (1 << 0)
-};
 
 // Verify section specific flag is used for the correct section.
 template <class SecFlagType>
@@ -189,9 +182,6 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   switch (Type) {
   case SecNameTable:
     IsFlagLegal = std::is_same<SecNameTableFlags, SecFlagType>();
-    break;
-  case SecProfSummary:
-    IsFlagLegal = std::is_same<SecProfSummaryFlags, SecFlagType>();
     break;
   default:
     break;
