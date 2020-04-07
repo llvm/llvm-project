@@ -932,7 +932,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      // almost always point to SP-after-prologue; if not, emit a longer
      // instruction sequence.
      int BaseOffset = -AFI->getTaggedBasePointerOffset();
-     unsigned FrameReg;
+     Register FrameReg;
      StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
          MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, FrameReg,
          /*PreferFP=*/false,

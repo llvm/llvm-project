@@ -809,7 +809,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   if (ScratchExecCopy != AMDGPU::NoRegister) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
       .addReg(ScratchExecCopy, RegState::Kill);
   }
@@ -844,7 +844,7 @@ static bool allSGPRSpillsAreDead(const MachineFrameInfo &MFI,
 #endif
 
 int SIFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                            unsigned &FrameReg) const {
+                                            Register &FrameReg) const {
   const SIRegisterInfo *RI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
 
   FrameReg = RI->getFrameRegister(MF);

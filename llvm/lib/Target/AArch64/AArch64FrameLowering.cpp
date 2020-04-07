@@ -1699,7 +1699,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 /// SP-relative and simple call frames aren't used.
 int AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                  int FI,
-                                                 unsigned &FrameReg) const {
+                                                 Register &FrameReg) const {
   return resolveFrameIndexReference(
              MF, FI, FrameReg,
              /*PreferFP=*/
@@ -1742,7 +1742,7 @@ int AArch64FrameLowering::getSEHFrameIndexOffset(const MachineFunction &MF,
 }
 
 StackOffset AArch64FrameLowering::resolveFrameIndexReference(
-    const MachineFunction &MF, int FI, unsigned &FrameReg, bool PreferFP,
+    const MachineFunction &MF, int FI, Register &FrameReg, bool PreferFP,
     bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
@@ -1754,7 +1754,7 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
 
 StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     const MachineFunction &MF, int64_t ObjectOffset, bool isFixed, bool isSVE,
-    unsigned &FrameReg, bool PreferFP, bool ForSimm) const {
+    Register &FrameReg, bool PreferFP, bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
   const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
@@ -2895,7 +2895,7 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
   Size = LastTagStore.Offset - FirstTagStore.Offset + LastTagStore.Size;
   DL = TagStores[0].MI->getDebugLoc();
 
-  unsigned Reg;
+  Register Reg;
   FrameRegOffset = TFI->resolveFrameOffsetReference(
       *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/, Reg,
       /*PreferFP=*/false, /*ForSimm=*/true);
@@ -3089,7 +3089,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
 /// before the update.  This is easily retrieved as it is exactly the offset
 /// that is set in processFunctionBeforeFrameFinalized.
 int AArch64FrameLowering::getFrameIndexReferencePreferSP(
-    const MachineFunction &MF, int FI, unsigned &FrameReg,
+    const MachineFunction &MF, int FI, Register &FrameReg,
     bool IgnoreSPUpdates) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (IgnoreSPUpdates) {

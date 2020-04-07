@@ -458,12 +458,12 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return ARMBaseRegisterInfo::eliminateFrameIndex(II, SPAdj, FIOperandNum,
                                                     RS);
 
-  unsigned VReg = 0;
+  Register VReg;
   const ARMBaseInstrInfo &TII = *STI.getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
   MachineInstrBuilder MIB(*MBB.getParent(), &MI);
 
-  unsigned FrameReg;
+  Register FrameReg;
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
   int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);

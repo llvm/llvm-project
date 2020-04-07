@@ -98,14 +98,14 @@ public:
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
 
-  int getWin64EHFrameIndexRef(const MachineFunction &MF,
-                              int FI, unsigned &SPReg) const;
-  int getFrameIndexReferenceSP(const MachineFunction &MF,
-                               int FI, unsigned &SPReg, int Adjustment) const;
+  int getWin64EHFrameIndexRef(const MachineFunction &MF, int FI,
+                              Register &SPReg) const;
+  int getFrameIndexReferenceSP(const MachineFunction &MF, int FI,
+                               Register &SPReg, int Adjustment) const;
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
-                                     unsigned &FrameReg,
+                                     Register &FrameReg,
                                      bool IgnoreSPUpdates) const override;
 
   MachineBasicBlock::iterator
@@ -178,10 +178,10 @@ public:
 
   int getInitialCFAOffset(const MachineFunction &MF) const override;
 
-  unsigned getInitialCFARegister(const MachineFunction &MF) const override;
+  Register getInitialCFARegister(const MachineFunction &MF) const override;
 
   /// Return true if the function has a redzone (accessible bytes past the
-  /// frame of the top of stack function) as part of it's ABI.  
+  /// frame of the top of stack function) as part of it's ABI.
   bool has128ByteRedZone(const MachineFunction& MF) const;
 
 private:
