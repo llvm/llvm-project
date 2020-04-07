@@ -92,11 +92,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
-                                         unsigned PhysReg) const {
+                                         MCRegister PhysReg) const {
   return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
 }
 
-bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+bool RISCVRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   return PhysReg == RISCV::X0;
 }
 
