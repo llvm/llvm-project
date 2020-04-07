@@ -4,16 +4,12 @@ math(EXPR file_last "${file_len} - 1")
 
 get_llvm_lit_path(LIT_BASE_DIR LIT_FILE_NAME)
 
-set(LLVM_SOURCE_DIR ${LLVM_MAIN_SRC_DIR})
-
 # LLVM_LIT_CONFIG_FILES contains interleaved main config (in the source tree)
 # and site config (in the build tree) pairs. Make them relative to
 # llvm-lit and then convert them to map_config() calls.
 if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
   make_paths_relative(
-    LLVM_LIT_CONFIG_FILES "${LIT_BASE_DIR}" "${LLVM_LIT_CONFIG_FILES}")
-  make_paths_relative(
-    LLVM_SOURCE_DIR "${LIT_BASE_DIR}" "${LLVM_SOURCE_DIR}")
+      LLVM_LIT_CONFIG_FILES "${LIT_BASE_DIR}" "${LLVM_LIT_CONFIG_FILES}")
 endif()
 
 set(LLVM_LIT_CONFIG_MAP "${LLVM_LIT_PATH_FUNCTION}\n")
@@ -26,6 +22,8 @@ if (${file_last} GREATER -1)
     set(LLVM_LIT_CONFIG_MAP "${LLVM_LIT_CONFIG_MAP}\n${map}")
   endforeach()
 endif()
+
+set(LLVM_SOURCE_DIR ${LLVM_MAIN_SRC_DIR})
 
 if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
   foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
