@@ -1064,6 +1064,8 @@ public:
   Token emitError(llvm::SMLoc loc, const Twine &msg);
   Token emitError(const char *loc, const Twine &msg);
 
+  Token emitErrorAndNote(llvm::SMLoc loc, const Twine &msg, const Twine &note);
+
 private:
   Token formToken(Token::Kind kind, const char *tokStart) {
     return Token(kind, StringRef(tokStart, curPtr - tokStart));
@@ -1090,6 +1092,12 @@ FormatLexer::FormatLexer(llvm::SourceMgr &mgr) : srcMgr(mgr) {
 
 Token FormatLexer::emitError(llvm::SMLoc loc, const Twine &msg) {
   srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  return formToken(Token::error, loc.getPointer());
+}
+Token FormatLexer::emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
+                                    const Twine &note) {
+  srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Note, note);
   return formToken(Token::error, loc.getPointer());
 }
 Token FormatLexer::emitError(const char *loc, const Twine &msg) {
@@ -1325,6 +1333,11 @@ private:
     lexer.emitError(loc, msg);
     return failure();
   }
+  LogicalResult emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
+                                 const Twine &note) {
+    lexer.emitErrorAndNote(loc, msg, note);
+    return failure();
+  }
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -1360,7 +1373,8 @@ LogicalResult FormatParser::parse() {
 
   // Check that the attribute dictionary is in the format.
   if (!hasAttrDict)
-    return emitError(loc, "format missing 'attr-dict' directive");
+    return emitError(loc, "'attr-dict' directive not found in "
+                          "custom assembly format");
 
   // Check for any type traits that we can use for inferring types.
   llvm::StringMap<TypeResolutionInstance> variableTyResolver;
@@ -1465,8 +1479,12 @@ LogicalResult FormatParser::verifyOperands(
 
     // Check that the operand itself is in the format.
     if (!hasAllOperands && !seenOperands.count(&operand)) {
-      return emitError(loc, "format missing instance of operand #" + Twine(i) +
-                                "('" + operand.name + "')");
+      return emitErrorAndNote(loc,
+                              "operand #" + Twine(i) + ", named '" +
+                                  operand.name +
+                                  "', not found in custom assembly format",
+                              "suggest adding a '$" + operand.name +
+                                  "' directive to the custom assembly format");
     }
 
     // Check that the operand type is in the format, or that it can be inferred.
@@ -1485,8 +1503,15 @@ LogicalResult FormatParser::verifyOperands(
     // we aren't using the 'operands' directive.
     Optional<StringRef> builder = operand.constraint.getBuilderCall();
     if (!builder || (hasAllOperands && operand.isVariadic())) {
-      return emitError(loc, "format missing instance of operand #" + Twine(i) +
-                                "('" + operand.name + "') type");
+      return emitErrorAndNote(
+          loc,
+          "type of operand #" + Twine(i) + ", named '" + operand.name +
+              "', is not buildable and a buildable " +
+              "type cannot be inferred",
+          "suggest adding a type constraint "
+          "to the operation or adding a "
+          "'type($" +
+              operand.name + ")' directive to the " + "custom assembly format");
     }
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
     fmt.operandTypes[i].setBuilderIdx(it.first->second);
@@ -1520,8 +1545,15 @@ LogicalResult FormatParser::verifyResults(
     NamedTypeConstraint &result = op.getResult(i);
     Optional<StringRef> builder = result.constraint.getBuilderCall();
     if (!builder || result.constraint.isVariadic()) {
-      return emitError(loc, "format missing instance of result #" + Twine(i) +
-                                "('" + result.name + "') type");
+      return emitErrorAndNote(
+          loc,
+          "type of result #" + Twine(i) + ", named '" + result.name +
+              "', is not buildable and a buildable " +
+              "type cannot be inferred",
+          "suggest adding a type constraint "
+          "to the operation or adding a "
+          "'type($" +
+              result.name + ")' directive to the " + "custom assembly format");
     }
     // Note in the format that this result uses the custom builder.
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
@@ -1538,8 +1570,12 @@ LogicalResult FormatParser::verifySuccessors(llvm::SMLoc loc) {
   for (unsigned i = 0, e = op.getNumSuccessors(); i != e; ++i) {
     const NamedSuccessor &successor = op.getSuccessor(i);
     if (!seenSuccessors.count(&successor)) {
-      return emitError(loc, "format missing instance of successor #" +
-                                Twine(i) + "('" + successor.name + "')");
+      return emitErrorAndNote(loc,
+                              "successor #" + Twine(i) + ", named '" +
+                                  successor.name +
+                                  "', not found in custom assembly format",
+                              "suggest adding a '$" + successor.name +
+                                  "' directive to the custom assembly format");
     }
   }
   return success();
