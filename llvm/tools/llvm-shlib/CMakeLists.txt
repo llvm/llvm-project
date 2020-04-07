@@ -106,7 +106,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
               " -compatibility_version 1 -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} -Wl,-reexport_library ${LIB_PATH}")
 endif()
 
-if(MSVC)
+if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Build the LLVM-C.dll library that exports the C API.
 
   set(LLVM_LINK_COMPONENTS
