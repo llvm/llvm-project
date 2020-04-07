@@ -154,7 +154,7 @@ private:
 
 namespace {
 struct ToyToLLVMLoweringPass
-    : public OperationPass<ToyToLLVMLoweringPass, ModuleOp> {
+    : public PassWrapper<ToyToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void runOnOperation() final;
 };
 } // end anonymous namespace

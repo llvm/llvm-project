@@ -2847,7 +2847,8 @@ LLVMTypeConverter::promoteMemRefDescriptors(Location loc, ValueRange opOperands,
 
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
-struct LLVMLoweringPass : public OperationPass<LLVMLoweringPass, ModuleOp> {
+struct LLVMLoweringPass
+    : public PassWrapper<LLVMLoweringPass, OperationPass<ModuleOp>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertStandardToLLVM
 #include "mlir/Conversion/Passes.h.inc"
@@ -2901,7 +2902,7 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
   this->addIllegalOp<TanhOp>();
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
   return std::make_unique<LLVMLoweringPass>(
       options.useBarePtrCallConv, options.emitCWrappers, options.indexBitwidth);

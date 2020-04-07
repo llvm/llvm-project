@@ -101,7 +101,8 @@ static bool getInnermostNestedLoops(Block *block,
 }
 
 namespace {
-struct ParallelLoopTiling : public FunctionPass<ParallelLoopTiling> {
+struct ParallelLoopTiling
+    : public PassWrapper<ParallelLoopTiling, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LoopParallelLoopTiling
 #include "mlir/Dialect/LoopOps/Passes.h.inc"

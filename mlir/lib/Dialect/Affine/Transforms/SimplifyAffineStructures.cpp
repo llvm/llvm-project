@@ -27,7 +27,7 @@ namespace {
 /// all memrefs with non-trivial layout maps are converted to ones with trivial
 /// identity layout ones.
 struct SimplifyAffineStructures
-    : public FunctionPass<SimplifyAffineStructures> {
+    : public PassWrapper<SimplifyAffineStructures, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_SimplifyAffineStructures
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -73,7 +73,8 @@ struct SimplifyAffineStructures
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createSimplifyAffineStructuresPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createSimplifyAffineStructuresPass() {
   return std::make_unique<SimplifyAffineStructures>();
 }
 

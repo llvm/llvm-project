@@ -58,7 +58,7 @@ namespace {
 /// full unroll threshold was specified, in which case, fully unrolls all loops
 /// with trip count less than the specified threshold. The latter is for testing
 /// purposes, especially for testing outer loop unrolling.
-struct LoopUnroll : public FunctionPass<LoopUnroll> {
+struct LoopUnroll : public PassWrapper<LoopUnroll, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineUnroll
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -166,7 +166,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
   return loopUnrollByFactor(forOp, kDefaultUnrollFactor);
 }
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopUnrollPass(
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopUnrollPass(
     int unrollFactor, int unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(

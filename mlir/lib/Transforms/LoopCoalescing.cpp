@@ -19,7 +19,8 @@
 using namespace mlir;
 
 namespace {
-struct LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
+struct LoopCoalescingPass
+    : public PassWrapper<LoopCoalescingPass, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LoopCoalescing
 #include "mlir/Transforms/Passes.h.inc"
@@ -89,6 +90,6 @@ struct LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
 
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopCoalescingPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }

@@ -21,7 +21,7 @@ namespace {
 #include "TestVectorTransformPatterns.h.inc"
 
 struct TestVectorToVectorConversion
-    : public FunctionPass<TestVectorToVectorConversion> {
+    : public PassWrapper<TestVectorToVectorConversion, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     auto *context = &getContext();
@@ -33,7 +33,7 @@ struct TestVectorToVectorConversion
 };
 
 struct TestVectorSlicesConversion
-    : public FunctionPass<TestVectorSlicesConversion> {
+    : public PassWrapper<TestVectorSlicesConversion, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
@@ -42,7 +42,7 @@ struct TestVectorSlicesConversion
 };
 
 struct TestVectorContractionConversion
-    : public FunctionPass<TestVectorContractionConversion> {
+    : public PassWrapper<TestVectorContractionConversion, FunctionPass> {
   TestVectorContractionConversion() = default;
   TestVectorContractionConversion(const TestVectorContractionConversion &pass) {
   }

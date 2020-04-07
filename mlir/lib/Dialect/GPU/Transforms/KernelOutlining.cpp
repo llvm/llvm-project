@@ -215,7 +215,7 @@ namespace {
 /// a separate pass. The external functions can then be annotated with the
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass
-    : public OperationPass<GpuKernelOutliningPass, ModuleOp> {
+    : public PassWrapper<GpuKernelOutliningPass, OperationPass<ModuleOp>> {
 public:
 /// Include the generated pass utilities.
 #define GEN_PASS_GpuKernelOutlining
@@ -301,6 +301,6 @@ private:
 
 } // namespace
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createGpuKernelOutliningPass() {
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createGpuKernelOutliningPass() {
   return std::make_unique<GpuKernelOutliningPass>();
 }

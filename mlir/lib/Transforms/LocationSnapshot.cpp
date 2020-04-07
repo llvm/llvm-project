@@ -123,7 +123,8 @@ LogicalResult mlir::generateLocationsFromIR(StringRef fileName, StringRef tag,
 }
 
 namespace {
-struct LocationSnapshotPass : public OperationPass<LocationSnapshotPass> {
+struct LocationSnapshotPass
+    : public PassWrapper<LocationSnapshotPass, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LocationSnapshot
 #include "mlir/Transforms/Passes.h.inc"

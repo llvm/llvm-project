@@ -38,7 +38,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct TestPatternDriver : public FunctionPass<TestPatternDriver> {
+struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
@@ -96,7 +96,8 @@ static void reifyReturnShape(Operation *op) {
                      << it.value().getDefiningOp();
 }
 
-struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
+struct TestReturnTypeDriver
+    : public PassWrapper<TestReturnTypeDriver, FunctionPass> {
   void runOnFunction() override {
     if (getFunction().getName() == "testCreateFunctions") {
       std::vector<Operation *> ops;
@@ -398,7 +399,7 @@ struct TestTypeConverter : public TypeConverter {
 };
 
 struct TestLegalizePatternDriver
-    : public OperationPass<TestLegalizePatternDriver, ModuleOp> {
+    : public PassWrapper<TestLegalizePatternDriver, OperationPass<ModuleOp>> {
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
 
@@ -534,7 +535,8 @@ struct OneVResOneVOperandOp1Converter
   }
 };
 
-struct TestRemappedValue : public mlir::FunctionPass<TestRemappedValue> {
+struct TestRemappedValue
+    : public mlir::PassWrapper<TestRemappedValue, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
     patterns.insert<OneVResOneVOperandOp1Converter>(&getContext());

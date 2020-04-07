@@ -60,7 +60,7 @@ namespace {
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-struct MemRefDataFlowOpt : public FunctionPass<MemRefDataFlowOpt> {
+struct MemRefDataFlowOpt : public PassWrapper<MemRefDataFlowOpt, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_MemRefDataFlowOpt
 #include "mlir/Transforms/Passes.h.inc"
@@ -82,7 +82,7 @@ struct MemRefDataFlowOpt : public FunctionPass<MemRefDataFlowOpt> {
 
 /// Creates a pass to perform optimizations relying on memref dataflow such as
 /// store to load forwarding, elimination of dead stores, and dead allocs.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createMemRefDataFlowOptPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createMemRefDataFlowOptPass() {
   return std::make_unique<MemRefDataFlowOpt>();
 }
 

@@ -80,7 +80,8 @@ static void populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns,
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public OperationPass<DecorateSPIRVCompositeTypeLayoutPass, ModuleOp> {
+    : public PassWrapper<DecorateSPIRVCompositeTypeLayoutPass,
+                         OperationPass<ModuleOp>> {
 private:
   void runOnOperation() override;
 };
@@ -113,7 +114,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
   return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
 }

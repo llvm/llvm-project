@@ -47,7 +47,8 @@ static constexpr const char *kCubinAnnotation = "nvvm.cubin";
 /// GPU binary code, which is then attached as an attribute to the function. The
 /// function body is erased.
 class GpuKernelToCubinPass
-    : public OperationPass<GpuKernelToCubinPass, gpu::GPUModuleOp> {
+    : public PassWrapper<GpuKernelToCubinPass,
+                         OperationPass<gpu::GPUModuleOp>> {
 public:
   GpuKernelToCubinPass(CubinGenerator cubinGenerator)
       : cubinGenerator(cubinGenerator) {}
@@ -143,7 +144,7 @@ StringAttr GpuKernelToCubinPass::translateGPUModuleToCubinAnnotation(
   return StringAttr::get({cubin->data(), cubin->size()}, loc->getContext());
 }
 
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 mlir::createConvertGPUKernelToCubinPass(CubinGenerator cubinGenerator) {
   return std::make_unique<GpuKernelToCubinPass>(cubinGenerator);
 }

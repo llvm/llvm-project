@@ -20,7 +20,8 @@
 using namespace mlir;
 
 namespace {
-struct ParallelLoopCollapsing : public OperationPass<ParallelLoopCollapsing> {
+struct ParallelLoopCollapsing
+    : public PassWrapper<ParallelLoopCollapsing, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ParallelLoopCollapsing
 #include "mlir/Transforms/Passes.h.inc"
