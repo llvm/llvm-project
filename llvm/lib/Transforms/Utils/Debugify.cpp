@@ -30,6 +30,17 @@ namespace {
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+enum class Level {
+  Locations,
+  LocationsAndVariables
+};
+cl::opt<Level> DebugifyLevel(
+    "debugify-level", cl::desc("Kind of debug info to add"),
+    cl::values(clEnumValN(Level::Locations, "locations", "Locations only"),
+               clEnumValN(Level::LocationsAndVariables, "location+variables",
+                          "Locations and Variables")),
+    cl::init(Level::LocationsAndVariables));
+
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
@@ -99,6 +110,9 @@ bool applyDebugifyMetadata(Module &M,
       // Attach debug locations.
       for (Instruction &I : BB)
         I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+
+      if (DebugifyLevel < Level::LocationsAndVariables)
+        continue;
 
       // Inserting debug values into EH pads can break IR invariants.
       if (BB.isEHPad())
