@@ -19,12 +19,14 @@ class MCSymbolWasm : public MCSymbol {
   bool IsHidden = false;
   bool IsComdat = false;
   mutable bool IsUsedInGOT = false;
-  Optional<std::string> ImportModule;
-  Optional<std::string> ImportName;
-  Optional<std::string> ExportName;
-  wasm::WasmSignature *Signature = nullptr;
   Optional<wasm::WasmGlobalType> GlobalType;
   Optional<wasm::WasmEventType> EventType;
+
+  // Non-owning pointers since MCSymbol must be trivially destructible.
+  std::string *ImportModule = nullptr;
+  std::string *ImportName = nullptr;
+  std::string *ExportName = nullptr;
+  wasm::WasmSignature *Signature = nullptr;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -69,37 +71,32 @@ public:
   bool isComdat() const { return IsComdat; }
   void setComdat(bool isComdat) { IsComdat = isComdat; }
 
-  bool hasImportModule() const { return ImportModule.hasValue(); }
+  bool hasImportModule() const { return ImportModule != nullptr; }
   const StringRef getImportModule() const {
-      if (ImportModule.hasValue()) {
-          return ImportModule.getValue();
-      }
-      // Use a default module name of "env" for now, for compatibility with
-      // existing tools.
-      // TODO(sbc): Find a way to specify a default value in the object format
-      // without picking a hardcoded value like this.
-      return "env";
+    if (ImportModule)
+      return StringRef(*ImportModule);
+    // Use a default module name of "env" for now, for compatibility with
+    // existing tools.
+    // TODO(sbc): Find a way to specify a default value in the object format
+    // without picking a hardcoded value like this.
+    return "env";
   }
-  void setImportModule(StringRef Name) {
-    ImportModule = std::string(std::string(Name));
-  }
+  void setImportModule(std::string *Name) { ImportModule = Name; }
 
-  bool hasImportName() const { return ImportName.hasValue(); }
+  bool hasImportName() const { return ImportName != nullptr; }
   const StringRef getImportName() const {
-      if (ImportName.hasValue()) {
-          return ImportName.getValue();
-      }
-      return getName();
+    if (ImportName)
+      return StringRef(*ImportName);
+    return getName();
   }
-  void setImportName(StringRef Name) {
-    ImportName = std::string(std::string(Name));
-  }
+  void setImportName(std::string *Name) { ImportName = Name; }
 
-  bool hasExportName() const { return ExportName.hasValue(); }
-  const StringRef getExportName() const { return ExportName.getValue(); }
-  void setExportName(StringRef Name) {
-    ExportName = std::string(std::string(Name));
+  bool hasExportName() const { return ExportName != nullptr; }
+  const StringRef getExportName() const {
+    assert(ExportName);
+    return StringRef(*ExportName);
   }
+  void setExportName(std::string *Name) { ExportName = Name; }
 
   void setUsedInGOT() const { IsUsedInGOT = true; }
   bool isUsedInGOT() const { return IsUsedInGOT; }
