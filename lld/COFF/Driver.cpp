@@ -1273,6 +1273,14 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       config->pdbAltPath = arg->getValue();
     if (args.hasArg(OPT_natvis))
       config->natvisFiles = args.getAllArgValues(OPT_natvis);
+    if (args.hasArg(OPT_pdbstream)) {
+      for (const StringRef value : args.getAllArgValues(OPT_pdbstream)) {
+        const std::pair<StringRef, StringRef> nameFile = value.split("=");
+        const StringRef name = nameFile.first;
+        const std::string file = nameFile.second.str();
+        config->namedStreams[name] = file;
+      }
+    }
 
     if (auto *arg = args.getLastArg(OPT_pdb_source_path))
       config->pdbSourcePath = arg->getValue();
