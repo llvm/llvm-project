@@ -436,14 +436,38 @@ public:
                     SourceRange Range, const MacroArgs *Args) override {
     if (!Collector)
       return;
-    // Only record top-level expansions, not those where:
+    const auto &SM = Collector->PP.getSourceManager();
+    // Only record top-level expansions that directly produce expanded tokens.
+    // This excludes those where:
     //   - the macro use is inside a macro body,
     //   - the macro appears in an argument to another macro.
-    if (!MacroNameTok.getLocation().isFileID() ||
-        (LastExpansionEnd.isValid() &&
-         Collector->PP.getSourceManager().isBeforeInTranslationUnit(
-             Range.getBegin(), LastExpansionEnd)))
+    // However macro expansion isn't really a tree, it's token rewrite rules,
+    // so there are other cases, e.g.
+    //   #define B(X) X
+    //   #define A 1 + B
+    //   A(2)
+    // Both A and B produce expanded tokens, though the macro name 'B' comes
+    // from an expansion. The best we can do is merge the mappings for both.
+
+    // The *last* token of any top-level macro expansion must be in a file.
+    // (In the example above, see the closing paren of the expansion of B).
+    if (!Range.getEnd().isFileID())
       return;
+    // If there's a current expansion that encloses this one, this one can't be
+    // top-level.
+    if (LastExpansionEnd.isValid() &&
+        !SM.isBeforeInTranslationUnit(LastExpansionEnd, Range.getEnd()))
+      return;
+
+    // If the macro invocation (B) starts in a macro (A) but ends in a file,
+    // we'll create a merged mapping for A + B by overwriting the endpoint for
+    // A's startpoint.
+    if (!Range.getBegin().isFileID()) {
+      Range.setBegin(SM.getExpansionLoc(Range.getBegin()));
+      assert(Collector->Expansions.count(Range.getBegin().getRawEncoding()) &&
+             "Overlapping macros should have same expansion location");
+    }
+
     Collector->Expansions[Range.getBegin().getRawEncoding()] = Range.getEnd();
     LastExpansionEnd = Range.getEnd();
   }
