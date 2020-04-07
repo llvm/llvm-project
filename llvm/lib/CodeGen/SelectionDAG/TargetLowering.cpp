@@ -1727,8 +1727,7 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If the input sign bit is known zero, convert this into a zero extension.
     if (Known.Zero[ExVTBits - 1])
-      return TLO.CombineTo(
-          Op, TLO.DAG.getZeroExtendInReg(Op0, dl, ExVT.getScalarType()));
+      return TLO.CombineTo(Op, TLO.DAG.getZeroExtendInReg(Op0, dl, ExVT));
 
     APInt Mask = APInt::getLowBitsSet(BitWidth, ExVTBits);
     if (Known.One[ExVTBits - 1]) { // Input sign bit known set

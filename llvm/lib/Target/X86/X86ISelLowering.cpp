@@ -41259,7 +41259,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   case ISD::ANY_EXTEND:
     return Op;
   case ISD::ZERO_EXTEND:
-    return DAG.getZeroExtendInReg(Op, DL, NarrowVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, DL, NarrowVT);
   case ISD::SIGN_EXTEND:
     return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
                        Op, DAG.getValueType(NarrowVT));
@@ -44870,7 +44870,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   SDValue Res = DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
 
   if (N->getOpcode() == ISD::ZERO_EXTEND)
-    Res = DAG.getZeroExtendInReg(Res, dl, N0.getValueType().getScalarType());
+    Res = DAG.getZeroExtendInReg(Res, dl, N0.getValueType());
 
   return Res;
 }
