@@ -568,7 +568,7 @@ documentation.
 Consider the following pass specified in C++:
 
 ```c++
-struct MyPass : OperationPass<MyPass> {
+struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
   ...
 
   /// Options.
@@ -595,7 +595,7 @@ static PassRegistration<MyPass> pass("my-pass", "My pass summary");
 This pass may be specified declaratively as so:
 
 ```tablegen
-def MyPass : Pass<"my-pass"> {
+def MyPass : Pass<"my-pass", "ModuleOp"> {
   let summary = "My Pass Summary";
   let description = [{
     Here we can now give a much larger description of `MyPass`, including all of
@@ -636,11 +636,12 @@ void registerMyPasses() {
 We can then update the original C++ pass definition:
 
 ```c++
-struct MyPass : OperationPass<MyPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_MyPass
+/// Include the generated base pass class definitions.
+#define GEN_PASS_CLASSES
 #include "Passes.h.inc"
 
+// Define the main class as deriving from the generated base class.
+struct MyPass : MyPassBase<MyPass> {
   ...
 };
 
@@ -653,8 +654,9 @@ std::unique_ptr<Pass> foo::createMyPass() {
 ### Tablegen Specification
 
 The `Pass` class is used to begin a new pass definition. This class takes as an
-argument the command line argument to attribute to the pass. It contains the
-following fields:
+argument the command line argument to attribute to the pass, as well as an
+optional string corresponding to the operation type that the pass operates on.
+It contains the following fields:
 
 *   summary
     -   A short one line summary of the pass, used as the description when
