@@ -559,7 +559,7 @@ SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
 #endif
 
-#if !SANITIZER_GO && !SANITIZER_FREEBSD && !SANITIZER_NETBSD &&                \
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD &&                \
     !SANITIZER_OPENBSD
 static void ReadNullSepFileToArray(const char *path, char ***arr,
                                    int arr_size) {
@@ -585,7 +585,7 @@ static void ReadNullSepFileToArray(const char *path, char ***arr,
 }
 #endif
 
-#if !SANITIZER_OPENBSD && !SANITIZER_GO
+#if !SANITIZER_OPENBSD
 static void GetArgsAndEnv(char ***argv, char ***envp) {
 #if SANITIZER_FREEBSD
   // On FreeBSD, retrieving the argument and environment arrays is done via the
@@ -605,16 +605,16 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #else // SANITIZER_FREEBSD
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
-#endif // !SANITIZER_GO
     uptr* stack_end = (uptr*)__libc_stack_end;
     int argc = *stack_end;
     *argv = (char**)(stack_end + 1);
     *envp = (char**)(stack_end + argc + 2);
-#if !SANITIZER_GO
   } else {
+#endif // !SANITIZER_GO
     static const int kMaxArgv = 2000, kMaxEnvp = 2000;
     ReadNullSepFileToArray("/proc/self/cmdline", argv, kMaxArgv);
     ReadNullSepFileToArray("/proc/self/environ", envp, kMaxEnvp);
+#if !SANITIZER_GO
   }
 #endif // !SANITIZER_GO
 #endif // SANITIZER_FREEBSD
