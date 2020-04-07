@@ -1249,7 +1249,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
   for (SectionRef Sec : Obj->sections())
     SectionAddresses.emplace_back(Sec.getAddress(), Sec);
-  stable_sort(SectionAddresses);
+  llvm::stable_sort(SectionAddresses, llvm::less_first());
 
   // Linked executables (.exe and .dll files) typically don't include a real
   // symbol table but they might contain an export table.
