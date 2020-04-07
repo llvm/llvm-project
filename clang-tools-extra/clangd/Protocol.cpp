@@ -297,7 +297,7 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
               SemanticHighlighting->getBoolean("semanticHighlighting"))
         R.TheiaSemanticHighlighting = *SemanticHighlightingSupport;
     }
-    if (auto *SemanticHighlighting = TextDocument->getObject("semanticTokens"))
+    if (TextDocument->getObject("semanticTokens"))
       R.SemanticTokens = true;
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
       if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
