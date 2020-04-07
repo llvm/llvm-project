@@ -28,6 +28,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
     FOO.link.pass.cpp       - Compiles and links successfully, run not attempted
     FOO.link.fail.cpp       - Compiles successfully, but fails to link
     FOO.sh.cpp              - A builtin lit Shell test
+    FOO.sh.s                - A builtin lit Shell test
 
     FOO.fail.cpp            - Does not compile successfully -- run with clang-verify
                               if any expected-meow appears in the file, otherwise
@@ -89,7 +90,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                               '.pass.mm',
                               '.compile.pass.cpp', '.compile.fail.cpp',
                               '.link.pass.cpp', '.link.fail.cpp',
-                              '.sh.cpp',
+                              '.sh.cpp', '.sh.s',
                               '.fail.cpp', '.fail.mm']
         sourcePath = testSuite.getSourcePath(pathInSuite)
         for filename in os.listdir(sourcePath):
@@ -131,7 +132,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         self._checkSubstitutions(test.config.substitutions)
         VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
         filename = test.path_in_suite[-1]
-        if filename.endswith('.sh.cpp'):
+        if filename.endswith('.sh.cpp') or filename.endswith('.sh.s'):
             steps = [ ] # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.pass.cpp'):
@@ -182,7 +183,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 ]
             return self._executeShTest(test, litConfig, steps)
         else:
-            return lit.Test.Result(lit.Test.FAIL, "Unknown test suffix for '{}'".format(filename))
+            return lit.Test.Result(lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename))
 
     # Utility function to add compile flags in lit.local.cfg files.
     def addCompileFlags(self, config, *flags):
