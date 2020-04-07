@@ -149,6 +149,78 @@ define i32 @ptestnzc_256_invert0_commute(<4 x i64> %c, <4 x i64> %d, i32 %a, i32
 }
 
 ;
+; testz(AND(X,Y),AND(X,Y)) -> testz(X,Y)
+;
+
+define i32 @ptestz_128_and(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vptest %xmm0, %xmm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t1 = and <2 x i64> %c, %d
+  %t2 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %t1, <2 x i64> %t1)
+  %t3 = icmp ne i32 %t2, 0
+  %t4 = select i1 %t3, i32 %a, i32 %b
+  ret i32 %t4
+}
+
+define i32 @ptestz_256_and(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vptest %ymm0, %ymm0
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = and <4 x i64> %c, %d
+  %t2 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %t1, <4 x i64> %t1)
+  %t3 = icmp eq i32 %t2, 0
+  %t4 = select i1 %t3, i32 %a, i32 %b
+  ret i32 %t4
+}
+
+;
+; testz(AND(~X,Y),AND(~X,Y)) -> testc(X,Y)
+;
+
+define i32 @ptestz_128_andc(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_128_andc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vptest %xmm0, %xmm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    retq
+  %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
+  %t2 = and <2 x i64> %t1, %d
+  %t3 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %t2, <2 x i64> %t2)
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
+define i32 @ptestz_256_andc(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_256_andc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vptest %ymm0, %ymm0
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = xor <4 x i64> %c, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %t2 = and <4 x i64> %t1, %d
+  %t3 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %t2, <4 x i64> %t2)
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
+;
 ; testz(-1,X) -> testz(X,X)
 ;
 
