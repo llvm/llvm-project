@@ -24,7 +24,6 @@ add_llvm_tool(dsymutil
   CFBundle.cpp
   DebugMap.cpp
   DwarfLinkerForBinary.cpp
-  DwarfStreamer.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
   SymbolMap.cpp
