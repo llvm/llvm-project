@@ -81,8 +81,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
     past, so we favour having tests mark themselves as unsupported explicitly.
 
     This test format still needs work in the following areas:
-        - It doesn't support the MODULES_DEFINES from the old test format, but
-          that can be achieved easily with ADDITIONAL_COMPILE_FLAGS.
         - It is unknown how well it works on Windows yet.
     """
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
@@ -128,10 +126,24 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         compilerSupportsVerify = result.code != lit.Test.FAIL
         return compilerSupportsVerify and testContainsTags
 
+    def _disableWithModules(self, test, litConfig):
+        with open(test.getSourcePath(), 'rb') as f:
+            contents = f.read()
+        return b'#define _LIBCPP_ASSERT' in contents
+
     def execute(self, test, litConfig):
         self._checkSubstitutions(test.config.substitutions)
         VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
         filename = test.path_in_suite[-1]
+
+        # TODO(ldionne): We currently disable tests that re-define _LIBCPP_ASSERT
+        #                when we run with modules enabled. Instead, we should
+        #                split the part that does a death test outside of the
+        #                test, and only disable that part when modules are
+        #                enabled.
+        if '-fmodules' in test.config.available_features and self._disableWithModules(test, litConfig):
+            return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
+
         if filename.endswith('.sh.cpp') or filename.endswith('.sh.s'):
             steps = [ ] # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
