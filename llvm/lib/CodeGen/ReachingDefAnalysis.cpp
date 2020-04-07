@@ -137,12 +137,64 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
   ++CurInstr;
 }
 
+void ReachingDefAnalysis::reprocessBasicBlock(MachineBasicBlock *MBB) {
+  unsigned MBBNumber = MBB->getNumber();
+  assert(MBBNumber < MBBReachingDefs.size() &&
+         "Unexpected basic block number.");
+
+  // Count number of non-debug instructions for end of block adjustment.
+  int NumInsts = 0;
+  for (const MachineInstr &MI : *MBB)
+    if (!MI.isDebugInstr())
+      NumInsts++;
+
+  // When reprocessing a block, the only thing we need to do is check whether
+  // there is now a more recent incoming reaching definition from a predecessor.
+  for (MachineBasicBlock *pred : MBB->predecessors()) {
+    assert(unsigned(pred->getNumber()) < MBBOutRegsInfos.size() &&
+           "Should have pre-allocated MBBInfos for all MBBs");
+    const LiveRegsDefInfo &Incoming = MBBOutRegsInfos[pred->getNumber()];
+    // Incoming may be empty for dead predecessors.
+    if (Incoming.empty())
+      continue;
+
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
+      int Def = Incoming[Unit];
+      if (Def == ReachingDefDefaultVal)
+        continue;
+
+      auto Start = MBBReachingDefs[MBBNumber][Unit].begin();
+      if (Start != MBBReachingDefs[MBBNumber][Unit].end() && *Start < 0) {
+        if (*Start >= Def)
+          continue;
+
+        // Update existing reaching def from predecessor to a more recent one.
+        *Start = Def;
+      } else {
+        // Insert new reaching def from predecessor.
+        MBBReachingDefs[MBBNumber][Unit].insert(Start, Def);
+      }
+
+      // Update reaching def at end of of BB. Keep in mind that these are
+      // adjusted relative to the end of the basic block.
+      if (MBBOutRegsInfos[MBBNumber][Unit] < Def - NumInsts)
+        MBBOutRegsInfos[MBBNumber][Unit] = Def - NumInsts;
+    }
+  }
+}
+
 void ReachingDefAnalysis::processBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   MachineBasicBlock *MBB = TraversedMBB.MBB;
   LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
                     << (!TraversedMBB.IsDone ? ": incomplete\n"
                                              : ": all preds known\n"));
+
+  if (!TraversedMBB.PrimaryPass) {
+    // Reprocess MBB that is part of a loop.
+    reprocessBasicBlock(MBB);
+    return;
+  }
 
   enterBasicBlock(MBB);
   for (MachineInstr &MI : *MBB) {
@@ -188,11 +240,18 @@ void ReachingDefAnalysis::traverse() {
   // Traverse the basic blocks.
   for (LoopTraversal::TraversedMBBInfo TraversedMBB : TraversedMBBOrder)
     processBasicBlock(TraversedMBB);
-  // Sorting all reaching defs found for a ceartin reg unit in a given BB.
+#ifndef NDEBUG
+  // Make sure reaching defs are sorted and unique.
   for (MBBDefsInfo &MBBDefs : MBBReachingDefs) {
-    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs)
-      llvm::sort(RegUnitDefs);
+    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs) {
+      int LastDef = ReachingDefDefaultVal;
+      for (int Def : RegUnitDefs) {
+        assert(Def > LastDef && "Defs must be sorted and unique");
+        LastDef = Def;
+      }
+    }
   }
+#endif
 }
 
 int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) const {

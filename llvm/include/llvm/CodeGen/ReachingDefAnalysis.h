@@ -207,6 +207,9 @@ private:
   /// Process he given basic block.
   void processBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
 
+  /// Process block that is part of a loop again.
+  void reprocessBasicBlock(MachineBasicBlock *MBB);
+
   /// Update def-ages for registers defined by MI.
   /// Also break dependencies on partial defs and undef uses.
   void processDefs(MachineInstr *);
