@@ -94,6 +94,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   bitcodeFiles.clear();
   objectFiles.clear();
   sharedFiles.clear();
+  backwardReferences.clear();
 
   config = make<Configuration>();
   driver = make<LinkerDriver>();
@@ -1921,6 +1922,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   compileBitcodeFiles<ELFT>();
+
+  // Symbol resolution finished. Report backward reference problems.
+  reportBackrefs();
   if (errorCount())
     return;
 
