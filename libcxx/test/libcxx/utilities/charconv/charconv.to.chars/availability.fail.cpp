@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// REQUIRES: with_system_cxx_lib=macosx
 // REQUIRES: availability=macosx10.7 || availability=macosx10.8 || availability=macosx10.9 || availability=macosx10.10 || availability=macosx10.11 || availability=macosx10.12 || availability=macosx10.13 || availability=macosx10.14
-
-// TODO(ldionne): This test is currently broken when testing libc++ trunk on one of the above macOS's
-// UNSUPPORTED: macosx
 
 // Test the availability markup on std::to_chars.
 
