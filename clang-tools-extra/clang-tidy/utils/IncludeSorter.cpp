@@ -275,13 +275,11 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
   return Fixes;
 }
 
-IncludeSorter::IncludeStyle
-IncludeSorter::parseIncludeStyle(const std::string &Value) {
-  return Value == "llvm" ? IS_LLVM : IS_Google;
-}
-
-StringRef IncludeSorter::toString(IncludeStyle Style) {
-  return Style == IS_LLVM ? "llvm" : "google";
+llvm::ArrayRef<std::pair<StringRef, IncludeSorter::IncludeStyle>>
+IncludeSorter::getMapping() {
+  static constexpr std::pair<StringRef, IncludeSorter::IncludeStyle> Mapping[] =
+      {{"llvm", IS_LLVM}, {"google", IS_Google}};
+  return makeArrayRef(Mapping);
 }
 
 } // namespace utils
