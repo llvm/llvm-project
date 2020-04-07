@@ -643,7 +643,7 @@ static json::Array GetStackMemoryAsJSON(NativeProcessProtocol &process,
   if (error.Success() && bytes_read > 0) {
     buf.resize(bytes_read);
     stack_memory_chunks.push_back(
-        std::move(CreateMemoryChunk(stack_memory_chunks, sp_value, buf)));
+        CreateMemoryChunk(stack_memory_chunks, sp_value, buf));
   }
 
   // Additionally, try to walk the frame pointer link chain. If the frame
@@ -662,7 +662,7 @@ static json::Array GetStackMemoryAsJSON(NativeProcessProtocol &process,
       break;
 
     stack_memory_chunks.push_back(
-        std::move(CreateMemoryChunk(stack_memory_chunks, fp_value, fp_ra_buf)));
+        CreateMemoryChunk(stack_memory_chunks, fp_value, fp_ra_buf));
 
     // Advance the stack pointer and the frame pointer.
     sp_value = fp_value;
