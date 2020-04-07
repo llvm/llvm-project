@@ -5284,6 +5284,7 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
   // If the default argument expression is not set yet, we are building it now.
   if (!Param->hasInit()) {
     Diag(Param->getBeginLoc(), diag::err_recursive_default_argument) << FD;
+    Diag(CallLoc, diag::note_recursive_default_argument_used_here);
     Param->setInvalidDecl();
     return true;
   }
