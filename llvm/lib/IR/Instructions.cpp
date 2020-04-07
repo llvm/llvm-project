@@ -267,10 +267,7 @@ bool CallBase::isIndirectCall() const {
   const Value *V = getCalledValue();
   if (isa<Function>(V) || isa<Constant>(V))
     return false;
-  if (const CallInst *CI = dyn_cast<CallInst>(this))
-    if (CI->isInlineAsm())
-      return false;
-  return true;
+  return !isInlineAsm();
 }
 
 /// Tests if this call site must be tail call optimized. Only a CallInst can
