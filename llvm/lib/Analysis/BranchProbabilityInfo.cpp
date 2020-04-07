@@ -854,6 +854,7 @@ bool BranchProbabilityInfo::calcInvokeHeuristics(const BasicBlock *BB) {
 
 void BranchProbabilityInfo::releaseMemory() {
   Probs.clear();
+  Handles.clear();
 }
 
 bool BranchProbabilityInfo::invalidate(Function &, const PreservedAnalyses &PA,
