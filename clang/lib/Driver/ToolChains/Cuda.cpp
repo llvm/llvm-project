@@ -45,17 +45,22 @@ void CudaInstallationDetector::ParseCudaVersionFile(llvm::StringRef V) {
     return;
   DetectedVersion = join_items(".", VersionParts[0], VersionParts[1]);
   Version = CudaStringToVersion(DetectedVersion);
-  if (Version != CudaVersion::UNKNOWN)
+  if (Version != CudaVersion::UNKNOWN) {
+    // TODO(tra): remove the warning once we have all features of 10.2 and 11.0
+    // implemented.
+    DetectedVersionIsNotSupported = Version > CudaVersion::LATEST_SUPPORTED;
     return;
+  }
 
-  Version = CudaVersion::LATEST;
+  Version = CudaVersion::LATEST_SUPPORTED;
   DetectedVersionIsNotSupported = true;
 }
 
 void CudaInstallationDetector::WarnIfUnsupportedVersion() {
   if (DetectedVersionIsNotSupported)
     D.Diag(diag::warn_drv_unknown_cuda_version)
-        << DetectedVersion << CudaVersionToString(Version);
+        << DetectedVersion
+        << CudaVersionToString(CudaVersion::LATEST_SUPPORTED);
 }
 
 CudaInstallationDetector::CudaInstallationDetector(
@@ -639,24 +644,30 @@ void CudaToolChain::addClangTargetOptions(
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
   const char *PtxFeature = nullptr;
-  switch(CudaInstallation.version()) {
-    case CudaVersion::CUDA_101:
-      PtxFeature = "+ptx64";
-      break;
-    case CudaVersion::CUDA_100:
-      PtxFeature = "+ptx63";
-      break;
-    case CudaVersion::CUDA_92:
-      PtxFeature = "+ptx61";
-      break;
-    case CudaVersion::CUDA_91:
-      PtxFeature = "+ptx61";
-      break;
-    case CudaVersion::CUDA_90:
-      PtxFeature = "+ptx60";
-      break;
-    default:
-      PtxFeature = "+ptx42";
+  switch (CudaInstallation.version()) {
+  case CudaVersion::CUDA_110:
+    PtxFeature = "+ptx70";
+    break;
+  case CudaVersion::CUDA_102:
+    PtxFeature = "+ptx65";
+    break;
+  case CudaVersion::CUDA_101:
+    PtxFeature = "+ptx64";
+    break;
+  case CudaVersion::CUDA_100:
+    PtxFeature = "+ptx63";
+    break;
+  case CudaVersion::CUDA_92:
+    PtxFeature = "+ptx61";
+    break;
+  case CudaVersion::CUDA_91:
+    PtxFeature = "+ptx61";
+    break;
+  case CudaVersion::CUDA_90:
+    PtxFeature = "+ptx60";
+    break;
+  default:
+    PtxFeature = "+ptx42";
   }
   CC1Args.append({"-target-feature", PtxFeature});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
