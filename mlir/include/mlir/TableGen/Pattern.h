@@ -159,6 +159,9 @@ public:
   // value.
   bool isReplaceWithValue() const;
 
+  // Returns whether this DAG represents the location of an op creation.
+  bool isLocationDirective() const;
+
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
 

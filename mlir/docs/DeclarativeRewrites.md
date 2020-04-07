@@ -657,9 +657,53 @@ pattern. This is based on the heuristics and assumptions that:
 The fourth parameter to `Pattern` (and `Pat`) allows to manually tweak a
 pattern's benefit. Just supply `(addBenefit N)` to add `N` to the benefit value.
 
-## Special directives
+## Rewrite directives
 
-[TODO]
+### `location`
+
+By default the C++ pattern expanded from a DRR pattern uses the fused location
+of all source ops as the location for all generated ops. This is not always the
+best location mapping relationship. For such cases, DRR provides the `location`
+directive to provide finer control.
+
+`location` is of the following syntax:
+
+```tablgen
+(location $symbol0, $symbol1, ...)
+```
+
+where all `$symbol` should be bound previously in the pattern.
+
+`location` must be used as the last argument to an op creation. For example,
+
+```tablegen
+def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
+          (LocDst1Op (LocDst2Op ..., (location $src2)))>;
+```
+
+In the above pattern, the generated `LocDst2Op` will use the matched location
+of `LocSrc2Op` while the root `LocDst1Op` node will still se the fused location
+of all source Ops.
+
+### `replaceWithValue`
+
+The `replaceWithValue` directive is used to eliminate a matched op by replacing
+all of it uses with a captured value. It is of the following syntax:
+
+```tablegen
+(replaceWithValue $symbol)
+```
+
+where `$symbol` should be a symbol bound previously in the pattern.
+
+For example,
+
+```tablegen
+def : Pat<(Foo $input), (replaceWithValue $input)>;
+```
+
+The above pattern removes the `Foo` and replaces all uses of `Foo` with
+`$input`.
 
 ## Debugging Tips
 
