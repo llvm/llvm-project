@@ -24,7 +24,7 @@ object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
 C-like languages use the [Clang](http://clang.llvm.org/) front end.  This
-component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
+component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
