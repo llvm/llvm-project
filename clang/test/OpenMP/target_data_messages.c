@@ -35,5 +35,13 @@ int main(int argc, char **argv) {
   {
     foo();
   }
+  #pragma omp target data map(delete: a) // expected-error {{map type 'delete' is not allowed for '#pragma omp target data'}}
+  {
+    foo();
+  }
+  #pragma omp target data map(release: a) // expected-error {{map type 'release' is not allowed for '#pragma omp target data'}}
+  {
+    foo();
+  }
   return 0;
 }
