@@ -220,7 +220,7 @@ getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool ARMBaseRegisterInfo::
-isAsmClobberable(const MachineFunction &MF, unsigned PhysReg) const {
+isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
   return !getReservedRegs(MF).test(PhysReg);
 }
 

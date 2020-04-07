@@ -34,7 +34,7 @@ public:
     return getEncodingValue(i);
   }
 
-  bool isReservedReg(const MachineFunction &MF, unsigned Reg) const;
+  bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;
 
@@ -83,8 +83,8 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
-                       unsigned PhysReg) const override;
-  bool isConstantPhysReg(unsigned PhysReg) const override;
+                       MCRegister PhysReg) const override;
+  bool isConstantPhysReg(MCRegister PhysReg) const override;
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
                      unsigned Kind = 0) const override;
