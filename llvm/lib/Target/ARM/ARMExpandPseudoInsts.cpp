@@ -827,7 +827,7 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
-  unsigned PredReg = 0;
+  Register PredReg;
   ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();

@@ -75,8 +75,8 @@ bool TargetRegisterInfo::shouldRegionSplitForVirtReg(
   return true;
 }
 
-void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet, unsigned Reg)
-    const {
+void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet,
+                                       MCRegister Reg) const {
   for (MCSuperRegIterator AI(Reg, this, true); AI.isValid(); ++AI)
     RegisterSet.set(*AI);
 }
@@ -170,7 +170,7 @@ Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
-Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
+Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI) {
   return Printable([Reg, &RegInfo, TRI](raw_ostream &OS) {
     if (RegInfo.getRegClassOrNull(Reg))
@@ -207,7 +207,7 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
 /// register of the given type, picking the most sub register class of
 /// the right type that contains this physreg.
 const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClass(unsigned reg, MVT VT) const {
+TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
   assert(Register::isPhysicalRegister(reg) &&
          "reg must be a physical register");
 
@@ -399,13 +399,10 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
-bool
-TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
-                                          ArrayRef<MCPhysReg> Order,
-                                          SmallVectorImpl<MCPhysReg> &Hints,
-                                          const MachineFunction &MF,
-                                          const VirtRegMap *VRM,
-                                          const LiveRegMatrix *Matrix) const {
+bool TargetRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const std::pair<Register, SmallVector<Register, 4>> &Hints_MRI =
     MRI.getRegAllocationHints(VirtReg);
@@ -489,10 +486,11 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
-unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
-                                         const MachineRegisterInfo &MRI) const {
+unsigned
+TargetRegisterInfo::getRegSizeInBits(Register Reg,
+                                     const MachineRegisterInfo &MRI) const {
   const TargetRegisterClass *RC{};
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
@@ -536,7 +534,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,
+void TargetRegisterInfo::dumpReg(Register Reg, unsigned SubRegIndex,
                                  const TargetRegisterInfo *TRI) {
   dbgs() << printReg(Reg, TRI, SubRegIndex) << "\n";
 }

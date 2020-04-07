@@ -123,7 +123,7 @@ static const std::map<unsigned, int> FixedCSRFIMap = {
 };
 
 bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                             unsigned Reg,
+                                             Register Reg,
                                              int &FrameIdx) const {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (!RVFI->useSaveRestoreLibCalls())

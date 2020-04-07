@@ -649,7 +649,7 @@ void PPCRegisterInfo::lowerCRSpilling(MachineBasicBlock::iterator II,
   // If the saved register wasn't CR0, shift the bits left so that they are in
   // CR0's slot.
   if (SrcReg != PPC::CR0) {
-    unsigned Reg1 = Reg;
+    Register Reg1 = Reg;
     Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
     // rlwinm rA, rA, ShiftBits, 0, 31.
@@ -694,7 +694,7 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
   // If the reloaded register isn't CR0, shift the bits right so that they are
   // in the right CR's slot.
   if (DestReg != PPC::CR0) {
-    unsigned Reg1 = Reg;
+    Register Reg1 = Reg;
     Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
     unsigned ShiftBits = getEncodingValue(DestReg)*4;
@@ -798,7 +798,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
 
     // If the saved register wasn't CR0LT, shift the bits left so that the bit
     // to store is the first one. Mask all but that bit.
-    unsigned Reg1 = Reg;
+    Register Reg1 = Reg;
     Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
     // rlwinm rA, rA, ShiftBits, 0, 0.
@@ -924,7 +924,7 @@ void PPCRegisterInfo::lowerVRSAVERestore(MachineBasicBlock::iterator II,
 }
 
 bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                           unsigned Reg, int &FrameIdx) const {
+                                           Register Reg, int &FrameIdx) const {
   // For the nonvolatile condition registers (CR2, CR3, CR4) return true to
   // prevent allocating an additional frame slot.
   // For 64-bit ELF and AIX, the CR save area is in the linkage area at SP+8,
@@ -1103,7 +1103,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
   const TargetRegisterClass *RC = is64Bit ? G8RC : GPRC;
-  unsigned SRegHi = MF.getRegInfo().createVirtualRegister(RC),
+  Register SRegHi = MF.getRegInfo().createVirtualRegister(RC),
            SReg = MF.getRegInfo().createVirtualRegister(RC);
 
   // Insert a set of rA with the full offset value before the ld, st, or add
@@ -1226,10 +1226,10 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
 /// Insert defining instruction(s) for BaseReg to
 /// be a pointer to FrameIdx at the beginning of the basic block.
-void PPCRegisterInfo::
-materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                             unsigned BaseReg, int FrameIdx,
-                             int64_t Offset) const {
+void PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                   Register BaseReg,
+                                                   int FrameIdx,
+                                                   int64_t Offset) const {
   unsigned ADDriOpc = TM.isPPC64() ? PPC::ADDI8 : PPC::ADDI;
 
   MachineBasicBlock::iterator Ins = MBB->begin();
@@ -1248,7 +1248,7 @@ materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addFrameIndex(FrameIdx).addImm(Offset);
 }
 
-void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                         int64_t Offset) const {
   unsigned FIOperandNum = 0;
   while (!MI.getOperand(FIOperandNum).isFI()) {
@@ -1273,7 +1273,7 @@ void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 }
 
 bool PPCRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
-                                         unsigned BaseReg,
+                                         Register BaseReg,
                                          int64_t Offset) const {
   unsigned FIOperandNum = 0;
   while (!MI->getOperand(FIOperandNum).isFI()) {
