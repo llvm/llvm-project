@@ -1373,8 +1373,8 @@ static void speculateSelectInstLoads(SelectInst &SI) {
     NumLoadsSpeculated += 2;
 
     // Transfer alignment and AA info if present.
-    TL->setAlignment(MaybeAlign(LI->getAlignment()));
-    FL->setAlignment(MaybeAlign(LI->getAlignment()));
+    TL->setAlignment(LI->getAlign());
+    FL->setAlignment(LI->getAlign());
 
     AAMDNodes Tags;
     LI->getAAMetadata(Tags);

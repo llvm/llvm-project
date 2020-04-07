@@ -248,8 +248,7 @@ Align IRTranslator::getMemOpAlign(const Instruction &I) {
     return SI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
   }
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    Type *ValTy = LI->getType();
-    return LI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
+    return DL->getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
   }
   if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
     // TODO(PR27168): This instruction has no alignment attribute, but unlike

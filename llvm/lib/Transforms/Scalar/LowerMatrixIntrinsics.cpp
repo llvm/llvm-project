@@ -1118,7 +1118,7 @@ public:
     Builder.SetInsertPoint(Copy, Copy->begin());
     AllocaInst *NewLd =
         Builder.CreateAlloca(Load->getType(), Load->getPointerAddressSpace());
-    Builder.CreateMemCpy(NewLd, MaybeAlign(NewLd->getAlignment()),
+    Builder.CreateMemCpy(NewLd, NewLd->getAlign(),
                          Load->getPointerOperand(), Load->getAlign(),
                          LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
