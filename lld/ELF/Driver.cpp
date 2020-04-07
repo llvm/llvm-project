@@ -1448,6 +1448,10 @@ static void handleUndefined(Symbol *sym) {
   // eliminate it. Mark the symbol as "used" to prevent it.
   sym->isUsedInRegularObj = true;
 
+  // GNU linkers allow -u foo -ldef -lref. We should not treat it as a backward
+  // reference.
+  backwardReferences.erase(sym);
+
   if (sym->isLazy())
     sym->fetch();
 }
