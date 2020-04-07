@@ -11,10 +11,7 @@
 // Test that including <atomic> fails to compile when _LIBCPP_HAS_NO_THREADS
 // is defined.
 
-// MODULES_DEFINES: _LIBCPP_HAS_NO_THREADS
-#ifndef _LIBCPP_HAS_NO_THREADS
-#define _LIBCPP_HAS_NO_THREADS
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_THREADS
 
 #include <atomic>
 

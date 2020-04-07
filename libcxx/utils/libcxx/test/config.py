@@ -1036,7 +1036,8 @@ class Configuration(object):
         sub.append(('%{cxx}', '{} {}'.format(tool_env, pipes.quote(self.cxx.path))))
         sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
-        sub.append(('%{flags}',         ' '.join(map(pipes.quote, self.cxx.flags))))
+        flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
+        sub.append(('%{flags}',         ' '.join(map(pipes.quote, flags))))
         sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, self.cxx.compile_flags))))
         sub.append(('%{link_flags}',    ' '.join(map(pipes.quote, self.cxx.link_flags))))
         sub.append(('%{link_libcxxabi}', pipes.quote(self.cxx.link_libcxxabi_flag)))

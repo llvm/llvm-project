@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
-// MODULES_DEFINES: _LIBCPP_DEBUG=0
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
 
 // This test requires debug mode, which the library on macOS doesn't have.
 // UNSUPPORTED: with_system_cxx_lib=macosx
@@ -22,7 +22,6 @@
 // void set_exception_on_thread_exit(exception_ptr p);
 // Test that a null exception_ptr is diagnosed.
 
-#define _LIBCPP_DEBUG 0
 #include <future>
 #include <exception>
 #include <cstdlib>

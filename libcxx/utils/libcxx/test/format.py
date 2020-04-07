@@ -46,8 +46,6 @@ class LibcxxTestFormat(object):
     @staticmethod
     def _make_custom_parsers(test):
         return [
-            IntegratedTestKeywordParser('MODULES_DEFINES:', ParserKind.LIST,
-                                        initial_value=[]),
             IntegratedTestKeywordParser('FILE_DEPENDENCIES:', ParserKind.LIST,
                                         initial_value=test.file_dependencies),
             IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:', ParserKind.LIST,
@@ -144,11 +142,7 @@ class LibcxxTestFormat(object):
         if is_fail_test:
             test_cxx.useCCache(False)
             test_cxx.useWarnings(False)
-        extra_modules_defines = self._get_parser('MODULES_DEFINES:',
-                                                 parsers).getValue()
         if '-fmodules' in test.config.available_features:
-            test_cxx.compile_flags += [('-D%s' % mdef.strip()) for
-                                       mdef in extra_modules_defines]
             test_cxx.addWarningFlagIfSupported('-Wno-macro-redefined')
             # FIXME: libc++ debug tests #define _LIBCPP_ASSERT to override it
             # If we see this we need to build the test against uniquely built
