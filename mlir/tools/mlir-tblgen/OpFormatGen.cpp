@@ -1055,7 +1055,7 @@ private:
 /// This class implements a simple lexer for operation assembly format strings.
 class FormatLexer {
 public:
-  FormatLexer(llvm::SourceMgr &mgr);
+  FormatLexer(llvm::SourceMgr &mgr, Operator &op);
 
   /// Lex the next token and return it.
   Token lexToken();
@@ -1080,23 +1080,29 @@ private:
   Token lexVariable(const char *tokStart);
 
   llvm::SourceMgr &srcMgr;
+  Operator &op;
   StringRef curBuffer;
   const char *curPtr;
 };
 } // end anonymous namespace
 
-FormatLexer::FormatLexer(llvm::SourceMgr &mgr) : srcMgr(mgr) {
+FormatLexer::FormatLexer(llvm::SourceMgr &mgr, Operator &op)
+    : srcMgr(mgr), op(op) {
   curBuffer = srcMgr.getMemoryBuffer(mgr.getMainFileID())->getBuffer();
   curPtr = curBuffer.begin();
 }
 
 Token FormatLexer::emitError(llvm::SMLoc loc, const Twine &msg) {
   srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(op.getLoc()[0], llvm::SourceMgr::DK_Note,
+                            "in custom assembly format for this operation");
   return formToken(Token::error, loc.getPointer());
 }
 Token FormatLexer::emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
                                     const Twine &note) {
   srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(op.getLoc()[0], llvm::SourceMgr::DK_Note,
+                            "in custom assembly format for this operation");
   srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Note, note);
   return formToken(Token::error, loc.getPointer());
 }
@@ -1233,7 +1239,7 @@ namespace {
 class FormatParser {
 public:
   FormatParser(llvm::SourceMgr &mgr, OperationFormat &format, Operator &op)
-      : lexer(mgr), curToken(lexer.lexToken()), fmt(format), op(op),
+      : lexer(mgr, op), curToken(lexer.lexToken()), fmt(format), op(op),
         seenOperandTypes(op.getNumOperands()),
         seenResultTypes(op.getNumResults()) {}
 
@@ -1481,8 +1487,7 @@ LogicalResult FormatParser::verifyOperands(
     if (!hasAllOperands && !seenOperands.count(&operand)) {
       return emitErrorAndNote(loc,
                               "operand #" + Twine(i) + ", named '" +
-                                  operand.name +
-                                  "', not found in custom assembly format",
+                                  operand.name + "', not found",
                               "suggest adding a '$" + operand.name +
                                   "' directive to the custom assembly format");
     }
@@ -1572,8 +1577,7 @@ LogicalResult FormatParser::verifySuccessors(llvm::SMLoc loc) {
     if (!seenSuccessors.count(&successor)) {
       return emitErrorAndNote(loc,
                               "successor #" + Twine(i) + ", named '" +
-                                  successor.name +
-                                  "', not found in custom assembly format",
+                                  successor.name + "', not found",
                               "suggest adding a '$" + successor.name +
                                   "' directive to the custom assembly format");
     }
