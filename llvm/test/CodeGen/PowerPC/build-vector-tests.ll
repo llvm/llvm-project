@@ -1282,7 +1282,7 @@ define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemVali:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxpermdi vs0, f0, f0, 2
+; P8LE-NEXT:    xxswapd vs0, f0
 ; P8LE-NEXT:    xxspltw v2, vs0, 3
 ; P8LE-NEXT:    blr
 entry:
@@ -2801,7 +2801,7 @@ define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemValui:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxpermdi vs0, f0, f0, 2
+; P8LE-NEXT:    xxswapd vs0, f0
 ; P8LE-NEXT:    xxspltw v2, vs0, 3
 ; P8LE-NEXT:    blr
 entry:
