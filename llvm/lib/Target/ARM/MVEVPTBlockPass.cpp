@@ -134,7 +134,7 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
                                      unsigned MaxSteps,
                                      unsigned &NumInstrsSteppedOver) {
   ARMVCC::VPTCodes NextPred = ARMVCC::None;
-  unsigned PredReg;
+  Register PredReg;
   NumInstrsSteppedOver = 0;
 
   while (Iter != EndIter) {
@@ -261,7 +261,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 
   while (MBIter != EndIter) {
     MachineInstr *MI = &*MBIter;
-    unsigned PredReg = 0;
+    Register PredReg;
     DebugLoc DL = MI->getDebugLoc();
 
     ARMVCC::VPTCodes Pred = getVPTInstrPredicate(*MI, PredReg);

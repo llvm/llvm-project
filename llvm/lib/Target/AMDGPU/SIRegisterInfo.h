@@ -81,14 +81,14 @@ public:
 
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
 
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                    unsigned BaseReg, int FrameIdx,
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
+                                    int FrameIdx,
                                     int64_t Offset) const override;
 
-  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
 
-  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+  bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
   const TargetRegisterClass *getPointerRegClass(
@@ -110,7 +110,7 @@ public:
   bool eliminateSGPRToVGPRSpillFrameIndex(MachineBasicBlock::iterator MI,
                                           int FI, RegScavenger *RS) const;
 
-  StringRef getRegAsmName(unsigned Reg) const override;
+  StringRef getRegAsmName(MCRegister Reg) const override;
 
   unsigned getHWRegIndex(MCRegister Reg) const {
     return getEncodingValue(Reg) & 0xff;
