@@ -16998,6 +16998,21 @@ static void checkMappableExpressionList(
         continue;
       }
 
+      // target, target data
+      // OpenMP 5.0 [2.12.2, Restrictions, p. 163]
+      // OpenMP 5.0 [2.12.5, Restrictions, p. 174]
+      // A map-type in a map clause must be to, from, tofrom or alloc
+      if ((DKind == OMPD_target_data ||
+           isOpenMPTargetExecutionDirective(DKind)) &&
+          !(MapType == OMPC_MAP_to || MapType == OMPC_MAP_from ||
+            MapType == OMPC_MAP_tofrom || MapType == OMPC_MAP_alloc)) {
+        SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
+            << (IsMapTypeImplicit ? 1 : 0)
+            << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
+            << getOpenMPDirectiveName(DKind);
+        continue;
+      }
+
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct

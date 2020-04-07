@@ -462,10 +462,10 @@ void ttd(int argc) {
 // CHECK-DAG:  [[#TTD+4]]: rd
 // CHECK-DAG:  [[#TTD+5]]: [B3.[[#TTDB+2]]]
 // CHECK-DAG:  [[#TTD+6]]: [B3.[[#TTDB]]]
-// CHECK-DAG:  [[#TTD+7]]: #pragma omp target teams distribute if(cond) firstprivate(fp) reduction(+: rd) map(release: map)
+// CHECK-DAG:  [[#TTD+7]]: #pragma omp target teams distribute if(cond) firstprivate(fp) reduction(+: rd) map(alloc: map)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TTDB+3]]];
-#pragma omp target teams distribute if(cond) firstprivate(fp) reduction(+:rd) map(release:map)
+#pragma omp target teams distribute if(cond) firstprivate(fp) reduction(+:rd) map(alloc:map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
@@ -486,10 +486,10 @@ void ttdpf(int argc) {
 // CHECK-DAG:  [[#TTDPF+4]]: rd
 // CHECK-DAG:  [[#TTDPF+5]]: [B3.[[#TTDPFB+2]]]
 // CHECK-DAG:  [[#TTDPF+6]]: [B3.[[#TTDPFB]]]
-// CHECK-DAG:  [[#TTDPF+7]]: #pragma omp target teams distribute parallel for if(cond) firstprivate(fp) reduction(+: rd) map(delete: map)
+// CHECK-DAG:  [[#TTDPF+7]]: #pragma omp target teams distribute parallel for if(cond) firstprivate(fp) reduction(+: rd) map(alloc: map)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TTDPFB+3]]];
-#pragma omp target teams distribute parallel for if(cond) firstprivate(fp) reduction(+:rd) map(delete:map)
+#pragma omp target teams distribute parallel for if(cond) firstprivate(fp) reduction(+:rd) map(alloc:map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
