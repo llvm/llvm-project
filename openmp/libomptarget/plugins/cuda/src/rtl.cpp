@@ -309,6 +309,68 @@ public:
 
 static RTLDeviceInfoTy DeviceInfo;
 
+namespace {
+CUstream selectStream(int32_t Id, __tgt_async_info *AsyncInfo) {
+  if (!AsyncInfo)
+    return DeviceInfo.getNextStream(Id);
+
+  if (!AsyncInfo->Queue)
+    AsyncInfo->Queue = DeviceInfo.getNextStream(Id);
+
+  return reinterpret_cast<CUstream>(AsyncInfo->Queue);
+}
+
+int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
+                     __tgt_async_info *AsyncInfoPtr) {
+  assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+  // Set the context we are using.
+  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[DeviceId]);
+  if (err != CUDA_SUCCESS) {
+    DP("Error when setting CUDA context\n");
+    CUDA_ERR_STRING(err);
+    return OFFLOAD_FAIL;
+  }
+
+  CUstream Stream = selectStream(DeviceId, AsyncInfoPtr);
+
+  err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
+  if (err != CUDA_SUCCESS) {
+    DP("Error when copying data from device to host. Pointers: host = " DPxMOD
+       ", device = " DPxMOD ", size = %" PRId64 "\n",
+       DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+    CUDA_ERR_STRING(err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
+                   __tgt_async_info *AsyncInfoPtr) {
+  assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+  // Set the context we are using.
+  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[DeviceId]);
+  if (err != CUDA_SUCCESS) {
+    DP("Error when setting CUDA context\n");
+    CUDA_ERR_STRING(err);
+    return OFFLOAD_FAIL;
+  }
+
+  CUstream Stream = selectStream(DeviceId, AsyncInfoPtr);
+
+  err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
+  if (err != CUDA_SUCCESS) {
+    DP("Error when copying data from host to device. Pointers: host = " DPxMOD
+       ", device = " DPxMOD ", size = %" PRId64 "\n",
+       DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+    CUDA_ERR_STRING(err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+} // namespace
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -663,69 +725,38 @@ void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
 }
 
 int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
-    int64_t size) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
+                              int64_t size, __tgt_async_info *async_info_ptr) {
+  // The function dataSubmit is always asynchronous. Considering some data
+  // transfer must be synchronous, we assume if async_info_ptr is nullptr, the
+  // transfer will be synchronous by creating a temporary async info and then
+  // synchronizing after call dataSubmit; otherwise, it is asynchronous.
+  if (async_info_ptr)
+    return dataSubmit(device_id, tgt_ptr, hst_ptr, size, async_info_ptr);
+
+  __tgt_async_info async_info;
+  int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  }
 
-  CUstream &Stream = DeviceInfo.getNextStream(device_id);
-
-  err = cuMemcpyHtoDAsync((CUdeviceptr)tgt_ptr, hst_ptr, size, Stream);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when copying data from host to device. Pointers: host = " DPxMOD
-       ", device = " DPxMOD ", size = %" PRId64 "\n",
-       DPxPTR(hst_ptr), DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  err = cuStreamSynchronize(Stream);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when synchronizing async data transfer from host to device. "
-       "Pointers: host = " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
-       DPxPTR(hst_ptr), DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
+  return __tgt_rtl_synchronize(device_id, &async_info);
 }
 
 int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
-    int64_t size) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
+                                int64_t size,
+                                __tgt_async_info *async_info_ptr) {
+  // The function dataRetrieve is always asynchronous. Considering some data
+  // transfer must be synchronous, we assume if async_info_ptr is nullptr, the
+  // transfer will be synchronous by creating a temporary async info and then
+  // synchronizing after call dataRetrieve; otherwise, it is asynchronous.
+  if (async_info_ptr)
+    return dataRetrieve(device_id, hst_ptr, tgt_ptr, size, async_info_ptr);
+
+  __tgt_async_info async_info;
+  int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  }
 
-  CUstream &Stream = DeviceInfo.getNextStream(device_id);
-
-  err = cuMemcpyDtoHAsync(hst_ptr, (CUdeviceptr)tgt_ptr, size, Stream);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when copying data from device to host. Pointers: host = " DPxMOD
-       ", device = " DPxMOD ", size = %" PRId64 "\n",
-       DPxPTR(hst_ptr), DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  err = cuStreamSynchronize(Stream);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when synchronizing async data transfer from device to host. "
-       "Pointers: host = " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
-       DPxPTR(hst_ptr), DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
+  return __tgt_rtl_synchronize(device_id, &async_info);
 }
 
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
@@ -747,8 +778,12 @@ int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
-    int32_t thread_limit, uint64_t loop_tripcount) {
+                                         void **tgt_args,
+                                         ptrdiff_t *tgt_offsets,
+                                         int32_t arg_num, int32_t team_num,
+                                         int32_t thread_limit,
+                                         uint64_t loop_tripcount,
+                                         __tgt_async_info *async_info) {
   // Set the context we are using.
   CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
   if (err != CUDA_SUCCESS) {
@@ -844,8 +879,7 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   DP("Launch kernel with %d blocks and %d threads\n", cudaBlocksPerGrid,
      cudaThreadsPerBlock);
 
-  CUstream &Stream = DeviceInfo.getNextStream(device_id);
-
+  CUstream Stream = selectStream(device_id, async_info);
   err = cuLaunchKernel(KernelInfo->Func, cudaBlocksPerGrid, 1, 1,
                        cudaThreadsPerBlock, 1, 1, 0 /*bytes of shared memory*/,
                        Stream, &args[0], 0);
@@ -858,25 +892,35 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   DP("Launch of entry point at " DPxMOD " successful!\n",
       DPxPTR(tgt_entry_ptr));
 
-  CUresult sync_err = cuStreamSynchronize(Stream);
-  if (sync_err != CUDA_SUCCESS) {
-    DP("Kernel execution error at " DPxMOD "!\n", DPxPTR(tgt_entry_ptr));
-    CUDA_ERR_STRING(sync_err);
-    return OFFLOAD_FAIL;
-  } else {
-    DP("Kernel execution at " DPxMOD " successful!\n", DPxPTR(tgt_entry_ptr));
-  }
-
   return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num) {
+                                    void **tgt_args, ptrdiff_t *tgt_offsets,
+                                    int32_t arg_num,
+                                    __tgt_async_info *async_info) {
   // use one team and the default number of threads.
   const int32_t team_num = 1;
   const int32_t thread_limit = 0;
   return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-      tgt_offsets, arg_num, team_num, thread_limit, 0);
+                                          tgt_offsets, arg_num, team_num,
+                                          thread_limit, 0, async_info);
+}
+
+int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *async_info) {
+  assert(async_info && "async_info is nullptr");
+  assert(async_info->Queue && "async_info->Queue is nullptr");
+
+  CUstream Stream = reinterpret_cast<CUstream>(async_info->Queue);
+  CUresult Err = cuStreamSynchronize(Stream);
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when synchronizing stream. stream = " DPxMOD
+       ", async info ptr = " DPxMOD "\n",
+       DPxPTR(Stream), DPxPTR(async_info));
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 #ifdef __cplusplus

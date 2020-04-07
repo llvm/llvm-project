@@ -331,31 +331,38 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
   return rc;
 }
 
-// Submit data to device.
+// Submit data to device
 int32_t DeviceTy::data_submit(void *TgtPtrBegin, void *HstPtrBegin,
-    int64_t Size) {
-  return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+
+  return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+                          AsyncInfoPtr);
 }
 
-// Retrieve data from device.
+// Retrieve data from device
 int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
-    int64_t Size) {
-  return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+                            AsyncInfoPtr);
 }
 
 // Run region on device
 int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
-    ptrdiff_t *TgtOffsets, int32_t TgtVarsSize) {
+                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                             __tgt_async_info *AsyncInfo) {
   return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-      TgtVarsSize);
+                         TgtVarsSize, AsyncInfo);
 }
 
 // Run team region on device.
 int32_t DeviceTy::run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
-    ptrdiff_t *TgtOffsets, int32_t TgtVarsSize, int32_t NumTeams,
-    int32_t ThreadLimit, uint64_t LoopTripCount) {
+                                  ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                                  int32_t NumTeams, int32_t ThreadLimit,
+                                  uint64_t LoopTripCount,
+                                  __tgt_async_info *AsyncInfo) {
   return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-      TgtVarsSize, NumTeams, ThreadLimit, LoopTripCount);
+                              TgtVarsSize, NumTeams, ThreadLimit, LoopTripCount,
+                              AsyncInfo);
 }
 
 /// Check whether a device has an associated RTL and initialize it if it's not

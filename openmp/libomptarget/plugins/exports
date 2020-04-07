@@ -11,6 +11,7 @@ VERS1.0 {
     __tgt_rtl_data_delete;
     __tgt_rtl_run_target_team_region;
     __tgt_rtl_run_target_region;
+    __tgt_rtl_synchronize;
   local:
     *;
 };
