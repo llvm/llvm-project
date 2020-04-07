@@ -12,17 +12,9 @@ This document describes the available MLIR passes and their contracts.
 
 [include "ConversionPasses.md"]
 
-## Quantizer Passes
-
-[include "QuantizerPasses.md"]
-
 ## `affine` Dialect Passes
 
 [include "AffinePasses.md"]
-
-## `fxpmath` Dialect Passes
-
-[include "FxpMathPasses.md"]
 
 ## `gpu` Dialect Passes
 
