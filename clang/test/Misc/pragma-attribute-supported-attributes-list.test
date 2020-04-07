@@ -61,7 +61,6 @@
 // CHECK-NEXT: FlagEnum (SubjectMatchRule_enum)
 // CHECK-NEXT: Flatten (SubjectMatchRule_function)
 // CHECK-NEXT: GNUInline (SubjectMatchRule_function)
-// CHECK-NEXT: HIPPinnedShadow (SubjectMatchRule_variable)
 // CHECK-NEXT: Hot (SubjectMatchRule_function)
 // CHECK-NEXT: IBAction (SubjectMatchRule_objc_method_is_instance)
 // CHECK-NEXT: IFunc (SubjectMatchRule_function)
