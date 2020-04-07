@@ -312,41 +312,6 @@ public:
       return Default;
     }
 
-    /// Read a named option from the ``Context`` and parse it as a bool.
-    ///
-    /// Reads the option with the check-local name \p LocalName from the
-    /// ``CheckOptions``. If the corresponding key is not present, returns
-    /// a ``MissingOptionError``. If the corresponding key can't be parsed as
-    /// a bool, return an ``UnparseableIntegerOptionError``.
-    template <> llvm::Expected<bool> get<bool>(StringRef LocalName) const;
-
-    /// Read a named option from the ``Context`` and parse it as a bool.
-    ///
-    /// Reads the option with the check-local name \p LocalName from the
-    /// ``CheckOptions``. If the corresponding key is not present or it can't be
-    /// parsed as a bool, returns \p Default.
-    template <> bool get<bool>(StringRef LocalName, bool Default) const;
-
-    /// Read a named option from the ``Context`` and parse it as a bool.
-    ///
-    /// Reads the option with the check-local name \p LocalName from local or
-    /// global ``CheckOptions``. Gets local option first. If local is not
-    /// present, falls back to get global option. If global option is not
-    /// present either, returns a ``MissingOptionError``. If the corresponding
-    /// key can't be parsed as a bool, return an
-    /// ``UnparseableIntegerOptionError``.
-    template <>
-    llvm::Expected<bool> getLocalOrGlobal<bool>(StringRef LocalName) const;
-
-    /// Read a named option from the ``Context`` and parse it as a bool.
-    ///
-    /// Reads the option with the check-local name \p LocalName from local or
-    /// global ``CheckOptions``. Gets local option first. If local is not
-    /// present, falls back to get global option. If global option is not
-    /// present either or it can't be parsed as a bool, returns \p Default.
-    template <>
-    bool getLocalOrGlobal<bool>(StringRef LocalName, bool Default) const;
-
     /// Read a named option from the ``Context`` and parse it as an
     /// enum type ``T`` using the \p Mapping provided. If \p IgnoreCase is set,
     /// it will search the mapping ignoring the case.
@@ -487,6 +452,47 @@ protected:
   /// Returns the language options from the context.
   const LangOptions &getLangOpts() const { return Context->getLangOpts(); }
 };
+
+/// Read a named option from the ``Context`` and parse it as a bool.
+///
+/// Reads the option with the check-local name \p LocalName from the
+/// ``CheckOptions``. If the corresponding key is not present, returns
+/// a ``MissingOptionError``. If the corresponding key can't be parsed as
+/// a bool, return an ``UnparseableIntegerOptionError``.
+template <>
+llvm::Expected<bool>
+ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName) const;
+
+/// Read a named option from the ``Context`` and parse it as a bool.
+///
+/// Reads the option with the check-local name \p LocalName from the
+/// ``CheckOptions``. If the corresponding key is not present or it can't be
+/// parsed as a bool, returns \p Default.
+template <>
+bool ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName,
+                                            bool Default) const;
+
+/// Read a named option from the ``Context`` and parse it as a bool.
+///
+/// Reads the option with the check-local name \p LocalName from local or
+/// global ``CheckOptions``. Gets local option first. If local is not
+/// present, falls back to get global option. If global option is not
+/// present either, returns a ``MissingOptionError``. If the corresponding
+/// key can't be parsed as a bool, return an
+/// ``UnparseableIntegerOptionError``.
+template <>
+llvm::Expected<bool>
+ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const;
+
+/// Read a named option from the ``Context`` and parse it as a bool.
+///
+/// Reads the option with the check-local name \p LocalName from local or
+/// global ``CheckOptions``. Gets local option first. If local is not
+/// present, falls back to get global option. If global option is not
+/// present either or it can't be parsed as a bool, returns \p Default.
+template <>
+bool ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName,
+                                                         bool Default) const;
 
 } // namespace tidy
 } // namespace clang
