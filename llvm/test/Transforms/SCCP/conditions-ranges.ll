@@ -11,16 +11,11 @@ define void @f1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[BC:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
 ; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ult i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 21
@@ -29,14 +24,10 @@ define void @f1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
-; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 276
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    [[F_5:%.*]] = icmp ugt i32 [[B]], 275
-; CHECK-NEXT:    call void @use(i1 [[F_5]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[B]], 276
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i32 [[B]], 275
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[B]], 275
@@ -279,24 +270,15 @@ define void @f8_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[BC_2:%.*]] = icmp ult i32 [[B]], 255
 ; CHECK-NEXT:    br i1 [[BC_2]], label [[TRUE_2:%.*]], label [[FALSE_2:%.*]]
 ; CHECK:       true.2:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ult i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 255
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    [[F_5:%.*]] = icmp ugt i32 [[B]], 255
-; CHECK-NEXT:    call void @use(i1 [[F_5]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i32 [[B]], 255
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B]], 300
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 21
@@ -305,14 +287,10 @@ define void @f8_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false.2:
-; CHECK-NEXT:    [[F_6:%.*]] = icmp eq i32 [[B]], 254
-; CHECK-NEXT:    call void @use(i1 [[F_6]])
-; CHECK-NEXT:    [[F_7:%.*]] = icmp ult i32 [[B]], 255
-; CHECK-NEXT:    call void @use(i1 [[F_7]])
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 254
-; CHECK-NEXT:    call void @use(i1 [[T_5]])
-; CHECK-NEXT:    [[T_6:%.*]] = icmp uge i32 [[B]], 255
-; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[B]], 255
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ne i32 [[B]], 275
@@ -395,14 +373,10 @@ define void @f9_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[B:%.*]], 10
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 10
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 10
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 11
@@ -410,14 +384,10 @@ define void @f9_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[BC_2:%.*]] = icmp ugt i32 [[B]], 20
 ; CHECK-NEXT:    br i1 [[BC_2]], label [[TRUE_2:%.*]], label [[FALSE_2:%.*]]
 ; CHECK:       true.2:
-; CHECK-NEXT:    [[F_3:%.*]] = icmp eq i32 [[B]], 11
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i32 [[B]], 11
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B]], 20
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[B]], 21
@@ -426,18 +396,12 @@ define void @f9_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false.2:
-; CHECK-NEXT:    [[F_5:%.*]] = icmp eq i32 [[B]], 21
-; CHECK-NEXT:    call void @use(i1 [[F_5]])
-; CHECK-NEXT:    [[F_6:%.*]] = icmp ugt i32 [[B]], 21
-; CHECK-NEXT:    call void @use(i1 [[F_6]])
-; CHECK-NEXT:    [[F_7:%.*]] = icmp ne i32 [[B]], 5
-; CHECK-NEXT:    call void @use(i1 [[F_7]])
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 21
-; CHECK-NEXT:    call void @use(i1 [[T_5]])
-; CHECK-NEXT:    [[T_6:%.*]] = icmp ult i32 [[B]], 21
-; CHECK-NEXT:    call void @use(i1 [[T_6]])
-; CHECK-NEXT:    [[T_7:%.*]] = icmp ne i32 [[B]], 5
-; CHECK-NEXT:    call void @use(i1 [[T_7]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp eq i32 [[B]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_6]])
 ; CHECK-NEXT:    [[C_7:%.*]] = icmp ne i32 [[B]], 15
@@ -530,18 +494,12 @@ define void @f10_cond_does_not_restrict_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[B_255:%.*]] = and i32 [[B:%.*]], 255
 ; CHECK-NEXT:    br label [[TRUE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B_255]], 256
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B_255]], 300
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[B_255]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[B_255]], 300
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[B_255]], 256
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B_255]], 300
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B_255]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B_255]], 30
@@ -649,10 +607,8 @@ define void @f13_constexpr1() {
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 55
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 10
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 55
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -680,8 +636,8 @@ define void @f14_constexpr2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 icmp eq (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)), label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    call void @use(i1 icmp ne (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)))
-; CHECK-NEXT:    call void @use(i1 icmp eq (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)))
+; CHECK-NEXT:    call void @use(i1 icmp ne (i32 ptrtoint (i32* @B to i32), i32 ptrtoint (i32* @A to i32)))
+; CHECK-NEXT:    call void @use(i1 icmp eq (i32 ptrtoint (i32* @B to i32), i32 ptrtoint (i32* @A to i32)))
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -830,10 +786,9 @@ define i32 @udiv_2(i64 %sz) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SZ:%.*]], 4088
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 4088, [[SZ]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ 0, [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
