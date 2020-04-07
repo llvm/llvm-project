@@ -305,7 +305,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           // of the previous load.
           LoadInst *newLoad =
               IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
-          newLoad->setAlignment(MaybeAlign(OrigLoad->getAlignment()));
+          newLoad->setAlignment(OrigLoad->getAlign());
           // Transfer the AA info too.
           AAMDNodes AAInfo;
           OrigLoad->getAAMetadata(AAInfo);
