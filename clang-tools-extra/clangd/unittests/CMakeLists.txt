@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   support
   AllTargetsInfos
+  FrontendOpenMP
   )
 
 get_filename_component(CLANGD_SOURCE_DIR

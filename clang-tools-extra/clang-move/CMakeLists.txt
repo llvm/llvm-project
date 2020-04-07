@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   support
+  FrontendOpenMP
   )
 
 add_clang_library(clangMove
