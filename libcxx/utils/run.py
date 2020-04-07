@@ -17,11 +17,11 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--execdir', type=str, required=True)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
     parser.add_argument('--dependencies', type=str, nargs='*', required=False, default=[])
     parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
@@ -43,23 +43,25 @@ def main():
     # Extract environment variables into a dictionary
     env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
 
+    # Create the execution directory, and make sure we remove it at the end.
     try:
-        tmpDir = tempfile.mkdtemp()
+        os.mkdir(args.execdir)
 
-        # Ensure the file dependencies exist and copy them to a temporary directory.
+        # Ensure the file dependencies exist and copy them to the execution directory.
         for dep in args.dependencies:
             if not os.path.exists(dep):
                 sys.stderr.write('Missing file or directory "{}" marked as a dependency of a test'.format(dep))
                 exit(1)
             if os.path.isdir(dep):
-                shutil.copytree(dep, os.path.join(tmpDir, os.path.basename(dep)), symlinks=True)
+                shutil.copytree(dep, os.path.join(args.execdir, os.path.basename(dep)), symlinks=True)
             else:
-                shutil.copy2(dep, tmpDir)
+                shutil.copy2(dep, args.execdir)
 
-        # Run the executable with the given environment in the temporary directory.
-        return subprocess.call(' '.join(remaining), cwd=tmpDir, env=env, shell=True)
+        # Run the executable with the given environment in the execution directory.
+        return subprocess.call(' '.join(remaining), cwd=args.execdir, env=env, shell=True)
     finally:
-        shutil.rmtree(tmpDir)
+        shutil.rmtree(args.execdir)
+
 
 if __name__ == '__main__':
     exit(main())
