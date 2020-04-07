@@ -5,6 +5,7 @@ Exception: in single process mode _execute is called directly.
 For efficiency, we copy all data needed to execute all tests into each worker
 and store it in global variables. This reduces the cost of each task.
 """
+import contextlib
 import signal
 import time
 import traceback
@@ -39,28 +40,27 @@ def execute(test):
     Arguments and results of this function are pickled, so they should be cheap
     to copy.
     """
-    result = _execute_in_parallelism_group(test, _lit_config,
-                                           _parallelism_semaphores)
+    with _get_parallelism_semaphore(test):
+        result = _execute(test, _lit_config)
+
     test.setResult(result)
     return test
 
 
-def _execute_in_parallelism_group(test, lit_config, parallelism_semaphores):
+# TODO(python3): replace with contextlib.nullcontext
+@contextlib.contextmanager
+def NopSemaphore():
+    yield
+
+
+def _get_parallelism_semaphore(test):
     pg = test.config.parallelism_group
     if callable(pg):
         pg = pg(test)
-
-    if pg:
-        semaphore = parallelism_semaphores[pg]
-        try:
-            semaphore.acquire()
-            return _execute(test, lit_config)
-        finally:
-            semaphore.release()
-    else:
-        return _execute(test, lit_config)
+    return _parallelism_semaphores.get(pg, NopSemaphore())
 
 
+# Do not inline! Directly used by LitTestCase.py
 def _execute(test, lit_config):
     start = time.time()
     result = _execute_test_handle_errors(test, lit_config)
