@@ -51,6 +51,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -86,7 +87,7 @@ private:
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  DenseSet<const MachineInstr*> LoweredEndCf;
+  SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
 
   const TargetRegisterClass *BoolRC = nullptr;
@@ -116,6 +117,9 @@ private:
   MachineBasicBlock::iterator
   skipIgnoreExecInstsTrivialSucc(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator It) const;
+
+  // Remove redundant SI_END_CF instructions.
+  void optimizeEndCf();
 
 public:
   static char ID;
@@ -448,29 +452,6 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineInstr *Def = MRI.getUniqueVRegDef(CFMask);
   const DebugLoc &DL = MI.getDebugLoc();
 
-  // If the only instruction immediately following this END_CF is an another
-  // END_CF in the only successor we can avoid emitting exec mask restore here.
-  if (RemoveRedundantEndcf) {
-    auto Next =
-      skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
-    if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
-                              LoweredEndCf.count(&*Next))) {
-      // Only skip inner END_CF if outer ENDCF belongs to SI_IF.
-      // If that belongs to SI_ELSE then saved mask has an inverted value.
-      Register SavedExec = Next->getOperand(0).getReg();
-      const MachineInstr *Def = MRI.getUniqueVRegDef(SavedExec);
-      // A lowered SI_IF turns definition into COPY of exec.
-      if (Def && (Def->getOpcode() == AMDGPU::SI_IF ||
-                  LoweredIf.count(SavedExec))) {
-        LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
-        if (LIS)
-          LIS->RemoveMachineInstrFromMaps(MI);
-        MI.eraseFromParent();
-        return;
-      }
-    }
-  }
-
   MachineBasicBlock::iterator InsPt =
       Def && Def->getParent() == &MBB ? std::next(MachineBasicBlock::iterator(Def))
                                : MBB.begin();
@@ -542,6 +523,34 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
   MI.addOperand(Ops[UniqueOpndIdx]);
   if (MRI->use_empty(Reg))
     MRI->getUniqueVRegDef(Reg)->eraseFromParent();
+}
+
+void SILowerControlFlow::optimizeEndCf() {
+  // If the only instruction immediately following this END_CF is an another
+  // END_CF in the only successor we can avoid emitting exec mask restore here.
+  if (!RemoveRedundantEndcf)
+    return;
+
+  for (MachineInstr *MI : LoweredEndCf) {
+    MachineBasicBlock &MBB = *MI->getParent();
+    auto Next =
+      skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI->getIterator()));
+    if (Next == MBB.end() || !LoweredEndCf.count(&*Next))
+      continue;
+    // Only skip inner END_CF if outer ENDCF belongs to SI_IF.
+    // If that belongs to SI_ELSE then saved mask has an inverted value.
+    Register SavedExec
+      = TII->getNamedOperand(*Next, AMDGPU::OpName::src1)->getReg();
+    assert(SavedExec.isVirtual() && "Expected saved exec to be src1!");
+
+    const MachineInstr *Def = MRI->getUniqueVRegDef(SavedExec);
+    if (Def && LoweredIf.count(SavedExec)) {
+      LLVM_DEBUG(dbgs() << "Skip redundant "; MI->dump());
+      if (LIS)
+        LIS->RemoveMachineInstrFromMaps(*MI);
+      MI->eraseFromParent();
+    }
+  }
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
@@ -625,6 +634,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       Next = (Last == MBB.end()) ? MBB.begin() : Last;
     }
   }
+
+  optimizeEndCf();
 
   LoweredEndCf.clear();
   LoweredIf.clear();
