@@ -1167,15 +1167,21 @@ SDValue SelectionDAG::getBoolExtOrTrunc(SDValue Op, const SDLoc &SL, EVT VT,
 }
 
 SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
-  assert(!VT.isVector() &&
-         "getZeroExtendInReg should use the vector element type instead of "
-         "the vector type!");
-  if (Op.getValueType().getScalarType() == VT) return Op;
-  unsigned BitWidth = Op.getScalarValueSizeInBits();
-  APInt Imm = APInt::getLowBitsSet(BitWidth,
-                                   VT.getSizeInBits());
-  return getNode(ISD::AND, DL, Op.getValueType(), Op,
-                 getConstant(Imm, DL, Op.getValueType()));
+  EVT OpVT = Op.getValueType();
+  assert(VT.isInteger() && OpVT.isInteger() &&
+         "Cannot getZeroExtendInReg FP types");
+  assert(VT.isVector() == OpVT.isVector() &&
+         "getZeroExtendInReg type should be vector iff the operand "
+         "type is vector!");
+  assert((!VT.isVector() ||
+          VT.getVectorNumElements() == OpVT.getVectorNumElements()) &&
+         "Vector element counts must match in getZeroExtendInReg");
+  assert(VT.bitsLE(OpVT) && "Not extending!");
+  if (OpVT == VT)
+    return Op;
+  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
+                                   VT.getScalarSizeInBits());
+  return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
 }
 
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {

@@ -10142,7 +10142,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       if (!LegalOperations || (TLI.isOperationLegal(ISD::AND, SrcVT) &&
                                TLI.isOperationLegal(ISD::ZERO_EXTEND, VT))) {
         SDValue Op = N0.getOperand(0);
-        Op = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
+        Op = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT);
         AddToWorklist(Op.getNode());
         SDValue ZExtOrTrunc = DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
         // Transfer the debug info; the new node is equivalent to N0.
@@ -10154,7 +10154,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     if (!LegalOperations || TLI.isOperationLegal(ISD::AND, VT)) {
       SDValue Op = DAG.getAnyExtOrTrunc(N0.getOperand(0), SDLoc(N), VT);
       AddToWorklist(Op.getNode());
-      SDValue And = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
+      SDValue And = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT);
       // We may safely transfer the debug info describing the truncate node over
       // to the equivalent and operation.
       DAG.transferDbgValues(N0, And);
@@ -10283,7 +10283,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         // zext(setcc) -> zext_in_reg(vsetcc) for vectors.
         SDValue VSetCC = DAG.getNode(ISD::SETCC, DL, VT, N0.getOperand(0),
                                      N0.getOperand(1), N0.getOperand(2));
-        return DAG.getZeroExtendInReg(VSetCC, DL, MVT::i1);
+        return DAG.getZeroExtendInReg(VSetCC, DL, N0.getValueType());
       }
 
       // If the desired elements are smaller or larger than the source
@@ -10293,8 +10293,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       SDValue VsetCC =
           DAG.getNode(ISD::SETCC, DL, MatchingVectorType, N0.getOperand(0),
                       N0.getOperand(1), N0.getOperand(2));
-      return DAG.getZeroExtendInReg(DAG.getAnyExtOrTrunc(VsetCC, DL, VT),
-                                    DL, MVT::i1);
+      return DAG.getZeroExtendInReg(DAG.getAnyExtOrTrunc(VsetCC, DL, VT), DL,
+                                    N0.getValueType());
     }
 
     // zext(setcc x,y,cc) -> select_cc x, y, 1, 0, cc
@@ -10812,7 +10812,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
 
   // fold (sext_in_reg x) -> (zext_in_reg x) if the sign bit is known zero.
   if (DAG.MaskedValueIsZero(N0, APInt::getOneBitSet(VTBits, EVTBits - 1)))
-    return DAG.getZeroExtendInReg(N0, SDLoc(N), EVT.getScalarType());
+    return DAG.getZeroExtendInReg(N0, SDLoc(N), EVT);
 
   // fold operands of sext_in_reg based on knowledge that the top bits are not
   // demanded.
