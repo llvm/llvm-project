@@ -1,4 +1,4 @@
-//===- tools/dsymutil/DwarfStreamer.h - Dwarf Streamer ----------*- C++ -*-===//
+//===- DwarfStreamer.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,37 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
-#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+#ifndef LLVM_DWARFLINKER_DWARFSTREAMER_H
+#define LLVM_DWARFLINKER_DWARFSTREAMER_H
 
-#include "DebugMap.h"
-#include "LinkUtils.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
-namespace dsymutil {
+
+enum class OutputFileType {
+  Object,
+  Assembly,
+};
+
+///   User of DwarfStreamer should call initialization code
+///   for AsmPrinter:
+///
+///   InitializeAllTargetInfos();
+///   InitializeAllTargetMCs();
+///   InitializeAllTargets();
+///   InitializeAllAsmPrinters();
+
+class MCCodeEmitter;
 
 /// The Dwarf streaming logic.
 ///
@@ -44,13 +42,16 @@ namespace dsymutil {
 /// information binary representation are handled in this class.
 class DwarfStreamer : public DwarfEmitter {
 public:
-  DwarfStreamer(raw_fd_ostream &OutFile, LinkOptions Options)
-      : OutFile(OutFile), Options(std::move(Options)) {}
+  DwarfStreamer(OutputFileType OutFileType, raw_pwrite_stream &OutFile,
+                std::function<StringRef(StringRef Input)> Translator,
+                bool Minimize, messageHandler Error, messageHandler Warning)
+      : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
+        Minimize(Minimize), ErrorHandler(Error), WarningHandler(Warning) {}
 
   bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
-  bool finish(const DebugMap &, SymbolMapTranslator &T);
+  void finish();
 
   AsmPrinter &getAsmPrinter() const { return *Asm; }
 
@@ -158,6 +159,16 @@ public:
   }
 
 private:
+  inline void error(const Twine &Error, StringRef Context = "") {
+    if (ErrorHandler)
+      ErrorHandler(Error, Context, nullptr);
+  }
+
+  inline void warn(const Twine &Warning, StringRef Context = "") {
+    if (WarningHandler)
+      WarningHandler(Warning, Context, nullptr);
+  }
+
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
   std::unique_ptr<MCRegisterInfo> MRI;
@@ -174,10 +185,11 @@ private:
   std::unique_ptr<AsmPrinter> Asm;
   /// @}
 
-  /// The file we stream the linked Dwarf to.
-  raw_fd_ostream &OutFile;
-
-  LinkOptions Options;
+  /// The output file we stream the linked Dwarf to.
+  raw_pwrite_stream &OutFile;
+  OutputFileType OutFileType = OutputFileType::Object;
+  std::function<StringRef(StringRef Input)> Translator;
+  bool Minimize = true;
 
   uint64_t RangesSectionSize = 0;
   uint64_t LocSectionSize = 0;
@@ -197,9 +209,11 @@ private:
   void emitPubSectionForUnit(MCSection *Sec, StringRef Name,
                              const CompileUnit &Unit,
                              const std::vector<CompileUnit::AccelInfo> &Names);
+
+  messageHandler ErrorHandler = nullptr;
+  messageHandler WarningHandler = nullptr;
 };
 
-} // end namespace dsymutil
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+#endif // LLVM_DWARFLINKER_DWARFSTREAMER_H
