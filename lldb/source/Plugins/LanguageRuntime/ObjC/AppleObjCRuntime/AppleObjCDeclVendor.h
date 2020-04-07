@@ -9,11 +9,11 @@
 #ifndef liblldb_AppleObjCDeclVendor_h_
 #define liblldb_AppleObjCDeclVendor_h_
 
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 namespace lldb_private {
 

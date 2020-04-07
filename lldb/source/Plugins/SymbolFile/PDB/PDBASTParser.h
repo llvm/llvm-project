@@ -11,7 +11,7 @@
 
 #include "lldb/lldb-forward.h"
 
-#include "lldb/Symbol/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 
 class SymbolFilePDB;
 

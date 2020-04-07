@@ -159,7 +159,7 @@ bool LibcxxVariantSummaryProvider(ValueObject &valobj, Stream &stream,
   if (!template_type)
     return false;
 
-  stream.Printf(" Active Type = %s ", template_type.GetTypeName().GetCString());
+  stream << " Active Type = " << template_type.GetDisplayTypeName() << " ";
 
   return true;
 }
