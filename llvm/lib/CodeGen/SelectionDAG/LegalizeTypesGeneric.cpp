@@ -154,9 +154,9 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // Create the stack frame object.  Make sure it is aligned for both
   // the source and expanded destination types.
-  unsigned Alignment = DAG.getDataLayout().getPrefTypeAlignment(
+  Align Alignment = DAG.getDataLayout().getPrefTypeAlign(
       NOutVT.getTypeForEVT(*DAG.getContext()));
-  SDValue StackPtr = DAG.CreateStackTemporary(InVT, Alignment);
+  SDValue StackPtr = DAG.CreateStackTemporary(InVT, Alignment.value());
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
@@ -165,7 +165,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, InOp, StackPtr, PtrInfo);
 
   // Load the first half from the stack slot.
-  Lo = DAG.getLoad(NOutVT, dl, Store, StackPtr, PtrInfo);
+  Lo = DAG.getLoad(NOutVT, dl, Store, StackPtr, PtrInfo, Alignment);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NOutVT.getSizeInBits() / 8;
@@ -173,8 +173,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // Load the second half from the stack slot.
   Hi = DAG.getLoad(NOutVT, dl, Store, StackPtr,
-                   PtrInfo.getWithOffset(IncrementSize),
-                   MinAlign(Alignment, IncrementSize));
+                   PtrInfo.getWithOffset(IncrementSize), Alignment);
 
   // Handle endianness of the load.
   if (TLI.hasBigEndianPartOrdering(OutVT, DAG.getDataLayout()))
@@ -251,21 +250,20 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  unsigned Alignment = LD->getAlignment();
   AAMDNodes AAInfo = LD->getAAInfo();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
-  Lo = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(), Alignment,
-                   LD->getMemOperand()->getFlags(), AAInfo);
+  Lo = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(),
+                   LD->getOriginalAlign(), LD->getMemOperand()->getFlags(),
+                   AAInfo);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
   Ptr = DAG.getMemBasePlusOffset(Ptr, IncrementSize, dl);
-  Hi = DAG.getLoad(NVT, dl, Chain, Ptr,
-                   LD->getPointerInfo().getWithOffset(IncrementSize),
-                   MinAlign(Alignment, IncrementSize),
-                   LD->getMemOperand()->getFlags(), AAInfo);
+  Hi = DAG.getLoad(
+      NVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(IncrementSize),
+      LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -462,7 +460,6 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = St->getChain();
   SDValue Ptr = St->getBasePtr();
-  unsigned Alignment = St->getAlignment();
   AAMDNodes AAInfo = St->getAAInfo();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
@@ -474,14 +471,14 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   if (TLI.hasBigEndianPartOrdering(ValueVT, DAG.getDataLayout()))
     std::swap(Lo, Hi);
 
-  Lo = DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(), Alignment,
-                    St->getMemOperand()->getFlags(), AAInfo);
+  Lo = DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(),
+                    St->getOriginalAlign(), St->getMemOperand()->getFlags(),
+                    AAInfo);
 
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
-  Hi = DAG.getStore(Chain, dl, Hi, Ptr,
-                    St->getPointerInfo().getWithOffset(IncrementSize),
-                    MinAlign(Alignment, IncrementSize),
-                    St->getMemOperand()->getFlags(), AAInfo);
+  Hi = DAG.getStore(
+      Chain, dl, Hi, Ptr, St->getPointerInfo().getWithOffset(IncrementSize),
+      St->getOriginalAlign(), St->getMemOperand()->getFlags(), AAInfo);
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
 }

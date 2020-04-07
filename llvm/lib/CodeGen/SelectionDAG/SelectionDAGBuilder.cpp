@@ -3955,7 +3955,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   SDValue Ptr = getValue(SV);
 
   Type *Ty = I.getType();
-  unsigned Alignment = I.getAlignment();
+  Align Alignment = DL->getValueOrABITypeAlignment(I.getAlign(), Ty);
 
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
@@ -4148,7 +4148,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDValue Root = I.isVolatile() ? getRoot() : getMemoryRoot();
   SmallVector<SDValue, 4> Chains(std::min(MaxParallelChains, NumValues));
   SDLoc dl = getCurSDLoc();
-  unsigned Alignment = I.getAlignment();
+  Align Alignment =
+      DL->getValueOrABITypeAlignment(I.getAlign(), SrcV->getType());
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
 
@@ -4580,8 +4581,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign().getValueOr(DAG.getEVTAlign(MemVT)), AAMDNodes(), nullptr,
-      SSID, Order);
+      *I.getAlign(), AAMDNodes(), nullptr, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 

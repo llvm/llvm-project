@@ -278,8 +278,8 @@ define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwi
 ; X32-NEXT:    addl 8(%ecx), %edi
 ; X32-NEXT:    adcl 12(%ecx), %esi
 ; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %esi, 12(%eax)
 ; X32-NEXT:    movl %ebx, (%eax)
+; X32-NEXT:    movl %esi, 12(%eax)
 ; X32-NEXT:    movl %edx, 4(%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
