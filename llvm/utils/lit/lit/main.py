@@ -42,6 +42,10 @@ def main(builtin_params={}):
         sys.stderr.write('error: did not discover any tests for provided path(s)\n')
         sys.exit(2)
 
+    if opts.show_suites or opts.show_tests:
+        print_discovered(discovered_tests, opts.show_suites, opts.show_tests)
+        sys.exit(0)
+
     # Command line overrides configuration for maxIndividualTestTime.
     if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
         if opts.maxIndividualTestTime != lit_config.maxIndividualTestTime:
@@ -52,10 +56,6 @@ def main(builtin_params={}):
                 .format(lit_config.maxIndividualTestTime,
                         opts.maxIndividualTestTime))
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
-
-    if opts.showSuites or opts.showTests:
-        print_suites_or_tests(discovered_tests, opts)
-        return
 
     filtered_tests = [t for t in discovered_tests if
                       opts.filter.search(t.getFullName())]
@@ -119,34 +119,29 @@ def create_params(builtin_params, user_params):
     params.update([parse(p) for p in user_params])
     return params
 
-def print_suites_or_tests(tests, opts):
-    # Aggregate the tests by suite.
-    suitesAndTests = {}
-    for result_test in tests:
-        if result_test.suite not in suitesAndTests:
-            suitesAndTests[result_test.suite] = []
-        suitesAndTests[result_test.suite].append(result_test)
-    suitesAndTests = list(suitesAndTests.items())
-    suitesAndTests.sort(key = lambda item: item[0].name)
 
-    # Show the suites, if requested.
-    if opts.showSuites:
+def print_discovered(tests, show_suites, show_tests):
+    # Suite names are not necessarily unique.  Include object identity in sort
+    # key to avoid mixing tests of different suites.
+    tests.sort(key=lambda t: (t.suite.name, t.suite, t.path_in_suite))
+
+    if show_suites:
+        import itertools
+        tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
         print('-- Test Suites --')
-        for ts,ts_tests in suitesAndTests:
-            print('  %s - %d tests' %(ts.name, len(ts_tests)))
-            print('    Source Root: %s' % ts.source_root)
-            print('    Exec Root  : %s' % ts.exec_root)
-            if ts.config.available_features:
-                print('    Available Features : %s' % ' '.join(
-                    sorted(ts.config.available_features)))
+        for suite, suite_iter in tests_by_suite:
+            test_count = sum(1 for _ in suite_iter)
+            print('  %s - %d tests' % (suite.name, test_count))
+            print('    Source Root: %s' % suite.source_root)
+            print('    Exec Root  : %s' % suite.exec_root)
+            if suite.config.available_features:
+                features = ' '.join(sorted(suite.config.available_features))
+                print('    Available Features : %s' % features)
 
-    # Show the tests, if requested.
-    if opts.showTests:
+    if show_tests:
         print('-- Available Tests --')
-        for ts,ts_tests in suitesAndTests:
-            ts_tests.sort(key = lambda test: test.path_in_suite)
-            for test in ts_tests:
-                print('  %s' % (test.getFullName(),))
+        for t in tests:
+            print('  %s' % t.getFullName())
 
 
 def determine_order(tests, order):
