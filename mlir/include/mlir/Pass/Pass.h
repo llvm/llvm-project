@@ -341,23 +341,8 @@ template <typename T> struct FunctionPass : public OperationPass<T, FuncOp> {
       runOnFunction();
   }
 
-  /// Return the current module being transformed.
+  /// Return the current function being transformed.
   FuncOp getFunction() { return this->getOperation(); }
-};
-
-/// A model for providing module pass specific utilities.
-///
-/// Derived module passes are expected to provide the following:
-///   - A 'void runOnModule()' method.
-template <typename T> struct ModulePass : public OperationPass<T, ModuleOp> {
-  /// The polymorphic API that runs the pass over the currently held module.
-  virtual void runOnModule() = 0;
-
-  /// The polymorphic API that runs the pass over the currently held operation.
-  void runOnOperation() final { runOnModule(); }
-
-  /// Return the current module being transformed.
-  ModuleOp getModule() { return this->getOperation(); }
 };
 } // end namespace mlir
 

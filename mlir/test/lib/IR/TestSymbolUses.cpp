@@ -15,7 +15,7 @@ using namespace mlir;
 namespace {
 /// This is a symbol test pass that tests the symbol uselist functionality
 /// provided by the symbol table along with erasing from the symbol table.
-struct SymbolUsesPass : public ModulePass<SymbolUsesPass> {
+struct SymbolUsesPass : public OperationPass<SymbolUsesPass, ModuleOp> {
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
                              SmallVectorImpl<FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
@@ -59,8 +59,8 @@ struct SymbolUsesPass : public ModulePass<SymbolUsesPass> {
     return WalkResult::advance();
   }
 
-  void runOnModule() override {
-    auto module = getModule();
+  void runOnOperation() override {
+    auto module = getOperation();
 
     // Walk nested symbols.
     SmallVector<FuncOp, 4> deadFunctions;
@@ -86,9 +86,10 @@ struct SymbolUsesPass : public ModulePass<SymbolUsesPass> {
 
 /// This is a symbol test pass that tests the symbol use replacement
 /// functionality provided by the symbol table.
-struct SymbolReplacementPass : public ModulePass<SymbolReplacementPass> {
-  void runOnModule() override {
-    auto module = getModule();
+struct SymbolReplacementPass
+    : public OperationPass<SymbolReplacementPass, ModuleOp> {
+  void runOnOperation() override {
+    auto module = getOperation();
 
     // Walk nested functions and modules.
     module.getBodyRegion().walk([&](Operation *nestedOp) {

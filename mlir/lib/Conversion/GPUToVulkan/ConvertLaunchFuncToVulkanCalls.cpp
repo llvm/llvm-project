@@ -58,7 +58,7 @@ namespace {
 /// * deinitVulkan         -- deinitializes vulkan runtime
 ///
 class VulkanLaunchFuncToVulkanCallsPass
-    : public ModulePass<VulkanLaunchFuncToVulkanCallsPass> {
+    : public OperationPass<VulkanLaunchFuncToVulkanCallsPass, ModuleOp> {
 private:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertVulkanLaunchFuncToVulkanCalls
@@ -150,7 +150,7 @@ private:
   LogicalResult deduceMemRefRank(Value ptrToMemRefDescriptor, uint32_t &rank);
 
 public:
-  void runOnModule() override;
+  void runOnOperation() override;
 
 private:
   LLVM::LLVMDialect *llvmDialect;
@@ -169,18 +169,18 @@ private:
 
 } // anonymous namespace
 
-void VulkanLaunchFuncToVulkanCallsPass::runOnModule() {
+void VulkanLaunchFuncToVulkanCallsPass::runOnOperation() {
   initializeCachedTypes();
 
   // Collect SPIR-V attributes such as `spirv_blob` and
   // `spirv_entry_point_name`.
-  getModule().walk([this](LLVM::CallOp op) {
+  getOperation().walk([this](LLVM::CallOp op) {
     if (isVulkanLaunchCallOp(op))
       collectSPIRVAttributes(op);
   });
 
   // Convert vulkan launch call op into a sequence of Vulkan runtime calls.
-  getModule().walk([this](LLVM::CallOp op) {
+  getOperation().walk([this](LLVM::CallOp op) {
     if (isCInterfaceVulkanLaunchCallOp(op))
       translateVulkanLaunchCall(op);
   });
@@ -278,7 +278,7 @@ VulkanLaunchFuncToVulkanCallsPass::deduceMemRefRank(Value ptrToMemRefDescriptor,
 }
 
 void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
   OpBuilder builder(module.getBody()->getTerminator());
 
   if (!module.lookupSymbol(kSetEntryPoint)) {

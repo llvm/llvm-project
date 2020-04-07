@@ -80,14 +80,14 @@ static void populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns,
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public ModulePass<DecorateSPIRVCompositeTypeLayoutPass> {
+    : public OperationPass<DecorateSPIRVCompositeTypeLayoutPass, ModuleOp> {
 private:
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void DecorateSPIRVCompositeTypeLayoutPass::runOnModule() {
-  auto module = getModule();
+void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
+  auto module = getOperation();
   OwningRewritePatternList patterns;
   populateSPIRVLayoutInfoPatterns(patterns, module.getContext());
   ConversionTarget target(*(module.getContext()));

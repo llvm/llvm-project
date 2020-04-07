@@ -13,8 +13,8 @@
 using namespace mlir;
 
 namespace {
-struct TestModulePass : public ModulePass<TestModulePass> {
-  void runOnModule() final {}
+struct TestModulePass : public OperationPass<TestModulePass, ModuleOp> {
+  void runOnOperation() final {}
 };
 struct TestFunctionPass : public FunctionPass<TestFunctionPass> {
   void runOnFunction() final {}

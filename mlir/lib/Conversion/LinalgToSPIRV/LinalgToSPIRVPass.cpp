@@ -16,18 +16,18 @@ using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Linalg ops into SPIR-V ops.
-class LinalgToSPIRVPass : public ModulePass<LinalgToSPIRVPass> {
+class LinalgToSPIRVPass : public OperationPass<LinalgToSPIRVPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertLinalgToSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void LinalgToSPIRVPass::runOnModule() {
+void LinalgToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
   std::unique_ptr<ConversionTarget> target =

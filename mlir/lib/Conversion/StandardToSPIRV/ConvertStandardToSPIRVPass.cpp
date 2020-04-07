@@ -22,18 +22,18 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
-    : public ModulePass<ConvertStandardToSPIRVPass> {
+    : public OperationPass<ConvertStandardToSPIRVPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertStandardToSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void ConvertStandardToSPIRVPass::runOnModule() {
+void ConvertStandardToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
   std::unique_ptr<ConversionTarget> target =
