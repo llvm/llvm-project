@@ -1255,8 +1255,16 @@ private:
     Optional<StringRef> transformer;
   };
 
+  /// An iterator over the elements of a format group.
+  using ElementsIterT = llvm::pointee_iterator<
+      std::vector<std::unique_ptr<Element>>::const_iterator>;
+
   /// Verify the state of operation attributes within the format.
   LogicalResult verifyAttributes(llvm::SMLoc loc);
+  /// Verify the attribute elements at the back of the given stack of iterators.
+  LogicalResult verifyAttributes(
+      llvm::SMLoc loc,
+      SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
@@ -1423,54 +1431,60 @@ LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
       std::vector<std::unique_ptr<Element>>::const_iterator>;
   SmallVector<std::pair<ElementsIterT, ElementsIterT>, 1> iteratorStack;
   iteratorStack.emplace_back(fmt.elements.begin(), fmt.elements.end());
-  while (!iteratorStack.empty()) {
-    auto &stackIt = iteratorStack.back();
-    ElementsIterT &it = stackIt.first, e = stackIt.second;
-    while (it != e) {
-      Element *element = &*(it++);
+  while (!iteratorStack.empty())
+    if (failed(verifyAttributes(loc, iteratorStack)))
+      return failure();
+  return success();
+}
+/// Verify the attribute elements at the back of the given stack of iterators.
+LogicalResult FormatParser::verifyAttributes(
+    llvm::SMLoc loc,
+    SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack) {
+  auto &stackIt = iteratorStack.back();
+  ElementsIterT &it = stackIt.first, e = stackIt.second;
+  while (it != e) {
+    Element *element = &*(it++);
 
-      // Traverse into optional groups.
-      if (auto *optional = dyn_cast<OptionalElement>(element)) {
-        auto elements = optional->getElements();
-        iteratorStack.emplace_back(elements.begin(), elements.end());
-        break;
-      }
+    // Traverse into optional groups.
+    if (auto *optional = dyn_cast<OptionalElement>(element)) {
+      auto elements = optional->getElements();
+      iteratorStack.emplace_back(elements.begin(), elements.end());
+      return success();
+    }
 
-      // We are checking for an attribute element followed by a `:`, so there is
-      // no need to check the end.
-      if (it == e && iteratorStack.size() == 1)
-        break;
+    // We are checking for an attribute element followed by a `:`, so there is
+    // no need to check the end.
+    if (it == e && iteratorStack.size() == 1)
+      break;
 
-      // Check for an attribute with a constant type builder, followed by a `:`.
-      auto *prevAttr = dyn_cast<AttributeVariable>(element);
-      if (!prevAttr || prevAttr->getTypeBuilder())
-        continue;
+    // Check for an attribute with a constant type builder, followed by a `:`.
+    auto *prevAttr = dyn_cast<AttributeVariable>(element);
+    if (!prevAttr || prevAttr->getTypeBuilder())
+      continue;
 
-      // Check the next iterator within the stack for literal elements.
-      for (auto &nextItPair : iteratorStack) {
-        ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
-        for (; nextIt != nextE; ++nextIt) {
-          // Skip any trailing optional groups or attribute dictionaries.
-          if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
-            continue;
+    // Check the next iterator within the stack for literal elements.
+    for (auto &nextItPair : iteratorStack) {
+      ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
+      for (; nextIt != nextE; ++nextIt) {
+        // Skip any trailing optional groups or attribute dictionaries.
+        if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
+          continue;
 
-          // We are only interested in `:` literals.
-          auto *literal = dyn_cast<LiteralElement>(&*nextIt);
-          if (!literal || literal->getLiteral() != ":")
-            break;
+        // We are only interested in `:` literals.
+        auto *literal = dyn_cast<LiteralElement>(&*nextIt);
+        if (!literal || literal->getLiteral() != ":")
+          break;
 
-          // TODO: Use the location of the literal element itself.
-          return emitError(
-              loc, llvm::formatv("format ambiguity caused by `:` literal found "
-                                 "after attribute `{0}` which does not have "
-                                 "a buildable type",
-                                 prevAttr->getVar()->name));
-        }
+        // TODO: Use the location of the literal element itself.
+        return emitError(
+            loc, llvm::formatv("format ambiguity caused by `:` literal found "
+                               "after attribute `{0}` which does not have "
+                               "a buildable type",
+                               prevAttr->getVar()->name));
       }
     }
-    if (it == e)
-      iteratorStack.pop_back();
   }
+  iteratorStack.pop_back();
   return success();
 }
 
