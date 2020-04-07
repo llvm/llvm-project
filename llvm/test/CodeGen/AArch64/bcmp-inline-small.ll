@@ -11,12 +11,12 @@ entry:
   ret i1 %ret
 
 ; CHECK-LABEL: test_b2:
-; CHECK-NOT:   bl bcmp
+; CHECKN-NOT:  bl bcmp
 ; CHECKN:      ldr  x
 ; CHECKN-NEXT: ldr  x
 ; CHECKN-NEXT: ldur x
 ; CHECKN-NEXT: ldur x
-; CHECKS-COUNT-30: ldrb w
+; CHECKS: bl bcmp
 }
 
 define i1 @test_b2_align8(i8* align 8 %s1, i8* align 8 %s2) {
@@ -26,19 +26,13 @@ entry:
   ret i1 %ret
 
 ; CHECK-LABEL: test_b2_align8:
-; CHECK-NOT:   bl bcmp
+; CHECKN-NOT:  bl bcmp
 ; CHECKN:      ldr  x
 ; CHECKN-NEXT: ldr  x
 ; CHECKN-NEXT: ldur x
 ; CHECKN-NEXT: ldur x
-; CHECKS:      ldr  x
-; CHECKS-NEXT: ldr  x
-; CHECKS-NEXT: ldr  w
-; CHECKS-NEXT: ldr  w
-; CHECKS-NEXT: ldrh  w
-; CHECKS-NEXT: ldrh  w
-; CHECKS-NEXT: ldrb  w
-; CHECKS-NEXT: ldrb  w
+; TODO: Four loads should be within the limit, but the heuristic isn't implemented.
+; CHECKS: bl bcmp
 }
 
 define i1 @test_bs(i8* %s1, i8* %s2) optsize {
