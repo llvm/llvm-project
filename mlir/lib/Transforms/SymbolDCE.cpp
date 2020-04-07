@@ -17,7 +17,7 @@
 using namespace mlir;
 
 namespace {
-struct SymbolDCE : public OperationPass<SymbolDCE> {
+struct SymbolDCE : public PassWrapper<SymbolDCE, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_SymbolDCE
 #include "mlir/Transforms/Passes.h.inc"

@@ -23,7 +23,7 @@ namespace {
 // Extracts fixed-range loops for top-level loop nests with ranges defined in
 // the pass constructor.  Assumes loops are permutable.
 class SimpleParametricLoopTilingPass
-    : public FunctionPass<SimpleParametricLoopTilingPass> {
+    : public PassWrapper<SimpleParametricLoopTilingPass, FunctionPass> {
 public:
   SimpleParametricLoopTilingPass() = default;
   SimpleParametricLoopTilingPass(const SimpleParametricLoopTilingPass &) {}

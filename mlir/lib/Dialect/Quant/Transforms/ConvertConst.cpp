@@ -21,7 +21,7 @@ using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
-struct ConvertConstPass : public FunctionPass<ConvertConstPass> {
+struct ConvertConstPass : public PassWrapper<ConvertConstPass, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_QuantConvertConst
 #include "mlir/Dialect/Quant/Passes.h.inc"
@@ -105,6 +105,6 @@ void ConvertConstPass::runOnFunction() {
   applyPatternsGreedily(func, patterns);
 }
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::quant::createConvertConstPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::quant::createConvertConstPass() {
   return std::make_unique<ConvertConstPass>();
 }

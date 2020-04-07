@@ -573,7 +573,7 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public FunctionPass<Vectorize> {
+struct Vectorize : public PassWrapper<Vectorize, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineVectorize
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -1252,10 +1252,10 @@ void Vectorize::runOnFunction() {
   LLVM_DEBUG(dbgs() << "\n");
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
   return std::make_unique<Vectorize>(virtualVectorSize);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createSuperVectorizePass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createSuperVectorizePass() {
   return std::make_unique<Vectorize>();
 }

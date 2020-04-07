@@ -73,7 +73,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 
 namespace {
 /// Simple common sub-expression elimination.
-struct CSE : public OperationPass<CSE> {
+struct CSE : public PassWrapper<CSE, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_CSE
 #include "mlir/Transforms/Passes.h.inc"

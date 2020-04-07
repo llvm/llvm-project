@@ -160,7 +160,8 @@ void mlir::loop::naivelyFuseParallelOps(Region &region) {
 }
 
 namespace {
-struct ParallelLoopFusion : public OperationPass<ParallelLoopFusion> {
+struct ParallelLoopFusion
+    : public PassWrapper<ParallelLoopFusion, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LoopParallelLoopFusion
 #include "mlir/Dialect/LoopOps/Passes.h.inc"

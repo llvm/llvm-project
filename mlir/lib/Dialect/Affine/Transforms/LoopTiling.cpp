@@ -58,7 +58,7 @@ static llvm::cl::list<unsigned> clTileSizes(
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
-struct LoopTiling : public FunctionPass<LoopTiling> {
+struct LoopTiling : public PassWrapper<LoopTiling, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineLoopTiling
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -85,11 +85,11 @@ struct LoopTiling : public FunctionPass<LoopTiling> {
 
 /// Creates a pass to perform loop tiling on all suitable loop nests of a
 /// Function.
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopTilingPass(uint64_t cacheSizeBytes) {
   return std::make_unique<LoopTiling>(cacheSizeBytes);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopTilingPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopTilingPass() {
   return std::make_unique<LoopTiling>();
 }
 

@@ -38,7 +38,8 @@ namespace {
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public OperationPass<ConvertGpuLaunchFuncToVulkanLaunchFunc, ModuleOp> {
+    : public PassWrapper<ConvertGpuLaunchFuncToVulkanLaunchFunc,
+                         OperationPass<ModuleOp>> {
 public:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertGpuLaunchFuncToVulkanLaunchFunc
@@ -168,7 +169,7 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
   launchOp.erase();
 }
 
-std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass() {
   return std::make_unique<ConvertGpuLaunchFuncToVulkanLaunchFunc>();
 }

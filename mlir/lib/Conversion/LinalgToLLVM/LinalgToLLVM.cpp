@@ -562,7 +562,7 @@ void mlir::populateLinalgToLLVMConversionPatterns(
 
 namespace {
 struct ConvertLinalgToLLVMPass
-    : public OperationPass<ConvertLinalgToLLVMPass, ModuleOp> {
+    : public PassWrapper<ConvertLinalgToLLVMPass, OperationPass<ModuleOp>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertLinalgToLLVM
 #include "mlir/Conversion/Passes.h.inc"
@@ -593,6 +593,6 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
     signalPassFailure();
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertLinalgToLLVMPass() {
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertLinalgToLLVMPass() {
   return std::make_unique<ConvertLinalgToLLVMPass>();
 }

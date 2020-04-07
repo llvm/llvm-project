@@ -13,7 +13,8 @@ using namespace mlir;
 
 namespace {
 /// This is a test pass for verifying FuncOp's eraseArgument method.
-struct TestFuncEraseArg : public OperationPass<TestFuncEraseArg, ModuleOp> {
+struct TestFuncEraseArg
+    : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     auto module = getOperation();
 
@@ -36,7 +37,8 @@ struct TestFuncEraseArg : public OperationPass<TestFuncEraseArg, ModuleOp> {
 };
 
 /// This is a test pass for verifying FuncOp's setType method.
-struct TestFuncSetType : public OperationPass<TestFuncSetType, ModuleOp> {
+struct TestFuncSetType
+    : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     auto module = getOperation();
     SymbolTable symbolTable(module);

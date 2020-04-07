@@ -60,7 +60,7 @@ static llvm::cl::opt<unsigned>
 namespace {
 /// Loop unroll jam pass. Currently, this just unroll jams the first
 /// outer loop in a Function.
-struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
+struct LoopUnrollAndJam : public PassWrapper<LoopUnrollAndJam, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineLoopUnrollAndJam
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -76,7 +76,7 @@ struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
 };
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopUnrollAndJamPass(int unrollJamFactor) {
   return std::make_unique<LoopUnrollAndJam>(
       unrollJamFactor == -1 ? None : Optional<unsigned>(unrollJamFactor));

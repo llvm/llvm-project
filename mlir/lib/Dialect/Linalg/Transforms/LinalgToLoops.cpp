@@ -693,7 +693,8 @@ static void lowerLinalgToLoopsImpl(Operation *op, MLIRContext *context) {
 }
 
 namespace {
-struct LowerToAffineLoops : public FunctionPass<LowerToAffineLoops> {
+struct LowerToAffineLoops
+    : public PassWrapper<LowerToAffineLoops, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgLowerToAffineLoops
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -703,7 +704,7 @@ struct LowerToAffineLoops : public FunctionPass<LowerToAffineLoops> {
                                                             &getContext());
   }
 };
-struct LowerToLoops : public FunctionPass<LowerToLoops> {
+struct LowerToLoops : public PassWrapper<LowerToLoops, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgLowerToLoops
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -713,7 +714,8 @@ struct LowerToLoops : public FunctionPass<LowerToLoops> {
                                                          &getContext());
   }
 };
-struct LowerToParallelLoops : public FunctionPass<LowerToParallelLoops> {
+struct LowerToParallelLoops
+    : public PassWrapper<LowerToParallelLoops, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgLowerToParallelLoops
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -725,16 +727,16 @@ struct LowerToParallelLoops : public FunctionPass<LowerToParallelLoops> {
 };
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<LowerToLoops>();
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createConvertLinalgToParallelLoopsPass() {
   return std::make_unique<LowerToParallelLoops>();
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<LowerToAffineLoops>();
 }

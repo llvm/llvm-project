@@ -30,7 +30,8 @@ using namespace mlir::loop;
 
 namespace {
 
-struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
+struct LoopToStandardPass
+    : public PassWrapper<LoopToStandardPass, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertLoopToStandard
 #include "mlir/Conversion/Passes.h.inc"

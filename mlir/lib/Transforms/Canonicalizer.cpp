@@ -19,7 +19,7 @@ using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public OperationPass<Canonicalizer> {
+struct Canonicalizer : public PassWrapper<Canonicalizer, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_Canonicalizer
 #include "mlir/Transforms/Passes.h.inc"

@@ -567,7 +567,8 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
 };
 
 /// Pass that fuses generic ops on tensors. Used only for testing.
-struct FusionOfTensorOpsPass : public OperationPass<FusionOfTensorOpsPass> {
+struct FusionOfTensorOpsPass
+    : public PassWrapper<FusionOfTensorOpsPass, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgFusionOfTensorOps
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -580,7 +581,7 @@ struct FusionOfTensorOpsPass : public OperationPass<FusionOfTensorOpsPass> {
   };
 };
 
-struct LinalgFusionPass : public FunctionPass<LinalgFusionPass> {
+struct LinalgFusionPass : public PassWrapper<LinalgFusionPass, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgFusion
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -589,7 +590,7 @@ struct LinalgFusionPass : public FunctionPass<LinalgFusionPass> {
 };
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgFusionPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgFusionPass() {
   return std::make_unique<LinalgFusionPass>();
 }
 

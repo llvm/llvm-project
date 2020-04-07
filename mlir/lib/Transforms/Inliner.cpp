@@ -589,7 +589,7 @@ static void inlineSCC(Inliner &inliner, CGUseList &useList,
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct InlinerPass : public OperationPass<InlinerPass> {
+struct InlinerPass : public PassWrapper<InlinerPass, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_Inliner
 #include "mlir/Transforms/Passes.h.inc"

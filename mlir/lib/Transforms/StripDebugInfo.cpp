@@ -14,7 +14,7 @@
 using namespace mlir;
 
 namespace {
-struct StripDebugInfo : public OperationPass<StripDebugInfo> {
+struct StripDebugInfo : public PassWrapper<StripDebugInfo, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_StripDebugInfo
 #include "mlir/Transforms/Passes.h.inc"

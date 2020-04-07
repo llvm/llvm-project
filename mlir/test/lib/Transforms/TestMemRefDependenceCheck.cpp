@@ -28,7 +28,7 @@ namespace {
 // TODO(andydavis) Add common surrounding loop depth-wise dependence checks.
 /// Checks dependences between all pairs of memref accesses in a Function.
 struct TestMemRefDependenceCheck
-    : public FunctionPass<TestMemRefDependenceCheck> {
+    : public PassWrapper<TestMemRefDependenceCheck, FunctionPass> {
   SmallVector<Operation *, 4> loadsAndStores;
   void runOnFunction() override;
 };

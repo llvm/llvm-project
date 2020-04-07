@@ -44,7 +44,8 @@ namespace {
 ///     d) infer the shape of its output from the argument types.
 ///   3) If the worklist is empty, the algorithm succeeded.
 ///
-class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
+class ShapeInferencePass
+    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
 public:
   void runOnFunction() override {
     auto f = getFunction();

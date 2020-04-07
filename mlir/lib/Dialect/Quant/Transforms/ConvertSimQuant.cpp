@@ -20,7 +20,7 @@ using namespace mlir::quant;
 
 namespace {
 struct ConvertSimulatedQuantPass
-    : public FunctionPass<ConvertSimulatedQuantPass> {
+    : public PassWrapper<ConvertSimulatedQuantPass, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_QuantConvertSimulatedQuant
 #include "mlir/Dialect/Quant/Passes.h.inc"
@@ -140,7 +140,7 @@ void ConvertSimulatedQuantPass::runOnFunction() {
     signalPassFailure();
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::quant::createConvertSimulatedQuantPass() {
   return std::make_unique<ConvertSimulatedQuantPass>();
 }

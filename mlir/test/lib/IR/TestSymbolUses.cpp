@@ -15,7 +15,8 @@ using namespace mlir;
 namespace {
 /// This is a symbol test pass that tests the symbol uselist functionality
 /// provided by the symbol table along with erasing from the symbol table.
-struct SymbolUsesPass : public OperationPass<SymbolUsesPass, ModuleOp> {
+struct SymbolUsesPass
+    : public PassWrapper<SymbolUsesPass, OperationPass<ModuleOp>> {
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
                              SmallVectorImpl<FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
@@ -87,7 +88,7 @@ struct SymbolUsesPass : public OperationPass<SymbolUsesPass, ModuleOp> {
 /// This is a symbol test pass that tests the symbol use replacement
 /// functionality provided by the symbol table.
 struct SymbolReplacementPass
-    : public OperationPass<SymbolReplacementPass, ModuleOp> {
+    : public PassWrapper<SymbolReplacementPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     auto module = getOperation();
 

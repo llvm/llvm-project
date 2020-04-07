@@ -160,7 +160,8 @@ void mlir::populateStdLegalizationPatternsForSPIRVLowering(
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct SPIRVLegalization final : public OperationPass<SPIRVLegalization> {
+struct SPIRVLegalization final
+    : public PassWrapper<SPIRVLegalization, OperationPass<>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LegalizeStandardForSPIRV
 #include "mlir/Conversion/Passes.h.inc"

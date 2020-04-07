@@ -61,7 +61,8 @@ namespace {
 ///
 /// Intermediate data structures are allocated on the stack.
 class GpuLaunchFuncToCudaCallsPass
-    : public OperationPass<GpuLaunchFuncToCudaCallsPass, ModuleOp> {
+    : public PassWrapper<GpuLaunchFuncToCudaCallsPass,
+                         OperationPass<ModuleOp>> {
 private:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertGpuLaunchFuncToCudaCalls
@@ -464,7 +465,7 @@ void GpuLaunchFuncToCudaCallsPass::translateGpuLaunchCalls(
   launchOp.erase();
 }
 
-std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToCudaCallsPass() {
   return std::make_unique<GpuLaunchFuncToCudaCallsPass>();
 }

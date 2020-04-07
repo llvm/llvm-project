@@ -19,7 +19,7 @@ namespace mlir {
 class Location;
 class ModuleOp;
 
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
@@ -42,7 +42,7 @@ using CubinGenerator =
 /// attached as a string attribute named 'nvvm.cubin' to the kernel function.
 /// After the transformation, the body of the kernel function is removed (i.e.,
 /// it is turned into a declaration).
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 createConvertGPUKernelToCubinPass(CubinGenerator cubinGenerator);
 
 /// Creates a pass to convert a gpu.launch_func operation into a sequence of
@@ -51,7 +51,7 @@ createConvertGPUKernelToCubinPass(CubinGenerator cubinGenerator);
 /// This pass does not generate code to call CUDA directly but instead uses a
 /// small wrapper library that exports a stable and conveniently typed ABI
 /// on top of CUDA.
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 createConvertGpuLaunchFuncToCudaCallsPass();
 
 } // namespace mlir
