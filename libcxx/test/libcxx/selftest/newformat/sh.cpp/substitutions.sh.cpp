@@ -14,7 +14,7 @@
 // - %{exec}
 
 // FILE_DEPENDENCIES: %t.exe
-// RUN: %{cxx} %{flags} %{compile_flags} %{link_flags} -o %t.exe %s
+// RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe "HELLO"
 
 #include <cassert>
