@@ -1548,7 +1548,7 @@ SDValue R600TargetLowering::lowerFrameIndex(SDValue Op,
   FrameIndexSDNode *FIN = cast<FrameIndexSDNode>(Op);
 
   unsigned FrameIndex = FIN->getIndex();
-  unsigned IgnoredFrameReg;
+  Register IgnoredFrameReg;
   unsigned Offset =
     TFL->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
   return DAG.getConstant(Offset * 4 * TFL->getStackWidth(MF), SDLoc(Op),
