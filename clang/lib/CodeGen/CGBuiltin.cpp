@@ -7463,8 +7463,56 @@ Value *CodeGenFunction::vectorWrapScalar16(Value *Op) {
   return Op;
 }
 
+/// SVEBuiltinMemEltTy - Returns the memory element type for this memory
+/// access builtin.  Only required if it can't be inferred from the base pointer
+/// operand.
+llvm::Type *CodeGenFunction::SVEBuiltinMemEltTy(SVETypeFlags TypeFlags) {
+  switch (TypeFlags.getMemEltType()) {
+  case SVETypeFlags::MemEltTyDefault:
+    return getEltType(TypeFlags);
+  case SVETypeFlags::MemEltTyInt8:
+    return Builder.getInt8Ty();
+  case SVETypeFlags::MemEltTyInt16:
+    return Builder.getInt16Ty();
+  case SVETypeFlags::MemEltTyInt32:
+    return Builder.getInt32Ty();
+  case SVETypeFlags::MemEltTyInt64:
+    return Builder.getInt64Ty();
+  }
+  llvm_unreachable("Unknown MemEltType");
+}
+
+llvm::Type *CodeGenFunction::getEltType(SVETypeFlags TypeFlags) {
+  switch (TypeFlags.getEltType()) {
+  default:
+    llvm_unreachable("Invalid SVETypeFlag!");
+
+  case SVETypeFlags::EltTyInt8:
+    return Builder.getInt8Ty();
+  case SVETypeFlags::EltTyInt16:
+    return Builder.getInt16Ty();
+  case SVETypeFlags::EltTyInt32:
+    return Builder.getInt32Ty();
+  case SVETypeFlags::EltTyInt64:
+    return Builder.getInt64Ty();
+
+  case SVETypeFlags::EltTyFloat16:
+    return Builder.getHalfTy();
+  case SVETypeFlags::EltTyFloat32:
+    return Builder.getFloatTy();
+  case SVETypeFlags::EltTyFloat64:
+    return Builder.getDoubleTy();
+
+  case SVETypeFlags::EltTyBool8:
+  case SVETypeFlags::EltTyBool16:
+  case SVETypeFlags::EltTyBool32:
+  case SVETypeFlags::EltTyBool64:
+    return Builder.getInt1Ty();
+  }
+}
+
 // Return the llvm vector type corresponding to the specified element TypeFlags.
-llvm::Type *CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
+llvm::VectorType *CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   switch (TypeFlags.getEltType()) {
   default:
     llvm_unreachable("Invalid SVETypeFlag!");
@@ -7526,6 +7574,113 @@ Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
   Value *C = Builder.CreateCall(F, Pred);
   assert(C->getType() == RTy && "Unexpected return type!");
   return C;
+}
+
+Value *CodeGenFunction::EmitSVEGatherLoad(SVETypeFlags TypeFlags,
+                                          SmallVectorImpl<Value *> &Ops,
+                                          unsigned IntID) {
+  auto *ResultTy = getSVEType(TypeFlags);
+  auto *OverloadedTy = llvm::VectorType::get(SVEBuiltinMemEltTy(TypeFlags),
+                                             ResultTy->getElementCount());
+
+  // At the ACLE level there's only one predicate type, svbool_t, which is
+  // mapped to <n x 16 x i1>. However, this might be incompatible with the
+  // actual type being loaded. For example, when loading doubles (i64) the
+  // predicated should be <n x 2 x i1> instead. At the IR level the type of
+  // the predicate and the data being loaded must match. Cast accordingly.
+  Ops[0] = EmitSVEPredicateCast(Ops[0], OverloadedTy);
+
+  Function *F = nullptr;
+  if (Ops[1]->getType()->isVectorTy())
+    // This is the "vector base, scalar offset" case. In order to uniquely
+    // map this built-in to an LLVM IR intrinsic, we need both the return type
+    // and the type of the vector base.
+    F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[1]->getType()});
+  else
+    // This is the "scalar base, vector offset case". The type of the offset
+    // is encoded in the name of the intrinsic. We only need to specify the
+    // return type in order to uniquely map this built-in to an LLVM IR
+    // intrinsic.
+    F = CGM.getIntrinsic(IntID, OverloadedTy);
+
+  // Pass 0 when the offset is missing. This can only be applied when using
+  // the "vector base" addressing mode for which ACLE allows no offset. The
+  // corresponding LLVM IR always requires an offset.
+  if (Ops.size() == 2) {
+    assert(Ops[1]->getType()->isVectorTy() && "Scalar base requires an offset");
+    Ops.push_back(ConstantInt::get(Int64Ty, 0));
+  }
+
+  // For "vector base, scalar index" scale the index so that it becomes a
+  // scalar offset.
+  if (!TypeFlags.isByteIndexed() && Ops[1]->getType()->isVectorTy()) {
+    unsigned BytesPerElt =
+        OverloadedTy->getElementType()->getScalarSizeInBits() / 8;
+    Value *Scale = ConstantInt::get(Int64Ty, BytesPerElt);
+    Ops[2] = Builder.CreateMul(Ops[2], Scale);
+  }
+
+  Value *Call = Builder.CreateCall(F, Ops);
+
+  // The following sext/zext is only needed when ResultTy != OverloadedTy. In
+  // other cases it's folded into a nop.
+  return TypeFlags.isZExtReturn() ? Builder.CreateZExt(Call, ResultTy)
+                                  : Builder.CreateSExt(Call, ResultTy);
+}
+
+Value *CodeGenFunction::EmitSVEScatterStore(SVETypeFlags TypeFlags,
+                                            SmallVectorImpl<Value *> &Ops,
+                                            unsigned IntID) {
+  auto *SrcDataTy = getSVEType(TypeFlags);
+  auto *OverloadedTy = llvm::VectorType::get(SVEBuiltinMemEltTy(TypeFlags),
+                                             SrcDataTy->getElementCount());
+
+  // In ACLE the source data is passed in the last argument, whereas in LLVM IR
+  // it's the first argument. Move it accordingly.
+  Ops.insert(Ops.begin(), Ops.pop_back_val());
+
+  Function *F = nullptr;
+  if (Ops[2]->getType()->isVectorTy())
+    // This is the "vector base, scalar offset" case. In order to uniquely
+    // map this built-in to an LLVM IR intrinsic, we need both the return type
+    // and the type of the vector base.
+    F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[2]->getType()});
+  else
+    // This is the "scalar base, vector offset case". The type of the offset
+    // is encoded in the name of the intrinsic. We only need to specify the
+    // return type in order to uniquely map this built-in to an LLVM IR
+    // intrinsic.
+    F = CGM.getIntrinsic(IntID, OverloadedTy);
+
+  // Pass 0 when the offset is missing. This can only be applied when using
+  // the "vector base" addressing mode for which ACLE allows no offset. The
+  // corresponding LLVM IR always requires an offset.
+  if (Ops.size() == 3) {
+    assert(Ops[1]->getType()->isVectorTy() && "Scalar base requires an offset");
+    Ops.push_back(ConstantInt::get(Int64Ty, 0));
+  }
+
+  // Truncation is needed when SrcDataTy != OverloadedTy. In other cases it's
+  // folded into a nop.
+  Ops[0] = Builder.CreateTrunc(Ops[0], OverloadedTy);
+
+  // At the ACLE level there's only one predicate type, svbool_t, which is
+  // mapped to <n x 16 x i1>. However, this might be incompatible with the
+  // actual type being stored. For example, when storing doubles (i64) the
+  // predicated should be <n x 2 x i1> instead. At the IR level the type of
+  // the predicate and the data being stored must match. Cast accordingly.
+  Ops[1] = EmitSVEPredicateCast(Ops[1], OverloadedTy);
+
+  // For "vector base, scalar index" scale the index so that it becomes a
+  // scalar offset.
+  if (!TypeFlags.isByteIndexed() && Ops[2]->getType()->isVectorTy()) {
+    unsigned BytesPerElt =
+        OverloadedTy->getElementType()->getScalarSizeInBits() / 8;
+    Value *Scale = ConstantInt::get(Int64Ty, BytesPerElt);
+    Ops[3] = Builder.CreateMul(Ops[3], Scale);
+  }
+
+  return Builder.CreateCall(F, Ops);
 }
 
 Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
@@ -7639,8 +7794,12 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                              TypeFlags.isZExtReturn());
   else if (TypeFlags.isStore())
     return EmitSVEMaskedStore(E, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isGatherLoad())
+    return EmitSVEGatherLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isScatterStore())
+    return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
-    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+    llvm::VectorType *OverloadedTy = getSVEType(TypeFlags);
 
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
