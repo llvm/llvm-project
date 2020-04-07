@@ -55,6 +55,8 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
+  
+  ScriptInterpreter *GetScriptInterpreter();
 
 private:
   std::string m_class_name;
