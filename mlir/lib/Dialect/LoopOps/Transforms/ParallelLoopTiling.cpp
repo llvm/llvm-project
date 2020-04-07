@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/LoopOps/Transforms.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -102,13 +102,8 @@ static bool getInnermostNestedLoops(Block *block,
 
 namespace {
 struct ParallelLoopTiling
-    : public PassWrapper<ParallelLoopTiling, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LoopParallelLoopTiling
-#include "mlir/Dialect/LoopOps/Passes.h.inc"
-
+    : public LoopParallelLoopTilingBase<ParallelLoopTiling> {
   ParallelLoopTiling() = default;
-  ParallelLoopTiling(const ParallelLoopTiling &) {}
   explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes) {
     this->tileSizes = tileSizes;
   }

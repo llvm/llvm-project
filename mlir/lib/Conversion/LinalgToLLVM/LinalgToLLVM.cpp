@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
@@ -28,8 +29,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -562,11 +561,7 @@ void mlir::populateLinalgToLLVMConversionPatterns(
 
 namespace {
 struct ConvertLinalgToLLVMPass
-    : public PassWrapper<ConvertLinalgToLLVMPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertLinalgToLLVM
-#include "mlir/Conversion/Passes.h.inc"
-
+    : public ConvertLinalgToLLVMBase<ConvertLinalgToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

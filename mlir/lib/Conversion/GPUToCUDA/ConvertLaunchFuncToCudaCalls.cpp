@@ -15,6 +15,7 @@
 
 #include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
 
+#include "../PassDetail.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
@@ -22,7 +23,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/DataLayout.h"
@@ -61,13 +61,8 @@ namespace {
 ///
 /// Intermediate data structures are allocated on the stack.
 class GpuLaunchFuncToCudaCallsPass
-    : public PassWrapper<GpuLaunchFuncToCudaCallsPass,
-                         OperationPass<ModuleOp>> {
+    : public ConvertGpuLaunchFuncToCudaCallsBase<GpuLaunchFuncToCudaCallsPass> {
 private:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertGpuLaunchFuncToCudaCalls
-#include "mlir/Conversion/Passes.h.inc"
-
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
   llvm::LLVMContext &getLLVMContext() {

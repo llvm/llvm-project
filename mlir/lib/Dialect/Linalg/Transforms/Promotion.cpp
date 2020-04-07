@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
@@ -21,8 +22,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -230,14 +229,8 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
 }
 
 namespace {
-struct LinalgPromotionPass
-    : public PassWrapper<LinalgPromotionPass, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgPromotion
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+struct LinalgPromotionPass : public LinalgPromotionBase<LinalgPromotionPass> {
   LinalgPromotionPass() = default;
-  LinalgPromotionPass(const LinalgPromotionPass &) {}
   LinalgPromotionPass(bool dynamicBuffers) {
     this->dynamicBuffers = dynamicBuffers;
   }

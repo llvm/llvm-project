@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,11 +58,7 @@ namespace {
 /// full unroll threshold was specified, in which case, fully unrolls all loops
 /// with trip count less than the specified threshold. The latter is for testing
 /// purposes, especially for testing outer loop unrolling.
-struct LoopUnroll : public PassWrapper<LoopUnroll, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineUnroll
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
   const Optional<unsigned> unrollFactor;
   const Optional<bool> unrollFull;
   // Callback to obtain unroll factors; if this has a callable target, takes

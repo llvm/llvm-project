@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
@@ -15,17 +16,12 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::quant;
 
 namespace {
-struct ConvertConstPass : public PassWrapper<ConvertConstPass, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_QuantConvertConst
-#include "mlir/Dialect/Quant/Passes.h.inc"
-
+struct ConvertConstPass : public QuantConvertConstBase<ConvertConstPass> {
   void runOnFunction() override;
 };
 

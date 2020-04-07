@@ -7,16 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 // This transformation pass performs a simple common sub-expression elimination
-// algorithm on operations within a function.
+// algorithm on operations within a region.
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/Dominance.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -25,6 +22,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
+
 using namespace mlir;
 
 namespace {
@@ -73,14 +71,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 
 namespace {
 /// Simple common sub-expression elimination.
-struct CSE : public PassWrapper<CSE, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_CSE
-#include "mlir/Transforms/Passes.h.inc"
-
-  CSE() = default;
-  CSE(const CSE &) {}
-
+struct CSE : public CSEBase<CSE> {
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,

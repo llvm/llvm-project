@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/Dominance.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
@@ -20,9 +21,7 @@
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -568,11 +567,7 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
 
 /// Pass that fuses generic ops on tensors. Used only for testing.
 struct FusionOfTensorOpsPass
-    : public PassWrapper<FusionOfTensorOpsPass, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgFusionOfTensorOps
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+    : public LinalgFusionOfTensorOpsBase<FusionOfTensorOpsPass> {
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
@@ -581,11 +576,7 @@ struct FusionOfTensorOpsPass
   };
 };
 
-struct LinalgFusionPass : public PassWrapper<LinalgFusionPass, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgFusion
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+struct LinalgFusionPass : public LinalgFusionBase<LinalgFusionPass> {
   void runOnFunction() override { fuseLinalgOpsGreedily(getFunction()); }
 };
 } // namespace

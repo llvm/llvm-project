@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
@@ -148,9 +149,7 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public PassWrapper<LowerABIAttributesPass,
-                         OperationPass<spirv::ModuleOp>> {
-private:
+    : public SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace

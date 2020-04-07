@@ -82,6 +82,9 @@ public:
   /// Return the command line argument of the pass.
   StringRef getArgument() const;
 
+  /// Return the name for the C++ base class.
+  StringRef getBaseClass() const;
+
   /// Return the short 1-line summary of the pass.
   StringRef getSummary() const;
 

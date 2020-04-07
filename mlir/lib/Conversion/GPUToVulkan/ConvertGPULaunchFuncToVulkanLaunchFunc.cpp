@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -23,7 +24,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -38,13 +38,9 @@ namespace {
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public PassWrapper<ConvertGpuLaunchFuncToVulkanLaunchFunc,
-                         OperationPass<ModuleOp>> {
+    : public ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
+          ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertGpuLaunchFuncToVulkanLaunchFunc
-#include "mlir/Conversion/Passes.h.inc"
-
   void runOnOperation() override;
 
 private:

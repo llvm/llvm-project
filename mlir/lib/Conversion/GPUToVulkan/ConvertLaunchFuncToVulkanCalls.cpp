@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -21,7 +22,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
-#include "mlir/Pass/Pass.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -58,13 +58,9 @@ namespace {
 /// * deinitVulkan         -- deinitializes vulkan runtime
 ///
 class VulkanLaunchFuncToVulkanCallsPass
-    : public PassWrapper<VulkanLaunchFuncToVulkanCallsPass,
-                         OperationPass<ModuleOp>> {
+    : public ConvertVulkanLaunchFuncToVulkanCallsBase<
+          VulkanLaunchFuncToVulkanCallsPass> {
 private:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertVulkanLaunchFuncToVulkanCalls
-#include "mlir/Conversion/Passes.h.inc"
-
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
   llvm::LLVMContext &getLLVMContext() {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -19,12 +19,7 @@
 using namespace mlir;
 
 namespace {
-struct LoopCoalescingPass
-    : public PassWrapper<LoopCoalescingPass, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LoopCoalescing
-#include "mlir/Transforms/Passes.h.inc"
-
+struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
   void runOnFunction() override {
     FuncOp func = getFunction();
 

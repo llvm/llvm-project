@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using loop::ParallelOp;
@@ -60,11 +60,7 @@ static void specializeLoopForUnrolling(ParallelOp op) {
 
 namespace {
 struct ParallelLoopSpecialization
-    : public PassWrapper<ParallelLoopSpecialization, FunctionPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LoopParallelLoopSpecialization
-#include "mlir/Dialect/LoopOps/Passes.h.inc"
-
+    : public LoopParallelLoopSpecializationBase<ParallelLoopSpecialization> {
   void runOnFunction() override {
     getFunction().walk([](ParallelOp op) { specializeLoopForUnrolling(op); });
   }

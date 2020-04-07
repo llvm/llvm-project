@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
@@ -80,9 +81,8 @@ static void populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns,
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public PassWrapper<DecorateSPIRVCompositeTypeLayoutPass,
-                         OperationPass<ModuleOp>> {
-private:
+    : public SPIRVCompositeTypeLayoutBase<
+          DecorateSPIRVCompositeTypeLayoutPass> {
   void runOnOperation() override;
 };
 } // namespace

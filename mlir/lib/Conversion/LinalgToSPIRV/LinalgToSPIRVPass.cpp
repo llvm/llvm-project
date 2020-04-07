@@ -7,21 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
+#include "../PassDetail.h"
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Linalg ops into SPIR-V ops.
-class LinalgToSPIRVPass
-    : public PassWrapper<LinalgToSPIRVPass, OperationPass<ModuleOp>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertLinalgToSPIRV
-#include "mlir/Conversion/Passes.h.inc"
-
+class LinalgToSPIRVPass : public ConvertLinalgToSPIRVBase<LinalgToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
