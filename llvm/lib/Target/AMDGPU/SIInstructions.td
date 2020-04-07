@@ -1255,7 +1255,7 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
-// FIXME: The implicit-def of scc from S_[X]OR_B32 is mishandled
+// FIXME: The implicit-def of scc from S_[X]OR/AND_B32 is mishandled
  // def : GCNPat <
 //   (fneg (f64 SReg_64:$src)),
 //   (REG_SEQUENCE SReg_64,
@@ -1273,6 +1273,17 @@ def : GCNPat <
 //     sub0,
 //     (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
 //               (S_MOV_B32 (i32 0x80000000))), // Set sign bit.
+//     sub1)
+// >;
+
+// FIXME: Use S_BITSET0_B32/B64?
+// def : GCNPat <
+//   (fabs (f64 SReg_64:$src)),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//                (i32 (S_MOV_B32 (i32 0x7fffffff)))),
 //     sub1)
 // >;
 
