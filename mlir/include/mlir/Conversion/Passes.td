@@ -225,8 +225,6 @@ def ConvertStandardToLLVM : Pass<"convert-std-to-llvm"> {
   }];
   let constructor = "mlir::createLowerToLLVMPass()";
   let options = [
-    Option<"useAlloca", "use-alloca", "bool", /*default=*/"false",
-           "Use `alloca` instead of `call @malloc` for converting std.alloc">,
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace FuncOp's MemRef arguments with bare pointers to the MemRef "

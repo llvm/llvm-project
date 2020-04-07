@@ -124,6 +124,56 @@ class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     ArithmeticOp<mnemonic, traits>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
 
+// Base class for memref allocating ops: alloca and alloc.
+//
+//   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
+//
+class AllocLikeOp<string mnemonic, list<OpTrait> traits = []> :
+    Std_Op<mnemonic, traits> {
+
+  let arguments = (ins Variadic<Index>:$value,
+                   Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
+  let results = (outs AnyMemRef);
+
+  let builders = [OpBuilder<
+    "Builder *builder, OperationState &result, MemRefType memrefType", [{
+       result.types.push_back(memrefType);
+     }]>,
+    OpBuilder<
+    "Builder *builder, OperationState &result, MemRefType memrefType, " #
+    "ValueRange operands, IntegerAttr alignment = IntegerAttr()", [{
+       result.addOperands(operands);
+       result.types.push_back(memrefType);
+       if (alignment)
+         result.addAttribute(getAlignmentAttrName(), alignment);
+     }]>];
+
+  let extraClassDeclaration = [{
+    static StringRef getAlignmentAttrName() { return "alignment"; }
+
+    MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
+
+    /// Returns the number of symbolic operands (the ones in square brackets),
+    /// which bind to the symbols of the memref's layout map.
+    unsigned getNumSymbolicOperands() {
+      return getNumOperands() - getType().getNumDynamicDims();
+    }
+
+    /// Returns the symbolic operands (the ones in square brackets), which bind
+    /// to the symbols of the memref's layout map.
+    operand_range getSymbolicOperands() {
+      return {operand_begin() + getType().getNumDynamicDims(), operand_end()};
+    }
+
+    /// Returns the dynamic sizes for this alloc operation if specified.
+    operand_range getDynamicSizes() { return getOperands(); }
+  }];
+
+  let parser = [{ return ::parseAllocLikeOp(parser, result); }];
+
+  let hasCanonicalizer = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // AbsFOp
 //===----------------------------------------------------------------------===//
@@ -225,7 +275,7 @@ def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
 // AllocOp
 //===----------------------------------------------------------------------===//
 
-def AllocOp : Std_Op<"alloc"> {
+def AllocOp : AllocLikeOp<"alloc"> {
   let summary = "memory allocation operation";
   let description = [{
     The `alloc` operation allocates a region of memory, as specified by its
@@ -234,7 +284,7 @@ def AllocOp : Std_Op<"alloc"> {
     Example:
 
     ```mlir
-    %0 = alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    %0 = alloc() : memref<8x64xf32, 1>
     ```
 
     The optional list of dimension operands are bound to the dynamic dimensions
@@ -242,7 +292,7 @@ def AllocOp : Std_Op<"alloc"> {
     bound to the second dimension of the memref (which is dynamic).
 
     ```mlir
-    %0 = alloc(%d) : memref<8x?xf32, (d0, d1) -> (d0, d1), 1>
+    %0 = alloc(%d) : memref<8x?xf32, 1>
     ```
 
     The optional list of symbol operands are bound to the symbols of the
@@ -250,7 +300,8 @@ def AllocOp : Std_Op<"alloc"> {
     the symbol 's0' in the affine map specified in the allocs memref type.
 
     ```mlir
-    %0 = alloc()[%s] : memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+    %0 = alloc()[%s] : memref<8x64xf32,
+                              affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
     ```
 
     This operation returns a single ssa value of memref type, which can be used
@@ -262,49 +313,49 @@ def AllocOp : Std_Op<"alloc"> {
 
     ```mlir
     %0 = alloc()[%s] {alignment = 8} :
-      memref<8x64xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1>
+      memref<8x64xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
     ```
   }];
+}
 
-  let arguments = (ins Variadic<Index>:$value,
-                   Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
-  let results = (outs AnyMemRef);
+//===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
 
-  let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, MemRefType memrefType", [{
-       result.types.push_back(memrefType);
-     }]>,
-    OpBuilder<
-    "Builder *builder, OperationState &result, MemRefType memrefType, " #
-    "ArrayRef<Value> operands, IntegerAttr alignment = IntegerAttr()", [{
-       result.addOperands(operands);
-       result.types.push_back(memrefType);
-       if (alignment)
-         result.addAttribute(getAlignmentAttrName(), alignment);
-     }]>];
+def AllocaOp : AllocLikeOp<"alloca"> {
+  let summary = "stack memory allocation operation";
+  let description = [{
+    The `alloca` operation allocates memory on the stack, to be automatically
+    released when the stack frame is discarded. The amount of memory allocated
+    is specified by its memref and additional operands. For example:
 
-  let extraClassDeclaration = [{
-    static StringRef getAlignmentAttrName() { return "alignment"; }
+    ```mlir
+		%0 = alloca() : memref<8x64xf32>
+    ```
 
-    MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
+    The optional list of dimension operands are bound to the dynamic dimensions
+    specified in its memref type. In the example below, the SSA value '%d' is
+    bound to the second dimension of the memref (which is dynamic).
 
-    /// Returns the number of symbolic operands (the ones in square brackets),
-    /// which bind to the symbols of the memref's layout map.
-    unsigned getNumSymbolicOperands() {
-      return getNumOperands() - getType().getNumDynamicDims();
-    }
+    ```mlir
+		%0 = alloca(%d) : memref<8x?xf32>
+    ```
 
-    /// Returns the symbolic operands (the ones in square brackets), which bind
-    /// to the symbols of the memref's layout map.
-    operand_range getSymbolicOperands() {
-      return {operand_begin() + getType().getNumDynamicDims(), operand_end()};
-    }
+    The optional list of symbol operands are bound to the symbols of the
+    memref's affine map. In the example below, the SSA value '%s' is bound to
+    the symbol 's0' in the affine map specified in the allocs memref type.
 
-    /// Returns the dynamic sizes for this alloc operation if specified.
-    operand_range getDynamicSizes() { return getOperands(); }
+    ```mlir
+		%0 = alloca()[%s] : memref<8x64xf32,
+                               affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>>
+    ```
+
+    This operation returns a single SSA value of memref type, which can be used
+    by subsequent load and store operations. An optional alignment attribute, if
+    specified, guarantees alignment at least to that boundary. If not specified,
+    an alignment on any convenient boundary compatible with the type will be
+    chosen.
   }];
-
-  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
