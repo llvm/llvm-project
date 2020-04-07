@@ -40,7 +40,7 @@ define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonl
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
-; P8-NEXT:    xxpermdi vs0, f0, f0, 2
+; P8-NEXT:    xxswapd vs0, f0
 ; P8-NEXT:    xxspltw v2, vs0, 3
 ; P8-NEXT:    stvx v2, 0, r3
 ; P8-NEXT:    blr
@@ -65,7 +65,7 @@ define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
-; P8-NEXT:    xxpermdi vs0, f0, f0, 2
+; P8-NEXT:    xxswapd vs0, f0
 ; P8-NEXT:    xxspltw v2, vs0, 3
 ; P8-NEXT:    stvx v2, 0, r3
 ; P8-NEXT:    blr
@@ -110,7 +110,7 @@ define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ; P8-LABEL: unadjusted_lxvwsx:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lfiwzx f0, 0, r3
-; P8-NEXT:    xxpermdi vs0, f0, f0, 2
+; P8-NEXT:    xxswapd vs0, f0
 ; P8-NEXT:    xxspltw v2, vs0, 3
 ; P8-NEXT:    blr
   entry:
