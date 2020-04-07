@@ -68,7 +68,7 @@
 ; CODEGEN:        i32 @main()
 ; CODEGEN-NEXT:     ret i32 3
 
-; IMPORT2: @gBar = available_externally dso_local local_unnamed_addr global i32 2, align 4
+; IMPORT2: @gBar = available_externally local_unnamed_addr global i32 2, align 4
 
 ; CODEGEN2:      i32 @main2
 ; CODEGEN2-NEXT:   %1 = tail call i32 @rand()
