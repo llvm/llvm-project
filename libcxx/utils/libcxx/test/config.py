@@ -1070,9 +1070,6 @@ class Configuration(object):
                                                      pipes.quote(executor),
                                                      ' '.join(exec_args))))
         sub.append(('%{run}', '%{exec} %t.exe'))
-        # Configure not program substitutions
-        not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
-        sub.append(('%{not}', '{} {}'.format(pipes.quote(sys.executable), pipes.quote(not_py))))
         if self.get_lit_conf('libcxx_gdb'):
             sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 
