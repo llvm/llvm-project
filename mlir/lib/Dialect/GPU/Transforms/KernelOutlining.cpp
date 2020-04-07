@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
@@ -17,7 +18,6 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
@@ -215,12 +215,8 @@ namespace {
 /// a separate pass. The external functions can then be annotated with the
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass
-    : public PassWrapper<GpuKernelOutliningPass, OperationPass<ModuleOp>> {
+    : public GpuKernelOutliningBase<GpuKernelOutliningPass> {
 public:
-/// Include the generated pass utilities.
-#define GEN_PASS_GpuKernelOutlining
-#include "mlir/Dialect/GPU/Passes.h.inc"
-
   void runOnOperation() override {
     SymbolTable symbolTable(getOperation());
     bool modified = false;

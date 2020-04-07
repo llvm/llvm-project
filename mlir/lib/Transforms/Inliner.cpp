@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffects.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -589,11 +589,7 @@ static void inlineSCC(Inliner &inliner, CGUseList &useList,
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct InlinerPass : public PassWrapper<InlinerPass, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_Inliner
-#include "mlir/Transforms/Passes.h.inc"
-
+struct InlinerPass : public InlinerBase<InlinerPass> {
   void runOnOperation() override {
     CallGraph &cg = getAnalysis<CallGraph>();
     auto *context = &getContext();

@@ -15,7 +15,7 @@ include "mlir/Pass/PassBase.td"
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
-def ConvertAffineToStandard : Pass<"lower-affine"> {
+def ConvertAffineToStandard : FunctionPass<"lower-affine"> {
   let summary = "Lower Affine operations to a combination of Standard and Loop "
                 "operations";
   let description = [{
@@ -72,7 +72,7 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
 // AVX512ToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertAVX512ToLLVM : Pass<"convert-avx512-to-llvm"> {
+def ConvertAVX512ToLLVM : Pass<"convert-avx512-to-llvm", "ModuleOp"> {
   let summary = "Convert the operations from the avx512 dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertAVX512ToLLVMPass()";
@@ -82,7 +82,7 @@ def ConvertAVX512ToLLVM : Pass<"convert-avx512-to-llvm"> {
 // GPUToCUDA
 //===----------------------------------------------------------------------===//
 
-def ConvertGpuLaunchFuncToCudaCalls : Pass<"launch-func-to-cuda"> {
+def ConvertGpuLaunchFuncToCudaCalls : Pass<"launch-func-to-cuda", "ModuleOp"> {
   let summary = "Convert all launch_func ops to CUDA runtime calls";
   let constructor = "mlir::createConvertGpuLaunchFuncToCudaCallsPass()";
 }
@@ -91,7 +91,7 @@ def ConvertGpuLaunchFuncToCudaCalls : Pass<"launch-func-to-cuda"> {
 // GPUToNVVM
 //===----------------------------------------------------------------------===//
 
-def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm"> {
+def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
 }
@@ -100,7 +100,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm"> {
 // GPUToROCDL
 //===----------------------------------------------------------------------===//
 
-def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl"> {
+def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let summary = "Generate ROCDL operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
 }
@@ -109,7 +109,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl"> {
 // GPUToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv"> {
+def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
   let summary = "Convert GPU dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertGPUToSPIRVPass()";
 }
@@ -119,12 +119,13 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : Pass<"convert-gpu-launch-to-vulkan-launch"> {
+    : Pass<"convert-gpu-launch-to-vulkan-launch", "ModuleOp"> {
   let summary = "Convert gpu.launch_func to vulkanLaunch external call";
   let constructor = "mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass()";
 }
 
-def ConvertVulkanLaunchFuncToVulkanCalls : Pass<"launch-func-to-vulkan"> {
+def ConvertVulkanLaunchFuncToVulkanCalls
+    : Pass<"launch-func-to-vulkan", "ModuleOp"> {
   let summary = "Convert vulkanLaunch external call to Vulkan runtime external "
                 "calls";
   let constructor = "mlir::createConvertVulkanLaunchFuncToVulkanCallsPass()";
@@ -134,7 +135,7 @@ def ConvertVulkanLaunchFuncToVulkanCalls : Pass<"launch-func-to-vulkan"> {
 // LinalgToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertLinalgToLLVM : Pass<"convert-linalg-to-llvm"> {
+def ConvertLinalgToLLVM : Pass<"convert-linalg-to-llvm", "ModuleOp"> {
   let summary = "Convert the operations from the linalg dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertLinalgToLLVMPass()";
@@ -144,7 +145,7 @@ def ConvertLinalgToLLVM : Pass<"convert-linalg-to-llvm"> {
 // LinalgToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv"> {
+def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv", "ModuleOp"> {
   let summary = "Convert Linalg ops to SPIR-V ops";
   let constructor = "mlir::createLinalgToSPIRVPass()";
 }
@@ -163,7 +164,7 @@ def ConvertLoopToStandard : Pass<"convert-loop-to-std"> {
 // LoopsToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertSimpleLoopsToGPU : Pass<"convert-loops-to-gpu"> {
+def ConvertSimpleLoopsToGPU : FunctionPass<"convert-loops-to-gpu"> {
   let summary = "Convert top-level loops to GPU kernels";
   let constructor = "mlir::createSimpleLoopsToGPUPass()";
   let options = [
@@ -174,7 +175,7 @@ def ConvertSimpleLoopsToGPU : Pass<"convert-loops-to-gpu"> {
   ];
 }
 
-def ConvertLoopsToGPU : Pass<"convert-loop-op-to-gpu"> {
+def ConvertLoopsToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
   let summary = "Convert top-level loop::ForOp to GPU kernels";
   let constructor = "mlir::createLoopToGPUPass()";
   let options = [
@@ -196,7 +197,7 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
 // StandardToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertStandardToLLVM : Pass<"convert-std-to-llvm"> {
+def ConvertStandardToLLVM : Pass<"convert-std-to-llvm", "ModuleOp"> {
   let summary = "Convert scalar and vector operations from the Standard to the "
                 "LLVM dialect";
   let description = [{
@@ -233,7 +234,7 @@ def ConvertStandardToLLVM : Pass<"convert-std-to-llvm"> {
            "Emit wrappers for C-compatible pointer-to-struct memref "
            "descriptors">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=*/"kDeriveIndexBitwidthFromDataLayout",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
   ];
 }
@@ -247,7 +248,7 @@ def LegalizeStandardForSPIRV : Pass<"legalize-std-for-spirv"> {
   let constructor = "mlir::createLegalizeStdOpsForSPIRVLoweringPass()";
 }
 
-def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv"> {
+def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
   let summary = "Convert Standard Ops to SPIR-V dialect";
   let constructor = "mlir::createConvertStandardToSPIRVPass()";
 }
@@ -256,7 +257,7 @@ def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv"> {
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm"> {
+def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertVectorToLLVMPass()";

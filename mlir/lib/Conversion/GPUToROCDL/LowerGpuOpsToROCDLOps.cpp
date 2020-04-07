@@ -21,6 +21,7 @@
 
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
+#include "../PassDetail.h"
 
 using namespace mlir;
 
@@ -32,13 +33,8 @@ namespace {
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
 class LowerGpuOpsToROCDLOpsPass
-    : public PassWrapper<LowerGpuOpsToROCDLOpsPass,
-                         OperationPass<gpu::GPUModuleOp>> {
+    : public ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
 public:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertGpuOpsToROCDLOps
-#include "mlir/Conversion/Passes.h.inc"
-
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 

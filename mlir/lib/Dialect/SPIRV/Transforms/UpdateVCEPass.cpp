@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -26,9 +27,7 @@ using namespace mlir;
 namespace {
 /// Pass to deduce minimal version/extension/capability requirements for a
 /// spirv::ModuleOp.
-class UpdateVCEPass final
-    : public PassWrapper<UpdateVCEPass, OperationPass<spirv::ModuleOp>> {
-private:
+class UpdateVCEPass final : public SPIRVUpdateVCEBase<UpdateVCEPass> {
   void runOnOperation() override;
 };
 } // namespace

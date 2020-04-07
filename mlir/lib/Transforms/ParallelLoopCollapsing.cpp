@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -21,13 +20,7 @@ using namespace mlir;
 
 namespace {
 struct ParallelLoopCollapsing
-    : public PassWrapper<ParallelLoopCollapsing, OperationPass<>> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ParallelLoopCollapsing
-#include "mlir/Transforms/Passes.h.inc"
-
-  ParallelLoopCollapsing() = default;
-  ParallelLoopCollapsing(const ParallelLoopCollapsing &) {}
+    : public ParallelLoopCollapsingBase<ParallelLoopCollapsing> {
   void runOnOperation() override {
     Operation *module = getOperation();
 
@@ -45,7 +38,6 @@ struct ParallelLoopCollapsing
     });
   }
 };
-
 } // namespace
 
 std::unique_ptr<Pass> mlir::createParallelLoopCollapsingPass() {
