@@ -473,6 +473,8 @@ namespace llvm {
   /// Create IR Type Promotion pass. \see TypePromotion.cpp
   FunctionPass *createTypePromotionPass();
 
+  /// Creates MIR Debugify pass. \see MachineDebugify.cpp
+  ModulePass *createDebugifyMachineModulePass();
 } // End llvm namespace
 
 #endif
