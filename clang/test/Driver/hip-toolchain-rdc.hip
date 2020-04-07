@@ -44,7 +44,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV1:".*-gfx803-.*o"]]
 
-// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[OBJ_DEV1]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -77,7 +77,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV2:".*-gfx900-.*o"]]
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[OBJ_DEV2]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"

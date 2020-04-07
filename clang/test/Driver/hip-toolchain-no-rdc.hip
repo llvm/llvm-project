@@ -38,7 +38,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV_A_803:".*-gfx803-.*o"]]
 
-// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_803:.*out]]" [[OBJ_DEV_A_803]]
 
 //
@@ -67,7 +67,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV_A_900:".*-gfx900-.*o"]]
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_900:.*out]]" [[OBJ_DEV_A_900]]
 
 //
@@ -112,7 +112,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV_B_803:".*-gfx803-.*o"]]
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_B_803:.*out]]" [[OBJ_DEV_B_803]]
 
 //
@@ -141,7 +141,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV_B_900:".*-gfx900-.*o"]]
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_B_900:.*out]]" [[OBJ_DEV_B_900]]
 
 //
