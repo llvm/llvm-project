@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  FrontendOpenMP
   )
 
 add_clang_library(findAllSymbols
