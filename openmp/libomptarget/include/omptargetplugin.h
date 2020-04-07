@@ -58,15 +58,21 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 // case an error occurred on the target device.
 void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr);
 
-// Pass the data content to the target device using the target address.
-// In case of success, return zero. Otherwise, return an error code.
+// Pass the data content to the target device using the target address. If
+// AsyncInfoPtr is nullptr, it is synchronous; otherwise it is asynchronous.
+// However, AsyncInfoPtr may be ignored on some platforms, like x86_64. In that
+// case, it is synchronous. In case of success, return zero. Otherwise, return
+// an error code.
 int32_t __tgt_rtl_data_submit(int32_t ID, void *TargetPtr, void *HostPtr,
-                              int64_t Size);
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
-// Retrieve the data content from the target device using its address.
-// In case of success, return zero. Otherwise, return an error code.
+// Retrieve the data content from the target device using its address. If
+// AsyncInfoPtr is nullptr, it is synchronous; otherwise it is asynchronous.
+// However, AsyncInfoPtr may be ignored on some platforms, like x86_64. In that
+// case, it is synchronous. In case of success, return zero. Otherwise, return
+// an error code.
 int32_t __tgt_rtl_data_retrieve(int32_t ID, void *HostPtr, void *TargetPtr,
-                                int64_t Size);
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
 // De-allocate the data referenced by target ptr on the device. In case of
 // success, return zero. Otherwise, return an error code.
@@ -75,17 +81,28 @@ int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr);
 // Transfer control to the offloaded entry Entry on the target device.
 // Args and Offsets are arrays of NumArgs size of target addresses and
 // offsets. An offset should be added to the target address before passing it
-// to the outlined function on device side. In case of success, return zero.
-// Otherwise, return an error code.
+// to the outlined function on device side. If AsyncInfoPtr is nullptr, it is
+// synchronous; otherwise it is asynchronous. However, AsyncInfoPtr may be
+// ignored on some platforms, like x86_64. In that case, it is synchronous. In
+// case of success, return zero. Otherwise, return an error code.
 int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
-                                    ptrdiff_t *Offsets, int32_t NumArgs);
+                                    ptrdiff_t *Offsets, int32_t NumArgs,
+                                    __tgt_async_info *AsyncInfoPtr);
 
 // Similar to __tgt_rtl_run_target_region, but additionally specify the
-// number of teams to be created and a number of threads in each team.
+// number of teams to be created and a number of threads in each team. If
+// AsyncInfoPtr is nullptr, it is synchronous; otherwise it is asynchronous.
+// However, AsyncInfoPtr may be ignored on some platforms, like x86_64. In that
+// case, it is synchronous.
 int32_t __tgt_rtl_run_target_team_region(int32_t ID, void *Entry, void **Args,
                                          ptrdiff_t *Offsets, int32_t NumArgs,
                                          int32_t NumTeams, int32_t ThreadLimit,
-                                         uint64_t loop_tripcount);
+                                         uint64_t loop_tripcount,
+                                         __tgt_async_info *AsyncInfoPtr);
+
+// Device synchronization. In case of success, return zero. Otherwise, return an
+// error code.
+int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfoPtr);
 
 #ifdef __cplusplus
 }
