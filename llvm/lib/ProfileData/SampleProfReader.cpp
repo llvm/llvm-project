@@ -478,8 +478,6 @@ std::error_code SampleProfileReaderExtBinary::readOneSection(
   case SecProfSummary:
     if (std::error_code EC = readSummary())
       return EC;
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
-      Summary->setPartialProfile(true);
     break;
   case SecNameTable:
     if (std::error_code EC = readNameTableSec(
@@ -833,40 +831,11 @@ uint64_t SampleProfileReaderExtBinaryBase::getFileSize() {
   return FileSize;
 }
 
-static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
-  std::string Flags;
-  if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress))
-    Flags.append("{compressed,");
-  else
-    Flags.append("{");
-
-  switch (Entry.Type) {
-  case SecNameTable:
-    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))
-      Flags.append("md5,");
-    break;
-  case SecProfSummary:
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
-      Flags.append("partial,");
-    break;
-  default:
-    break;
-  }
-  char &last = Flags.back();
-  if (last == ',')
-    last = '}';
-  else
-    Flags.append("}");
-  return Flags;
-}
-
 bool SampleProfileReaderExtBinaryBase::dumpSectionInfo(raw_ostream &OS) {
   uint64_t TotalSecsSize = 0;
   for (auto &Entry : SecHdrTable) {
     OS << getSecName(Entry.Type) << " - Offset: " << Entry.Offset
-       << ", Size: " << Entry.Size << ", Flags: " << getSecFlagsStr(Entry)
-       << "\n";
-    ;
+       << ", Size: " << Entry.Size << "\n";
     TotalSecsSize += getSectionSize(Entry.Type);
   }
   uint64_t HeaderSize = SecHdrTable.front().Offset;
