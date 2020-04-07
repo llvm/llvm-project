@@ -1,5 +1,4 @@
 // RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
-// RUN: mlir-opt -convert-std-to-llvm='use-alloca=1' %s | FileCheck %s --check-prefix=ALLOCA
 // RUN: mlir-opt -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // BAREPTR-LABEL: func @check_noalias
@@ -67,7 +66,6 @@ func @check_static_return_with_offset(%static : memref<32x18xf32, offset:7, stri
 // -----
 
 // CHECK-LABEL: func @zero_d_alloc() -> !llvm<"{ float*, float*, i64 }"> {
-// ALLOCA-LABEL: func @zero_d_alloc() -> !llvm<"{ float*, float*, i64 }"> {
 // BAREPTR-LABEL: func @zero_d_alloc() -> !llvm<"{ float*, float*, i64 }"> {
 func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
@@ -83,10 +81,6 @@ func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[1] : !llvm<"{ float*, float*, i64 }">
 // CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm<"{ float*, float*, i64 }">
-
-// ALLOCA-NOT: malloc
-//     ALLOCA: alloca
-// ALLOCA-NOT: malloc
 
 // BAREPTR-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm<"float*">
@@ -202,6 +196,32 @@ func @static_alloc() -> memref<32x18xf32> {
 // BAREPTR-NEXT: %[[allocated:.*]] = llvm.call @malloc(%[[bytes]]) : (!llvm.i64) -> !llvm<"i8*">
 // BAREPTR-NEXT: llvm.bitcast %[[allocated]] : !llvm<"i8*"> to !llvm<"float*">
  %0 = alloc() : memref<32x18xf32>
+ return %0 : memref<32x18xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @static_alloca() -> !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }"> {
+func @static_alloca() -> memref<32x18xf32> {
+// CHECK-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
+// CHECK-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : !llvm.i64
+// CHECK-NEXT:  %[[num_elems:.*]] = llvm.mul %0, %1 : !llvm.i64
+// CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm<"float*">
+// CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm<"float*">, !llvm.i64) -> !llvm<"float*">
+// CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm<"float*"> to !llvm.i64
+// CHECK-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
+// CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[bytes]] x !llvm.float : (!llvm.i64) -> !llvm<"float*">
+ %0 = alloca() : memref<32x18xf32>
+
+ // Test with explicitly specified alignment. llvm.alloca takes care of the
+ // alignment. The same pointer is thus used for allocation and aligned
+ // accesses.
+ // CHECK: %[[alloca_aligned:.*]] = llvm.alloca %{{.*}} x !llvm.float {alignment = 32 : i64} : (!llvm.i64) -> !llvm<"float*">
+ // CHECK: %[[desc:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+ // CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+ // CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+ alloca() {alignment = 32} : memref<32x18xf32>
  return %0 : memref<32x18xf32>
 }
 
