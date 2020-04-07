@@ -320,7 +320,7 @@ void SwiftASTManipulatorBase::DoInitialization() {
     if (do_stmt) {
       // There should only be one catch:
       assert(m_do_stmt->getCatches().size() == 1);
-      swift::CatchStmt *our_catch = m_do_stmt->getCatches().front();
+      swift::CaseStmt *our_catch = m_do_stmt->getCatches().front();
       if (our_catch)
         m_catch_stmt = our_catch;
     }
