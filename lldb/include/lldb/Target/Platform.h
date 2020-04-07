@@ -434,6 +434,10 @@ public:
     return lldb_private::ConstString();
   }
 
+  virtual llvm::StringRef GetSDKPath(lldb_private::XcodeSDK sdk) {
+    return {};
+  }
+
   const std::string &GetRemoteURL() const { return m_remote_url; }
 
   bool IsHost() const {
