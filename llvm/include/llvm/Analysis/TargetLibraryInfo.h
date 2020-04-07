@@ -48,6 +48,23 @@ struct VecDesc {
 class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
+public:
+  /// List of known vector-functions libraries.
+  ///
+  /// The vector-functions library defines, which functions are vectorizable
+  /// and with which factor. The library can be specified by either frontend,
+  /// or a commandline option, and then used by
+  /// addVectorizableFunctionsFromVecLib for filling up the tables of
+  /// vectorizable functions.
+  enum VectorLibrary {
+    Accelerate, // Use Accelerate framework.
+    MASSV,      // IBM MASS vector library.
+    SVML,       // Intel short vector math library.
+    NumVecLibs, // Number of supported vector libraries.
+    NoLibrary   // Don't use any vector library.
+  };
+
+private:
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
@@ -66,32 +83,31 @@ class TargetLibraryInfoImpl {
     return static_cast<AvailabilityState>((AvailableArray[F/4] >> 2*(F&3)) & 3);
   }
 
-  /// Vectorization descriptors - sorted by ScalarFnName.
-  std::vector<VecDesc> VectorDescs;
-  /// Scalarization descriptors - same content as VectorDescs but sorted based
-  /// on VectorFnName rather than ScalarFnName.
-  std::vector<VecDesc> ScalarDescs;
+  /// Vector library descriptor for all supported ones.
+  struct VectorLibraryDescriptors {
+    /// Vectorization descriptors - sorted by ScalarFnName.
+    std::vector<VecDesc> VectorDescs;
+    /// Scalarization descriptors - same content as VectorDescs but sorted based
+    /// on VectorFnName rather than ScalarFnName.
+    std::vector<VecDesc> ScalarDescs;
+  } VecLibDescs[NumVecLibs];
 
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                               const DataLayout *DL) const;
 
-public:
-  /// List of known vector-functions libraries.
-  ///
-  /// The vector-functions library defines, which functions are vectorizable
-  /// and with which factor. The library can be specified by either frontend,
-  /// or a commandline option, and then used by
-  /// addVectorizableFunctionsFromVecLib for filling up the tables of
-  /// vectorizable functions.
-  enum VectorLibrary {
-    NoLibrary,  // Don't use any vector library.
-    Accelerate, // Use Accelerate framework.
-    MASSV,      // IBM MASS vector library.
-    SVML        // Intel short vector math library.
-  };
+  /// Add a set of scalar -> vector mappings, queryable via
+  /// getVectorizedFunction and getScalarizedFunction.
+  void addVectorizableFunctions(ArrayRef<VecDesc> Fns,
+                                VectorLibraryDescriptors &VetLibDescs);
 
+  /// Calls addVectorizableFunctionsFromVecLib with a known preset of functions
+  /// for the given vector library.
+  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+                                          VectorLibraryDescriptors &VetLibDesc);
+
+public:
   TargetLibraryInfoImpl();
   explicit TargetLibraryInfoImpl(const Triple &T);
 
@@ -141,39 +157,38 @@ public:
   /// This can be used for options like -fno-builtin.
   void disableAllFunctions();
 
-  /// Add a set of scalar -> vector mappings, queryable via
-  /// getVectorizedFunction and getScalarizedFunction.
-  void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
-
-  /// Calls addVectorizableFunctions with a known preset of functions for the
-  /// given vector library.
-  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
+  /// Populate VectorLibraryDescriptors for all supported vector libraries.
+  void addAllVectorizableFunctions();
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
-  bool isFunctionVectorizable(StringRef F, unsigned VF) const {
-    return !getVectorizedFunction(F, VF).empty();
+  bool isFunctionVectorizable(StringRef F, unsigned VF,
+                              VectorLibrary vecLib) const {
+    return !getVectorizedFunction(F, VF, vecLib).empty();
   }
 
   /// Return true if the function F has a vector equivalent with any
   /// vectorization factor.
-  bool isFunctionVectorizable(StringRef F) const;
+  bool isFunctionVectorizable(StringRef F, VectorLibrary vecLib) const;
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, unsigned VF) const;
+  StringRef getVectorizedFunction(StringRef F, unsigned VF,
+                                  VectorLibrary vecLib) const;
 
   /// Return true if the function F has a scalar equivalent, and set VF to be
   /// the vectorization factor.
-  bool isFunctionScalarizable(StringRef F, unsigned &VF) const {
-    return !getScalarizedFunction(F, VF).empty();
+  bool isFunctionScalarizable(StringRef F, unsigned &VF,
+                              VectorLibrary vecLib) const {
+    return !getScalarizedFunction(F, VF, vecLib).empty();
   }
 
   /// Return the name of the equivalent of F, scalarized. If no such mapping
   /// exists, return the empty string.
   ///
   /// Set VF to the vectorization factor.
-  StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
+  StringRef getScalarizedFunction(StringRef F, unsigned &VF,
+                                  VectorLibrary vecLib) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -201,7 +216,7 @@ public:
 
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
-  unsigned getWidestVF(StringRef ScalarF) const;
+  unsigned getWidestVF(StringRef ScalarF, VectorLibrary vecLib) const;
 };
 
 /// Provides information about what library functions are available for
@@ -216,63 +231,66 @@ class TargetLibraryInfo {
   /// The global (module level) TLI info.
   const TargetLibraryInfoImpl *Impl;
 
+  /// Vector library available for vectorization.
+  TargetLibraryInfoImpl::VectorLibrary VectLibrary =
+      TargetLibraryInfoImpl::NoLibrary;
+
   /// Support for -fno-builtin* options as function attributes, overrides
   /// information in global TargetLibraryInfoImpl.
   BitVector OverrideAsUnavailable;
 
+  TargetLibraryInfoImpl::VectorLibrary
+  getVecLibFromName(const StringRef &VecLibName) {
+    if (VecLibName == "Accelerate")
+      return TargetLibraryInfoImpl::Accelerate;
+    else if (VecLibName == "MASSV")
+      return TargetLibraryInfoImpl::MASSV;
+    else if (VecLibName == "SVML")
+      return TargetLibraryInfoImpl::SVML;
+    return TargetLibraryInfoImpl::NoLibrary;
+  }
+
 public:
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
-                             Optional<const Function *> F = None)
-      : Impl(&Impl), OverrideAsUnavailable(NumLibFuncs) {
-    if (!F)
-      return;
-    if ((*F)->hasFnAttribute("no-builtins"))
-      disableAllFunctions();
-    else {
-      // Disable individual libc/libm calls in TargetLibraryInfo.
-      LibFunc LF;
-      AttributeSet FnAttrs = (*F)->getAttributes().getFnAttributes();
-      for (const Attribute &Attr : FnAttrs) {
-        if (!Attr.isStringAttribute())
-          continue;
-        auto AttrStr = Attr.getKindAsString();
-        if (!AttrStr.consume_front("no-builtin-"))
-          continue;
-        if (getLibFunc(AttrStr, LF))
-          setUnavailable(LF);
-      }
-    }
-  }
+                             Optional<const Function *> F = None);
 
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+      : Impl(TLI.Impl), VectLibrary(TLI.VectLibrary),
+        OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
   TargetLibraryInfo(TargetLibraryInfo &&TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+      : Impl(TLI.Impl), VectLibrary(TLI.VectLibrary),
+        OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) {
     Impl = TLI.Impl;
+    VectLibrary = TLI.VectLibrary;
     OverrideAsUnavailable = TLI.OverrideAsUnavailable;
     return *this;
   }
   TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
     Impl = TLI.Impl;
+    VectLibrary = TLI.VectLibrary;
     OverrideAsUnavailable = TLI.OverrideAsUnavailable;
     return *this;
   }
 
   /// Determine whether a callee with the given TLI can be inlined into
-  /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
-  /// allow inlining into a caller with a superset of the callee's nobuiltin
-  /// attributes, which is conservatively correct.
+  /// caller with this TLI, based on 'nobuiltin', `veclib` attributes.
+  /// When requested, allow inlining into a caller with a superset of the
+  /// callee's attributes, which is conservatively correct.
   bool areInlineCompatible(const TargetLibraryInfo &CalleeTLI,
                            bool AllowCallerSuperset) const {
     if (!AllowCallerSuperset)
-      return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
+      return VectLibrary == CalleeTLI.VectLibrary &&
+             OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
     BitVector B = OverrideAsUnavailable;
     B |= CalleeTLI.OverrideAsUnavailable;
-    // We can inline if the union of the caller and callee's nobuiltin
-    // attributes is no stricter than the caller's nobuiltin attributes.
-    return B == OverrideAsUnavailable;
+    // We can inline if the union of the caller and callee's attributes
+    // is no stricter than the caller's attributes.
+    bool VecLibCompatible =
+        (VectLibrary == CalleeTLI.VectLibrary) ||
+        CalleeTLI.VectLibrary == TargetLibraryInfoImpl::NoLibrary;
+    return B == OverrideAsUnavailable && VecLibCompatible;
   }
 
   /// Searches for a particular function name.
@@ -317,13 +335,13 @@ public:
     return getState(F) != TargetLibraryInfoImpl::Unavailable;
   }
   bool isFunctionVectorizable(StringRef F, unsigned VF) const {
-    return Impl->isFunctionVectorizable(F, VF);
+    return Impl->isFunctionVectorizable(F, VF, VectLibrary);
   }
   bool isFunctionVectorizable(StringRef F) const {
-    return Impl->isFunctionVectorizable(F);
+    return Impl->isFunctionVectorizable(F, VectLibrary);
   }
   StringRef getVectorizedFunction(StringRef F, unsigned VF) const {
-    return Impl->getVectorizedFunction(F, VF);
+    return Impl->getVectorizedFunction(F, VF, VectLibrary);
   }
 
   /// Tests if the function is both available and a candidate for optimized code
@@ -408,7 +426,7 @@ public:
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
   unsigned getWidestVF(StringRef ScalarF) const {
-    return Impl->getWidestVF(ScalarF);
+    return Impl->getWidestVF(ScalarF, VectLibrary);
   }
 
   /// Check if the function "F" is listed in a library known to LLVM.

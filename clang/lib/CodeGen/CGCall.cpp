@@ -1868,6 +1868,24 @@ static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
   llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
 }
 
+static void addVectLibAttributes(llvm::AttrBuilder &FuncAttrs,
+                                 const CodeGenOptions &CodeGenOpts) {
+  StringRef AttributeName = "veclib";
+  switch (CodeGenOpts.getVecLib()) {
+  case CodeGenOptions::Accelerate:
+    FuncAttrs.addAttribute(AttributeName, "Accelerate");
+    break;
+  case CodeGenOptions::MASSV:
+    FuncAttrs.addAttribute(AttributeName, "MASSV");
+    break;
+  case CodeGenOptions::SVML:
+    FuncAttrs.addAttribute(AttributeName, "SVML");
+    break;
+  case CodeGenOptions::NoLibrary:
+    break;
+  }
+}
+
 void CodeGenModule::ConstructAttributeList(
     StringRef Name, const CGFunctionInfo &FI, CGCalleeInfo CalleeInfo,
     llvm::AttributeList &AttrList, unsigned &CallingConv, bool AttrOnCallSite) {
@@ -1965,6 +1983,9 @@ void CodeGenModule::ConstructAttributeList(
   // * LangOpts: -ffreestanding, -fno-builtin, -fno-builtin-<name>
   // * FunctionDecl attributes: __attribute__((no_builtin(...)))
   addNoBuiltinAttributes(FuncAttrs, getLangOpts(), NBA);
+
+  // Attach "veclib" attribute to function based on '-fveclib' setting.
+  addVectLibAttributes(FuncAttrs, getCodeGenOpts());
 
   ConstructDefaultFnAttrList(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 
