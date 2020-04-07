@@ -18,7 +18,7 @@ using namespace mlir;
 
 namespace {
 struct TestAllReduceLoweringPass
-    : public OperationPass<TestAllReduceLoweringPass, ModuleOp> {
+    : public PassWrapper<TestAllReduceLoweringPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     populateGpuRewritePatterns(&getContext(), patterns);

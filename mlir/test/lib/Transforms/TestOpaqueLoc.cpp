@@ -17,7 +17,8 @@ namespace {
 /// It also takes all operations that are not function operations or
 /// terminators and clones them with opaque locations which store the initial
 /// locations.
-struct TestOpaqueLoc : public OperationPass<TestOpaqueLoc, ModuleOp> {
+struct TestOpaqueLoc
+    : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
 
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.

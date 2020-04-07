@@ -28,7 +28,8 @@ using namespace mlir;
 namespace {
 
 /// Checks for out of bound memef access subscripts..
-struct TestMemRefBoundCheck : public FunctionPass<TestMemRefBoundCheck> {
+struct TestMemRefBoundCheck
+    : public PassWrapper<TestMemRefBoundCheck, FunctionPass> {
   void runOnFunction() override;
 };
 

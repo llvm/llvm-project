@@ -28,7 +28,8 @@
 using namespace mlir;
 
 namespace {
-struct PipelineDataTransfer : public FunctionPass<PipelineDataTransfer> {
+struct PipelineDataTransfer
+    : public PassWrapper<PipelineDataTransfer, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffinePipelineDataTransfer
 #include "mlir/Transforms/Passes.h.inc"
@@ -43,7 +44,7 @@ struct PipelineDataTransfer : public FunctionPass<PipelineDataTransfer> {
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createPipelineDataTransferPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createPipelineDataTransferPass() {
   return std::make_unique<PipelineDataTransfer>();
 }
 

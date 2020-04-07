@@ -20,7 +20,7 @@ using namespace mlir;
 namespace {
 
 struct TestParallelismDetection
-    : public FunctionPass<TestParallelismDetection> {
+    : public PassWrapper<TestParallelismDetection, FunctionPass> {
   void runOnFunction() override;
 };
 

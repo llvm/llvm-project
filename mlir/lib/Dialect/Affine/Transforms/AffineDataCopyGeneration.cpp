@@ -75,7 +75,7 @@ namespace {
 // TODO(bondhugula): We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
-    : public FunctionPass<AffineDataCopyGeneration> {
+    : public PassWrapper<AffineDataCopyGeneration, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineDataCopyGeneration
 #include "mlir/Dialect/Affine/Passes.h.inc"
@@ -134,14 +134,15 @@ struct AffineDataCopyGeneration
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
 /// by the latter. Only load op's handled for now.
 /// TODO(bondhugula): extend this to store op's.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass(
+std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
     int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
   return std::make_unique<AffineDataCopyGeneration>(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createAffineDataCopyGenerationPass() {
   return std::make_unique<AffineDataCopyGeneration>();
 }
 

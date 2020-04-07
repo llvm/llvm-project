@@ -1119,7 +1119,7 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
 
 namespace {
 struct LowerVectorToLLVMPass
-    : public OperationPass<LowerVectorToLLVMPass, ModuleOp> {
+    : public PassWrapper<LowerVectorToLLVMPass, OperationPass<ModuleOp>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertVectorToLLVM
 #include "mlir/Conversion/Passes.h.inc"
@@ -1155,6 +1155,6 @@ void LowerVectorToLLVMPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertVectorToLLVMPass() {
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertVectorToLLVMPass() {
   return std::make_unique<LowerVectorToLLVMPass>();
 }

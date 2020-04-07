@@ -18,7 +18,8 @@
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public OperationPass<PrintOpStatsPass, ModuleOp> {
+struct PrintOpStatsPass
+    : public PassWrapper<PrintOpStatsPass, OperationPass<ModuleOp>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_PrintOpStats
 #include "mlir/Transforms/Passes.h.inc"
@@ -85,6 +86,6 @@ void PrintOpStatsPass::printSummary() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createPrintOpStatsPass() {
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createPrintOpStatsPass() {
   return std::make_unique<PrintOpStatsPass>();
 }

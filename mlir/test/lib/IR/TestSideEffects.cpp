@@ -12,7 +12,8 @@
 using namespace mlir;
 
 namespace {
-struct SideEffectsPass : public OperationPass<SideEffectsPass, ModuleOp> {
+struct SideEffectsPass
+    : public PassWrapper<SideEffectsPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
     auto module = getOperation();
 

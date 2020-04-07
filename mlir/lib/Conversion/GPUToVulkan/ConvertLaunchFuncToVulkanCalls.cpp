@@ -58,7 +58,8 @@ namespace {
 /// * deinitVulkan         -- deinitializes vulkan runtime
 ///
 class VulkanLaunchFuncToVulkanCallsPass
-    : public OperationPass<VulkanLaunchFuncToVulkanCallsPass, ModuleOp> {
+    : public PassWrapper<VulkanLaunchFuncToVulkanCallsPass,
+                         OperationPass<ModuleOp>> {
 private:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertVulkanLaunchFuncToVulkanCalls
@@ -436,7 +437,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   cInterfaceVulkanLaunchCallOp.erase();
 }
 
-std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createConvertVulkanLaunchFuncToVulkanCallsPass() {
   return std::make_unique<VulkanLaunchFuncToVulkanCallsPass>();
 }

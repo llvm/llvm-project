@@ -246,7 +246,8 @@ struct GPUReturnOpLowering : public ConvertToLLVMPattern {
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
 class LowerGpuOpsToNVVMOpsPass
-    : public OperationPass<LowerGpuOpsToNVVMOpsPass, gpu::GPUModuleOp> {
+    : public PassWrapper<LowerGpuOpsToNVVMOpsPass,
+                         OperationPass<gpu::GPUModuleOp>> {
 public:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertGpuOpsToNVVMOps
@@ -324,7 +325,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                 "__nv_tanh");
 }
 
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 mlir::createLowerGpuOpsToNVVMOpsPass() {
   return std::make_unique<LowerGpuOpsToNVVMOpsPass>();
 }

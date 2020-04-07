@@ -14,7 +14,7 @@
 namespace mlir {
 class LLVMTypeConverter;
 class ModuleOp;
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 class OwningRewritePatternList;
 
 /// Collect a set of patterns to convert memory-related operations from the
@@ -61,7 +61,7 @@ struct LowerToLLVMOptions {
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// stdlib malloc/free is used for allocating memrefs allocated with std.alloc,
 /// while LLVM's alloca is used for those allocated with std.alloca.
-std::unique_ptr<OpPassBase<ModuleOp>> createLowerToLLVMPass(
+std::unique_ptr<OperationPass<ModuleOp>> createLowerToLLVMPass(
     const LowerToLLVMOptions &options = {
         /*useBarePtrCallConv=*/false, /*emitCWrappers=*/false,
         /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout});

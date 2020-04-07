@@ -77,7 +77,7 @@ namespace {
 // TODO(andydavis) Extend this pass to check for fusion preventing dependences,
 // and add support for more general loop fusion algorithms.
 
-struct LoopFusion : public FunctionPass<LoopFusion> {
+struct LoopFusion : public PassWrapper<LoopFusion, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_AffineLoopFusion
 #include "mlir/Transforms/Passes.h.inc"
@@ -104,7 +104,7 @@ struct LoopFusion : public FunctionPass<LoopFusion> {
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopFusionPass(unsigned fastMemorySpace,
                            uint64_t localBufSizeThreshold, bool maximalFusion) {
   return std::make_unique<LoopFusion>(fastMemorySpace, localBufSizeThreshold,

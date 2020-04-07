@@ -230,7 +230,8 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
 }
 
 namespace {
-struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
+struct LinalgPromotionPass
+    : public PassWrapper<LinalgPromotionPass, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LinalgPromotion
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -247,10 +248,10 @@ struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
 };
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgPromotionPass(bool dynamicBuffers) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgPromotionPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgPromotionPass() {
   return std::make_unique<LinalgPromotionPass>();
 }

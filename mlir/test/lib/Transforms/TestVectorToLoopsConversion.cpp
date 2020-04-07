@@ -18,7 +18,7 @@ using namespace mlir;
 namespace {
 
 struct TestVectorToLoopsPass
-    : public FunctionPass<TestVectorToLoopsPass> {
+    : public PassWrapper<TestVectorToLoopsPass, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     auto *context = &getContext();

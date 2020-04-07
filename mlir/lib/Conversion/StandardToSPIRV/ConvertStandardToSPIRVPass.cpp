@@ -22,7 +22,7 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
-    : public OperationPass<ConvertStandardToSPIRVPass, ModuleOp> {
+    : public PassWrapper<ConvertStandardToSPIRVPass, OperationPass<ModuleOp>> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertStandardToSPIRV
 #include "mlir/Conversion/Passes.h.inc"
@@ -49,6 +49,7 @@ void ConvertStandardToSPIRVPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertStandardToSPIRVPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertStandardToSPIRVPass() {
   return std::make_unique<ConvertStandardToSPIRVPass>();
 }

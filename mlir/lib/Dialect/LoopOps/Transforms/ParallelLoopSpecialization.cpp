@@ -60,7 +60,7 @@ static void specializeLoopForUnrolling(ParallelOp op) {
 
 namespace {
 struct ParallelLoopSpecialization
-    : public FunctionPass<ParallelLoopSpecialization> {
+    : public PassWrapper<ParallelLoopSpecialization, FunctionPass> {
 /// Include the generated pass utilities.
 #define GEN_PASS_LoopParallelLoopSpecialization
 #include "mlir/Dialect/LoopOps/Passes.h.inc"
