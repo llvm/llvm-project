@@ -21,10 +21,10 @@
 // CHECK-DEBUG-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DEBUG-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CHECK-DEBUG-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CHECK-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+22]];1;;\00"
+// CHECK-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+23]];1;;\00"
 // CHECK-DEBUG-DAG: [[LOC2:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;tmain;[[@LINE+11]];1;;\00"
 // IRBUILDER-DEBUG-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
-// IRBUILDER-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+19]];0;;\00"
+// IRBUILDER-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+20]];0;;\00"
 // IRBUILDER-DEBUG-DAG: [[LOC2:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;tmain<char **>;[[@LINE+8]];0;;\00"
 
 template <class T>
@@ -41,10 +41,11 @@ int tmain(T argc) {
   return 0;
 }
 
+int global;
 int main (int argc, char **argv) {
   int a[argc];
-#pragma omp parallel
-  foo(a[1]);
+#pragma omp parallel shared(global, a) default(none)
+  (void)global, foo(a[1]);
   return tmain(argv);
 }
 
