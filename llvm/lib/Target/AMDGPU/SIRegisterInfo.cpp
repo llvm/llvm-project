@@ -386,7 +386,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 }
 
 void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                  unsigned BaseReg,
+                                                  Register BaseReg,
                                                   int FrameIdx,
                                                   int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
@@ -420,7 +420,7 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addImm(0); // clamp bit
 }
 
-void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                        int64_t Offset) const {
   const SIInstrInfo *TII = ST.getInstrInfo();
 
@@ -457,7 +457,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 }
 
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
-                                        unsigned BaseReg,
+                                        Register BaseReg,
                                         int64_t Offset) const {
   if (!SIInstrInfo::isMUBUF(*MI))
     return false;
@@ -1270,7 +1270,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
 }
 
-StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
+StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 

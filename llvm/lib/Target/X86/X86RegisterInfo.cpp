@@ -661,7 +661,7 @@ bool X86RegisterInfo::canRealignStack(const MachineFunction &MF) const {
 }
 
 bool X86RegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                           unsigned Reg, int &FrameIdx) const {
+                                           Register Reg, int &FrameIdx) const {
   // Since X86 defines assignCalleeSavedSpillSlots which always return true
   // this function neither used nor tested.
   llvm_unreachable("Unused function on X86. Otherwise need a test case.");

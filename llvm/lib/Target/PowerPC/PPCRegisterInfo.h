@@ -121,7 +121,7 @@ public:
   void lowerVRSAVERestore(MachineBasicBlock::iterator II,
                           unsigned FrameIndex) const;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
@@ -129,12 +129,12 @@ public:
 
   // Support for virtual base registers.
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                    unsigned BaseReg, int FrameIdx,
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
+                                    int FrameIdx,
                                     int64_t Offset) const override;
-  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
-  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+  bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
   // Debug information queries.

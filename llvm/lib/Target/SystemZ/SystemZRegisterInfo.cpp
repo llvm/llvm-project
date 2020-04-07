@@ -73,13 +73,10 @@ static void addHints(ArrayRef<MCPhysReg> Order,
       Hints.push_back(Reg);
 }
 
-bool
-SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
-                                           ArrayRef<MCPhysReg> Order,
-                                           SmallVectorImpl<MCPhysReg> &Hints,
-                                           const MachineFunction &MF,
-                                           const VirtRegMap *VRM,
-                                           const LiveRegMatrix *Matrix) const {
+bool SystemZRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -134,11 +131,11 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   }
 
   if (MRI->getRegClass(VirtReg) == &SystemZ::GRX32BitRegClass) {
-    SmallVector<unsigned, 8> Worklist;
-    SmallSet<unsigned, 4> DoneRegs;
+    SmallVector<Register, 8> Worklist;
+    SmallSet<Register, 4> DoneRegs;
     Worklist.push_back(VirtReg);
     while (Worklist.size()) {
-      unsigned Reg = Worklist.pop_back_val();
+      Register Reg = Worklist.pop_back_val();
       if (!DoneRegs.insert(Reg).second)
         continue;
 

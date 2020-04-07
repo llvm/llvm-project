@@ -289,7 +289,8 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 }
 
 // Get the other register in a GPRPair.
-static unsigned getPairedGPR(unsigned Reg, bool Odd, const MCRegisterInfo *RI) {
+static MCPhysReg getPairedGPR(MCPhysReg Reg, bool Odd,
+                              const MCRegisterInfo *RI) {
   for (MCSuperRegIterator Supers(Reg, RI); Supers.isValid(); ++Supers)
     if (ARM::GPRPairRegClass.contains(*Supers))
       return RI->getSubReg(*Supers, Odd ? ARM::gsub_1 : ARM::gsub_0);
@@ -297,15 +298,12 @@ static unsigned getPairedGPR(unsigned Reg, bool Odd, const MCRegisterInfo *RI) {
 }
 
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
-bool
-ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
-                                           ArrayRef<MCPhysReg> Order,
-                                           SmallVectorImpl<MCPhysReg> &Hints,
-                                           const MachineFunction &MF,
-                                           const VirtRegMap *VRM,
-                                           const LiveRegMatrix *Matrix) const {
+bool ARMBaseRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  std::pair<unsigned, unsigned> Hint = MRI.getRegAllocationHint(VirtReg);
+  std::pair<Register, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
   unsigned Odd;
   switch (Hint.first) {
@@ -323,12 +321,12 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   // This register should preferably be even (Odd == 0) or odd (Odd == 1).
   // Check if the other part of the pair has already been assigned, and provide
   // the paired register as the first hint.
-  unsigned Paired = Hint.second;
-  if (Paired == 0)
+  Register Paired = Hint.second;
+  if (!Paired)
     return false;
 
-  unsigned PairedPhys = 0;
-  if (Register::isPhysicalRegister(Paired)) {
+  Register PairedPhys;
+  if (Paired.isPhysical()) {
     PairedPhys = Paired;
   } else if (VRM && VRM->hasPhys(Paired)) {
     PairedPhys = getPairedGPR(VRM->getPhys(Paired), Odd, this);
@@ -339,11 +337,11 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     Hints.push_back(PairedPhys);
 
   // Then prefer even or odd registers.
-  for (unsigned Reg : Order) {
+  for (MCPhysReg Reg : Order) {
     if (Reg == PairedPhys || (getEncodingValue(Reg) & 1) != Odd)
       continue;
     // Don't provide hints that are paired to a reserved register.
-    unsigned Paired = getPairedGPR(Reg, !Odd, this);
+    MCPhysReg Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
     Hints.push_back(Reg);
@@ -351,27 +349,27 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   return false;
 }
 
-void
-ARMBaseRegisterInfo::updateRegAllocHint(unsigned Reg, unsigned NewReg,
-                                        MachineFunction &MF) const {
+void ARMBaseRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
+                                             MachineFunction &MF) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(Reg);
-  if ((Hint.first == (unsigned)ARMRI::RegPairOdd ||
-       Hint.first == (unsigned)ARMRI::RegPairEven) &&
-      Register::isVirtualRegister(Hint.second)) {
+  std::pair<Register, Register> Hint = MRI->getRegAllocationHint(Reg);
+  if ((Hint.first == ARMRI::RegPairOdd || Hint.first == ARMRI::RegPairEven) &&
+      Hint.second.isVirtual()) {
     // If 'Reg' is one of the even / odd register pair and it's now changed
     // (e.g. coalesced) into a different register. The other register of the
     // pair allocation hint must be updated to reflect the relationship
     // change.
-    unsigned OtherReg = Hint.second;
+    Register OtherReg = Hint.second;
     Hint = MRI->getRegAllocationHint(OtherReg);
     // Make sure the pair has not already divorced.
     if (Hint.second == Reg) {
       MRI->setRegAllocationHint(OtherReg, Hint.first, NewReg);
       if (Register::isVirtualRegister(NewReg))
         MRI->setRegAllocationHint(NewReg,
-            Hint.first == (unsigned)ARMRI::RegPairOdd ? ARMRI::RegPairEven
-            : ARMRI::RegPairOdd, OtherReg);
+                                  Hint.first == ARMRI::RegPairOdd
+                                      ? ARMRI::RegPairEven
+                                      : ARMRI::RegPairOdd,
+                                  OtherReg);
     }
   }
 }
@@ -457,8 +455,8 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 /// specified immediate.
 void ARMBaseRegisterInfo::emitLoadConstPool(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx, int Val,
-    ARMCC::CondCodes Pred, unsigned PredReg, unsigned MIFlags) const {
+    const DebugLoc &dl, Register DestReg, unsigned SubIdx, int Val,
+    ARMCC::CondCodes Pred, Register PredReg, unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();
@@ -621,10 +619,10 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
 /// materializeFrameBaseRegister - Insert defining instruction(s) for BaseReg to
 /// be a pointer to FrameIdx at the beginning of the basic block.
-void ARMBaseRegisterInfo::
-materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                             unsigned BaseReg, int FrameIdx,
-                             int64_t Offset) const {
+void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                       Register BaseReg,
+                                                       int FrameIdx,
+                                                       int64_t Offset) const {
   ARMFunctionInfo *AFI = MBB->getParent()->getInfo<ARMFunctionInfo>();
   unsigned ADDriOpc = !AFI->isThumbFunction() ? ARM::ADDri :
     (AFI->isThumb1OnlyFunction() ? ARM::tADDframe : ARM::t2ADDri);
@@ -647,7 +645,7 @@ materializeFrameBaseRegister(MachineBasicBlock *MBB,
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
 }
 
-void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                             int64_t Offset) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -675,7 +673,8 @@ void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   (void)Done;
 }
 
-bool ARMBaseRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+bool ARMBaseRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
+                                             Register BaseReg,
                                              int64_t Offset) const {
   const MCInstrDesc &Desc = MI->getDesc();
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
