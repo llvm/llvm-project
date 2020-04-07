@@ -852,10 +852,13 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     unsigned ImmVal = (unsigned)MO.getImm();
     unsigned SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(ImmVal);
     unsigned SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
+    unsigned MIFlags = MI.getFlags();
     LO16 = LO16.addImm(SOImmValV1);
     HI16 = HI16.addImm(SOImmValV2);
     LO16.cloneMemRefs(MI);
     HI16.cloneMemRefs(MI);
+    LO16.setMIFlags(MIFlags);
+    HI16.setMIFlags(MIFlags);
     LO16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     HI16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     if (isCC)
@@ -867,6 +870,7 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
 
   unsigned LO16Opc = 0;
   unsigned HI16Opc = 0;
+  unsigned MIFlags = MI.getFlags();
   if (Opcode == ARM::t2MOVi32imm || Opcode == ARM::t2MOVCCi32imm) {
     LO16Opc = ARM::t2MOVi16;
     HI16Opc = ARM::t2MOVTi16;
@@ -879,6 +883,9 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(HI16Opc))
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
     .addReg(DstReg);
+
+  LO16.setMIFlags(MIFlags);
+  HI16.setMIFlags(MIFlags);
 
   switch (MO.getType()) {
   case MachineOperand::MO_Immediate: {
