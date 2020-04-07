@@ -41,10 +41,7 @@ static bool isValidRegDefOf(const MachineOperand &MO, int PhysReg) {
   return isValidRegDef(MO) && MO.getReg() == PhysReg;
 }
 
-void ReachingDefAnalysis::enterBasicBlock(
-    const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
-
-  MachineBasicBlock *MBB = TraversedMBB.MBB;
+void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
   unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
@@ -94,16 +91,11 @@ void ReachingDefAnalysis::enterBasicBlock(
   for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
     if (LiveRegs[Unit] != ReachingDefDefaultVal)
       MBBReachingDefs[MBBNumber][Unit].push_back(LiveRegs[Unit]);
-
-  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
-                    << (!TraversedMBB.IsDone ? ": incomplete\n"
-                                             : ": all preds known\n"));
 }
 
-void ReachingDefAnalysis::leaveBasicBlock(
-    const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
+void ReachingDefAnalysis::leaveBasicBlock(MachineBasicBlock *MBB) {
   assert(!LiveRegs.empty() && "Must enter basic block first.");
-  unsigned MBBNumber = TraversedMBB.MBB->getNumber();
+  unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBOutRegsInfos.size() &&
          "Unexpected basic block number.");
   // Save register clearances at end of MBB - used by enterBasicBlock().
@@ -147,12 +139,17 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
 
 void ReachingDefAnalysis::processBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
-  enterBasicBlock(TraversedMBB);
-  for (MachineInstr &MI : *TraversedMBB.MBB) {
+  MachineBasicBlock *MBB = TraversedMBB.MBB;
+  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
+                    << (!TraversedMBB.IsDone ? ": incomplete\n"
+                                             : ": all preds known\n"));
+
+  enterBasicBlock(MBB);
+  for (MachineInstr &MI : *MBB) {
     if (!MI.isDebugInstr())
       processDefs(&MI);
   }
-  leaveBasicBlock(TraversedMBB);
+  leaveBasicBlock(MBB);
 }
 
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
