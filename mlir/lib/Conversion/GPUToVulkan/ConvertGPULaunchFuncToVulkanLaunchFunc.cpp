@@ -38,13 +38,13 @@ namespace {
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public ModulePass<ConvertGpuLaunchFuncToVulkanLaunchFunc> {
+    : public OperationPass<ConvertGpuLaunchFuncToVulkanLaunchFunc, ModuleOp> {
 public:
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertGpuLaunchFuncToVulkanLaunchFunc
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 
 private:
   /// Creates a SPIR-V binary shader from the given `module` using
@@ -68,14 +68,13 @@ private:
   /// operand is unsupported by Vulkan runtime.
   LogicalResult declareVulkanLaunchFunc(Location loc,
                                         gpu::LaunchFuncOp launchOp);
-
 };
 
 } // anonymous namespace
 
-void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnModule() {
+void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
   bool done = false;
-  getModule().walk([this, &done](gpu::LaunchFuncOp op) {
+  getOperation().walk([this, &done](gpu::LaunchFuncOp op) {
     if (done) {
       op.emitError("should only contain one 'gpu::LaunchFuncOp' op");
       return signalPassFailure();
@@ -86,17 +85,17 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnModule() {
 
   // Erase `gpu::GPUModuleOp` and `spirv::Module` operations.
   for (auto gpuModule :
-       llvm::make_early_inc_range(getModule().getOps<gpu::GPUModuleOp>()))
+       llvm::make_early_inc_range(getOperation().getOps<gpu::GPUModuleOp>()))
     gpuModule.erase();
 
   for (auto spirvModule :
-       llvm::make_early_inc_range(getModule().getOps<spirv::ModuleOp>()))
+       llvm::make_early_inc_range(getOperation().getOps<spirv::ModuleOp>()))
     spirvModule.erase();
 }
 
 LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
     Location loc, gpu::LaunchFuncOp launchOp) {
-  OpBuilder builder(getModule().getBody()->getTerminator());
+  OpBuilder builder(getOperation().getBody()->getTerminator());
   // TODO: Workgroup size is written into the kernel. So to properly modelling
   // vulkan launch, we cannot have the local workgroup size configuration here.
   SmallVector<Type, 8> vulkanLaunchTypes{launchOp.getOperandTypes()};
@@ -138,7 +137,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
 
 void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
     gpu::LaunchFuncOp launchOp) {
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
   OpBuilder builder(launchOp);
   Location loc = launchOp.getLoc();
 

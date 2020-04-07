@@ -33,18 +33,18 @@ namespace {
 /// replace it).
 ///
 /// 2) Lower the body of the spirv::ModuleOp.
-struct GPUToSPIRVPass : public ModulePass<GPUToSPIRVPass> {
+struct GPUToSPIRVPass : public OperationPass<GPUToSPIRVPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertGpuToSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void GPUToSPIRVPass::runOnModule() {
+void GPUToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
 
   SmallVector<Operation *, 1> kernelModules;
   OpBuilder builder(context);

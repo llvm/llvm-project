@@ -561,17 +561,18 @@ void mlir::populateLinalgToLLVMConversionPatterns(
 }
 
 namespace {
-struct ConvertLinalgToLLVMPass : public ModulePass<ConvertLinalgToLLVMPass> {
+struct ConvertLinalgToLLVMPass
+    : public OperationPass<ConvertLinalgToLLVMPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertLinalgToLLVM
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void ConvertLinalgToLLVMPass::runOnModule() {
-  auto module = getModule();
+void ConvertLinalgToLLVMPass::runOnOperation() {
+  auto module = getOperation();
 
   // Convert to the LLVM IR dialect using the converter defined above.
   OwningRewritePatternList patterns;

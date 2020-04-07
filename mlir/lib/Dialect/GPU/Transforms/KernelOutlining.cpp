@@ -214,16 +214,17 @@ namespace {
 /// The gpu.modules are intended to be compiled to a cubin blob independently in
 /// a separate pass. The external functions can then be annotated with the
 /// symbol of the cubin accessor function.
-class GpuKernelOutliningPass : public ModulePass<GpuKernelOutliningPass> {
+class GpuKernelOutliningPass
+    : public OperationPass<GpuKernelOutliningPass, ModuleOp> {
 public:
 /// Include the generated pass utilities.
 #define GEN_PASS_GpuKernelOutlining
 #include "mlir/Dialect/GPU/Passes.h.inc"
 
-  void runOnModule() override {
-    SymbolTable symbolTable(getModule());
+  void runOnOperation() override {
+    SymbolTable symbolTable(getOperation());
     bool modified = false;
-    for (auto func : getModule().getOps<FuncOp>()) {
+    for (auto func : getOperation().getOps<FuncOp>()) {
       // Insert just after the function.
       Block::iterator insertPt(func.getOperation()->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
@@ -255,8 +256,8 @@ public:
     // If any new module was inserted in this module, annotate this module as
     // a container module.
     if (modified)
-      getModule().setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-                          UnitAttr::get(&getContext()));
+      getOperation().setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
+                             UnitAttr::get(&getContext()));
   }
 
 private:
@@ -267,7 +268,7 @@ private:
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
     // and then this needs to use the OpBuilder.
-    auto context = getModule().getContext();
+    auto context = getOperation().getContext();
     Builder builder(context);
     OperationState state(kernelFunc.getLoc(),
                          gpu::GPUModuleOp::getOperationName());

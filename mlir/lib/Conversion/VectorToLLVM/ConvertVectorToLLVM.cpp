@@ -1118,23 +1118,24 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
 }
 
 namespace {
-struct LowerVectorToLLVMPass : public ModulePass<LowerVectorToLLVMPass> {
+struct LowerVectorToLLVMPass
+    : public OperationPass<LowerVectorToLLVMPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_ConvertVectorToLLVM
 #include "mlir/Conversion/Passes.h.inc"
 
-  void runOnModule() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void LowerVectorToLLVMPass::runOnModule() {
+void LowerVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
     populateVectorContractLoweringPatterns(patterns, &getContext());
-    applyPatternsGreedily(getModule(), patterns);
+    applyPatternsGreedily(getOperation(), patterns);
   }
 
   // Convert to the LLVM IR dialect.
@@ -1148,8 +1149,8 @@ void LowerVectorToLLVMPass::runOnModule() {
   LLVMConversionTarget target(getContext());
   target.addDynamicallyLegalOp<FuncOp>(
       [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
-  if (failed(
-          applyPartialConversion(getModule(), target, patterns, &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns,
+                                    &converter))) {
     signalPassFailure();
   }
 }

@@ -18,7 +18,7 @@
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public ModulePass<PrintOpStatsPass> {
+struct PrintOpStatsPass : public OperationPass<PrintOpStatsPass, ModuleOp> {
 /// Include the generated pass utilities.
 #define GEN_PASS_PrintOpStats
 #include "mlir/Transforms/Passes.h.inc"
@@ -26,7 +26,7 @@ struct PrintOpStatsPass : public ModulePass<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os = llvm::errs()) : os(os) {}
 
   // Prints the resultant operation statistics post iterating over the module.
-  void runOnModule() override;
+  void runOnOperation() override;
 
   // Print summary of op stats.
   void printSummary();
@@ -37,11 +37,11 @@ private:
 };
 } // namespace
 
-void PrintOpStatsPass::runOnModule() {
+void PrintOpStatsPass::runOnOperation() {
   opCount.clear();
 
   // Compute the operation statistics for each function in the module.
-  for (auto &op : getModule())
+  for (auto &op : getOperation())
     op.walk([&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
   printSummary();
 }
