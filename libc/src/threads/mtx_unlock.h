@@ -1,4 +1,4 @@
-//===-------- Implementation header for mtx_unlock function ------ *-C++-* ===//
+//===-- Implementation header for mtx_unlock function -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
