@@ -5653,8 +5653,8 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
 
       VariantMatchInfo VMI;
       OMPTraitInfo &TI = A->getTraitInfo();
-      TI.getAsVariantMatchInfo(Context, VMI, /* DeviceSetOnly */ false);
-      if (!isVariantApplicableInContext(VMI, OMPCtx))
+      TI.getAsVariantMatchInfo(Context, VMI);
+      if (!isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ false))
         continue;
 
       VMIs.push_back(VMI);
