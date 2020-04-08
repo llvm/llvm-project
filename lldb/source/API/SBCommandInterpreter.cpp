@@ -154,11 +154,29 @@ public:
                                        lldb::SBCommandPluginInterface *backend,
                                        const char *help = nullptr,
                                        const char *syntax = nullptr,
-                                       uint32_t flags = 0)
+                                       uint32_t flags = 0,
+                                       const char *auto_repeat_command = "")
       : CommandObjectParsed(interpreter, name, help, syntax, flags),
-        m_backend(backend) {}
+        m_backend(backend) {
+    m_auto_repeat_command =
+        auto_repeat_command == nullptr
+            ? llvm::None
+            : llvm::Optional<std::string>(auto_repeat_command);
+  }
 
   bool IsRemovable() const override { return true; }
+
+  /// More documentation is available in lldb::CommandObject::GetRepeatCommand,
+  /// but in short, if nullptr is returned, the previous command will be
+  /// repeated, and if an empty string is returned, no commands will be
+  /// executed.
+  const char *GetRepeatCommand(Args &current_command_args,
+                               uint32_t index) override {
+    if (!m_auto_repeat_command)
+      return nullptr;
+    else
+      return m_auto_repeat_command->c_str();
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -170,6 +188,7 @@ protected:
     return ret;
   }
   std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
+  llvm::Optional<std::string> m_auto_repeat_command;
 };
 
 SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
@@ -681,14 +700,8 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
       (const char *, lldb::SBCommandPluginInterface *, const char *), name,
       impl, help);
 
-  lldb::CommandObjectSP new_command_sp;
-  new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
-      *m_opaque_ptr, name, impl, help);
-
-  if (new_command_sp &&
-      m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
-    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
-  return LLDB_RECORD_RESULT(lldb::SBCommand());
+  return LLDB_RECORD_RESULT(AddCommand(name, impl, help, /*syntax=*/nullptr,
+                                       /*auto_repeat_command=*/""))
 }
 
 lldb::SBCommand
@@ -699,10 +712,22 @@ SBCommandInterpreter::AddCommand(const char *name,
                      (const char *, lldb::SBCommandPluginInterface *,
                       const char *, const char *),
                      name, impl, help, syntax);
+  return LLDB_RECORD_RESULT(
+      AddCommand(name, impl, help, syntax, /*auto_repeat_command=*/""))
+}
+
+lldb::SBCommand SBCommandInterpreter::AddCommand(
+    const char *name, lldb::SBCommandPluginInterface *impl, const char *help,
+    const char *syntax, const char *auto_repeat_command) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommandInterpreter, AddCommand,
+                     (const char *, lldb::SBCommandPluginInterface *,
+                      const char *, const char *, const char *),
+                     name, impl, help, syntax, auto_repeat_command);
 
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
-      *m_opaque_ptr, name, impl, help, syntax);
+      *m_opaque_ptr, name, impl, help, syntax, /*flags=*/0,
+      auto_repeat_command);
 
   if (new_command_sp &&
       m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
@@ -783,17 +808,8 @@ lldb::SBCommand SBCommand::AddCommand(const char *name,
       lldb::SBCommand, SBCommand, AddCommand,
       (const char *, lldb::SBCommandPluginInterface *, const char *), name,
       impl, help);
-
-  if (!IsValid())
-    return LLDB_RECORD_RESULT(lldb::SBCommand());
-  if (!m_opaque_sp->IsMultiwordObject())
-    return LLDB_RECORD_RESULT(lldb::SBCommand());
-  lldb::CommandObjectSP new_command_sp;
-  new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
-      m_opaque_sp->GetCommandInterpreter(), name, impl, help);
-  if (new_command_sp && m_opaque_sp->LoadSubCommand(name, new_command_sp))
-    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
-  return LLDB_RECORD_RESULT(lldb::SBCommand());
+  return LLDB_RECORD_RESULT(AddCommand(name, impl, help, /*syntax=*/nullptr,
+                                       /*auto_repeat_command=*/""))
 }
 
 lldb::SBCommand SBCommand::AddCommand(const char *name,
@@ -803,6 +819,18 @@ lldb::SBCommand SBCommand::AddCommand(const char *name,
                      (const char *, lldb::SBCommandPluginInterface *,
                       const char *, const char *),
                      name, impl, help, syntax);
+  return LLDB_RECORD_RESULT(
+      AddCommand(name, impl, help, syntax, /*auto_repeat_command=*/""))
+}
+
+lldb::SBCommand SBCommand::AddCommand(const char *name,
+                                      lldb::SBCommandPluginInterface *impl,
+                                      const char *help, const char *syntax,
+                                      const char *auto_repeat_command) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommand, AddCommand,
+                     (const char *, lldb::SBCommandPluginInterface *,
+                      const char *, const char *, const char *),
+                     name, impl, help, syntax, auto_repeat_command);
 
   if (!IsValid())
     return LLDB_RECORD_RESULT(lldb::SBCommand());
@@ -810,7 +838,8 @@ lldb::SBCommand SBCommand::AddCommand(const char *name,
     return LLDB_RECORD_RESULT(lldb::SBCommand());
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
-      m_opaque_sp->GetCommandInterpreter(), name, impl, help, syntax);
+      m_opaque_sp->GetCommandInterpreter(), name, impl, help, syntax,
+      /*flags=*/0, auto_repeat_command);
   if (new_command_sp && m_opaque_sp->LoadSubCommand(name, new_command_sp))
     return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
   return LLDB_RECORD_RESULT(lldb::SBCommand());
@@ -946,6 +975,9 @@ void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommandInterpreter, AddCommand,
                        (const char *, lldb::SBCommandPluginInterface *,
                         const char *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommandInterpreter, AddCommand,
+                       (const char *, lldb::SBCommandPluginInterface *,
+                        const char *, const char *, const char *));
   LLDB_REGISTER_CONSTRUCTOR(SBCommand, ());
   LLDB_REGISTER_METHOD(bool, SBCommand, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBCommand, operator bool, ());
@@ -962,6 +994,9 @@ void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommand, AddCommand,
                        (const char *, lldb::SBCommandPluginInterface *,
                         const char *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommand, AddCommand,
+                       (const char *, lldb::SBCommandPluginInterface *,
+                        const char *, const char *, const char *));
   LLDB_REGISTER_METHOD(uint32_t, SBCommand, GetFlags, ());
   LLDB_REGISTER_METHOD(void, SBCommand, SetFlags, (uint32_t));
 }

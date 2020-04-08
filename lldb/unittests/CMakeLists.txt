@@ -59,6 +59,7 @@ function(add_unittest_inputs test_name inputs)
 endfunction()
 
 add_subdirectory(TestingSupport)
+add_subdirectory(API)
 add_subdirectory(Breakpoint)
 add_subdirectory(Core)
 add_subdirectory(DataFormatter)

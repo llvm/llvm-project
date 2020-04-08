@@ -111,13 +111,85 @@ public:
 
   lldb::SBCommand AddMultiwordCommand(const char *name, const char *help);
 
+  /// Add a new command to the lldb::CommandInterpreter.
+  ///
+  /// The new command won't support autorepeat. If you need this functionality,
+  /// use the override of this function that accepts the \a auto_repeat_command
+  /// parameter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
   lldb::SBCommand AddCommand(const char *name,
                              lldb::SBCommandPluginInterface *impl,
                              const char *help);
 
+  /// Add a new command to the lldb::CommandInterpreter.
+  ///
+  /// The new command won't support autorepeat. If you need this functionality,
+  /// use the override of this function that accepts the \a auto_repeat_command
+  /// parameter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \param[in] syntax
+  ///     The syntax to show as part of the help message of this command. This
+  ///     could include a description of the different arguments and flags this
+  ///     command accepts.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
   lldb::SBCommand AddCommand(const char *name,
                              lldb::SBCommandPluginInterface *impl,
                              const char *help, const char *syntax);
+
+  /// Add a new command to the lldb::CommandInterpreter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \param[in] syntax
+  ///     The syntax to show as part of the help message of this command. This
+  ///     could include a description of the different arguments and flags this
+  ///     command accepts.
+  ///
+  /// \param[in] auto_repeat_command
+  ///     Autorepeating is triggered when the user presses Enter successively
+  ///     after executing a command. If \b nullptr is provided, the previous
+  ///     exact command will be repeated. If \b "" is provided, autorepeating
+  ///     is disabled. Otherwise, the provided string is used as a repeat
+  ///     command.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
+  lldb::SBCommand AddCommand(const char *name,
+                             lldb::SBCommandPluginInterface *impl,
+                             const char *help, const char *syntax,
+                             const char *auto_repeat_command);
 
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result);
 
@@ -283,13 +355,89 @@ public:
   lldb::SBCommand AddMultiwordCommand(const char *name,
                                       const char *help = nullptr);
 
+  /// Add a new subcommand to the lldb::SBCommand.
+  ///
+  /// The new command won't support autorepeat. If you need this functionality,
+  /// use the override of this function that accepts the \a auto_repeat
+  /// parameter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
   lldb::SBCommand AddCommand(const char *name,
                              lldb::SBCommandPluginInterface *impl,
                              const char *help = nullptr);
 
+  /// Add a new subcommand to the lldb::SBCommand.
+  ///
+  /// The new command won't support autorepeat. If you need this functionality,
+  /// use the override of this function that accepts the \a auto_repeat_command
+  /// parameter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \param[in] syntax
+  ///     The syntax to show as part of the help message of this command. This
+  ///     could include a description of the different arguments and flags this
+  ///     command accepts.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
   lldb::SBCommand AddCommand(const char *name,
                              lldb::SBCommandPluginInterface *impl,
                              const char *help, const char *syntax);
+
+  /// Add a new subcommand to the lldb::SBCommand.
+  ///
+  /// The new command won't support autorepeat. If you need this functionality,
+  /// use the override of this function that accepts the \a auto_repeat_command
+  /// parameter.
+  ///
+  /// \param[in] name
+  ///     The name of the command.
+  ///
+  /// \param[in] impl
+  ///     The handler of this command.
+  ///
+  /// \param[in] help
+  ///     The general description to show as part of the help message of this
+  ///     command.
+  ///
+  /// \param[in] syntax
+  ///     The syntax to show as part of the help message of this command. This
+  ///     could include a description of the different arguments and flags this
+  ///     command accepts.
+  ///
+  /// \param[in] auto_repeat_command
+  ///     Autorepeating is triggered when the user presses Enter successively
+  ///     after executing a command. If \b nullptr is provided, the previous
+  ///     exact command will be repeated. If \b "" is provided, autorepeating
+  ///     is disabled. Otherwise, the provided string is used as a repeat
+  ///     command.
+  ///
+  /// \return
+  ///     A lldb::SBCommand representing the newly created command.
+  lldb::SBCommand AddCommand(const char *name,
+                             lldb::SBCommandPluginInterface *impl,
+                             const char *help, const char *syntax,
+                             const char *auto_repeat_command);
 
 private:
   friend class SBDebugger;
