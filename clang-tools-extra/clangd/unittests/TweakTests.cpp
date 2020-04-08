@@ -2436,6 +2436,7 @@ TEST_F(AddUsingTest, Prepare) {
 #define NS(name) one::two::name
 namespace one {
 void oo() {}
+template<typename TT> class tt {};
 namespace two {
 enum ee {};
 void ff() {}
@@ -2458,6 +2459,10 @@ public:
   EXPECT_UNAVAILABLE(Header +
                      "void fun() { o^n^e^:^:^t^w^o^:^:^c^c^:^:^s^t inst; }");
   EXPECT_UNAVAILABLE(Header + "void fun() { N^S(c^c) inst; }");
+  // This used to crash. Ideally we would support this case, but for now we just
+  // test that we don't crash.
+  EXPECT_UNAVAILABLE(Header +
+                     "template<typename TT> using foo = one::tt<T^T>;");
 }
 
 TEST_F(AddUsingTest, Apply) {
