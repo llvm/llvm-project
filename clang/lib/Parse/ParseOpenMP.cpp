@@ -2776,7 +2776,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPClauseKind Kind, bool ParseOnly) {
   return Actions.ActOnOpenMPClause(Kind, Loc, Tok.getLocation());
 }
 
-
 /// Parsing of OpenMP clauses with single expressions and some additional
 /// argument like 'schedule' or 'dist_schedule'.
 ///
@@ -2788,7 +2787,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPClauseKind Kind, bool ParseOnly) {
 ///      'if' '(' [ directive-name-modifier ':' ] expression ')'
 ///
 ///    defaultmap:
-///      'defaultmap' '(' modifier ':' kind ')'
+///      'defaultmap' '(' modifier [ ':' kind ] ')'
 ///
 ///    device-clause:
 ///      'device' '(' [ device-modifier ':' ] expression ')'
@@ -2877,17 +2876,22 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
         Tok.isNot(tok::annot_pragma_openmp_end))
       ConsumeAnyToken();
     // Parse ':'
-    if (Tok.is(tok::colon))
-      ConsumeAnyToken();
-    else if (Arg.back() != OMPC_DEFAULTMAP_MODIFIER_unknown)
-      Diag(Tok, diag::warn_pragma_expected_colon) << "defaultmap modifier";
-    // Get a defaultmap kind
-    Arg.push_back(getOpenMPSimpleClauseType(
-        Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok)));
-    KLoc.push_back(Tok.getLocation());
-    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
-        Tok.isNot(tok::annot_pragma_openmp_end))
-      ConsumeAnyToken();
+    if (Tok.is(tok::colon) || getLangOpts().OpenMP < 50) {
+      if (Tok.is(tok::colon))
+        ConsumeAnyToken();
+      else if (Arg.back() != OMPC_DEFAULTMAP_MODIFIER_unknown)
+        Diag(Tok, diag::warn_pragma_expected_colon) << "defaultmap modifier";
+      // Get a defaultmap kind
+      Arg.push_back(getOpenMPSimpleClauseType(
+          Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok)));
+      KLoc.push_back(Tok.getLocation());
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+          Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+    } else {
+      Arg.push_back(OMPC_DEFAULTMAP_unknown);
+      KLoc.push_back(SourceLocation());
+    }
   } else if (Kind == OMPC_device) {
     // Only target executable directives support extended device construct.
     if (isOpenMPTargetExecutionDirective(DKind) && getLangOpts().OpenMP >= 50 &&

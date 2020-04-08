@@ -1831,9 +1831,11 @@ void OMPClausePrinter::VisitOMPDefaultmapClause(OMPDefaultmapClause *Node) {
   OS << "defaultmap(";
   OS << getOpenMPSimpleClauseTypeName(OMPC_defaultmap,
                                       Node->getDefaultmapModifier());
-  OS << ": ";
-  OS << getOpenMPSimpleClauseTypeName(OMPC_defaultmap,
-    Node->getDefaultmapKind());
+  if (Node->getDefaultmapKind() != OMPC_DEFAULTMAP_unknown) {
+    OS << ": ";
+    OS << getOpenMPSimpleClauseTypeName(OMPC_defaultmap,
+                                        Node->getDefaultmapKind());
+  }
   OS << ")";
 }
 
