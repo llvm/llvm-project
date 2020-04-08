@@ -383,6 +383,9 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getHeapAllocMarker());
 }
 
+#ifndef _WIN32
+// See discussion on https://reviews.llvm.org/D77685, this is throwing a SEH
+// exception when run on a Windows bot despite being UBSan-clean.
 TEST(MachineInstrClone, CopyCallSiteInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
@@ -402,6 +405,7 @@ TEST(MachineInstrClone, CopyCallSiteInfo) {
   MF->CloneMachineInstrBundle(*MBB, MBB->end(), *MI);
   EXPECT_EQ(MF->getCallSitesInfo().size(), 2u);
 }
+#endif
 
 static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");
 
