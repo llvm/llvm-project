@@ -897,6 +897,19 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_array_v
 
 // is_pointer
 
+// In clang 10.0.0 and earlier __is_pointer didn't work with Objective-C types.
+#if __has_keyword(__is_pointer) && _LIBCPP_CLANG_VER > 1000
+
+template<class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_pointer_v = __is_pointer(_Tp);
+#endif
+
+#else // __has_keyword(__is_pointer)
+
 template <class _Tp> struct __libcpp_is_pointer       : public false_type {};
 template <class _Tp> struct __libcpp_is_pointer<_Tp*> : public true_type {};
 
@@ -916,6 +929,8 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_pointer_v
     = is_pointer<_Tp>::value;
 #endif
+
+#endif // __has_keyword(__is_pointer)
 
 // is_reference
 
