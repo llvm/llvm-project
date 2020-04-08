@@ -82,24 +82,6 @@ private:
 #endif
 };
 
-// Helper to measure a list of PerfEvent for a particular function.
-// callback is called for each successful measure (PerfEvent needs to be valid).
-template <typename Function>
-void Measure(
-    ArrayRef<PerfEvent> Events,
-    const std::function<void(const PerfEvent &Event, int64_t Value)> &Callback,
-    Function Fn) {
-  for (const auto &Event : Events) {
-    if (!Event.valid())
-      continue;
-    Counter Cnt(Event);
-    Cnt.start();
-    Fn();
-    Cnt.stop();
-    Callback(Event, Cnt.read());
-  }
-}
-
 } // namespace pfm
 } // namespace exegesis
 } // namespace llvm
