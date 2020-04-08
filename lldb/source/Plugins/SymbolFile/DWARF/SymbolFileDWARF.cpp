@@ -3620,7 +3620,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data &&
+          if (location_is_const_value_data && die.GetDIE()->IsGlobalOrStaticVariable()
               !IsSwiftLanguage(sc.comp_unit->GetLanguage()))
             scope = eValueTypeVariableStatic;
           else {
