@@ -8246,6 +8246,9 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   case swift::FileUnitKind::Builtin: {
     s.PutCString("Builtin");
   } break;
+  case swift::FileUnitKind::Synthesized: {
+    s.PutCString("Synthesized");
+  } break;
   case swift::FileUnitKind::SerializedAST:
   case swift::FileUnitKind::ClangModule: {
     if (file_unit->getKind() == swift::FileUnitKind::SerializedAST)
