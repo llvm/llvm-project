@@ -472,6 +472,10 @@ class Configuration(object):
                 intMacroValue(macros['__cpp_deduction_guides']) < 201611:
             self.config.available_features.add('libcpp-no-deduction-guides')
 
+        if '__cpp_concepts' not in macros or \
+                intMacroValue(macros['__cpp_concepts']) < 201811:
+            self.config.available_features.add('libcpp-no-concepts')
+
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
