@@ -357,7 +357,7 @@ public:
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
-  unsigned addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
+  Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
   void removeLiveIn(MCPhysReg Reg,
@@ -854,7 +854,7 @@ public:
   ///
   /// \p Reg must be a physical register.
   LivenessQueryResult computeRegisterLiveness(const TargetRegisterInfo *TRI,
-                                              unsigned Reg,
+                                              MCRegister Reg,
                                               const_iterator Before,
                                               unsigned Neighborhood = 10) const;
 
