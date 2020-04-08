@@ -209,6 +209,7 @@
 
 #include "WebAssembly.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -883,6 +884,27 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   return Changed;
 }
 
+// This tries to get debug info from the instruction before which a new
+// instruction will be inserted, and if there's no debug info in that
+// instruction, tries to get the info instead from the previous instruction (if
+// any). If none of these has debug info and a DISubprogram is provided, it
+// creates a dummy debug info with the first line of the function, because IR
+// verifier requires all inlinable callsites should have debug info when both a
+// caller and callee have DISubprogram. If none of these conditions are met,
+// returns empty info.
+static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
+                                    DISubprogram *SP) {
+  assert(InsertBefore);
+  if (InsertBefore->getDebugLoc())
+    return InsertBefore->getDebugLoc();
+  const Instruction *Prev = InsertBefore->getPrevNode();
+  if (Prev && Prev->getDebugLoc())
+    return Prev->getDebugLoc();
+  if (SP)
+    return DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+  return DebugLoc();
+}
+
 bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
@@ -900,7 +922,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // this instruction to a constant 4, because this value will be used in
   // SSAUpdater.AddAvailableValue(...) later.
   BasicBlock &EntryBB = F.getEntryBlock();
-  DebugLoc FirstDL = EntryBB.begin()->getDebugLoc();
+  DebugLoc FirstDL = getOrCreateDebugLoc(&*EntryBB.begin(), F.getSubprogram());
   BinaryOperator *SetjmpTableSize = BinaryOperator::Create(
       Instruction::Add, IRB.getInt32(4), IRB.getInt32(0), "setjmpTableSize",
       &*EntryBB.getFirstInsertionPt());
@@ -1076,13 +1098,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (BasicBlock &BB : F) {
     Instruction *TI = BB.getTerminator();
     if (isa<ReturnInst>(TI)) {
+      DebugLoc DL = getOrCreateDebugLoc(TI, F.getSubprogram());
       auto *Free = CallInst::CreateFree(SetjmpTable, TI);
-      Free->setDebugLoc(TI->getDebugLoc());
+      Free->setDebugLoc(DL);
       // CallInst::CreateFree may create a bitcast instruction if its argument
       // types mismatch. We need to set the debug loc for the bitcast too.
       if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
         if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
-          BitCastI->setDebugLoc(TI->getDebugLoc());
+          BitCastI->setDebugLoc(DL);
       }
     }
   }
