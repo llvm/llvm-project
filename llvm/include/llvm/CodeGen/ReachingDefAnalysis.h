@@ -43,6 +43,7 @@ class ReachingDef {
   explicit ReachingDef(uintptr_t Encoded) : Encoded(Encoded) {}
 
 public:
+  ReachingDef(nullptr_t) : Encoded(0) {}
   ReachingDef(int Instr) : Encoded((Instr << 2) | 2) {}
   operator int() const { return ((int) Encoded) >> 2; }
 };
