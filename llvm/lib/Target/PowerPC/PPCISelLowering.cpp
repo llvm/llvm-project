@@ -7093,7 +7093,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       const MCPhysReg ArgReg = VA.getLocReg();
       const PPCFrameLowering *FL = Subtarget.getFrameLowering();
 
-      if (Flags.getByValAlign() > PtrByteSize)
+      if (Flags.getNonZeroByValAlign() > PtrByteSize)
         report_fatal_error("Over aligned byvals not supported yet.");
 
       const unsigned StackSize = alignTo(Flags.getByValSize(), PtrByteSize);
