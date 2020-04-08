@@ -1442,8 +1442,6 @@ public:
 
   QualType getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                 ArrayRef<ObjCProtocolDecl *> protocols) const;
-  void adjustObjCTypeParamBoundType(const ObjCTypeParamDecl *Orig,
-                                    ObjCTypeParamDecl *New) const;
 
   bool ObjCObjectAdoptsQTypeProtocols(QualType QT, ObjCInterfaceDecl *Decl);
 
