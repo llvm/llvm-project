@@ -114,5 +114,5 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
                 "breakpoint event is for breakpoint %i" % (foo_bp_id))
         self.assertTrue('line' in breakpoint and breakpoint['line'] > 0,
                 "breakpoint event is has a line number")
-        self.assertTrue("foo.cpp" in breakpoint['source']['path'],
-                "breakpoint event path contains foo.cpp")
+        self.assertNotIn("source", breakpoint,
+                "breakpoint event should not return a source object")
