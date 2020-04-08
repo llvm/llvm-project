@@ -61,8 +61,8 @@ struct ImperfectlyNestedForLoopMapper
   ImperfectlyNestedForLoopMapper() = default;
   ImperfectlyNestedForLoopMapper(ArrayRef<int64_t> numWorkGroups,
                                  ArrayRef<int64_t> workGroupSize) {
-    this->numWorkGroups->assign(numWorkGroups.begin(), numWorkGroups.end());
-    this->workGroupSize->assign(workGroupSize.begin(), workGroupSize.end());
+    this->numWorkGroups = numWorkGroups;
+    this->workGroupSize = workGroupSize;
   }
 
   void runOnFunction() override {

@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam -unroll-jam-factor=2 | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam -unroll-jam-factor=4 | FileCheck --check-prefix=UJAM-FOUR %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam="unroll-jam-factor=2" | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam="unroll-jam-factor=4" | FileCheck --check-prefix=UJAM-FOUR %s
 
 // CHECK-DAG: [[MAP_PLUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: [[MAP_DIV_OFFSET:#map[0-9]+]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>

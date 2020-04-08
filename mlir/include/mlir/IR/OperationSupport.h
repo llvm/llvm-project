@@ -514,6 +514,9 @@ public:
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
+  /// Return the size limit for printing large ElementsAttr.
+  Optional<int64_t> getLargeElementsAttrLimit() const;
+
   /// Return if debug information should be printed.
   bool shouldPrintDebugInfo() const;
 

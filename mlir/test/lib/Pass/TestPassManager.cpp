@@ -35,10 +35,9 @@ public:
   TestOptionsPass() = default;
   TestOptionsPass(const TestOptionsPass &) {}
   TestOptionsPass(const Options &options) {
-    listOption->assign(options.listOption.begin(), options.listOption.end());
-    stringOption.setValue(options.stringOption);
-    stringListOption->assign(options.stringListOption.begin(),
-                             options.stringListOption.end());
+    listOption = options.listOption;
+    stringOption = options.stringOption;
+    stringListOption = options.stringListOption;
   }
 
   void runOnFunction() final {}

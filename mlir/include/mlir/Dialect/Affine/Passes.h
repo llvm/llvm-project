@@ -59,7 +59,7 @@ std::unique_ptr<OperationPass<FuncOp>> createLoopTilingPass();
 /// and no callback is provided, anything passed from the command-line (if at
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
 std::unique_ptr<OperationPass<FuncOp>> createLoopUnrollPass(
-    int unrollFactor = -1, int unrollFull = -1,
+    int unrollFactor = -1, bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
 
 /// Creates a loop unroll jam pass to unroll jam by the specified factor. A
