@@ -139,6 +139,11 @@ else()
     SOVERSION "${amd_comgr_VERSION_MAJOR}"
     VERSION "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}.${amd_comgr_VERSION_PATCH}")
 endif()
+
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+  set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
+endif()
+
 target_compile_options(amd_comgr
   PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}")
 target_compile_definitions(amd_comgr
