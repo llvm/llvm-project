@@ -77,23 +77,19 @@
 # YAML-NEXT:    Sections:
 # YAML-NEXT:      - Section: .dynamic
 # YAML-NEXT:    VAddr: 0x0000000000003EF0
-# YAML-NEXT:    Align: 0x0000000000000001
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
 # YAML-NEXT:    VAddr: 0x0000000000004000
-# YAML-NEXT:    Align: 0x0000000000000001
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
 # YAML-NEXT:    Sections:
 # YAML-NEXT:      - Section: .gnu.hash
 # YAML-NEXT:    VAddr: 0x00000000000001A0
-# YAML-NEXT:    Align: 0x0000000000000001
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
 # YAML-NEXT:    Sections:
 # YAML-NEXT:      - Section: .gnu.hash
 # YAML-NEXT:    VAddr: 0x00000000000001A0
-# YAML-NEXT:    Align: 0x0000000000000001
 # YAML-NEXT: Sections:
 
 --- !ELF
@@ -150,6 +146,9 @@ ProgramHeaders:
 ## Show we can create a relro segment and put a section into it.
 ## We used .dynamic here and in tests above to demonstrate that
 ## we can place a section in any number of segments.
+## Also, we explicitly set the "Align" property to 1 to demonstate
+## that we do not dump it, because it is the default alignment
+## value set by yaml2obj.
   - Type:  PT_GNU_RELRO
     Flags: [ PF_R ]
     Sections:
@@ -257,19 +256,16 @@ DynamicSymbols: []
 # EMPTY-NEXT:   Sections:
 # EMPTY-NEXT:     - Section:         .empty.tls.start
 # EMPTY-NEXT:   VAddr:           0x0000000000001000
-# EMPTY-NEXT:   Align:           0x0000000000000001
 # EMPTY-NEXT: - Type:            PT_TLS
 # EMPTY-NEXT:   Flags:           [ PF_W, PF_R ]
 # EMPTY-NEXT:   Sections:
 # EMPTY-NEXT:     - Section:         .empty.tls.middle
 # EMPTY-NEXT:   VAddr:           0x0000000000001100
-# EMPTY-NEXT:   Align:           0x0000000000000001
 # EMPTY-NEXT: - Type:            PT_TLS
 # EMPTY-NEXT:   Flags:           [ PF_W, PF_R ]
 # EMPTY-NEXT:   Sections:
 # EMPTY-NEXT:     - Section:         .empty.tls.end
 # EMPTY-NEXT:   VAddr:           0x0000000000001200
-# EMPTY-NEXT:   Align:           0x0000000000000001
 # EMPTY-NEXT: Sections:
 
 --- !ELF
@@ -385,7 +381,6 @@ Sections:
 # NON-ALLOC-NEXT:      - Section: .non-alloc.1
 # NON-ALLOC-NEXT:      - Section: .alloc.2
 # NON-ALLOC-NEXT:     VAddr: 0x0000000000001000
-# NON-ALLOC-NEXT:     Align: 0x0000000000000001
 # NON-ALLOC-NEXT: Sections:
 
 --- !ELF
