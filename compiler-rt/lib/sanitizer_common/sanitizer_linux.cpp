@@ -606,7 +606,12 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
     uptr* stack_end = (uptr*)__libc_stack_end;
-    int argc = *stack_end;
+    // Normally argc can be obtained from *stack_end, however, on ARM glibc's
+    // _start clobbers it:
+    // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/arm/start.S;hb=refs/heads/release/2.31/master#l75
+    // Do not special-case ARM and infer argc from argv everywhere.
+    int argc = 0;
+    while (stack_end[argc + 1]) argc++;
     *argv = (char**)(stack_end + 1);
     *envp = (char**)(stack_end + argc + 2);
   } else {
