@@ -5,3 +5,7 @@ add_public_tablegen_target(MLIRTestLinalgTransformPatternsIncGen)
 set(LLVM_TARGET_DEFINITIONS TestVectorTransformPatterns.td)
 mlir_tablegen(TestVectorTransformPatterns.h.inc -gen-rewriters)
 add_public_tablegen_target(MLIRTestVectorTransformPatternsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TestLinalgMatmulToVectorPatterns.td)
+mlir_tablegen(TestLinalgMatmulToVectorPatterns.h.inc -gen-rewriters)
+add_public_tablegen_target(MLIRTestLinalgMatmulToVectorPatternsIncGen)
