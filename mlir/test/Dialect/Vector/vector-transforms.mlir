@@ -341,16 +341,21 @@ func @tuple_get_producer_consumer(
   %2 = vector.extract_slices %1, [4, 8], [1, 1]
     : vector<4x16xf32> into tuple<vector<4x8xf32>, vector<4x8xf32>>
   // %arg7 == %2 at tupleIndex = 1, offsets = [2, 4]
-  %3 = vector.tuple_get %2, 1 : tuple<vector<4x8xf32>, vector<4x8xf32>>
-  // %arg7 == %3 at tupleIndex = -1, offsets = [2, 4]
-  %4 = vector.extract_slices %3, [2, 4], [1, 1]
+  %3 = vector.shape_cast %2 : tuple<vector<4x8xf32>, vector<4x8xf32>> to
+                              tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>>
+  // %arg7 = %3 at tupleIndex = 1, offsets = [0, 0, 2, 4]
+  %4 = vector.tuple_get %3, 1 : tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>>
+  // %arg7 == %4 at tupleIndex = -1, offsets = [0, 0, 2, 4]
+  %5 = vector.shape_cast %4 : vector<1x1x4x8xf32> to vector<4x8xf32>
+  // %arg7 == %5 at tupleIndex = -1, offsets = [2, 4]
+  %6 = vector.extract_slices %5, [2, 4], [1, 1]
     : vector<4x8xf32> into
       tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
-  // %arg7 == %4 at tupleIndex = 3, offsets = [0, 0]
-  %5 = vector.tuple_get %4, 3
+  // %arg7 == %6 at tupleIndex = 3, offsets = [0, 0]
+  %7 = vector.tuple_get %6, 3
     : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
-  // %arg7 == %5
-  return %5 : vector<2x4xf32>
+  // %arg7 == %7
+  return %7 : vector<2x4xf32>
 }
 
 // CHECK-LABEL: func @tuple_get_producer_consumer_swizzle
@@ -381,25 +386,40 @@ func @tuple_get_producer_consumer_swizzle(
   %2 = vector.extract_slices %1, [4, 8], [1, 1]
     : vector<4x16xf32> into tuple<vector<4x8xf32>, vector<4x8xf32>>
   // %arg7 == %2 at tupleIndex = 1, offsets = [2, 4]
+  %3= vector.shape_cast %2 : tuple<vector<4x8xf32>, vector<4x8xf32>> to
+                             tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>>
+  // %arg7 = %3 at tupleIndex = 1, offsets = [0, 0, 2, 4]
 
   // Extract tuple elements.
-  %3 = vector.tuple_get %2, 0 : tuple<vector<4x8xf32>, vector<4x8xf32>>
-  %4 = vector.tuple_get %2, 1 : tuple<vector<4x8xf32>, vector<4x8xf32>>
-  // %arg7 == %4 at tupleIndex = -1, offsets = [2, 4]
+  %4 = vector.tuple_get %3, 0 : tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>>
+  %5 = vector.tuple_get %3, 1 : tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>>
+  // %arg7 == %5 at tupleIndex = -1, offsets = [0, 0, 2, 4]
 
   // Swizzle tuple elements.
-  %5 = vector.tuple %4, %3 : vector<4x8xf32>, vector<4x8xf32>
-  // %arg7 == %5 at tupleIndex = 0, offsets = [2, 4]
-  %6 = vector.tuple_get %5, 0 : tuple<vector<4x8xf32>, vector<4x8xf32>>
-  // %arg7 == %6 at tupleIndex = -1, offsets = [2, 4]
-  %7 = vector.extract_slices %6, [2, 4], [1, 1]
+  %6 = vector.tuple %5, %4 : vector<1x1x4x8xf32>, vector<1x1x4x8xf32>
+  // %arg7 == %6 at tupleIndex = 0, offsets = [0, 0, 2, 4]
+  %7 = vector.shape_cast %6 : tuple<vector<1x1x4x8xf32>, vector<1x1x4x8xf32>> to
+                              tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 = %7 at tupleIndex = 0, offsets = [2, 4]
+  %8 = vector.tuple_get %7, 0 : tuple<vector<4x8xf32>, vector<4x8xf32>>
+  // %arg7 == %8 at tupleIndex = -1, offsets = [2, 4]
+  %9 = vector.extract_slices %8, [2, 4], [1, 1]
     : vector<4x8xf32> into
       tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
-  // %arg7 == %7 at tupleIndex = 3, offsets = [0, 0]
-  %8 = vector.tuple_get %7, 3
+  // %arg7 == %9 at tupleIndex = 3, offsets = [0, 0]
+  %10 = vector.tuple_get %9, 3
     : tuple<vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>, vector<2x4xf32>>
-  // %arg7 == %8
-  return %8 : vector<2x4xf32>
+  // %arg7 == %10
+  return %10 : vector<2x4xf32>
+}
+
+// CHECK-LABEL: func @cancelling_shape_cast_ops
+//  CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>
+//       CHECK: return %[[A0]] : vector<2x4xf32>
+func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
+  %0 = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
+  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
+  return %1 : vector<2x4xf32>
 }
 
 // CHECK-LABEL: func @vector_transfers_vector_element_type
