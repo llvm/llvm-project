@@ -128,14 +128,13 @@ public:
   bool ComputeValueKnownInPredecessorsImpl(
       Value *V, BasicBlock *BB, jumpthreading::PredValueInfo &Result,
       jumpthreading::ConstantPreference Preference,
-      DenseSet<std::pair<Value *, BasicBlock *>> &RecursionSet,
-      Instruction *CxtI = nullptr);
+      DenseSet<Value *> &RecursionSet, Instruction *CxtI = nullptr);
   bool
   ComputeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                   jumpthreading::PredValueInfo &Result,
                                   jumpthreading::ConstantPreference Preference,
                                   Instruction *CxtI = nullptr) {
-    DenseSet<std::pair<Value *, BasicBlock *>> RecursionSet;
+    DenseSet<Value *> RecursionSet;
     return ComputeValueKnownInPredecessorsImpl(V, BB, Result, Preference,
                                                RecursionSet, CxtI);
   }
