@@ -3,7 +3,7 @@
 
 ---
 name: testFoldRLWINM
-#CHECK : name : testFoldRLWINM
+#CHECK: name: testFoldRLWINM
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -18,7 +18,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMSrcFullMask1
-#CHECK : name : testFoldRLWINMSrcFullMask1
+#CHECK: name: testFoldRLWINMSrcFullMask1
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -33,7 +33,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMSrcFullMask2
-#CHECK : name : testFoldRLWINMSrcFullMask2
+#CHECK: name: testFoldRLWINMSrcFullMask2
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -48,7 +48,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMSrcWrapped
-#CHECK : name : testFoldRLWINMSrcWrapped
+#CHECK: name: testFoldRLWINMSrcWrapped
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -63,7 +63,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMUserWrapped
-#CHECK : name : testFoldRLWINMUserWrapped
+#CHECK: name: testFoldRLWINMUserWrapped
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -78,7 +78,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMResultWrapped
-#CHECK : name : testFoldRLWINMResultWrapped
+#CHECK: name: testFoldRLWINMResultWrapped
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -93,7 +93,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMMultipleUses
-#CHECK : name : testFoldRLWINMMultipleUses
+#CHECK: name: testFoldRLWINMMultipleUses
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -110,7 +110,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMToZero
-#CHECK : name : testFoldRLWINMToZero
+#CHECK: name: testFoldRLWINMToZero
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -125,7 +125,7 @@ body: |
 ...
 ---
 name: testFoldRLWINM_recToZero
-#CHECK : name : testFoldRLWINM_recToZero
+#CHECK: name: testFoldRLWINM_recToZero
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -140,7 +140,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
-#CHECK : name : testFoldRLWINMoToZeroSrcCanNotBeDeleted
+#CHECK: name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -155,7 +155,7 @@ body: |
 ...
 ---
 name: testFoldRLWINMInvalidMask
-#CHECK : name : testFoldRLWINMInvalidMask
+#CHECK: name: testFoldRLWINMInvalidMask
 tracksRegLiveness: true
 body: |
   bb.0.entry:
