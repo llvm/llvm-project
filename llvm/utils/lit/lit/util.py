@@ -291,7 +291,7 @@ def printHistogram(items, title='Items'):
     hr = '-' * (barW + 34)
     print('\nSlowest %s:' % title)
     print(hr)
-    for name, value in items[-20:]:
+    for name, value in reversed(items[-20:]):
         print('%.2fs: %s' % (value, name))
     print('\n%s Times:' % title)
     print(hr)
@@ -304,7 +304,7 @@ def printHistogram(items, title='Items'):
                                     'Percentage'.center(barW),
                                     'Count'.center(cDigits * 2 + 1)))
     print(hr)
-    for i, row in enumerate(histo):
+    for i, row in reversed(list(enumerate(histo))):
         pct = float(len(row)) / len(items)
         w = int(barW * pct)
         print('[%*.*fs,%*.*fs) :: [%s%s] :: [%*d/%*d]' % (
