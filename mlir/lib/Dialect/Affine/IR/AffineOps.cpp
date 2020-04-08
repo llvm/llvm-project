@@ -133,7 +133,7 @@ static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp,
                                     unsigned index) {
   auto memRefType = memrefDefOp.getType();
   // Statically shaped.
-  if (!ShapedType::isDynamic(memRefType.getDimSize(index)))
+  if (!memRefType.isDynamicDim(index))
     return true;
   // Get the position of the dimension among dynamic dimensions;
   unsigned dynamicDimPos = memRefType.getDynamicDimIndex(index);
