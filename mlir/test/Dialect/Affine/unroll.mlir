@@ -501,7 +501,7 @@ func @loop_nest_symbolic_bound(%N : index) {
     // A cleanup loop will be be generated here.
     // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]+}}()[%arg0] to %arg0 {
     // UNROLL-BY-4-NEXT: %0 = "foo"() : () -> i32
-    // UNROLL-BY-4_NEXT: }
+    // UNROLL-BY-4-NEXT: }
     affine.for %j = 0 to %N {
       %x = "foo"() : () -> i32
     }
@@ -526,7 +526,7 @@ func @loop_nest_symbolic_bound_with_step(%N : index) {
 // A cleanup loop will be be generated here.
 // UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]+}}()[%[[N]]] to %[[N]] step 3 {
 // UNROLL-BY-4-NEXT:   "foo"()
-// UNROLL-BY-4_NEXT: }
+// UNROLL-BY-4-NEXT: }
   }
   return
 }
