@@ -188,9 +188,8 @@ body: |
 
     ; CHECK-LABEL: name: test_inttoptr_s33_to_p3
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s33) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[TRUNC]](s33)
-    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[TRUNC1]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[TRUNC]](s32)
     ; CHECK: S_ENDPGM 0, implicit [[INTTOPTR]](p3)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0

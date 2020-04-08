@@ -252,6 +252,9 @@ def PPCcall  : SDNode<"PPCISD::CALL", SDT_PPCCall,
 def PPCcall_nop  : SDNode<"PPCISD::CALL_NOP", SDT_PPCCall,
                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                            SDNPVariadic]>;
+def PPCcall_notoc : SDNode<"PPCISD::CALL_NOTOC", SDT_PPCCall,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
 def PPCmtctr      : SDNode<"PPCISD::MTCTR", SDT_PPCCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def PPCbctrl : SDNode<"PPCISD::BCTRL", SDTNone,
@@ -994,6 +997,7 @@ def HasBPERMD : Predicate<"PPCSubTarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"PPCSubTarget->hasExtDiv()">;
 def IsISA3_0 : Predicate<"PPCSubTarget->isISA3_0()">;
 def HasFPU : Predicate<"PPCSubTarget->hasFPU()">;
+def PCRelativeMemops : Predicate<"PPCSubTarget->hasPCRelativeMemops()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.

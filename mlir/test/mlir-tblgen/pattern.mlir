@@ -32,7 +32,7 @@ func @verifyZeroResult(%arg0 : i32) {
   return
 }
 
-// CHECK-LABEL verifyZeroArg
+// CHECK-LABEL: verifyZeroArg
 func @verifyZeroArg() -> i32 {
   // CHECK: "test.op_k"() : () -> i32
   %0 = "test.op_j"() : () -> i32

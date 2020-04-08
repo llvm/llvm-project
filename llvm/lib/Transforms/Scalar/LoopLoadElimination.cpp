@@ -432,6 +432,7 @@ public:
     Value *Ptr = Cand.Load->getPointerOperand();
     auto *PtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
     auto *PH = L->getLoopPreheader();
+    assert(PH && "Preheader should exist!");
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
     Value *Initial = new LoadInst(

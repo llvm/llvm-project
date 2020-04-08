@@ -2763,11 +2763,13 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
 
     // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
-    // the FP cast because the FP cast does not change the sign-bit.
+    // the FP extend/truncate because that cast does not change the sign-bit.
+    // This is true for all standard IEEE-754 types and the X86 80-bit type.
+    // The sign-bit is always the most significant bit in those types.
     const APInt *C;
     bool TrueIfSigned;
-    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        isSignBitCheck(Pred, *C, TrueIfSigned)) {
+    if (!BCSrcOp->getType()->isPPC_FP128Ty() && match(Op1, m_APInt(C)) &&
+        Bitcast->hasOneUse() && isSignBitCheck(Pred, *C, TrueIfSigned)) {
       if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
           match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0

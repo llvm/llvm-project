@@ -1509,10 +1509,11 @@ struct DSEState {
     for (BasicBlock *BB : post_order(&F)) {
       State.PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
-        if (I.mayThrow() && !MSSA.getMemoryAccess(&I))
+        MemoryAccess *MA = MSSA.getMemoryAccess(&I);
+        if (I.mayThrow() && !MA)
           State.ThrowingBlocks.insert(I.getParent());
 
-        auto *MD = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(&I));
+        auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
             hasAnalyzableMemoryWrite(&I, TLI) && isRemovable(&I))
           State.MemDefs.push_back(MD);
@@ -1574,12 +1575,13 @@ struct DSEState {
 
     ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
     // If necessary, perform additional analysis.
-    if (isModSet(MR))
+    if (isModSet(MR) && isa<CallBase>(UseInst))
       MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
 
     Optional<MemoryLocation> UseLoc = getLocForWriteEx(UseInst);
     return isModSet(MR) && isMustSet(MR) &&
-           UseLoc->Size.getValue() >= DefLoc.Size.getValue();
+           (UseLoc->Size.hasValue() && DefLoc.Size.hasValue() &&
+            UseLoc->Size.getValue() >= DefLoc.Size.getValue());
   }
 
   /// Returns true if \p Use may read from \p DefLoc.

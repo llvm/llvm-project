@@ -1404,6 +1404,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::SRA_ADDZE:       return "PPCISD::SRA_ADDZE";
   case PPCISD::CALL:            return "PPCISD::CALL";
   case PPCISD::CALL_NOP:        return "PPCISD::CALL_NOP";
+  case PPCISD::CALL_NOTOC:      return "PPCISD::CALL_NOTOC";
   case PPCISD::MTCTR:           return "PPCISD::MTCTR";
   case PPCISD::BCTRL:           return "PPCISD::BCTRL";
   case PPCISD::BCTRL_LOAD_TOC:  return "PPCISD::BCTRL_LOAD_TOC";
@@ -4689,6 +4690,16 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
                                     SelectionDAG& DAG) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
+  // FIXME: Tail calls are currently disabled when using PC Relative addressing.
+  // The issue is that PC Relative is only partially implemented and so there
+  // is currently a mix of functions that require the TOC and functions that do
+  // not require it. If we have A calls B calls C and both A and B require the
+  // TOC and C does not and is marked as clobbering R2 then it is not safe for
+  // B to tail call C. Since we do not have the information of whether or not
+  // a funciton needs to use the TOC here in this function we need to be
+  // conservatively safe and disable all tail calls for now.
+  if (Subtarget.isUsingPCRelativeCalls()) return false;
+
   if (DisableSCO && !TailCallOpt) return false;
 
   // Variadic argument functions are not supported.
@@ -5085,6 +5096,17 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     return PPCISD::BCTRL;
   }
 
+  // FIXME: At this moment indirect calls are treated ahead of the
+  // PC Relative condition because binaries can still contain a possible
+  // mix of functions that use a TOC and functions that do not use a TOC.
+  // Once the PC Relative feature is complete this condition should be moved
+  // up ahead of the indirect calls and should return a PPCISD::BCTRL for
+  // that case.
+  if (Subtarget.isUsingPCRelativeCalls()) {
+    assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
+    return PPCISD::CALL_NOTOC;
+  }
+
   // The ABIs that maintain a TOC pointer accross calls need to have a nop
   // immediately following the call instruction if the caller and callee may
   // have different TOC bases. At link time if the linker determines the calls
@@ -5094,8 +5116,8 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
   // will rewrite the nop to be a load of the TOC pointer from the linkage area
   // into gpr2.
   if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
-    return callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
-                                                  : PPCISD::CALL_NOP;
+      return callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
+                                                    : PPCISD::CALL_NOP;
 
   return PPCISD::CALL;
 }
@@ -5372,7 +5394,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // no way to mark dependencies as implicit here.
   // We will add the R2/X2 dependency in EmitInstrWithCustomInserter.
   if ((Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) &&
-      !CFlags.IsPatchPoint)
+       !CFlags.IsPatchPoint && !Subtarget.isUsingPCRelativeCalls())
     Ops.push_back(DAG.getRegister(Subtarget.getTOCPointerRegister(), RegVT));
 
   // Add implicit use of CR bit 6 for 32-bit SVR4 vararg calls
@@ -5398,7 +5420,8 @@ SDValue PPCTargetLowering::FinishCall(
     unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
     SmallVectorImpl<SDValue> &InVals, ImmutableCallSite CS) const {
 
-  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI())
+  if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
+      Subtarget.isAIXABI())
     setUsesTOCBasePtr(DAG);
 
   unsigned CallOpc =
@@ -7036,12 +7059,10 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
   SmallVector<SDValue, 8> MemOps;
 
-  for (CCValAssign &VA : ArgLocs) {
-    EVT ValVT = VA.getValVT();
+  for (size_t I = 0, End = ArgLocs.size(); I != End; /* No increment here */) {
+    CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-    assert((VA.isRegLoc() || VA.isMemLoc()) &&
-           "Unexpected location for function call argument.");
 
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
@@ -7069,42 +7090,64 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     if (Flags.isByVal()) {
       assert(VA.isRegLoc() && "MemLocs should already be handled.");
 
-      const unsigned ByValSize = Flags.getByValSize();
-      if (ByValSize > PtrByteSize)
-        report_fatal_error("Formal arguments greater then register size not "
-                           "implemented yet.");
-
       const MCPhysReg ArgReg = VA.getLocReg();
       const PPCFrameLowering *FL = Subtarget.getFrameLowering();
-      const unsigned Offset = mapArgRegToOffsetAIX(ArgReg, FL);
 
-      const unsigned StackSize = alignTo(ByValSize, PtrByteSize);
+      if (Flags.getByValAlign() > PtrByteSize)
+        report_fatal_error("Over aligned byvals not supported yet.");
+
+      const unsigned StackSize = alignTo(Flags.getByValSize(), PtrByteSize);
       const int FI = MF.getFrameInfo().CreateFixedObject(
-          StackSize, Offset, /* IsImmutable */ false, /* IsAliased */ true);
+          StackSize, mapArgRegToOffsetAIX(ArgReg, FL), /* IsImmutable */ false,
+          /* IsAliased */ true);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-
       InVals.push_back(FIN);
 
-      const unsigned VReg = MF.addLiveIn(ArgReg, IsPPC64 ? &PPC::G8RCRegClass
-                                                         : &PPC::GPRCRegClass);
+      // Add live ins for all the RegLocs for the same ByVal.
+      const TargetRegisterClass *RegClass =
+          IsPPC64 ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
 
-      // Since the callers side has left justified the aggregate in the
-      // register, we can simply store the entire register into the stack
-      // slot.
-      // The store to the fixedstack object is needed becuase accessing a
-      // field of the ByVal will use a gep and load. Ideally we will optimize
-      // to extracting the value from the register directly, and elide the
-      // stores when the arguments address is not taken, but that will need to
-      // be future work.
-      SDValue CopyFrom = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
-      SDValue Store =
-          DAG.getStore(CopyFrom.getValue(1), dl, CopyFrom, FIN,
-                       MachinePointerInfo::getFixedStack(MF, FI, 0));
+      auto HandleRegLoc = [&, RegClass, LocVT](const MCPhysReg PhysReg,
+                                               unsigned Offset) {
+        const unsigned VReg = MF.addLiveIn(PhysReg, RegClass);
+        // Since the callers side has left justified the aggregate in the
+        // register, we can simply store the entire register into the stack
+        // slot.
+        SDValue CopyFrom = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
+        // The store to the fixedstack object is needed becuase accessing a
+        // field of the ByVal will use a gep and load. Ideally we will optimize
+        // to extracting the value from the register directly, and elide the
+        // stores when the arguments address is not taken, but that will need to
+        // be future work.
+        SDValue Store =
+            DAG.getStore(CopyFrom.getValue(1), dl, CopyFrom,
+                         DAG.getObjectPtrOffset(dl, FIN, Offset),
+                         MachinePointerInfo::getFixedStack(MF, FI, Offset));
 
-      MemOps.push_back(Store);
+        MemOps.push_back(Store);
+      };
+
+      unsigned Offset = 0;
+      HandleRegLoc(VA.getLocReg(), Offset);
+      Offset += PtrByteSize;
+      for (; Offset != StackSize; Offset += PtrByteSize) {
+        assert(I != End &&
+               "Expecting enough RegLocs to copy entire ByVal arg.");
+
+        if (!ArgLocs[I].isRegLoc())
+          report_fatal_error("Passing ByVals split between registers and stack "
+                             "not yet implemented.");
+
+        assert(ArgLocs[I].getValNo() == VA.getValNo() &&
+               "Expecting more RegLocs for ByVal argument.");
+
+        const CCValAssign RL = ArgLocs[I++];
+        HandleRegLoc(RL.getLocReg(), Offset);
+      }
       continue;
     }
 
+    EVT ValVT = VA.getValVT();
     if (VA.isRegLoc()) {
       MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
       unsigned VReg =
@@ -11373,7 +11416,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::STACKMAP ||
       MI.getOpcode() == TargetOpcode::PATCHPOINT) {
     if (Subtarget.is64BitELFABI() &&
-        MI.getOpcode() == TargetOpcode::PATCHPOINT) {
+        MI.getOpcode() == TargetOpcode::PATCHPOINT &&
+        !Subtarget.isUsingPCRelativeCalls()) {
       // Call lowering should have added an r2 operand to indicate a dependence
       // on the TOC base pointer value. It can't however, because there is no
       // way to mark the dependence as implicit there, and so the stackmap code
@@ -15521,12 +15565,12 @@ PPCTargetLowering::getScratchRegisters(CallingConv::ID) const {
   return ScratchRegs;
 }
 
-unsigned PPCTargetLowering::getExceptionPointerRegister(
+Register PPCTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   return Subtarget.isPPC64() ? PPC::X3 : PPC::R3;
 }
 
-unsigned PPCTargetLowering::getExceptionSelectorRegister(
+Register PPCTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return Subtarget.isPPC64() ? PPC::X4 : PPC::R4;
 }

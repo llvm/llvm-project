@@ -156,8 +156,7 @@ define i32 @ptestz_128_and(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_128_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vptest %xmm0, %xmm0
+; CHECK-NEXT:    vptest %xmm1, %xmm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = and <2 x i64> %c, %d
@@ -171,8 +170,7 @@ define i32 @ptestz_256_and(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vptest %ymm0, %ymm0
+; CHECK-NEXT:    vptest %ymm1, %ymm0
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -191,9 +189,8 @@ define i32 @ptestz_128_andc(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_128_andc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vptest %xmm0, %xmm0
-; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vptest %xmm1, %xmm0
+; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
   %t2 = and <2 x i64> %t1, %d
@@ -207,9 +204,8 @@ define i32 @ptestz_256_andc(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_andc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vandnps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vptest %ymm0, %ymm0
-; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovbl %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t1 = xor <4 x i64> %c, <i64 -1, i64 -1, i64 -1, i64 -1>

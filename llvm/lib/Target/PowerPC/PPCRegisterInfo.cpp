@@ -153,7 +153,14 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_SRV464_TLS_PE_SaveList;
 
   // On PPC64, we might need to save r2 (but only if it is not reserved).
-  bool SaveR2 = MF->getRegInfo().isAllocatable(PPC::X2);
+  // We do not need to treat R2 as callee-saved when using PC-Relative calls
+  // because any direct uses of R2 will cause it to be reserved. If the function
+  // is a leaf or the only uses of R2 are implicit uses for calls, the calls
+  // will use the @notoc relocation which will cause this function to set the
+  // st_other bit to 1, thereby communicating to its caller that it arbitrarily
+  // clobbers the TOC.
+  bool SaveR2 = MF->getRegInfo().isAllocatable(PPC::X2) &&
+                !Subtarget.isUsingPCRelativeCalls();
 
   // Cold calling convention CSRs.
   if (MF->getFunction().getCallingConv() == CallingConv::Cold) {

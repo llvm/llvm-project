@@ -591,6 +591,8 @@ def warn_cxx17_compat_for_range_init_stmt : Warning<
 def warn_empty_init_statement : Warning<
   "empty initialization statement of '%select{if|switch|range-based for}0' "
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
+def err_keyword_as_parameter : Error <
+  "invalid parameter name: '%0' is a keyword">;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;

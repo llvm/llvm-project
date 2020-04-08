@@ -1,16 +1,14 @@
 // Fix sign conversion warnings found by fsanitize=implicit-integer-sign-change
 // in intrinsic headers.
 // Preprocess file to workaround no warnings in system headers.
-// RUN: %clang_cc1 %s -triple x86_64-pc-linux-gnu -ffreestanding -E 2>&1 \
-// RUN:     | %clang_cc1 -x c - -triple x86_64-pc-linux-gnu -ffreestanding -Wsign-conversion -E -o - 2>&1 \
-// RUN:     | FileCheck --allow-empty %s
+// RUN: %clang_cc1 %s -triple x86_64-pc-linux-gnu -ffreestanding -E -CC 2>&1 \
+// RUN:     | %clang_cc1 -x c - -triple x86_64-pc-linux-gnu -Wsign-conversion -fsyntax-only -verify
 // REQUIRES: x86-registered-target
 
 #include <x86intrin.h>
 
 void test0() {
-  // CHECK-LABEL: test0
-  // CHECK-NOT: warning:
+  // expected-no-diagnostics
   _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
   _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_OFF);
   _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_MASK);

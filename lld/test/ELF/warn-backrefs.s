@@ -62,6 +62,12 @@
 ## --warn-backrefs does not warn.
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t2.a %t1.o %t2.so %t2.a -o /dev/null
 
+## In GNU linkers, -u does not make a backward reference.
+# RUN: ld.lld --fatal-warnings --warn-backrefs -u foo %t2.a %t1.o -o /dev/null
+
+## In GNU gold, --export-dynamic-symbol does not make a backward reference.
+# RUN: ld.lld --fatal-warnings --warn-backrefs --export-dynamic-symbol foo %t2.a %t1.o -o /dev/null
+
 .globl _start, foo
 _start:
   call foo

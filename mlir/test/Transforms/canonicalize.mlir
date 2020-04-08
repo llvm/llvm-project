@@ -370,7 +370,7 @@ func @dead_dealloc_fold_multi_use(%cond : i1) {
 
 // CHECK-LABEL: func @dead_block_elim
 func @dead_block_elim() {
-  // CHECK-NOT ^bb
+  // CHECK-NOT: ^bb
   func @nested() {
     return
 

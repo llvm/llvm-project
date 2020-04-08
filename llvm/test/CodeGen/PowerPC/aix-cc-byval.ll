@@ -687,8 +687,6 @@ entry:
   ret void
 }
 
-declare zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 %s)
-
 ; CHECK-LABEL: name: call_test_byval_32Byte{{.*}}
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -740,18 +738,78 @@ declare zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 %s
 ; ASM64-NEXT:  bl .test_byval_32Byte
 ; ASM64-NEXT:  nop
 
+define zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 %s) {
+entry:
+  %arrayidx = getelementptr inbounds %struct.S32, %struct.S32* %s, i32 0, i32 0, i32 21
+  %0 = load i8, i8* %arrayidx, align 1
+  ret i8 %0
+}
 
-%struct.S31 = type { [31 x i8] }
+; The ByVal handling produces dead stores. See `LowerFormalArguments_AIX` for
+; details on why.
+
+; CHECK-LABEL: name:            test_byval_32Byte
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 24, size: 32, alignment: 8, stack-id: default,
+; 32BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
+; 32BIT-DAG:    STW killed renamable $r3,   0, %fixed-stack.0 :: (store 4 into %fixed-stack.0
+; 32BIT-DAG:    STW killed renamable $r4,   4, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 4
+; 32BIT-DAG:    STW killed renamable $r5,   8, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 8
+; 32BIT-DAG:    STW killed renamable $r6,  12, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 12
+; 32BIT-DAG:    STW killed renamable $r7,  16, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 16
+; 32BIT-DAG:    STW killed renamable $r8,  20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
+; 32BIT-DAG:    STW killed renamable $r9,  24, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 24
+; 32BIT-DAG:    STW killed renamable $r10, 28, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 28
+; 32BIT:        renamable $r3 = LBZ 21, %fixed-stack.0 :: (dereferenceable load 1
+; 32BIT:        BLR
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 48, size: 32, alignment: 16, stack-id: default,
+; 64BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
+; 64BIT-DAG:    STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0
+; 64BIT-DAG:    STD killed renamable $x4, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
+; 64BIT-DAG:    STD killed renamable $x5, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
+; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
+; 64BIT-NEXT:   renamable $x3 = LBZ8 21, %fixed-stack.0 :: (dereferenceable load 1
+; 64BIT-NEXT:   BLR8
+
+; ASM-LABEL: .test_byval_32Byte:
+
+; ASM32:       stw 8, 44(1)
+; ASM32:       stw 3, 24(1)
+; ASM32-DAG:   lbz 3, 45(1)
+; ASM32-DAG:   stw 4, 28(1)
+; ASM32-DAG:   stw 5, 32(1)
+; ASM32-DAG:   stw 6, 36(1)
+; ASM32-DAG:   stw 7, 40(1)
+; ASM32-DAG:   stw 9, 48(1)
+; ASM32-DAG:   stw 10, 52(1)
+; ASM32-NEXT:  blr
+
+; ASM64:       std 5, 64(1)
+; ASM64:       std 3, 48(1)
+; ASM64-DAG:   lbz 3, 69(1)
+; ASM64-DAG:   std 4, 56(1)
+; ASM64-DAG:   std 6, 72(1)
+; ASM64-NEXT:  blr
+
+%struct.S31 = type <{ float, i32, i64, double, i32, i16, i8 }>
 
 @gS31 = external global %struct.S31, align 1
 
 define void @call_test_byval_31Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 @gS31)
+  %call = call double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 @gS31)
   ret void
 }
 
-declare zeroext i8 @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_31Byte{{.*}}
 
@@ -820,6 +878,66 @@ declare zeroext i8 @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1)
 ; ASM64-NEXT:  bl .test_byval_31Byte
 ; ASM64-NEXT:  nop
 
+
+
+define double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 %s) {
+entry:
+  %gep = getelementptr inbounds %struct.S31, %struct.S31* %s, i32 0, i32 3
+  %load = load double, double* %gep, align 1
+  ret double %load
+}
+
+; CHECK-LABEL: name:            test_byval_31Byte
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 24, size: 32, alignment: 8, stack-id: default,
+; 32BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
+; 32BIT-DAG:    STW killed renamable $r3,   0, %fixed-stack.0 :: (store 4 into %fixed-stack.0
+; 32BIT-DAG:    STW killed renamable $r4,   4, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 4
+; 32BIT-DAG:    STW killed renamable $r5,   8, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 8
+; 32BIT-DAG:    STW killed renamable $r6,  12, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 12
+; 32BIT-DAG:    STW killed renamable $r7,  16, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 16
+; 32BIT-DAG:    STW killed renamable $r8,  20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
+; 32BIT-DAG:    STW killed renamable $r9,  24, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 24
+; 32BIT-DAG:    STW killed renamable $r10, 28, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 28
+; 32BIT-NEXT:   renamable $f1 = LFD 16, %fixed-stack.0 :: (dereferenceable load 8
+; 32BIT-NEXT:   BLR
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 48, size: 32, alignment: 16, stack-id: default,
+; 64BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
+; 64BIT-DAG:    STD killed renamable $x3,  0, %fixed-stack.0 :: (store 8 into %fixed-stack.0
+; 64BIT-DAG:    STD killed renamable $x4,  8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
+; 64BIT-DAG:    STD killed renamable $x5, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
+; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
+; 64BIT-NEXT:   renamable $f1 = LFD 16, %fixed-stack.0 :: (dereferenceable load 8
+; 64BIT-NEXT:   BLR8
+
+; ASM32-LABEL: .test_byval_31Byte:
+
+; ASM32-DAG:      stw 8, 44(1)
+; ASM32:          stw 7, 40(1)
+; ASM32-DAG:      lfd 1, 40(1)
+; ASM32-DAG:      stw 3, 24(1)
+; ASM32-DAG:      stw 4, 28(1)
+; ASM32-DAG:      stw 5, 32(1)
+; ASM32-DAG:      stw 6, 36(1)
+; ASM32-DAG:      stw 9, 48(1)
+; ASM32-DAG:      stw 10, 52(1)
+; ASM32-NEXT:     blr
+
+; ASM64:          std 5, 64(1)
+; ASM64:          lfd 1, 64(1)
+; ASM64-DAG:      std 3, 48(1)
+; ASM64-DAG:      std 4, 56(1)
+; ASM64-DAG:      std 6, 72(1)
+; ASM64-NEXT:     blr
 
 %struct.F = type { float, float, float }
 

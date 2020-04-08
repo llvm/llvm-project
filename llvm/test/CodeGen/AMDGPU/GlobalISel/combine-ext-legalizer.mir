@@ -35,3 +35,51 @@ body: |
     %2:_(s64) = G_ZEXT %1
     $vgpr0_vgpr1 = COPY %2
 ...
+
+---
+name: test_zext_zext_i32_i48_i64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_zext_i32_i48_i64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s48) = G_ZEXT %0
+    %2:_(s64) = G_ZEXT %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_sext_zext_i32_i48_i64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_sext_zext_i32_i48_i64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s48) = G_ZEXT %0
+    %2:_(s64) = G_SEXT %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_sext_sext_i32_i48_i64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_sext_sext_i32_i48_i64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s48) = G_SEXT %0
+    %2:_(s64) = G_SEXT %1
+    $vgpr0_vgpr1 = COPY %2
+...

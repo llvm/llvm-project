@@ -8688,27 +8688,27 @@ Arguments:
 """"""""""
 
 The first two operands of a '``shufflevector``' instruction are vectors
-with the same type. The third argument is a shuffle mask whose element
-type is always 'i32'. The result of the instruction is a vector whose
-length is the same as the shuffle mask and whose element type is the
+with the same type. The third argument is a shuffle mask vector constant
+whose element type is ``i32``. The mask vector elements must be constant
+integers or ``undef`` values. The result of the instruction is a vector
+whose length is the same as the shuffle mask and whose element type is the
 same as the element type of the first two operands.
-
-The shuffle mask operand is required to be a constant vector with either
-constant integer or undef values.
 
 Semantics:
 """"""""""
 
 The elements of the two input vectors are numbered from left to right
-across both of the vectors. The shuffle mask operand specifies, for each
-element of the result vector, which element of the two input vectors the
-result element gets.
+across both of the vectors. For each element of the result vector, the
+shuffle mask selects an element from one of the input vectors to copy
+to the result. Non-negative elements in the mask represent an index
+into the concatenated pair of input vectors.
 
-If the shuffle mask is undef, the result vector is undef. If any element
-of the mask operand is undef, that element of the result is undef. If the
-shuffle mask selects an undef element from one of the input vectors, the
-resulting element is undef. An undef mask element prevents a poisoned
-vector element from propagating.
+If the shuffle mask is undefined, the result vector is undefined. If
+the shuffle mask selects an undefined element from one of the input
+vectors, the resulting element is undefined. An undefined element
+in the mask vector specifies that the resulting element is undefined.
+An undefined element in the mask vector prevents a poisoned vector
+element from propagating.
 
 For scalable vectors, the only valid mask values at present are
 ``zeroinitializer`` and ``undef``, since we cannot write all indices as

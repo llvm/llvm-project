@@ -255,9 +255,11 @@ public:
         NextReq.reset();
       }
 
-      WithContext Guard(std::move(CurrentReq->Ctx));
-      // Build the preamble and let the waiters know about it.
-      build(std::move(*CurrentReq));
+      {
+        WithContext Guard(std::move(CurrentReq->Ctx));
+        // Build the preamble and let the waiters know about it.
+        build(std::move(*CurrentReq));
+      }
       bool IsEmpty = false;
       {
         std::lock_guard<std::mutex> Lock(Mutex);
@@ -795,7 +797,7 @@ void ASTWorker::generateDiagnostics(
   // FIXME: It might be better to not reuse this AST. That way queued AST builds
   // won't be required for diags.
   llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
-  if (!AST) {
+  if (!AST || !InputsAreLatest) {
     auto RebuildStartTime = DebouncePolicy::clock::now();
     llvm::Optional<ParsedAST> NewAST = buildAST(
         FileName, std::move(Invocation), CIDiags, Inputs, LatestPreamble);
@@ -817,8 +819,6 @@ void ASTWorker::generateDiagnostics(
     });
     AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
   } else {
-    assert(InputsAreLatest && !RanASTCallback &&
-           "forgot to invalidate cached ast?");
     log("Skipping rebuild of the AST for {0}, inputs are the same.", FileName);
     Status.update([](TUStatus &Status) {
       Status.Details.ReuseAST = true;

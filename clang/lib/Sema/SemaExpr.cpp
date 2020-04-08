@@ -13630,6 +13630,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   if (ResultTy.isNull() || LHS.isInvalid() || RHS.isInvalid())
     return ExprError();
 
+  // The LHS is not converted to the result type for fixed-point compound
+  // assignment as the common type is computed on demand. Reset the CompLHSTy
+  // to the LHS type we would have gotten after unary conversions.
+  if (!CompLHSTy.isNull() &&
+      (LHS.get()->getType()->isFixedPointType() ||
+       RHS.get()->getType()->isFixedPointType()))
+    CompLHSTy = UsualUnaryConversions(LHS.get()).get()->getType();
+
   if (ResultTy->isRealFloatingType() &&
       (getLangOpts().getFPRoundingMode() != LangOptions::FPR_ToNearest ||
        getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore))

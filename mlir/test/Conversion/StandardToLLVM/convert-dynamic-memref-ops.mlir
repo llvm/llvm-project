@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
 
 // CHECK-LABEL: func @check_strided_memref_arguments(
 // CHECK-COUNT-2: !llvm<"float*">
@@ -136,6 +137,52 @@ func @dynamic_dealloc(%arg0: memref<?x?xf32>) {
 // CHECK-NEXT:  llvm.call @free(%[[ptri8]]) : (!llvm<"i8*">) -> ()
   dealloc %arg0 : memref<?x?xf32>
   return
+}
+
+// CHECK-LABEL: func @stdlib_aligned_alloc({{.*}}) -> !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }"> {
+// ALIGNED-ALLOC-LABEL: func @stdlib_aligned_alloc({{.*}}) -> !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }"> {
+func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
+// ALIGNED-ALLOC-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[num_elems:.*]] = llvm.mul %0, %1 : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm<"float*">
+// ALIGNED-ALLOC-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm<"float*">, !llvm.i64) -> !llvm<"float*">
+// ALIGNED-ALLOC-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm<"float*"> to !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[allocated:.*]] = llvm.call @aligned_alloc(%[[alignment]], %[[bytes]]) : (!llvm.i64, !llvm.i64) -> !llvm<"i8*">
+// ALIGNED-ALLOC-NEXT:  llvm.bitcast %[[allocated]] : !llvm<"i8*"> to !llvm<"float*">
+  %0 = alloc() {alignment = 32} : memref<32x18xf32>
+  // Do another alloc just to test that we have a unique declaration for
+  // aligned_alloc.
+  // ALIGNED-ALLOC:  llvm.call @aligned_alloc
+  %1 = alloc() {alignment = 64} : memref<4096xf32>
+
+  // Alignment is to element type boundaries (minimum 16 bytes).
+  // ALIGNED-ALLOC:  %[[c32:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
+  // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]]
+  %2 = alloc() : memref<4096xvector<8xf32>>
+  // The minimum alignment is 16 bytes unless explicitly specified.
+  // ALIGNED-ALLOC:  %[[c16:.*]] = llvm.mlir.constant(16 : i64) : !llvm.i64
+  // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c16]],
+  %3 = alloc() : memref<4096xvector<2xf32>>
+  // ALIGNED-ALLOC:  %[[c8:.*]] = llvm.mlir.constant(8 : i64) : !llvm.i64
+  // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c8]],
+  %4 = alloc() {alignment = 8} : memref<1024xvector<4xf32>>
+  // Bump the memref allocation size if its size is not a multiple of alignment.
+  // ALIGNED-ALLOC:       %[[c32:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
+  // ALIGNED-ALLOC-NEXT:  llvm.urem
+  // ALIGNED-ALLOC-NEXT:  llvm.sub
+  // ALIGNED-ALLOC-NEXT:  llvm.urem
+  // ALIGNED-ALLOC-NEXT:  %[[SIZE_ALIGNED:.*]] = llvm.add
+  // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]], %[[SIZE_ALIGNED]])
+  %5 = alloc() {alignment = 32} : memref<100xf32>
+  // Bump alignment to the next power of two if it isn't.
+  // ALIGNED-ALLOC:  %[[c128:.*]] = llvm.mlir.constant(128 : i64) : !llvm.i64
+  // ALIGNED-ALLOC:  llvm.call @aligned_alloc(%[[c128]]
+  %6 = alloc(%N) : memref<?xvector<18xf32>>
+  return %0 : memref<32x18xf32>
 }
 
 // CHECK-LABEL: func @mixed_load(

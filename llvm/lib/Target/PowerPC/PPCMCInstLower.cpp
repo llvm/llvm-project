@@ -81,7 +81,12 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
  if (MO.getTargetFlags() == PPCII::MO_PLT)
     RefKind = MCSymbolRefExpr::VK_PLT;
 
-  const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+  const MachineInstr *MI = MO.getParent();
+
+  if (MI->getOpcode() == PPC::BL8_NOTOC)
+    RefKind = MCSymbolRefExpr::VK_PPC_NOTOC;
+
+  const MachineFunction *MF = MI->getMF();
   const Module *M = MF->getFunction().getParent();
   const PPCSubtarget *Subtarget = &(MF->getSubtarget<PPCSubtarget>());
   const TargetMachine &TM = Printer.TM;

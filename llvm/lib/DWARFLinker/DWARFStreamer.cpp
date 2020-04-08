@@ -27,8 +27,6 @@
 
 namespace llvm {
 
-static mc::RegisterMCTargetOptionsFlags MOF;
-
 bool DwarfStreamer::init(Triple TheTriple) {
   std::string ErrorStr;
   std::string TripleName;

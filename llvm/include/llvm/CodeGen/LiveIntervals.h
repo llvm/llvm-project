@@ -333,7 +333,7 @@ class VirtRegMap;
     void repairIntervalsInRange(MachineBasicBlock *MBB,
                                 MachineBasicBlock::iterator Begin,
                                 MachineBasicBlock::iterator End,
-                                ArrayRef<unsigned> OrigRegs);
+                                ArrayRef<Register> OrigRegs);
 
     // Register mask functions.
     //

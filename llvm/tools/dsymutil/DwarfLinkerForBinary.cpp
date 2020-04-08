@@ -83,6 +83,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -100,6 +101,9 @@
 #include <vector>
 
 namespace llvm {
+
+static mc::RegisterMCTargetOptionsFlags MOF;
+
 namespace dsymutil {
 
 static Error copySwiftInterfaces(

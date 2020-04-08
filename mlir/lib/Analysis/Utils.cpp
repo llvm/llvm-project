@@ -344,7 +344,6 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   return success();
 }
 
-//  TODO(mlir-team): improve/complete this when we have target data.
 static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 

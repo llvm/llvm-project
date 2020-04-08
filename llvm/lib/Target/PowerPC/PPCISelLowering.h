@@ -165,9 +165,11 @@ namespace llvm {
 
     /// CALL - A direct function call.
     /// CALL_NOP is a call with the special NOP which follows 64-bit
+    /// CALL_NOTOC the caller does not use the TOC.
     /// SVR4 calls and 32-bit/64-bit AIX calls.
     CALL,
     CALL_NOP,
+    CALL_NOTOC,
 
     /// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
     /// MTCTR instruction.
@@ -875,7 +877,7 @@ namespace llvm {
       if (VT != MVT::f32 && VT != MVT::f64)
         return false;
 
-      return true; 
+      return true;
     }
 
     // Returns true if the address of the global is stored in TOC entry.
@@ -943,12 +945,12 @@ namespace llvm {
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     /// Override to support customized stack guard loading.

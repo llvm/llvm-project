@@ -2915,12 +2915,12 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   return Result;
 }
 
-unsigned RISCVTargetLowering::getExceptionPointerRegister(
+Register RISCVTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   return RISCV::X10;
 }
 
-unsigned RISCVTargetLowering::getExceptionSelectorRegister(
+Register RISCVTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return RISCV::X11;
 }

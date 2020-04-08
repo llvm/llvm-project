@@ -164,6 +164,7 @@ public:
   }
 
   bool allowAutoPadding() const override;
+  bool allowEnhancedRelaxation() const override;
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
@@ -455,6 +456,10 @@ static bool hasVariantSymbol(const MCInst &MI) {
 
 bool X86AsmBackend::allowAutoPadding() const {
   return (AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone);
+}
+
+bool X86AsmBackend::allowEnhancedRelaxation() const {
+  return allowAutoPadding() && X86PadMaxPrefixSize != 0 && X86PadForBranchAlign;
 }
 
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {

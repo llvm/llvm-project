@@ -761,9 +761,9 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
 
       // Ok, we need to do a load from a stub.  If we've already loaded from
       // this stub, reuse the loaded pointer, otherwise emit the load now.
-      DenseMap<const Value *, unsigned>::iterator I = LocalValueMap.find(V);
-      unsigned LoadReg;
-      if (I != LocalValueMap.end() && I->second != 0) {
+      DenseMap<const Value *, Register>::iterator I = LocalValueMap.find(V);
+      Register LoadReg;
+      if (I != LocalValueMap.end() && I->second) {
         LoadReg = I->second;
       } else {
         // Issue load from stub.

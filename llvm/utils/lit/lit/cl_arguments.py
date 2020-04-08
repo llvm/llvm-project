@@ -91,7 +91,6 @@ def parse_args():
             action="append",
             default=[])
     execution_group.add_argument("--time-tests",
-            dest="timeTests",
             help="Track elapsed wall time for each test",
             action="store_true")
     execution_group.add_argument("--no-execute",

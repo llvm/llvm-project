@@ -31,7 +31,7 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
 
   transformer::RewriteRule::Case Case =
       transformer::detail::findSelectedCase(Result, Rule);
-  auto Transformations = transformer::detail::translateEdits(Result, Case.Edits);
+  auto Transformations = Case.Edits(Result);
   if (!Transformations) {
     Consumer(Transformations.takeError());
     return;

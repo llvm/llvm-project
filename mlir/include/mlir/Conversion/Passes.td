@@ -226,6 +226,8 @@ def ConvertStandardToLLVM : Pass<"convert-std-to-llvm", "ModuleOp"> {
   }];
   let constructor = "mlir::createLowerToLLVMPass()";
   let options = [
+    Option<"useAlignedAlloc", "use-aligned-alloc", "bool", /*default=*/"false",
+           "Use aligned_alloc in place of malloc for heap allocations">,
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace FuncOp's MemRef arguments with bare pointers to the MemRef "
