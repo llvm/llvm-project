@@ -269,7 +269,7 @@ public:
 
       if (Opcode == TargetOpcode::G_ANYEXT) {
         // G_ANYEXT (G_IMPLICIT_DEF) -> G_IMPLICIT_DEF
-        if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
+        if (!isInstLegal({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
         Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, {DstReg}, {});

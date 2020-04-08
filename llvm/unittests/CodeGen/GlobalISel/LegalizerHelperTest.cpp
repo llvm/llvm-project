@@ -2748,4 +2748,60 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test narrowing of G_IMPLICIT_DEF
+TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  // Make sure that G_IMPLICIT_DEF can be narrowed if the original size is not a
+  // multiple of narrow size
+  LLT S32{LLT::scalar(32)};
+  LLT S48{LLT::scalar(48)};
+  LLT S64{LLT::scalar(64)};
+  LLT V2S64{{LLT::vector(2, 64)}};
+
+  auto Implicit1 = B.buildUndef(S64);
+  auto Implicit2 = B.buildUndef(S64);
+  auto Implicit3 = B.buildUndef(V2S64);
+  auto Implicit4 = B.buildUndef(V2S64);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*Implicit1, 0, S48));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*Implicit2, 0, S32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*Implicit3, 0, S48));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*Implicit4, 0, S32));
+
+  const auto *CheckStr = R"(
+  CHECK: [[DEF:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[DEF]]
+
+  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]]:_(s32), [[DEF1]]
+
+  CHECK: [[DEF:%[0-9]+]]:_(<2 x s48>) = G_IMPLICIT_DEF
+  CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[DEF]]
+
+  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[BV:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]]:_(s32), [[DEF1]]:_(s32), [[DEF2]]:_(s32), [[DEF3]]:_(s32)
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

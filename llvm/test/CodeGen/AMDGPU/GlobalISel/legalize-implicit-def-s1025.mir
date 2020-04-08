@@ -1,0 +1,17 @@
+# RUN: not --crash llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=legalizer %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - 2>&1 | FileCheck %s
+
+# This test is not legalizable and produces more than 9000 instructions for it
+# before it fails, including legalizer artifacts like
+# %foo:_(s65600) = G_MERGE_VALUES. Since it is not really feasible to have that
+# many CHECK-lines, only the presence of the error is checked.
+
+---
+name: test_implicit_def_s1025
+body: |
+  bb.0:
+    ; CHECK: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(s65600) = G_MERGE_VALUES
+    %0:_(s1025) = G_IMPLICIT_DEF
+    %1:_(s32) = G_TRUNC %0
+    $vgpr0 = COPY %1
+...
