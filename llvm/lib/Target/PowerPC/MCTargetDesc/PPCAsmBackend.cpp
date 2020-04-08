@@ -39,6 +39,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
     return Value & 0xfffc;
   case PPC::fixup_ppc_br24:
   case PPC::fixup_ppc_br24abs:
+  case PPC::fixup_ppc_br24_notoc:
     return Value & 0x3fffffc;
   case PPC::fixup_ppc_half16:
     return Value & 0xffff;
@@ -62,6 +63,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case PPC::fixup_ppc_brcond14abs:
   case PPC::fixup_ppc_br24:
   case PPC::fixup_ppc_br24abs:
+  case PPC::fixup_ppc_br24_notoc:
     return 4;
   case FK_Data_8:
     return 8;
@@ -88,6 +90,7 @@ public:
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
       { "fixup_ppc_br24",        6,      24,   MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_ppc_br24_notoc",  6,      24,   MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_ppc_brcond14",    16,     14,   MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_ppc_br24abs",     6,      24,   0 },
       { "fixup_ppc_brcond14abs", 16,     14,   0 },
@@ -98,6 +101,7 @@ public:
     const static MCFixupKindInfo InfosLE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
       { "fixup_ppc_br24",        2,      24,   MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_ppc_br24_notoc",  2,      24,   MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_ppc_brcond14",    2,      14,   MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_ppc_br24abs",     2,      24,   0 },
       { "fixup_ppc_brcond14abs", 2,      14,   0 },
@@ -151,6 +155,7 @@ public:
       return Kind >= FirstLiteralRelocationKind;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
+    case PPC::fixup_ppc_br24_notoc:
       // If the target symbol has a local entry point we must not attempt
       // to resolve the fixup directly.  Emit a relocation and leave
       // resolution of the final target address to the linker.
