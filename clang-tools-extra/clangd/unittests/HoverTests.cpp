@@ -66,7 +66,7 @@ TEST(Hover, Structured) {
       {R"cpp(
           namespace ns1 { namespace ns2 {
             struct Foo {
-              int [[b^ar]];
+              char [[b^ar]];
             };
           }}
           )cpp",
@@ -75,8 +75,10 @@ TEST(Hover, Structured) {
          HI.LocalScope = "Foo::";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Field;
-         HI.Definition = "int bar";
-         HI.Type = "int";
+         HI.Definition = "char bar";
+         HI.Type = "char";
+         HI.Offset = 0;
+         HI.Size = 1;
        }},
       // Local to class method.
       {R"cpp(
@@ -100,7 +102,7 @@ TEST(Hover, Structured) {
       {R"cpp(
           namespace ns1 { namespace {
             struct {
-              int [[b^ar]];
+              char [[b^ar]];
             } T;
           }}
           )cpp",
@@ -109,8 +111,21 @@ TEST(Hover, Structured) {
          HI.LocalScope = "(anonymous struct)::";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Field;
-         HI.Definition = "int bar";
-         HI.Type = "int";
+         HI.Definition = "char bar";
+         HI.Type = "char";
+         HI.Offset = 0;
+         HI.Size = 1;
+       }},
+      // Struct definition shows size.
+      {R"cpp(
+          struct [[^X]]{};
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "X";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct X {}";
+         HI.Size = 1;
        }},
       // Variable with template type
       {R"cpp(
@@ -698,6 +713,8 @@ class Foo {})cpp";
     EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
     EXPECT_EQ(H->SymRange, Expected.SymRange);
     EXPECT_EQ(H->Value, Expected.Value);
+    EXPECT_EQ(H->Size, Expected.Size);
+    EXPECT_EQ(H->Offset, Expected.Offset);
   }
 }
 
@@ -1862,6 +1879,7 @@ TEST(Hover, Present) {
       {
           [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Class;
+            HI.Size = 10;
             HI.TemplateParameters = {
                 {std::string("typename"), std::string("T"), llvm::None},
                 {std::string("typename"), std::string("C"),
@@ -1875,6 +1893,7 @@ TEST(Hover, Present) {
           },
           R"(class foo
 
+Size: 10 bytes
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
@@ -1911,19 +1930,23 @@ ret_type foo(params) {})",
       },
       {
           [](HoverInfo &HI) {
-            HI.Kind = index::SymbolKind::Variable;
-            HI.LocalScope = "test::bar::";
+            HI.Kind = index::SymbolKind::Field;
+            HI.LocalScope = "test::Bar::";
             HI.Value = "value";
             HI.Name = "foo";
             HI.Type = "type";
             HI.Definition = "def";
+            HI.Size = 4;
+            HI.Offset = 12;
           },
-          R"(variable foo
+          R"(field foo
 
 Type: type
 Value = value
+Offset: 12 bytes
+Size: 4 bytes
 
-// In test::bar
+// In test::Bar
 def)",
       },
   };
