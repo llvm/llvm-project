@@ -107,9 +107,11 @@ PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
 LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
 
 
-echo "@@@ Configuring architecture-related stuff @@@"
-if [[ "${ARCH}" == "64" ]]; then CMAKE_ARCH_STRING="x86_64"; else CMAKE_ARCH_STRING="i386"; fi
-if [[ "${ARCH}" == "64" ]]; then LIT_ARCH_STRING="";         else LIT_ARCH_STRING="--param=enable_32bit=true"; fi
+echo "@@@ Setting up LIT flags for architecture @@@"
+LIT_ARCH_STRING=""
+if [[ "${ARCH}" == "32" ]]; then
+  LIT_ARCH_STRING="--param=enable_32bit=true"
+fi
 echo "@@@@@@"
 
 
@@ -121,7 +123,7 @@ mkdir -p "${LLVM_BUILD_DIR}"
     -GNinja \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-    -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCH_STRING}" \
+    -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" \
     "${MONOREPO_ROOT}/llvm"
 )
 echo "@@@@@@"
