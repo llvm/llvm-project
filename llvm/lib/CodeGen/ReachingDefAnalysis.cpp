@@ -41,10 +41,7 @@ static bool isValidRegDefOf(const MachineOperand &MO, int PhysReg) {
   return isValidRegDef(MO) && MO.getReg() == PhysReg;
 }
 
-void ReachingDefAnalysis::enterBasicBlock(
-    const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
-
-  MachineBasicBlock *MBB = TraversedMBB.MBB;
+void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
   unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
@@ -65,8 +62,10 @@ void ReachingDefAnalysis::enterBasicBlock(
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.
-        LiveRegs[*Unit] = -1;
-        MBBReachingDefs[MBBNumber][*Unit].push_back(LiveRegs[*Unit]);
+        if (LiveRegs[*Unit] != -1) {
+          LiveRegs[*Unit] = -1;
+          MBBReachingDefs[MBBNumber][*Unit].push_back(-1);
+        }
       }
     }
     LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
@@ -83,23 +82,20 @@ void ReachingDefAnalysis::enterBasicBlock(
     if (Incoming.empty())
       continue;
 
-    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
-      // Use the most recent predecessor def for each register.
+    // Find the most recent reaching definition from a predecessor.
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
       LiveRegs[Unit] = std::max(LiveRegs[Unit], Incoming[Unit]);
-      if ((LiveRegs[Unit] != ReachingDefDefaultVal))
-        MBBReachingDefs[MBBNumber][Unit].push_back(LiveRegs[Unit]);
-    }
   }
 
-  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
-                    << (!TraversedMBB.IsDone ? ": incomplete\n"
-                                             : ": all preds known\n"));
+  // Insert the most recent reaching definition we found.
+  for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
+    if (LiveRegs[Unit] != ReachingDefDefaultVal)
+      MBBReachingDefs[MBBNumber][Unit].push_back(LiveRegs[Unit]);
 }
 
-void ReachingDefAnalysis::leaveBasicBlock(
-    const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
+void ReachingDefAnalysis::leaveBasicBlock(MachineBasicBlock *MBB) {
   assert(!LiveRegs.empty() && "Must enter basic block first.");
-  unsigned MBBNumber = TraversedMBB.MBB->getNumber();
+  unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBOutRegsInfos.size() &&
          "Unexpected basic block number.");
   // Save register clearances at end of MBB - used by enterBasicBlock().
@@ -110,7 +106,8 @@ void ReachingDefAnalysis::leaveBasicBlock(
   // only cares about the clearance from the end of the block, so adjust
   // everything to be relative to the end of the basic block.
   for (int &OutLiveReg : MBBOutRegsInfos[MBBNumber])
-    OutLiveReg -= CurInstr;
+    if (OutLiveReg != ReachingDefDefaultVal)
+      OutLiveReg -= CurInstr;
   LiveRegs.clear();
 }
 
@@ -126,26 +123,85 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       continue;
     for (MCRegUnitIterator Unit(MO.getReg(), TRI); Unit.isValid(); ++Unit) {
       // This instruction explicitly defines the current reg unit.
-      LLVM_DEBUG(dbgs() << printReg(MO.getReg(), TRI) << ":\t" << CurInstr
+      LLVM_DEBUG(dbgs() << printReg(*Unit, TRI) << ":\t" << CurInstr
                         << '\t' << *MI);
 
       // How many instructions since this reg unit was last written?
-      LiveRegs[*Unit] = CurInstr;
-      MBBReachingDefs[MBBNumber][*Unit].push_back(CurInstr);
+      if (LiveRegs[*Unit] != CurInstr) {
+        LiveRegs[*Unit] = CurInstr;
+        MBBReachingDefs[MBBNumber][*Unit].push_back(CurInstr);
+      }
     }
   }
   InstIds[MI] = CurInstr;
   ++CurInstr;
 }
 
+void ReachingDefAnalysis::reprocessBasicBlock(MachineBasicBlock *MBB) {
+  unsigned MBBNumber = MBB->getNumber();
+  assert(MBBNumber < MBBReachingDefs.size() &&
+         "Unexpected basic block number.");
+
+  // Count number of non-debug instructions for end of block adjustment.
+  int NumInsts = 0;
+  for (const MachineInstr &MI : *MBB)
+    if (!MI.isDebugInstr())
+      NumInsts++;
+
+  // When reprocessing a block, the only thing we need to do is check whether
+  // there is now a more recent incoming reaching definition from a predecessor.
+  for (MachineBasicBlock *pred : MBB->predecessors()) {
+    assert(unsigned(pred->getNumber()) < MBBOutRegsInfos.size() &&
+           "Should have pre-allocated MBBInfos for all MBBs");
+    const LiveRegsDefInfo &Incoming = MBBOutRegsInfos[pred->getNumber()];
+    // Incoming may be empty for dead predecessors.
+    if (Incoming.empty())
+      continue;
+
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
+      int Def = Incoming[Unit];
+      if (Def == ReachingDefDefaultVal)
+        continue;
+
+      auto Start = MBBReachingDefs[MBBNumber][Unit].begin();
+      if (Start != MBBReachingDefs[MBBNumber][Unit].end() && *Start < 0) {
+        if (*Start >= Def)
+          continue;
+
+        // Update existing reaching def from predecessor to a more recent one.
+        *Start = Def;
+      } else {
+        // Insert new reaching def from predecessor.
+        MBBReachingDefs[MBBNumber][Unit].insert(Start, Def);
+      }
+
+      // Update reaching def at end of of BB. Keep in mind that these are
+      // adjusted relative to the end of the basic block.
+      if (MBBOutRegsInfos[MBBNumber][Unit] < Def - NumInsts)
+        MBBOutRegsInfos[MBBNumber][Unit] = Def - NumInsts;
+    }
+  }
+}
+
 void ReachingDefAnalysis::processBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
-  enterBasicBlock(TraversedMBB);
-  for (MachineInstr &MI : *TraversedMBB.MBB) {
+  MachineBasicBlock *MBB = TraversedMBB.MBB;
+  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
+                    << (!TraversedMBB.IsDone ? ": incomplete\n"
+                                             : ": all preds known\n"));
+
+  if (!TraversedMBB.PrimaryPass) {
+    // Reprocess MBB that is part of a loop.
+    reprocessBasicBlock(MBB);
+    return;
+  }
+
+  enterBasicBlock(MBB);
+  for (MachineInstr &MI : *MBB) {
     if (!MI.isDebugInstr())
       processDefs(&MI);
   }
-  leaveBasicBlock(TraversedMBB);
+  leaveBasicBlock(MBB);
 }
 
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
@@ -184,11 +240,18 @@ void ReachingDefAnalysis::traverse() {
   // Traverse the basic blocks.
   for (LoopTraversal::TraversedMBBInfo TraversedMBB : TraversedMBBOrder)
     processBasicBlock(TraversedMBB);
-  // Sorting all reaching defs found for a ceartin reg unit in a given BB.
+#ifndef NDEBUG
+  // Make sure reaching defs are sorted and unique.
   for (MBBDefsInfo &MBBDefs : MBBReachingDefs) {
-    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs)
-      llvm::sort(RegUnitDefs);
+    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs) {
+      int LastDef = ReachingDefDefaultVal;
+      for (int Def : RegUnitDefs) {
+        assert(Def > LastDef && "Defs must be sorted and unique");
+        LastDef = Def;
+      }
+    }
   }
+#endif
 }
 
 int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) const {

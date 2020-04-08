@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
@@ -19,11 +20,7 @@ using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public OperationPass<Canonicalizer> {
-/// Include the generated pass utilities.
-#define GEN_PASS_Canonicalizer
-#include "mlir/Transforms/Passes.h.inc"
-
+struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
   void runOnOperation() override {
     OwningRewritePatternList patterns;
 

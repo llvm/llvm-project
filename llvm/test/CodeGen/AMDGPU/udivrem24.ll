@@ -122,7 +122,7 @@ define amdgpu_kernel void @udiv23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* 
 
 ; FUNC-LABEL: {{^}}udiv24_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -139,7 +139,7 @@ define amdgpu_kernel void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* 
 
 ; FUNC-LABEL: {{^}}no_udiv24_u23_u24_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -156,7 +156,7 @@ define amdgpu_kernel void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 add
 
 ; FUNC-LABEL: {{^}}no_udiv24_u24_u23_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_udiv24_u24_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1

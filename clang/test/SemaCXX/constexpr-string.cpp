@@ -107,6 +107,20 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 6) == -1);
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 5) == 0);
 
+  static_assert(__builtin_memcmp(u8"abaa", u8"abba", 3) == -1);
+  static_assert(__builtin_memcmp(u8"abaa", u8"abba", 2) == 0);
+  static_assert(__builtin_memcmp(u8"a\203", u8"a", 2) == 1);
+  static_assert(__builtin_memcmp(u8"a\203", u8"a\003", 2) == 1);
+  static_assert(__builtin_memcmp(0, 0, 0) == 0);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0banana", 100) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 100) == -1); // FIXME: Should we reject this?
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 7) == -1);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 6) == -1);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 5) == 0);
+
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB4", 4) == 0);
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB3", 4) == 1);
+
   static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
   static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
   static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
@@ -372,6 +386,20 @@ namespace StrchrEtc {
   static_assert(__builtin_memchr(kFoo, 'x', 4) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
   static_assert(__builtin_memchr(nullptr, 'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
   static_assert(__builtin_memchr(nullptr, 'x', 0) == nullptr); // FIXME: Should we reject this?
+
+  constexpr const char8_t *kU8Str = u8"abca\xff\0d";
+  constexpr char8_t kU8Foo[] = {u8'f', u8'o', u8'o'};
+  static_assert(__builtin_memchr(kU8Str, u8'a', 0) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'a', 1) == kU8Str);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 5) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 6) == kU8Str + 5);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff', 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' + 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' - 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 3) == nullptr);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 4) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 0) == nullptr); // FIXME: Should we reject this?
 
   extern struct Incomplete incomplete;
   static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);

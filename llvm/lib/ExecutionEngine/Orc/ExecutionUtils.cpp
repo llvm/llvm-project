@@ -13,6 +13,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -300,6 +302,51 @@ StaticLibraryDefinitionGenerator::Load(ObjectLayer &L, const char *FileName) {
     return ArchiveBuffer.takeError();
 
   return Create(L, std::move(*ArchiveBuffer));
+}
+
+Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+StaticLibraryDefinitionGenerator::Load(ObjectLayer &L, const char *FileName,
+                                       const Triple &TT) {
+  auto B = object::createBinary(FileName);
+  if (!B)
+    return B.takeError();
+
+  // If this is a regular archive then create an instance from it.
+  if (isa<object::Archive>(B->getBinary()))
+    return Create(L, std::move(B->takeBinary().second));
+
+  // If this is a universal binary then search for a slice matching the given
+  // Triple.
+  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+    for (const auto &Obj : UB->objects()) {
+      auto ObjTT = Obj.getTriple();
+      if (ObjTT.getArch() == TT.getArch() &&
+          ObjTT.getSubArch() == TT.getSubArch() &&
+          ObjTT.getVendor() == TT.getVendor()) {
+        // We found a match. Create an instance from a buffer covering this
+        // slice.
+        auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, Obj.getSize(),
+                                                      Obj.getOffset());
+        if (!SliceBuffer)
+          return make_error<StringError>(
+              Twine("Could not create buffer for ") + TT.str() + " slice of " +
+                  FileName + ": [ " + formatv("{0:x}", Obj.getOffset()) +
+                  " .. " + formatv("{0:x}", Obj.getOffset() + Obj.getSize()) +
+                  ": " + SliceBuffer.getError().message(),
+              SliceBuffer.getError());
+        return Create(L, std::move(*SliceBuffer));
+      }
+    }
+
+    return make_error<StringError>(Twine("Universal binary ") + FileName +
+                                       " does not contain a slice for " +
+                                       TT.str(),
+                                   inconvertibleErrorCode());
+  }
+
+  return make_error<StringError>(Twine("Unrecognized file type for ") +
+                                     FileName,
+                                 inconvertibleErrorCode());
 }
 
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>

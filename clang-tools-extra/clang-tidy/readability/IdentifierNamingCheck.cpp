@@ -11,8 +11,10 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Regex.h"
 
@@ -97,6 +99,16 @@ static StringRef const StyleNames[] = {
 #undef NAMING_KEYS
 // clang-format on
 
+static constexpr std::pair<StringRef, IdentifierNamingCheck::CaseType>
+    Mapping[] = {
+        {"aNy_CasE", IdentifierNamingCheck::CT_AnyCase},
+        {"lower_case", IdentifierNamingCheck::CT_LowerCase},
+        {"UPPER_CASE", IdentifierNamingCheck::CT_UpperCase},
+        {"camelBack", IdentifierNamingCheck::CT_CamelBack},
+        {"CamelCase", IdentifierNamingCheck::CT_CamelCase},
+        {"Camel_Snake_Case", IdentifierNamingCheck::CT_CamelSnakeCase},
+        {"camel_Snake_Back", IdentifierNamingCheck::CT_CamelSnakeBack}};
+
 namespace {
 /// Callback supplies macros to IdentifierNamingCheck::checkMacro
 class IdentifierNamingCheckPPCallbacks : public PPCallbacks {
@@ -129,26 +141,26 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
     : RenamerClangTidyCheck(Name, Context),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", 0)),
       IgnoreMainLikeFunctions(Options.get("IgnoreMainLikeFunctions", 0)) {
-  auto const fromString = [](StringRef Str) {
-    return llvm::StringSwitch<llvm::Optional<CaseType>>(Str)
-        .Case("aNy_CasE", CT_AnyCase)
-        .Case("lower_case", CT_LowerCase)
-        .Case("UPPER_CASE", CT_UpperCase)
-        .Case("camelBack", CT_CamelBack)
-        .Case("CamelCase", CT_CamelCase)
-        .Case("Camel_Snake_Case", CT_CamelSnakeCase)
-        .Case("camel_Snake_Back", CT_CamelSnakeBack)
-        .Default(llvm::None);
-  };
 
   for (auto const &Name : StyleNames) {
-    auto const caseOptional =
-        fromString(Options.get((Name + "Case").str(), ""));
+    auto CaseOptional = [&]() -> llvm::Optional<CaseType> {
+      auto ValueOr = Options.get((Name + "Case").str(), makeArrayRef(Mapping));
+      if (ValueOr)
+        return *ValueOr;
+      llvm::logAllUnhandledErrors(
+          llvm::handleErrors(ValueOr.takeError(),
+                             [](const MissingOptionError &) -> llvm::Error {
+                               return llvm::Error::success();
+                             }),
+          llvm::errs(), "warning: ");
+      return llvm::None;
+    }();
+
     auto prefix = Options.get((Name + "Prefix").str(), "");
     auto postfix = Options.get((Name + "Suffix").str(), "");
 
-    if (caseOptional || !prefix.empty() || !postfix.empty()) {
-      NamingStyles.push_back(NamingStyle(caseOptional, prefix, postfix));
+    if (CaseOptional || !prefix.empty() || !postfix.empty()) {
+      NamingStyles.push_back(NamingStyle(CaseOptional, prefix, postfix));
     } else {
       NamingStyles.push_back(llvm::None);
     }
@@ -158,32 +170,11 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
 IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  auto const toString = [](CaseType Type) {
-    switch (Type) {
-    case CT_AnyCase:
-      return "aNy_CasE";
-    case CT_LowerCase:
-      return "lower_case";
-    case CT_CamelBack:
-      return "camelBack";
-    case CT_UpperCase:
-      return "UPPER_CASE";
-    case CT_CamelCase:
-      return "CamelCase";
-    case CT_CamelSnakeCase:
-      return "Camel_Snake_Case";
-    case CT_CamelSnakeBack:
-      return "camel_Snake_Back";
-    }
-
-    llvm_unreachable("Unknown Case Type");
-  };
-
   for (size_t i = 0; i < SK_Count; ++i) {
     if (NamingStyles[i]) {
       if (NamingStyles[i]->Case) {
         Options.store(Opts, (StyleNames[i] + "Case").str(),
-                      toString(*NamingStyles[i]->Case));
+                      *NamingStyles[i]->Case, llvm::makeArrayRef(Mapping));
       }
       Options.store(Opts, (StyleNames[i] + "Prefix").str(),
                     NamingStyles[i]->Prefix);

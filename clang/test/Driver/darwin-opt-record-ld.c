@@ -2,6 +2,10 @@
 
 // RUN: touch %t.o
 //
+// Check that we're not passing -lto-pass-remarks-output if not requested
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=NO_PASS_REMARKS_OUTPUT %s < %t.log
+// NO_PASS_REMARKS_OUTPUT-NOT: -lto-pass-remarks
 // Check that we're passing -lto-pass-remarks-output for LTO
 // RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### -o foo/bar.out 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT %s < %t.log

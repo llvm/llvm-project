@@ -28,7 +28,7 @@ namespace {
 // top level decl.
 //
 // Currently this only removes qualifier from under the cursor. In the future,
-// we should improve this to remove qualifier from all occurences of this
+// we should improve this to remove qualifier from all occurrences of this
 // symbol.
 class AddUsing : public Tweak {
 public:

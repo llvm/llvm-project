@@ -42,6 +42,31 @@ static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
 static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
             cl::init(false));
 
+static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
+                                 BranchProbabilityInfo *BPI,
+                                 bool isSimple) {
+  std::string Filename =
+      (CFGDotFilenamePrefix + "." + F.getName() + ".dot").str();
+  errs() << "Writing '" << Filename << "'...";
+
+  std::error_code EC;
+  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+
+  DOTFuncInfo CFGInfo(&F, BFI, BPI);
+  if (!EC)
+    WriteGraph(File, &CFGInfo, isSimple);
+  else
+    errs() << "  error opening file for writing!";
+  errs() << "\n";
+}
+
+static void viewCFG(Function &F, BlockFrequencyInfo *BFI,
+                                 BranchProbabilityInfo *BPI,
+                                 bool isSimple) {
+  DOTFuncInfo CFGInfo(&F, BFI, BPI);
+  ViewGraph(&CFGInfo, "cfg." + F.getName(), isSimple);
+}
+
 namespace {
   struct CFGViewerLegacyPass : public FunctionPass {
     static char ID; // Pass identifcation, replacement for typeid
@@ -50,13 +75,18 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      F.viewCFG();
+      auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+      auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
+      viewCFG(F, BFI, BPI, /*isSimple=*/false);
       return false;
     }
 
     void print(raw_ostream &OS, const Module* = nullptr) const override {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      FunctionPass::getAnalysisUsage(AU); // Maybe Change to FunctionPass::...
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
       AU.setPreservesAll();
     }
   };
@@ -67,7 +97,9 @@ INITIALIZE_PASS(CFGViewerLegacyPass, "view-cfg", "View CFG of function", false, 
 
 PreservedAnalyses CFGViewerPass::run(Function &F,
                                      FunctionAnalysisManager &AM) {
-  F.viewCFG();
+  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+  viewCFG(F, BFI, BPI, /*isSimple=*/false);
   return PreservedAnalyses::all();
 }
 
@@ -80,13 +112,18 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      F.viewCFGOnly();
+      auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+      auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
+      viewCFG(F, BFI, BPI, /*isSimple=*/false);
       return false;
     }
 
     void print(raw_ostream &OS, const Module* = nullptr) const override {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      FunctionPass::getAnalysisUsage(AU);
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
       AU.setPreservesAll();
     }
   };
@@ -98,25 +135,10 @@ INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
 
 PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  F.viewCFGOnly();
+  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+  viewCFG(F, BFI, BPI, /*isSimple=*/false);
   return PreservedAnalyses::all();
-}
-
-static void writeCFGToDotFile(Function &F, bool CFGOnly = false) {
-  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-     return;
-  std::string Filename =
-      (CFGDotFilenamePrefix + "." + F.getName() + ".dot").str();
-  errs() << "Writing '" << Filename << "'...";
-
-  std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
-
-  if (!EC)
-    WriteGraph(File, (const Function*)&F, CFGOnly);
-  else
-    errs() << "  error opening file for writing!";
-  errs() << "\n";
 }
 
 namespace {
@@ -127,13 +149,18 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      writeCFGToDotFile(F);
+      auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+      auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
+      writeCFGToDotFile(F, BFI, BPI, /*isSimple=*/false);
       return false;
     }
 
     void print(raw_ostream &OS, const Module* = nullptr) const override {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      FunctionPass::getAnalysisUsage(AU);
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
       AU.setPreservesAll();
     }
   };
@@ -145,7 +172,9 @@ INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg", "Print CFG of function to 'dot'
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  writeCFGToDotFile(F);
+  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+  writeCFGToDotFile(F, BFI, BPI, /*isSimple=*/false);
   return PreservedAnalyses::all();
 }
 
@@ -157,12 +186,17 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      writeCFGToDotFile(F, /*CFGOnly=*/true);
+      auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+      auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
+      writeCFGToDotFile(F, BFI, BPI, /*isSimple=*/false);
       return false;
     }
     void print(raw_ostream &OS, const Module* = nullptr) const override {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      FunctionPass::getAnalysisUsage(AU);
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
       AU.setPreservesAll();
     }
   };
@@ -175,7 +209,9 @@ INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
-  writeCFGToDotFile(F, /*CFGOnly=*/true);
+  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+  writeCFGToDotFile(F, BFI, BPI, /*isSimple=*/false);
   return PreservedAnalyses::all();
 }
 
@@ -187,7 +223,8 @@ PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
 void Function::viewCFG() const {
   if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
      return;
-  ViewGraph(this, "cfg" + getName());
+  DOTFuncInfo CFGInfo(this);
+  ViewGraph(&CFGInfo, "cfg" + getName());
 }
 
 /// viewCFGOnly - This function is meant for use from the debugger.  It works
@@ -198,7 +235,8 @@ void Function::viewCFG() const {
 void Function::viewCFGOnly() const {
   if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
      return;
-  ViewGraph(this, "cfg" + getName(), true);
+  DOTFuncInfo CFGInfo(this);
+  ViewGraph(&CFGInfo, "cfg" + getName(), true);
 }
 
 FunctionPass *llvm::createCFGPrinterLegacyPassPass () {
@@ -209,7 +247,7 @@ FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass () {
   return new CFGOnlyPrinterLegacyPass();
 }
 
-void DOTGraphTraits<const Function *>::computeHiddenNodes(const Function *F) {
+void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
   auto evaluateBB = [&](const BasicBlock *Node) {
     if (succ_begin(Node) == succ_end(Node)) {
       const Instruction *TI = Node->getTerminator();
@@ -228,7 +266,7 @@ void DOTGraphTraits<const Function *>::computeHiddenNodes(const Function *F) {
            evaluateBB);
 }
 
-bool DOTGraphTraits<const Function *>::isNodeHidden(const BasicBlock *Node) {
+bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node) {
   // If both restricting flags are false, all nodes are displayed.
   if (!HideUnreachablePaths && !HideDeoptimizePaths)
     return false;

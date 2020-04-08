@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   lineeditor
   support
+  FrontendOpenMP
   )
 
 add_clang_library(clangQuery

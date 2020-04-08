@@ -281,6 +281,11 @@ def FeatureAM : SubtargetFeature<
     "am", "HasAM", "true",
     "Enable v8.4-A Activity Monitors extension">;
 
+def FeatureAMVS : SubtargetFeature<
+    "amvs", "HasAMVS", "true",
+    "Enable v8.6-A Activity Monitors Virtualization support",
+    [FeatureAM]>;
+
 def FeatureSEL2 : SubtargetFeature<
     "sel2", "HasSEL2", "true",
     "Enable v8.4-A Secure Exception Level 2 extension">;
@@ -368,6 +373,14 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
 def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
     "true", "Enable BFloat16 Extension" >;
 
+def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
+    "true", "Enable fine grained virtualization traps extension">;
+
+def FeatureEnhancedCounterVirtualization :
+      SubtargetFeature<"ecv", "HasEnhancedCounterVirtualization",
+      "true", "Enable enhanced counter virtualization extension">;
+
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -398,7 +411,9 @@ def HasV8_5aOps : SubtargetFeature<
 
 def HasV8_6aOps : SubtargetFeature<
   "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
-  [HasV8_5aOps, FeatureBF16]>;
+
+  [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
+   FeatureEnhancedCounterVirtualization]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

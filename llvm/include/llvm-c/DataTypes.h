@@ -24,12 +24,6 @@
 #ifndef LLVM_C_DATATYPES_H
 #define LLVM_C_DATATYPES_H
 
-#ifdef __cplusplus
-#include <cmath>
-#else
-#include <math.h>
-#endif
-
 #include <inttypes.h>
 #include <stdint.h>
 

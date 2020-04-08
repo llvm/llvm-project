@@ -112,12 +112,25 @@ public:
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     NULL will be returned.
-  const char *getCStr(uint64_t *offset_ptr) const;
+  const char *getCStr(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return getCStrRef(OffsetPtr, Err).data();
+  }
+
+  /// Extract a C string from the location given by the cursor. In case of an
+  /// extraction error, or if the cursor is already in an error state, a
+  /// nullptr is returned.
+  const char *getCStr(Cursor &C) const { return getCStrRef(C).data(); }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -134,12 +147,25 @@ public:
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// \return
   ///     A StringRef for the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     a default-initialized StringRef will be returned.
-  StringRef getCStrRef(uint64_t *offset_ptr) const;
+  StringRef getCStrRef(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract a C string (as a StringRef) from the location given by the cursor.
+  /// In case of an extraction error, or if the cursor is already in an error
+  /// state, a default-initialized StringRef is returned.
+  StringRef getCStrRef(Cursor &C) const {
+    return getCStrRef(&C.Offset, &C.Err);
+  }
 
   /// Extract a fixed length string from \a *OffsetPtr and consume \a Length
   /// bytes.
@@ -191,13 +217,25 @@ public:
   ///     The number of bytes to extract. If there are not enough bytes in the
   ///     data to extract all of the bytes, the offset will be left unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// \return
   ///     A StringRef for the extracted bytes. If the offset pointed to by
   ///     \a OffsetPtr is out of bounds, or if the offset plus the length
   ///     is out of bounds, a default-initialized StringRef will be returned.
-  StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length) const;
+  StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length,
+                     Error *Err = nullptr) const;
 
-  StringRef getCStrRef(Cursor &C) const { return getCStrRef(&C.Offset); }
+  /// Extract a fixed number of bytes from the location given by the cursor. In
+  /// case of an extraction error, or if the cursor is already in an error
+  /// state, a default-initialized StringRef is returned.
+  StringRef getBytes(Cursor &C, uint64_t Length) {
+    return getBytes(&C.Offset, Length, &C.Err);
+  }
 
   /// Extract an unsigned integer of size \a byte_size from \a
   /// *offset_ptr.
@@ -429,9 +467,20 @@ public:
   ///     is out of bounds or there are not enough bytes to extract this value,
   ///     the offset will be left unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     The extracted 24-bit value represented in a uint32_t.
-  uint32_t getU24(uint64_t *offset_ptr) const;
+  uint32_t getU24(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract a single 24-bit unsigned value from the location given by the
+  /// cursor. In case of an extraction error, or if the cursor is already in an
+  /// error state, zero is returned.
+  uint32_t getU24(Cursor &C) const { return getU24(&C.Offset, &C.Err); }
 
   /// Extract a uint32_t value from \a *offset_ptr.
   ///
@@ -551,9 +600,20 @@ public:
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     The extracted signed integer value.
-  int64_t getSLEB128(uint64_t *offset_ptr) const;
+  int64_t getSLEB128(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract an signed LEB128 value from the location given by the cursor.
+  /// In case of an extraction error, or if the cursor is already in an error
+  /// state, zero is returned.
+  int64_t getSLEB128(Cursor &C) const { return getSLEB128(&C.Offset, &C.Err); }
 
   /// Extract a unsigned LEB128 value from \a *offset_ptr.
   ///
@@ -579,7 +639,7 @@ public:
   ///     The extracted unsigned integer value.
   uint64_t getULEB128(uint64_t *offset_ptr, llvm::Error *Err = nullptr) const;
 
-  /// Extract an unsigned ULEB128 value from the location given by the cursor.
+  /// Extract an unsigned LEB128 value from the location given by the cursor.
   /// In case of an extraction error, or if the cursor is already in an error
   /// state, zero is returned.
   uint64_t getULEB128(Cursor &C) const { return getULEB128(&C.Offset, &C.Err); }

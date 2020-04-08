@@ -222,7 +222,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
-                                      unsigned Reg) const {
+                                        MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
 }
 
@@ -240,11 +240,11 @@ void AArch64RegisterInfo::emitReservedArgRegCallError(
 }
 
 bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
-                                          unsigned PhysReg) const {
+                                          MCRegister PhysReg) const {
   return !isReservedReg(MF, PhysReg);
 }
 
-bool AArch64RegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+bool AArch64RegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   return PhysReg == AArch64::WZR || PhysReg == AArch64::XZR;
 }
 
@@ -399,7 +399,7 @@ bool AArch64RegisterInfo::needsFrameBaseReg(MachineInstr *MI,
 }
 
 bool AArch64RegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
-                                             unsigned BaseReg,
+                                             Register BaseReg,
                                              int64_t Offset) const {
   assert(MI && "Unable to get the legal offset for nil instruction.");
   StackOffset SaveOffset(Offset, MVT::i8);
@@ -409,7 +409,7 @@ bool AArch64RegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 /// Insert defining instruction(s) for BaseReg to be a pointer to FrameIdx
 /// at the beginning of the basic block.
 void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                       unsigned BaseReg,
+                                                       Register BaseReg,
                                                        int FrameIdx,
                                                        int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
@@ -430,7 +430,7 @@ void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
       .addImm(Shifter);
 }
 
-void AArch64RegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+void AArch64RegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                             int64_t Offset) const {
   // ARM doesn't need the general 64-bit offsets
   StackOffset Off(Offset, MVT::i8);
@@ -486,7 +486,7 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   bool Tagged =
       MI.getOperand(FIOperandNum).getTargetFlags() & AArch64II::MO_TAGGED;
-  unsigned FrameReg;
+  Register FrameReg;
 
   // Special handling of dbg_value, stackmap and patchpoint instructions.
   if (MI.isDebugValue() || MI.getOpcode() == TargetOpcode::STACKMAP ||

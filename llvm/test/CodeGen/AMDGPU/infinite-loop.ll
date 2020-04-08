@@ -77,28 +77,36 @@ define amdgpu_kernel void @infinite_loops(i32 addrspace(1)* %out) {
 ; SI-LABEL: infinite_loops:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_mov_b64 s[2:3], -1
+; SI-NEXT:    s_cbranch_scc1 BB2_4
+; SI-NEXT:  ; %bb.1:
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_cbranch_scc0 BB2_3
-; SI-NEXT:  ; %bb.1: ; %loop1.preheader
-; SI-NEXT:    v_mov_b32_e32 v0, 0x3e7
-; SI-NEXT:    s_and_b64 vcc, exec, -1
-; SI-NEXT:  BB2_2: ; %loop1
-; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-NEXT:    s_cbranch_vccnz BB2_2
-; SI-NEXT:    s_branch BB2_5
-; SI-NEXT:  BB2_3:
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x378
 ; SI-NEXT:    s_and_b64 vcc, exec, -1
-; SI-NEXT:  BB2_4: ; %loop2
-; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:  BB2_2:
+; SI:         s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-NEXT:    s_cbranch_vccnz BB2_4
-; SI-NEXT:  BB2_5: ; %DummyReturnBlock
+; SI-NEXT:    s_cbranch_vccnz BB2_2
+; SI-NEXT:  ; %bb.3:
+; SI-NEXT:    s_mov_b64 s[2:3], 0
+; SI-NEXT:  BB2_4:
+; SI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b64 vcc, vcc
+; SI-NEXT:    s_cbranch_vccz BB2_7
+; SI-NEXT:  ; %bb.5:
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, 0x3e7
+; SI-NEXT:    s_and_b64 vcc, exec, 0
+; SI-NEXT:  BB2_6:
+; SI:         buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_cbranch_vccz BB2_6
+; SI-NEXT:  BB2_7:
 ; SI-NEXT:    s_endpgm
+
 ; IR-LABEL: @infinite_loops(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br i1 undef, label [[LOOP1:%.*]], label [[LOOP2:%.*]]

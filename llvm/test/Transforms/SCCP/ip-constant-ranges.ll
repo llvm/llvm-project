@@ -84,9 +84,7 @@ end:
 }
 
 ; CHECK-LABEL: f4
-; CHECK: %cmp = icmp sgt i32 %x, 300
-; CHECK: %res = select i1 %cmp, i32 1, i32 2
-; CHECK: ret i32 %res
+; CHECK:  ret i32 undef
 define internal i32 @f4(i32 %x) {
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -94,8 +92,13 @@ entry:
   ret i32 %res
 }
 
-; ICmp could introduce bounds on ConstantRanges.
+; ICmp introduces bounds on ConstantRanges.
 define i32 @caller3(i32 %x) {
+; CHECK-LABEL: define i32 @caller3(i32 %x)
+; CHECK-LABEL: end:
+; CHECK-NEXT:    %res = phi i32 [ 0, %entry ], [ 1, %if.true ]
+; CHECK-NEXT:    ret i32 %res
+;
 entry:
   %cmp = icmp sgt i32 %x, 300
   br i1 %cmp, label %if.true, label %end

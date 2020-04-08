@@ -18,8 +18,7 @@
 // When exceptions are disabled, all iterators should get this "fast path"
 //
 
-// MODULES_DEFINES: _LIBCPP_NO_EXCEPTIONS
-#define _LIBCPP_NO_EXCEPTIONS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_NO_EXCEPTIONS
 
 #include <iterator>
 #include <cassert>

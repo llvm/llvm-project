@@ -48,7 +48,7 @@ static llvm::cl::opt<bool> clTestLoopFusionTransformation(
 
 namespace {
 
-struct TestLoopFusion : public FunctionPass<TestLoopFusion> {
+struct TestLoopFusion : public PassWrapper<TestLoopFusion, FunctionPass> {
   void runOnFunction() override;
 };
 

@@ -57,6 +57,7 @@ add_lldb_library(lldbUtility
   UserIDResolver.cpp
   VASprintf.cpp
   VMRange.cpp
+  XcodeSDK.cpp
 
   LINK_LIBS
     ${LLDB_SYSTEM_LIBS}

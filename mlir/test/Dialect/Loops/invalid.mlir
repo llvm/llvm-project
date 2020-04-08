@@ -2,7 +2,7 @@
 
 func @loop_for_lb(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #0 must be index}}
-  "loop.for"(%arg0, %arg1, %arg1) : (f32, index, index) -> ()
+  "loop.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
   return
 }
 
@@ -10,7 +10,7 @@ func @loop_for_lb(%arg0: f32, %arg1: index) {
 
 func @loop_for_ub(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #1 must be index}}
-  "loop.for"(%arg1, %arg0, %arg1) : (index, f32, index) -> ()
+  "loop.for"(%arg1, %arg0, %arg1) ({}) : (index, f32, index) -> ()
   return
 }
 
@@ -18,7 +18,7 @@ func @loop_for_ub(%arg0: f32, %arg1: index) {
 
 func @loop_for_step(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #2 must be index}}
-  "loop.for"(%arg1, %arg1, %arg0) : (index, index, f32) -> ()
+  "loop.for"(%arg1, %arg1, %arg0) ({}) : (index, index, f32) -> ()
   return
 }
 
@@ -37,7 +37,7 @@ func @loop_for_step_positive(%arg0: index) {
 // -----
 
 func @loop_for_one_region(%arg0: index) {
-  // expected-error@+1 {{incorrect number of regions: expected 1 but found 2}}
+  // expected-error@+1 {{requires one region}}
   "loop.for"(%arg0, %arg0, %arg0) (
     {loop.yield},
     {loop.yield}
@@ -77,14 +77,14 @@ func @loop_for_single_index_argument(%arg0: index) {
 
 func @loop_if_not_i1(%arg0: index) {
   // expected-error@+1 {{operand #0 must be 1-bit signless integer}}
-  "loop.if"(%arg0) : (index) -> ()
+  "loop.if"(%arg0) ({}, {}) : (index) -> ()
   return
 }
 
 // -----
 
 func @loop_if_more_than_2_regions(%arg0: i1) {
-  // expected-error@+1 {{op has incorrect number of regions: expected 2}}
+  // expected-error@+1 {{expected 2 regions}}
   "loop.if"(%arg0) ({}, {}, {}): (i1) -> ()
   return
 }

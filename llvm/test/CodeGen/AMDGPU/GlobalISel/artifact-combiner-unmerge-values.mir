@@ -536,3 +536,41 @@ body:             |
     %4:_(s64), %5:_(s64) = G_UNMERGE_VALUES %3
     S_ENDPGM 0, implicit %4, implicit %5
 ...
+
+---
+name: test_unmerge_values_v3s32_of_v12s32_concat_vectors_v4s32
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_unmerge_values_v3s32_of_v12s32_concat_vectors_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>), [[COPY2]](<4 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
+    ; CHECK: S_ENDPGM 0, implicit [[UV]](<3 x s32>), implicit [[UV1]](<3 x s32>), implicit [[UV2]](<3 x s32>), implicit [[UV3]](<3 x s32>)
+    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<12 x s32>) = G_CONCAT_VECTORS %0, %1, %2
+    %4:_(<3 x s32>), %5:_(<3 x s32>), %6:_(<3 x s32>), %7:_(<3 x s32>) = G_UNMERGE_VALUES %3
+    S_ENDPGM 0, implicit %4, implicit %5, implicit %6, implicit %7
+...
+
+---
+name: test_unmerge_values_v3s16_of_v12s16_concat_vectors_v4s16
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_unmerge_values_v3s16_of_v12s16_concat_vectors_v4s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr4_vgpr5
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[COPY]](<4 x s16>), [[COPY1]](<4 x s16>), [[COPY2]](<4 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; CHECK: S_ENDPGM 0, implicit [[UV]](<3 x s16>), implicit [[UV1]](<3 x s16>), implicit [[UV2]](<3 x s16>), implicit [[UV3]](<3 x s16>)
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(<4 x s16>) = COPY $vgpr2_vgpr3
+    %2:_(<4 x s16>) = COPY $vgpr4_vgpr5
+    %3:_(<12 x s16>) = G_CONCAT_VECTORS %0, %1, %2
+    %4:_(<3 x s16>), %5:_(<3 x s16>), %6:_(<3 x s16>), %7:_(<3 x s16>) = G_UNMERGE_VALUES %3
+    S_ENDPGM 0, implicit %4, implicit %5, implicit %6, implicit %7
+...

@@ -66,7 +66,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
 
   // If the first instruction of Tail is predicated, we may have to update
   // the IT instruction.
-  unsigned PredReg = 0;
+  Register PredReg;
   ARMCC::CondCodes CC = getInstrPredicate(*Tail, PredReg);
   MachineBasicBlock::iterator MBBI = Tail;
   if (CC != ARMCC::AL)
@@ -114,7 +114,7 @@ Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
       return false;
   }
 
-  unsigned PredReg = 0;
+  Register PredReg;
   return getITInstrPredicate(*MBBI, PredReg) == ARMCC::AL;
 }
 
@@ -229,9 +229,9 @@ void Thumb2InstrInfo::expandLoadStackGuard(
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI,
-                                  const DebugLoc &dl, unsigned DestReg,
-                                  unsigned BaseReg, int NumBytes,
-                                  ARMCC::CondCodes Pred, unsigned PredReg,
+                                  const DebugLoc &dl, Register DestReg,
+                                  Register BaseReg, int NumBytes,
+                                  ARMCC::CondCodes Pred, Register PredReg,
                                   const ARMBaseInstrInfo &TII,
                                   unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
@@ -471,7 +471,7 @@ immediateOffsetOpcode(unsigned opcode)
 }
 
 bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                               unsigned FrameReg, int &Offset,
+                               Register FrameReg, int &Offset,
                                const ARMBaseInstrInfo &TII,
                                const TargetRegisterInfo *TRI) {
   unsigned Opcode = MI.getOpcode();
@@ -491,7 +491,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   if (IsSP || Opcode == ARM::t2ADDri || Opcode == ARM::t2ADDri12) {
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
 
-    unsigned PredReg;
+    Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
         !MI.definesRegister(ARM::CPSR)) {
       // Turn it into a move.
@@ -706,7 +706,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 }
 
 ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
-                                           unsigned &PredReg) {
+                                           Register &PredReg) {
   unsigned Opc = MI.getOpcode();
   if (Opc == ARM::tBcc || Opc == ARM::t2Bcc)
     return ARMCC::AL;
@@ -727,7 +727,7 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
 }
 
 ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
-                                            unsigned &PredReg) {
+                                            Register &PredReg) {
   int PIdx = findFirstVPTPredOperandIdx(MI);
   if (PIdx == -1) {
     PredReg = 0;

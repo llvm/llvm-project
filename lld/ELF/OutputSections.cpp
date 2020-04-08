@@ -242,6 +242,25 @@ void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
       sortByOrder(isd->sections, order);
 }
 
+static void nopInstrFill(uint8_t *buf, size_t size) {
+  if (size == 0)
+    return;
+  unsigned i = 0;
+  if (size == 0)
+    return;
+  std::vector<std::vector<uint8_t>> nopFiller = *target->nopInstrs;
+  unsigned num = size / nopFiller.back().size();
+  for (unsigned c = 0; c < num; ++c) {
+    memcpy(buf + i, nopFiller.back().data(), nopFiller.back().size());
+    i += nopFiller.back().size();
+  }
+  unsigned remaining = size - i;
+  if (!remaining)
+    return;
+  assert(nopFiller[remaining - 1].size() == remaining);
+  memcpy(buf + i, nopFiller[remaining - 1].data(), remaining);
+}
+
 // Fill [Buf, Buf + Size) with Filler.
 // This is used for linker script "=fillexp" command.
 static void fill(uint8_t *buf, size_t size,
@@ -330,7 +349,11 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
         end = buf + size;
       else
         end = buf + sections[i + 1]->outSecOff;
-      fill(start, end - start, filler);
+      if (isec->nopFiller) {
+        assert(target->nopInstrs);
+        nopInstrFill(start, end - start);
+      } else
+        fill(start, end - start, filler);
     }
   });
 

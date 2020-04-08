@@ -92,11 +92,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
-                                         unsigned PhysReg) const {
+                                         MCRegister PhysReg) const {
   return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
 }
 
-bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+bool RISCVRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   return PhysReg == RISCV::X0;
 }
 
@@ -123,7 +123,7 @@ static const std::map<unsigned, int> FixedCSRFIMap = {
 };
 
 bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                             unsigned Reg,
+                                             Register Reg,
                                              int &FrameIdx) const {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (!RVFI->useSaveRestoreLibCalls())
@@ -149,7 +149,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  unsigned FrameReg;
+  Register FrameReg;
   int Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg) +
       MI.getOperand(FIOperandNum + 1).getImm();

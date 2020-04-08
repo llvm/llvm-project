@@ -1443,7 +1443,7 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
 
   // LLDB needs to create those decls only to be able to display a
   // type that includes a template template argument. Only the name matters for
-  // this purpose, so we use dummy values for the other characterisitcs of the
+  // this purpose, so we use dummy values for the other characteristics of the
   // type.
   return TemplateTemplateParmDecl::Create(
       ast, decl_ctx, SourceLocation(),
@@ -8419,7 +8419,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // Try to find an exact match for the value.
   // At the same time, we're applying a heuristic to determine whether we want
   // to print this enum as a bitfield. We're likely dealing with a bitfield if
-  // every enumrator is either a one bit value or a superset of the previous
+  // every enumerator is either a one bit value or a superset of the previous
   // enumerators. Also 0 doesn't make sense when the enumerators are used as
   // flags.
   for (auto enumerator : enum_decl->enumerators()) {

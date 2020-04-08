@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/LoopAnalysis.h"
@@ -20,7 +21,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -41,11 +41,8 @@ namespace {
 /// TODO(asabne) : Check for the presence of side effects before hoisting.
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.
-struct LoopInvariantCodeMotion : public FunctionPass<LoopInvariantCodeMotion> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopInvariantCodeMotion
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct LoopInvariantCodeMotion
+    : public AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnFunction() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
@@ -232,7 +229,7 @@ void LoopInvariantCodeMotion::runOnFunction() {
   });
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createAffineLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }

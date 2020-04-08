@@ -15,21 +15,17 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-NEXT:    pcmpgtq %xmm7, %xmm3
 ; SSE-NEXT:    pcmpgtq %xmm6, %xmm2
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    packssdw %xmm2, %xmm2
 ; SSE-NEXT:    pcmpgtq %xmm5, %xmm1
 ; SSE-NEXT:    pcmpgtq %xmm4, %xmm0
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    packssdw %xmm0, %xmm0
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    packssdw %xmm11, %xmm10
-; SSE-NEXT:    packssdw %xmm10, %xmm1
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    packssdw %xmm9, %xmm8
-; SSE-NEXT:    packssdw %xmm0, %xmm8
-; SSE-NEXT:    pblendw {{.*#+}} xmm8 = xmm8[0,1,2,3],xmm1[4,5,6,7]
+; SSE-NEXT:    packssdw %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm0, %xmm8
 ; SSE-NEXT:    packsswb %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
@@ -115,21 +111,17 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; SSE-NEXT:    cmpltpd %xmm3, %xmm7
 ; SSE-NEXT:    cmpltpd %xmm2, %xmm6
 ; SSE-NEXT:    packssdw %xmm7, %xmm6
-; SSE-NEXT:    packssdw %xmm6, %xmm2
 ; SSE-NEXT:    cmpltpd %xmm1, %xmm5
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm4
 ; SSE-NEXT:    packssdw %xmm5, %xmm4
-; SSE-NEXT:    packssdw %xmm0, %xmm4
-; SSE-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    packssdw %xmm6, %xmm4
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    packssdw %xmm11, %xmm10
-; SSE-NEXT:    packssdw %xmm10, %xmm0
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    packssdw %xmm9, %xmm8
-; SSE-NEXT:    packssdw %xmm0, %xmm8
-; SSE-NEXT:    pblendw {{.*#+}} xmm8 = xmm8[0,1,2,3],xmm0[4,5,6,7]
+; SSE-NEXT:    packssdw %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm4, %xmm8
 ; SSE-NEXT:    packsswb %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax

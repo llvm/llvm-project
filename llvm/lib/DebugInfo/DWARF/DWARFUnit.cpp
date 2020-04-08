@@ -181,20 +181,17 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
   if (IsDWO) {
     // If we are reading a package file, we need to adjust the location list
     // data based on the index entries.
-    StringRef Data = LocSection->Data;
+    StringRef Data = Header.getVersion() >= 5
+                         ? Context.getDWARFObj().getLoclistsDWOSection().Data
+                         : LocSection->Data;
     if (auto *IndexEntry = Header.getIndexEntry())
-      if (const auto *C = IndexEntry->getContribution(DW_SECT_LOC))
+      if (const auto *C = IndexEntry->getContribution(
+              Header.getVersion() >= 5 ? DW_SECT_LOCLISTS : DW_SECT_EXT_LOC))
         Data = Data.substr(C->Offset, C->Length);
 
-    DWARFDataExtractor DWARFData =
-        Header.getVersion() >= 5
-            ? DWARFDataExtractor(Context.getDWARFObj(),
-                                 Context.getDWARFObj().getLoclistsDWOSection(),
-                                 isLittleEndian, getAddressByteSize())
-            : DWARFDataExtractor(Data, isLittleEndian, getAddressByteSize());
+    DWARFDataExtractor DWARFData(Data, isLittleEndian, getAddressByteSize());
     LocTable =
         std::make_unique<DWARFDebugLoclists>(DWARFData, Header.getVersion());
-
   } else if (Header.getVersion() >= 5) {
     LocTable = std::make_unique<DWARFDebugLoclists>(
         DWARFDataExtractor(Context.getDWARFObj(),
@@ -276,7 +273,7 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     FormParams.AddrSize = debug_info.getU8(offset_ptr, &Err);
     // Fake a unit type based on the section type.  This isn't perfect,
     // but distinguishing compile and type units is generally enough.
-    if (SectionKind == DW_SECT_TYPES)
+    if (SectionKind == DW_SECT_EXT_TYPES)
       UnitType = DW_UT_type;
     else
       UnitType = DW_UT_compile;
@@ -491,9 +488,17 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
   // describe address ranges.
   if (getVersion() >= 5) {
-    if (IsDWO)
-      setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
-    else
+    // In case of DWP, the base offset from the index has to be added.
+    uint64_t ContributionBaseOffset = 0;
+    if (IsDWO) {
+      if (auto *IndexEntry = Header.getIndexEntry())
+        if (auto *Contrib = IndexEntry->getContribution(DW_SECT_RNGLISTS))
+          ContributionBaseOffset = Contrib->Offset;
+      setRangesSection(
+          &Context.getDWARFObj().getRnglistsDWOSection(),
+          ContributionBaseOffset +
+              DWARFListTableHeader::getHeaderSize(Header.getFormat()));
+    } else
       setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
                        toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
     if (RangeSection->Data.size()) {
@@ -513,7 +518,8 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
       // Adjust RangeSectionBase to point past the table header.
       if (IsDWO && RngListTable)
-        RangeSectionBase = RngListTable->getHeaderSize();
+        RangeSectionBase =
+            ContributionBaseOffset + RngListTable->getHeaderSize();
     }
 
     // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
@@ -541,6 +547,9 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
                                  " list table with base = 0x%" PRIx64 "\n",
                                  Offset);
       Offset -= HeaderSize;
+      if (auto *IndexEntry = Header.getIndexEntry())
+        if (const auto *Contrib = IndexEntry->getContribution(DW_SECT_LOCLISTS))
+          Offset += Contrib->Offset;
       if (Error E = LoclistTableHeader->extract(Data, &Offset))
         return createStringError(errc::invalid_argument,
                                  "parsing a loclist table: " +
@@ -759,7 +768,7 @@ const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
                                               DWARFSectionKind Kind) {
   if (Kind == DW_SECT_INFO)
     return Context.getCUIndex();
-  assert(Kind == DW_SECT_TYPES);
+  assert(Kind == DW_SECT_EXT_TYPES);
   return Context.getTUIndex();
 }
 

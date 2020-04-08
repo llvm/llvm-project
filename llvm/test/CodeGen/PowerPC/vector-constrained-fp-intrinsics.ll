@@ -6375,7 +6375,7 @@ define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
 ; PC64LE-NEXT:    addi 3, 3, .LCPI103_0@toc@l
 ; PC64LE-NEXT:    lfiwzx 0, 0, 3
-; PC64LE-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE-NEXT:    xxswapd 34, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v1f32:
@@ -6383,7 +6383,7 @@ define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI103_0@toc@l
 ; PC64LE9-NEXT:    lfiwzx 0, 0, 3
-; PC64LE9-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE9-NEXT:    xxswapd 34, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %ceil = call <1 x float> @llvm.experimental.constrained.ceil.v1f32(
@@ -6464,7 +6464,7 @@ define <1 x float> @constrained_vector_floor_v1f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
 ; PC64LE-NEXT:    addi 3, 3, .LCPI107_0@toc@l
 ; PC64LE-NEXT:    lfiwzx 0, 0, 3
-; PC64LE-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE-NEXT:    xxswapd 34, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v1f32:
@@ -6472,7 +6472,7 @@ define <1 x float> @constrained_vector_floor_v1f32() #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI107_0@toc@l
 ; PC64LE9-NEXT:    lfiwzx 0, 0, 3
-; PC64LE9-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE9-NEXT:    xxswapd 34, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %floor = call <1 x float> @llvm.experimental.constrained.floor.v1f32(
@@ -6554,7 +6554,7 @@ define <1 x float> @constrained_vector_round_v1f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
 ; PC64LE-NEXT:    addi 3, 3, .LCPI111_0@toc@l
 ; PC64LE-NEXT:    lfiwzx 0, 0, 3
-; PC64LE-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE-NEXT:    xxswapd 34, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v1f32:
@@ -6562,7 +6562,7 @@ define <1 x float> @constrained_vector_round_v1f32() #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI111_0@toc@l
 ; PC64LE9-NEXT:    lfiwzx 0, 0, 3
-; PC64LE9-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE9-NEXT:    xxswapd 34, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %round = call <1 x float> @llvm.experimental.constrained.round.v1f32(
@@ -6646,7 +6646,7 @@ define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
 ; PC64LE-NEXT:    addi 3, 3, .LCPI115_0@toc@l
 ; PC64LE-NEXT:    lfiwzx 0, 0, 3
-; PC64LE-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE-NEXT:    xxswapd 34, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v1f32:
@@ -6654,7 +6654,7 @@ define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI115_0@toc@l
 ; PC64LE9-NEXT:    lfiwzx 0, 0, 3
-; PC64LE9-NEXT:    xxpermdi 34, 0, 0, 2
+; PC64LE9-NEXT:    xxswapd 34, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %trunc = call <1 x float> @llvm.experimental.constrained.trunc.v1f32(

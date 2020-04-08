@@ -531,30 +531,33 @@ getSymbolLessAffineMaps(ArrayRef<ArrayRef<AffineExpr>> reassociation) {
 }
 
 void mlir::linalg::ReshapeOp::build(
-    Builder *b, OperationState &result, Value view,
+    Builder *b, OperationState &result, Value src,
     ArrayRef<ArrayRef<AffineExpr>> reassociation,
     ArrayRef<NamedAttribute> attrs) {
   auto maps = getSymbolLessAffineMaps(reassociation);
-  auto memRefType = view.getType().cast<MemRefType>();
+  auto memRefType = src.getType().cast<MemRefType>();
   auto resultType = computeReshapeCollapsedType(memRefType, maps);
-  build(b, result, resultType, view, attrs);
+  build(b, result, resultType, src, attrs);
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
                       b->getAffineMapArrayAttr(maps));
 }
 
 void mlir::linalg::ReshapeOp::build(
-    Builder *b, OperationState &result, Type resultType, Value view,
+    Builder *b, OperationState &result, Type resultType, Value src,
     ArrayRef<ArrayRef<AffineExpr>> reassociation,
     ArrayRef<NamedAttribute> attrs) {
   auto maps = getSymbolLessAffineMaps(reassociation);
-  build(b, result, resultType, view, attrs);
+  build(b, result, resultType, src, attrs);
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
                       b->getAffineMapArrayAttr(maps));
 }
 
-static LogicalResult verify(ReshapeOp op) {
-  MemRefType expandedType = op.getViewType();
-  MemRefType collapsedType = op.getResult().getType().cast<MemRefType>();
+// Common verifier for reshape-like types. Fills `expandedType` and
+// `collapsedType` with the proper `src` or `result` type.
+template <typename Op, typename T>
+LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType, T &collapsedType) {
+  expandedType = op.getSrcType();
+  collapsedType = op.getResultType();
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
   bool isCollapse = expandedRank > collapsedRank;
@@ -568,7 +571,7 @@ static LogicalResult verify(ReshapeOp op) {
     return op.emitOpError("expected to collapse or expand dims");
 
   if (collapsedRank != op.reassociation().size())
-    return op.emitOpError("expected rank of the collapsed view(")
+    return op.emitOpError("expected rank of the collapsed type(")
            << collapsedRank << ") to be the number of reassociation maps("
            << op.reassociation().size() << ")";
   auto maps = getAffineMaps(op.reassociation());
@@ -581,7 +584,84 @@ static LogicalResult verify(ReshapeOp op) {
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
            << invalidIdx << " to be valid and contiguous";
+  return success();
+}
+
+static LogicalResult verify(ReshapeOp op) {
+  MemRefType expandedType, collapsedType;
+  if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
+    return failure();
+  auto maps = getAffineMaps(op.reassociation());
   MemRefType expectedType = computeReshapeCollapsedType(expandedType, maps);
+  if (collapsedType != expectedType)
+    return op.emitOpError("expected collapsed type to be ")
+           << expectedType << ", but got " << collapsedType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TensorReshapeOp
+//===----------------------------------------------------------------------===//
+
+/// Compute the RankedTensorType obtained by applying `reassociation` to `type`.
+static RankedTensorType
+computeTensorReshapeCollapsedType(RankedTensorType type,
+                                  ArrayRef<AffineMap> reassociation) {
+  auto shape = type.getShape();
+  SmallVector<int64_t, 4> newShape;
+  newShape.reserve(reassociation.size());
+
+  // Use the fact that reassociation is valid to simplify the logic: only use
+  // each map's rank.
+  assert(isReassociationValid(reassociation) && "invalid reassociation");
+  unsigned currentDim = 0;
+  for (AffineMap m : reassociation) {
+    unsigned dim = m.getNumResults();
+    auto band = shape.drop_front(currentDim).take_front(dim);
+    int64_t size = 1;
+    if (llvm::is_contained(band, ShapedType::kDynamicSize))
+      size = ShapedType::kDynamicSize;
+    else
+      for (unsigned d = 0; d < dim; ++d)
+        size *= shape[currentDim + d];
+    newShape.push_back(size);
+    currentDim += dim;
+  }
+
+  return RankedTensorType::get(newShape, type.getElementType());
+}
+
+void mlir::linalg::TensorReshapeOp::build(
+    Builder *b, OperationState &result, Value src,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
+  auto resultType = computeTensorReshapeCollapsedType(
+      src.getType().cast<RankedTensorType>(), maps);
+  build(b, result, resultType, src, attrs);
+  result.addAttribute(TensorReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
+}
+
+void mlir::linalg::TensorReshapeOp::build(
+    Builder *b, OperationState &result, Type resultType, Value src,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
+  build(b, result, resultType, src, attrs);
+  result.addAttribute(TensorReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
+}
+
+static LogicalResult verify(TensorReshapeOp op) {
+  RankedTensorType expandedType, collapsedType;
+  if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
+    return failure();
+  auto maps = getAffineMaps(op.reassociation());
+  // TODO(ntv): expanding a ? with a non-constant is under-specified. Error
+  // out.
+  RankedTensorType expectedType =
+      computeTensorReshapeCollapsedType(expandedType, maps);
   if (collapsedType != expectedType)
     return op.emitOpError("expected collapsed type to be ")
            << expectedType << ", but got " << collapsedType;

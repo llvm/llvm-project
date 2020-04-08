@@ -12,28 +12,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
-    : public ModulePass<ConvertStandardToSPIRVPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertStandardToSPIRV
-#include "mlir/Conversion/Passes.h.inc"
-
-  void runOnModule() override;
+    : public ConvertStandardToSPIRVBase<ConvertStandardToSPIRVPass> {
+  void runOnOperation() override;
 };
 } // namespace
 
-void ConvertStandardToSPIRVPass::runOnModule() {
+void ConvertStandardToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getModule();
+  ModuleOp module = getOperation();
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
   std::unique_ptr<ConversionTarget> target =
@@ -49,6 +45,7 @@ void ConvertStandardToSPIRVPass::runOnModule() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertStandardToSPIRVPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertStandardToSPIRVPass() {
   return std::make_unique<ConvertStandardToSPIRVPass>();
 }

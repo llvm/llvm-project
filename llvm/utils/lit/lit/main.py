@@ -42,6 +42,10 @@ def main(builtin_params={}):
         sys.stderr.write('error: did not discover any tests for provided path(s)\n')
         sys.exit(2)
 
+    if opts.show_suites or opts.show_tests:
+        print_discovered(discovered_tests, opts.show_suites, opts.show_tests)
+        sys.exit(0)
+
     # Command line overrides configuration for maxIndividualTestTime.
     if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
         if opts.maxIndividualTestTime != lit_config.maxIndividualTestTime:
@@ -52,10 +56,6 @@ def main(builtin_params={}):
                 .format(lit_config.maxIndividualTestTime,
                         opts.maxIndividualTestTime))
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
-
-    if opts.showSuites or opts.showTests:
-        print_suites_or_tests(discovered_tests, opts)
-        return
 
     filtered_tests = [t for t in discovered_tests if
                       opts.filter.search(t.getFullName())]
@@ -119,34 +119,29 @@ def create_params(builtin_params, user_params):
     params.update([parse(p) for p in user_params])
     return params
 
-def print_suites_or_tests(tests, opts):
-    # Aggregate the tests by suite.
-    suitesAndTests = {}
-    for result_test in tests:
-        if result_test.suite not in suitesAndTests:
-            suitesAndTests[result_test.suite] = []
-        suitesAndTests[result_test.suite].append(result_test)
-    suitesAndTests = list(suitesAndTests.items())
-    suitesAndTests.sort(key = lambda item: item[0].name)
 
-    # Show the suites, if requested.
-    if opts.showSuites:
+def print_discovered(tests, show_suites, show_tests):
+    # Suite names are not necessarily unique.  Include object identity in sort
+    # key to avoid mixing tests of different suites.
+    tests.sort(key=lambda t: (t.suite.name, t.suite, t.path_in_suite))
+
+    if show_suites:
+        import itertools
+        tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
         print('-- Test Suites --')
-        for ts,ts_tests in suitesAndTests:
-            print('  %s - %d tests' %(ts.name, len(ts_tests)))
-            print('    Source Root: %s' % ts.source_root)
-            print('    Exec Root  : %s' % ts.exec_root)
-            if ts.config.available_features:
-                print('    Available Features : %s' % ' '.join(
-                    sorted(ts.config.available_features)))
+        for suite, suite_iter in tests_by_suite:
+            test_count = sum(1 for _ in suite_iter)
+            print('  %s - %d tests' % (suite.name, test_count))
+            print('    Source Root: %s' % suite.source_root)
+            print('    Exec Root  : %s' % suite.exec_root)
+            if suite.config.available_features:
+                features = ' '.join(sorted(suite.config.available_features))
+                print('    Available Features : %s' % features)
 
-    # Show the tests, if requested.
-    if opts.showTests:
+    if show_tests:
         print('-- Available Tests --')
-        for ts,ts_tests in suitesAndTests:
-            ts_tests.sort(key = lambda test: test.path_in_suite)
-            for test in ts_tests:
-                print('  %s' % (test.getFullName(),))
+        for t in tests:
+            print('  %s' % t.getFullName())
 
 
 def determine_order(tests, order):
@@ -243,55 +238,59 @@ def execute_in_tmp_dir(run, lit_config):
                 # FIXME: Re-try after timeout on Windows.
                 lit_config.warning("Failed to delete temp directory '%s'" % tmp_dir)
 
+
 def print_summary(tests, elapsed, opts):
-    if not opts.quiet:
-        print('\nTesting Time: %.2fs' % elapsed)
+    # Status code, summary label, group label
+    groups = [
+        # Successes
+        (lit.Test.UNSUPPORTED, 'Unsupported Tests  ', 'Unsupported'),
+        (lit.Test.PASS,        'Expected Passes    ', ''),
+        (lit.Test.FLAKYPASS,   'Passes With Retry  ', ''),
+        (lit.Test.XFAIL,       'Expected Failures  ', 'Expected Failing'),
+        # Failures
+        (lit.Test.UNRESOLVED,  'Unresolved Tests   ', 'Unresolved'),
+        (lit.Test.TIMEOUT,     'Individual Timeouts', 'Timed Out'),
+        (lit.Test.FAIL,        'Unexpected Failures', 'Failing'),
+        (lit.Test.XPASS,       'Unexpected Passes  ', 'Unexpected Passing')]
 
-    byCode = {}
+    by_code = {code: [] for (code, _, _) in groups}
     for test in tests:
-        if test.result.code not in byCode:
-            byCode[test.result.code] = []
-        byCode[test.result.code].append(test)
+        by_code[test.result.code].append(test)
 
-    # Print each test in any of the failing groups.
-    for title,code in (('Unexpected Passing Tests', lit.Test.XPASS),
-                       ('Failing Tests', lit.Test.FAIL),
-                       ('Unresolved Tests', lit.Test.UNRESOLVED),
-                       ('Unsupported Tests', lit.Test.UNSUPPORTED),
-                       ('Expected Failing Tests', lit.Test.XFAIL),
-                       ('Timed Out Tests', lit.Test.TIMEOUT)):
-        if (lit.Test.XFAIL == code and not opts.show_xfail) or \
-           (lit.Test.UNSUPPORTED == code and not opts.show_unsupported) or \
-           (lit.Test.UNRESOLVED == code and (opts.max_failures is not None)):
-            continue
-        elts = byCode.get(code)
-        if not elts:
-            continue
-        print('*'*20)
-        print('%s (%d):' % (title, len(elts)))
-        for test in elts:
-            print('    %s' % test.getFullName())
-        sys.stdout.write('\n')
+    for (code, _, group_label) in groups:
+        print_group(code, group_label, by_code[code], opts)
 
     if opts.timeTests and tests:
-        # Order by time.
-        test_times = [(test.getFullName(), test.result.elapsed)
-                      for test in tests]
+        test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
         lit.util.printHistogram(test_times, title='Tests')
 
-    for name,code in (('Expected Passes    ', lit.Test.PASS),
-                      ('Passes With Retry  ', lit.Test.FLAKYPASS),
-                      ('Expected Failures  ', lit.Test.XFAIL),
-                      ('Unsupported Tests  ', lit.Test.UNSUPPORTED),
-                      ('Unresolved Tests   ', lit.Test.UNRESOLVED),
-                      ('Unexpected Passes  ', lit.Test.XPASS),
-                      ('Unexpected Failures', lit.Test.FAIL),
-                      ('Individual Timeouts', lit.Test.TIMEOUT)):
-        if opts.quiet and not code.isFailure:
-            continue
-        N = len(byCode.get(code,[]))
-        if N:
-            print('  %s: %d' % (name,N))
+    if not opts.quiet:
+        print('\nTesting Time: %.2fs' % elapsed)
+    for (code, summary_label, _) in groups:
+        print_group_summary(code, summary_label, by_code[code], opts.quiet)
+
+
+def print_group(code, label, tests, opts):
+    if not tests:
+        return
+    if code == lit.Test.PASS:
+        return
+    if (lit.Test.XFAIL == code and not opts.show_xfail) or \
+       (lit.Test.UNSUPPORTED == code and not opts.show_unsupported) or \
+       (lit.Test.UNRESOLVED == code and (opts.max_failures is not None)):
+        return
+    print('*' * 20)
+    print('%s Tests (%d):' % (label, len(tests)))
+    for test in tests:
+        print('  %s' % test.getFullName())
+    sys.stdout.write('\n')
+
+
+def print_group_summary(code, label, tests, quiet):
+    count = len(tests)
+    if count and (code.isFailure or not quiet):
+        print('  %s: %d' % (label, count))
+
 
 def write_test_results(tests, lit_config, elapsed, output_path):
     # TODO(yln): audit: unexecuted tests

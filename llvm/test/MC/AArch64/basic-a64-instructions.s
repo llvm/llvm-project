@@ -3465,12 +3465,14 @@ _func:
         wfi
         sev
         sevl
+        dgh
 // CHECK: nop                             // encoding: [0x1f,0x20,0x03,0xd5]
 // CHECK: yield                           // encoding: [0x3f,0x20,0x03,0xd5]
 // CHECK: wfe                             // encoding: [0x5f,0x20,0x03,0xd5]
 // CHECK: wfi                             // encoding: [0x7f,0x20,0x03,0xd5]
 // CHECK: sev                             // encoding: [0x9f,0x20,0x03,0xd5]
 // CHECK: sevl                            // encoding: [0xbf,0x20,0x03,0xd5]
+// CHECK: dgh                             // encoding: [0xdf,0x20,0x03,0xd5]
 
         clrex
         clrex #0

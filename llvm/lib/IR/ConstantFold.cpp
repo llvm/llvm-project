@@ -124,18 +124,9 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
           Constant::getNullValue(Type::getInt32Ty(DPTy->getContext()));
         IdxList.push_back(Zero);
         Type *ElTy = PTy->getElementType();
-        while (ElTy != DPTy->getElementType()) {
-          if (StructType *STy = dyn_cast<StructType>(ElTy)) {
-            if (STy->getNumElements() == 0) break;
-            ElTy = STy->getElementType(0);
-            IdxList.push_back(Zero);
-          } else if (SequentialType *STy =
-                     dyn_cast<SequentialType>(ElTy)) {
-            ElTy = STy->getElementType();
-            IdxList.push_back(Zero);
-          } else {
-            break;
-          }
+        while (ElTy && ElTy != DPTy->getElementType()) {
+          ElTy = GetElementPtrInst::getTypeAtIndex(ElTy, (uint64_t)0);
+          IdxList.push_back(Zero);
         }
 
         if (ElTy == DPTy->getElementType())
@@ -954,7 +945,7 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
   if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
     NumElts = ST->getNumElements();
   else
-    NumElts = cast<SequentialType>(Agg->getType())->getNumElements();
+    NumElts = cast<ArrayType>(Agg->getType())->getNumElements();
 
   SmallVector<Constant*, 32> Result;
   for (unsigned i = 0; i != NumElts; ++i) {
@@ -969,9 +960,7 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
 
   if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
     return ConstantStruct::get(ST, Result);
-  if (ArrayType *AT = dyn_cast<ArrayType>(Agg->getType()))
-    return ConstantArray::get(AT, Result);
-  return ConstantVector::get(Result);
+  return ConstantArray::get(cast<ArrayType>(Agg->getType()), Result);
 }
 
 Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
@@ -2451,12 +2440,12 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       // The verify makes sure that GEPs into a struct are in range.
       continue;
     }
-    auto *STy = cast<SequentialType>(Ty);
-    if (isa<VectorType>(STy)) {
+    if (isa<VectorType>(Ty)) {
       // There can be awkward padding in after a non-power of two vector.
       Unknown = true;
       continue;
     }
+    auto *STy = cast<ArrayType>(Ty);
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Idxs[i])) {
       if (isIndexInRangeOfArrayType(STy->getNumElements(), CI))
         // It's in range, skip to the next index.

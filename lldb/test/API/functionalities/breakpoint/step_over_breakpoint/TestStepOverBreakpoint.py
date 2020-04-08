@@ -1,7 +1,7 @@
 """
 Test that breakpoints do not affect stepping.
 Check for correct StopReason when stepping to the line with breakpoint
-which chould be eStopReasonBreakpoint in general,
+which should be eStopReasonBreakpoint in general,
 and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 

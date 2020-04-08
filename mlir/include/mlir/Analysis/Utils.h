@@ -220,11 +220,18 @@ struct MemRefRegion {
   /// i.e., the returned bounding constant holds for *any given* value of the
   /// symbol identifiers. The 'shape' vector is set to the corresponding
   /// dimension-wise bounds major to minor. We use int64_t instead of uint64_t
-  /// since index types can be at most int64_t.
+  /// since index types can be at most int64_t. `lbs` are set to the lower
+  /// bounds for each of the rank dimensions, and lbDivisors contains the
+  /// corresponding denominators for floorDivs.
   Optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
       SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
+
+  /// Gets the lower and upper bound map for the dimensional identifier at
+  /// `pos`.
+  void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
+                             AffineMap &ubMap) const;
 
   /// A wrapper around FlatAffineConstraints::getConstantBoundOnDimSize(). 'pos'
   /// corresponds to the position of the memref shape's dimension (major to

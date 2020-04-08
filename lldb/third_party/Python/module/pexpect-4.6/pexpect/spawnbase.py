@@ -150,7 +150,7 @@ class SpawnBase(object):
         self._buffer = self.buffer_type()
         self._buffer.write(value)
 
-    # This property is provided for backwards compatability (self.buffer used
+    # This property is provided for backwards compatibility (self.buffer used
     # to be a string/bytes object)
     buffer = property(_get_buffer, _set_buffer)
 

@@ -1374,6 +1374,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Decide whether to use availability macros.
 #if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
+    !defined(_LIBCXXABI_BUILDING_LIBRARY) &&                                   \
     !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
     __has_feature(attribute_availability_with_strict) &&                       \
     __has_feature(attribute_availability_in_templates) &&                      \
@@ -1438,7 +1439,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
      _LIBCPP_AVAILABILITY_FILESYSTEM
 #  define _LIBCPP_AVAILABILITY_SYNC                                            \
-     /*FIXME:mark this as unavailable on Apple platforms*/
+     __attribute__((unavailable))
 #else
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS

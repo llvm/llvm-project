@@ -126,6 +126,9 @@ void RTLsTy::LoadRTLs() {
     if (!(*((void**) &R.run_team_region) = dlsym(
               dynlib_handle, "__tgt_rtl_run_target_team_region")))
       continue;
+    if (!(*((void**) &R.synchronize) = dlsym(
+              dynlib_handle, "__tgt_rtl_synchronize")))
+      continue;
 
     // Optional functions
     *((void**) &R.init_requires) = dlsym(

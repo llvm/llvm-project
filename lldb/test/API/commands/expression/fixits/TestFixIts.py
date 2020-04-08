@@ -23,6 +23,7 @@ class ExprCommandWithFixits(TestBase):
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "The expression was successful.")
         self.assertTrue("Fix-it applied" in ret_val.GetError(), "Found the applied FixIt.")
 
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"])
     def test_with_target(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
@@ -61,6 +62,14 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.GetError().Success())
         self.assertEquals(value.GetValueAsUnsigned(), 20)
 
+        # Try a Fix-It that is stored in the 'note:' diagnostic of an error.
+        # The Fix-It here is adding parantheses around the ToStr parameters.
+        fixit_in_note_expr ="#define ToStr(x) #x\nToStr(0 {, })"
+        value = frame.EvaluateExpression(fixit_in_note_expr, options)
+        self.assertTrue(value.IsValid())
+        self.assertTrue(value.GetError().Success(), value.GetError())
+        self.assertEquals(value.GetSummary(), '"(0 {, })"')
+
         # Now turn off the fixits, and the expression should fail:
         options.SetAutoApplyFixIts(False)
         value = frame.EvaluateExpression(two_error_expression, options)
@@ -73,3 +82,71 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(
             error_string.find("my_pointer->second.a") != -1,
             "Fix was right")
+
+
+        # Test repeatedly applying Fix-Its to expressions and reparsing them.
+        multiple_runs_options = lldb.SBExpressionOptions()
+        multiple_runs_options.SetAutoApplyFixIts(True)
+        multiple_runs_options.SetTopLevel(True)
+
+        # An expression that needs two parse attempts with one Fix-It each
+        # to be successfully parsed.
+        two_runs_expr = """
+        struct Data { int m; };
+
+        template<typename T>
+        struct S1 : public T {
+          using T::TypeDef;
+          int f() {
+            Data d;
+            d.m = 123;
+            // The first error as the using above requires a 'typename '.
+            // Will trigger a Fix-It that puts 'typename' in the right place.
+            typename S1<T>::TypeDef i = &d;
+            // i has the type "Data *", so this should be i.m.
+            // The second run will change the . to -> via the Fix-It.
+            return i.m;
+          }
+        };
+
+        struct ClassWithTypeDef {
+          typedef Data *TypeDef;
+        };
+
+        int test_X(int i) {
+          S1<ClassWithTypeDef> s1;
+          return s1.f();
+        }
+        """
+
+        # Disable retries which will fail.
+        multiple_runs_options.SetRetriesWithFixIts(0)
+        value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
+        self.assertIn("expression failed to parse, fixed expression suggested:",
+                      value.GetError().GetCString())
+        self.assertIn("using typename T::TypeDef",
+                      value.GetError().GetCString())
+        # The second Fix-It shouldn't be suggested here as Clang should have
+        # aborted the parsing process.
+        self.assertNotIn("i->m",
+                      value.GetError().GetCString())
+
+        # Retry once, but the expression needs two retries.
+        multiple_runs_options.SetRetriesWithFixIts(1)
+        value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
+        self.assertIn("expression failed to parse, fixed expression suggested:",
+                      value.GetError().GetCString())
+        # Both our fixed expressions should be in the suggested expression.
+        self.assertIn("using typename T::TypeDef",
+                      value.GetError().GetCString())
+        self.assertIn("i->m",
+                      value.GetError().GetCString())
+
+        # Retry twice, which will get the expression working.
+        multiple_runs_options.SetRetriesWithFixIts(2)
+        value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
+        # This error signals success for top level expressions.
+        self.assertEquals(value.GetError().GetCString(), "error: No value")
+
+        # Test that the code above compiles to the right thing.
+        self.expect_expr("test_X(1)", result_type="int", result_value="123")

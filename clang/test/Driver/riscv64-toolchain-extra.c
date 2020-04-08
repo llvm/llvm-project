@@ -12,10 +12,8 @@
 // runtime if and only if they exist.
 //
 // REQUIRES: platform-linker
+// RUN: rm -rf %T/testroot-riscv64-baremetal-nogcc
 // RUN: mkdir -p %T/testroot-riscv64-baremetal-nogcc/bin
-// RUN: [ ! -s %T/testroot-riscv64-baremetal-nogcc/bin/clang ] || rm %T/testroot-riscv64-baremetal-nogcc/bin/clang
-// RUN: [ ! -s %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld ] || rm %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld
-// RUN: [ ! -s %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf ] || rm %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf
 // RUN: ln -s %clang %T/testroot-riscv64-baremetal-nogcc/bin/clang
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/bin/riscv64-unknown-elf-ld %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/riscv64-unknown-elf %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf

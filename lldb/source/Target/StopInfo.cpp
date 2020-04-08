@@ -453,7 +453,7 @@ protected:
               } else {
                 LLDB_LOGF(log,
                           "Condition evaluated for breakpoint %s on thread "
-                          "0x%llx conditon_says_stop: %i.",
+                          "0x%llx condition_says_stop: %i.",
                           loc_desc.GetData(),
                           static_cast<unsigned long long>(thread_sp->GetID()),
                           condition_says_stop);

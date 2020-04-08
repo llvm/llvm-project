@@ -111,6 +111,15 @@ struct __tgt_target_table {
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
+/// This struct contains information exchanged between different asynchronous
+/// operations for device-dependent optimization and potential synchronization
+struct __tgt_async_info {
+  // A pointer to a queue-like structure where offloading operations are issued.
+  // We assume to use this structure to do synchronization. In CUDA backend, it
+  // is CUstream.
+  void *Queue = nullptr;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

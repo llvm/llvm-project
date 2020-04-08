@@ -533,7 +533,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
 
-  if (checkRemarksOptions(getToolChain().getDriver(), Args,
+  if (willEmitRemarks(Args) &&
+      checkRemarksOptions(getToolChain().getDriver(), Args,
                           getToolChain().getTriple()))
     renderRemarksOptions(Args, CmdArgs, getToolChain().getTriple(), Output, JA);
 

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -20,8 +21,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
@@ -507,13 +506,8 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
 }
 
 namespace {
-struct LinalgTilingPass : public FunctionPass<LinalgTilingPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgTiling
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass() = default;
-  LinalgTilingPass(const LinalgTilingPass &) {}
   LinalgTilingPass(ArrayRef<int64_t> sizes) {
     tileSizes->assign(sizes.begin(), sizes.end());
   }
@@ -524,13 +518,8 @@ struct LinalgTilingPass : public FunctionPass<LinalgTilingPass> {
 };
 
 struct LinalgTilingToParallelLoopsPass
-    : public FunctionPass<LinalgTilingToParallelLoopsPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgTilingToParallelLoops
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+    : public LinalgTilingToParallelLoopsBase<LinalgTilingToParallelLoopsPass> {
   LinalgTilingToParallelLoopsPass() = default;
-  LinalgTilingToParallelLoopsPass(const LinalgTilingToParallelLoopsPass &) {}
   LinalgTilingToParallelLoopsPass(ArrayRef<int64_t> sizes) {
     tileSizes->assign(sizes.begin(), sizes.end());
   }
@@ -542,12 +531,12 @@ struct LinalgTilingToParallelLoopsPass
 
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass>(tileSizes);
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingToParallelLoopsPass>(tileSizes);
 }

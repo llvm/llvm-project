@@ -26,6 +26,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/Utility/UserIDResolver.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Support/VersionTuple.h"
@@ -434,6 +435,10 @@ public:
     return lldb_private::ConstString();
   }
 
+  virtual llvm::StringRef GetSDKPath(lldb_private::XcodeSDK sdk) {
+    return {};
+  }
+
   const std::string &GetRemoteURL() const { return m_remote_url; }
 
   bool IsHost() const {
@@ -827,18 +832,18 @@ public:
   virtual size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                            lldb_private::Status &error);
 
-  /// Gather all of crash informations into a structured data dictionnary.
+  /// Gather all of crash informations into a structured data dictionary.
   ///
   /// If the platform have a crashed process with crash information entries,
-  /// gather all the entries into an structured data dictionnary or return a
-  /// nullptr. This dictionnary is generic and extensible, as it contains an
+  /// gather all the entries into an structured data dictionary or return a
+  /// nullptr. This dictionary is generic and extensible, as it contains an
   /// array for each different type of crash information.
   ///
   /// \param[in] process
   ///     The crashed process.
   ///
   /// \return
-  ///     A structured data dictionnary containing at each entry, the crash
+  ///     A structured data dictionary containing at each entry, the crash
   ///     information type as the entry key and the matching  an array as the
   ///     entry value. \b nullptr if not implemented or  if the process has no
   ///     crash information entry. \b error if an error occured.

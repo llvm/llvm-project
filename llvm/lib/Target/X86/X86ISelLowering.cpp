@@ -191,12 +191,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // SETOEQ and SETUNE require checking two conditions.
-  setCondCodeAction(ISD::SETOEQ, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETOEQ, MVT::f64, Expand);
-  setCondCodeAction(ISD::SETOEQ, MVT::f80, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f80, Expand);
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
+    setCondCodeAction(ISD::SETOEQ, VT, Expand);
+    setCondCodeAction(ISD::SETUNE, VT, Expand);
+  }
 
   // Integer absolute.
   if (Subtarget.hasCMov()) {
@@ -361,46 +359,27 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::CTLZ           , MVT::i8   , MVT::i32);
     setOperationPromotedToType(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
   } else {
-    setOperationAction(ISD::CTLZ           , MVT::i8   , Custom);
-    setOperationAction(ISD::CTLZ           , MVT::i16  , Custom);
-    setOperationAction(ISD::CTLZ           , MVT::i32  , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16  , Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32  , Custom);
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::CTLZ         , MVT::i64  , Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
+    for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::CTLZ           , VT, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
     }
   }
 
-  // Special handling for half-precision floating point conversions.
-  // If we don't have F16C support, then lower half float conversions
-  // into library calls.
-  if (!Subtarget.useSoftFloat() && Subtarget.hasF16C()) {
-    setOperationAction(ISD::FP16_TO_FP,        MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Custom);
-    setOperationAction(ISD::FP_TO_FP16,        MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FP16_TO_FP,        MVT::f32, Expand);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Expand);
-    setOperationAction(ISD::FP_TO_FP16,        MVT::f32, Expand);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Expand);
+  for (auto Op : {ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP, ISD::FP_TO_FP16,
+                  ISD::STRICT_FP_TO_FP16}) {
+    // Special handling for half-precision floating point conversions.
+    // If we don't have F16C support, then lower half float conversions
+    // into library calls.
+    setOperationAction(
+        Op, MVT::f32,
+        (!Subtarget.useSoftFloat() && Subtarget.hasF16C()) ? Custom : Expand);
+    // There's never any support for operations beyond MVT::f32.
+    setOperationAction(Op, MVT::f64, Expand);
+    setOperationAction(Op, MVT::f80, Expand);
+    setOperationAction(Op, MVT::f128, Expand);
   }
-
-  // There's never any support for operations beyond MVT::f32.
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
-  setOperationAction(ISD::FP16_TO_FP, MVT::f80, Expand);
-  setOperationAction(ISD::FP16_TO_FP, MVT::f128, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f80, Expand);
-  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f128, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f80, Expand);
-  setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f80, Expand);
-  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f128, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
@@ -20236,7 +20215,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     InVT = EVT::getVectorVT(Ctx, InVT, 128 / InVT.getSizeInBits());
     OutVT = EVT::getVectorVT(Ctx, OutVT, 128 / OutVT.getSizeInBits());
     In = DAG.getBitcast(InVT, In);
-    SDValue Res = DAG.getNode(Opcode, DL, OutVT, In, In);
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT, In, DAG.getUNDEF(InVT));
     Res = extractSubVector(Res, 0, DAG, DL, 64);
     return DAG.getBitcast(DstVT, Res);
   }
@@ -23668,19 +23647,18 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   EVT ArgVT = Op.getNode()->getValueType(0);
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
   uint32_t ArgSize = DAG.getDataLayout().getTypeAllocSize(ArgTy);
-  uint8_t ArgMode = 0;
+  uint8_t ArgMode;
 
   // Decide which area this value should be read from.
   // TODO: Implement the AMD64 ABI in its entirety. This simple
   // selection mechanism works only for the basic types.
-  if (ArgVT == MVT::f80) {
-    llvm_unreachable("va_arg for f80 not yet implemented");
-  } else if (ArgVT.isFloatingPoint() && ArgSize <= 16 /*bytes*/) {
+  assert(ArgVT != MVT::f80 && "va_arg for f80 not yet implemented");
+  if (ArgVT.isFloatingPoint() && ArgSize <= 16 /*bytes*/) {
     ArgMode = 2;  // Argument passed in XMM register. Use fp_offset.
-  } else if (ArgVT.isInteger() && ArgSize <= 32 /*bytes*/) {
-    ArgMode = 1;  // Argument passed in GPR64 register(s). Use gp_offset.
   } else {
-    llvm_unreachable("Unhandled argument type in LowerVAARG");
+    assert(ArgVT.isInteger() && ArgSize <= 32 /*bytes*/ &&
+           "Unhandled argument type in LowerVAARG");
+    ArgMode = 1;  // Argument passed in GPR64 register(s). Use gp_offset.
   }
 
   if (ArgMode == 2) {
@@ -34771,6 +34749,7 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
+  SDLoc DL(Root);
   APInt UndefElts(NumMaskElts, 0);
   APInt ZeroElts(NumMaskElts, 0);
   APInt ConstantElts(NumMaskElts, 0);
@@ -34808,6 +34787,10 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
   }
   assert((UndefElts | ZeroElts | ConstantElts).isAllOnesValue());
 
+  // Attempt to create a zero vector.
+  if ((UndefElts | ZeroElts).isAllOnesValue())
+    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG, DL);
+
   // Create the constant data.
   MVT MaskSVT;
   if (VT.isFloatingPoint() && (MaskSizeInBits == 32 || MaskSizeInBits == 64))
@@ -34816,8 +34799,9 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     MaskSVT = MVT::getIntegerVT(MaskSizeInBits);
 
   MVT MaskVT = MVT::getVectorVT(MaskSVT, NumMaskElts);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(MaskVT))
+    return SDValue();
 
-  SDLoc DL(Root);
   SDValue CstOp = getConstVector(ConstantBitData, UndefElts, MaskVT, DAG, DL);
   return DAG.getBitcast(VT, CstOp);
 }
@@ -35358,31 +35342,56 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
 
+  bool IsUnary;
+  SmallVector<int, 64> TargetMask;
+  SmallVector<SDValue, 2> TargetOps;
+  if (isTargetShuffle(Opcode))
+    getTargetShuffleMask(N.getNode(), VT, true, TargetOps, TargetMask, IsUnary);
+
   // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
-  // single instruction.
-  if (VT.getScalarSizeInBits() == 64 &&
-      (Opcode == X86ISD::MOVSD || Opcode == X86ISD::UNPCKH ||
-       Opcode == X86ISD::UNPCKL)) {
-    auto BC0 = peekThroughBitcasts(N.getOperand(0));
-    auto BC1 = peekThroughBitcasts(N.getOperand(1));
-    EVT VT0 = BC0.getValueType();
-    EVT VT1 = BC1.getValueType();
-    unsigned Opcode0 = BC0.getOpcode();
-    unsigned Opcode1 = BC1.getOpcode();
-    if (Opcode0 == Opcode1 && VT0 == VT1 &&
-        (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
-         Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB ||
-         Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
-      SDValue Lo, Hi;
-      if (Opcode == X86ISD::MOVSD) {
-        Lo = BC1.getOperand(0);
-        Hi = BC0.getOperand(1);
-      } else {
-        Lo = BC0.getOperand(Opcode == X86ISD::UNPCKH ? 1 : 0);
-        Hi = BC1.getOperand(Opcode == X86ISD::UNPCKH ? 1 : 0);
+  // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
+  // represents the LHS/RHS inputs for the lower/upper halves.
+  SmallVector<int, 16> TargetMask128;
+  if (!TargetMask.empty() && 0 < TargetOps.size() && TargetOps.size() <= 2 &&
+      isRepeatedTargetShuffleMask(128, VT, TargetMask, TargetMask128)) {
+    SmallVector<int, 16> WidenedMask128 = TargetMask128;
+    while (WidenedMask128.size() > 2) {
+      SmallVector<int, 16> WidenedMask;
+      if (!canWidenShuffleElements(WidenedMask128, WidenedMask))
+        break;
+      WidenedMask128 = std::move(WidenedMask);
+    }
+    if (WidenedMask128.size() == 2) {
+      assert(isUndefOrZeroOrInRange(WidenedMask128, 0, 4) && "Illegal shuffle");
+      SDValue BC0 = peekThroughBitcasts(TargetOps.front());
+      SDValue BC1 = peekThroughBitcasts(TargetOps.back());
+      EVT VT0 = BC0.getValueType();
+      EVT VT1 = BC1.getValueType();
+      unsigned Opcode0 = BC0.getOpcode();
+      unsigned Opcode1 = BC1.getOpcode();
+      bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
+                      Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB);
+      if (Opcode0 == Opcode1 && VT0 == VT1 &&
+          (isHoriz || Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS)) {
+        bool SingleOp = (TargetOps.size() == 1);
+        if (!isHoriz || shouldUseHorizontalOp(SingleOp, DAG, Subtarget)) {
+          SDValue Lo = isInRange(WidenedMask128[0], 0, 2) ? BC0 : BC1;
+          SDValue Hi = isInRange(WidenedMask128[1], 0, 2) ? BC0 : BC1;
+          Lo = Lo.getOperand(WidenedMask128[0] & 1);
+          Hi = Hi.getOperand(WidenedMask128[1] & 1);
+          if (SingleOp) {
+            MVT SrcVT = BC0.getOperand(0).getSimpleValueType();
+            SDValue Undef = DAG.getUNDEF(SrcVT);
+            SDValue Zero = getZeroVector(SrcVT, Subtarget, DAG, DL);
+            Lo = (WidenedMask128[0] == SM_SentinelZero ? Zero : Lo);
+            Hi = (WidenedMask128[1] == SM_SentinelZero ? Zero : Hi);
+            Lo = (WidenedMask128[0] == SM_SentinelUndef ? Undef : Lo);
+            Hi = (WidenedMask128[1] == SM_SentinelUndef ? Undef : Hi);
+          }
+          SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
+          return DAG.getBitcast(VT, Horiz);
+        }
       }
-      SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
-      return DAG.getBitcast(VT, Horiz);
     }
   }
 
@@ -41250,7 +41259,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   case ISD::ANY_EXTEND:
     return Op;
   case ISD::ZERO_EXTEND:
-    return DAG.getZeroExtendInReg(Op, DL, NarrowVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, DL, NarrowVT);
   case ISD::SIGN_EXTEND:
     return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
                        Op, DAG.getValueType(NarrowVT));
@@ -43485,11 +43494,15 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   MVT InSVT = InVT.getScalarType();
 
   // Check we have a truncation suited for PACKSS/PACKUS.
-  if (!VT.is128BitVector() && !VT.is256BitVector())
+  if (!isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
   if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32)
     return SDValue();
   if (InSVT != MVT::i16 && InSVT != MVT::i32 && InSVT != MVT::i64)
+    return SDValue();
+
+  // Truncation to sub-128bit vXi32 can be better handled with shuffles.
+  if (SVT == MVT::i32 && VT.getSizeInBits() < 128)
     return SDValue();
 
   // AVX512 has fast truncate, but if the input is already going to be split,
@@ -44857,7 +44870,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   SDValue Res = DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
 
   if (N->getOpcode() == ISD::ZERO_EXTEND)
-    Res = DAG.getZeroExtendInReg(Res, dl, N0.getValueType().getScalarType());
+    Res = DAG.getZeroExtendInReg(Res, dl, N0.getValueType());
 
   return Res;
 }

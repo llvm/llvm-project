@@ -386,7 +386,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 }
 
 void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                  unsigned BaseReg,
+                                                  Register BaseReg,
                                                   int FrameIdx,
                                                   int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
@@ -420,7 +420,7 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addImm(0); // clamp bit
 }
 
-void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                        int64_t Offset) const {
   const SIInstrInfo *TII = ST.getInstrInfo();
 
@@ -457,7 +457,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 }
 
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
-                                        unsigned BaseReg,
+                                        Register BaseReg,
                                         int64_t Offset) const {
   if (!SIInstrInfo::isMUBUF(*MI))
     return false;
@@ -1270,7 +1270,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
 }
 
-StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
+StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
@@ -1279,6 +1279,8 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
 const TargetRegisterClass *
 SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
   static const TargetRegisterClass *const BaseClasses[] = {
+    &AMDGPU::VGPR_LO16RegClass,
+    &AMDGPU::VGPR_HI16RegClass,
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::AGPR_32RegClass,
@@ -1318,6 +1320,9 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
   switch (Size) {
+  case 16:
+    return getCommonSubClass(&AMDGPU::VGPR_LO16RegClass, RC) != nullptr ||
+           getCommonSubClass(&AMDGPU::VGPR_HI16RegClass, RC) != nullptr;
   case 32:
     return getCommonSubClass(&AMDGPU::VGPR_32RegClass, RC) != nullptr;
   case 64:

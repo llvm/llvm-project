@@ -169,7 +169,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
   }
 
   auto Includes = parseDriverOutput(BufOrError->get()->getBuffer());
-  log("System include extractor: succesfully executed {0}, got includes: "
+  log("System include extractor: successfully executed {0}, got includes: "
       "\"{1}\"",
       Driver, llvm::join(Includes, ", "));
   return Includes;

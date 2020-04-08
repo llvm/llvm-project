@@ -476,12 +476,22 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
     return 0;
   }
 
-  case Type::ArrayTyID:
-  case Type::VectorTyID: {
-    auto *STyL = cast<SequentialType>(TyL);
-    auto *STyR = cast<SequentialType>(TyR);
+  case Type::ArrayTyID: {
+    auto *STyL = cast<ArrayType>(TyL);
+    auto *STyR = cast<ArrayType>(TyR);
     if (STyL->getNumElements() != STyR->getNumElements())
       return cmpNumbers(STyL->getNumElements(), STyR->getNumElements());
+    return cmpTypes(STyL->getElementType(), STyR->getElementType());
+  }
+  case Type::VectorTyID: {
+    auto *STyL = cast<VectorType>(TyL);
+    auto *STyR = cast<VectorType>(TyR);
+    if (STyL->getElementCount().Scalable != STyR->getElementCount().Scalable)
+      return cmpNumbers(STyL->getElementCount().Scalable,
+                        STyR->getElementCount().Scalable);
+    if (STyL->getElementCount().Min != STyR->getElementCount().Min)
+      return cmpNumbers(STyL->getElementCount().Min,
+                        STyR->getElementCount().Min);
     return cmpTypes(STyL->getElementType(), STyR->getElementType());
   }
   }

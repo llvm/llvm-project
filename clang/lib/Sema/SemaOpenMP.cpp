@@ -2107,6 +2107,9 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     // Threadprivate variables must not be captured.
     if (isOpenMPThreadPrivate(DVarPrivate.CKind))
       return nullptr;
+    // Global shared must not be captured.
+    if (VD && !VD->hasLocalStorage() && DVarPrivate.CKind == OMPC_shared)
+      return nullptr;
     // The variable is not private or it is the variable in the directive with
     // default(none) clause and not used in any clause.
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
@@ -2233,7 +2236,7 @@ void Sema::setOpenMPCaptureKind(FieldDecl *FD, const ValueDecl *D,
     }
   }
   if (OMPC != OMPC_unknown)
-    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, OMPC));
+    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, unsigned(OMPC)));
 }
 
 bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,
@@ -5551,7 +5554,45 @@ Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
 FunctionDecl *
 Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
                                                                 Declarator &D) {
-  auto *BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
+  IdentifierInfo *BaseII = D.getIdentifier();
+  LookupResult Lookup(*this, DeclarationName(BaseII), D.getIdentifierLoc(),
+                      LookupOrdinaryName);
+  LookupParsedName(Lookup, S, &D.getCXXScopeSpec());
+
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  QualType FType = TInfo->getType();
+
+  bool IsConstexpr = D.getDeclSpec().getConstexprSpecifier() == CSK_constexpr;
+  bool IsConsteval = D.getDeclSpec().getConstexprSpecifier() == CSK_consteval;
+
+  FunctionDecl *BaseFD = nullptr;
+  for (auto *Candidate : Lookup) {
+    auto *UDecl = dyn_cast<FunctionDecl>(Candidate->getUnderlyingDecl());
+    if (!UDecl)
+      continue;
+
+    // Don't specialize constexpr/consteval functions with
+    // non-constexpr/consteval functions.
+    if (UDecl->isConstexpr() && !IsConstexpr)
+      continue;
+    if (UDecl->isConsteval() && !IsConsteval)
+      continue;
+
+    QualType NewType = Context.mergeFunctionTypes(
+        FType, UDecl->getType(), /* OfBlockPointer */ false,
+        /* Unqualified */ false, /* AllowCXX */ true);
+    if (NewType.isNull())
+      continue;
+
+    // Found a base!
+    BaseFD = UDecl;
+    break;
+  }
+  if (!BaseFD) {
+    BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
+    BaseFD->setImplicit(true);
+  }
+
   OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
   std::string MangledName;
   MangledName += D.getIdentifier()->getName();
@@ -5580,8 +5621,6 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
   auto *OMPDeclareVariantA = OMPDeclareVariantAttr::CreateImplicit(
       Context, VariantFuncRef, DVScope.TI);
   BaseFD->addAttr(OMPDeclareVariantA);
-
-  BaseFD->setImplicit(true);
 }
 
 ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
@@ -5614,8 +5653,8 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
 
       VariantMatchInfo VMI;
       OMPTraitInfo &TI = A->getTraitInfo();
-      TI.getAsVariantMatchInfo(Context, VMI, /* DeviceSetOnly */ false);
-      if (!isVariantApplicableInContext(VMI, OMPCtx))
+      TI.getAsVariantMatchInfo(Context, VMI);
+      if (!isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ false))
         continue;
 
       VMIs.push_back(VMI);
@@ -16991,6 +17030,21 @@ static void checkMappableExpressionList(
       if (DKind == OMPD_target_exit_data &&
           !(MapType == OMPC_MAP_from || MapType == OMPC_MAP_release ||
             MapType == OMPC_MAP_delete)) {
+        SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
+            << (IsMapTypeImplicit ? 1 : 0)
+            << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
+            << getOpenMPDirectiveName(DKind);
+        continue;
+      }
+
+      // target, target data
+      // OpenMP 5.0 [2.12.2, Restrictions, p. 163]
+      // OpenMP 5.0 [2.12.5, Restrictions, p. 174]
+      // A map-type in a map clause must be to, from, tofrom or alloc
+      if ((DKind == OMPD_target_data ||
+           isOpenMPTargetExecutionDirective(DKind)) &&
+          !(MapType == OMPC_MAP_to || MapType == OMPC_MAP_from ||
+            MapType == OMPC_MAP_tofrom || MapType == OMPC_MAP_alloc)) {
         SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
             << (IsMapTypeImplicit ? 1 : 0)
             << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)

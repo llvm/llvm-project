@@ -192,8 +192,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const char *InputFileName) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{
-      "-flavor", "gnu", "-shared", "-o", Output.getFilename(), InputFileName};
+  ArgStringList LldArgs{"-flavor",    "gnu", "--no-undefined",
+                        "-shared",    "-o",  Output.getFilename(),
+                        InputFileName};
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, Lld, LldArgs, Inputs));
 }

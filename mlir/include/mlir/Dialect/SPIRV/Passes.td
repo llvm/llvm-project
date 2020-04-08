@@ -11,17 +11,18 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SPIRVCompositeTypeLayout : Pass<"decorate-spirv-composite-type-layout"> {
+def SPIRVCompositeTypeLayout
+    : Pass<"decorate-spirv-composite-type-layout", "ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
 }
 
-def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs"> {
+def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createLowerABIAttributesPass()";
 }
 
-def SPIRVUpdateVCE : Pass<"spirv-update-vce"> {
+def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let summary = "Deduce and attach minimal (version, capabilities, extensions) "
                 "requirements to spv.module ops";
   let constructor = "mlir::spirv::createUpdateVersionCapabilityExtensionPass()";

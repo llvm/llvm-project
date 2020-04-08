@@ -16,15 +16,11 @@
 #include "llvm/Support/WithColor.h"
 
 #include "llvm/DWARFLinker/DWARFLinker.h"
+#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include <string>
 
 namespace llvm {
 namespace dsymutil {
-
-enum class OutputFileType {
-  Object,
-  Assembly,
-};
 
 struct LinkOptions {
   /// Verbosity

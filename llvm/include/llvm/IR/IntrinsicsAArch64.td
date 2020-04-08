@@ -1426,6 +1426,11 @@ def int_aarch64_sve_sdot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 def int_aarch64_sve_udot      : AdvSIMD_SVE_DOT_Intrinsic;
 def int_aarch64_sve_udot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 
+def int_aarch64_sve_sqadd_x   : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_uqadd_x   : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_uqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
+
 // Shifts
 
 def int_aarch64_sve_asr      : AdvSIMD_Pred2VectorArg_Intrinsic;

@@ -129,6 +129,10 @@ struct XCOFFStringTable {
 };
 
 struct XCOFFCsectAuxEnt32 {
+  static constexpr uint8_t SymbolTypeMask = 0x07;
+  static constexpr uint8_t SymbolAlignmentMask = 0xF8;
+  static constexpr size_t SymbolAlignmentBitOffset = 3;
+
   support::ubig32_t
       SectionOrLength; // If the symbol type is XTY_SD or XTY_CM, the csect
                        // length.
@@ -141,6 +145,17 @@ struct XCOFFCsectAuxEnt32 {
   XCOFF::StorageMappingClass StorageMappingClass;
   support::ubig32_t StabInfoIndex;
   support::ubig16_t StabSectNum;
+
+  uint16_t getAlignmentLog2() const {
+    return (SymbolAlignmentAndType & SymbolAlignmentMask) >>
+           SymbolAlignmentBitOffset;
+  }
+
+  uint8_t getSymbolType() const {
+    return SymbolAlignmentAndType & SymbolTypeMask;
+  }
+
+  bool isLabel() const { return getSymbolType() == XCOFF::XTY_LD; }
 };
 
 struct XCOFFFileAuxEnt {

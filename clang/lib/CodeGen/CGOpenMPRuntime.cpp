@@ -38,6 +38,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <numeric>
 
 using namespace clang;
 using namespace CodeGen;
@@ -5255,195 +5256,491 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   return std::make_pair(NumDeps, Base);
 }
 
+namespace {
+/// Loop generator for OpenMP iterator expression.
+class OMPIteratorGeneratorScope final
+    : public CodeGenFunction::OMPPrivateScope {
+  CodeGenFunction &CGF;
+  const OMPIteratorExpr *E = nullptr;
+  SmallVector<CodeGenFunction::JumpDest, 4> ContDests;
+  SmallVector<CodeGenFunction::JumpDest, 4> ExitDests;
+  OMPIteratorGeneratorScope() = delete;
+  OMPIteratorGeneratorScope(OMPIteratorGeneratorScope &) = delete;
+
+public:
+  OMPIteratorGeneratorScope(CodeGenFunction &CGF, const OMPIteratorExpr *E)
+      : CodeGenFunction::OMPPrivateScope(CGF), CGF(CGF), E(E) {
+    if (!E)
+      return;
+    SmallVector<llvm::Value *, 4> Uppers;
+    for (unsigned I = 0, End = E->numOfIterators(); I < End; ++I) {
+      Uppers.push_back(CGF.EmitScalarExpr(E->getHelper(I).Upper));
+      const auto *VD = cast<VarDecl>(E->getIteratorDecl(I));
+      addPrivate(VD, [&CGF, VD]() {
+        return CGF.CreateMemTemp(VD->getType(), VD->getName());
+      });
+      const OMPIteratorHelperData &HelperData = E->getHelper(I);
+      addPrivate(HelperData.CounterVD, [&CGF, &HelperData]() {
+        return CGF.CreateMemTemp(HelperData.CounterVD->getType(),
+                                 "counter.addr");
+      });
+    }
+    Privatize();
+
+    for (unsigned I = 0, End = E->numOfIterators(); I < End; ++I) {
+      const OMPIteratorHelperData &HelperData = E->getHelper(I);
+      LValue CLVal =
+          CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(HelperData.CounterVD),
+                             HelperData.CounterVD->getType());
+      // Counter = 0;
+      CGF.EmitStoreOfScalar(
+          llvm::ConstantInt::get(CLVal.getAddress(CGF).getElementType(), 0),
+          CLVal);
+      CodeGenFunction::JumpDest &ContDest =
+          ContDests.emplace_back(CGF.getJumpDestInCurrentScope("iter.cont"));
+      CodeGenFunction::JumpDest &ExitDest =
+          ExitDests.emplace_back(CGF.getJumpDestInCurrentScope("iter.exit"));
+      // N = <number-of_iterations>;
+      llvm::Value *N = Uppers[I];
+      // cont:
+      // if (Counter < N) goto body; else goto exit;
+      CGF.EmitBlock(ContDest.getBlock());
+      auto *CVal =
+          CGF.EmitLoadOfScalar(CLVal, HelperData.CounterVD->getLocation());
+      llvm::Value *Cmp =
+          HelperData.CounterVD->getType()->isSignedIntegerOrEnumerationType()
+              ? CGF.Builder.CreateICmpSLT(CVal, N)
+              : CGF.Builder.CreateICmpULT(CVal, N);
+      llvm::BasicBlock *BodyBB = CGF.createBasicBlock("iter.body");
+      CGF.Builder.CreateCondBr(Cmp, BodyBB, ExitDest.getBlock());
+      // body:
+      CGF.EmitBlock(BodyBB);
+      // Iteri = Begini + Counter * Stepi;
+      CGF.EmitIgnoredExpr(HelperData.Update);
+    }
+  }
+  ~OMPIteratorGeneratorScope() {
+    if (!E)
+      return;
+    for (unsigned I = E->numOfIterators(); I > 0; --I) {
+      // Counter = Counter + 1;
+      const OMPIteratorHelperData &HelperData = E->getHelper(I - 1);
+      CGF.EmitIgnoredExpr(HelperData.CounterUpdate);
+      // goto cont;
+      CGF.EmitBranchThroughCleanup(ContDests[I - 1]);
+      // exit:
+      CGF.EmitBlock(ExitDests[I - 1].getBlock(), /*IsFinished=*/I == 1);
+    }
+  }
+};
+} // namespace
+
+static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                           llvm::PointerUnion<unsigned *, LValue *> Pos,
+                           const OMPTaskDataTy::DependData &Data,
+                           Address DependenciesArray) {
+  CodeGenModule &CGM = CGF.CGM;
+  ASTContext &C = CGM.getContext();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  RecordDecl *KmpDependInfoRD =
+      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
+
+  OMPIteratorGeneratorScope IteratorScope(
+      CGF, cast_or_null<OMPIteratorExpr>(
+               Data.IteratorExpr ? Data.IteratorExpr->IgnoreParenImpCasts()
+                                 : nullptr));
+  for (const Expr *E : Data.DepExprs) {
+    const auto *OASE = dyn_cast<OMPArrayShapingExpr>(E);
+    llvm::Value *Addr;
+    if (OASE) {
+      const Expr *Base = OASE->getBase();
+      Addr = CGF.EmitScalarExpr(Base);
+    } else {
+      Addr = CGF.EmitLValue(E).getPointer(CGF);
+    }
+    llvm::Value *Size;
+    QualType Ty = E->getType();
+    if (OASE) {
+      Size = CGF.getTypeSize(OASE->getBase()->getType()->getPointeeType());
+      for (const Expr *SE : OASE->getDimensions()) {
+        llvm::Value *Sz = CGF.EmitScalarExpr(SE);
+        Sz = CGF.EmitScalarConversion(Sz, SE->getType(),
+                                      CGF.getContext().getSizeType(),
+                                      SE->getExprLoc());
+        Size = CGF.Builder.CreateNUWMul(Size, Sz);
+      }
+    } else if (const auto *ASE =
+                   dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
+      LValue UpAddrLVal =
+          CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
+      llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
+          UpAddrLVal.getPointer(CGF), /*Idx0=*/1);
+      llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGM.SizeTy);
+      llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGM.SizeTy);
+      Size = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    } else {
+      Size = CGF.getTypeSize(Ty);
+    }
+    LValue Base;
+    if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
+      Base = CGF.MakeAddrLValue(
+          CGF.Builder.CreateConstGEP(DependenciesArray, *P), KmpDependInfoTy);
+    } else {
+      LValue &PosLVal = *Pos.get<LValue *>();
+      llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
+      Base = CGF.MakeAddrLValue(
+          Address(CGF.Builder.CreateGEP(DependenciesArray.getPointer(), Idx),
+                  DependenciesArray.getAlignment()),
+          KmpDependInfoTy);
+    }
+    // deps[i].base_addr = &<Dependencies[i].second>;
+    LValue BaseAddrLVal = CGF.EmitLValueForField(
+        Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
+    CGF.EmitStoreOfScalar(CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy),
+                          BaseAddrLVal);
+    // deps[i].len = sizeof(<Dependencies[i].second>);
+    LValue LenLVal = CGF.EmitLValueForField(
+        Base, *std::next(KmpDependInfoRD->field_begin(), Len));
+    CGF.EmitStoreOfScalar(Size, LenLVal);
+    // deps[i].flags = <Dependencies[i].first>;
+    RTLDependenceKindTy DepKind = translateDependencyKind(Data.DepKind);
+    LValue FlagsLVal = CGF.EmitLValueForField(
+        Base, *std::next(KmpDependInfoRD->field_begin(), Flags));
+    CGF.EmitStoreOfScalar(llvm::ConstantInt::get(LLVMFlagsTy, DepKind),
+                          FlagsLVal);
+    if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
+      ++(*P);
+    } else {
+      LValue &PosLVal = *Pos.get<LValue *>();
+      llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
+      Idx = CGF.Builder.CreateNUWAdd(Idx,
+                                     llvm::ConstantInt::get(Idx->getType(), 1));
+      CGF.EmitStoreOfScalar(Idx, PosLVal);
+    }
+  }
+}
+
+static SmallVector<llvm::Value *, 4>
+emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                        const OMPTaskDataTy::DependData &Data) {
+  assert(Data.DepKind == OMPC_DEPEND_depobj &&
+         "Expected depobj dependecy kind.");
+  SmallVector<llvm::Value *, 4> Sizes;
+  SmallVector<LValue, 4> SizeLVals;
+  ASTContext &C = CGF.getContext();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  RecordDecl *KmpDependInfoRD =
+      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
+  llvm::Type *KmpDependInfoPtrT = CGF.ConvertTypeForMem(KmpDependInfoPtrTy);
+  {
+    OMPIteratorGeneratorScope IteratorScope(
+        CGF, cast_or_null<OMPIteratorExpr>(
+                 Data.IteratorExpr ? Data.IteratorExpr->IgnoreParenImpCasts()
+                                   : nullptr));
+    for (const Expr *E : Data.DepExprs) {
+      LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
+      LValue Base = CGF.EmitLoadOfPointerLValue(
+          DepobjLVal.getAddress(CGF),
+          C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
+      Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Base.getAddress(CGF), KmpDependInfoPtrT);
+      Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
+                                Base.getTBAAInfo());
+      llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
+          Addr.getPointer(),
+          llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      LValue NumDepsBase = CGF.MakeAddrLValue(
+          Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
+          Base.getBaseInfo(), Base.getTBAAInfo());
+      // NumDeps = deps[i].base_addr;
+      LValue BaseAddrLVal = CGF.EmitLValueForField(
+          NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
+      llvm::Value *NumDeps =
+          CGF.EmitLoadOfScalar(BaseAddrLVal, E->getExprLoc());
+      LValue NumLVal = CGF.MakeAddrLValue(
+          CGF.CreateMemTemp(C.getUIntPtrType(), "depobj.size.addr"),
+          C.getUIntPtrType());
+      CGF.InitTempAlloca(NumLVal.getAddress(CGF),
+                         llvm::ConstantInt::get(CGF.IntPtrTy, 0));
+      llvm::Value *PrevVal = CGF.EmitLoadOfScalar(NumLVal, E->getExprLoc());
+      llvm::Value *Add = CGF.Builder.CreateNUWAdd(PrevVal, NumDeps);
+      CGF.EmitStoreOfScalar(Add, NumLVal);
+      SizeLVals.push_back(NumLVal);
+    }
+  }
+  for (unsigned I = 0, E = SizeLVals.size(); I < E; ++I) {
+    llvm::Value *Size =
+        CGF.EmitLoadOfScalar(SizeLVals[I], Data.DepExprs[I]->getExprLoc());
+    Sizes.push_back(Size);
+  }
+  return Sizes;
+}
+
+static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                               LValue PosLVal,
+                               const OMPTaskDataTy::DependData &Data,
+                               Address DependenciesArray) {
+  assert(Data.DepKind == OMPC_DEPEND_depobj &&
+         "Expected depobj dependecy kind.");
+  ASTContext &C = CGF.getContext();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  RecordDecl *KmpDependInfoRD =
+      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
+  llvm::Type *KmpDependInfoPtrT = CGF.ConvertTypeForMem(KmpDependInfoPtrTy);
+  llvm::Value *ElSize = CGF.getTypeSize(KmpDependInfoTy);
+  {
+    OMPIteratorGeneratorScope IteratorScope(
+        CGF, cast_or_null<OMPIteratorExpr>(
+                 Data.IteratorExpr ? Data.IteratorExpr->IgnoreParenImpCasts()
+                                   : nullptr));
+    for (unsigned I = 0, End = Data.DepExprs.size(); I < End; ++I) {
+      const Expr *E = Data.DepExprs[I];
+      LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
+      LValue Base = CGF.EmitLoadOfPointerLValue(
+          DepobjLVal.getAddress(CGF),
+          C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
+      Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Base.getAddress(CGF), KmpDependInfoPtrT);
+      Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
+                                Base.getTBAAInfo());
+
+      // Get number of elements in a single depobj.
+      llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
+          Addr.getPointer(),
+          llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      LValue NumDepsBase = CGF.MakeAddrLValue(
+          Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
+          Base.getBaseInfo(), Base.getTBAAInfo());
+      // NumDeps = deps[i].base_addr;
+      LValue BaseAddrLVal = CGF.EmitLValueForField(
+          NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
+      llvm::Value *NumDeps =
+          CGF.EmitLoadOfScalar(BaseAddrLVal, E->getExprLoc());
+
+      // memcopy dependency data.
+      llvm::Value *Size = CGF.Builder.CreateNUWMul(
+          ElSize,
+          CGF.Builder.CreateIntCast(NumDeps, CGF.SizeTy, /*isSigned=*/false));
+      llvm::Value *Pos = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
+      Address DepAddr =
+          Address(CGF.Builder.CreateGEP(DependenciesArray.getPointer(), Pos),
+                  DependenciesArray.getAlignment());
+      CGF.Builder.CreateMemCpy(DepAddr, Base.getAddress(CGF), Size);
+
+      // Increase pos.
+      // pos += size;
+      llvm::Value *Add = CGF.Builder.CreateNUWAdd(Pos, NumDeps);
+      CGF.EmitStoreOfScalar(Add, PosLVal);
+    }
+  }
+}
+
 std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
-    CodeGenFunction &CGF,
-    ArrayRef<std::pair<OpenMPDependClauseKind, const Expr *>> Dependencies,
-    bool ForDepobj, SourceLocation Loc) {
+    CodeGenFunction &CGF, ArrayRef<OMPTaskDataTy::DependData> Dependencies,
+    SourceLocation Loc) {
+  if (llvm::all_of(Dependencies, [](const OMPTaskDataTy::DependData &D) {
+        return D.DepExprs.empty();
+      }))
+    return std::make_pair(nullptr, Address::invalid());
   // Process list of dependencies.
   ASTContext &C = CGM.getContext();
   Address DependenciesArray = Address::invalid();
-  unsigned NumDependencies = Dependencies.size();
   llvm::Value *NumOfElements = nullptr;
-  if (NumDependencies) {
-    QualType FlagsTy;
-    getDependTypes(C, KmpDependInfoTy, FlagsTy);
-    RecordDecl *KmpDependInfoRD =
-        cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-    llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
-    unsigned NumDepobjDependecies = 0;
-    SmallVector<std::pair<llvm::Value *, LValue>, 4> Depobjs;
-    llvm::Value *NumOfDepobjElements = llvm::ConstantInt::get(CGF.IntPtrTy, 0);
-    // Calculate number of depobj dependecies.
-    for (const std::pair<OpenMPDependClauseKind, const Expr *> &Pair :
-         Dependencies) {
-      if (Pair.first != OMPC_DEPEND_depobj)
-        continue;
-      LValue DepobjLVal = CGF.EmitLValue(Pair.second);
-      llvm::Value *NumDeps;
-      LValue Base;
-      std::tie(NumDeps, Base) = getDepobjElements(CGF, DepobjLVal, Loc);
-      NumOfDepobjElements =
-          CGF.Builder.CreateNUWAdd(NumOfDepobjElements, NumDeps);
-      Depobjs.emplace_back(NumDeps, Base);
-      ++NumDepobjDependecies;
-    }
-
-    QualType KmpDependInfoArrayTy;
-    // Define type kmp_depend_info[<Dependencies.size()>];
-    // For depobj reserve one extra element to store the number of elements.
-    // It is required to handle depobj(x) update(in) construct.
-    // kmp_depend_info[<Dependencies.size()>] deps;
-    if (ForDepobj) {
-      assert(NumDepobjDependecies == 0 &&
-             "depobj dependency kind is not expected in depobj directive.");
-      KmpDependInfoArrayTy = C.getConstantArrayType(
-          KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies + 1),
-          nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
-      // Need to allocate on the dynamic memory.
-      llvm::Value *ThreadID = getThreadID(CGF, Loc);
-      // Use default allocator.
-      llvm::Value *Allocator = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
-      CharUnits Align = C.getTypeAlignInChars(KmpDependInfoArrayTy);
-      CharUnits Sz = C.getTypeSizeInChars(KmpDependInfoArrayTy);
-      llvm::Value *Size = CGF.CGM.getSize(Sz.alignTo(Align));
-      llvm::Value *Args[] = {ThreadID, Size, Allocator};
-
-      llvm::Value *Addr = CGF.EmitRuntimeCall(
-          createRuntimeFunction(OMPRTL__kmpc_alloc), Args, ".dep.arr.addr");
-      Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          Addr, CGF.ConvertTypeForMem(KmpDependInfoArrayTy)->getPointerTo());
-      DependenciesArray = Address(Addr, Align);
-      NumOfElements = llvm::ConstantInt::get(CGM.Int32Ty, NumDependencies,
-                                             /*isSigned=*/false);
-    } else if (NumDepobjDependecies > 0) {
-      NumOfElements = CGF.Builder.CreateNUWAdd(
-          NumOfDepobjElements,
-          llvm::ConstantInt::get(CGM.IntPtrTy,
-                                 NumDependencies - NumDepobjDependecies,
-                                 /*isSigned=*/false));
-      NumOfElements = CGF.Builder.CreateIntCast(NumOfElements, CGF.Int32Ty,
-                                                /*isSigned=*/false);
-      OpaqueValueExpr OVE(
-          Loc, C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0),
-          VK_RValue);
-      CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
-                                                    RValue::get(NumOfElements));
-      KmpDependInfoArrayTy =
-          C.getVariableArrayType(KmpDependInfoTy, &OVE, ArrayType::Normal,
-                                 /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
-      // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
-      // Properly emit variable-sized array.
-      auto *PD = ImplicitParamDecl::Create(C, KmpDependInfoArrayTy,
-                                           ImplicitParamDecl::Other);
-      CGF.EmitVarDecl(*PD);
-      DependenciesArray = CGF.GetAddrOfLocalVar(PD);
-    } else {
-      KmpDependInfoArrayTy = C.getConstantArrayType(
-          KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies),
-          nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
-      DependenciesArray =
-          CGF.CreateMemTemp(KmpDependInfoArrayTy, ".dep.arr.addr");
-      NumOfElements = llvm::ConstantInt::get(CGM.Int32Ty, NumDependencies,
-                                             /*isSigned=*/false);
-    }
-    if (ForDepobj) {
-      // Write number of elements in the first element of array for depobj.
-      llvm::Value *NumVal =
-          llvm::ConstantInt::get(CGF.IntPtrTy, NumDependencies);
-      LValue Base = CGF.MakeAddrLValue(
-          CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0),
-          KmpDependInfoTy);
-      // deps[i].base_addr = NumDependencies;
-      LValue BaseAddrLVal = CGF.EmitLValueForField(
-          Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      CGF.EmitStoreOfScalar(NumVal, BaseAddrLVal);
-    }
-    unsigned Pos = ForDepobj ? 1 : 0;
-    for (unsigned I = 0; I < NumDependencies; ++I) {
-      if (Dependencies[I].first == OMPC_DEPEND_depobj)
-        continue;
-      const Expr *E = Dependencies[I].second;
-      const auto *OASE = dyn_cast<OMPArrayShapingExpr>(E);
-      llvm::Value *Addr;
-      if (OASE) {
-        const Expr *Base = OASE->getBase();
-        Addr = CGF.EmitScalarExpr(Base);
-      } else {
-        Addr = CGF.EmitLValue(E).getPointer(CGF);
+  unsigned NumDependencies = std::accumulate(
+      Dependencies.begin(), Dependencies.end(), 0,
+      [](unsigned V, const OMPTaskDataTy::DependData &D) {
+        return D.DepKind == OMPC_DEPEND_depobj
+                   ? V
+                   : (V + (D.IteratorExpr ? 0 : D.DepExprs.size()));
+      });
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  bool HasDepobjDeps = false;
+  bool HasRegularWithIterators = false;
+  llvm::Value *NumOfDepobjElements = llvm::ConstantInt::get(CGF.IntPtrTy, 0);
+  llvm::Value *NumOfRegularWithIterators =
+      llvm::ConstantInt::get(CGF.IntPtrTy, 1);
+  // Calculate number of depobj dependecies and regular deps with the iterators.
+  for (const OMPTaskDataTy::DependData &D : Dependencies) {
+    if (D.DepKind == OMPC_DEPEND_depobj) {
+      SmallVector<llvm::Value *, 4> Sizes =
+          emitDepobjElementsSizes(CGF, KmpDependInfoTy, D);
+      for (llvm::Value *Size : Sizes) {
+        NumOfDepobjElements =
+            CGF.Builder.CreateNUWAdd(NumOfDepobjElements, Size);
       }
-      llvm::Value *Size;
-      QualType Ty = E->getType();
-      if (OASE) {
-        Size = CGF.getTypeSize(OASE->getBase()->getType()->getPointeeType());
-        for (const Expr *SE : OASE->getDimensions()) {
-           llvm::Value *Sz = CGF.EmitScalarExpr(SE);
-           Sz = CGF.EmitScalarConversion(Sz, SE->getType(),
-                                    CGF.getContext().getSizeType(),
-                                    SE->getExprLoc());
-           Size = CGF.Builder.CreateNUWMul(Size, Sz);
-        }
-      } else if (const auto *ASE =
-                     dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
-        LValue UpAddrLVal =
-            CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
-        llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
-            UpAddrLVal.getPointer(CGF), /*Idx0=*/1);
-        llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGM.SizeTy);
-        llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGM.SizeTy);
-        Size = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
-      } else {
-        Size = CGF.getTypeSize(Ty);
-      }
-      LValue Base;
-      if (NumDepobjDependecies > 0) {
-        Base = CGF.MakeAddrLValue(
-            CGF.Builder.CreateConstGEP(DependenciesArray, Pos),
-            KmpDependInfoTy);
-      } else {
-        Base = CGF.MakeAddrLValue(
-            CGF.Builder.CreateConstArrayGEP(DependenciesArray, Pos),
-            KmpDependInfoTy);
-      }
-      // deps[i].base_addr = &<Dependencies[i].second>;
-      LValue BaseAddrLVal = CGF.EmitLValueForField(
-          Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      CGF.EmitStoreOfScalar(CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy),
-                            BaseAddrLVal);
-      // deps[i].len = sizeof(<Dependencies[i].second>);
-      LValue LenLVal = CGF.EmitLValueForField(
-          Base, *std::next(KmpDependInfoRD->field_begin(), Len));
-      CGF.EmitStoreOfScalar(Size, LenLVal);
-      // deps[i].flags = <Dependencies[i].first>;
-      RTLDependenceKindTy DepKind =
-          translateDependencyKind(Dependencies[I].first);
-      LValue FlagsLVal = CGF.EmitLValueForField(
-          Base, *std::next(KmpDependInfoRD->field_begin(), Flags));
-      CGF.EmitStoreOfScalar(llvm::ConstantInt::get(LLVMFlagsTy, DepKind),
-                            FlagsLVal);
-      ++Pos;
+      HasDepobjDeps = true;
+      continue;
     }
-    // Copy final depobj arrays.
-    if (NumDepobjDependecies > 0) {
-      llvm::Value *ElSize = CGF.getTypeSize(KmpDependInfoTy);
-      Address Addr = CGF.Builder.CreateConstGEP(DependenciesArray, Pos);
-      for (const std::pair<llvm::Value *, LValue> &Pair : Depobjs) {
-        llvm::Value *Size = CGF.Builder.CreateNUWMul(ElSize, Pair.first);
-        CGF.Builder.CreateMemCpy(Addr, Pair.second.getAddress(CGF), Size);
-        Addr =
-            Address(CGF.Builder.CreateGEP(
-                        Addr.getElementType(), Addr.getPointer(), Pair.first),
-                    DependenciesArray.getAlignment().alignmentOfArrayElement(
-                        C.getTypeSizeInChars(KmpDependInfoTy)));
+    // Include number of iterations, if any.
+    if (const auto *IE = cast_or_null<OMPIteratorExpr>(D.IteratorExpr)) {
+      for (unsigned I = 0, E = IE->numOfIterators(); I < E; ++I) {
+        llvm::Value *Sz = CGF.EmitScalarExpr(IE->getHelper(I).Upper);
+        Sz = CGF.Builder.CreateIntCast(Sz, CGF.IntPtrTy, /*isSigned=*/false);
+        NumOfRegularWithIterators =
+            CGF.Builder.CreateNUWMul(NumOfRegularWithIterators, Sz);
       }
-      DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          DependenciesArray, CGF.VoidPtrTy);
-    } else {
-      DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.Builder.CreateConstArrayGEP(DependenciesArray, ForDepobj ? 1 : 0),
-          CGF.VoidPtrTy);
+      HasRegularWithIterators = true;
+      continue;
     }
   }
+
+  QualType KmpDependInfoArrayTy;
+  if (HasDepobjDeps || HasRegularWithIterators) {
+    NumOfElements = llvm::ConstantInt::get(CGM.IntPtrTy, NumDependencies,
+                                           /*isSigned=*/false);
+    if (HasDepobjDeps) {
+      NumOfElements =
+          CGF.Builder.CreateNUWAdd(NumOfDepobjElements, NumOfElements);
+    }
+    if (HasRegularWithIterators) {
+      NumOfElements =
+          CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumOfElements);
+    }
+    OpaqueValueExpr OVE(Loc,
+                        C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0),
+                        VK_RValue);
+    CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
+                                                  RValue::get(NumOfElements));
+    KmpDependInfoArrayTy =
+        C.getVariableArrayType(KmpDependInfoTy, &OVE, ArrayType::Normal,
+                               /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+    // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
+    // Properly emit variable-sized array.
+    auto *PD = ImplicitParamDecl::Create(C, KmpDependInfoArrayTy,
+                                         ImplicitParamDecl::Other);
+    CGF.EmitVarDecl(*PD);
+    DependenciesArray = CGF.GetAddrOfLocalVar(PD);
+    NumOfElements = CGF.Builder.CreateIntCast(NumOfElements, CGF.Int32Ty,
+                                              /*isSigned=*/false);
+  } else {
+    KmpDependInfoArrayTy = C.getConstantArrayType(
+        KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies), nullptr,
+        ArrayType::Normal, /*IndexTypeQuals=*/0);
+    DependenciesArray =
+        CGF.CreateMemTemp(KmpDependInfoArrayTy, ".dep.arr.addr");
+    DependenciesArray = CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0);
+    NumOfElements = llvm::ConstantInt::get(CGM.Int32Ty, NumDependencies,
+                                           /*isSigned=*/false);
+  }
+  unsigned Pos = 0;
+  for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
+    if (Dependencies[I].DepKind == OMPC_DEPEND_depobj ||
+        Dependencies[I].IteratorExpr)
+      continue;
+    emitDependData(CGF, KmpDependInfoTy, &Pos, Dependencies[I],
+                   DependenciesArray);
+  }
+  // Copy regular dependecies with iterators.
+  LValue PosLVal = CGF.MakeAddrLValue(
+      CGF.CreateMemTemp(C.getSizeType(), "dep.counter.addr"), C.getSizeType());
+  CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Pos), PosLVal);
+  for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
+    if (Dependencies[I].DepKind == OMPC_DEPEND_depobj ||
+        !Dependencies[I].IteratorExpr)
+      continue;
+    emitDependData(CGF, KmpDependInfoTy, &PosLVal, Dependencies[I],
+                   DependenciesArray);
+  }
+  // Copy final depobj arrays without iterators.
+  if (HasDepobjDeps) {
+    for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
+      if (Dependencies[I].DepKind != OMPC_DEPEND_depobj)
+        continue;
+      emitDepobjElements(CGF, KmpDependInfoTy, PosLVal, Dependencies[I],
+                         DependenciesArray);
+    }
+  }
+  DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      DependenciesArray, CGF.VoidPtrTy);
   return std::make_pair(NumOfElements, DependenciesArray);
+}
+
+Address CGOpenMPRuntime::emitDepobjDependClause(
+    CodeGenFunction &CGF, const OMPTaskDataTy::DependData &Dependencies,
+    SourceLocation Loc) {
+  if (Dependencies.DepExprs.empty())
+    return Address::invalid();
+  // Process list of dependencies.
+  ASTContext &C = CGM.getContext();
+  Address DependenciesArray = Address::invalid();
+  unsigned NumDependencies = Dependencies.DepExprs.size();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  RecordDecl *KmpDependInfoRD =
+      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+
+  llvm::Value *Size;
+  // Define type kmp_depend_info[<Dependencies.size()>];
+  // For depobj reserve one extra element to store the number of elements.
+  // It is required to handle depobj(x) update(in) construct.
+  // kmp_depend_info[<Dependencies.size()>] deps;
+  llvm::Value *NumDepsVal;
+  CharUnits Align = C.getTypeAlignInChars(KmpDependInfoTy);
+  if (const auto *IE =
+          cast_or_null<OMPIteratorExpr>(Dependencies.IteratorExpr)) {
+    NumDepsVal = llvm::ConstantInt::get(CGF.SizeTy, 1);
+    for (unsigned I = 0, E = IE->numOfIterators(); I < E; ++I) {
+      llvm::Value *Sz = CGF.EmitScalarExpr(IE->getHelper(I).Upper);
+      Sz = CGF.Builder.CreateIntCast(Sz, CGF.SizeTy, /*isSigned=*/false);
+      NumDepsVal = CGF.Builder.CreateNUWMul(NumDepsVal, Sz);
+    }
+    Size = CGF.Builder.CreateNUWAdd(llvm::ConstantInt::get(CGF.SizeTy, 1),
+                                    NumDepsVal);
+    CharUnits SizeInBytes =
+        C.getTypeSizeInChars(KmpDependInfoTy).alignTo(Align);
+    llvm::Value *RecSize = CGM.getSize(SizeInBytes);
+    Size = CGF.Builder.CreateNUWMul(Size, RecSize);
+    NumDepsVal =
+        CGF.Builder.CreateIntCast(NumDepsVal, CGF.IntPtrTy, /*isSigned=*/false);
+  } else {
+    QualType KmpDependInfoArrayTy = C.getConstantArrayType(
+        KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies + 1),
+        nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
+    CharUnits Sz = C.getTypeSizeInChars(KmpDependInfoArrayTy);
+    Size = CGM.getSize(Sz.alignTo(Align));
+    NumDepsVal = llvm::ConstantInt::get(CGF.IntPtrTy, NumDependencies);
+  }
+  // Need to allocate on the dynamic memory.
+  llvm::Value *ThreadID = getThreadID(CGF, Loc);
+  // Use default allocator.
+  llvm::Value *Allocator = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  llvm::Value *Args[] = {ThreadID, Size, Allocator};
+
+  llvm::Value *Addr = CGF.EmitRuntimeCall(
+      createRuntimeFunction(OMPRTL__kmpc_alloc), Args, ".dep.arr.addr");
+  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      Addr, CGF.ConvertTypeForMem(KmpDependInfoTy)->getPointerTo());
+  DependenciesArray = Address(Addr, Align);
+  // Write number of elements in the first element of array for depobj.
+  LValue Base = CGF.MakeAddrLValue(DependenciesArray, KmpDependInfoTy);
+  // deps[i].base_addr = NumDependencies;
+  LValue BaseAddrLVal = CGF.EmitLValueForField(
+      Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
+  CGF.EmitStoreOfScalar(NumDepsVal, BaseAddrLVal);
+  llvm::PointerUnion<unsigned *, LValue *> Pos;
+  unsigned Idx = 1;
+  LValue PosLVal;
+  if (Dependencies.IteratorExpr) {
+    PosLVal = CGF.MakeAddrLValue(
+        CGF.CreateMemTemp(C.getSizeType(), "iterator.counter.addr"),
+        C.getSizeType());
+    CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Idx), PosLVal,
+                          /*IsInit=*/true);
+    Pos = &PosLVal;
+  } else {
+    Pos = &Idx;
+  }
+  emitDependData(CGF, KmpDependInfoTy, Pos, Dependencies, DependenciesArray);
+  DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      CGF.Builder.CreateConstGEP(DependenciesArray, 1), CGF.VoidPtrTy);
+  return DependenciesArray;
 }
 
 void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
@@ -5537,7 +5834,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
   Address DependenciesArray = Address::invalid();
   llvm::Value *NumOfElements;
   std::tie(NumOfElements, DependenciesArray) =
-      emitDependClause(CGF, Data.Dependences, /*ForDepobj=*/false, Loc);
+      emitDependClause(CGF, Data.Dependences, Loc);
 
   // NOTE: routine and part_id fields are initialized by __kmpc_omp_task_alloc()
   // libcall.
@@ -11206,10 +11503,9 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     // dims.upper = num_iterations;
     LValue UpperLVal = CGF.EmitLValueForField(
         DimsLVal, *std::next(RD->field_begin(), UpperFD));
-    llvm::Value *NumIterVal =
-        CGF.EmitScalarConversion(CGF.EmitScalarExpr(NumIterations[I]),
-                                 D.getNumIterations()->getType(), Int64Ty,
-                                 D.getNumIterations()->getExprLoc());
+    llvm::Value *NumIterVal = CGF.EmitScalarConversion(
+        CGF.EmitScalarExpr(NumIterations[I]), NumIterations[I]->getType(),
+        Int64Ty, NumIterations[I]->getExprLoc());
     CGF.EmitStoreOfScalar(NumIterVal, UpperLVal);
     // dims.stride = 1;
     LValue StrideLVal = CGF.EmitLValueForField(

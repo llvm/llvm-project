@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
@@ -80,14 +81,14 @@ static void populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns,
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public ModulePass<DecorateSPIRVCompositeTypeLayoutPass> {
-private:
-  void runOnModule() override;
+    : public SPIRVCompositeTypeLayoutBase<
+          DecorateSPIRVCompositeTypeLayoutPass> {
+  void runOnOperation() override;
 };
 } // namespace
 
-void DecorateSPIRVCompositeTypeLayoutPass::runOnModule() {
-  auto module = getModule();
+void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
+  auto module = getOperation();
   OwningRewritePatternList patterns;
   populateSPIRVLayoutInfoPatterns(patterns, module.getContext());
   ConversionTarget target(*(module.getContext()));
@@ -113,7 +114,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnModule() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
   return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
 }

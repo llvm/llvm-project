@@ -13,12 +13,12 @@
 // SSA scalars live out of 'affine.for'/'affine.if' statements is available.
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/Dominance.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <algorithm>
@@ -60,11 +60,7 @@ namespace {
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-struct MemRefDataFlowOpt : public FunctionPass<MemRefDataFlowOpt> {
-/// Include the generated pass utilities.
-#define GEN_PASS_MemRefDataFlowOpt
-#include "mlir/Transforms/Passes.h.inc"
-
+struct MemRefDataFlowOpt : public MemRefDataFlowOptBase<MemRefDataFlowOpt> {
   void runOnFunction() override;
 
   void forwardStoreToLoad(AffineLoadOp loadOp);
@@ -82,7 +78,7 @@ struct MemRefDataFlowOpt : public FunctionPass<MemRefDataFlowOpt> {
 
 /// Creates a pass to perform optimizations relying on memref dataflow such as
 /// store to load forwarding, elimination of dead stores, and dead allocs.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createMemRefDataFlowOptPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createMemRefDataFlowOptPass() {
   return std::make_unique<MemRefDataFlowOpt>();
 }
 

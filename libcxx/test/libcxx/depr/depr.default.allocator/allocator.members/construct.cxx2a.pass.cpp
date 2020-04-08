@@ -15,10 +15,8 @@
 //  However, for backwards compatibility, if _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 //  is defined before including <memory>, then removed members will be restored.
 
-// MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-// MODULES_DEFINES: _LIBCPP_DISABLE_DEPRECATION_WARNINGS
-#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <cassert>
@@ -64,7 +62,8 @@ public:
 
 int main(int, char**)
 {
-    {
+  globalMemCounter.reset();
+  {
     std::allocator<A> a;
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
@@ -112,7 +111,7 @@ int main(int, char**)
     DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
-    }
+  }
 #if TEST_STD_VER >= 11
     {
     std::allocator<move_only> a;

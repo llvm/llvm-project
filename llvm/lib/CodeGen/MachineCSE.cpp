@@ -831,6 +831,13 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
           continue;
         MachineInstr &NewMI =
             TII->duplicate(*CMBB, CMBB->getFirstTerminator(), *MI);
+
+        // When hoisting, make sure we don't carry the debug location of
+        // the original instruction, as that's not correct and can cause
+        // unexpected jumps when debugging optimized code.
+        auto EmptyDL = DebugLoc();
+        NewMI.setDebugLoc(EmptyDL);
+
         NewMI.getOperand(0).setReg(NewReg);
 
         PREMap[MI] = CMBB;

@@ -744,7 +744,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     OffsetEncodingFromFlag = ForceOffsetEncoding;
 
   clangd::RenameOptions RenameOpts;
-  // Shall we allow to custimize the file limit?
+  // Shall we allow to customize the file limit?
   RenameOpts.AllowCrossFile = CrossFileRename;
 
   ClangdLSPServer LSPServer(

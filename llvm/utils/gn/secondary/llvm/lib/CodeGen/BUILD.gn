@@ -97,6 +97,7 @@ static_library("CodeGen") {
     "MachineCSE.cpp",
     "MachineCombiner.cpp",
     "MachineCopyPropagation.cpp",
+    "MachineDebugify.cpp",
     "MachineDominanceFrontier.cpp",
     "MachineDominators.cpp",
     "MachineFrameInfo.cpp",

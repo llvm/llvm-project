@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/LoopOps/Transforms.h"
@@ -17,8 +18,6 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::loop;
@@ -160,11 +159,8 @@ void mlir::loop::naivelyFuseParallelOps(Region &region) {
 }
 
 namespace {
-struct ParallelLoopFusion : public OperationPass<ParallelLoopFusion> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LoopParallelLoopFusion
-#include "mlir/Dialect/LoopOps/Passes.h.inc"
-
+struct ParallelLoopFusion
+    : public LoopParallelLoopFusionBase<ParallelLoopFusion> {
   void runOnOperation() override {
     for (Region &region : getOperation()->getRegions())
       naivelyFuseParallelOps(region);

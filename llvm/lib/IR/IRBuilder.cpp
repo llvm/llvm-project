@@ -134,16 +134,6 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src,
-                                      unsigned SrcAlign, Value *Size,
-                                      bool isVolatile, MDNode *TBAATag,
-                                      MDNode *TBAAStructTag, MDNode *ScopeTag,
-                                      MDNode *NoAliasTag) {
-  return CreateMemCpy(Dst, MaybeAlign(DstAlign), Src, MaybeAlign(SrcAlign),
-                      Size, isVolatile, TBAATag, TBAAStructTag, ScopeTag,
-                      NoAliasTag);
-}
-
 CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
                                       Value *Src, MaybeAlign SrcAlign,
                                       Value *Size, bool isVolatile,

@@ -3555,7 +3555,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
         CurTy = GEP->getSourceElementType();
         FirstIter = false;
       } else {
-        CurTy = cast<SequentialType>(CurTy)->getElementType();
+        CurTy = GetElementPtrInst::getTypeAtIndex(CurTy, (uint64_t)0);
       }
       // For an array, add the element offset, explicitly scaled.
       const SCEV *ElementSize = getSizeOfExpr(IntIdxTy, CurTy);

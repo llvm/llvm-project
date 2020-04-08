@@ -113,6 +113,11 @@ New checks
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
 
+- New :doc:`llvmlibc-implementation-in-namespace
+  <clang-tidy/checks/llvmlibc-implementation-in-namespace>` check.
+
+  Checks all llvm-libc implementation is within the correct namespace.
+
 - New :doc:`llvmlibc-restrict-system-libc-headers
   <clang-tidy/checks/llvmlibc-restrict-system-libc-headers>` check.
 

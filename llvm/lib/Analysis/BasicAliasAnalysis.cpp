@@ -1145,11 +1145,11 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     GEP1->getSourceElementType(), IntermediateIndices);
   StructType *LastIndexedStruct = dyn_cast<StructType>(Ty);
 
-  if (isa<SequentialType>(Ty)) {
+  if (isa<ArrayType>(Ty) || isa<VectorType>(Ty)) {
     // We know that:
     // - both GEPs begin indexing from the exact same pointer;
     // - the last indices in both GEPs are constants, indexing into a sequential
-    //   type (array or pointer);
+    //   type (array or vector);
     // - both GEPs only index through arrays prior to that.
     //
     // Because array indices greater than the number of elements are valid in
@@ -1157,8 +1157,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     // GEP1 and GEP2 we cannot guarantee that the last indexed arrays don't
     // partially overlap. We also need to check that the loaded size matches
     // the element size, otherwise we could still have overlap.
-    const uint64_t ElementSize =
-        DL.getTypeStoreSize(cast<SequentialType>(Ty)->getElementType());
+    Type *LastElementTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
+    const uint64_t ElementSize = DL.getTypeStoreSize(LastElementTy);
     if (V1Size != ElementSize || V2Size != ElementSize)
       return MayAlias;
 

@@ -59,7 +59,7 @@ public:
     uint32_t
     GetTimeoutInMicroSeconds () const;
 
-    %feature("docstring", "Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expresson will finish.") SetTimeoutInMicroSeconds;
+    %feature("docstring", "Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expression will finish.") SetTimeoutInMicroSeconds;
     void
     SetTimeoutInMicroSeconds (uint32_t timeout = 0);
 
@@ -80,7 +80,7 @@ public:
     bool
     GetStopOthers () const;
 
-    %feature("docstring", "Sets whether to stop other threads at all while running expressins.  If false, TryAllThreads does nothing.") SetTryAllThreads;
+    %feature("docstring", "Sets whether to stop other threads at all while running expressions.  If false, TryAllThreads does nothing.") SetTryAllThreads;
     void
     SetStopOthers (bool stop_others = true);
 
@@ -125,6 +125,14 @@ public:
     %feature("docstring", "Gets whether to auto-apply fix-it hints to an expression.") GetAutoApplyFixIts;
     bool
     GetAutoApplyFixIts();
+
+    %feature("docstring", "Sets how often LLDB should retry applying fix-its to an expression.") SetRetriesWithFixIts;
+    void
+    SetRetriesWithFixIts(uint64_t retries);
+
+    %feature("docstring", "Gets how often LLDB will retry applying fix-its to an expression.") GetRetriesWithFixIts;
+    uint64_t
+    GetRetriesWithFixIts();
 
     bool
     GetTopLevel();

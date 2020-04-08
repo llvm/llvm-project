@@ -237,6 +237,20 @@ void SBExpressionOptions::SetAutoApplyFixIts(bool b) {
   return m_opaque_up->SetAutoApplyFixIts(b);
 }
 
+uint64_t SBExpressionOptions::GetRetriesWithFixIts() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBExpressionOptions,
+                             GetRetriesWithFixIts);
+
+  return m_opaque_up->GetRetriesWithFixIts();
+}
+
+void SBExpressionOptions::SetRetriesWithFixIts(uint64_t retries) {
+  LLDB_RECORD_METHOD(void, SBExpressionOptions, SetRetriesWithFixIts,
+                     (uint64_t), retries);
+
+  return m_opaque_up->SetRetriesWithFixIts(retries);
+}
+
 bool SBExpressionOptions::GetTopLevel() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBExpressionOptions, GetTopLevel);
 
@@ -329,6 +343,9 @@ void RegisterMethods<SBExpressionOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTopLevel, (bool));
   LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetAllowJIT, ());
   LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetAllowJIT, (bool));
+  LLDB_REGISTER_METHOD(uint64_t, SBExpressionOptions, GetRetriesWithFixIts, ());
+  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetRetriesWithFixIts,
+                       (uint64_t));
 }
 
 }

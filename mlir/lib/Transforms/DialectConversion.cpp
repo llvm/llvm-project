@@ -895,6 +895,10 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
   impl->replaceOp(op, nullRepls);
 }
 
+void ConversionPatternRewriter::eraseBlock(Block *block) {
+  llvm_unreachable("erasing blocks for dialect conversion not implemented");
+}
+
 /// Apply a signature conversion to the entry block of the given region.
 Block *ConversionPatternRewriter::applySignatureConversion(
     Region *region, TypeConverter::SignatureConversion &conversion) {

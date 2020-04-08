@@ -895,6 +895,27 @@ Value *InstCombiner::freelyNegateValue(Value *V) {
           I->getName() + ".neg", cast<BinaryOperator>(I)->isExact());
     return nullptr;
 
+  // Negation is equivalent to bitwise-not + 1.
+  case Instruction::Xor: {
+    // Special case for negate of 'not' - replace with increment:
+    // 0 - (~A)  =>  ((A ^ -1) ^ -1) + 1  =>  A + 1
+    Value *A;
+    if (match(I, m_Not(m_Value(A))))
+      return Builder.CreateAdd(A, ConstantInt::get(A->getType(), 1),
+                               I->getName() + ".neg");
+
+    // General case xor (not a 'not') requires creating a new xor, so this has a
+    // one-use limitation:
+    // 0 - (A ^ C)  =>  ((A ^ C) ^ -1) + 1  =>  A ^ ~C + 1
+    Constant *C;
+    if (match(I, m_OneUse(m_Xor(m_Value(A), m_Constant(C))))) {
+      Value *Xor = Builder.CreateXor(A, ConstantExpr::getNot(C));
+      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
+                               I->getName() + ".neg");
+    }
+    return nullptr;
+  }
+
   default:
     break;
   }
@@ -909,18 +930,6 @@ Value *InstCombiner::freelyNegateValue(Value *V) {
   case Instruction::Sub:
     return Builder.CreateSub(
         I->getOperand(1), I->getOperand(0), I->getName() + ".neg");
-
-  // Negation is equivalent to bitwise-not + 1:
-  // 0 - (A ^ C)  =>  ((A ^ C) ^ -1) + 1  =>  A ^ ~C + 1
-  case Instruction::Xor: {
-    Constant *C;
-    if (match(I->getOperand(1), m_Constant(C))) {
-      Value *Xor = Builder.CreateXor(I->getOperand(0), ConstantExpr::getNot(C));
-      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
-                               I->getName() + ".neg");
-    }
-    return nullptr;
-  }
 
   // 0-(A sdiv C)  =>  A sdiv (0-C)  provided the negation doesn't overflow.
   case Instruction::SDiv: {

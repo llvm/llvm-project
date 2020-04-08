@@ -8,7 +8,7 @@
 using size_t = __SIZE_TYPE__;
 
 void *malloc(size_t size);
-void *align_malloc(size_t size, unsigned short aligmnent);
+void *align_malloc(size_t size, unsigned short alignment);
 void *calloc(size_t num, size_t size);
 void *realloc(void *ptr, size_t size);
 void *align_realloc(void *ptr, size_t size, unsigned short alignment);

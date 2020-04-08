@@ -182,7 +182,7 @@ public:
   };
   /// If \c type_uid points to an array type, return its characteristics.
   /// To support variable-length array types, this function takes an
-  /// optional \p ExtecutionContext. If \c exe_ctx is non-null, the
+  /// optional \p ExecutionContext. If \c exe_ctx is non-null, the
   /// dynamic characteristics for that context are returned.
   virtual llvm::Optional<ArrayInfo>
   GetDynamicArrayInfoForUID(lldb::user_id_t type_uid,

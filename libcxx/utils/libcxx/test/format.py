@@ -46,8 +46,6 @@ class LibcxxTestFormat(object):
     @staticmethod
     def _make_custom_parsers(test):
         return [
-            IntegratedTestKeywordParser('MODULES_DEFINES:', ParserKind.LIST,
-                                        initial_value=[]),
             IntegratedTestKeywordParser('FILE_DEPENDENCIES:', ParserKind.LIST,
                                         initial_value=test.file_dependencies),
             IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:', ParserKind.LIST,
@@ -132,23 +130,19 @@ class LibcxxTestFormat(object):
 
         # Apply substitutions in FILE_DEPENDENCIES markup
         data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
-                                                       recursion_limit=10)
+                                                       recursion_limit=test.config.recursiveExpansionLimit)
         local_cwd = os.path.dirname(test.getSourcePath())
         data_files = [f if os.path.isabs(f) else os.path.join(local_cwd, f) for f in data_files]
         substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
 
         script = lit.TestRunner.applySubstitutions(script, substitutions,
-                                                   recursion_limit=10)
+                                                   recursion_limit=test.config.recursiveExpansionLimit)
 
         test_cxx = copy.deepcopy(self.cxx)
         if is_fail_test:
             test_cxx.useCCache(False)
             test_cxx.useWarnings(False)
-        extra_modules_defines = self._get_parser('MODULES_DEFINES:',
-                                                 parsers).getValue()
         if '-fmodules' in test.config.available_features:
-            test_cxx.compile_flags += [('-D%s' % mdef.strip()) for
-                                       mdef in extra_modules_defines]
             test_cxx.addWarningFlagIfSupported('-Wno-macro-redefined')
             # FIXME: libc++ debug tests #define _LIBCPP_ASSERT to override it
             # If we see this we need to build the test against uniquely built
@@ -252,12 +246,7 @@ class LibcxxTestFormat(object):
                        b'expected-no-diagnostics']
         use_verify = self.use_verify_for_fail and \
                      any([tag in contents for tag in verify_tags])
-        # FIXME(EricWF): GCC 5 does not evaluate static assertions that
-        # are dependant on a template parameter when '-fsyntax-only' is passed.
-        # This is fixed in GCC 6. However for now we only pass "-fsyntax-only"
-        # when using Clang.
-        if test_cxx.type != 'gcc':
-            test_cxx.flags += ['-fsyntax-only']
+        test_cxx.flags += ['-fsyntax-only']
         if use_verify:
             test_cxx.useVerify()
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)

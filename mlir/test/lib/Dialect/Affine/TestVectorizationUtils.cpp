@@ -72,7 +72,8 @@ static llvm::cl::opt<bool> clTestNormalizeMaps(
     llvm::cl::cat(clOptionsCategory));
 
 namespace {
-struct VectorizerTestPass : public FunctionPass<VectorizerTestPass> {
+struct VectorizerTestPass
+    : public PassWrapper<VectorizerTestPass, FunctionPass> {
   static constexpr auto kTestAffineMapOpName = "test_affine_map";
   static constexpr auto kTestAffineMapAttrName = "affine_map";
 

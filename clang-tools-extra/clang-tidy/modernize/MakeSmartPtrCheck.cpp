@@ -41,12 +41,12 @@ std::string GetNewExprName(const CXXNewExpr *NewExpr,
 
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 
-MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name,
-                                     ClangTidyContext* Context,
+MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
+                                            utils::IncludeSorter::IS_LLVM)),
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
       MakeSmartPtrFunctionName(
@@ -54,7 +54,8 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name,
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                utils::IncludeSorter::getMapping());
   Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
   Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -123,7 +124,7 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Be conservative for cases where we construct an array without any
-  // initalization.
+  // initialization.
   // For example,
   //    P.reset(new int[5]) // check fix: P = std::make_unique<int []>(5)
   //

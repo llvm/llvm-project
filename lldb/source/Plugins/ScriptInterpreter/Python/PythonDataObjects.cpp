@@ -1044,7 +1044,7 @@ std::string PythonException::ReadBacktrace() const {
   if (!backtrace) {
     std::string message =
         std::string(toCString()) + "\n" +
-        "Traceback unavailble, an error occurred while reading it:\n";
+        "Traceback unavailable, an error occurred while reading it:\n";
     return (message + llvm::toString(backtrace.takeError()));
   }
 

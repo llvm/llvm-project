@@ -1006,20 +1006,20 @@ define <16 x i32> @umulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2)
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpxor %xmm5, %xmm9, %xmm5
 ; AVX1-NEXT:    vpackssdw %xmm13, %xmm5, %xmm5
-; AVX1-NEXT:    vpacksswb %xmm11, %xmm5, %xmm5
+; AVX1-NEXT:    vpacksswb %xmm11, %xmm5, %xmm7
 ; AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpmulld %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmulld %xmm3, %xmm1, %xmm3
 ; AVX1-NEXT:    vpmulld %xmm10, %xmm12, %xmm6
-; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm5[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm7[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm5[2,3,0,1]
+; AVX1-NEXT:    vpacksswb %xmm5, %xmm11, %xmm1
+; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm5
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[3,3,0,1]
-; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm5, %ymm1
 ; AVX1-NEXT:    vmovdqa %xmm6, 48(%rdi)
 ; AVX1-NEXT:    vmovdqa %xmm3, 32(%rdi)
 ; AVX1-NEXT:    vmovdqa %xmm4, 16(%rdi)
@@ -1050,11 +1050,11 @@ define <16 x i32> @umulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2)
 ; AVX2-NEXT:    vpxor %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm6
 ; AVX2-NEXT:    vpackssdw %xmm6, %xmm5, %xmm5
-; AVX2-NEXT:    vpacksswb %xmm4, %xmm5, %xmm4
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm5, %xmm5
 ; AVX2-NEXT:    vpmulld %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpmulld %ymm3, %ymm1, %ymm3
-; AVX2-NEXT:    vpmovsxbd %xmm4, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm4[2,3,0,1]
+; AVX2-NEXT:    vpmovsxbd %xmm5, %ymm0
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm4, %xmm1
 ; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm2, (%rdi)

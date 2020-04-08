@@ -49,6 +49,12 @@ private:
   SummaryEntryVector DetailedSummary;
   uint64_t TotalCount, MaxCount, MaxInternalCount, MaxFunctionCount;
   uint32_t NumCounts, NumFunctions;
+  /// If 'Partial' is false, it means the profile being used to optimize
+  /// a target is collected from the same target.
+  /// If 'Partial' is true, it means the profile is for common/shared
+  /// code. The common profile is usually merged from profiles collected
+  /// from running other targets.
+  bool Partial = false;
   /// Return detailed summary as metadata.
   Metadata *getDetailedSummaryMD(LLVMContext &Context);
 
@@ -76,6 +82,8 @@ public:
   uint64_t getTotalCount() { return TotalCount; }
   uint64_t getMaxCount() { return MaxCount; }
   uint64_t getMaxInternalCount() { return MaxInternalCount; }
+  void setPartialProfile(bool PP) { Partial = PP; }
+  bool isPartialProfile() { return Partial; }
 };
 
 } // end namespace llvm

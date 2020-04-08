@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -14,11 +15,7 @@
 using namespace mlir;
 
 namespace {
-struct StripDebugInfo : public OperationPass<StripDebugInfo> {
-/// Include the generated pass utilities.
-#define GEN_PASS_StripDebugInfo
-#include "mlir/Transforms/Passes.h.inc"
-
+struct StripDebugInfo : public StripDebugInfoBase<StripDebugInfo> {
   void runOnOperation() override;
 };
 } // end anonymous namespace

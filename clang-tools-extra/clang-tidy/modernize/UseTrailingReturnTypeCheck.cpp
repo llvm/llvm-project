@@ -442,7 +442,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: this could be done better, by performing a lookup of all
   // unqualified names in the return type in the scope of the function. If the
   // lookup finds a different entity than the original entity identified by the
-  // name, then we can either not perform a rewrite or explicitely qualify the
+  // name, then we can either not perform a rewrite or explicitly qualify the
   // entity. Such entities could be function parameter names, (inherited) class
   // members, template parameters, etc.
   UnqualNameVisitor UNV{*F};

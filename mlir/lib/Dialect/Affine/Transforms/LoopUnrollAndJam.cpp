@@ -32,6 +32,8 @@
 // Note: 'if/else' blocks are not jammed. So, if there are loops inside if
 // op's, bodies of those loops will not be jammed.
 //===----------------------------------------------------------------------===//
+
+#include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -39,7 +41,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,11 +61,7 @@ static llvm::cl::opt<unsigned>
 namespace {
 /// Loop unroll jam pass. Currently, this just unroll jams the first
 /// outer loop in a Function.
-struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopUnrollAndJam
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct LoopUnrollAndJam : public AffineLoopUnrollAndJamBase<LoopUnrollAndJam> {
   Optional<unsigned> unrollJamFactor;
   static const unsigned kDefaultUnrollJamFactor = 4;
 
@@ -76,7 +73,7 @@ struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
 };
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopUnrollAndJamPass(int unrollJamFactor) {
   return std::make_unique<LoopUnrollAndJam>(
       unrollJamFactor == -1 ? None : Optional<unsigned>(unrollJamFactor));

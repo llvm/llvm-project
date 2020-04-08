@@ -9,9 +9,6 @@
 # [project/lit.cfg]
 #   config.parallelism_group = 'my_group'
 #
-# Note: We need at least 2 tests to prevent lit from using "single process
-#       mode", which ignores parallelism groups.
-#
 
 # RUN: %{lit} -j2 %{inputs}/parallelism-groups | FileCheck %s
 

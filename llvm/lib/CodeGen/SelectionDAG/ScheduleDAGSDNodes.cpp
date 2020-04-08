@@ -1054,6 +1054,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     CopyBB->setInlineAsmBrDefaultTarget();
 
     CopyBB->addSuccessor(FallThrough, BranchProbability::getOne());
+    BB->removeSuccessor(FallThrough);
     BB->addSuccessor(CopyBB, BranchProbability::getOne());
 
     // Mark all physical registers defined in the original block as being live
@@ -1067,19 +1068,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
             break;
           }
         }
-
-    // Bit of a hack: The copy block we created here exists only because we want
-    // the CFG to work with the current system. However, the successors to the
-    // block with the INLINEASM_BR instruction expect values to come from *that*
-    // block, not this usurper block. Thus we steal its successors and add them
-    // to the copy so that everyone is happy.
-    for (auto *Succ : BB->successors())
-      if (Succ != CopyBB && !CopyBB->isSuccessor(Succ))
-        CopyBB->addSuccessor(Succ, BranchProbability::getZero());
-
-    for (auto *Succ : CopyBB->successors())
-      if (BB->isSuccessor(Succ))
-        BB->removeSuccessor(Succ);
 
     CopyBB->normalizeSuccProbs();
     BB->normalizeSuccProbs();

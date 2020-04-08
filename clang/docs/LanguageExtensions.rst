@@ -2368,8 +2368,8 @@ constant expressions in C++11 onwards (where a cast from ``void*`` to ``char*``
 is disallowed in general).
 
 Constant evaluation support for the ``__builtin_mem*`` functions is provided
-only for arrays of ``char``, ``signed char``, or ``unsigned char``, despite
-these functions accepting an argument of type ``const void*``.
+only for arrays of ``char``, ``signed char``, ``unsigned char``, or ``char8_t``,
+despite these functions accepting an argument of type ``const void*``.
 
 Support for constant expression evaluation for the above builtins can be detected
 with ``__has_feature(cxx_constexpr_string_builtins)``.

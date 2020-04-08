@@ -224,10 +224,6 @@ struct InitializePythonRAII {
 public:
   InitializePythonRAII()
       : m_gil_state(PyGILState_UNLOCKED), m_was_already_initialized(false) {
-    // Python will muck with STDIN terminal state, so save off any current TTY
-    // settings so we can restore them.
-    m_stdin_tty_state.Save(STDIN_FILENO, false);
-
     InitializePythonHome();
 
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
@@ -271,8 +267,6 @@ public:
       // We initialized the threads in this function, just unlock the GIL.
       PyEval_SaveThread();
     }
-
-    m_stdin_tty_state.Restore();
   }
 
 private:

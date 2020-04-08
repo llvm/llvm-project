@@ -1,8 +1,8 @@
 // REQUIRES: shell
 // REQUIRES: x86-registered-target
 
+// RUN: rm -rf %T/testbin
 // RUN: mkdir -p %T/testbin
-// RUN: [ ! -s %T/testbin/i386-clang ] || rm %T/testbin/i386-clang
 // RUN: ln -s %clang %T/testbin/i386-clang
 
 // Check if invocation of "foo-clang" adds option "-target foo".

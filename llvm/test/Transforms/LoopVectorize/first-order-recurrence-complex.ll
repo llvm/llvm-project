@@ -129,7 +129,7 @@ define void @cannot_sink_with_additional_user(i32 %x, i32* %ptr, i64 %tc) {
 ; CHECK:  br label %for
 
 ; CHECK-LABEL: for:                                              ; preds = %for, %preheader
-; CHECK  br i1 %exitcond, label %exit, label %for
+; CHECK:  br i1 %exitcond, label %exit, label %for
 
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define void @cannot_sink_store(i32 %x, i32* %ptr, i64 %tc) {
 ; CHECK:  br label %for
 
 ; CHECK-LABEL: for:                                              ; preds = %for, %preheader
-; CHECK  br i1 %exitcond, label %exit, label %for
+; CHECK:  br i1 %exitcond, label %exit, label %for
 
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    ret void

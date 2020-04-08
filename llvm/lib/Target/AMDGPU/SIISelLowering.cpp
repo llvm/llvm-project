@@ -202,6 +202,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v8i32, MVT::v8i8, Expand);
   setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v32i32, MVT::v32i8, Expand);
+  setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
+  setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
+  setTruncStoreAction(MVT::v16i16, MVT::v16i8, Expand);
+  setTruncStoreAction(MVT::v32i16, MVT::v32i8, Expand);
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
@@ -4563,7 +4568,6 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     };
     SDValue NewBR = DAG.getNode(ISD::BR, DL, BR->getVTList(), Ops);
     DAG.ReplaceAllUsesWith(BR, NewBR.getNode());
-    BR = NewBR.getNode();
   }
 
   SDValue Chain = SDValue(Result, Result->getNumValues() - 1);
@@ -10983,6 +10987,10 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   return RC;
 }
 
+// FIXME: This is a workaround for DivergenceAnalysis not understanding always
+// uniform values (as produced by the mask results of control flow intrinsics)
+// used outside of divergent blocks. The phi users need to also be treated as
+// always uniform.
 static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
                       unsigned WaveSize) {
   // FIXME: We asssume we never cast the mask results of a control flow
@@ -11033,32 +11041,13 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
 
 bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
                                                const Value *V) const {
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    switch (Intrinsic->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::amdgcn_if_break:
-      return true;
-    }
-  }
-  if (const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V)) {
-    if (const IntrinsicInst *Intrinsic =
-            dyn_cast<IntrinsicInst>(ExtValue->getOperand(0))) {
-      switch (Intrinsic->getIntrinsicID()) {
-      default:
-        return false;
-      case Intrinsic::amdgcn_if:
-      case Intrinsic::amdgcn_else: {
-        ArrayRef<unsigned> Indices = ExtValue->getIndices();
-        if (Indices.size() == 1 && Indices[0] == 1) {
-          return true;
-        }
-      }
-      }
-    }
-  }
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
     if (isa<InlineAsm>(CI->getCalledValue())) {
+      // FIXME: This cannot give a correct answer. This should only trigger in
+      // the case where inline asm returns mixed SGPR and VGPR results, used
+      // outside the defining block. We don't have a specific result to
+      // consider, so this assumes if any value is SGPR, the overall register
+      // also needs to be SGPR.
       const SIRegisterInfo *SIRI = Subtarget->getRegisterInfo();
       ImmutableCallSite CS(CI);
       TargetLowering::AsmOperandInfoVector TargetConstraints = ParseConstraints(

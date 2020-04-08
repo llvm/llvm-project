@@ -1552,6 +1552,6 @@ def executeShTest(test, litConfig, useExternalSh,
     substitutions += getDefaultSubstitutions(test, tmpDir, tmpBase,
                                              normalize_slashes=useExternalSh)
     script = applySubstitutions(script, substitutions,
-                                recursion_limit=litConfig.recursiveExpansionLimit)
+                                recursion_limit=test.config.recursiveExpansionLimit)
 
     return _runShTest(test, litConfig, useExternalSh, script, tmpBase)

@@ -30,14 +30,18 @@ struct RTLInfoTy {
   typedef int32_t(init_device_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *);
-  typedef int32_t(data_submit_ty)(int32_t, void *, void *, int64_t);
-  typedef int32_t(data_retrieve_ty)(int32_t, void *, void *, int64_t);
+  typedef int32_t(data_submit_ty)(int32_t, void *, void *, int64_t,
+                                  __tgt_async_info *);
+  typedef int32_t(data_retrieve_ty)(int32_t, void *, void *, int64_t,
+                                    __tgt_async_info *);
   typedef int32_t(data_delete_ty)(int32_t, void *);
-  typedef int32_t(run_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                 int32_t);
+  typedef int32_t(run_region_ty)(int32_t, void *, void **, ptrdiff_t *, int32_t,
+                                 __tgt_async_info *);
   typedef int32_t(run_team_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                      int32_t, int32_t, int32_t, uint64_t);
+                                      int32_t, int32_t, int32_t, uint64_t,
+                                      __tgt_async_info *);
   typedef int64_t(init_requires_ty)(int64_t);
+  typedef int64_t(synchronize_ty)(int64_t, __tgt_async_info *);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -63,6 +67,7 @@ struct RTLInfoTy {
   run_region_ty *run_region = nullptr;
   run_team_region_ty *run_team_region = nullptr;
   init_requires_ty *init_requires = nullptr;
+  synchronize_ty *synchronize = nullptr;
 
   // Are there images associated with this RTL.
   bool isUsed = false;
@@ -95,6 +100,7 @@ struct RTLInfoTy {
     run_team_region = r.run_team_region;
     init_requires = r.init_requires;
     isUsed = r.isUsed;
+    synchronize = r.synchronize;
   }
 };
 

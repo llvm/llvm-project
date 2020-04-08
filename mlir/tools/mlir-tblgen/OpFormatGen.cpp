@@ -1055,7 +1055,7 @@ private:
 /// This class implements a simple lexer for operation assembly format strings.
 class FormatLexer {
 public:
-  FormatLexer(llvm::SourceMgr &mgr);
+  FormatLexer(llvm::SourceMgr &mgr, Operator &op);
 
   /// Lex the next token and return it.
   Token lexToken();
@@ -1063,6 +1063,8 @@ public:
   /// Emit an error to the lexer with the given location and message.
   Token emitError(llvm::SMLoc loc, const Twine &msg);
   Token emitError(const char *loc, const Twine &msg);
+
+  Token emitErrorAndNote(llvm::SMLoc loc, const Twine &msg, const Twine &note);
 
 private:
   Token formToken(Token::Kind kind, const char *tokStart) {
@@ -1078,18 +1080,30 @@ private:
   Token lexVariable(const char *tokStart);
 
   llvm::SourceMgr &srcMgr;
+  Operator &op;
   StringRef curBuffer;
   const char *curPtr;
 };
 } // end anonymous namespace
 
-FormatLexer::FormatLexer(llvm::SourceMgr &mgr) : srcMgr(mgr) {
+FormatLexer::FormatLexer(llvm::SourceMgr &mgr, Operator &op)
+    : srcMgr(mgr), op(op) {
   curBuffer = srcMgr.getMemoryBuffer(mgr.getMainFileID())->getBuffer();
   curPtr = curBuffer.begin();
 }
 
 Token FormatLexer::emitError(llvm::SMLoc loc, const Twine &msg) {
   srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(op.getLoc()[0], llvm::SourceMgr::DK_Note,
+                            "in custom assembly format for this operation");
+  return formToken(Token::error, loc.getPointer());
+}
+Token FormatLexer::emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
+                                    const Twine &note) {
+  srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(op.getLoc()[0], llvm::SourceMgr::DK_Note,
+                            "in custom assembly format for this operation");
+  srcMgr.PrintMessage(loc, llvm::SourceMgr::DK_Note, note);
   return formToken(Token::error, loc.getPointer());
 }
 Token FormatLexer::emitError(const char *loc, const Twine &msg) {
@@ -1225,7 +1239,7 @@ namespace {
 class FormatParser {
 public:
   FormatParser(llvm::SourceMgr &mgr, OperationFormat &format, Operator &op)
-      : lexer(mgr), curToken(lexer.lexToken()), fmt(format), op(op),
+      : lexer(mgr, op), curToken(lexer.lexToken()), fmt(format), op(op),
         seenOperandTypes(op.getNumOperands()),
         seenResultTypes(op.getNumResults()) {}
 
@@ -1241,8 +1255,16 @@ private:
     Optional<StringRef> transformer;
   };
 
+  /// An iterator over the elements of a format group.
+  using ElementsIterT = llvm::pointee_iterator<
+      std::vector<std::unique_ptr<Element>>::const_iterator>;
+
   /// Verify the state of operation attributes within the format.
   LogicalResult verifyAttributes(llvm::SMLoc loc);
+  /// Verify the attribute elements at the back of the given stack of iterators.
+  LogicalResult verifyAttributes(
+      llvm::SMLoc loc,
+      SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
@@ -1325,6 +1347,11 @@ private:
     lexer.emitError(loc, msg);
     return failure();
   }
+  LogicalResult emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
+                                 const Twine &note) {
+    lexer.emitErrorAndNote(loc, msg, note);
+    return failure();
+  }
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -1360,7 +1387,8 @@ LogicalResult FormatParser::parse() {
 
   // Check that the attribute dictionary is in the format.
   if (!hasAttrDict)
-    return emitError(loc, "format missing 'attr-dict' directive");
+    return emitError(loc, "'attr-dict' directive not found in "
+                          "custom assembly format");
 
   // Check for any type traits that we can use for inferring types.
   llvm::StringMap<TypeResolutionInstance> variableTyResolver;
@@ -1403,54 +1431,60 @@ LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
       std::vector<std::unique_ptr<Element>>::const_iterator>;
   SmallVector<std::pair<ElementsIterT, ElementsIterT>, 1> iteratorStack;
   iteratorStack.emplace_back(fmt.elements.begin(), fmt.elements.end());
-  while (!iteratorStack.empty()) {
-    auto &stackIt = iteratorStack.back();
-    ElementsIterT &it = stackIt.first, e = stackIt.second;
-    while (it != e) {
-      Element *element = &*(it++);
+  while (!iteratorStack.empty())
+    if (failed(verifyAttributes(loc, iteratorStack)))
+      return failure();
+  return success();
+}
+/// Verify the attribute elements at the back of the given stack of iterators.
+LogicalResult FormatParser::verifyAttributes(
+    llvm::SMLoc loc,
+    SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack) {
+  auto &stackIt = iteratorStack.back();
+  ElementsIterT &it = stackIt.first, e = stackIt.second;
+  while (it != e) {
+    Element *element = &*(it++);
 
-      // Traverse into optional groups.
-      if (auto *optional = dyn_cast<OptionalElement>(element)) {
-        auto elements = optional->getElements();
-        iteratorStack.emplace_back(elements.begin(), elements.end());
-        break;
-      }
+    // Traverse into optional groups.
+    if (auto *optional = dyn_cast<OptionalElement>(element)) {
+      auto elements = optional->getElements();
+      iteratorStack.emplace_back(elements.begin(), elements.end());
+      return success();
+    }
 
-      // We are checking for an attribute element followed by a `:`, so there is
-      // no need to check the end.
-      if (it == e && iteratorStack.size() == 1)
-        break;
+    // We are checking for an attribute element followed by a `:`, so there is
+    // no need to check the end.
+    if (it == e && iteratorStack.size() == 1)
+      break;
 
-      // Check for an attribute with a constant type builder, followed by a `:`.
-      auto *prevAttr = dyn_cast<AttributeVariable>(element);
-      if (!prevAttr || prevAttr->getTypeBuilder())
-        continue;
+    // Check for an attribute with a constant type builder, followed by a `:`.
+    auto *prevAttr = dyn_cast<AttributeVariable>(element);
+    if (!prevAttr || prevAttr->getTypeBuilder())
+      continue;
 
-      // Check the next iterator within the stack for literal elements.
-      for (auto &nextItPair : iteratorStack) {
-        ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
-        for (; nextIt != nextE; ++nextIt) {
-          // Skip any trailing optional groups or attribute dictionaries.
-          if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
-            continue;
+    // Check the next iterator within the stack for literal elements.
+    for (auto &nextItPair : iteratorStack) {
+      ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
+      for (; nextIt != nextE; ++nextIt) {
+        // Skip any trailing optional groups or attribute dictionaries.
+        if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
+          continue;
 
-          // We are only interested in `:` literals.
-          auto *literal = dyn_cast<LiteralElement>(&*nextIt);
-          if (!literal || literal->getLiteral() != ":")
-            break;
+        // We are only interested in `:` literals.
+        auto *literal = dyn_cast<LiteralElement>(&*nextIt);
+        if (!literal || literal->getLiteral() != ":")
+          break;
 
-          // TODO: Use the location of the literal element itself.
-          return emitError(
-              loc, llvm::formatv("format ambiguity caused by `:` literal found "
-                                 "after attribute `{0}` which does not have "
-                                 "a buildable type",
-                                 prevAttr->getVar()->name));
-        }
+        // TODO: Use the location of the literal element itself.
+        return emitError(
+            loc, llvm::formatv("format ambiguity caused by `:` literal found "
+                               "after attribute `{0}` which does not have "
+                               "a buildable type",
+                               prevAttr->getVar()->name));
       }
     }
-    if (it == e)
-      iteratorStack.pop_back();
   }
+  iteratorStack.pop_back();
   return success();
 }
 
@@ -1465,8 +1499,11 @@ LogicalResult FormatParser::verifyOperands(
 
     // Check that the operand itself is in the format.
     if (!hasAllOperands && !seenOperands.count(&operand)) {
-      return emitError(loc, "format missing instance of operand #" + Twine(i) +
-                                "('" + operand.name + "')");
+      return emitErrorAndNote(loc,
+                              "operand #" + Twine(i) + ", named '" +
+                                  operand.name + "', not found",
+                              "suggest adding a '$" + operand.name +
+                                  "' directive to the custom assembly format");
     }
 
     // Check that the operand type is in the format, or that it can be inferred.
@@ -1485,8 +1522,15 @@ LogicalResult FormatParser::verifyOperands(
     // we aren't using the 'operands' directive.
     Optional<StringRef> builder = operand.constraint.getBuilderCall();
     if (!builder || (hasAllOperands && operand.isVariadic())) {
-      return emitError(loc, "format missing instance of operand #" + Twine(i) +
-                                "('" + operand.name + "') type");
+      return emitErrorAndNote(
+          loc,
+          "type of operand #" + Twine(i) + ", named '" + operand.name +
+              "', is not buildable and a buildable " +
+              "type cannot be inferred",
+          "suggest adding a type constraint "
+          "to the operation or adding a "
+          "'type($" +
+              operand.name + ")' directive to the " + "custom assembly format");
     }
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
     fmt.operandTypes[i].setBuilderIdx(it.first->second);
@@ -1520,8 +1564,15 @@ LogicalResult FormatParser::verifyResults(
     NamedTypeConstraint &result = op.getResult(i);
     Optional<StringRef> builder = result.constraint.getBuilderCall();
     if (!builder || result.constraint.isVariadic()) {
-      return emitError(loc, "format missing instance of result #" + Twine(i) +
-                                "('" + result.name + "') type");
+      return emitErrorAndNote(
+          loc,
+          "type of result #" + Twine(i) + ", named '" + result.name +
+              "', is not buildable and a buildable " +
+              "type cannot be inferred",
+          "suggest adding a type constraint "
+          "to the operation or adding a "
+          "'type($" +
+              result.name + ")' directive to the " + "custom assembly format");
     }
     // Note in the format that this result uses the custom builder.
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
@@ -1538,8 +1589,11 @@ LogicalResult FormatParser::verifySuccessors(llvm::SMLoc loc) {
   for (unsigned i = 0, e = op.getNumSuccessors(); i != e; ++i) {
     const NamedSuccessor &successor = op.getSuccessor(i);
     if (!seenSuccessors.count(&successor)) {
-      return emitError(loc, "format missing instance of successor #" +
-                                Twine(i) + "('" + successor.name + "')");
+      return emitErrorAndNote(loc,
+                              "successor #" + Twine(i) + ", named '" +
+                                  successor.name + "', not found",
+                              "suggest adding a '$" + successor.name +
+                                  "' directive to the custom assembly format");
     }
   }
   return success();

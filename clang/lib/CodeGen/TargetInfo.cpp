@@ -8407,23 +8407,13 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
          (isa<VarDecl>(D) &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-           D->hasAttr<HIPPinnedShadowAttr>()));
-}
-
-static bool requiresAMDGPUDefaultVisibility(const Decl *D,
-                                            llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return isa<VarDecl>(D) && D->hasAttr<HIPPinnedShadowAttr>();
+           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType()));
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUDefaultVisibility(D, GV)) {
-    GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    GV->setDSOLocal(false);
-  } else if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }

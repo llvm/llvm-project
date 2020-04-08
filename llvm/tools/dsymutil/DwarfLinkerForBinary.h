@@ -11,11 +11,11 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "DwarfStreamer.h"
 #include "LinkUtils.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
+#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"

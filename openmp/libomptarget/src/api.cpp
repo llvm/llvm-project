@@ -161,19 +161,19 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   } else if (src_device == omp_get_initial_device()) {
     DP("copy from host to device\n");
     DeviceTy& DstDev = Devices[dst_device];
-    rc = DstDev.data_submit(dstAddr, srcAddr, length);
+    rc = DstDev.data_submit(dstAddr, srcAddr, length, nullptr);
   } else if (dst_device == omp_get_initial_device()) {
     DP("copy from device to host\n");
     DeviceTy& SrcDev = Devices[src_device];
-    rc = SrcDev.data_retrieve(dstAddr, srcAddr, length);
+    rc = SrcDev.data_retrieve(dstAddr, srcAddr, length, nullptr);
   } else {
     DP("copy from device to device\n");
     void *buffer = malloc(length);
     DeviceTy& SrcDev = Devices[src_device];
     DeviceTy& DstDev = Devices[dst_device];
-    rc = SrcDev.data_retrieve(buffer, srcAddr, length);
+    rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
     if (rc == OFFLOAD_SUCCESS)
-      rc = DstDev.data_submit(dstAddr, buffer, length);
+      rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);
     free(buffer);
   }
 

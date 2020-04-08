@@ -75,16 +75,43 @@ static LogicalResult visitInPrettyBlockOrder(
   return success();
 }
 
-/// Returns the last structured control flow op's merge block if the given
-/// `block` contains any structured control flow op. Otherwise returns nullptr.
-static Block *getLastStructuredControlFlowOpMergeBlock(Block *block) {
-  for (Operation &op : llvm::reverse(block->getOperations())) {
-    if (auto selectionOp = dyn_cast<spirv::SelectionOp>(op))
-      return selectionOp.getMergeBlock();
-    if (auto loopOp = dyn_cast<spirv::LoopOp>(op))
-      return loopOp.getMergeBlock();
-  }
+/// Returns the merge block if the given `op` is a structured control flow op.
+/// Otherwise returns nullptr.
+static Block *getStructuredControlFlowOpMergeBlock(Operation *op) {
+  if (auto selectionOp = dyn_cast<spirv::SelectionOp>(op))
+    return selectionOp.getMergeBlock();
+  if (auto loopOp = dyn_cast<spirv::LoopOp>(op))
+    return loopOp.getMergeBlock();
   return nullptr;
+}
+
+/// Given a predecessor `block` for a block with arguments, returns the block
+/// that should be used as the parent block for SPIR-V OpPhi instructions
+/// corresponding to the block arguments.
+static Block *getPhiIncomingBlock(Block *block) {
+  // If the predecessor block in question is the entry block for a spv.loop,
+  // we jump to this spv.loop from its enclosing block.
+  if (block->isEntryBlock()) {
+    if (auto loopOp = dyn_cast<spirv::LoopOp>(block->getParentOp())) {
+      // Then the incoming parent block for OpPhi should be the merge block of
+      // the structured control flow op before this loop.
+      Operation *op = loopOp.getOperation();
+      while ((op = op->getPrevNode()) != nullptr)
+        if (Block *incomingBlock = getStructuredControlFlowOpMergeBlock(op))
+          return incomingBlock;
+      // Or the enclosing block itself if no structured control flow ops
+      // exists before this loop.
+      return loopOp.getOperation()->getBlock();
+    }
+  }
+
+  // Otherwise, we jump from the given predecessor block. Try to see if there is
+  // a structured control flow op inside it.
+  for (Operation &op : llvm::reverse(block->getOperations())) {
+    if (Block *incomingBlock = getStructuredControlFlowOpMergeBlock(&op))
+      return incomingBlock;
+  }
+  return block;
 }
 
 namespace {
@@ -1374,12 +1401,14 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
   SmallVector<std::pair<Block *, Operation::operand_iterator>, 4> predecessors;
   for (Block *predecessor : block->getPredecessors()) {
     auto *terminator = predecessor->getTerminator();
-    // Check whether this predecessor block contains a structured control flow
-    // op. If so, the structured control flow op will be serialized to multiple
-    // SPIR-V blocks. The branch op jumping to the OpPhi's block then resides in
-    // the last structured control flow op's merge block.
-    if (auto *merge = getLastStructuredControlFlowOpMergeBlock(predecessor))
-      predecessor = merge;
+    // The predecessor here is the immediate one according to MLIR's IR
+    // structure. It does not directly map to the incoming parent block for the
+    // OpPhi instructions at SPIR-V binary level. This is because structured
+    // control flow ops are serialized to multiple SPIR-V blocks. If there is a
+    // spv.selection/spv.loop op in the MLIR predecessor block, the branch op
+    // jumping to the OpPhi's block then resides in the previous structured
+    // control flow op's merge block.
+    predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
       predecessors.emplace_back(predecessor, branchOp.operand_begin());
     } else {
@@ -1400,6 +1429,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     LLVM_DEBUG(llvm::dbgs() << "[phi] for block argument #" << argIndex << ' '
                             << arg << " (id = " << phiID << ")\n");
 
+    // Prepare the (value <id>, parent block <id>) pairs.
     SmallVector<uint32_t, 8> phiArgs;
     phiArgs.push_back(phiTypeID);
     phiArgs.push_back(phiID);
@@ -1499,16 +1529,9 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // afterwards.
   encodeInstructionInto(functionBody, spirv::Opcode::OpBranch, {headerID});
 
-  // We omit the LoopOp's entry block and start serialization from the loop
-  // header block. The entry block should not contain any additional ops other
-  // than a single spv.Branch that jumps to the loop header block. However,
-  // the spv.Branch can contain additional block arguments. Those block
-  // arguments must come from out of the loop using implicit capture. We will
-  // need to query the <id> for the value sent and the <id> for the incoming
-  // parent block. For the latter, we need to make sure this block is
-  // registered. The value sent should come from the block this loop resides in.
-  blockIDMap[loopOp.getEntryBlock()] =
-      getBlockID(loopOp.getOperation()->getBlock());
+  // LoopOp's entry block is just there for satisfying MLIR's structural
+  // requirements so we omit it and start serialization from the loop header
+  // block.
 
   // Emit the loop header block, which dominates all other blocks, first. We
   // need to emit an OpLoopMerge instruction before the loop header block's

@@ -305,7 +305,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           // of the previous load.
           LoadInst *newLoad =
               IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
-          newLoad->setAlignment(MaybeAlign(OrigLoad->getAlignment()));
+          newLoad->setAlignment(OrigLoad->getAlign());
           // Transfer the AA info too.
           AAMDNodes AAInfo;
           OrigLoad->getAAMetadata(AAInfo);
@@ -784,12 +784,17 @@ bool ArgumentPromotionPass::isDenselyPacked(Type *type, const DataLayout &DL) {
   if (DL.getTypeSizeInBits(type) != DL.getTypeAllocSizeInBits(type))
     return false;
 
-  if (!isa<StructType>(type) && !isa<SequentialType>(type))
-    return true;
-
-  // For homogenous sequential types, check for padding within members.
-  if (SequentialType *seqTy = dyn_cast<SequentialType>(type))
+  // FIXME: This isn't the right way to check for padding in vectors with
+  // non-byte-size elements.
+  if (VectorType *seqTy = dyn_cast<VectorType>(type))
     return isDenselyPacked(seqTy->getElementType(), DL);
+
+  // For array types, check for padding within members.
+  if (ArrayType *seqTy = dyn_cast<ArrayType>(type))
+    return isDenselyPacked(seqTy->getElementType(), DL);
+
+  if (!isa<StructType>(type))
+    return true;
 
   // Check for padding within and between elements of a struct.
   StructType *StructTy = cast<StructType>(type);

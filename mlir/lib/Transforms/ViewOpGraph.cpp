@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/ViewOpGraph.h"
+#include "PassDetail.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -100,11 +100,7 @@ namespace {
 // PrintOpPass is simple pass to write graph per function.
 // Note: this is a module pass only to avoid interleaving on the same ostream
 // due to multi-threading over functions.
-struct PrintOpPass : public ModulePass<PrintOpPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_PrintOpGraph
-#include "mlir/Transforms/Passes.h.inc"
-
+struct PrintOpPass : public PrintOpBase<PrintOpPass> {
   explicit PrintOpPass(raw_ostream &os = llvm::errs(), bool short_names = false,
                        const Twine &title = "")
       : os(os), title(title.str()), short_names(short_names) {}
@@ -140,7 +136,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
     }
   }
 
-  void runOnModule() override { processModule(getModule()); }
+  void runOnOperation() override { processModule(getOperation()); }
 
 private:
   raw_ostream &os;
@@ -160,7 +156,7 @@ raw_ostream &mlir::writeGraph(raw_ostream &os, Block &block, bool shortNames,
   return llvm::WriteGraph(os, &block, shortNames, title);
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createPrintOpGraphPass(raw_ostream &os, bool shortNames,
                              const Twine &title) {
   return std::make_unique<PrintOpPass>(os, shortNames, title);

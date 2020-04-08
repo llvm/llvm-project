@@ -160,11 +160,6 @@ static cl::opt<bool> VerifyMaxFixpointIterations(
     cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
     cl::init(false));
 
-static cl::opt<bool> DisableAttributor(
-    "attributor-disable", cl::Hidden,
-    cl::desc("Disable the attributor inter-procedural deduction pass."),
-    cl::init(true));
-
 static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
@@ -5658,7 +5653,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             constructPointer(PointeeTy->getPointerTo(), Base,
                              PrivStructLayout->getElementOffset(u), IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
-        L->setAlignment(MaybeAlign(1));
+        L->setAlignment(Align(1));
         ReplacementValues.push_back(L);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
@@ -5669,12 +5664,12 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         Value *Ptr =
             constructPointer(PointeePtrTy, Base, u * PointeeTySize, IRB, DL);
         LoadInst *L = new LoadInst(PointeePtrTy, Ptr, "", IP);
-        L->setAlignment(MaybeAlign(1));
+        L->setAlignment(Align(1));
         ReplacementValues.push_back(L);
       }
     } else {
       LoadInst *L = new LoadInst(PrivType, Base, "", IP);
-      L->setAlignment(MaybeAlign(1));
+      L->setAlignment(Align(1));
       ReplacementValues.push_back(L);
     }
   }
@@ -8849,7 +8844,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
                                      AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater) {
-  if (DisableAttributor || Functions.empty())
+  if (Functions.empty())
     return false;
 
   LLVM_DEBUG(dbgs() << "[Attributor] Run on module with " << Functions.size()

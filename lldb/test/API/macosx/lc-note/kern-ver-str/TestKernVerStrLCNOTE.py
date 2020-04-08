@@ -51,7 +51,7 @@ class TestKernVerStrLCNOTE(TestBase):
                 'echo "<!DOCTYPE plist PUBLIC \\"-//Apple//DTD PLIST 1.0//EN\\" \\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\\">"',
                 'echo "<plist version=\\"1.0\\">"',
                 '',
-                '# the last arugment is probably the uuid',
+                '# the last argument is probably the uuid',
                 'while [ $# -gt 1 ]',
                 'do',
                 '  shift',

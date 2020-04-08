@@ -265,7 +265,7 @@ private:
     EVT OldVT = Op.getValueType();
     SDLoc dl(Op);
     Op = GetPromotedInteger(Op);
-    return DAG.getZeroExtendInReg(Op, dl, OldVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, dl, OldVT);
   }
 
   // Get a promoted operand and sign or zero extend it to the final size
@@ -279,7 +279,7 @@ private:
     if (TLI.isSExtCheaperThanZExt(OldVT, Op.getValueType()))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(), Op,
                          DAG.getValueType(OldVT));
-    return DAG.getZeroExtendInReg(Op, DL, OldVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, DL, OldVT);
   }
 
   // Integer Result Promotion.

@@ -41,7 +41,7 @@ static bool CheckTargetForWatchpointOperations(Target *target,
   bool process_is_valid =
       target->GetProcessSP() && target->GetProcessSP()->IsAlive();
   if (!process_is_valid) {
-    result.AppendError("Thre's no process or it is not alive.");
+    result.AppendError("There's no process or it is not alive.");
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -1038,7 +1038,7 @@ protected:
     // set a watchpoint.
     if (raw_command.trim().empty()) {
       result.GetErrorStream().Printf("error: required argument missing; "
-                                     "specify an expression to evaulate into "
+                                     "specify an expression to evaluate into "
                                      "the address to watch for\n");
       result.SetStatus(eReturnStatusFailed);
       return false;

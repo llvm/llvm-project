@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/LoopAnalysis.h"
@@ -19,7 +20,6 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,11 +58,7 @@ static llvm::cl::list<unsigned> clTileSizes(
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
-struct LoopTiling : public FunctionPass<LoopTiling> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopTiling
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
   explicit LoopTiling(uint64_t cacheSizeBytes = kDefaultCacheMemCapacity,
                       bool avoidMaxMinBounds = true)
       : cacheSizeBytes(cacheSizeBytes), avoidMaxMinBounds(avoidMaxMinBounds) {}
@@ -85,11 +81,11 @@ struct LoopTiling : public FunctionPass<LoopTiling> {
 
 /// Creates a pass to perform loop tiling on all suitable loop nests of a
 /// Function.
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopTilingPass(uint64_t cacheSizeBytes) {
   return std::make_unique<LoopTiling>(cacheSizeBytes);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopTilingPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopTilingPass() {
   return std::make_unique<LoopTiling>();
 }
 

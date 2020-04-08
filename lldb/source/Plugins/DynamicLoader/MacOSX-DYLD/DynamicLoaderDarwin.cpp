@@ -681,7 +681,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
         loaded_module_list.AppendIfNeeded(image_module_sp);
       }
 
-      // macCataylst support:
+      // macCatalyst support:
       // Update the module's platform with the DYLD info.
       ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
       if (dyld_spec.GetTriple().getOS() == llvm::Triple::IOS &&

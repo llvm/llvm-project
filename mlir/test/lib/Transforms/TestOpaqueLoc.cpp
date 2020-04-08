@@ -17,7 +17,8 @@ namespace {
 /// It also takes all operations that are not function operations or
 /// terminators and clones them with opaque locations which store the initial
 /// locations.
-struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
+struct TestOpaqueLoc
+    : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
 
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.
@@ -29,11 +30,11 @@ struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
     int id;
   };
 
-  void runOnModule() override {
+  void runOnOperation() override {
     std::vector<std::unique_ptr<MyLocation>> myLocs;
     int last_it = 0;
 
-    getModule().walk([&](Operation *op) {
+    getOperation().walk([&](Operation *op) {
       myLocs.push_back(std::make_unique<MyLocation>(last_it++));
 
       Location loc = op->getLoc();
@@ -74,7 +75,7 @@ struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
       os.flush();
     });
 
-    getModule().walk([&](Operation *op) { op->emitOpError(); });
+    getOperation().walk([&](Operation *op) { op->emitOpError(); });
   }
 };
 

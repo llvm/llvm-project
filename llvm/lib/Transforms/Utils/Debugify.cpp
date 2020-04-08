@@ -30,6 +30,17 @@ namespace {
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+enum class Level {
+  Locations,
+  LocationsAndVariables
+};
+cl::opt<Level> DebugifyLevel(
+    "debugify-level", cl::desc("Kind of debug info to add"),
+    cl::values(clEnumValN(Level::Locations, "locations", "Locations only"),
+               clEnumValN(Level::LocationsAndVariables, "location+variables",
+                          "Locations and Variables")),
+    cl::init(Level::LocationsAndVariables));
+
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
@@ -51,10 +62,11 @@ Instruction *findTerminatingInstruction(BasicBlock &BB) {
     return I;
   return BB.getTerminator();
 }
+} // end anonymous namespace
 
-bool applyDebugifyMetadata(Module &M,
-                           iterator_range<Module::iterator> Functions,
-                           StringRef Banner) {
+bool llvm::applyDebugifyMetadata(
+    Module &M, iterator_range<Module::iterator> Functions, StringRef Banner,
+    std::function<bool(DIBuilder &DIB, Function &F)> ApplyToMF) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
     dbg() << Banner << "Skipping module with debug info\n";
@@ -100,6 +112,9 @@ bool applyDebugifyMetadata(Module &M,
       for (Instruction &I : BB)
         I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
 
+      if (DebugifyLevel < Level::LocationsAndVariables)
+        continue;
+
       // Inserting debug values into EH pads can break IR invariants.
       if (BB.isEHPad())
         continue;
@@ -135,6 +150,8 @@ bool applyDebugifyMetadata(Module &M,
                                     InsertBefore);
       }
     }
+    if (ApplyToMF)
+      ApplyToMF(DIB, F);
     DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
@@ -159,6 +176,7 @@ bool applyDebugifyMetadata(Module &M,
   return true;
 }
 
+namespace {
 /// Return true if a mis-sized diagnostic is issued for \p DVI.
 bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
   // The size of a dbg.value's value operand should match the size of the
@@ -301,7 +319,8 @@ bool checkDebugifyMetadata(Module &M,
 /// legacy module pass manager.
 struct DebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    return applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+    return applyDebugifyMetadata(M, M.functions(),
+                                 "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyModulePass() : ModulePass(ID) {}
@@ -320,7 +339,7 @@ struct DebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                                 "FunctionDebugify: ");
+                                 "FunctionDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyFunctionPass() : FunctionPass(ID) {}
@@ -395,7 +414,8 @@ FunctionPass *createDebugifyFunctionPass() {
 }
 
 PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+  applyDebugifyMetadata(M, M.functions(),
+                        "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   return PreservedAnalyses::all();
 }
 

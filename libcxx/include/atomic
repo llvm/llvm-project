@@ -1485,6 +1485,7 @@ template <class _Atp, class _Fn>
 struct __libcpp_atomic_wait_backoff_impl {
     _Atp* __a;
     _Fn __test_fn;
+    _LIBCPP_AVAILABILITY_SYNC
     _LIBCPP_INLINE_VISIBILITY bool operator()(chrono::nanoseconds __elapsed) const
     {
         if(__elapsed > chrono::microseconds(64))
@@ -1503,6 +1504,7 @@ struct __libcpp_atomic_wait_backoff_impl {
 };
 
 template <class _Atp, class _Fn>
+_LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 {
     __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
@@ -1535,6 +1537,7 @@ struct __cxx_atomic_wait_test_fn_impl {
 };
 
 template <class _Atp, class _Tp>
+_LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
 {
     __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
@@ -1623,17 +1626,17 @@ struct __atomic_base  // false
                                  memory_order __m = memory_order_seq_cst) _NOEXCEPT
         {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
 
-    _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
         {__cxx_atomic_wait(&__a_, __v, __m);}
-    _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
         {__cxx_atomic_wait(&__a_, __v, __m);}
-    _LIBCPP_INLINE_VISIBILITY void notify_one() volatile _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_one() volatile _NOEXCEPT
         {__cxx_atomic_notify_one(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY void notify_one() _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_one() _NOEXCEPT
         {__cxx_atomic_notify_one(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY void notify_all() volatile _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() volatile _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2059,7 +2062,7 @@ atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, _Tp* __e,
 // atomic_wait
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_wait(const volatile atomic<_Tp>* __o,
                  typename atomic<_Tp>::value_type __v) _NOEXCEPT
 {
@@ -2067,7 +2070,7 @@ void atomic_wait(const volatile atomic<_Tp>* __o,
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_wait(const atomic<_Tp>* __o,
                  typename atomic<_Tp>::value_type __v) _NOEXCEPT
 {
@@ -2077,7 +2080,7 @@ void atomic_wait(const atomic<_Tp>* __o,
 // atomic_wait_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_wait_explicit(const volatile atomic<_Tp>* __o,
                           typename atomic<_Tp>::value_type __v,
                           memory_order __m) _NOEXCEPT
@@ -2087,7 +2090,7 @@ void atomic_wait_explicit(const volatile atomic<_Tp>* __o,
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_wait_explicit(const atomic<_Tp>* __o,
                           typename atomic<_Tp>::value_type __v,
                           memory_order __m) _NOEXCEPT
@@ -2099,13 +2102,13 @@ void atomic_wait_explicit(const atomic<_Tp>* __o,
 // atomic_notify_one
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_one();
 }
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_one();
@@ -2114,13 +2117,13 @@ void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
 // atomic_notify_one
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_all();
 }
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
 void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_all();
@@ -2478,22 +2481,22 @@ typedef struct atomic_flag
     void clear(memory_order __m = memory_order_seq_cst) _NOEXCEPT
         {__cxx_atomic_store(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(false), __m);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
         {__cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
         {__cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void notify_one() volatile _NOEXCEPT
         {__cxx_atomic_notify_one(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void notify_one() _NOEXCEPT
         {__cxx_atomic_notify_one(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void notify_all() volatile _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
@@ -2603,21 +2606,21 @@ atomic_flag_clear_explicit(atomic_flag* __o, memory_order __m) _NOEXCEPT
     __o->clear(__m);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT
 {
     __o->wait(__v);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT
 {
     __o->wait(__v);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_wait_explicit(const volatile atomic_flag* __o,
                           bool __v, memory_order __m) _NOEXCEPT
@@ -2625,7 +2628,7 @@ atomic_flag_wait_explicit(const volatile atomic_flag* __o,
     __o->wait(__v, __m);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_wait_explicit(const atomic_flag* __o,
                           bool __v, memory_order __m) _NOEXCEPT
@@ -2633,28 +2636,28 @@ atomic_flag_wait_explicit(const atomic_flag* __o,
     __o->wait(__v, __m);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT
 {
     __o->notify_one();
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT
 {
     __o->notify_one();
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT
 {
     __o->notify_all();
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_SYNC
 void
 atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT
 {

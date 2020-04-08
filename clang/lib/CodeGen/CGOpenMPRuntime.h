@@ -102,7 +102,15 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> ReductionVars;
   SmallVector<const Expr *, 4> ReductionCopies;
   SmallVector<const Expr *, 4> ReductionOps;
-  SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4> Dependences;
+  struct DependData {
+    OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
+    const Expr *IteratorExpr = nullptr;
+    SmallVector<const Expr *, 4> DepExprs;
+    explicit DependData() = default;
+    DependData(OpenMPDependClauseKind DepKind, const Expr *IteratorExpr)
+        : DepKind(DepKind), IteratorExpr(IteratorExpr) {}
+  };
+  SmallVector<DependData, 4> Dependences;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Final;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Schedule;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Priority;
@@ -1768,13 +1776,19 @@ public:
 
   /// Emits list of dependecies based on the provided data (array of
   /// dependence/expression pairs).
-  /// \param ForDepobj true if the memory for depencies is alloacted for depobj
-  /// directive. In this case, the variable is allocated in dynamically.
   /// \returns Pointer to the first element of the array casted to VoidPtr type.
-  std::pair<llvm::Value *, Address> emitDependClause(
-      CodeGenFunction &CGF,
-      ArrayRef<std::pair<OpenMPDependClauseKind, const Expr *>> Dependencies,
-      bool ForDepobj, SourceLocation Loc);
+  std::pair<llvm::Value *, Address>
+  emitDependClause(CodeGenFunction &CGF,
+                   ArrayRef<OMPTaskDataTy::DependData> Dependencies,
+                   SourceLocation Loc);
+
+  /// Emits list of dependecies based on the provided data (array of
+  /// dependence/expression pairs) for depobj construct. In this case, the
+  /// variable is allocated in dynamically. \returns Pointer to the first
+  /// element of the array casted to VoidPtr type.
+  Address emitDepobjDependClause(CodeGenFunction &CGF,
+                                 const OMPTaskDataTy::DependData &Dependencies,
+                                 SourceLocation Loc);
 
   /// Emits the code to destroy the dependency object provided in depobj
   /// directive.

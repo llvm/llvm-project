@@ -42,7 +42,8 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
 /// (in output arg FrameReg). This is the default implementation which
 /// is overridden for some targets.
 int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                             int FI, unsigned &FrameReg) const {
+                                                int FI,
+                                                Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
@@ -150,8 +151,8 @@ int TargetFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
   llvm_unreachable("getInitialCFAOffset() not implemented!");
 }
 
-unsigned TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF)
-    const {
+Register
+TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
   llvm_unreachable("getInitialCFARegister() not implemented!");
 }
 

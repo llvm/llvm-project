@@ -27,7 +27,7 @@ the options to `*,-zlib.h`.
   #include <zlib.h>         // Bad: disallowed system header.
   #include "src/myfile.h"   // Good: non-system header always allowed.
 
-Since the opions support globbing you can use wildcarding to allow groups of
+Since the options support globbing you can use wildcarding to allow groups of
 headers.
 
 `-*,openssl/*.h` will allow all openssl headers but disallow any others.

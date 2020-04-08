@@ -12,9 +12,10 @@
 using namespace mlir;
 
 namespace {
-struct SideEffectsPass : public ModulePass<SideEffectsPass> {
-  void runOnModule() override {
-    auto module = getModule();
+struct SideEffectsPass
+    : public PassWrapper<SideEffectsPass, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    auto module = getOperation();
 
     // Walk operations detecting side effects.
     SmallVector<MemoryEffects::EffectInstance, 8> effects;

@@ -66,6 +66,9 @@ def no_color_diagnostics: F<"no-color-diagnostics">,
 def pdb : P<"pdb", "PDB file path">;
 def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
+def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
+    MetaVarName<"<name>=<file>">,
+    HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;
 def section : P<"section", "Specify section attributes">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;

@@ -664,6 +664,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
         const DWARFBaseDIE cu_die =
             dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
         if (cu_die) {
+          if (const char *sdk =
+                  cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr)) {
+            const char *sysroot =
+                cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
+            module_sp->RegisterXcodeSDK(sdk, sysroot);
+          }
           FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
           MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 

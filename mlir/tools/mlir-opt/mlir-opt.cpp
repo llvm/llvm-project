@@ -166,7 +166,12 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  return failed(MlirOptMain(output->os(), std::move(file), passPipeline,
-                            splitInputFile, verifyDiagnostics, verifyPasses,
-                            allowUnregisteredDialects));
+  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline,
+                         splitInputFile, verifyDiagnostics, verifyPasses,
+                         allowUnregisteredDialects))) {
+    return 1;
+  }
+  // Keep the output file if the invocation of MlirOptMain was successful.
+  output->keep();
+  return 0;
 }

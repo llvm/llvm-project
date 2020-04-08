@@ -147,7 +147,7 @@
 // handleNewPreprocessorExit function handles cleaning up with respect
 // to the preprocessing instance.
 //
-// The PreprocessorCallbacks object uses an overidden FileChanged callback
+// The PreprocessorCallbacks object uses an overridden FileChanged callback
 // to determine when a header is entered and exited (including exiting the
 // header during #include directives). It calls PreprocessorTracker's
 // handleHeaderEntry and handleHeaderExit functions upon entering and
@@ -174,7 +174,7 @@
 // MacroExpansionTracker object, one that matches the macro expanded value
 // and the macro definition location. If a matching MacroExpansionInstance
 // object is found, it just adds the current HeaderInclusionPath object to
-// it. If not found, it creates and stores a new MacroExpantionInstance
+// it. If not found, it creates and stores a new MacroExpansionInstance
 // object. The addMacroExpansionInstance function calls a couple of helper
 // functions to get the pre-formatted location and source line strings for
 // the macro reference and the macro definition stored as string handles.
@@ -369,7 +369,7 @@ static std::string getSourceLine(clang::Preprocessor &PP, clang::FileID FileID,
 }
 
 // Get the string for the Unexpanded macro instance.
-// The soureRange is expected to end at the last token
+// The sourceRange is expected to end at the last token
 // for the macro instance, which in the case of a function-style
 // macro will be a ')', but for an object-style macro, it
 // will be the macro name itself.

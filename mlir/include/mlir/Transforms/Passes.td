@@ -15,8 +15,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AffinePipelineDataTransfer : Pass<
-    "affine-pipeline-data-transfer"> {
+def AffinePipelineDataTransfer
+    : FunctionPass<"affine-pipeline-data-transfer"> {
   let summary = "Pipeline non-blocking data transfers between explicitly "
                 "managed levels of the memory hierarchy";
   let description = [{
@@ -84,7 +84,7 @@ def AffinePipelineDataTransfer : Pass<
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def AffineLoopFusion : Pass<"affine-loop-fusion"> {
+def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
   let summary = "Fuse affine loop nests";
   let constructor = "mlir::createLoopFusionPass()";
 }
@@ -120,7 +120,7 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   ];
 }
 
-def LoopCoalescing : Pass<"loop-coalescing"> {
+def LoopCoalescing : FunctionPass<"loop-coalescing"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::createLoopCoalescingPass()";
@@ -131,7 +131,7 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
-def MemRefDataFlowOpt : Pass<"memref-dataflow-opt"> {
+def MemRefDataFlowOpt : FunctionPass<"memref-dataflow-opt"> {
   let summary = "Perform store/load forwarding for memrefs";
   let description = [{
     This pass performs store to load forwarding for memref's to eliminate memory
@@ -192,17 +192,17 @@ def ParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {
   ];
 }
 
-def PrintCFG : Pass<"print-cfg-graph"> {
+def PrintCFG : FunctionPass<"print-cfg-graph"> {
   let summary = "Print CFG graph per-Region";
   let constructor = "mlir::createPrintCFGGraphPass()";
 }
 
-def PrintOpStats : Pass<"print-op-stats"> {
+def PrintOpStats : Pass<"print-op-stats", "ModuleOp"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
 }
 
-def PrintOp : Pass<"print-op-graph"> {
+def PrintOp : Pass<"print-op-graph", "ModuleOp"> {
   let summary = "Print op graph per-Region";
   let constructor = "mlir::createPrintOpGraphPass()";
 }

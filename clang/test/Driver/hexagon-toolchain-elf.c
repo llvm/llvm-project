@@ -598,79 +598,9 @@
 // RUN:   | FileCheck -check-prefix=CHECK084 %s
 // CHECK084:          "-fno-use-init-array"
 // -----------------------------------------------------------------------------
-// Passing --musl
+// Check default linker for elf
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   -fuse-ld=lld \
-// RUN:   --sysroot=/hexagon \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK085 %s
-// CHECK085-NOT:  /hexagon{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
-// CHECK085:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
-// CHECK085:      "/hexagon{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK085:      "-lclang_rt.builtins-hexagon" "-lc"
-// -----------------------------------------------------------------------------
-// Passing --musl --shared
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   --sysroot=/hexagon -shared \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK086 %s
-// CHECK086-NOT:    -dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1
-// CHECK086:        "/hexagon{{/|\\\\}}lib{{/|\\\\}}Scrt1.o"
-// CHECK086:        "-lclang_rt.builtins-hexagon" "-lc"
-// CHECK086-NOT:    /hexagon{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// -----------------------------------------------------------------------------
-// Passing --musl -nostdlib
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   --sysroot=/hexagon -nostdlib \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK087 %s
-// CHECK087:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
-// CHECK087-NOT:   /hexagon{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
-// CHECK087-NOT:   /hexagon{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK087-NOT:   -lclang_rt.builtins-hexagon
-// CHECK087-NOT:   -lc
-// -----------------------------------------------------------------------------
-// Passing --musl -nostartfiles
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   --sysroot=/hexagon -nostartfiles \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK088 %s
-// CHECK088:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
-// CHECK088-NOT:   /hexagon{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
-// CHECK088-NOT:   /hexagon{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK088:       "-lclang_rt.builtins-hexagon" "-lc"
-// -----------------------------------------------------------------------------
-// Passing --musl -nodefaultlibs
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   --sysroot=/hexagon -nodefaultlibs \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK089 %s
-// CHECK089:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
-// CHECK089:       "/hexagon{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK089-NOT:   -lclang_rt.builtins-hexagon
-// CHECK089-NOT:   -lc
-// -----------------------------------------------------------------------------
-// Not Passing -fno-use-init-array when musl is selected
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK090 %s
-// CHECK090-NOT:          -fno-use-init-array
+// RUN: %clang -### -target hexagon-unknown-elf %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK092 %s
+// CHECK092:          hexagon-link
 // -----------------------------------------------------------------------------

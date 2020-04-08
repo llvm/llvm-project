@@ -21,7 +21,8 @@ write_cmake_config("llvm-lit") {
   # llvm-lit contains a mapping from each lit.cfg.py file to the corresponding
   # generated llvm.site.cfg.py file, so llvm-lit depends on all the targets to
   # generate the site.cfg.py file.
-  config_map = ""
+  # FIXME: Write relative paths for path()s.
+  config_map = "def path(p): return p if p else \"\"\n"
 
   deps += [
     "//clang-tools-extra/test:lit_site_cfg",
@@ -62,8 +63,6 @@ write_cmake_config("llvm-lit") {
 
   values = [
     "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
-    "LLVM_BINARY_DIR=" +
-        rebase_path(get_label_info("//llvm", "target_out_dir")),
     "BUILD_MODE=.",
     "LLVM_LIT_CONFIG_MAP=" + config_map,
   ]

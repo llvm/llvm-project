@@ -11,6 +11,7 @@
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -31,7 +32,10 @@ public:
   static bool GetOSBuildString(std::string &s);
   static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
+  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 
+  /// Query xcrun to find an Xcode SDK directory.
+  static std::string GetXcodeSDK(XcodeSDK sdk);
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

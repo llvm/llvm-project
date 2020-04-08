@@ -27,7 +27,8 @@ namespace {
 } // end namespace mlir
 
 namespace {
-struct TestLinalgTransforms : public FunctionPass<TestLinalgTransforms> {
+struct TestLinalgTransforms
+    : public PassWrapper<TestLinalgTransforms, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace

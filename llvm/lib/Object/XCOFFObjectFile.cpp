@@ -766,6 +766,8 @@ uint8_t XCOFFSymbolRef::getNumberOfAuxEntries() const {
   return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->NumberOfAuxEntries;
 }
 
+// TODO: The function needs to return an error if there is no csect auxiliary
+// entry.
 const XCOFFCsectAuxEnt32 *XCOFFSymbolRef::getXCOFFCsectAuxEnt32() const {
   assert(!OwningObjectPtr->is64Bit() &&
          "32-bit interface called on 64-bit object file.");
@@ -791,6 +793,8 @@ int16_t XCOFFSymbolRef::getSectionNumber() const {
   return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->SectionNumber;
 }
 
+// TODO: The function name needs to be changed to express the purpose of the
+// function.
 bool XCOFFSymbolRef::hasCsectAuxEnt() const {
   XCOFF::StorageClass SC = getStorageClass();
   return (SC == XCOFF::C_EXT || SC == XCOFF::C_WEAKEXT ||

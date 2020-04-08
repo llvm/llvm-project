@@ -14,14 +14,13 @@
 using namespace mlir;
 
 namespace {
-/// Simple constant folding pass.
 struct TestMemRefStrideCalculation
-    : public FunctionPass<struct TestMemRefStrideCalculation> {
+    : public PassWrapper<TestMemRefStrideCalculation, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
 
-// Traverse AllocOp and compute strides of each MemRefType independently.
+/// Traverse AllocOp and compute strides of each MemRefType independently.
 void TestMemRefStrideCalculation::runOnFunction() {
   llvm::outs() << "Testing: " << getFunction().getName() << "\n";
   getFunction().walk([&](AllocOp allocOp) {

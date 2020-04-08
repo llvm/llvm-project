@@ -89,6 +89,14 @@ void PatternRewriter::eraseOp(Operation *op) {
   op->erase();
 }
 
+void PatternRewriter::eraseBlock(Block *block) {
+  for (auto &op : llvm::make_early_inc_range(llvm::reverse(*block))) {
+    assert(op.use_empty() && "expected 'op' to have no uses");
+    eraseOp(&op);
+  }
+  block->erase();
+}
+
 /// Merge the operations of block 'source' into the end of block 'dest'.
 /// 'source's predecessors must be empty or only contain 'dest`.
 /// 'argValues' is used to replace the block arguments of 'source' after

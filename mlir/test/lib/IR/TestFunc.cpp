@@ -13,9 +13,10 @@ using namespace mlir;
 
 namespace {
 /// This is a test pass for verifying FuncOp's eraseArgument method.
-struct TestFuncEraseArg : public ModulePass<TestFuncEraseArg> {
-  void runOnModule() override {
-    auto module = getModule();
+struct TestFuncEraseArg
+    : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
       SmallVector<unsigned, 4> indicesToErase;
@@ -36,9 +37,10 @@ struct TestFuncEraseArg : public ModulePass<TestFuncEraseArg> {
 };
 
 /// This is a test pass for verifying FuncOp's setType method.
-struct TestFuncSetType : public ModulePass<TestFuncSetType> {
-  void runOnModule() override {
-    auto module = getModule();
+struct TestFuncSetType
+    : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    auto module = getOperation();
     SymbolTable symbolTable(module);
 
     for (FuncOp func : module.getOps<FuncOp>()) {
