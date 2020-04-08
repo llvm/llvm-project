@@ -1575,12 +1575,13 @@ struct DSEState {
 
     ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
     // If necessary, perform additional analysis.
-    if (isModSet(MR))
+    if (isModSet(MR) && isa<CallBase>(UseInst))
       MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
 
     Optional<MemoryLocation> UseLoc = getLocForWriteEx(UseInst);
     return isModSet(MR) && isMustSet(MR) &&
-           UseLoc->Size.getValue() >= DefLoc.Size.getValue();
+           (UseLoc->Size.hasValue() && DefLoc.Size.hasValue() &&
+            UseLoc->Size.getValue() >= DefLoc.Size.getValue());
   }
 
   /// Returns true if \p Use may read from \p DefLoc.
