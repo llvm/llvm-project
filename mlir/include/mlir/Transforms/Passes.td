@@ -15,6 +15,24 @@
 
 include "mlir/Pass/PassBase.td"
 
+def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
+  let summary = "Fuse affine loop nests";
+  let constructor = "mlir::createLoopFusionPass()";
+  let options = [
+    Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
+           /*default=*/"0.30f", "Fractional increase in additional computation "
+                                "tolerated while fusing">,
+    Option<"fastMemorySpace", "fusion-fast-mem-space", "unsigned",
+           /*default=*/"0",
+           "Faster memory space number to promote fusion buffers to">,
+    Option<"localBufSizeThreshold", "fusion-local-buf-threshold", "uint64_t",
+           /*default=*/"0", "Threshold size (KiB) for promoting local buffers "
+                            "to fast memory space">,
+    Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
+           "Enables maximal loop fusion">,
+  ];
+}
+
 def AffinePipelineDataTransfer
     : FunctionPass<"affine-pipeline-data-transfer"> {
   let summary = "Pipeline non-blocking data transfers between explicitly "
@@ -84,11 +102,6 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
-  let summary = "Fuse affine loop nests";
-  let constructor = "mlir::createLoopFusionPass()";
-}
-
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let constructor = "mlir::createCanonicalizerPass()";
@@ -106,6 +119,14 @@ def CSE : Pass<"cse"> {
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
+  let options = [
+    Option<"disableCanonicalization", "disable-simplify", "bool",
+           /*default=*/"false",
+           "Disable running simplifications during inlining">,
+    Option<"maxInliningIterations", "max-iterations", "unsigned",
+           /*default=*/"4",
+           "Maximum number of iterations when inlining within an SCC">,
+  ];
 }
 
 def LocationSnapshot : Pass<"snapshot-op-locations"> {
@@ -113,7 +134,7 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   let constructor = "mlir::createLocationSnapshotPass()";
   let options = [
     Option<"fileName", "filename", "std::string", /*default=*/"",
-           "The filename to print the generated IR.">,
+           "The filename to print the generated IR">,
     Option<"tag", "tag", "std::string", /*default=*/"",
            "A tag to use when fusing the new locations with the "
            "original. If unset, the locations are replaced.">,

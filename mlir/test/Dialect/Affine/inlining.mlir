@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -inline -mlir-disable-inline-simplify | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -inline="disable-simplify" | FileCheck %s
 
 // Basic test that functions within affine operations are inlined.
 func @func_with_affine_ops(%N: index) {
