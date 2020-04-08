@@ -8866,8 +8866,8 @@ QualType ASTContext::mergeFunctionParameterTypes(QualType lhs, QualType rhs,
 }
 
 QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
-                                        bool OfBlockPointer,
-                                        bool Unqualified) {
+                                        bool OfBlockPointer, bool Unqualified,
+                                        bool AllowCXX) {
   const auto *lbase = lhs->castAs<FunctionType>();
   const auto *rbase = rhs->castAs<FunctionType>();
   const auto *lproto = dyn_cast<FunctionProtoType>(lbase);
@@ -8941,7 +8941,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
 
   if (lproto && rproto) { // two C99 style function prototypes
-    assert(!lproto->hasExceptionSpec() && !rproto->hasExceptionSpec() &&
+    assert((AllowCXX ||
+            (!lproto->hasExceptionSpec() && !rproto->hasExceptionSpec())) &&
            "C++ shouldn't be here");
     // Compatible functions must have the same number of parameters
     if (lproto->getNumParams() != rproto->getNumParams())
@@ -9005,7 +9006,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   const FunctionProtoType *proto = lproto ? lproto : rproto;
   if (proto) {
-    assert(!proto->hasExceptionSpec() && "C++ shouldn't be here");
+    assert((AllowCXX || !proto->hasExceptionSpec()) && "C++ shouldn't be here");
     if (proto->isVariadic())
       return {};
     // Check that the types are compatible with the types that

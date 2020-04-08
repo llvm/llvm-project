@@ -5554,7 +5554,45 @@ Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
 FunctionDecl *
 Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
                                                                 Declarator &D) {
-  auto *BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
+  IdentifierInfo *BaseII = D.getIdentifier();
+  LookupResult Lookup(*this, DeclarationName(BaseII), D.getIdentifierLoc(),
+                      LookupOrdinaryName);
+  LookupParsedName(Lookup, S, &D.getCXXScopeSpec());
+
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  QualType FType = TInfo->getType();
+
+  bool IsConstexpr = D.getDeclSpec().getConstexprSpecifier() == CSK_constexpr;
+  bool IsConsteval = D.getDeclSpec().getConstexprSpecifier() == CSK_consteval;
+
+  FunctionDecl *BaseFD = nullptr;
+  for (auto *Candidate : Lookup) {
+    auto *UDecl = dyn_cast<FunctionDecl>(Candidate->getUnderlyingDecl());
+    if (!UDecl)
+      continue;
+
+    // Don't specialize constexpr/consteval functions with
+    // non-constexpr/consteval functions.
+    if (UDecl->isConstexpr() && !IsConstexpr)
+      continue;
+    if (UDecl->isConsteval() && !IsConsteval)
+      continue;
+
+    QualType NewType = Context.mergeFunctionTypes(
+        FType, UDecl->getType(), /* OfBlockPointer */ false,
+        /* Unqualified */ false, /* AllowCXX */ true);
+    if (NewType.isNull())
+      continue;
+
+    // Found a base!
+    BaseFD = UDecl;
+    break;
+  }
+  if (!BaseFD) {
+    BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
+    BaseFD->setImplicit(true);
+  }
+
   OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
   std::string MangledName;
   MangledName += D.getIdentifier()->getName();
@@ -5583,8 +5621,6 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
   auto *OMPDeclareVariantA = OMPDeclareVariantAttr::CreateImplicit(
       Context, VariantFuncRef, DVScope.TI);
   BaseFD->addAttr(OMPDeclareVariantA);
-
-  BaseFD->setImplicit(true);
 }
 
 ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
