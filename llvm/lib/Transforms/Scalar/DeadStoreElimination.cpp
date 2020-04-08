@@ -1509,10 +1509,11 @@ struct DSEState {
     for (BasicBlock *BB : post_order(&F)) {
       State.PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
-        if (I.mayThrow() && !MSSA.getMemoryAccess(&I))
+        MemoryAccess *MA = MSSA.getMemoryAccess(&I);
+        if (I.mayThrow() && !MA)
           State.ThrowingBlocks.insert(I.getParent());
 
-        auto *MD = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(&I));
+        auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
             hasAnalyzableMemoryWrite(&I, TLI) && isRemovable(&I))
           State.MemDefs.push_back(MD);
