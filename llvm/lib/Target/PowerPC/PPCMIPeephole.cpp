@@ -57,6 +57,8 @@ STATISTIC(NumRotatesCollapsed,
           "Number of pairs of rotate left, clear left/right collapsed");
 STATISTIC(NumEXTSWAndSLDICombined,
           "Number of pairs of EXTSW and SLDI combined as EXTSWSLI");
+STATISTIC(NumX2FoundForPCRel, "Number of times the X2 TOC pointer has been "
+                              "found when PC relative NOTOC is being used.");
 
 static cl::opt<bool>
 FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
@@ -99,6 +101,11 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
+  // Perform peepholes that cannot be skipped.
+  // Some peephole simplifications are required for correctness and will not
+  // be skipped even if skipFunction(MF.getFunction()) returns true.
+  void unskipableSimplifyCode(void);
+
   // Perform peepholes.
   bool simplifyCode(void);
 
@@ -124,9 +131,14 @@ public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
+    initialize(MF);
+    // FIXME: This introduces another complete traversal of the instructions
+    // in the function in the common case (function is not skipped). Although
+    // this is less than ideal for compile time, this code will go away once
+    // our PC-Rel implementation is complete.
+    unskipableSimplifyCode();
     if (skipFunction(MF.getFunction()))
       return false;
-    initialize(MF);
     return simplifyCode();
   }
 };
@@ -258,6 +270,41 @@ void PPCMIPeephole::UpdateTOCSaves(
   }
   // Add new instruction to map.
   TOCSaves[MI] = Keep;
+}
+
+void PPCMIPeephole::unskipableSimplifyCode(void) {
+  // If this function has no uses of R2 there is nothing to do here.
+  if(MF->getRegInfo().use_empty(PPC::X2))
+    return;
+
+  // This is only for PCRelative calls.
+  if (!MF->getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls()) {
+    return;
+  }
+
+  // This function has R2 so we need to mark an implicit def for it.
+  PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+  FuncInfo->setUsesTOCBasePtr();
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() == PPC::BL8_NOTOC) {
+        // At this point the BL8_NOTOC instruction is not really safe because it
+        // assumes that the caller does not need the TOC. It will be safe
+        // later once the full PC relative implementation is complete but it is
+        // not now.
+        // Here we are looking for X2. Since this is Pre-RA the only uses of X2
+        // would indicate the use of the TOC. We want to detect all uses of the
+        // TOC. Once the work is done we should not see any uses of the TOC.
+        // TODO: Once the implementation is complete this should be turned into
+        // an assert
+        Register Reg = MF->getSubtarget<PPCSubtarget>().getTOCPointerRegister();
+        MachineOperand MO = MachineOperand::CreateReg(Reg, false, true);
+        MI.addOperand(*MF, MO);
+        MI.setDesc(TII->get(PPC::BL8_NOP));
+        ++NumX2FoundForPCRel;
+      }
+    }
+  }
 }
 
 // Perform peephole optimizations.
