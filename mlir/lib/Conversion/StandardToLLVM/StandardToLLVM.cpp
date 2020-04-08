@@ -1602,9 +1602,7 @@ struct AllocOpLowering : public AllocLikeOpLowering<AllocOp> {
       : AllocLikeOpLowering<AllocOp>(converter, useAlignedAlloc) {}
 };
 
-struct AllocaOpLowering : public AllocLikeOpLowering<AllocaOp> {
-  using Base::Base;
-};
+using AllocaOpLowering = AllocLikeOpLowering<AllocaOp>;
 
 // A CallOp automatically promotes MemRefType to a sequence of alloca/store and
 // passes the pointer to the MemRef across function boundaries.
