@@ -24,14 +24,22 @@ include "VEInstrFormats.td"
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
 
+// uimm6 - Generic immediate value.
+def uimm6 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<6>(N->getZExtValue()); }]>;
+
+// simm7 - Generic immediate value.
 def LO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
                                    SDLoc(N), MVT::i32);
 }]>;
-def simm7       : PatLeaf<(imm), [{ return isInt<7>(N->getSExtValue()); }]>;
+def simm7 : Operand<i32>, PatLeaf<(imm), [{
+    return isInt<7>(N->getSExtValue()); }], LO7> {
+  let DecoderMethod = "DecodeSIMM7";
+}
+
 def simm32      : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 def uimm32      : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
-def uimm6       : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
 def lomsbzero   : PatLeaf<(imm), [{ return (N->getZExtValue() & 0x80000000)
                                       == 0; }]>;
 def lozero      : PatLeaf<(imm), [{ return (N->getZExtValue() & 0xffffffff)
@@ -224,30 +232,6 @@ def brtarget32 : Operand<OtherVT> {
 def calltarget : Operand<i64> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
-}
-
-def simm7Op32 : Operand<i32> {
-  let DecoderMethod = "DecodeSIMM7";
-}
-
-def simm7Op64 : Operand<i64> {
-  let DecoderMethod = "DecodeSIMM7";
-}
-
-def simm32Op32 : Operand<i32> {
-  let DecoderMethod = "DecodeSIMM32";
-}
-
-def simm32Op64 : Operand<i64> {
-  let DecoderMethod = "DecodeSIMM32";
-}
-
-def uimm6Op32 : Operand<i32> {
-  let DecoderMethod = "DecodeUIMM6";
-}
-
-def uimm6Op64 : Operand<i64> {
-  let DecoderMethod = "DecodeUIMM6";
 }
 
 // Operand for printing out a condition code.
@@ -789,134 +773,134 @@ defm ST1B : STOREm<"st1b", 0x15, I32, i32, truncstorei8>;
 
 // CMOV instructions
 let cx = 0, cw = 0, cw2 = 0 in
-defm CMOVL : RRCMOVm<"cmov.l.${cf}", 0x3B, I64, i64, simm7Op64, uimm6Op64>;
+defm CMOVL : RRCMOVm<"cmov.l.${cf}", 0x3B, I64, i64, simm7, uimm6>;
 
 let cx = 0, cw = 1, cw2 = 0 in
-defm CMOVW : RRCMOVm<"cmov.w.${cf}", 0x3B, I32, i32, simm7Op64, uimm6Op32>;
+defm CMOVW : RRCMOVm<"cmov.w.${cf}", 0x3B, I32, i32, simm7, uimm6>;
 
 let cx = 0, cw = 0, cw2 = 1 in
-defm CMOVD : RRCMOVm<"cmov.d.${cf}", 0x3B, I64, f64, simm7Op64, uimm6Op64>;
+defm CMOVD : RRCMOVm<"cmov.d.${cf}", 0x3B, I64, f64, simm7, uimm6>;
 
 let cx = 0, cw = 1, cw2 = 1 in
-defm CMOVS : RRCMOVm<"cmov.s.${cf}", 0x3B, F32, f32, simm7Op64, uimm6Op32>;
+defm CMOVS : RRCMOVm<"cmov.s.${cf}", 0x3B, F32, f32, simm7, uimm6>;
 
 
 // 5.3.2.2. Fixed-Point Arithmetic Operation Instructions
 
 // ADD instruction
 let cx = 0 in
-defm ADD : RRm<"addu.l", 0x48, I64, i64, simm7Op64, uimm6Op64>;
+defm ADD : RRm<"addu.l", 0x48, I64, i64, simm7, uimm6>;
 let cx = 1 in
-defm ADDUW : RRm<"addu.w", 0x48, I32, i32, simm7Op32, uimm6Op32>;
+defm ADDUW : RRm<"addu.w", 0x48, I32, i32, simm7, uimm6>;
 
 // ADS instruction
 let cx = 0 in
-defm ADS : RRm<"adds.w.sx", 0x4A, I32, i32, simm7Op32, uimm6Op32, add>;
+defm ADS : RRm<"adds.w.sx", 0x4A, I32, i32, simm7, uimm6, add>;
 let cx = 1 in
-defm ADSU : RRm<"adds.w.zx", 0x4A, I32, i32, simm7Op32, uimm6Op32>;
+defm ADSU : RRm<"adds.w.zx", 0x4A, I32, i32, simm7, uimm6>;
 
 // ADX instruction
 let cx = 0 in
-defm ADX : RRm<"adds.l", 0x59, I64, i64, simm7Op64, uimm6Op64, add>;
+defm ADX : RRm<"adds.l", 0x59, I64, i64, simm7, uimm6, add>;
 
 // SUB instruction
 let cx = 0 in
-defm SUB : RRm<"subu.l", 0x58, I64, i64, simm7Op64, uimm6Op64>;
+defm SUB : RRm<"subu.l", 0x58, I64, i64, simm7, uimm6>;
 let cx = 1 in
-defm SUBUW : RRm<"subu.w", 0x58, I32, i32, simm7Op32, uimm6Op32>;
+defm SUBUW : RRm<"subu.w", 0x58, I32, i32, simm7, uimm6>;
 
 // SBS instruction
 let cx = 0 in
-defm SBS : RRNCm<"subs.w.sx", 0x5A, I32, i32, simm7Op32, uimm6Op32, sub>;
+defm SBS : RRNCm<"subs.w.sx", 0x5A, I32, i32, simm7, uimm6, sub>;
 let cx = 1 in
-defm SBSU : RRm<"subs.w.zx", 0x5A, I32, i32, simm7Op32, uimm6Op32>;
+defm SBSU : RRm<"subs.w.zx", 0x5A, I32, i32, simm7, uimm6>;
 
 // SBX instruction
 let cx = 0 in
-defm SBX : RRNCm<"subs.l", 0x5B, I64, i64, simm7Op64, uimm6Op64, sub>;
+defm SBX : RRNCm<"subs.l", 0x5B, I64, i64, simm7, uimm6, sub>;
 
 // MPY instruction
 let cx = 0 in
-defm MPY : RRm<"mulu.l", 0x49, I64, i64, simm7Op64, uimm6Op64>;
+defm MPY : RRm<"mulu.l", 0x49, I64, i64, simm7, uimm6>;
 let cx = 1 in
-defm MPYUW : RRm<"mulu.w", 0x49, I32, i32, simm7Op32, uimm6Op32>;
+defm MPYUW : RRm<"mulu.w", 0x49, I32, i32, simm7, uimm6>;
 
 // MPS instruction
 let cx = 0 in
-defm MPS : RRm<"muls.w.sx", 0x4B, I32, i32, simm7Op32, uimm6Op32, mul>;
+defm MPS : RRm<"muls.w.sx", 0x4B, I32, i32, simm7, uimm6, mul>;
 let cx = 1 in
-defm MPSU : RRm<"muls.w.zx", 0x4B, I32, i32, simm7Op32, uimm6Op32>;
+defm MPSU : RRm<"muls.w.zx", 0x4B, I32, i32, simm7, uimm6>;
 
 // MPX instruction
 let cx = 0 in
-defm MPX : RRm<"muls.l", 0x6E, I64, i64, simm7Op64, uimm6Op64, mul>;
+defm MPX : RRm<"muls.l", 0x6E, I64, i64, simm7, uimm6, mul>;
 
 // DIV instruction
 let cx = 0 in
-defm DIV : RRNCm<"divu.l", 0x6F, I64, i64, simm7Op64, uimm6Op64, udiv>;
+defm DIV : RRNCm<"divu.l", 0x6F, I64, i64, simm7, uimm6, udiv>;
 let cx = 1 in
-defm DIVUW : RRNCm<"divu.w", 0x6F, I32, i32, simm7Op32, uimm6Op32, udiv>;
+defm DIVUW : RRNCm<"divu.w", 0x6F, I32, i32, simm7, uimm6, udiv>;
 
 // DVS instruction
 let cx = 0 in
-defm DVS : RRNCm<"divs.w.sx", 0x7B, I32, i32, simm7Op32, uimm6Op32, sdiv>;
+defm DVS : RRNCm<"divs.w.sx", 0x7B, I32, i32, simm7, uimm6, sdiv>;
 let cx = 1 in
-defm DVSU : RRm<"divs.w.zx", 0x7B, I32, i32, simm7Op32, uimm6Op32>;
+defm DVSU : RRm<"divs.w.zx", 0x7B, I32, i32, simm7, uimm6>;
 
 // DVX instruction
 let cx = 0 in
-defm DVX : RRNCm<"divs.l", 0x7F, I64, i64, simm7Op64, uimm6Op64, sdiv>;
+defm DVX : RRNCm<"divs.l", 0x7F, I64, i64, simm7, uimm6, sdiv>;
 
 // CMP instruction
 let cx = 0 in
-defm CMP : RRm<"cmpu.l", 0x55, I64, i64, simm7Op64, uimm6Op64>;
+defm CMP : RRm<"cmpu.l", 0x55, I64, i64, simm7, uimm6>;
 let cx = 1 in
-defm CMPUW : RRm<"cmpu.w", 0x55, I32, i32, simm7Op32, uimm6Op32>;
+defm CMPUW : RRm<"cmpu.w", 0x55, I32, i32, simm7, uimm6>;
 
 // CPS instruction
 let cx = 0 in
-defm CPS : RRm<"cmps.w.sx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
+defm CPS : RRm<"cmps.w.sx", 0x7A, I32, i32, simm7, uimm6>;
 let cx = 1 in
-defm CPSU : RRm<"cmps.w.zx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
+defm CPSU : RRm<"cmps.w.zx", 0x7A, I32, i32, simm7, uimm6>;
 
 // CPX instruction
 let cx = 0 in
-defm CPX : RRm<"cmps.l", 0x6A, I64, i64, simm7Op64, uimm6Op64>;
+defm CPX : RRm<"cmps.l", 0x6A, I64, i64, simm7, uimm6>;
 
 // cx: sx/zx, cw: max/min
 
 let cw = 0 in defm CMXa :
-  RRm<"maxs.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+  RRm<"maxs.l", 0x68, I64, i64, simm7, uimm6>;
 
 let cx = 0, cw = 0 in defm CMSa :
-  RRm<"maxs.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
+  RRm<"maxs.w.zx", 0x78, I32, i32, simm7, uimm6>;
 
 let cw = 1 in defm CMXi :
-  RRm<"mins.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+  RRm<"mins.l", 0x68, I64, i64, simm7, uimm6>;
 
 let cx = 1, cw = 0 in defm CMSi :
-  RRm<"mins.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
+  RRm<"mins.w.zx", 0x78, I32, i32, simm7, uimm6>;
 
 // 5.3.2.3. Logical Arithmetic Operation Instructions
 
 let cx = 0 in {
-  defm AND : RRm<"and", 0x44, I64, i64, simm7Op64, uimm6Op64, and>;
-  defm OR : RRm<"or", 0x45, I64, i64, simm7Op64, uimm6Op64, or>;
-  defm XOR : RRm<"xor", 0x46, I64, i64, simm7Op64, uimm6Op64, xor>;
+  defm AND : RRm<"and", 0x44, I64, i64, simm7, uimm6, and>;
+  defm OR : RRm<"or", 0x45, I64, i64, simm7, uimm6, or>;
+  defm XOR : RRm<"xor", 0x46, I64, i64, simm7, uimm6, xor>;
   let isCodeGenOnly = 1 in {
-    defm AND32 : RRm<"and", 0x44, I32, i32, simm7Op32, uimm6Op32, and>;
-    defm OR32 : RRm<"or", 0x45, I32, i32, simm7Op32, uimm6Op32, or>;
-    defm XOR32 : RRm<"xor", 0x46, I32, i32, simm7Op32, uimm6Op32, xor>;
+    defm AND32 : RRm<"and", 0x44, I32, i32, simm7, uimm6, and>;
+    defm OR32 : RRm<"or", 0x45, I32, i32, simm7, uimm6, or>;
+    defm XOR32 : RRm<"xor", 0x46, I32, i32, simm7, uimm6, xor>;
   }
 }
 
 // Bits operations
 
 let cx = 0 in {
-  defm PCNT : RRI2m<"pcnt", 0x38, I64, i64, uimm6Op64, ctpop>;
-  defm BRV : RRI2m<"brv", 0x39, I64, i64, uimm6Op64, bitreverse>;
-  defm LDZ : RRI2m<"ldz", 0x67, I64, i64, uimm6Op64, ctlz>;
-  defm BSWP : RRIm<"bswp", 0x2B, I64, i64, simm7Op64, uimm6Op64>;
+  defm PCNT : RRI2m<"pcnt", 0x38, I64, i64, uimm6, ctpop>;
+  defm BRV : RRI2m<"brv", 0x39, I64, i64, uimm6, bitreverse>;
+  defm LDZ : RRI2m<"ldz", 0x67, I64, i64, uimm6, ctlz>;
+  defm BSWP : RRIm<"bswp", 0x2B, I64, i64, simm7, uimm6>;
 }
 
 
@@ -924,20 +908,20 @@ let cx = 0 in {
 // 5.3.2.4 Shift Instructions
 
 let cx = 0 in
-defm SRAX : RRIm<"sra.l", 0x77, I64, i64, simm7Op32, uimm6Op64, sra>;
+defm SRAX : RRIm<"sra.l", 0x77, I64, i64, simm7, uimm6, sra>;
 let cx = 0 in
-defm SRA : RRIm<"sra.w.sx", 0x76, I32, i32, simm7Op32, uimm6Op32, sra>;
+defm SRA : RRIm<"sra.w.sx", 0x76, I32, i32, simm7, uimm6, sra>;
 let cx = 1 in
-defm SRAU : RRIm<"sra.w.zx", 0x76, I32, i32, simm7Op32, uimm6Op32>;
+defm SRAU : RRIm<"sra.w.zx", 0x76, I32, i32, simm7, uimm6>;
 
 let cx = 0 in
-defm SLL : RRIm<"sll", 0x65, I64, i64, simm7Op32, uimm6Op64, shl>;
+defm SLL : RRIm<"sll", 0x65, I64, i64, simm7, uimm6, shl>;
 let cx = 0 in
-defm SLA : RRIm<"sla.w.sx", 0x66, I32, i32, simm7Op32, uimm6Op32, shl>;
+defm SLA : RRIm<"sla.w.sx", 0x66, I32, i32, simm7, uimm6, shl>;
 let cx = 1 in
-defm SLAU : RRIm<"sla.w.zx", 0x66, I32, i32, simm7Op32, uimm6Op32>;
+defm SLAU : RRIm<"sla.w.zx", 0x66, I32, i32, simm7, uimm6>;
 let cx = 0 in
-defm SRL : RRIm<"srl", 0x75, I64, i64, simm7Op32, uimm6Op64, srl>;
+defm SRL : RRIm<"srl", 0x75, I64, i64, simm7, uimm6, srl>;
 
 def : Pat<(i32 (srl i32:$src, (i32 simm7:$val))),
           (EXTRACT_SUBREG (SRLri (ANDrm0 (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
@@ -948,62 +932,62 @@ def : Pat<(i32 (srl i32:$src, i32:$val)),
 
 // 5.3.2.5. Floating-point Arithmetic Operation Instructions
 let cx = 0 in
-defm FAD : RRFm<"fadd.d", 0x4C, I64, f64, simm7Op64, uimm6Op64, fadd>;
+defm FAD : RRFm<"fadd.d", 0x4C, I64, f64, simm7, uimm6, fadd>;
 let cx = 1 in
-defm FADS : RRFm<"fadd.s", 0x4C, F32, f32, simm7Op32, uimm6Op32, fadd>;
+defm FADS : RRFm<"fadd.s", 0x4C, F32, f32, simm7, uimm6, fadd>;
 
 let cx = 0 in
-defm FSB : RRFm<"fsub.d", 0x5C, I64, f64, simm7Op64, uimm6Op64, fsub>;
+defm FSB : RRFm<"fsub.d", 0x5C, I64, f64, simm7, uimm6, fsub>;
 let cx = 1 in
-defm FSBS : RRFm<"fsub.s", 0x5C, F32, f32, simm7Op32, uimm6Op32, fsub>;
+defm FSBS : RRFm<"fsub.s", 0x5C, F32, f32, simm7, uimm6, fsub>;
 
 let cx = 0 in
-defm FMP : RRFm<"fmul.d", 0x4D, I64, f64, simm7Op64, uimm6Op64, fmul>;
+defm FMP : RRFm<"fmul.d", 0x4D, I64, f64, simm7, uimm6, fmul>;
 let cx = 1 in
-defm FMPS : RRFm<"fmul.s", 0x4D, F32, f32, simm7Op32, uimm6Op32, fmul>;
+defm FMPS : RRFm<"fmul.s", 0x4D, F32, f32, simm7, uimm6, fmul>;
 
 let cx = 0 in
-defm FDV : RRFm<"fdiv.d", 0x5D, I64, f64, simm7Op64, uimm6Op64, fdiv>;
+defm FDV : RRFm<"fdiv.d", 0x5D, I64, f64, simm7, uimm6, fdiv>;
 let cx = 1 in
-defm FDVS : RRFm<"fdiv.s", 0x5D, F32, f32, simm7Op32, uimm6Op32, fdiv>;
+defm FDVS : RRFm<"fdiv.s", 0x5D, F32, f32, simm7, uimm6, fdiv>;
 
 // FCP instruction
 let cx = 0 in
-defm FCP : RRm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
+defm FCP : RRm<"fcmp.d", 0x7E, I64, f64, simm7, uimm6>;
 let cx = 1 in
-defm FCPS : RRm<"fcmp.s", 0x7E, F32, f32, simm7Op32, uimm6Op32>;
+defm FCPS : RRm<"fcmp.s", 0x7E, F32, f32, simm7, uimm6>;
 
 // FCM
 let cw = 0 in {
   let cx = 0 in
-  defm FCMA : RRm<"fmax.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  defm FCMA : RRm<"fmax.d", 0x3E, I64, f64, simm7, uimm6>;
   let cx = 1 in
-  defm FCMAS : RRm<"fmax.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+  defm FCMAS : RRm<"fmax.s", 0x3E, F32, f32, simm7, uimm6>;
 }
 let cw = 1 in {
   let cx = 0 in
-  defm FCMI : RRm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  defm FCMI : RRm<"fmin.d", 0x3E, I64, f64, simm7, uimm6>;
   let cx = 1 in
-  defm FCMIS : RRm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+  defm FCMIS : RRm<"fmin.s", 0x3E, F32, f32, simm7, uimm6>;
 }
 
 let cx = 0, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
-defm FIX : CVTm<"cvt.w.d.sx.rz", 0x4E, I32, i32, I64, f64, simm7Op32, fp_to_sint>;
+defm FIX : CVTm<"cvt.w.d.sx.rz", 0x4E, I32, i32, I64, f64, simm7, fp_to_sint>;
 let cx = 1, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
-defm FIXS : CVTm<"cvt.w.s.sx.rz", 0x4E, I32, i32, F32, f32, simm7Op32, fp_to_sint>;
+defm FIXS : CVTm<"cvt.w.s.sx.rz", 0x4E, I32, i32, F32, f32, simm7, fp_to_sint>;
 let cx = 0, cz = 1, sz = 0 /* round toward zero */ in
-defm FIXX : CVTm<"cvt.l.d.rz", 0x4F, I64, i64, I64, f64, simm7Op64, fp_to_sint>;
+defm FIXX : CVTm<"cvt.l.d.rz", 0x4F, I64, i64, I64, f64, simm7, fp_to_sint>;
 let cz = 0, sz = 0 in {
   let cx = 0 in
-  defm FLT : CVTm<"cvt.d.w", 0x5E, I64, f64, I32, i32, simm7Op32, sint_to_fp>;
+  defm FLT : CVTm<"cvt.d.w", 0x5E, I64, f64, I32, i32, simm7, sint_to_fp>;
   let cx = 1 in
-  defm FLTS : CVTm<"cvt.s.w", 0x5E, F32, f32, I32, i32, simm7Op32, sint_to_fp>;
+  defm FLTS : CVTm<"cvt.s.w", 0x5E, F32, f32, I32, i32, simm7, sint_to_fp>;
   let cx = 0 in
-  defm FLTX : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, simm7Op64, sint_to_fp>;
+  defm FLTX : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, simm7, sint_to_fp>;
   let cx = 0 in
-  defm CVS : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, simm7Op64, fpround>;
+  defm CVS : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, simm7, fpround>;
   let cx = 0 in
-  defm CVD : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, simm7Op32, fpextend>;
+  defm CVD : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, simm7, fpextend>;
 }
 
 // Control-flow
@@ -1052,13 +1036,13 @@ def BSIC : RM<0x08, (outs), (ins I64:$sx, I64:$sz), "bsic $sx, (, ${sz})">;
 
 // Branch instruction
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */ in
-defm BCRL : BCRm<"br${cf}.l", "br.l", 0x18, I64, i64, simm7Op64, uimm6Op64>;
+defm BCRL : BCRm<"br${cf}.l", "br.l", 0x18, I64, i64, simm7, uimm6>;
 let cx = 1, cx2 = 0, bpf = 0 /* NONE */ in
-defm BCRW : BCRm<"br${cf}.w", "br.w", 0x18, I32, i32, simm7Op32, uimm6Op32>;
+defm BCRW : BCRm<"br${cf}.w", "br.w", 0x18, I32, i32, simm7, uimm6>;
 let cx = 0, cx2 = 1, bpf = 0 /* NONE */ in
-defm BCRD : BCRm<"br${cf}.d", "br.d", 0x18, I64, f64, simm7Op64, uimm6Op64>;
+defm BCRD : BCRm<"br${cf}.d", "br.d", 0x18, I64, f64, simm7, uimm6>;
 let cx = 1, cx2 = 1, bpf = 0 /* NONE */ in
-defm BCRS : BCRm<"br${cf}.s", "br.s", 0x18, F32, f32, simm7Op32, uimm6Op32>;
+defm BCRS : BCRm<"br${cf}.s", "br.s", 0x18, F32, f32, simm7, uimm6>;
 
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
@@ -1103,8 +1087,8 @@ def CALLr : RM<
 //===----------------------------------------------------------------------===//
 
 // Small immediates.
-def : Pat<(i32 simm7:$val), (OR32im1 imm:$val, 0)>;
-def : Pat<(i64 simm7:$val), (ORim1 imm:$val, 0)>;
+def : Pat<(i32 simm7:$val), (OR32im1 (LO7 $val), 0)>;
+def : Pat<(i64 simm7:$val), (ORim1 (LO7 $val), 0)>;
 // Medium immediates.
 def : Pat<(i32 simm32:$val), (LEA32zii 0, 0, (LO32 $val))>;
 def : Pat<(i64 simm32:$val), (LEAzii 0, 0, (LO32 $val))>;
