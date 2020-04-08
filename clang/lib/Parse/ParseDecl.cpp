@@ -6815,6 +6815,31 @@ void Parser::ParseParameterDeclarationClause(
           Actions.containsUnexpandedParameterPacks(ParmDeclarator))
         DiagnoseMisplacedEllipsisInDeclarator(ConsumeToken(), ParmDeclarator);
 
+      // Now we are at the point where declarator parsing is finished.
+      //
+      // Try to catch keywords in place of the identifier in a declarator, and
+      // in particular the common case where:
+      //   1 identifier comes at the end of the declarator
+      //   2 if the identifier is dropped, the declarator is valid but anonymous
+      //     (no identifier)
+      //   3 declarator parsing succeeds, and then we have a trailing keyword,
+      //     which is never valid in a param list (e.g. missing a ',')
+      // And we can't handle this in ParseDeclarator because in general keywords
+      // may be allowed to follow the declarator. (And in some cases there'd be
+      // better recovery like inserting punctuation). ParseDeclarator is just
+      // treating this as an anonymous parameter, and fortunately at this point
+      // we've already almost done that.
+      //
+      // We care about case 1) where the declarator type should be known, and
+      // the identifier should be null.
+      if (!ParmDeclarator.isInvalidType() && !ParmDeclarator.hasName()) {
+        if (Tok.getIdentifierInfo() &&
+            Tok.getIdentifierInfo()->isKeyword(getLangOpts())) {
+          Diag(Tok, diag::err_keyword_as_parameter) << PP.getSpelling(Tok);
+          // Consume the keyword.
+          ConsumeToken();
+        }
+      }
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
       Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator);
