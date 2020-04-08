@@ -40,12 +40,16 @@ std::unique_ptr<llvm::Module> translateLLVMAVX512ModuleToLLVMIR(Operation *m) {
 }
 } // end namespace
 
-static TranslateFromMLIRRegistration
-    reg("avx512-mlir-to-llvmir", [](ModuleOp module, raw_ostream &output) {
-      auto llvmModule = translateLLVMAVX512ModuleToLLVMIR(module);
-      if (!llvmModule)
-        return failure();
+namespace mlir {
+void registerAVX512ToLLVMIRTranslation() {
+  TranslateFromMLIRRegistration reg(
+      "avx512-mlir-to-llvmir", [](ModuleOp module, raw_ostream &output) {
+        auto llvmModule = translateLLVMAVX512ModuleToLLVMIR(module);
+        if (!llvmModule)
+          return failure();
 
-      llvmModule->print(output, nullptr);
-      return success();
-    });
+        llvmModule->print(output, nullptr);
+        return success();
+      });
+}
+} // namespace mlir
