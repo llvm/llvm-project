@@ -255,9 +255,11 @@ public:
         NextReq.reset();
       }
 
-      WithContext Guard(std::move(CurrentReq->Ctx));
-      // Build the preamble and let the waiters know about it.
-      build(std::move(*CurrentReq));
+      {
+        WithContext Guard(std::move(CurrentReq->Ctx));
+        // Build the preamble and let the waiters know about it.
+        build(std::move(*CurrentReq));
+      }
       bool IsEmpty = false;
       {
         std::lock_guard<std::mutex> Lock(Mutex);
