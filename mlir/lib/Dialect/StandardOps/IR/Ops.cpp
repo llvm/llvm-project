@@ -1068,7 +1068,7 @@ static LogicalResult verify(DimOp op) {
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   // Constant fold dim when the size along the index referred to is a constant.
   auto opType = memrefOrTensor().getType();
-  int64_t indexSize = -1;
+  int64_t indexSize = ShapedType::kDynamicSize;
   if (auto tensorType = opType.dyn_cast<RankedTensorType>())
     indexSize = tensorType.getShape()[getIndex()];
   else if (auto memrefType = opType.dyn_cast<MemRefType>())
