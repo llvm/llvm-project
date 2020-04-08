@@ -13,6 +13,7 @@ selected:        false
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
   frameOffsetReg:  '$sgpr4'
 
 registers:
@@ -98,6 +99,7 @@ selected:        false
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
   frameOffsetReg:  '$sgpr4'
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }

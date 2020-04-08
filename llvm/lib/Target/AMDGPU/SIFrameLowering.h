@@ -61,15 +61,17 @@ private:
                                         const DebugLoc &DL,
                                         Register ScratchWaveOffsetReg) const;
 
-  Register
-  getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF,
-                                         Register ScratchWaveOffsetReg) const;
+  Register getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF) const;
 
-  void emitEntryFunctionScratchRsrcRegSetup(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I, const DebugLoc &DL,
-      Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
-      Register ScratchWaveOffsetReg) const;
+  Register
+  getEntryFunctionReservedScratchWaveOffsetReg(MachineFunction &MF) const;
+
+  void emitEntryFunctionScratchRsrcRegSetup(MachineFunction &MF,
+                                            MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            const DebugLoc &DL,
+                                            Register PreloadedPrivateBufferReg,
+                                            Register ScratchRsrcReg) const;
 
 public:
   bool hasFP(const MachineFunction &MF) const override;
