@@ -26,29 +26,6 @@ using namespace mlir;
 
 #define DEBUG_TYPE "affine-loop-unroll"
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-// Loop unrolling factor.
-static llvm::cl::opt<unsigned> clUnrollFactor(
-    "unroll-factor",
-    llvm::cl::desc("Use this unroll factor for all loops being unrolled"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool> clUnrollFull("unroll-full",
-                                        llvm::cl::desc("Fully unroll loops"),
-                                        llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<unsigned> clUnrollNumRepetitions(
-    "unroll-num-reps",
-    llvm::cl::desc("Unroll innermost loops repeatedly this many times"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<unsigned> clUnrollFullThreshold(
-    "unroll-full-threshold", llvm::cl::Hidden,
-    llvm::cl::desc(
-        "Unroll all loops with trip count less than or equal to this"),
-    llvm::cl::cat(clOptionsCategory));
-
 namespace {
 
 // TODO: this is really a test pass and should be moved out of dialect
