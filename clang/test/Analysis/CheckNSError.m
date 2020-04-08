@@ -1,5 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.NSError,osx.coreFoundation.CFError -analyzer-store=region -verify -Wno-objc-root-class %s
-
+// RUN: %clang_analyze_cc1 -verify -Wno-objc-root-class %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=nullability \
+// RUN:   -analyzer-checker=osx.cocoa.NSError \
+// RUN:   -analyzer-checker=osx.coreFoundation.CFError
 
 typedef signed char BOOL;
 typedef int NSInteger;
@@ -18,6 +21,7 @@ extern NSString * const NSXMLParserErrorDomain ;
 @interface A
 - (void)myMethodWhichMayFail:(NSError **)error;
 - (BOOL)myMethodWhichMayFail2:(NSError **)error;
+- (BOOL)myMethodWhichMayFail3:(NSError **_Nonnull)error;
 @end
 
 @implementation A
@@ -27,6 +31,11 @@ extern NSString * const NSXMLParserErrorDomain ;
 
 - (BOOL)myMethodWhichMayFail2:(NSError **)error {  // no-warning
   if (error) *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // no-warning
+  return 0;
+}
+
+- (BOOL)myMethodWhichMayFail3:(NSError **_Nonnull)error {         // no-warning
+  *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // no-warning
   return 0;
 }
 @end
