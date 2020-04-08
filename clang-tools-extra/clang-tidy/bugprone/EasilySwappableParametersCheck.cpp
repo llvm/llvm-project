@@ -9,6 +9,7 @@
 #include "EasilySwappableParametersCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallSet.h"
@@ -65,6 +66,10 @@ static constexpr bool DefaultQualifiersMix = false;
 /// The default value for the ModelImplicitConversions check option.
 static constexpr bool DefaultModelImplicitConversions = true;
 
+/// The default value for suppressing diagnostics about parameters that are
+/// used together.
+static constexpr bool DefaultSuppressParametersUsedTogether = true;
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -74,7 +79,12 @@ namespace bugprone {
 using TheCheck = EasilySwappableParametersCheck;
 
 namespace filter {
+class SimilarlyUsedParameterPairSuppressor;
+
 static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node);
+static inline bool
+isSimilarlyUsedParameter(const SimilarlyUsedParameterPairSuppressor &Suppressor,
+                         const ParmVarDecl *Param1, const ParmVarDecl *Param2);
 } // namespace filter
 
 namespace model {
@@ -1269,9 +1279,9 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
   return {MixFlags::None};
 }
 
-static MixableParameterRange modelMixingRange(const TheCheck &Check,
-                                              const FunctionDecl *FD,
-                                              std::size_t StartIndex) {
+static MixableParameterRange modelMixingRange(
+    const TheCheck &Check, const FunctionDecl *FD, std::size_t StartIndex,
+    const filter::SimilarlyUsedParameterPairSuppressor &UsageBasedSuppressor) {
   std::size_t NumParams = FD->getNumParams();
   assert(StartIndex < NumParams && "out of bounds for start");
   const ASTContext &Ctx = FD->getASTContext();
@@ -1296,6 +1306,19 @@ static MixableParameterRange modelMixingRange(const TheCheck &Check,
       const ParmVarDecl *Jth = FD->getParamDecl(J);
       LLVM_DEBUG(llvm::dbgs()
                  << "Check mix of #" << J << " against #" << I << "...\n");
+
+      if (isSimilarlyUsedParameter(UsageBasedSuppressor, Ith, Jth)) {
+        // Consider the two similarly used parameters to not be possible in a
+        // mix-up at the user's request, if they enabled this heuristic.
+        LLVM_DEBUG(llvm::dbgs() << "Parameters #" << I << " and #" << J
+                                << " deemed related, ignoring...\n");
+
+        // If the parameter #I and #J mixes, then I is mixable with something
+        // in the current range, so the range has to be broken and I not
+        // included.
+        MixesOfIth.clear();
+        break;
+      }
 
       Mix M{Jth, Ith,
             calculateMixability(Check, Jth->getType(), Ith->getType(), Ctx,
@@ -1330,6 +1353,12 @@ static MixableParameterRange modelMixingRange(const TheCheck &Check,
 }
 
 } // namespace model
+
+/// Matches DeclRefExprs and their ignorable wrappers to ParmVarDecls.
+AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Stmt>, paramRefExpr) {
+  return expr(ignoringParenImpCasts(ignoringElidableConstructorCall(
+      declRefExpr(to(parmVarDecl().bind("param"))))));
+}
 
 namespace filter {
 
@@ -1389,6 +1418,261 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   }
 
   return false;
+}
+
+/// This namespace contains the implementations for the suppression of
+/// diagnostics from similaly used ("related") parameters.
+namespace relatedness_heuristic {
+
+static constexpr std::size_t SmallDataStructureSize = 4;
+
+template <typename T, std::size_t N = SmallDataStructureSize>
+using ParamToSmallSetMap =
+    llvm::DenseMap<const ParmVarDecl *, llvm::SmallSet<T, N>>;
+
+/// Returns whether the sets mapped to the two elements in the map have at
+/// least one element in common.
+template <typename MapTy, typename ElemTy>
+bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
+                                     const ElemTy &E2) {
+  auto E1Iterator = Map.find(E1);
+  auto E2Iterator = Map.find(E2);
+  if (E1Iterator == Map.end() || E2Iterator == Map.end())
+    return false;
+
+  for (const auto &E1SetElem : E1Iterator->second)
+    if (llvm::find(E2Iterator->second, E1SetElem) != E2Iterator->second.end())
+      return true;
+
+  return false;
+}
+
+/// Implements the heuristic that marks two parameters related if there is
+/// a usage for both in the same strict expression subtree. A strict
+/// expression subtree is a tree which only includes Expr nodes, i.e. no
+/// Stmts and no Decls.
+class AppearsInSameExpr : public RecursiveASTVisitor<AppearsInSameExpr> {
+  using Base = RecursiveASTVisitor<AppearsInSameExpr>;
+
+  const FunctionDecl *FD;
+  const Expr *CurrentExprOnlyTreeRoot = nullptr;
+  llvm::DenseMap<const ParmVarDecl *,
+                 llvm::SmallPtrSet<const Expr *, SmallDataStructureSize>>
+      ParentExprsForParamRefs;
+
+public:
+  void setup(const FunctionDecl *FD) {
+    this->FD = FD;
+    TraverseFunctionDecl(const_cast<FunctionDecl *>(FD));
+  }
+
+  bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
+    return lazyMapOfSetsIntersectionExists(ParentExprsForParamRefs, Param1,
+                                           Param2);
+  }
+
+  bool TraverseDecl(Decl *D) {
+    CurrentExprOnlyTreeRoot = nullptr;
+    return Base::TraverseDecl(D);
+  }
+
+  bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr) {
+    if (auto *E = dyn_cast_or_null<Expr>(S)) {
+      bool RootSetInCurrentStackFrame = false;
+      if (!CurrentExprOnlyTreeRoot) {
+        CurrentExprOnlyTreeRoot = E;
+        RootSetInCurrentStackFrame = true;
+      }
+
+      bool Ret = Base::TraverseStmt(S);
+
+      if (RootSetInCurrentStackFrame)
+        CurrentExprOnlyTreeRoot = nullptr;
+
+      return Ret;
+    }
+
+    // A Stmt breaks the strictly Expr subtree.
+    CurrentExprOnlyTreeRoot = nullptr;
+    return Base::TraverseStmt(S);
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (!CurrentExprOnlyTreeRoot)
+      return true;
+
+    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+      if (llvm::find(FD->parameters(), PVD))
+        ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
+
+    return true;
+  }
+};
+
+/// Implements the heuristic that marks two parameters related if there are
+/// two separate calls to the same function (overload) and the parameters are
+/// passed to the same index in both calls, i.e f(a, b) and f(a, c) passes
+/// b and c to the same index (2) of f(), marking them related.
+class PassedToSameFunction {
+  ParamToSmallSetMap<std::pair<const FunctionDecl *, unsigned>> TargetParams;
+
+public:
+  void setup(const FunctionDecl *FD) {
+    auto ParamsAsArgsInFnCalls =
+        match(functionDecl(forEachDescendant(
+                  callExpr(forEachArgumentWithParam(
+                               paramRefExpr(), parmVarDecl().bind("passed-to")))
+                      .bind("call-expr"))),
+              *FD, FD->getASTContext());
+    for (const auto &Match : ParamsAsArgsInFnCalls) {
+      const auto *PassedParamOfThisFn = Match.getNodeAs<ParmVarDecl>("param");
+      const auto *CE = Match.getNodeAs<CallExpr>("call-expr");
+      const auto *PassedToParam = Match.getNodeAs<ParmVarDecl>("passed-to");
+      assert(PassedParamOfThisFn && CE && PassedToParam);
+
+      const FunctionDecl *CalledFn = CE->getDirectCallee();
+      if (!CalledFn)
+        continue;
+
+      llvm::Optional<unsigned> TargetIdx;
+      unsigned NumFnParams = CalledFn->getNumParams();
+      for (unsigned Idx = 0; Idx < NumFnParams; ++Idx)
+        if (CalledFn->getParamDecl(Idx) == PassedToParam)
+          TargetIdx.emplace(Idx);
+
+      assert(TargetIdx.hasValue() && "Matched, but didn't find index?");
+      TargetParams[PassedParamOfThisFn].insert(
+          {CalledFn->getCanonicalDecl(), *TargetIdx});
+    }
+  }
+
+  bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
+    return lazyMapOfSetsIntersectionExists(TargetParams, Param1, Param2);
+  }
+};
+
+/// Implements the heuristic that marks two parameters related if the same
+/// member is accessed (referred to) inside the current function's body.
+class AccessedSameMemberOf {
+  ParamToSmallSetMap<const Decl *> AccessedMembers;
+
+public:
+  void setup(const FunctionDecl *FD) {
+    auto MembersCalledOnParams = match(
+        functionDecl(forEachDescendant(
+            memberExpr(hasObjectExpression(paramRefExpr())).bind("mem-expr"))),
+        *FD, FD->getASTContext());
+
+    for (const auto &Match : MembersCalledOnParams) {
+      const auto *AccessedParam = Match.getNodeAs<ParmVarDecl>("param");
+      const auto *ME = Match.getNodeAs<MemberExpr>("mem-expr");
+      assert(AccessedParam && ME);
+      AccessedMembers[AccessedParam].insert(
+          ME->getMemberDecl()->getCanonicalDecl());
+    }
+  }
+
+  bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
+    return lazyMapOfSetsIntersectionExists(AccessedMembers, Param1, Param2);
+  }
+};
+
+/// Implements the heuristic that marks two parameters related if different
+/// ReturnStmts return them from the function.
+class Returned {
+  llvm::SmallVector<const ParmVarDecl *, SmallDataStructureSize> ReturnedParams;
+
+public:
+  void setup(const FunctionDecl *FD) {
+    // TODO: Handle co_return.
+    auto ParamReturns = match(functionDecl(forEachDescendant(
+                                  returnStmt(hasReturnValue(paramRefExpr())))),
+                              *FD, FD->getASTContext());
+    for (const auto &Match : ParamReturns) {
+      const auto *ReturnedParam = Match.getNodeAs<ParmVarDecl>("param");
+      assert(ReturnedParam);
+
+      if (find(FD->parameters(), ReturnedParam) == FD->param_end())
+        // Inside the subtree of a FunctionDecl there might be ReturnStmts of
+        // a parameter that isn't the parameter of the function, e.g. in the
+        // case of lambdas.
+        continue;
+
+      ReturnedParams.emplace_back(ReturnedParam);
+    }
+  }
+
+  bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
+    return llvm::find(ReturnedParams, Param1) != ReturnedParams.end() &&
+           llvm::find(ReturnedParams, Param2) != ReturnedParams.end();
+  }
+};
+
+} // namespace relatedness_heuristic
+
+/// Helper class that is used to detect if two parameters of the same function
+/// are used in a similar fashion, to suppress the result.
+class SimilarlyUsedParameterPairSuppressor {
+  const bool Enabled;
+  relatedness_heuristic::AppearsInSameExpr SameExpr;
+  relatedness_heuristic::PassedToSameFunction PassToFun;
+  relatedness_heuristic::AccessedSameMemberOf SameMember;
+  relatedness_heuristic::Returned Returns;
+
+public:
+  SimilarlyUsedParameterPairSuppressor(const FunctionDecl *FD, bool Enable)
+      : Enabled(Enable) {
+    if (!Enable)
+      return;
+
+    SameExpr.setup(FD);
+    PassToFun.setup(FD);
+    SameMember.setup(FD);
+    Returns.setup(FD);
+  }
+
+  /// Returns whether the specified two parameters are deemed similarly used
+  /// or related by the heuristics.
+  bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
+    if (!Enabled)
+      return false;
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "::: Matching similar usage / relatedness heuristic...\n");
+
+    if (SameExpr(Param1, Param2)) {
+      LLVM_DEBUG(llvm::dbgs() << "::: Used in the same expression.\n");
+      return true;
+    }
+
+    if (PassToFun(Param1, Param2)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "::: Passed to same function in different calls.\n");
+      return true;
+    }
+
+    if (SameMember(Param1, Param2)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "::: Same member field access or method called.\n");
+      return true;
+    }
+
+    if (Returns(Param1, Param2)) {
+      LLVM_DEBUG(llvm::dbgs() << "::: Both parameter returned.\n");
+      return true;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "::: None.\n");
+    return false;
+  }
+};
+
+// (This function hoists the call to operator() of the wrapper, so we do not
+// need to define the previous class at the top of the file.)
+static inline bool
+isSimilarlyUsedParameter(const SimilarlyUsedParameterPairSuppressor &Suppressor,
+                         const ParmVarDecl *Param1, const ParmVarDecl *Param2) {
+  return Suppressor(Param1, Param2);
 }
 
 } // namespace filter
@@ -1604,7 +1888,10 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
                       DefaultIgnoredParameterTypeSuffixes))),
       QualifiersMix(Options.get("QualifiersMix", DefaultQualifiersMix)),
       ModelImplicitConversions(Options.get("ModelImplicitConversions",
-                                           DefaultModelImplicitConversions)) {}
+                                           DefaultModelImplicitConversions)),
+      SuppressParametersUsedTogether(
+          Options.get("SuppressParametersUsedTogether",
+                      DefaultSuppressParametersUsedTogether)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -1615,6 +1902,8 @@ void EasilySwappableParametersCheck::storeOptions(
                 optutils::serializeStringList(IgnoredParameterTypeSuffixes));
   Options.store(Opts, "QualifiersMix", QualifiersMix);
   Options.store(Opts, "ModelImplicitConversions", ModelImplicitConversions);
+  Options.store(Opts, "SuppressParametersUsedTogether",
+                SuppressParametersUsedTogether);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -1647,6 +1936,11 @@ void EasilySwappableParametersCheck::check(
   std::size_t NumParams = FD->getNumParams();
   std::size_t MixableRangeStartIndex = 0;
 
+  // Spawn one suppressor and if the user requested, gather information from
+  // the AST for the parameters' usages.
+  filter::SimilarlyUsedParameterPairSuppressor UsageBasedSuppressor{
+      FD, SuppressParametersUsedTogether};
+
   LLVM_DEBUG(llvm::dbgs() << "Begin analysis of " << getName(FD) << " with "
                           << NumParams << " parameters...\n");
   while (MixableRangeStartIndex < NumParams) {
@@ -1657,8 +1951,8 @@ void EasilySwappableParametersCheck::check(
       continue;
     }
 
-    MixableParameterRange R =
-        modelMixingRange(*this, FD, MixableRangeStartIndex);
+    MixableParameterRange R = modelMixingRange(
+        *this, FD, MixableRangeStartIndex, UsageBasedSuppressor);
     assert(R.NumParamsChecked > 0 && "Ensure forward progress!");
     MixableRangeStartIndex += R.NumParamsChecked;
     if (R.NumParamsChecked < MinimumLength) {

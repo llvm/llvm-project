@@ -4,7 +4,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 1} \
+// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 1}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0} \
 // RUN:  ]}' --
 
 void implicitDoesntBreakOtherStuff(int A, int B) {}
