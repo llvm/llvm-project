@@ -1652,7 +1652,7 @@ static bool canNarrowShiftAmt(Constant *C, unsigned BitWidth) {
 
   if (C->getType()->isVectorTy()) {
     // Check each element of a constant vector.
-    unsigned NumElts = C->getType()->getVectorNumElements();
+    unsigned NumElts = cast<VectorType>(C->getType())->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);
       if (!Elt)
@@ -2082,7 +2082,7 @@ static Instruction *matchRotate(Instruction &Or) {
 
 /// If all elements of two constant vectors are 0/-1 and inverses, return true.
 static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
-  unsigned NumElts = C1->getType()->getVectorNumElements();
+  unsigned NumElts = cast<VectorType>(C1->getType())->getNumElements();
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *EltC1 = C1->getAggregateElement(i);
     Constant *EltC2 = C2->getAggregateElement(i);

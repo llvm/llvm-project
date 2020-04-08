@@ -897,7 +897,7 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     // For vectors, we apply the same reasoning on a per-lane basis.
     auto *Base = GEPLHS->getPointerOperand();
     if (GEPLHS->getType()->isVectorTy() && Base->getType()->isPointerTy()) {
-      int NumElts = GEPLHS->getType()->getVectorNumElements();
+      int NumElts = cast<VectorType>(GEPLHS->getType())->getNumElements();
       Base = Builder.CreateVectorSplat(NumElts, Base);
     }
     return new ICmpInst(Cond, Base,
@@ -1861,8 +1861,8 @@ Instruction *InstCombiner::foldICmpAndConstant(ICmpInst &Cmp,
     int32_t ExactLogBase2 = C2->exactLogBase2();
     if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
       Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
-      if (And->getType()->isVectorTy())
-        NTy = VectorType::get(NTy, And->getType()->getVectorNumElements());
+      if (auto *AndVTy = dyn_cast<VectorType>(And->getType()))
+        NTy = VectorType::get(NTy, AndVTy->getNumElements());
       Value *Trunc = Builder.CreateTrunc(X, NTy);
       auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE
                                                             : CmpInst::ICMP_SLT;
@@ -2147,8 +2147,8 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   if (Shl->hasOneUse() && Amt != 0 && C.countTrailingZeros() >= Amt &&
       DL.isLegalInteger(TypeBits - Amt)) {
     Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
-    if (ShType->isVectorTy())
-      TruncTy = VectorType::get(TruncTy, ShType->getVectorNumElements());
+    if (auto *ShVTy = dyn_cast<VectorType>(ShType))
+      TruncTy = VectorType::get(TruncTy, ShVTy->getNumElements());
     Constant *NewC =
         ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
     return new ICmpInst(Pred, Builder.CreateTrunc(X, TruncTy), NewC);
@@ -2776,8 +2776,8 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
         // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
         Type *XType = X->getType();
         Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
-        if (XType->isVectorTy())
-          NewType = VectorType::get(NewType, XType->getVectorNumElements());
+        if (auto *XVTy = dyn_cast<VectorType>(XType))
+          NewType = VectorType::get(NewType, XVTy->getNumElements());
         Value *NewBitcast = Builder.CreateBitCast(X, NewType);
         if (TrueIfSigned)
           return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
@@ -3354,8 +3354,9 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
   Type *OpTy = M->getType();
   auto *VecC = dyn_cast<Constant>(M);
   if (OpTy->isVectorTy() && VecC && VecC->containsUndefElement()) {
+    auto *OpVTy = cast<VectorType>(OpTy);
     Constant *SafeReplacementConstant = nullptr;
-    for (unsigned i = 0, e = OpTy->getVectorNumElements(); i != e; ++i) {
+    for (unsigned i = 0, e = OpVTy->getNumElements(); i != e; ++i) {
       if (!isa<UndefValue>(VecC->getAggregateElement(i))) {
         SafeReplacementConstant = VecC->getAggregateElement(i);
         break;
@@ -5189,8 +5190,8 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
     // Bail out if the constant can't be safely incremented/decremented.
     if (!ConstantIsOk(CI))
       return llvm::None;
-  } else if (Type->isVectorTy()) {
-    unsigned NumElts = Type->getVectorNumElements();
+  } else if (auto *VTy = dyn_cast<VectorType>(Type)) {
+    unsigned NumElts = VTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);
       if (!Elt)
@@ -5411,7 +5412,8 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   if (ScalarC && match(M, m_SplatOrUndefMask(MaskSplatIndex))) {
     // We allow undefs in matching, but this transform removes those for safety.
     // Demanded elements analysis should be able to recover some/all of that.
-    C = ConstantVector::getSplat(V1Ty->getVectorElementCount(), ScalarC);
+    C = ConstantVector::getSplat(cast<VectorType>(V1Ty)->getElementCount(),
+                                 ScalarC);
     SmallVector<int, 8> NewM(M.size(), MaskSplatIndex);
     Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, C)
                          : Builder.CreateICmp(Pred, V1, C);

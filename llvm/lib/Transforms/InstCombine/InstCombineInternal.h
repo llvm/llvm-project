@@ -244,9 +244,10 @@ static inline bool canFreelyInvertAllUsersOf(Value *V, Value *IgnoredUser) {
 /// If no identity constant exists, replace undef with some other safe constant.
 static inline Constant *getSafeVectorConstantForBinop(
       BinaryOperator::BinaryOps Opcode, Constant *In, bool IsRHSConstant) {
-  assert(In->getType()->isVectorTy() && "Not expecting scalars here");
+  auto *InVTy = dyn_cast<VectorType>(In->getType());
+  assert(InVTy && "Not expecting scalars here");
 
-  Type *EltTy = In->getType()->getVectorElementType();
+  Type *EltTy = InVTy->getElementType();
   auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);
   if (!SafeC) {
     // TODO: Should this be available as a constant utility function? It is
@@ -284,7 +285,7 @@ static inline Constant *getSafeVectorConstantForBinop(
     }
   }
   assert(SafeC && "Must have safe constant for binop");
-  unsigned NumElts = In->getType()->getVectorNumElements();
+  unsigned NumElts = InVTy->getNumElements();
   SmallVector<Constant *, 16> Out(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *C = In->getAggregateElement(i);
