@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "index/Serialization.h"
 #include "index/dex/Dex.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -28,6 +29,9 @@ namespace {
 llvm::cl::opt<std::string> IndexPath("index-path",
                                      llvm::cl::desc("Path to the index"),
                                      llvm::cl::Positional, llvm::cl::Required);
+
+llvm::cl::opt<std::string>
+    ExecCommand("c", llvm::cl::desc("Command to execute and then exit"));
 
 static const std::string Overview = R"(
 This is an **experimental** interactive tool to process user-provided search
@@ -78,6 +82,7 @@ class Command {
   llvm::cl::opt<bool, false, llvm::cl::parser<bool>> Help{
       "help", llvm::cl::desc("Display available options"),
       llvm::cl::ValueDisallowed, llvm::cl::cat(llvm::cl::GeneralCategory)};
+  // FIXME: Allow commands to signal failure.
   virtual void run() = 0;
 
 protected:
@@ -85,25 +90,27 @@ protected:
 
 public:
   virtual ~Command() = default;
-  virtual void parseAndRun(llvm::ArrayRef<const char *> Argv,
-                           const char *Overview, const SymbolIndex &Index) {
+  bool parseAndRun(llvm::ArrayRef<const char *> Argv, const char *Overview,
+                   const SymbolIndex &Index) {
     std::string ParseErrs;
     llvm::raw_string_ostream OS(ParseErrs);
     bool Ok = llvm::cl::ParseCommandLineOptions(Argv.size(), Argv.data(),
                                                 Overview, &OS);
+    // must do this before opts are destroyed
+    auto Cleanup = llvm::make_scope_exit(llvm::cl::ResetCommandLineParser);
     if (Help.getNumOccurrences() > 0) {
       // Avoid printing parse errors in this case.
       // (Well, in theory. A bunch get printed to llvm::errs() regardless!)
       llvm::cl::PrintHelpMessage();
-    } else {
-      llvm::outs() << OS.str();
-      if (Ok) {
-        this->Index = &Index;
-        reportTime(Argv[0], [&] { run(); });
-      }
+      return true;
     }
-    llvm::cl::ResetCommandLineParser(); // must do this before opts are
-                                        // destroyed.
+
+    llvm::outs() << OS.str();
+    if (Ok) {
+      this->Index = &Index;
+      reportTime(Argv[0], [&] { run(); });
+    }
+    return Ok;
   }
 };
 
@@ -268,6 +275,34 @@ std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
   return loadIndex(Index, /*UseDex=*/true);
 }
 
+bool runCommand(std::string Request, const SymbolIndex &Index) {
+  // Split on spaces and add required null-termination.
+  std::replace(Request.begin(), Request.end(), ' ', '\0');
+  llvm::SmallVector<llvm::StringRef, 8> Args;
+  llvm::StringRef(Request).split(Args, '\0', /*MaxSplit=*/-1,
+                                 /*KeepEmpty=*/false);
+  if (Args.empty())
+    return false;
+  if (Args.front() == "help") {
+    llvm::outs() << "dexp - Index explorer\nCommands:\n";
+    for (const auto &C : CommandInfo)
+      llvm::outs() << llvm::formatv("{0,16} - {1}\n", C.Name, C.Description);
+    llvm::outs() << "Get detailed command help with e.g. `find -help`.\n";
+    return true;
+  }
+  llvm::SmallVector<const char *, 8> FakeArgv;
+  for (llvm::StringRef S : Args)
+    FakeArgv.push_back(S.data()); // Terminated by separator or end of string.
+
+  for (const auto &Cmd : CommandInfo) {
+    if (Cmd.Name == Args.front())
+      return Cmd.Implementation()->parseAndRun(FakeArgv, Cmd.Description,
+                                               Index);
+  }
+  llvm::outs() << "Unknown command. Try 'help'.\n";
+  return false;
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
@@ -289,38 +324,10 @@ int main(int argc, const char *argv[]) {
     return -1;
   }
 
+  if (!ExecCommand.empty())
+    return runCommand(ExecCommand, *Index) ? 0 : 1;
+
   llvm::LineEditor LE("dexp");
-
-  while (llvm::Optional<std::string> Request = LE.readLine()) {
-    // Split on spaces and add required null-termination.
-    std::replace(Request->begin(), Request->end(), ' ', '\0');
-    llvm::SmallVector<llvm::StringRef, 8> Args;
-    llvm::StringRef(*Request).split(Args, '\0', /*MaxSplit=*/-1,
-                                    /*KeepEmpty=*/false);
-    if (Args.empty())
-      continue;
-    if (Args.front() == "help") {
-      llvm::outs() << "dexp - Index explorer\nCommands:\n";
-      for (const auto &C : CommandInfo)
-        llvm::outs() << llvm::formatv("{0,16} - {1}\n", C.Name, C.Description);
-      llvm::outs() << "Get detailed command help with e.g. `find -help`.\n";
-      continue;
-    }
-    llvm::SmallVector<const char *, 8> FakeArgv;
-    for (llvm::StringRef S : Args)
-      FakeArgv.push_back(S.data()); // Terminated by separator or end of string.
-
-    bool Recognized = false;
-    for (const auto &Cmd : CommandInfo) {
-      if (Cmd.Name == Args.front()) {
-        Recognized = true;
-        Cmd.Implementation()->parseAndRun(FakeArgv, Cmd.Description, *Index);
-        break;
-      }
-    }
-    if (!Recognized)
-      llvm::outs() << "Unknown command. Try 'help'.\n";
-  }
-
-  return 0;
+  while (llvm::Optional<std::string> Request = LE.readLine())
+    runCommand(std::move(*Request), *Index);
 }
