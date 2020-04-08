@@ -1,0 +1,39 @@
+## This test shows that llvm-objdump can handle sections with the same address
+## when symbols in those sections are referenced. In the past, the section
+## picked was non-deterministic, resulting in different symbols being found for
+## the section. The test uses YAML for the input, as we need a fully linked ELF
+## to reproduce the original failure.
+
+# RUN: yaml2obj %s -o %t1 -D SECTION=.second
+# RUN: llvm-objdump -d %t1 | FileCheck %s
+# RUN: yaml2obj %s -o %t2 -D SECTION=.first
+## FIXME: this case should print "<target>" too.
+# RUN: llvm-objdump -d %t2 | FileCheck %s --check-prefix=FAIL
+
+# CHECK: callq 0x5 <target>
+# FAIL:  callq 0x5{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .caller
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x0
+    Content: e800000000 # Call instruction to next address.
+  - Name:    .first
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x5
+  - Name:    .second
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x5
+Symbols:
+  - Name:    target
+    Section: [[SECTION]]
+    Value:   0x5
