@@ -375,7 +375,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
                    " is not a call instruction");
     MachineFunction::CallSiteInfo CSInfo;
     for (auto ArgRegPair : YamlCSInfo.ArgForwardingRegs) {
-      unsigned Reg = 0;
+      Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, ArgRegPair.Reg.Value, Error))
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.emplace_back(Reg, ArgRegPair.ArgNo);
@@ -557,10 +557,10 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
 
   // Parse the liveins.
   for (const auto &LiveIn : YamlMF.LiveIns) {
-    unsigned Reg = 0;
+    Register Reg;
     if (parseNamedRegisterReference(PFS, Reg, LiveIn.Register.Value, Error))
       return error(Error, LiveIn.Register.SourceRange);
-    unsigned VReg = 0;
+    Register VReg;
     if (!LiveIn.VirtualRegister.Value.empty()) {
       VRegInfo *Info;
       if (parseVirtualRegisterReference(PFS, Info, LiveIn.VirtualRegister.Value,
@@ -576,7 +576,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
   if (YamlMF.CalleeSavedRegisters) {
     SmallVector<MCPhysReg, 16> CalleeSavedRegisters;
     for (const auto &RegSource : YamlMF.CalleeSavedRegisters.getValue()) {
-      unsigned Reg = 0;
+      Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
         return error(Error, RegSource.SourceRange);
       CalleeSavedRegisters.push_back(Reg);
@@ -594,7 +594,7 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   bool Error = false;
   // Create VRegs
   auto populateVRegInfo = [&] (const VRegInfo &Info, Twine Name) {
-    unsigned Reg = Info.VReg;
+    Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
       error(Twine("Cannot determine class/bank of virtual register ") +
@@ -765,7 +765,7 @@ bool MIRParserImpl::parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
     const yaml::StringValue &RegisterSource, bool IsRestored, int FrameIdx) {
   if (RegisterSource.Value.empty())
     return false;
-  unsigned Reg = 0;
+  Register Reg;
   SMDiagnostic Error;
   if (parseNamedRegisterReference(PFS, Reg, RegisterSource.Value, Error))
     return error(Error, RegisterSource.SourceRange);
