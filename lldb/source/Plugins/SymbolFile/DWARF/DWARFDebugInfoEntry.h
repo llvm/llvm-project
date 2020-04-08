@@ -172,6 +172,8 @@ public:
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
+  bool IsGlobalOrStaticVariable() const;
+
 protected:
   dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
   uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
