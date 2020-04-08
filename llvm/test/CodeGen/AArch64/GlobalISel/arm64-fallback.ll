@@ -136,7 +136,7 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3, %4 :: (store 12 into `i96* undef`, align 16) (in function: nonpow2_add_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s96) = G_ADD %2:_, %2:_ (in function: nonpow2_add_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
 define void @nonpow2_add_narrowing() {
@@ -147,7 +147,7 @@ define void @nonpow2_add_narrowing() {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3, %4 :: (store 12 into `i96* undef`, align 16) (in function: nonpow2_add_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %5:_(s96) = G_INSERT %18:_, %16:_(s32), 64 (in function: nonpow2_or_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_or_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_or_narrowing:
 define void @nonpow2_or_narrowing() {
@@ -160,7 +160,7 @@ define void @nonpow2_or_narrowing() {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR remark: <unknown>:0:0: unable to legalize instruction: G_STORE %0, %1 :: (store 12 into `i96* undef`, align 16) (in function: nonpow2_load_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s96) = G_INSERT %10:_, %8:_(s32), 64 (in function: nonpow2_load_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_load_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_load_narrowing:
 define void @nonpow2_load_narrowing() {
