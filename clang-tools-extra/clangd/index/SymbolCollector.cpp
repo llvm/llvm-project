@@ -283,6 +283,18 @@ bool SymbolCollector::handleDeclOccurrence(
   if (!ID)
     return true;
 
+  // ND is the canonical (i.e. first) declaration. If it's in the main file
+  // (which is not a header), then no public declaration was visible, so assume
+  // it's main-file only.
+  bool IsMainFileOnly =
+      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
+      !isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+                    ASTCtx->getLangOpts());
+  // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
+  if (ASTNode.OrigD->isImplicit() ||
+      !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
+    return true;
+
   // Note: we need to process relations for all decl occurrences, including
   // refs, because the indexing code only populates relations for specific
   // occurrences. For example, RelationBaseOf is only populated for the
@@ -297,17 +309,6 @@ bool SymbolCollector::handleDeclOccurrence(
   if (IsOnlyRef && !CollectRef)
     return true;
 
-  // ND is the canonical (i.e. first) declaration. If it's in the main file
-  // (which is not a header), then no public declaration was visible, so assume
-  // it's main-file only.
-  bool IsMainFileOnly =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
-      !isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
-                    ASTCtx->getLangOpts());
-  // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
-  if (ASTNode.OrigD->isImplicit() ||
-      !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
-    return true;
   // Do not store references to main-file symbols.
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's

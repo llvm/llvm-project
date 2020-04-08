@@ -116,9 +116,10 @@ SymbolSlab TestTU::headerSymbols() const {
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
   auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true);
-  Idx->updatePreamble(Filename, /*Version=*/"null", AST.getASTContext(),
-                      AST.getPreprocessorPtr(), AST.getCanonicalIncludes());
-  Idx->updateMain(Filename, AST);
+  Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
+                      AST.getASTContext(), AST.getPreprocessorPtr(),
+                      AST.getCanonicalIncludes());
+  Idx->updateMain(testPath(Filename), AST);
   return std::move(Idx);
 }
 
