@@ -27,7 +27,10 @@ enum class CudaVersion {
   CUDA_92,
   CUDA_100,
   CUDA_101,
-  LATEST = CUDA_101,
+  CUDA_102,
+  CUDA_110,
+  LATEST = CUDA_110,
+  LATEST_SUPPORTED = CUDA_101,
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
@@ -50,6 +53,7 @@ enum class CudaArch {
   SM_70,
   SM_72,
   SM_75,
+  SM_80,
   GFX600,
   GFX601,
   GFX700,
