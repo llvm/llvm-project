@@ -11,18 +11,20 @@
 # BEFORE:        0:       00 00 00 94     bl      #0
 # BEFORE:        4:       00 00 00 94     bl      #0
 # BEFORE:        8:       c0 03 5f d6     ret
+# BEFORE:        c:       ff              <unknown>
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
-# AFTER:  140001000:      03 00 00 94     bl      #12
-# AFTER:  140001004:      05 00 00 94     bl      #20
+# AFTER:  140001000:      04 00 00 94     bl      #16
+# AFTER:  140001004:      06 00 00 94     bl      #24
 # AFTER:  140001008:      c0 03 5f d6     ret
-# AFTER:  14000100c:      10 00 00 b0     adrp    x16, #4096
-# AFTER:  140001010:      10 32 40 f9     ldr     x16, [x16, #96]
-# AFTER:  140001014:      00 02 1f d6     br      x16
-# AFTER:  140001018:      10 00 00 b0     adrp    x16, #4096
-# AFTER:  14000101c:      10 3a 40 f9     ldr     x16, [x16, #112]
-# AFTER:  140001020:      00 02 1f d6     br      x16
+# AFTER:  14000100c:      ff cc cc cc     <unknown>
+# AFTER:  140001010:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  140001014:      10 32 40 f9     ldr     x16, [x16, #96]
+# AFTER:  140001018:      00 02 1f d6     br      x16
+# AFTER:  14000101c:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  140001020:      10 3a 40 f9     ldr     x16, [x16, #112]
+# AFTER:  140001024:      00 02 1f d6     br      x16
 
 # IMPORTS: Import {
 # IMPORTS:   Name: library.dll
@@ -45,7 +47,7 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     0000009400000094C0035FD6
+    SectionData:     0000009400000094C0035FD6FF
     Relocations:
       - VirtualAddress:  0
         SymbolName:      function

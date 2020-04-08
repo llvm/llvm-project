@@ -365,7 +365,9 @@ public:
 
 class ThunkChunkARM : public NonSectionChunk {
 public:
-  ThunkChunkARM(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
+  ThunkChunkARM(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {
+    setAlignment(2);
+  }
 
   size_t getSize() const override { return sizeof(thunkARM); }
 
@@ -385,7 +387,9 @@ public:
 
 class TailMergeChunkARM : public NonSectionChunk {
 public:
-  TailMergeChunkARM(Chunk *d, Defined *h) : desc(d), helper(h) {}
+  TailMergeChunkARM(Chunk *d, Defined *h) : desc(d), helper(h) {
+    setAlignment(2);
+  }
 
   size_t getSize() const override { return sizeof(tailMergeARM); }
 
@@ -405,7 +409,9 @@ public:
 
 class ThunkChunkARM64 : public NonSectionChunk {
 public:
-  ThunkChunkARM64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
+  ThunkChunkARM64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {
+    setAlignment(4);
+  }
 
   size_t getSize() const override { return sizeof(thunkARM64); }
 
@@ -422,7 +428,9 @@ public:
 
 class TailMergeChunkARM64 : public NonSectionChunk {
 public:
-  TailMergeChunkARM64(Chunk *d, Defined *h) : desc(d), helper(h) {}
+  TailMergeChunkARM64(Chunk *d, Defined *h) : desc(d), helper(h) {
+    setAlignment(4);
+  }
 
   size_t getSize() const override { return sizeof(tailMergeARM64); }
 

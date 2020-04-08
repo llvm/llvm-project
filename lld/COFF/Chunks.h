@@ -486,7 +486,9 @@ public:
 
 class ImportThunkChunkARM : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM(Defined *s) : ImportThunkChunk(s) {}
+  explicit ImportThunkChunkARM(Defined *s) : ImportThunkChunk(s) {
+    setAlignment(2);
+  }
   size_t getSize() const override { return sizeof(importThunkARM); }
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
@@ -494,14 +496,16 @@ public:
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(Defined *s) : ImportThunkChunk(s) {}
+  explicit ImportThunkChunkARM64(Defined *s) : ImportThunkChunk(s) {
+    setAlignment(4);
+  }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
 };
 
 class RangeExtensionThunkARM : public NonSectionChunk {
 public:
-  explicit RangeExtensionThunkARM(Defined *t) : target(t) {}
+  explicit RangeExtensionThunkARM(Defined *t) : target(t) { setAlignment(2); }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 
