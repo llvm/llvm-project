@@ -591,10 +591,9 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   // infinite loop).
   Type *Dummy;
   if (!Ty->isIntegerTy() && Ty->isSized() &&
-      !(Ty->isVectorTy() && Ty->getVectorIsScalable()) &&
+      !(Ty->isVectorTy() && cast<VectorType>(Ty)->isScalable()) &&
       DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
-      DL.typeSizeEqualsStoreSize(Ty) &&
-      !DL.isNonIntegralPointerType(Ty) &&
+      DL.typeSizeEqualsStoreSize(Ty) && !DL.isNonIntegralPointerType(Ty) &&
       !isMinMaxWithLoads(
           peekThroughBitcast(LI.getPointerOperand(), /*OneUseOnly=*/true),
           Dummy)) {
