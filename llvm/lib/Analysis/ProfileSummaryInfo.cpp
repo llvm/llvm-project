@@ -70,6 +70,23 @@ static cl::opt<bool> PartialProfile(
     "partial-profile", cl::Hidden, cl::init(false),
     cl::desc("Specify the current profile is used as a partial profile."));
 
+cl::opt<bool> ScalePartialSampleProfileWorkingSetSize(
+    "scale-partial-sample-profile-working-set-size", cl::Hidden,
+    cl::init(false),
+    cl::desc(
+        "If true, scale the working set size of the partial sample profile "
+        "by the partial profile ratio to reflect the size of the program "
+        "being compiled."));
+
+static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
+    "partial-sample-profile-working-set-size-scale-factor", cl::Hidden,
+    cl::init(0.008),
+    cl::desc("The scale factor used to scale the working set size of the "
+             "partial sample profile along with the partial profile ratio. "
+             "This includes the factor of the profile counter per block "
+             "and the factor to scale the working set size to use the same "
+             "shared thresholds as PGO."));
+
 // Find the summary entry for a desired percentile of counts.
 static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
                                                         uint64_t Percentile) {
@@ -280,10 +297,23 @@ void ProfileSummaryInfo::computeThresholds() {
     ColdCountThreshold = ProfileSummaryColdCount;
   assert(ColdCountThreshold <= HotCountThreshold &&
          "Cold count threshold cannot exceed hot count threshold!");
-  HasHugeWorkingSetSize =
-      HotEntry.NumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
-  HasLargeWorkingSetSize =
-      HotEntry.NumCounts > ProfileSummaryLargeWorkingSetSizeThreshold;
+  if (!hasPartialSampleProfile() || !ScalePartialSampleProfileWorkingSetSize) {
+    HasHugeWorkingSetSize =
+        HotEntry.NumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
+    HasLargeWorkingSetSize =
+        HotEntry.NumCounts > ProfileSummaryLargeWorkingSetSizeThreshold;
+  } else {
+    // Scale the working set size of the partial sample profile to reflect the
+    // size of the program being compiled.
+    double PartialProfileRatio = Summary->getPartialProfileRatio();
+    uint64_t ScaledHotEntryNumCounts =
+        static_cast<uint64_t>(HotEntry.NumCounts * PartialProfileRatio *
+                              PartialSampleProfileWorkingSetSizeScaleFactor);
+    HasHugeWorkingSetSize =
+        ScaledHotEntryNumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
+    HasLargeWorkingSetSize =
+        ScaledHotEntryNumCounts > ProfileSummaryLargeWorkingSetSizeThreshold;
+  }
 }
 
 Optional<uint64_t>
