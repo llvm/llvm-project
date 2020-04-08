@@ -11,7 +11,7 @@
 
 ---
 name: testIndexForm1
-#CHECK : name : testIndexForm1
+#CHECK: name: testIndexForm1
 # ToBeDeletedReg equals to ScaleReg
 tracksRegLiveness: true
 body: |
@@ -27,7 +27,7 @@ body: |
 ...
 ---
 name: testIndexForm2
-#CHECK : name : testIndexForm2
+#CHECK: name: testIndexForm2
 # ToBeDeletedReg equals to ToBeChangedReg
 tracksRegLiveness: true
 body: |
@@ -43,7 +43,7 @@ body: |
 ...
 ---
 name: testIndexForm3
-#CHECK : name : testIndexForm3
+#CHECK: name: testIndexForm3
 # There is other use for ToBeDeletedReg between ADD instr and Imm instr
 tracksRegLiveness: true
 body: |
@@ -61,7 +61,7 @@ body: |
 ...
 ---
 name: testIndexForm4
-#CHECK : name : testIndexForm3
+#CHECK: name: testIndexForm4
 # There is other use for ToBeChangedReg between ADDI instr and ADD instr
 tracksRegLiveness: true
 body: |
@@ -79,7 +79,7 @@ body: |
 ...
 ---
 name: testIndexForm5
-#CHECK : name : testIndexForm5
+#CHECK: name: testIndexForm5
 # ToBeChangedReg has no killed flag
 tracksRegLiveness: true
 body: |
@@ -97,7 +97,7 @@ body: |
 ...
 ---
 name: testIndexForm6
-#CHECK : name : testIndexForm6
+#CHECK: name: testIndexForm6
 # ToBeDeletedReg has no killed flag
 tracksRegLiveness: true
 body: |
@@ -114,7 +114,7 @@ body: |
 ...
 ---
 name: testIndexForm7
-#CHECK : name : testIndexForm7
+#CHECK: name: testIndexForm7
 # There is other def for ToBeChangedReg between ADD instr and Imm instr
 tracksRegLiveness: true
 body: |
@@ -134,7 +134,7 @@ body: |
 ...
 ---
 name: testIndexForm8
-#CHECK : name : testIndexForm8
+#CHECK: name: testIndexForm8
 # There is other def for ScaleReg between ADD instr and Imm instr
 tracksRegLiveness: true
 body: |
@@ -154,6 +154,7 @@ body: |
 ...
 ---
 name: testR0
+#CHECK: name: testR0
 # Give up the folding if the register is R0/X0
 tracksRegLiveness: true
 body:             |
