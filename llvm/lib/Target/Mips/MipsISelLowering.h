@@ -353,14 +353,14 @@ class TargetRegisterClass;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
