@@ -1,26 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
 
-typedef __typeof__(sizeof(int)) size_t;
-typedef __typeof__(sizeof(int)) fpos_t;
-typedef struct _IO_FILE FILE;
-#define SEEK_SET  0  /* Seek from beginning of file.  */
-#define SEEK_CUR  1  /* Seek from current position.  */
-#define SEEK_END  2  /* Seek from end of file.  */
-extern FILE *fopen(const char *path, const char *mode);
-extern FILE *tmpfile(void);
-extern int fclose(FILE *fp);
-extern size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-extern size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-extern int fseek (FILE *__stream, long int __off, int __whence);
-extern long int ftell (FILE *__stream);
-extern void rewind (FILE *__stream);
-extern int fgetpos(FILE *stream, fpos_t *pos);
-extern int fsetpos(FILE *stream, const fpos_t *pos);
-extern void clearerr(FILE *stream);
-extern int feof(FILE *stream);
-extern int ferror(FILE *stream);
-extern int fileno(FILE *stream);
-extern FILE *freopen(const char *pathname, const char *mode, FILE *stream);
+#include "Inputs/system-header-simulator.h"
 
 void check_fread() {
   FILE *fp = tmpfile();

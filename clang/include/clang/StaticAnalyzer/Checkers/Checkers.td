@@ -1400,6 +1400,11 @@ def TaintTesterChecker : Checker<"TaintTest">,
   HelpText<"Mark tainted symbols as such.">,
   Documentation<NotDocumented>;
 
+def StreamTesterChecker : Checker<"StreamTester">,
+  HelpText<"Add test functions to StreamChecker for test and debugging purposes.">,
+  Dependencies<[StreamChecker]>,
+  Documentation<NotDocumented>;
+
 def ExprInspectionChecker : Checker<"ExprInspection">,
   HelpText<"Check the analyzer's understanding of expressions">,
   Documentation<NotDocumented>;
