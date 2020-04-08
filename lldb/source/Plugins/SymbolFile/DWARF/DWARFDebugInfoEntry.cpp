@@ -1016,6 +1016,29 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
   return nullptr;
 }
 
+bool DWARFDebugInfoEntry::IsGlobalOrStaticVariable() const {
+  if (Tag() != DW_TAG_variable)
+    return false;
+  const DWARFDebugInfoEntry *parent_die = GetParent();
+  while (parent_die != nullptr) {
+    switch (parent_die->Tag()) {
+    case DW_TAG_subprogram:
+    case DW_TAG_lexical_block:
+    case DW_TAG_inlined_subroutine:
+      return false;
+
+    case DW_TAG_compile_unit:
+    case DW_TAG_partial_unit:
+      return true;
+
+    default:
+      break;
+    }
+    parent_die = parent_die->GetParent();
+  }
+  return false;
+}
+
 bool DWARFDebugInfoEntry::operator==(const DWARFDebugInfoEntry &rhs) const {
   return m_offset == rhs.m_offset && m_parent_idx == rhs.m_parent_idx &&
          m_sibling_idx == rhs.m_sibling_idx &&
