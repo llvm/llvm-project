@@ -37,6 +37,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
 
@@ -67,6 +68,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<TargetPassConfig>();
+    AU.addRequired<LoopInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -83,7 +85,7 @@ private:
   // Compute the scale of this gather/scatter instruction
   int computeScale(unsigned GEPElemSize, unsigned MemoryElemSize);
 
-  bool lowerGather(IntrinsicInst *I);
+  Value *lowerGather(IntrinsicInst *I);
   // Create a gather from a base + vector of offsets
   Value *tryCreateMaskedGatherOffset(IntrinsicInst *I, Value *Ptr,
                                      Instruction *&Root, IRBuilder<> &Builder);
@@ -91,13 +93,22 @@ private:
   Value *tryCreateMaskedGatherBase(IntrinsicInst *I, Value *Ptr,
                                    IRBuilder<> &Builder);
 
-  bool lowerScatter(IntrinsicInst *I);
+  Value *lowerScatter(IntrinsicInst *I);
   // Create a scatter to a base + vector of offsets
-  Value *tryCreateMaskedScatterOffset(IntrinsicInst *I, Value *Ptr,
+  Value *tryCreateMaskedScatterOffset(IntrinsicInst *I, Value *Offsets,
                                       IRBuilder<> &Builder);
   // Create a scatter to a vector of pointers
   Value *tryCreateMaskedScatterBase(IntrinsicInst *I, Value *Ptr,
                                     IRBuilder<> &Builder);
+
+  // Check whether these offsets could be moved out of the loop they're in
+  bool optimiseOffsets(Value *Offsets, BasicBlock *BB, LoopInfo *LI);
+  // Pushes the given add out of the loop
+  void pushOutAdd(PHINode *&Phi, Value *OffsSecondOperand, unsigned StartIndex);
+  // Pushes the given mul out of the loop
+  void pushOutMul(PHINode *&Phi, Value *IncrementPerRound,
+                  Value *OffsSecondOperand, unsigned LoopIncrement,
+                  IRBuilder<> &Builder);
 };
 
 } // end anonymous namespace
@@ -205,7 +216,7 @@ int MVEGatherScatterLowering::computeScale(unsigned GEPElemSize,
   return -1;
 }
 
-bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
+Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   using namespace PatternMatch;
   LLVM_DEBUG(dbgs() << "masked gathers: checking transform preconditions\n");
 
@@ -220,7 +231,7 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
 
   if (!isLegalTypeAndAlignment(Ty->getVectorNumElements(),
                                Ty->getScalarSizeInBits(), Alignment))
-    return false;
+    return nullptr;
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
@@ -233,7 +244,7 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   if (!Load)
     Load = tryCreateMaskedGatherBase(I, Ptr, Builder);
   if (!Load)
-    return false;
+    return nullptr;
 
   if (!isa<UndefValue>(PassThru) && !match(PassThru, m_Zero())) {
     LLVM_DEBUG(dbgs() << "masked gathers: found non-trivial passthru - "
@@ -247,12 +258,14 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
     // If this was an extending gather, we need to get rid of the sext/zext
     // sext/zext as well as of the gather itself
     I->eraseFromParent();
+
   LLVM_DEBUG(dbgs() << "masked gathers: successfully built masked gather\n");
-  return true;
+  return Load;
 }
 
-Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
-    IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
+Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
+                                                           Value *Ptr,
+                                                           IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Type *Ty = I->getType();
   LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
@@ -287,7 +300,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     if (!I->hasOneUse())
       return nullptr;
 
-    // The correct root to replace is the not the CallInst itself, but the
+    // The correct root to replace is not the CallInst itself, but the
     // instruction which extends it
     Extend = cast<Instruction>(*I->users().begin());
     if (isa<SExtInst>(Extend)) {
@@ -334,7 +347,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
          Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
 }
 
-bool MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
+Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   using namespace PatternMatch;
   LLVM_DEBUG(dbgs() << "masked scatters: checking transform preconditions\n");
 
@@ -348,7 +361,7 @@ bool MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
 
   if (!isLegalTypeAndAlignment(Ty->getVectorNumElements(),
                                Ty->getScalarSizeInBits(), Alignment))
-    return false;
+    return nullptr;
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
@@ -360,12 +373,12 @@ bool MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   if (!Store)
     Store = tryCreateMaskedScatterBase(I, Ptr, Builder);
   if (!Store)
-    return false;
+    return nullptr;
 
   LLVM_DEBUG(dbgs() << "masked scatters: successfully built masked scatter\n");
   I->replaceAllUsesWith(Store);
   I->eraseFromParent();
-  return true;
+  return Store;
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
@@ -445,6 +458,263 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
          Builder.getInt32(Scale)});
 }
 
+void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
+                                          Value *OffsSecondOperand,
+                                          unsigned StartIndex) {
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising add instruction\n");
+  Instruction *InsertionPoint;
+  if (isa<Instruction>(OffsSecondOperand))
+    InsertionPoint = &cast<Instruction>(OffsSecondOperand)->getParent()->back();
+  else
+    InsertionPoint =
+        &cast<Instruction>(Phi->getIncomingBlock(StartIndex)->back());
+  // Initialize the phi with a vector that contains a sum of the constants
+  Instruction *NewIndex = BinaryOperator::Create(
+      Instruction::Add, Phi->getIncomingValue(StartIndex), OffsSecondOperand,
+      "PushedOutAdd", InsertionPoint);
+  unsigned IncrementIndex = StartIndex == 0 ? 1 : 0;
+
+  // Order such that start index comes first (this reduces mov's)
+  Phi->addIncoming(NewIndex, Phi->getIncomingBlock(StartIndex));
+  Phi->addIncoming(Phi->getIncomingValue(IncrementIndex),
+                   Phi->getIncomingBlock(IncrementIndex));
+  Phi->removeIncomingValue(IncrementIndex);
+  Phi->removeIncomingValue(StartIndex);
+}
+
+void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
+                                          Value *IncrementPerRound,
+                                          Value *OffsSecondOperand,
+                                          unsigned LoopIncrement,
+                                          IRBuilder<> &Builder) {
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising mul instruction\n");
+
+  // Create a new scalar add outside of the loop and transform it to a splat
+  // by which loop variable can be incremented
+  Instruction *InsertionPoint;
+  if (isa<Instruction>(OffsSecondOperand))
+    InsertionPoint = &cast<Instruction>(OffsSecondOperand)->getParent()->back();
+  else
+    InsertionPoint = &cast<Instruction>(
+        Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back());
+
+  // Create a new index
+  Value *StartIndex = BinaryOperator::Create(
+      Instruction::Mul, Phi->getIncomingValue(LoopIncrement == 1 ? 0 : 1),
+      OffsSecondOperand, "PushedOutMul", InsertionPoint);
+
+  Instruction *Product =
+      BinaryOperator::Create(Instruction::Mul, IncrementPerRound,
+                             OffsSecondOperand, "Product", InsertionPoint);
+  // Increment NewIndex by Product instead of the multiplication
+  Instruction *NewIncrement = BinaryOperator::Create(
+      Instruction::Add, Phi, Product, "IncrementPushedOutMul",
+      cast<Instruction>(Phi->getIncomingBlock(LoopIncrement)->back())
+          .getPrevNode());
+
+  Phi->addIncoming(StartIndex,
+                   Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1));
+  Phi->addIncoming(NewIncrement, Phi->getIncomingBlock(LoopIncrement));
+  Phi->removeIncomingValue((unsigned)0);
+  Phi->removeIncomingValue((unsigned)0);
+  return;
+}
+
+// Return true if the given intrinsic is a gather or scatter
+bool isGatherScatter(IntrinsicInst *IntInst) {
+  if (IntInst == nullptr)
+    return false;
+  unsigned IntrinsicID = IntInst->getIntrinsicID();
+  return (IntrinsicID == Intrinsic::masked_gather ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset_predicated ||
+          IntrinsicID == Intrinsic::masked_scatter ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset_predicated);
+}
+
+// Check whether all usages of this instruction are as offsets of
+// gathers/scatters or simple arithmetics only used by gathers/scatters
+bool hasAllGatScatUsers(Instruction *I) {
+  if (I->hasNUses(0)) {
+    return false;
+  }
+  bool Gatscat = true;
+  for (User *U : I->users()) {
+    if (!isa<Instruction>(U))
+      return false;
+    if (isa<GetElementPtrInst>(U) ||
+        isGatherScatter(dyn_cast<IntrinsicInst>(U))) {
+      return Gatscat;
+    } else {
+      unsigned OpCode = cast<Instruction>(U)->getOpcode();
+      if ((OpCode == Instruction::Add || OpCode == Instruction::Mul) &&
+          hasAllGatScatUsers(cast<Instruction>(U))) {
+        continue;
+      }
+      return false;
+    }
+  }
+  return Gatscat;
+}
+
+bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
+                                               LoopInfo *LI) {
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: trying to optimize\n");
+  // Optimise the addresses of gathers/scatters by moving invariant
+  // calculations out of the loop
+  if (!isa<Instruction>(Offsets))
+    return false;
+  Instruction *Offs = cast<Instruction>(Offsets);
+  if (Offs->getOpcode() != Instruction::Add &&
+      Offs->getOpcode() != Instruction::Mul)
+    return false;
+  Loop *L = LI->getLoopFor(BB);
+  if (L == nullptr)
+    return false;
+  if (!Offs->hasOneUse()) {
+    if (!hasAllGatScatUsers(Offs))
+      return false;
+  }
+
+  // Find out which, if any, operand of the instruction
+  // is a phi node
+  PHINode *Phi;
+  int OffsSecondOp;
+  if (isa<PHINode>(Offs->getOperand(0))) {
+    Phi = cast<PHINode>(Offs->getOperand(0));
+    OffsSecondOp = 1;
+  } else if (isa<PHINode>(Offs->getOperand(1))) {
+    Phi = cast<PHINode>(Offs->getOperand(1));
+    OffsSecondOp = 0;
+  } else {
+    bool Changed = true;
+    if (isa<Instruction>(Offs->getOperand(0)) &&
+        L->contains(cast<Instruction>(Offs->getOperand(0))))
+      Changed |= optimiseOffsets(Offs->getOperand(0), BB, LI);
+    if (isa<Instruction>(Offs->getOperand(1)) &&
+        L->contains(cast<Instruction>(Offs->getOperand(1))))
+      Changed |= optimiseOffsets(Offs->getOperand(1), BB, LI);
+    if (!Changed) {
+      return false;
+    } else {
+      if (isa<PHINode>(Offs->getOperand(0))) {
+        Phi = cast<PHINode>(Offs->getOperand(0));
+        OffsSecondOp = 1;
+      } else if (isa<PHINode>(Offs->getOperand(1))) {
+        Phi = cast<PHINode>(Offs->getOperand(1));
+        OffsSecondOp = 0;
+      } else {
+        return false;
+      }
+    }
+  }
+  // A phi node we want to perform this function on should be from the
+  // loop header, and shouldn't have more than 2 incoming values
+  if (Phi->getParent() != L->getHeader() ||
+      Phi->getNumIncomingValues() != 2)
+    return false;
+
+  // The phi must be an induction variable
+  Instruction *Op;
+  int IncrementingBlock = -1;
+
+  for (int i = 0; i < 2; i++)
+    if ((Op = dyn_cast<Instruction>(Phi->getIncomingValue(i))) != nullptr)
+      if (Op->getOpcode() == Instruction::Add &&
+          (Op->getOperand(0) == Phi || Op->getOperand(1) == Phi))
+        IncrementingBlock = i;
+  if (IncrementingBlock == -1)
+    return false;
+
+  Instruction *IncInstruction =
+      cast<Instruction>(Phi->getIncomingValue(IncrementingBlock));
+
+  // If the phi is not used by anything else, we can just adapt it when
+  // replacing the instruction; if it is, we'll have to duplicate it
+  PHINode *NewPhi;
+  Value *IncrementPerRound = IncInstruction->getOperand(
+      (IncInstruction->getOperand(0) == Phi) ? 1 : 0);
+
+  // Get the value that is added to/multiplied with the phi
+  Value *OffsSecondOperand = Offs->getOperand(OffsSecondOp);
+
+  if (IncrementPerRound->getType() != OffsSecondOperand->getType())
+    // Something has gone wrong, abort
+    return false;
+
+  // Only proceed if the increment per round is a constant or an instruction
+  // which does not originate from within the loop
+  if (!isa<Constant>(IncrementPerRound) &&
+      !(isa<Instruction>(IncrementPerRound) &&
+        !L->contains(cast<Instruction>(IncrementPerRound))))
+    return false;
+
+  if (Phi->getNumUses() == 2) {
+    // No other users -> reuse existing phi (One user is the instruction
+    // we're looking at, the other is the phi increment)
+    if (IncInstruction->getNumUses() != 1) {
+      // If the incrementing instruction does have more users than
+      // our phi, we need to copy it
+      IncInstruction = BinaryOperator::Create(
+          Instruction::BinaryOps(IncInstruction->getOpcode()), Phi,
+          IncrementPerRound, "LoopIncrement", IncInstruction);
+      Phi->setIncomingValue(IncrementingBlock, IncInstruction);
+    }
+    NewPhi = Phi;
+  } else {
+    // There are other users -> create a new phi
+    NewPhi = PHINode::Create(Phi->getType(), 0, "NewPhi", Phi);
+    std::vector<Value *> Increases;
+    // Copy the incoming values of the old phi
+    NewPhi->addIncoming(Phi->getIncomingValue(IncrementingBlock == 1 ? 0 : 1),
+                        Phi->getIncomingBlock(IncrementingBlock == 1 ? 0 : 1));
+    IncInstruction = BinaryOperator::Create(
+        Instruction::BinaryOps(IncInstruction->getOpcode()), NewPhi,
+        IncrementPerRound, "LoopIncrement", IncInstruction);
+    NewPhi->addIncoming(IncInstruction,
+                        Phi->getIncomingBlock(IncrementingBlock));
+    IncrementingBlock = 1;
+  }
+
+  IRBuilder<> Builder(BB->getContext());
+  Builder.SetInsertPoint(Phi);
+  Builder.SetCurrentDebugLocation(Offs->getDebugLoc());
+
+  switch (Offs->getOpcode()) {
+  case Instruction::Add:
+    pushOutAdd(NewPhi, OffsSecondOperand, IncrementingBlock == 1 ? 0 : 1);
+    break;
+  case Instruction::Mul:
+    pushOutMul(NewPhi, IncrementPerRound, OffsSecondOperand, IncrementingBlock,
+               Builder);
+    break;
+  default:
+    return false;
+  }
+  LLVM_DEBUG(
+      dbgs() << "masked gathers/scatters: simplified loop variable add/mul\n");
+
+  // The instruction has now been "absorbed" into the phi value
+  Offs->replaceAllUsesWith(NewPhi);
+  if (Offs->hasNUses(0))
+    Offs->eraseFromParent();
+  // Clean up the old increment in case it's unused because we built a new
+  // one
+  if (IncInstruction->hasNUses(0))
+    IncInstruction->eraseFromParent();
+
+  return true;
+}
+
 bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!EnableMaskedGatherScatters)
     return false;
@@ -455,6 +725,8 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
     return false;
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
+  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
@@ -466,10 +738,30 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   }
 
   bool Changed = false;
-  for (IntrinsicInst *I : Gathers)
-    Changed |= lowerGather(I);
-  for (IntrinsicInst *I : Scatters)
-    Changed |= lowerScatter(I);
+  for (unsigned i = 0; i < Gathers.size(); i++) {
+    IntrinsicInst *I = Gathers[i];
+    if (isa<GetElementPtrInst>(I->getArgOperand(0)))
+      optimiseOffsets(cast<Instruction>(I->getArgOperand(0))->getOperand(1),
+                      I->getParent(), &LI);
+    Value *L = lowerGather(I);
+    if (L == nullptr)
+      continue;
+    // Get rid of any now dead instructions
+    SimplifyInstructionsInBlock(cast<Instruction>(L)->getParent());
+    Changed = true;
+  }
 
+  for (unsigned i = 0; i < Scatters.size(); i++) {
+    IntrinsicInst *I = Scatters[i];
+    if (isa<GetElementPtrInst>(I->getArgOperand(1)))
+      optimiseOffsets(cast<Instruction>(I->getArgOperand(1))->getOperand(1),
+                      I->getParent(), &LI);
+    Value *S = lowerScatter(I);
+    if (S == nullptr)
+      continue;
+    // Get rid of any now dead instructions
+    SimplifyInstructionsInBlock(cast<Instruction>(S)->getParent());
+    Changed = true;
+  }
   return Changed;
 }
