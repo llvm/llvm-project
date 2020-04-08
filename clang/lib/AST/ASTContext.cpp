@@ -1892,24 +1892,24 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::IncompleteArray:
   case Type::VariableArray:
-    Width = 0;
-    Align = getTypeAlign(cast<ArrayType>(T)->getElementType());
-    break;
-
   case Type::ConstantArray: {
-    const auto *CAT = cast<ConstantArrayType>(T);
+    // Model non-constant sized arrays as size zero, but track the alignment.
+    uint64_t Size = 0;
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(T))
+      Size = CAT->getSize().getZExtValue();
 
-    TypeInfo EltInfo = getTypeInfo(CAT->getElementType());
-    uint64_t Size = CAT->getSize().getZExtValue();
+    TypeInfo EltInfo = getTypeInfo(cast<ArrayType>(T)->getElementType());
     assert((Size == 0 || EltInfo.Width <= (uint64_t)(-1) / Size) &&
            "Overflow in array type bit size evaluation");
     Width = EltInfo.Width * Size;
     Align = EltInfo.Align;
+    AlignIsRequired = EltInfo.AlignIsRequired;
     if (!getTargetInfo().getCXXABI().isMicrosoft() ||
         getTargetInfo().getPointerWidth(0) == 64)
       Width = llvm::alignTo(Width, Align);
     break;
   }
+
   case Type::ExtVector:
   case Type::Vector: {
     const auto *VT = cast<VectorType>(T);
