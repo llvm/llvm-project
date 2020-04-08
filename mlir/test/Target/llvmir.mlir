@@ -1202,7 +1202,7 @@ llvm.func @callFenceInst() {
   llvm.return
 }
 
-// CHECK-LABEL @passthrough
+// CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
 llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null-pointer-is-valid", ["foo", "bar"]]} {
   llvm.return
