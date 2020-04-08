@@ -3531,7 +3531,6 @@ void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ObjCTypeParamDecl *OTPDecl,
                                 ArrayRef<ObjCProtocolDecl *> protocols) {
   ID.AddPointer(OTPDecl);
-  ID.AddPointer(OTPDecl->getUnderlyingType().getAsOpaquePtr());
   ID.AddInteger(protocols.size());
   for (auto proto : protocols)
     ID.AddPointer(proto);

@@ -29,9 +29,7 @@ __attribute__((objc_root_class))
 @end
 
 @interface NSDictionary<K, V> : NSObject <NSCopying>
-+ (instancetype)dictionaryWithObjects:(const V [])objects
-                              forKeys:(const K <NSCopying> [])keys
-                                count:(NSUInteger)cnt;
++ (instancetype)dictionaryWithObjects:(const V [])objects forKeys:(const K [])keys count:(NSUInteger)cnt;
 @end
 
 void testArrayLiteral(void) {
@@ -50,11 +48,5 @@ void testDictionaryLiteral(void) {
     @"hello" : @17,
     @18 : @18, // expected-warning{{object of type 'NSNumber *' is not compatible with dictionary key type 'NSString *'}}
     @"world" : @"blah" // expected-warning{{object of type 'NSString *' is not compatible with dictionary value type 'NSNumber *'}}
-  };
-}
-
-void testCastingInDictionaryLiteral(NSString *arg) {
-  NSDictionary *dict = @{
-    (id)arg : @"foo",
   };
 }
