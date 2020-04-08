@@ -1404,6 +1404,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::SRA_ADDZE:       return "PPCISD::SRA_ADDZE";
   case PPCISD::CALL:            return "PPCISD::CALL";
   case PPCISD::CALL_NOP:        return "PPCISD::CALL_NOP";
+  case PPCISD::CALL_NOTOC:      return "PPCISD::CALL_NOTOC";
   case PPCISD::MTCTR:           return "PPCISD::MTCTR";
   case PPCISD::BCTRL:           return "PPCISD::BCTRL";
   case PPCISD::BCTRL_LOAD_TOC:  return "PPCISD::BCTRL_LOAD_TOC";
@@ -4689,6 +4690,16 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
                                     SelectionDAG& DAG) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
+  // FIXME: Tail calls are currently disabled when using PC Relative addressing.
+  // The issue is that PC Relative is only partially implemented and so there
+  // is currently a mix of functions that require the TOC and functions that do
+  // not require it. If we have A calls B calls C and both A and B require the
+  // TOC and C does not and is marked as clobbering R2 then it is not safe for
+  // B to tail call C. Since we do not have the information of whether or not
+  // a funciton needs to use the TOC here in this function we need to be
+  // conservatively safe and disable all tail calls for now.
+  if (Subtarget.isUsingPCRelativeCalls()) return false;
+
   if (DisableSCO && !TailCallOpt) return false;
 
   // Variadic argument functions are not supported.
@@ -5085,6 +5096,17 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     return PPCISD::BCTRL;
   }
 
+  // FIXME: At this moment indirect calls are treated ahead of the
+  // PC Relative condition because binaries can still contain a possible
+  // mix of functions that use a TOC and functions that do not use a TOC.
+  // Once the PC Relative feature is complete this condition should be moved
+  // up ahead of the indirect calls and should return a PPCISD::BCTRL for
+  // that case.
+  if (Subtarget.isUsingPCRelativeCalls()) {
+    assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
+    return PPCISD::CALL_NOTOC;
+  }
+
   // The ABIs that maintain a TOC pointer accross calls need to have a nop
   // immediately following the call instruction if the caller and callee may
   // have different TOC bases. At link time if the linker determines the calls
@@ -5094,8 +5116,8 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
   // will rewrite the nop to be a load of the TOC pointer from the linkage area
   // into gpr2.
   if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
-    return callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
-                                                  : PPCISD::CALL_NOP;
+      return callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
+                                                    : PPCISD::CALL_NOP;
 
   return PPCISD::CALL;
 }
@@ -5372,7 +5394,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // no way to mark dependencies as implicit here.
   // We will add the R2/X2 dependency in EmitInstrWithCustomInserter.
   if ((Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) &&
-      !CFlags.IsPatchPoint)
+       !CFlags.IsPatchPoint && !Subtarget.isUsingPCRelativeCalls())
     Ops.push_back(DAG.getRegister(Subtarget.getTOCPointerRegister(), RegVT));
 
   // Add implicit use of CR bit 6 for 32-bit SVR4 vararg calls
@@ -5398,7 +5420,8 @@ SDValue PPCTargetLowering::FinishCall(
     unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
     SmallVectorImpl<SDValue> &InVals, ImmutableCallSite CS) const {
 
-  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI())
+  if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
+      Subtarget.isAIXABI())
     setUsesTOCBasePtr(DAG);
 
   unsigned CallOpc =
@@ -11373,7 +11396,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::STACKMAP ||
       MI.getOpcode() == TargetOpcode::PATCHPOINT) {
     if (Subtarget.is64BitELFABI() &&
-        MI.getOpcode() == TargetOpcode::PATCHPOINT) {
+        MI.getOpcode() == TargetOpcode::PATCHPOINT &&
+        !Subtarget.isUsingPCRelativeCalls()) {
       // Call lowering should have added an r2 operand to indicate a dependence
       // on the TOC base pointer value. It can't however, because there is no
       // way to mark the dependence as implicit there, and so the stackmap code

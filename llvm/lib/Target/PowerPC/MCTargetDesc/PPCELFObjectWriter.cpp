@@ -86,6 +86,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       llvm_unreachable("Unimplemented");
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
+    case PPC::fixup_ppc_br24_notoc:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
       case MCSymbolRefExpr::VK_None:
@@ -96,6 +97,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         break;
       case MCSymbolRefExpr::VK_PPC_LOCAL:
         Type = ELF::R_PPC_LOCAL24PC;
+        break;
+      case MCSymbolRefExpr::VK_PPC_NOTOC:
+        Type = ELF::R_PPC64_REL24_NOTOC;
         break;
       }
       break;
@@ -431,6 +435,7 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
       return false;
 
     case ELF::R_PPC_REL24:
+    case ELF::R_PPC64_REL24_NOTOC:
       // If the target symbol has a local entry point, we must keep the
       // target symbol to preserve that information for the linker.
       // The "other" values are stored in the last 6 bits of the second byte.
