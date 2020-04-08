@@ -114,6 +114,7 @@ void test_for_alloc(Alloc& alloc)
 
 int main(int, char**)
 {
+  globalMemCounter.reset();
   {
     bare_allocator<DummyClass> alloc;
     test_for_alloc(alloc);

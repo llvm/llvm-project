@@ -62,7 +62,8 @@ public:
 
 int main(int, char**)
 {
-    {
+  globalMemCounter.reset();
+  {
     std::allocator<A> a;
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
@@ -110,7 +111,7 @@ int main(int, char**)
     DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
-    }
+  }
 #if TEST_STD_VER >= 11
     {
     std::allocator<move_only> a;
