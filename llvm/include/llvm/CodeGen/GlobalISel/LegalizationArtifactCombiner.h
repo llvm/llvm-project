@@ -278,6 +278,20 @@ public:
       return true;
     }
 
+    // trunc(trunc) -> trunc
+    Register TruncSrc;
+    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
+      // Always combine trunc(trunc) since the eventual resulting trunc must be
+      // legal anyway as it must be legal for all outputs of the consumer type
+      // set.
+      LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_TRUNC): " << MI);
+
+      Builder.buildTrunc(DstReg, TruncSrc);
+      UpdatedDefs.push_back(DstReg);
+      markInstAndDefDead(MI, *MRI.getVRegDef(TruncSrc), DeadInsts);
+      return true;
+    }
+
     return false;
   }
 
