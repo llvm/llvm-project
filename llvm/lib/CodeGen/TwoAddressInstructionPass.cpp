@@ -1419,7 +1419,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
             LV->addVirtualRegisterKilled(Reg, *NewMIs[1]);
           }
 
-          SmallVector<unsigned, 4> OrigRegs;
+          SmallVector<Register, 4> OrigRegs;
           if (LIS) {
             for (const MachineOperand &MO : MI.operands()) {
               if (MO.isReg())
@@ -1802,7 +1802,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     llvm_unreachable(nullptr);
   }
 
-  SmallVector<unsigned, 4> OrigRegs;
+  SmallVector<Register, 4> OrigRegs;
   if (LIS) {
     OrigRegs.push_back(MI.getOperand(0).getReg());
     for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
