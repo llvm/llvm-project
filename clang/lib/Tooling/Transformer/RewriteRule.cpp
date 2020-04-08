@@ -28,12 +28,11 @@ using ast_matchers::internal::DynTypedMatcher;
 
 using MatchResult = MatchFinder::MatchResult;
 
-Expected<SmallVector<transformer::detail::Transformation, 1>>
-transformer::detail::translateEdits(const MatchResult &Result,
-                                llvm::ArrayRef<ASTEdit> Edits) {
-  SmallVector<transformer::detail::Transformation, 1> Transformations;
-  for (const auto &Edit : Edits) {
-    Expected<CharSourceRange> Range = Edit.TargetRange(Result);
+static Expected<SmallVector<transformer::Edit, 1>>
+translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
+  SmallVector<transformer::Edit, 1> Edits;
+  for (const auto &E : ASTEdits) {
+    Expected<CharSourceRange> Range = E.TargetRange(Result);
     if (!Range)
       return Range.takeError();
     llvm::Optional<CharSourceRange> EditRange =
@@ -41,21 +40,33 @@ transformer::detail::translateEdits(const MatchResult &Result,
     // FIXME: let user specify whether to treat this case as an error or ignore
     // it as is currently done.
     if (!EditRange)
-      return SmallVector<Transformation, 0>();
-    auto Replacement = Edit.Replacement->eval(Result);
+      return SmallVector<Edit, 0>();
+    auto Replacement = E.Replacement->eval(Result);
     if (!Replacement)
       return Replacement.takeError();
-    transformer::detail::Transformation T;
+    transformer::Edit T;
     T.Range = *EditRange;
     T.Replacement = std::move(*Replacement);
-    Transformations.push_back(std::move(T));
+    Edits.push_back(std::move(T));
   }
-  return Transformations;
+  return Edits;
 }
 
-ASTEdit transformer::changeTo(RangeSelector S, TextGenerator Replacement) {
+EditGenerator transformer::editList(SmallVector<ASTEdit, 1> Edits) {
+  return [Edits = std::move(Edits)](const MatchResult &Result) {
+    return translateEdits(Result, Edits);
+  };
+}
+
+EditGenerator transformer::edit(ASTEdit Edit) {
+  return [Edit = std::move(Edit)](const MatchResult &Result) {
+    return translateEdits(Result, {Edit});
+  };
+}
+
+ASTEdit transformer::changeTo(RangeSelector Target, TextGenerator Replacement) {
   ASTEdit E;
-  E.TargetRange = std::move(S);
+  E.TargetRange = std::move(Target);
   E.Replacement = std::move(Replacement);
   return E;
 }
@@ -82,8 +93,9 @@ ASTEdit transformer::remove(RangeSelector S) {
   return change(std::move(S), std::make_shared<SimpleTextGenerator>(""));
 }
 
-RewriteRule transformer::makeRule(DynTypedMatcher M, SmallVector<ASTEdit, 1> Edits,
-                              TextGenerator Explanation) {
+RewriteRule transformer::makeRule(ast_matchers::internal::DynTypedMatcher M,
+                                  EditGenerator Edits,
+                                  TextGenerator Explanation) {
   return RewriteRule{{RewriteRule::Case{
       std::move(M), std::move(Edits), std::move(Explanation), {}}}};
 }
