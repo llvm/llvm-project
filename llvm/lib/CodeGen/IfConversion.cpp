@@ -972,6 +972,11 @@ bool IfConverter::ValidDiamond(
       FalseBBI.IsBeingAnalyzed || FalseBBI.IsDone)
     return false;
 
+  // If the True and False BBs are equal we're dealing with a degenerate case
+  // that we don't treat as a diamond.
+  if (TrueBBI.BB == FalseBBI.BB)
+    return false;
+
   MachineBasicBlock *TT = TrueBBI.TrueBB;
   MachineBasicBlock *FT = FalseBBI.TrueBB;
 
