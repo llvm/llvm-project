@@ -55,7 +55,7 @@ private:
       if (!PerfEvent.valid())
         return make_error<Failure>(
             Twine("invalid perf event '").concat(CounterName).concat("'"));
-      pfm::Counter Counter(PerfEvent);
+      pfm::Counter Counter(std::move(PerfEvent));
       Scratch->clear();
       {
         CrashRecoveryContext CRC;

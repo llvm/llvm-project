@@ -65,7 +65,7 @@ private:
 // underlying event.
 struct Counter {
   // event: the PerfEvent to measure.
-  explicit Counter(const PerfEvent &event);
+  explicit Counter(PerfEvent &&event);
 
   Counter(const Counter &) = delete;
   Counter(Counter &&other) = default;
@@ -77,6 +77,7 @@ struct Counter {
   int64_t read() const; // Return the current value of the counter.
 
 private:
+  PerfEvent Event;
 #ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
 #endif
