@@ -91,6 +91,9 @@ def main(builtin_params={}):
 
     executed_tests = [t for t in filtered_tests if t.result]
 
+    if opts.time_tests:
+        print_histogram(executed_tests)
+
     print_results(executed_tests, elapsed, opts)
 
     if opts.output_path:
@@ -239,6 +242,11 @@ def execute_in_tmp_dir(run, lit_config):
                 lit_config.warning("Failed to delete temp directory '%s'" % tmp_dir)
 
 
+def print_histogram(tests):
+    test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
+    lit.util.printHistogram(test_times, title='Tests')
+
+
 # Status code, summary label, group label
 failure_codes = [
     (lit.Test.UNRESOLVED,  'Unresolved Tests',    'Unresolved'),
@@ -262,10 +270,6 @@ def print_results(tests, elapsed, opts):
 
     for (code, _, group_label) in all_codes:
         print_group(code, group_label, tests_by_code[code], opts)
-
-    if opts.timeTests and tests:
-        test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
-        lit.util.printHistogram(test_times, title='Tests')
 
     print_summary(tests_by_code, opts.quiet, elapsed)
 

@@ -289,7 +289,7 @@ def printHistogram(items, title='Items'):
 
     barW = 40
     hr = '-' * (barW + 34)
-    print('\nSlowest %s:' % title)
+    print('Slowest %s:' % title)
     print(hr)
     for name, value in reversed(items[-20:]):
         print('%.2fs: %s' % (value, name))
@@ -310,6 +310,7 @@ def printHistogram(items, title='Items'):
         print('[%*.*fs,%*.*fs) :: [%s%s] :: [%*d/%*d]' % (
             pDigits, pfDigits, i * barH, pDigits, pfDigits, (i + 1) * barH,
             '*' * w, ' ' * (barW - w), cDigits, len(row), cDigits, len(items)))
+    print(hr)
 
 
 class ExecuteCommandTimeoutException(Exception):
