@@ -122,7 +122,7 @@ int64_t Counter::read() const {
 
 #else
 
-Counter::Counter(const PerfEvent &Event) {}
+Counter::Counter(PerfEvent &&Event) : Event(std::move(Event)) {}
 
 Counter::~Counter() = default;
 
