@@ -1587,7 +1587,7 @@ void
 LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
                                       MachineBasicBlock::iterator Begin,
                                       MachineBasicBlock::iterator End,
-                                      ArrayRef<unsigned> OrigRegs) {
+                                      ArrayRef<Register> OrigRegs) {
   // Find anchor points, which are at the beginning/end of blocks or at
   // instructions that already have indexes.
   while (Begin != MBB->begin() && !Indexes->hasIndex(*Begin))
@@ -1618,8 +1618,8 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
     }
   }
 
-  for (unsigned Reg : OrigRegs) {
-    if (!Register::isVirtualRegister(Reg))
+  for (Register Reg : OrigRegs) {
+    if (!Reg.isVirtual())
       continue;
 
     LiveInterval &LI = getInterval(Reg);
