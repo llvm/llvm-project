@@ -1241,8 +1241,6 @@ static bool isSupportedMemRefType(MemRefType type) {
 /// Lowering for AllocOp and AllocaOp.
 template <typename AllocLikeOp>
 struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
-  using ConvertOpToLLVMPattern<AllocLikeOp>::ConvertOpToLLVMPattern;
-  using Base = AllocLikeOpLowering<AllocLikeOp>;
   using ConvertOpToLLVMPattern<AllocLikeOp>::createIndexConstant;
   using ConvertOpToLLVMPattern<AllocLikeOp>::getIndexType;
   using ConvertOpToLLVMPattern<AllocLikeOp>::typeConverter;
