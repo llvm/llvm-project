@@ -45,6 +45,7 @@ public:
   void Merge(XcodeSDK other);
 
   XcodeSDK &operator=(XcodeSDK other);
+  XcodeSDK(const XcodeSDK&) = default;
   bool operator==(XcodeSDK other);
 
   /// Return parsed SDK number, and SDK version number.
