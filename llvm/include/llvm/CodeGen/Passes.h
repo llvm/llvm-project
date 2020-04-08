@@ -468,6 +468,9 @@ namespace llvm {
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();
+
+  /// Creates MIR Strip Debug pass. \see MachineStripDebug.cpp
+  ModulePass *createStripDebugMachineModulePass();
 } // End llvm namespace
 
 #endif
