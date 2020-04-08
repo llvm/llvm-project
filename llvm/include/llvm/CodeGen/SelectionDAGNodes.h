@@ -30,6 +30,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -2034,13 +2035,13 @@ public:
 class RegisterSDNode : public SDNode {
   friend class SelectionDAG;
 
-  unsigned Reg;
+  Register Reg;
 
-  RegisterSDNode(unsigned reg, EVT VT)
+  RegisterSDNode(Register reg, EVT VT)
     : SDNode(ISD::Register, 0, DebugLoc(), getSDVTList(VT)), Reg(reg) {}
 
 public:
-  unsigned getReg() const { return Reg; }
+  Register getReg() const { return Reg; }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::Register;

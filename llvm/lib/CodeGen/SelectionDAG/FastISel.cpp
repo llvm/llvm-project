@@ -492,7 +492,7 @@ Register FastISel::lookUpRegForValue(const Value *V) {
   // cache values defined by Instructions across blocks, and other values
   // only locally. This is because Instructions already have the SSA
   // def-dominates-use requirement enforced.
-  DenseMap<const Value *, unsigned>::iterator I = FuncInfo.ValueMap.find(V);
+  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(V);
   if (I != FuncInfo.ValueMap.end())
     return I->second;
   return LocalValueMap[V];
@@ -504,8 +504,8 @@ void FastISel::updateValueMap(const Value *I, Register Reg, unsigned NumRegs) {
     return;
   }
 
-  unsigned &AssignedReg = FuncInfo.ValueMap[I];
-  if (AssignedReg == 0)
+  Register &AssignedReg = FuncInfo.ValueMap[I];
+  if (!AssignedReg)
     // Use the new register.
     AssignedReg = Reg;
   else if (Reg != AssignedReg) {
@@ -1807,7 +1807,7 @@ bool FastISel::selectExtractValue(const User *U) {
 
   // Get the base result register.
   unsigned ResultReg;
-  DenseMap<const Value *, unsigned>::iterator I = FuncInfo.ValueMap.find(Op0);
+  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(Op0);
   if (I != FuncInfo.ValueMap.end())
     ResultReg = I->second;
   else if (isa<Instruction>(Op0))

@@ -513,15 +513,15 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // registers. If we don't apply the reg fixups before, some registers may
   // appear as unused and will be skipped, resulting in bad MI.
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (DenseMap<unsigned, unsigned>::iterator I = FuncInfo->RegFixups.begin(),
+  for (DenseMap<Register, Register>::iterator I = FuncInfo->RegFixups.begin(),
                                               E = FuncInfo->RegFixups.end();
        I != E; ++I) {
-    unsigned From = I->first;
-    unsigned To = I->second;
+    Register From = I->first;
+    Register To = I->second;
     // If To is also scheduled to be replaced, find what its ultimate
     // replacement is.
     while (true) {
-      DenseMap<unsigned, unsigned>::iterator J = FuncInfo->RegFixups.find(To);
+      DenseMap<Register, Register>::iterator J = FuncInfo->RegFixups.find(To);
       if (J == E)
         break;
       To = J->second;
@@ -660,15 +660,15 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // Replace forward-declared registers with the registers containing
   // the desired value.
-  for (DenseMap<unsigned, unsigned>::iterator
+  for (DenseMap<Register, Register>::iterator
        I = FuncInfo->RegFixups.begin(), E = FuncInfo->RegFixups.end();
        I != E; ++I) {
-    unsigned From = I->first;
-    unsigned To = I->second;
+    Register From = I->first;
+    Register To = I->second;
     // If To is also scheduled to be replaced, find what its ultimate
     // replacement is.
     while (true) {
-      DenseMap<unsigned, unsigned>::iterator J = FuncInfo->RegFixups.find(To);
+      DenseMap<Register, Register>::iterator J = FuncInfo->RegFixups.find(To);
       if (J == E) break;
       To = J->second;
     }
@@ -1537,7 +1537,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
           if (!Inst->getType()->isVoidTy() && !Inst->getType()->isTokenTy() &&
               !Inst->use_empty()) {
-            unsigned &R = FuncInfo->ValueMap[Inst];
+            Register &R = FuncInfo->ValueMap[Inst];
             if (!R)
               R = FuncInfo->CreateRegs(Inst);
           }

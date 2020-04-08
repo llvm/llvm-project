@@ -1399,11 +1399,11 @@ void SelectionDAGBuilder::resolveOrClearDbgInfo() {
 /// getCopyFromRegs - If there was virtual register allocated for the value V
 /// emit CopyFromReg of the specified type Ty. Return empty SDValue() otherwise.
 SDValue SelectionDAGBuilder::getCopyFromRegs(const Value *V, Type *Ty) {
-  DenseMap<const Value *, unsigned>::iterator It = FuncInfo.ValueMap.find(V);
+  DenseMap<const Value *, Register>::iterator It = FuncInfo.ValueMap.find(V);
   SDValue Result;
 
   if (It != FuncInfo.ValueMap.end()) {
-    unsigned InReg = It->second;
+    Register InReg = It->second;
 
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                      DAG.getDataLayout(), InReg, Ty,
@@ -1977,7 +1977,7 @@ void SelectionDAGBuilder::CopyToExportRegsIfNeeded(const Value *V) {
   if (V->getType()->isEmptyTy())
     return;
 
-  DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
+  DenseMap<const Value *, Register>::iterator VMI = FuncInfo.ValueMap.find(V);
   if (VMI != FuncInfo.ValueMap.end()) {
     assert(!V->use_empty() && "Unused value assigned virtual registers!");
     CopyValueToVirtualRegister(V, VMI->second);
@@ -4618,7 +4618,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
       PendingLoads.push_back(OutChain);
     return;
   }
-  
+
   SDValue L = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, MemVT, InChain,
                             Ptr, MMO);
 
@@ -5551,7 +5551,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     };
 
     // Check if ValueMap has reg number.
-    DenseMap<const Value *, unsigned>::const_iterator
+    DenseMap<const Value *, Register>::const_iterator
       VMI = FuncInfo.ValueMap.find(V);
     if (VMI != FuncInfo.ValueMap.end()) {
       const auto &TLI = DAG.getTargetLoweringInfo();
@@ -10005,7 +10005,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         }
         Reg = RegOut;
       } else {
-        DenseMap<const Value *, unsigned>::iterator I =
+        DenseMap<const Value *, Register>::iterator I =
           FuncInfo.ValueMap.find(PHIOp);
         if (I != FuncInfo.ValueMap.end())
           Reg = I->second;
