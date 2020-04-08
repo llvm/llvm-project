@@ -66,6 +66,7 @@ struct DebugifyMachineModule : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
+    AU.setPreservesCFG();
   }
 
   static char ID; // Pass identification.
@@ -79,6 +80,6 @@ INITIALIZE_PASS_BEGIN(DebugifyMachineModule, DEBUG_TYPE,
 INITIALIZE_PASS_END(DebugifyMachineModule, DEBUG_TYPE,
                     "Machine Debugify Module", false, false)
 
-ModulePass *createDebugifyMachineModulePass() {
+ModulePass *llvm::createDebugifyMachineModulePass() {
   return new DebugifyMachineModule();
 }
