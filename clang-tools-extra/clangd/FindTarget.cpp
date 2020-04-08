@@ -331,6 +331,14 @@ public:
             break;
           }
       }
+      void VisitGotoStmt(const GotoStmt *Goto) {
+        if (auto *LabelDecl = Goto->getLabel())
+          Outer.add(LabelDecl, Flags);
+      }
+      void VisitLabelStmt(const LabelStmt *Label) {
+        if (auto *LabelDecl = Label->getDecl())
+          Outer.add(LabelDecl, Flags);
+      }
       void
       VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
         const Type *BaseType = E->getBaseType().getTypePtrOrNull();
