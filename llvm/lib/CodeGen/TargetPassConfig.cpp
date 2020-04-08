@@ -530,17 +530,16 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
   if (StopBefore == PassID && StopBeforeCount++ == StopBeforeInstanceNum)
     Stopped = true;
   if (Started && !Stopped) {
+    if (AddingMachinePasses)
+      addMachinePrePasses();
     std::string Banner;
     // Construct banner message before PM->add() as that may delete the pass.
     if (AddingMachinePasses && (printAfter || verifyAfter))
       Banner = std::string("After ") + std::string(P->getPassName());
     PM->add(P);
-    if (AddingMachinePasses) {
-      if (printAfter)
-        addPrintPass(Banner);
-      if (verifyAfter)
-        addVerifyPass(Banner);
-    }
+    if (AddingMachinePasses)
+      addMachinePostPasses(Banner, /*AllowPrint*/ printAfter,
+                           /*AllowVerify*/ verifyAfter);
 
     // Add the passes after the pass P if there is any.
     for (auto IP : Impl->InsertedPasses) {
@@ -604,6 +603,16 @@ void TargetPassConfig::addVerifyPass(const std::string &Banner) {
 #endif
   if (Verify)
     PM->add(createMachineVerifierPass(Banner));
+}
+
+void TargetPassConfig::addMachinePrePasses() {}
+
+void TargetPassConfig::addMachinePostPasses(const std::string &Banner,
+                                            bool AllowPrint, bool AllowVerify) {
+  if (AllowPrint)
+    addPrintPass(Banner);
+  if (AllowVerify)
+    addVerifyPass(Banner);
 }
 
 /// Add common target configurable passes that perform LLVM IR to IR transforms
