@@ -57,7 +57,7 @@ static cl::opt<bool> WidenLoads(
   "amdgpu-codegenprepare-widen-constant-loads",
   cl::desc("Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
   cl::ReallyHidden,
-  cl::init(true));
+  cl::init(false));
 
 static cl::opt<bool> UseMul24Intrin(
   "amdgpu-codegenprepare-mul24",
