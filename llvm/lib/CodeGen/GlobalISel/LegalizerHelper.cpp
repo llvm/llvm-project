@@ -633,8 +633,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   unsigned Size = LLTy.getSizeInBits();
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch (MI.getOpcode()) {
   default:
@@ -731,8 +730,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
                                                               unsigned TypeIdx,
                                                               LLT NarrowTy) {
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   uint64_t NarrowSize = NarrowTy.getSizeInBits();
@@ -1612,8 +1610,7 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch (MI.getOpcode()) {
   default:
@@ -2205,8 +2202,7 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch(MI.getOpcode()) {
   default:
@@ -3241,8 +3237,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                      LLT NarrowTy) {
   using namespace TargetOpcode;
 
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
   switch (MI.getOpcode()) {
   case G_IMPLICIT_DEF:
     return fewerElementsVectorImplicitDef(MI, TypeIdx, NarrowTy);
