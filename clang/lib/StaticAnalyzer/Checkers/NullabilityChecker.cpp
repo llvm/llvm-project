@@ -508,13 +508,7 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
 /// return expressions of ObjC types when the return type of the function or
 /// method is non-null but the express is not.
 static const Expr *lookThroughImplicitCasts(const Expr *E) {
-  assert(E);
-
-  while (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    E = ICE->getSubExpr();
-  }
-
-  return E;
+  return E->IgnoreImpCasts();
 }
 
 /// This method check when nullable pointer or null value is returned from a

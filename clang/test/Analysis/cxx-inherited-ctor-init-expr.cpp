@@ -57,3 +57,19 @@ void test_B() {
   clang_analyzer_eval(b.z == 3); // expected-warning{{TRUE}}
 }
 } // namespace arguments_with_constructors
+
+namespace inherited_constructor_crash {
+class a {
+public:
+  a(int);
+};
+struct b : a {
+  using a::a; // Ihnerited ctor.
+};
+void c() {
+  int d;
+  // This construct expr utilizes the inherited ctor.
+  // Note that d must be uninitialized to cause the crash.
+  (b(d)); // expected-warning{{1st function call argument is an uninitialized value}}
+}
+} // namespace inherited_constructor_crash

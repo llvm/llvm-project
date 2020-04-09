@@ -48,15 +48,14 @@ void AppleThreadPlanStepThroughObjCTrampoline::DidPush() {
   // Setting up the memory space for the called function text might require
   // allocations, i.e. a nested function call.  This needs to be done as a
   // PreResumeAction.
-  m_thread.GetProcess()->AddPreResumeAction(PreResumeInitializeFunctionCaller,
-                                            (void *)this);
+  m_process.AddPreResumeAction(PreResumeInitializeFunctionCaller, (void *)this);
 }
 
 bool AppleThreadPlanStepThroughObjCTrampoline::InitializeFunctionCaller() {
   if (!m_func_sp) {
     DiagnosticManager diagnostics;
     m_args_addr =
-        m_trampoline_handler.SetupDispatchFunction(m_thread, m_input_values);
+        m_trampoline_handler.SetupDispatchFunction(GetThread(), m_input_values);
 
     if (m_args_addr == LLDB_INVALID_ADDRESS) {
       return false;
@@ -68,7 +67,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::InitializeFunctionCaller() {
     options.SetUnwindOnError(true);
     options.SetIgnoreBreakpoints(true);
     options.SetStopOthers(m_stop_others);
-    m_thread.CalculateExecutionContext(exc_ctx);
+    GetThread().CalculateExecutionContext(exc_ctx);
     m_func_sp = m_impl_function->GetThreadPlanToCallFunction(
         exc_ctx, m_args_addr, options, diagnostics);
     m_func_sp->SetOkayToDiscard(true);
@@ -132,7 +131,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
   if (!m_run_to_sp) {
     Value target_addr_value;
     ExecutionContext exc_ctx;
-    m_thread.CalculateExecutionContext(exc_ctx);
+    GetThread().CalculateExecutionContext(exc_ctx);
     m_impl_function->FetchFunctionResults(exc_ctx, m_args_addr,
                                           target_addr_value);
     m_impl_function->DeallocateFunctionResults(exc_ctx, m_args_addr);
@@ -151,13 +150,13 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
                 ", stopping.",
                 target_addr);
 
-      SymbolContext sc = m_thread.GetStackFrameAtIndex(0)->GetSymbolContext(
+      SymbolContext sc = GetThread().GetStackFrameAtIndex(0)->GetSymbolContext(
           eSymbolContextEverything);
       Status status;
       const bool abort_other_plans = false;
       const bool first_insn = true;
       const uint32_t frame_idx = 0;
-      m_run_to_sp = m_thread.QueueThreadPlanForStepOutNoShouldStop(
+      m_run_to_sp = GetThread().QueueThreadPlanForStepOutNoShouldStop(
           abort_other_plans, &sc, first_insn, m_stop_others, eVoteNoOpinion,
           eVoteNoOpinion, frame_idx, status);
       if (m_run_to_sp && status.Success())
@@ -180,10 +179,10 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
     // Extract the target address from the value:
 
     m_run_to_sp = std::make_shared<ThreadPlanRunToAddress>(
-        m_thread, target_so_addr, m_stop_others);
+        GetThread(), target_so_addr, m_stop_others);
     PushPlan(m_run_to_sp);
     return false;
-  } else if (m_thread.IsThreadPlanDone(m_run_to_sp.get())) {
+  } else if (GetThread().IsThreadPlanDone(m_run_to_sp.get())) {
     // Third stage, work the run to target plan.
     SetPlanComplete();
     return true;

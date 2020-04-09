@@ -140,14 +140,14 @@ public:
   void finishedCheckerRegistration();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
-  AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
-  ASTContext &getASTContext() { return Context; }
+  AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
+  ASTContext &getASTContext() const { return Context; }
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.
   void reportInvalidCheckerOptionValue(const CheckerBase *C,
                                        StringRef OptionName,
-                                       StringRef ExpectedValueDesc);
+                                       StringRef ExpectedValueDesc) const;
 
   using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
@@ -620,7 +620,7 @@ private:
   /// Returns the checkers that have registered for callbacks of the
   /// given \p Kind.
   const std::vector<CheckObjCMessageFunc> &
-  getObjCMessageCheckers(ObjCMessageVisitKind Kind);
+  getObjCMessageCheckers(ObjCMessageVisitKind Kind) const;
 
   std::vector<CheckObjCMessageFunc> PreObjCMessageCheckers;
   std::vector<CheckObjCMessageFunc> PostObjCMessageCheckers;

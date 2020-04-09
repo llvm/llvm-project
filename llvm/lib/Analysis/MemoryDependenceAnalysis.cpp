@@ -23,7 +23,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -327,8 +326,7 @@ static bool isVolatile(Instruction *Inst) {
 
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
-    OrderedBasicBlock *OBB) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
   MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
@@ -339,7 +337,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     }
   }
   MemDepResult SimpleDep = getSimplePointerDependencyFrom(
-      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit, OBB);
+      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit);
   if (SimpleDep.isDef())
     return SimpleDep;
   // Non-local invariant group dependency indicates there is non local Def
@@ -440,8 +438,7 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
-    OrderedBasicBlock *OBB) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
   bool isInvariantLoad = false;
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
@@ -487,15 +484,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   }
 
   const DataLayout &DL = BB->getModule()->getDataLayout();
-
-  // If the caller did not provide an ordered basic block,
-  // create one to lazily compute and cache instruction
-  // positions inside a BB. This is used to provide fast queries for relative
-  // position between two instructions in a BB and can be used by
-  // AliasAnalysis::callCapturesBefore.
-  OrderedBasicBlock OBBTmp(BB);
-  if (!OBB)
-    OBB = &OBBTmp;
 
   // Return "true" if and only if the instruction I is either a non-simple
   // load or a non-simple store.
@@ -686,7 +674,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     ModRefInfo MR = AA.getModRefInfo(Inst, MemLoc);
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
-      MR = AA.callCapturesBefore(Inst, MemLoc, &DT, OBB);
+      MR = AA.callCapturesBefore(Inst, MemLoc, &DT);
     switch (clearMust(MR)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
@@ -712,8 +700,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   return MemDepResult::getNonFuncLocal();
 }
 
-MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst,
-                                                    OrderedBasicBlock *OBB) {
+MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
   Instruction *ScanPos = QueryInst;
 
   // Check for a cached result
@@ -753,7 +740,7 @@ MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst,
 
       LocalCache =
           getPointerDependencyFrom(MemLoc, isLoad, ScanPos->getIterator(),
-                                   QueryParent, QueryInst, nullptr, OBB);
+                                   QueryParent, QueryInst, nullptr);
     } else if (auto *QueryCall = dyn_cast<CallBase>(QueryInst)) {
       bool isReadOnly = AA.onlyReadsMemory(QueryCall);
       LocalCache = getCallDependencyFrom(QueryCall, isReadOnly,

@@ -12,10 +12,5 @@
     <string>debugserver</string>
     <key>CFBundleVersion</key>
     <string>2</string>
-	<key>SecTaskAccess</key>
-	<array>
-		<string>allowed</string>
-		<string>debug</string>
-	</array>
 </dict>
 </plist>

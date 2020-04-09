@@ -224,12 +224,17 @@ public:
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
+  
+  bool GetOSPluginReportsAllThreads() const;
+
+  void SetOSPluginReportsAllThreads(bool does_report);
 
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
 
   void UpdateLaunchInfoFromProperties();
+
 
 private:
   // Callbacks for m_launch_info.

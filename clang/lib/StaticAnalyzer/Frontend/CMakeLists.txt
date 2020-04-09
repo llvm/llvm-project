@@ -21,4 +21,6 @@ add_clang_library(clangStaticAnalyzerFrontend
   clangLex
   clangStaticAnalyzerCheckers
   clangStaticAnalyzerCore
+  clangRewrite
+  clangToolingCore
   )
