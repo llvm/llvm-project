@@ -167,6 +167,8 @@ public:
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
+  bool IsGlobalOrStaticVariable() const;
+
 protected:
   static DWARFDeclContext
   GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
