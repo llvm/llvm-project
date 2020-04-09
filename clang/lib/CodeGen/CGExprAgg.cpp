@@ -249,7 +249,7 @@ void AggExprEmitter::withReturnValueSlot(
     const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
   QualType RetTy = E->getType();
   bool RequiresDestruction =
-      Dest.isIgnored() &&
+      !Dest.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
 
   // If it makes no observable difference, save a memcpy + temporary.
@@ -287,10 +287,8 @@ void AggExprEmitter::withReturnValueSlot(
   }
 
   RValue Src =
-      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused));
-
-  if (RequiresDestruction)
-    CGF.pushDestroy(RetTy.isDestructedType(), Src.getAggregateAddress(), RetTy);
+      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused,
+                               Dest.isExternallyDestructed()));
 
   if (!UseTemp)
     return;
@@ -659,7 +657,21 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   }
 
   AggValueSlot Slot = EnsureSlot(E->getType());
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  bool Destruct =
+      !CGF.getLangOpts().CPlusPlus && !Slot.isExternallyDestructed();
+  if (Destruct)
+    Slot.setExternallyDestructed();
+
   CGF.EmitAggExpr(E->getInitializer(), Slot);
+
+  if (Destruct)
+    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
+      CGF.pushLifetimeExtendedDestroy(
+          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
+          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
 }
 
 /// Attempt to look through various unimportant expressions to find a
@@ -813,8 +825,19 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     // If we're loading from a volatile type, force the destination
     // into existence.
     if (E->getSubExpr()->getType().isVolatileQualified()) {
+      bool Destruct =
+          !Dest.isExternallyDestructed() &&
+          E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+      if (Destruct)
+        Dest.setExternallyDestructed();
       EnsureDest(E->getType());
-      return Visit(E->getSubExpr());
+      Visit(E->getSubExpr());
+
+      if (Destruct)
+        CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Dest.getAddress(),
+                        E->getType());
+
+      return;
     }
 
     LLVM_FALLTHROUGH;
