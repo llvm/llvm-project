@@ -298,60 +298,45 @@ protected:
   }
 };
 
-class CommandObjectLogTimer : public CommandObjectParsed {
+class CommandObjectLogTimerEnable : public CommandObjectParsed {
 public:
   // Constructors and Destructors
-  CommandObjectLogTimer(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "log timers",
-                            "Enable, disable, dump, and reset LLDB internal "
-                            "performance timers.",
-                            "log timers < enable <depth> | disable | dump | "
-                            "increment <bool> | reset >") {}
+  CommandObjectLogTimerEnable(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "log timers enable",
+                            "enable LLDB internal performance timers",
+                            "log timers enable <depth>") {
+    CommandArgumentEntry arg;
+    CommandArgumentData depth_arg;
 
-  ~CommandObjectLogTimer() override = default;
+    // Define the first (and only) variant of this arg.
+    depth_arg.arg_type = eArgTypeCount;
+    depth_arg.arg_repetition = eArgRepeatOptional;
+
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg.push_back(depth_arg);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectLogTimerEnable() override = default;
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusFailed);
 
-    if (args.GetArgumentCount() == 1) {
-      auto sub_command = args[0].ref();
-
-      if (sub_command.equals_lower("enable")) {
-        Timer::SetDisplayDepth(UINT32_MAX);
+    if (args.GetArgumentCount() == 0) {
+      Timer::SetDisplayDepth(UINT32_MAX);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else if (args.GetArgumentCount() == 1) {
+      uint32_t depth;
+      if (args[0].ref().consumeInteger(0, depth)) {
+        result.AppendError(
+            "Could not convert enable depth to an unsigned integer.");
+      } else {
+        Timer::SetDisplayDepth(depth);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else if (sub_command.equals_lower("disable")) {
-        Timer::DumpCategoryTimes(&result.GetOutputStream());
-        Timer::SetDisplayDepth(0);
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (sub_command.equals_lower("dump")) {
-        Timer::DumpCategoryTimes(&result.GetOutputStream());
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (sub_command.equals_lower("reset")) {
-        Timer::ResetCategoryTimes();
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      }
-    } else if (args.GetArgumentCount() == 2) {
-      auto sub_command = args[0].ref();
-      auto param = args[1].ref();
-
-      if (sub_command.equals_lower("enable")) {
-        uint32_t depth;
-        if (param.consumeInteger(0, depth)) {
-          result.AppendError(
-              "Could not convert enable depth to an unsigned integer.");
-        } else {
-          Timer::SetDisplayDepth(depth);
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        }
-      } else if (sub_command.equals_lower("increment")) {
-        bool success;
-        bool increment = OptionArgParser::ToBoolean(param, false, &success);
-        if (success) {
-          Timer::SetQuiet(!increment);
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        } else
-          result.AppendError("Could not convert increment value to boolean.");
       }
     }
 
@@ -361,6 +346,154 @@ protected:
     }
     return result.Succeeded();
   }
+};
+
+class CommandObjectLogTimerDisable : public CommandObjectParsed {
+public:
+  // Constructors and Destructors
+  CommandObjectLogTimerDisable(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "log timers disable",
+                            "disable LLDB internal performance timers",
+                            nullptr) {}
+
+  ~CommandObjectLogTimerDisable() override = default;
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    Timer::SetDisplayDepth(0);
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    if (!result.Succeeded()) {
+      result.AppendError("Missing subcommand");
+      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+    }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectLogTimerDump : public CommandObjectParsed {
+public:
+  // Constructors and Destructors
+  CommandObjectLogTimerDump(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "log timers dump",
+                            "dump LLDB internal performance timers", nullptr) {}
+
+  ~CommandObjectLogTimerDump() override = default;
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    if (!result.Succeeded()) {
+      result.AppendError("Missing subcommand");
+      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+    }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectLogTimerReset : public CommandObjectParsed {
+public:
+  // Constructors and Destructors
+  CommandObjectLogTimerReset(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "log timers reset",
+                            "reset LLDB internal performance timers", nullptr) {
+  }
+
+  ~CommandObjectLogTimerReset() override = default;
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Timer::ResetCategoryTimes();
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    if (!result.Succeeded()) {
+      result.AppendError("Missing subcommand");
+      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+    }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectLogTimerIncrement : public CommandObjectParsed {
+public:
+  // Constructors and Destructors
+  CommandObjectLogTimerIncrement(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "log timers increment",
+                            "increment LLDB internal performance timers",
+                            "log timers increment <bool>") {
+    CommandArgumentEntry arg;
+    CommandArgumentData bool_arg;
+
+    // Define the first (and only) variant of this arg.
+    bool_arg.arg_type = eArgTypeBoolean;
+    bool_arg.arg_repetition = eArgRepeatPlain;
+
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg.push_back(bool_arg);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectLogTimerIncrement() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    request.TryCompleteCurrentArg("true");
+    request.TryCompleteCurrentArg("false");
+  }
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    result.SetStatus(eReturnStatusFailed);
+
+    if (args.GetArgumentCount() == 1) {
+      bool success;
+      bool increment =
+          OptionArgParser::ToBoolean(args[0].ref(), false, &success);
+
+      if (success) {
+        Timer::SetQuiet(!increment);
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      } else
+        result.AppendError("Could not convert increment value to boolean.");
+    }
+
+    if (!result.Succeeded()) {
+      result.AppendError("Missing subcommand");
+      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+    }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectLogTimer : public CommandObjectMultiword {
+public:
+  CommandObjectLogTimer(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(interpreter, "log timers",
+                               "Enable, disable, dump, and reset LLDB internal "
+                               "performance timers.",
+                               "log timers < enable <depth> | disable | dump | "
+                               "increment <bool> | reset >") {
+    LoadSubCommand("enable", CommandObjectSP(
+                                 new CommandObjectLogTimerEnable(interpreter)));
+    LoadSubCommand("disable", CommandObjectSP(new CommandObjectLogTimerDisable(
+                                  interpreter)));
+    LoadSubCommand("dump",
+                   CommandObjectSP(new CommandObjectLogTimerDump(interpreter)));
+    LoadSubCommand(
+        "reset", CommandObjectSP(new CommandObjectLogTimerReset(interpreter)));
+    LoadSubCommand(
+        "increment",
+        CommandObjectSP(new CommandObjectLogTimerIncrement(interpreter)));
+  }
+
+  ~CommandObjectLogTimer() override = default;
 };
 
 CommandObjectLog::CommandObjectLog(CommandInterpreter &interpreter)
