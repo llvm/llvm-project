@@ -67,8 +67,8 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i) {
     const dw_tag_t die_tag = die_info_array[i].tag;
-    if (die_tag != 0 && die_tag != DW_TAG_class_type &&
-        die_tag != DW_TAG_structure_type)
+    if (!(die_tag == 0 || die_tag == DW_TAG_class_type ||
+          die_tag == DW_TAG_structure_type))
       continue;
     if (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) {
       if (return_implementation_only_if_available) {
