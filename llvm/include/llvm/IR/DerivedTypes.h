@@ -543,6 +543,8 @@ ElementCount Type::getVectorElementCount() const {
   return cast<VectorType>(this)->getElementCount();
 }
 
+bool Type::isVectorTy() const { return isa<VectorType>(this); }
+
 /// Class to represent pointers.
 class PointerType : public Type {
   explicit PointerType(Type *ElType, unsigned AddrSpace);
