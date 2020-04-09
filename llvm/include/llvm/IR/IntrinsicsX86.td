@@ -4938,3 +4938,13 @@ let TargetPrefix = "x86" in {
   def int_x86_serialize : GCCBuiltin<"__builtin_ia32_serialize">,
               Intrinsic<[], [], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// TSXLDTRK - TSX Suspend Load Address Tracking
+
+let TargetPrefix = "x86" in {
+  def int_x86_xsusldtrk : GCCBuiltin<"__builtin_ia32_xsusldtrk">,
+              Intrinsic<[], [], []>;
+  def int_x86_xresldtrk : GCCBuiltin<"__builtin_ia32_xresldtrk">,
+              Intrinsic<[], [], []>;
+}

@@ -208,3 +208,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-serialize %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SERIALIZE %s
 // SERIALIZE: "-target-feature" "+serialize"
 // NO-SERIALIZE: "-target-feature" "-serialize"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mtsxldtrk %s -### -o %t.o 2>&1 | FileCheck --check-prefix=TSXLDTRK %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-tsxldtrk %s -### -o %t.o 2>&1 | FileCheck --check-prefix=NO-TSXLDTRK %s
+// TSXLDTRK: "-target-feature" "+tsxldtrk"
+// NO-TSXLDTRK: "-target-feature" "-tsxldtrk"

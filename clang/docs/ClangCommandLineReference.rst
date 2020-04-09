@@ -3175,6 +3175,8 @@ X86
 
 .. option:: -mtbm, -mno-tbm
 
+.. option:: -mtsxldtrk, -mno-tsxldtrk
+
 .. option:: -mvaes, -mno-vaes
 
 .. option:: -mvpclmulqdq, -mno-vpclmulqdq
