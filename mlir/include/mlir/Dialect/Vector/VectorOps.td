@@ -1446,7 +1446,7 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
      result.addAttribute("lhs_rows", builder->getI32IntegerAttr(lhsRows));
      result.addAttribute("lhs_columns", builder->getI32IntegerAttr(lhsColumns));
      result.addAttribute("rhs_columns", builder->getI32IntegerAttr(rhsColumns));
-     result.addTypes(VectorType::get(lhsRows * lhsColumns,
+     result.addTypes(VectorType::get(lhsRows * rhsColumns,
        lhs.getType().cast<VectorType>().getElementType()));
    }]>,
   ];
