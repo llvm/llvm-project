@@ -242,6 +242,14 @@ TEST(ParserTest, FullParserTest) {
   EXPECT_TRUE(matches("void f(int a, int x);", M));
   EXPECT_FALSE(matches("void f(int x, int a);", M));
 
+  Code = "unaryExprOrTypeTraitExpr(ofKind(\"UETT_SizeOf\"))";
+  llvm::Optional<DynTypedMatcher> UnaryExprSizeOf(
+      Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error));
+  EXPECT_EQ("", Error.toStringFull());
+  Matcher<Stmt> MStmt = UnaryExprSizeOf->unconditionalConvertTo<Stmt>();
+  EXPECT_TRUE(matches("unsigned X = sizeof(int);", MStmt));
+  EXPECT_FALSE(matches("unsigned X = alignof(int);", MStmt));
+
   Code = "hasInitializer(\n    binaryOperator(hasLHS(\"A\")))";
   EXPECT_TRUE(!Parser::parseMatcherExpression(Code, &Error).hasValue());
   EXPECT_EQ("1:1: Error parsing argument 1 for matcher hasInitializer.\n"
