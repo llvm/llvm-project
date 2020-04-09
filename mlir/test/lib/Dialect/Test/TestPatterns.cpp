@@ -360,6 +360,28 @@ struct TestNonRootReplacement : public RewritePattern {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Recursive Rewrite Testing
+/// This pattern is applied to the same operation multiple times, but has a
+/// bounded recursion.
+struct TestBoundedRecursiveRewrite
+    : public OpRewritePattern<TestRecursiveRewriteOp> {
+  using OpRewritePattern<TestRecursiveRewriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TestRecursiveRewriteOp op,
+                                PatternRewriter &rewriter) const final {
+    // Decrement the depth of the op in-place.
+    rewriter.updateRootInPlace(op, [&] {
+      op.setAttr("depth",
+                 rewriter.getI64IntegerAttr(op.depth().getSExtValue() - 1));
+    });
+    return success();
+  }
+
+  /// The conversion target handles bounding the recursion of this pattern.
+  bool hasBoundedRewriteRecursion() const final { return true; }
+};
 } // namespace
 
 namespace {
@@ -414,7 +436,7 @@ struct TestLegalizePatternDriver
         TestCreateIllegalBlock, TestPassthroughInvalidOp, TestSplitReturnType,
         TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
         TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-        TestNonRootReplacement>(&getContext());
+        TestNonRootReplacement, TestBoundedRecursiveRewrite>(&getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
@@ -448,6 +470,10 @@ struct TestLegalizePatternDriver
       return static_cast<bool>(
           op->getAttrOfType<UnitAttr>("test.recursively_legal"));
     });
+
+    // Mark the bound recursion operation as dynamically legal.
+    target.addDynamicallyLegalOp<TestRecursiveRewriteOp>(
+        [](TestRecursiveRewriteOp op) { return op.depth() == 0; });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {

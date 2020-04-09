@@ -131,6 +131,12 @@ public:
     return failure();
   }
 
+  /// Returns true if this pattern is known to result in recursive application,
+  /// i.e. this pattern may generate IR that also matches this pattern, but is
+  /// known to bound the recursion. This signals to a rewriter that it is safe
+  /// to apply this pattern recursively to generated IR.
+  virtual bool hasBoundedRewriteRecursion() const { return false; }
+
   /// Return a list of operations that may be generated when rewriting an
   /// operation instance with this pattern.
   ArrayRef<OperationName> getGeneratedOps() const { return generatedOps; }

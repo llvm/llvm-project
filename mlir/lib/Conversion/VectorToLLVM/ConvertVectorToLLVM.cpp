@@ -789,23 +789,10 @@ public:
         Value extractedDest = extractOne(rewriter, loc, op.dest(), off);
         // 3. Reduce the problem to lowering a new InsertStridedSlice op with
         // smaller rank.
-        InsertStridedSliceOp insertStridedSliceOp =
-            rewriter.create<InsertStridedSliceOp>(
-                loc, extractedSource, extractedDest,
-                getI64SubArray(op.offsets(), /* dropFront=*/1),
-                getI64SubArray(op.strides(), /* dropFront=*/1));
-        // Call matchAndRewrite recursively from within the pattern. This
-        // circumvents the current limitation that a given pattern cannot
-        // be called multiple times by the PatternRewrite infrastructure (to
-        // avoid infinite recursion, but in this case, infinite recursion
-        // cannot happen because the rank is strictly decreasing).
-        // TODO(rriddle, nicolasvasilache) Implement something like a hook for
-        // a potential function that must decrease and allow the same pattern
-        // multiple times.
-        auto success = matchAndRewrite(insertStridedSliceOp, rewriter);
-        (void)success;
-        assert(succeeded(success) && "Unexpected failure");
-        extractedSource = insertStridedSliceOp;
+        extractedSource = rewriter.create<InsertStridedSliceOp>(
+            loc, extractedSource, extractedDest,
+            getI64SubArray(op.offsets(), /* dropFront=*/1),
+            getI64SubArray(op.strides(), /* dropFront=*/1));
       }
       // 4. Insert the extractedSource into the res vector.
       res = insertOne(rewriter, loc, extractedSource, res, off);
@@ -814,6 +801,9 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
+  /// This pattern creates recursive InsertStridedSliceOp, but the recursion is
+  /// bounded as the rank is strictly decreasing.
+  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 class VectorTypeCastOpConversion : public ConvertToLLVMPattern {
@@ -1068,28 +1058,19 @@ public:
          off += stride, ++idx) {
       Value extracted = extractOne(rewriter, loc, op.vector(), off);
       if (op.offsets().getValue().size() > 1) {
-        StridedSliceOp stridedSliceOp = rewriter.create<StridedSliceOp>(
+        extracted = rewriter.create<StridedSliceOp>(
             loc, extracted, getI64SubArray(op.offsets(), /* dropFront=*/1),
             getI64SubArray(op.sizes(), /* dropFront=*/1),
             getI64SubArray(op.strides(), /* dropFront=*/1));
-        // Call matchAndRewrite recursively from within the pattern. This
-        // circumvents the current limitation that a given pattern cannot
-        // be called multiple times by the PatternRewrite infrastructure (to
-        // avoid infinite recursion, but in this case, infinite recursion
-        // cannot happen because the rank is strictly decreasing).
-        // TODO(rriddle, nicolasvasilache) Implement something like a hook for
-        // a potential function that must decrease and allow the same pattern
-        // multiple times.
-        auto success = matchAndRewrite(stridedSliceOp, rewriter);
-        (void)success;
-        assert(succeeded(success) && "Unexpected failure");
-        extracted = stridedSliceOp;
       }
       res = insertOne(rewriter, loc, extracted, res, idx);
     }
     rewriter.replaceOp(op, {res});
     return success();
   }
+  /// This pattern creates recursive StridedSliceOp, but the recursion is
+  /// bounded as the rank is strictly decreasing.
+  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 } // namespace
