@@ -581,7 +581,8 @@ namespace llvm {
     struct CGModifierPass : public CGPass {
       unsigned NumSCCs = 0;
       unsigned NumFns = 0;
-      bool SetupWorked = true;
+      unsigned NumFnDecls = 0;
+      unsigned SetupWorked = 0;
       unsigned NumExtCalledBefore = 0;
       unsigned NumExtCalledAfter = 0;
 
@@ -589,10 +590,12 @@ namespace llvm {
 
       bool runOnSCC(CallGraphSCC &SCMM) override {
         ++NumSCCs;
-        for (CallGraphNode *N : SCMM)
-          if (N->getFunction())
+        for (CallGraphNode *N : SCMM) {
+          if (N->getFunction()){
             ++NumFns;
-
+            NumFnDecls += N->getFunction()->isDeclaration();
+          }
+        }
         CGPass::run();
 
         CallGraph &CG = const_cast<CallGraph &>(SCMM.getCallGraph());
@@ -618,11 +621,13 @@ namespace llvm {
 
         if (!Test1F || !Test2aF || !Test2bF || !Test3F || !InSCC(Test1F) ||
             !InSCC(Test2aF) || !InSCC(Test2bF) || !InSCC(Test3F))
-          return SetupWorked = false;
+          return false;
 
         CallInst *CI = dyn_cast<CallInst>(&Test1F->getEntryBlock().front());
         if (!CI || CI->getCalledFunction() != Test2aF)
-          return SetupWorked = false;
+          return false;
+
+        SetupWorked += 1;
 
         // Create a replica of test3 and just move the blocks there.
         Function *Test3FRepl = Function::Create(
@@ -664,7 +669,11 @@ namespace llvm {
     TEST(PassManager, CallGraphUpdater0) {
       // SCC#1: test1->test2a->test2b->test3->test1
       // SCC#2: test4
-      // SCC#3: indirect call node
+      // SCC#3: test3 (the empty function declaration as we replaced it with
+      //               test3repl when we visited SCC#1)
+      // SCC#4: test2a->test2b (the empty function declarations as we deleted
+      //                        these functions when we visited SCC#1)
+      // SCC#5: indirect call node
 
       LLVMContext Context;
       std::unique_ptr<Module> M(makeLLVMModule(Context));
@@ -677,9 +686,10 @@ namespace llvm {
       legacy::PassManager Passes;
       Passes.add(P);
       Passes.run(*M);
-      ASSERT_TRUE(P->SetupWorked);
-      ASSERT_EQ(P->NumSCCs, 3U);
-      ASSERT_EQ(P->NumFns, 5U);
+      ASSERT_EQ(P->SetupWorked, 1U);
+      ASSERT_EQ(P->NumSCCs, 5U);
+      ASSERT_EQ(P->NumFns, 8U);
+      ASSERT_EQ(P->NumFnDecls, 3U);
       ASSERT_EQ(M->getFunctionList().size(), 3U);
       ASSERT_EQ(P->NumExtCalledBefore, /* test1, 2a, 2b, 3, 4 */ 5U);
       ASSERT_EQ(P->NumExtCalledAfter, /* test1, 3repl, 4 */ 3U);

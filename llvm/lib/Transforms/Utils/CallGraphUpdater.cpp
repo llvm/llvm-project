@@ -110,6 +110,10 @@ void CallGraphUpdater::removeFunction(Function &DeadFn) {
     DeadFunctionsInComdats.push_back(&DeadFn);
   else
     DeadFunctions.push_back(&DeadFn);
+
+  // For the old call graph we remove the function from the SCC right away.
+  if (CGSCC && !ReplacedFunctions.count(&DeadFn))
+    CGSCC->DeleteNode((*CG)[&DeadFn]);
 }
 
 void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {
