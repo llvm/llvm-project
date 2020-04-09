@@ -6884,17 +6884,18 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
 
-  SmallVector<VPValue *, 2> Masks;
+  SmallVector<VPValue *, 2> Operands;
   unsigned NumIncoming = Phi->getNumIncomingValues();
   for (unsigned In = 0; In < NumIncoming; In++) {
     VPValue *EdgeMask =
       createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent(), Plan);
     assert((EdgeMask || NumIncoming == 1) &&
            "Multiple predecessors with one having a full mask");
+    Operands.push_back(Plan->getOrAddVPValue(Phi->getIncomingValue(In)));
     if (EdgeMask)
-      Masks.push_back(EdgeMask);
+      Operands.push_back(EdgeMask);
   }
-  return new VPBlendRecipe(Phi, Masks);
+  return new VPBlendRecipe(Phi, Operands);
 }
 
 VPWidenCallRecipe *
@@ -7436,10 +7437,8 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
 
-  unsigned NumIncoming = Phi->getNumIncomingValues();
+  unsigned NumIncoming = getNumIncomingValues();
 
-  assert((User || NumIncoming == 1) &&
-         "Multiple predecessors with predecessors having a full mask");
   // Generate a sequence of selects of the form:
   // SELECT(Mask3, In3,
   //      SELECT(Mask2, In2,
@@ -7449,14 +7448,13 @@ void VPBlendRecipe::execute(VPTransformState &State) {
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       // We might have single edge PHIs (blocks) - use an identity
       // 'select' for the first PHI operand.
-      Value *In0 =
-          State.ILV->getOrCreateVectorValue(Phi->getIncomingValue(In), Part);
+      Value *In0 = State.get(getIncomingValue(In), Part);
       if (In == 0)
         Entry[Part] = In0; // Initialize with the first incoming value.
       else {
         // Select between the current value and the previous incoming edge
         // based on the incoming mask.
-        Value *Cond = State.get(User->getOperand(In), Part);
+        Value *Cond = State.get(getMask(In), Part);
         Entry[Part] =
             State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
       }

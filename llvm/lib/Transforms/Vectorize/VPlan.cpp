@@ -756,17 +756,17 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +\n" << Indent << "\"BLEND ";
   Phi->printAsOperand(O, false);
   O << " =";
-  if (!User) {
+  if (getNumIncomingValues() == 1) {
     // Not a User of any mask: not really blending, this is a
     // single-predecessor phi.
     O << " ";
-    Phi->getIncomingValue(0)->printAsOperand(O, false);
+    getIncomingValue(0)->printAsOperand(O, SlotTracker);
   } else {
-    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
+    for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
       O << " ";
-      Phi->getIncomingValue(I)->printAsOperand(O, false);
+      getIncomingValue(I)->printAsOperand(O, SlotTracker);
       O << "/";
-      User->getOperand(I)->printAsOperand(O, SlotTracker);
+      getMask(I)->printAsOperand(O, SlotTracker);
     }
   }
   O << "\\l\"";
