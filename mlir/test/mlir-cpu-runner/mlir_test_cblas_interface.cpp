@@ -1,4 +1,4 @@
-//===- cblas_interface.cpp - Simple Blas subset interface -----------------===//
+//===- mlir_test_cblas_interface.cpp - Simple Blas subset interface -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/cblas_interface.h"
-#include "include/cblas.h"
+#include "include/mlir_test_cblas_interface.h"
+#include "include/mlir_test_cblas.h"
 #include <assert.h>
 #include <iostream>
 
@@ -82,8 +82,8 @@ extern "C" void _mlir_ciface_linalg_dot_viewsxf32_viewsxf32_viewf32(
     return;
   }
   Z->data[Z->offset] +=
-      cblas_sdot(X->sizes[0], X->data + X->offset, X->strides[0],
-                 Y->data + Y->offset, Y->strides[0]);
+      mlir_test_cblas_sdot(X->sizes[0], X->data + X->offset, X->strides[0],
+                           Y->data + Y->offset, Y->strides[0]);
 }
 
 extern "C" void _mlir_ciface_linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
@@ -99,9 +99,9 @@ extern "C" void _mlir_ciface_linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
     printMemRefMetaData(std::cerr, *C);
     return;
   }
-  cblas_sgemm(CBLAS_ORDER::CblasRowMajor, CBLAS_TRANSPOSE::CblasNoTrans,
-              CBLAS_TRANSPOSE::CblasNoTrans, C->sizes[0], C->sizes[1],
-              A->sizes[1], 1.0f, A->data + A->offset, A->strides[0],
-              B->data + B->offset, B->strides[0], 1.0f, C->data + C->offset,
-              C->strides[0]);
+  mlir_test_cblas_sgemm(
+      CBLAS_ORDER::CblasRowMajor, CBLAS_TRANSPOSE::CblasNoTrans,
+      CBLAS_TRANSPOSE::CblasNoTrans, C->sizes[0], C->sizes[1], A->sizes[1],
+      1.0f, A->data + A->offset, A->strides[0], B->data + B->offset,
+      B->strides[0], 1.0f, C->data + C->offset, C->strides[0]);
 }
