@@ -95,3 +95,17 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
                           "OMPC_");
   return llvm::None;
 }
+
+llvm::Optional<std::string>
+clang::ast_matchers::dynamic::internal::ArgTypeTraits<
+    clang::UnaryExprOrTypeTrait>::getBestGuess(const VariantValue &Value) {
+  static constexpr llvm::StringRef Allowed[] = {
+      "UETT_SizeOf",           "UETT_AlignOf",
+      "UETT_VecStep",          "UETT_OpenMPRequiredSimdAlign",
+      "UETT_PreferredAlignOf",
+  };
+  if (Value.isString())
+    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
+                          "UETT_");
+  return llvm::None;
+}

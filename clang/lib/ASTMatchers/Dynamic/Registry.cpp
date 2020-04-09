@@ -95,9 +95,6 @@ void RegistryMaps::registerMatcher(
 RegistryMaps::RegistryMaps() {
   // TODO: Here is the list of the missing matchers, grouped by reason.
   //
-  // Need Variant/Parser fixes:
-  // ofKind
-  //
   // Polymorphic + argument overload:
   // findAll
   //
@@ -458,6 +455,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(objcThrowStmt);
   REGISTER_MATCHER(objcTryStmt);
   REGISTER_MATCHER(ofClass);
+  REGISTER_MATCHER(ofKind);
   REGISTER_MATCHER(ompDefaultClause);
   REGISTER_MATCHER(ompExecutableDirective);
   REGISTER_MATCHER(on);
