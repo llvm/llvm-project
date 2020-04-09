@@ -199,6 +199,7 @@ public:
 
   /// Returns the kind of call this is.
   virtual Kind getKind() const = 0;
+  virtual StringRef getKindAsString() const = 0;
 
   /// Returns the declaration of the function or method that will be
   /// called. May be null.
@@ -530,6 +531,9 @@ public:
   }
 
   Kind getKind() const override { return CE_Function; }
+  virtual StringRef getKindAsString() const override {
+    return "SimpleFunctionCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_Function;
@@ -634,13 +638,12 @@ public:
   void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
                                     BindingsTy &Bindings) const override;
 
-  ArrayRef<ParmVarDecl*> parameters() const override;
+  ArrayRef<ParmVarDecl *> parameters() const override;
 
   Kind getKind() const override { return CE_Block; }
+  virtual StringRef getKindAsString() const override { return "BlockCall"; }
 
-  static bool classof(const CallEvent *CA) {
-    return CA->getKind() == CE_Block;
-  }
+  static bool classof(const CallEvent *CA) { return CA->getKind() == CE_Block; }
 };
 
 /// Represents a non-static C++ member function call, no matter how
@@ -712,6 +715,7 @@ public:
   RuntimeDefinition getRuntimeDefinition() const override;
 
   Kind getKind() const override { return CE_CXXMember; }
+  virtual StringRef getKindAsString() const override { return "CXXMemberCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMember;
@@ -751,6 +755,9 @@ public:
   const Expr *getCXXThisExpr() const override;
 
   Kind getKind() const override { return CE_CXXMemberOperator; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXMemberOperatorCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMemberOperator;
@@ -815,6 +822,9 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXDestructor; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXDestructorCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXDestructor;
@@ -887,6 +897,9 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXConstructor; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXConstructorCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXConstructor;
@@ -964,6 +977,9 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXInheritedConstructor; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXInheritedConstructorCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXInheritedConstructor;
@@ -1020,6 +1036,9 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXAllocator; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXAllocatorCall";
+  }
 
   static bool classof(const CallEvent *CE) {
     return CE->getKind() == CE_CXXAllocator;
@@ -1143,6 +1162,9 @@ public:
   ArrayRef<ParmVarDecl*> parameters() const override;
 
   Kind getKind() const override { return CE_ObjCMessage; }
+  virtual StringRef getKindAsString() const override {
+    return "ObjCMethodCall";
+  }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_ObjCMessage;
