@@ -4,8 +4,10 @@
 ; we don't do that anymore. It also verifies that the combination of
 ; globalopt and argpromotion is able to optimize the call safely.
 ;
-; RUN: opt -S -argpromotion %s | FileCheck %s --check-prefix=ARGPROMOTION
-; RUN: opt -S -globalopt -argpromotion %s | FileCheck %s --check-prefix=GLOBALOPT_ARGPROMOTION
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=3 -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=3 -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM
+; RUN: opt -attributor-cgscc -attributor-manifest-internal -attributor-disable=false -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal -attributor-disable=false -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.11.0"
@@ -13,25 +15,25 @@ target triple = "i386-pc-windows-msvc19.11.0"
 %struct.a = type { i8 }
 
 define internal x86_thiscallcc void @internalfun(%struct.a* %this, <{ %struct.a }>* inalloca) {
-; ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun
-; ARGPROMOTION-SAME: (%struct.a* [[THIS:%.*]], <{ [[STRUCT_A:%.*]] }>* inalloca [[TMP0:%.*]])
-; ARGPROMOTION-NEXT:  entry:
-; ARGPROMOTION-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
-; ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
-; ARGPROMOTION-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
-; ARGPROMOTION-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* [[TMP1]], %struct.a* dereferenceable(1) [[A]])
-; ARGPROMOTION-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* inalloca [[ARGMEM]])
-; ARGPROMOTION-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@internalfun
+; IS__TUNIT____-SAME: (%struct.a* noalias nocapture nofree readnone [[THIS:%.*]], <{ [[STRUCT_A:%.*]] }>* inalloca nonnull align 4 dereferenceable(1) [[TMP0:%.*]])
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
+; IS__TUNIT____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* nonnull align 4 dereferenceable(1) [[TMP1]], %struct.a* nonnull align 4 dereferenceable(1) [[A]])
+; IS__TUNIT____-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
+; IS__TUNIT____-NEXT:    ret void
 ;
-; GLOBALOPT_ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun
-; GLOBALOPT_ARGPROMOTION-SAME: (<{ [[STRUCT_A:%.*]] }>* [[TMP0:%.*]]) unnamed_addr
-; GLOBALOPT_ARGPROMOTION-NEXT:  entry:
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* [[TMP1]], %struct.a* dereferenceable(1) [[A]])
-; GLOBALOPT_ARGPROMOTION-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* inalloca [[ARGMEM]])
-; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
+; IS__CGSCC____-LABEL: define {{[^@]+}}@internalfun
+; IS__CGSCC____-SAME: (%struct.a* nocapture nofree readnone [[THIS:%.*]], <{ [[STRUCT_A:%.*]] }>* inalloca nonnull dereferenceable(1) [[TMP0:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
+; IS__CGSCC____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* nonnull align 4 dereferenceable(1) [[TMP1]], %struct.a* nonnull dereferenceable(1) [[A]])
+; IS__CGSCC____-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   %a = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %0, i32 0, i32 0
@@ -44,21 +46,21 @@ entry:
 
 ; This is here to ensure @internalfun is live.
 define void @exportedfun(%struct.a* %a) {
-; ARGPROMOTION-LABEL: define {{[^@]+}}@exportedfun
-; ARGPROMOTION-SAME: (%struct.a* [[A:%.*]])
-; ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
-; ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; ARGPROMOTION-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* [[A]], <{ [[STRUCT_A]] }>* inalloca [[ARGMEM]])
-; ARGPROMOTION-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
-; ARGPROMOTION-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@exportedfun
+; IS__TUNIT____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]])
+; IS__TUNIT____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
+; IS__TUNIT____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
+; IS__TUNIT____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nofree readnone undef, <{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
+; IS__TUNIT____-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
+; IS__TUNIT____-NEXT:    ret void
 ;
-; GLOBALOPT_ARGPROMOTION-LABEL: define {{[^@]+}}@exportedfun
-; GLOBALOPT_ARGPROMOTION-SAME: (%struct.a* [[A:%.*]]) local_unnamed_addr
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
-; GLOBALOPT_ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; GLOBALOPT_ARGPROMOTION-NEXT:    call fastcc void @internalfun(<{ [[STRUCT_A]] }>* [[ARGMEM]])
-; GLOBALOPT_ARGPROMOTION-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
-; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
+; IS__CGSCC____-LABEL: define {{[^@]+}}@exportedfun
+; IS__CGSCC____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]])
+; IS__CGSCC____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
+; IS__CGSCC____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
+; IS__CGSCC____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone [[A]], <{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
+; IS__CGSCC____-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   %inalloca.save = tail call i8* @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.a }>, align 4
