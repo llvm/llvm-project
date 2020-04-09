@@ -475,10 +475,6 @@ namespace llvm {
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();
-
-  /// The pass fixups statepoint machine instruction to replace usage of
-  /// caller saved registers with stack slots.
-  extern char &FixupStatepointCallerSavedID;
 } // End llvm namespace
 
 #endif

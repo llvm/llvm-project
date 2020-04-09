@@ -204,8 +204,6 @@ static cl::opt<std::string>
                   cl::desc("Stop compilation before a specific pass"),
                   cl::value_desc("pass-name"), cl::init(""), cl::Hidden);
 
-extern cl::opt<bool> UseRegistersForDeoptValues;
-
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -912,9 +910,6 @@ void TargetPassConfig::addMachinePasses() {
 
   // Run post-ra passes.
   addPostRegAlloc();
-
-  if (UseRegistersForDeoptValues)
-    addPass(&FixupStatepointCallerSavedID);
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOpt::None) {
