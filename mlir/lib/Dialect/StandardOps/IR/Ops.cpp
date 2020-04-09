@@ -1068,14 +1068,14 @@ static LogicalResult verify(DimOp op) {
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   // Constant fold dim when the size along the index referred to is a constant.
   auto opType = memrefOrTensor().getType();
-  int64_t indexSize = ShapedType::kDynamicSize;
+  int64_t dimSize = ShapedType::kDynamicSize;
   if (auto tensorType = opType.dyn_cast<RankedTensorType>())
-    indexSize = tensorType.getShape()[getIndex()];
+    dimSize = tensorType.getShape()[getIndex()];
   else if (auto memrefType = opType.dyn_cast<MemRefType>())
-    indexSize = memrefType.getShape()[getIndex()];
+    dimSize = memrefType.getShape()[getIndex()];
 
-  if (!ShapedType::isDynamic(indexSize))
-    return IntegerAttr::get(IndexType::get(getContext()), indexSize);
+  if (!ShapedType::isDynamic(dimSize))
+    return IntegerAttr::get(IndexType::get(getContext()), dimSize);
 
   // Fold dim to the size argument for an AllocOp/ViewOp/SubViewOp.
   auto memrefType = opType.dyn_cast<MemRefType>();
@@ -2310,13 +2310,12 @@ Value ViewOp::getDynamicOffset() {
 
 static LogicalResult verifyDynamicStrides(MemRefType memrefType,
                                           ArrayRef<int64_t> strides) {
-  ArrayRef<int64_t> shape = memrefType.getShape();
   unsigned rank = memrefType.getRank();
   assert(rank == strides.size());
   bool dynamicStrides = false;
   for (int i = rank - 2; i >= 0; --i) {
     // If size at dim 'i + 1' is dynamic, set the 'dynamicStrides' flag.
-    if (ShapedType::isDynamic(shape[i + 1]))
+    if (memrefType.isDynamicDim(i + 1))
       dynamicStrides = true;
     // If stride at dim 'i' is not dynamic, return error.
     if (dynamicStrides && strides[i] != MemRefType::getDynamicStrideOrOffset())
