@@ -563,7 +563,7 @@ void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
 }
 
 void CallGraphSCC::DeleteNode(CallGraphNode *Old) {
-  ReplaceNode(Old, /* New */ nullptr);
+  ReplaceNode(Old, /*New=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
