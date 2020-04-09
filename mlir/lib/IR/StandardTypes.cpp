@@ -184,9 +184,14 @@ int64_t ShapedType::getRank() const { return getShape().size(); }
 
 bool ShapedType::hasRank() const { return !isa<UnrankedTensorType>(); }
 
-int64_t ShapedType::getDimSize(int64_t i) const {
-  assert(i >= 0 && i < getRank() && "invalid index for shaped type");
-  return getShape()[i];
+int64_t ShapedType::getDimSize(unsigned idx) const {
+  assert(idx < getRank() && "invalid index for shaped type");
+  return getShape()[idx];
+}
+
+bool ShapedType::isDynamicDim(unsigned idx) const {
+  assert(idx < getRank() && "invalid index for shaped type");
+  return isDynamic(getShape()[idx]);
 }
 
 unsigned ShapedType::getDynamicDimIndex(unsigned index) const {
