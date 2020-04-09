@@ -35,32 +35,6 @@
 
 using namespace mlir;
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-static llvm::cl::opt<unsigned long long> clFastMemoryCapacity(
-    "affine-data-copy-generate-fast-mem-capacity",
-    llvm::cl::desc(
-        "Set fast memory space capacity in KiB (default: unlimited)"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool>
-    clDma("affine-data-copy-generate-dma",
-          llvm::cl::desc("Generate DMA instead of point-wise copy"),
-          llvm::cl::cat(clOptionsCategory), llvm::cl::init(true));
-
-static llvm::cl::opt<unsigned> clFastMemorySpace(
-    "affine-data-copy-generate-fast-mem-space", llvm::cl::init(1),
-    llvm::cl::desc(
-        "Fast memory space identifier for copy generation (default: 1)"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool> clSkipNonUnitStrideLoop(
-    "affine-data-copy-generate-skip-non-unit-stride-loops", llvm::cl::Hidden,
-    llvm::cl::init(false),
-    llvm::cl::desc("Testing purposes: avoid non-unit stride loop choice depths "
-                   "for copy placement"),
-    llvm::cl::cat(clOptionsCategory));
-
 namespace {
 
 /// Replaces all loads and stores on memref's living in 'slowMemorySpace' by
@@ -76,50 +50,21 @@ namespace {
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
     : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
-  explicit AffineDataCopyGeneration(
-      unsigned slowMemorySpace = 0,
-      unsigned fastMemorySpace = clFastMemorySpace, unsigned tagMemorySpace = 0,
-      int minDmaTransferSize = 1024,
-      uint64_t fastMemCapacityBytes =
-          (clFastMemoryCapacity.getNumOccurrences() > 0
-               ? clFastMemoryCapacity * 1024 // cl-provided size is in KiB
-               : std::numeric_limits<uint64_t>::max()),
-      bool generateDma = clDma,
-      bool skipNonUnitStrideLoops = clSkipNonUnitStrideLoop)
-      : slowMemorySpace(slowMemorySpace), fastMemorySpace(fastMemorySpace),
-        tagMemorySpace(tagMemorySpace), minDmaTransferSize(minDmaTransferSize),
-        fastMemCapacityBytes(fastMemCapacityBytes), generateDma(generateDma),
-        skipNonUnitStrideLoops(skipNonUnitStrideLoops) {}
-
-  explicit AffineDataCopyGeneration(const AffineDataCopyGeneration &other)
-      : AffineDataCopyGenerationBase<AffineDataCopyGeneration>(other),
-        slowMemorySpace(other.slowMemorySpace),
-        fastMemorySpace(other.fastMemorySpace),
-        tagMemorySpace(other.tagMemorySpace),
-        minDmaTransferSize(other.minDmaTransferSize),
-        fastMemCapacityBytes(other.fastMemCapacityBytes),
-        generateDma(other.generateDma),
-        skipNonUnitStrideLoops(other.skipNonUnitStrideLoops) {}
+  AffineDataCopyGeneration() = default;
+  explicit AffineDataCopyGeneration(unsigned slowMemorySpace,
+                                    unsigned fastMemorySpace,
+                                    unsigned tagMemorySpace,
+                                    int minDmaTransferSize,
+                                    uint64_t fastMemCapacityBytes) {
+    this->slowMemorySpace = slowMemorySpace;
+    this->fastMemorySpace = fastMemorySpace;
+    this->tagMemorySpace = tagMemorySpace;
+    this->minDmaTransferSize = minDmaTransferSize;
+    this->fastMemoryCapacity = fastMemCapacityBytes / 1024;
+  }
 
   void runOnFunction() override;
   LogicalResult runOnBlock(Block *block, DenseSet<Operation *> &copyNests);
-
-  // Slow memory space associated with copies.
-  const unsigned slowMemorySpace;
-  // Fast memory space associated with copies.
-  unsigned fastMemorySpace;
-  // Memory space associated with DMA tags.
-  unsigned tagMemorySpace;
-  // Minimum DMA transfer size supported by the target in bytes.
-  const int minDmaTransferSize;
-  // Capacity of the faster memory space.
-  uint64_t fastMemCapacityBytes;
-
-  // If set, generate DMA operations instead of read/write.
-  bool generateDma;
-
-  // If set, ignore loops with steps other than 1.
-  bool skipNonUnitStrideLoops;
 
   // Constant zero index to avoid too many duplicates.
   Value zeroIndex = nullptr;
@@ -153,6 +98,10 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
   if (block->empty())
     return success();
 
+  uint64_t fastMemCapacityBytes =
+      fastMemoryCapacity != std::numeric_limits<uint64_t>::max()
+          ? fastMemoryCapacity * 1024
+          : fastMemoryCapacity;
   AffineCopyOptions copyOptions = {generateDma, slowMemorySpace,
                                    fastMemorySpace, tagMemorySpace,
                                    fastMemCapacityBytes};

@@ -582,7 +582,7 @@ struct Vectorize : public AffineVectorizeBase<Vectorize> {
 } // end anonymous namespace
 
 Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
-  vectorSizes->assign(virtualVectorSize.begin(), virtualVectorSize.end());
+  vectorSizes = virtualVectorSize;
 }
 
 /////// TODO(ntv): Hoist to a VectorizationStrategy.cpp when appropriate.

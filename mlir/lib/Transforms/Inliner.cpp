@@ -27,16 +27,6 @@
 
 using namespace mlir;
 
-static llvm::cl::opt<bool> disableCanonicalization(
-    "mlir-disable-inline-simplify",
-    llvm::cl::desc("Disable running simplifications during inlining"),
-    llvm::cl::ReallyHidden, llvm::cl::init(false));
-
-static llvm::cl::opt<unsigned> maxInliningIterations(
-    "mlir-max-inline-iterations",
-    llvm::cl::desc("Maximum number of iterations when inlining within an SCC"),
-    llvm::cl::ReallyHidden, llvm::cl::init(4));
-
 //===----------------------------------------------------------------------===//
 // Symbol Use Tracking
 //===----------------------------------------------------------------------===//
@@ -563,13 +553,55 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
     useList.recomputeUses(node, cg);
 }
 
-/// Attempt to inline calls within the given scc, and run canonicalizations with
-/// the given patterns, until a fixed point is reached. This allows for the
-/// inlining of newly devirtualized calls.
-static void inlineSCC(Inliner &inliner, CGUseList &useList,
-                      MutableArrayRef<CallGraphNode *> currentSCC,
-                      MLIRContext *context,
-                      const OwningRewritePatternList &canonPatterns) {
+//===----------------------------------------------------------------------===//
+// InlinerPass
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct InlinerPass : public InlinerBase<InlinerPass> {
+  void runOnOperation() override;
+
+  /// Attempt to inline calls within the given scc, and run canonicalizations
+  /// with the given patterns, until a fixed point is reached. This allows for
+  /// the inlining of newly devirtualized calls.
+  void inlineSCC(Inliner &inliner, CGUseList &useList,
+                 MutableArrayRef<CallGraphNode *> currentSCC,
+                 MLIRContext *context,
+                 const OwningRewritePatternList &canonPatterns);
+};
+} // end anonymous namespace
+
+void InlinerPass::runOnOperation() {
+  CallGraph &cg = getAnalysis<CallGraph>();
+  auto *context = &getContext();
+
+  // The inliner should only be run on operations that define a symbol table,
+  // as the callgraph will need to resolve references.
+  Operation *op = getOperation();
+  if (!op->hasTrait<OpTrait::SymbolTable>()) {
+    op->emitOpError() << " was scheduled to run under the inliner, but does "
+                         "not define a symbol table";
+    return signalPassFailure();
+  }
+
+  // Collect a set of canonicalization patterns to use when simplifying
+  // callable regions within an SCC.
+  OwningRewritePatternList canonPatterns;
+  for (auto *op : context->getRegisteredOperations())
+    op->getCanonicalizationPatterns(canonPatterns, context);
+
+  // Run the inline transform in post-order over the SCCs in the callgraph.
+  Inliner inliner(context, cg);
+  CGUseList useList(getOperation(), cg);
+  runTransformOnCGSCCs(cg, [&](MutableArrayRef<CallGraphNode *> scc) {
+    inlineSCC(inliner, useList, scc, context, canonPatterns);
+  });
+}
+
+void InlinerPass::inlineSCC(Inliner &inliner, CGUseList &useList,
+                            MutableArrayRef<CallGraphNode *> currentSCC,
+                            MLIRContext *context,
+                            const OwningRewritePatternList &canonPatterns) {
   // If we successfully inlined any calls, run some simplifications on the
   // nodes of the scc. Continue attempting to inline until we reach a fixed
   // point, or a maximum iteration count. We canonicalize here as it may
@@ -583,41 +615,6 @@ static void inlineSCC(Inliner &inliner, CGUseList &useList,
     canonicalizeSCC(inliner.cg, useList, currentSCC, context, canonPatterns);
   }
 }
-
-//===----------------------------------------------------------------------===//
-// InlinerPass
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct InlinerPass : public InlinerBase<InlinerPass> {
-  void runOnOperation() override {
-    CallGraph &cg = getAnalysis<CallGraph>();
-    auto *context = &getContext();
-
-    // The inliner should only be run on operations that define a symbol table,
-    // as the callgraph will need to resolve references.
-    Operation *op = getOperation();
-    if (!op->hasTrait<OpTrait::SymbolTable>()) {
-      op->emitOpError() << " was scheduled to run under the inliner, but does "
-                           "not define a symbol table";
-      return signalPassFailure();
-    }
-
-    // Collect a set of canonicalization patterns to use when simplifying
-    // callable regions within an SCC.
-    OwningRewritePatternList canonPatterns;
-    for (auto *op : context->getRegisteredOperations())
-      op->getCanonicalizationPatterns(canonPatterns, context);
-
-    // Run the inline transform in post-order over the SCCs in the callgraph.
-    Inliner inliner(context, cg);
-    CGUseList useList(getOperation(), cg);
-    runTransformOnCGSCCs(cg, [&](MutableArrayRef<CallGraphNode *> scc) {
-      inlineSCC(inliner, useList, scc, context, canonPatterns);
-    });
-  }
-};
-} // end anonymous namespace
 
 std::unique_ptr<Pass> mlir::createInlinerPass() {
   return std::make_unique<InlinerPass>();
