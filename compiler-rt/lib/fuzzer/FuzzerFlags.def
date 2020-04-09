@@ -22,7 +22,7 @@ FUZZER_FLAG_INT(len_control, 100, "Try generating small inputs first, "
   "size up to max_len. Default value is 0, if LLVMFuzzerCustomMutator is used.")
 FUZZER_FLAG_STRING(seed_inputs, "A comma-separated list of input files "
   "to use as an additional seed corpus. Alternatively, an \"@\" followed by "
-  "the name of a file containing the comma-seperated list.")
+  "the name of a file containing the comma-separated list.")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
