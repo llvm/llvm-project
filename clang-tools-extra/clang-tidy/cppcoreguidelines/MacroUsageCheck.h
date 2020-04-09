@@ -27,8 +27,8 @@ public:
   MacroUsageCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         AllowedRegexp(Options.get("AllowedRegexp", "^DEBUG_*")),
-        CheckCapsOnly(Options.get("CheckCapsOnly", 0)),
-        IgnoreCommandLineMacros(Options.get("IgnoreCommandLineMacros", 1)) {}
+        CheckCapsOnly(Options.get("CheckCapsOnly", false)),
+        IgnoreCommandLineMacros(Options.get("IgnoreCommandLineMacros", true)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }

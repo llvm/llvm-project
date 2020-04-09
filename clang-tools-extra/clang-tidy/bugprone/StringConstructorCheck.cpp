@@ -26,7 +26,7 @@ AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnLargeLength(Options.get("WarnOnLargeLength", 1) != 0),
+      WarnOnLargeLength(Options.get("WarnOnLargeLength", true)),
       LargeLengthThreshold(Options.get("LargeLengthThreshold", 0x800000)) {}
 
 void StringConstructorCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

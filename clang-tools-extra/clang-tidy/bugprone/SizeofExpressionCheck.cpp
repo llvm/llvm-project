@@ -60,12 +60,12 @@ CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
 SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnSizeOfConstant(Options.get("WarnOnSizeOfConstant", 1) != 0),
+      WarnOnSizeOfConstant(Options.get("WarnOnSizeOfConstant", true)),
       WarnOnSizeOfIntegerExpression(
-          Options.get("WarnOnSizeOfIntegerExpression", 0) != 0),
-      WarnOnSizeOfThis(Options.get("WarnOnSizeOfThis", 1) != 0),
+          Options.get("WarnOnSizeOfIntegerExpression", false)),
+      WarnOnSizeOfThis(Options.get("WarnOnSizeOfThis", true)),
       WarnOnSizeOfCompareToConstant(
-          Options.get("WarnOnSizeOfCompareToConstant", 1) != 0) {}
+          Options.get("WarnOnSizeOfCompareToConstant", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);

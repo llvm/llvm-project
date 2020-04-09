@@ -24,7 +24,7 @@ void InefficientStringConcatenationCheck::storeOptions(
 InefficientStringConcatenationCheck::InefficientStringConcatenationCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", 0)) {}
+      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
 
 void InefficientStringConcatenationCheck::registerMatchers(
     MatchFinder *Finder) {

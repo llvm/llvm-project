@@ -23,11 +23,11 @@ namespace cppcoreguidelines {
 
 SpecialMemberFunctionsCheck::SpecialMemberFunctionsCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      AllowMissingMoveFunctions(Options.get("AllowMissingMoveFunctions", 0)),
-      AllowSoleDefaultDtor(Options.get("AllowSoleDefaultDtor", 0)),
+    : ClangTidyCheck(Name, Context), AllowMissingMoveFunctions(Options.get(
+                                         "AllowMissingMoveFunctions", false)),
+      AllowSoleDefaultDtor(Options.get("AllowSoleDefaultDtor", false)),
       AllowMissingMoveFunctionsWhenCopyIsDeleted(
-          Options.get("AllowMissingMoveFunctionsWhenCopyIsDeleted", 0)) {}
+          Options.get("AllowMissingMoveFunctionsWhenCopyIsDeleted", false)) {}
 
 void SpecialMemberFunctionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
