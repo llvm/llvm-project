@@ -462,55 +462,60 @@ Value Importer::processValue(llvm::Value *value) {
   return nullptr;
 }
 
+/// Return the MLIR OperationName for the given LLVM opcode.
+static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
 // Maps from LLVM opcode to MLIR OperationName. This is deliberately ordered
 // as in llvm/IR/Instructions.def to aid comprehension and spot missing
 // instructions.
 #define INST(llvm_n, mlir_n)                                                   \
   { llvm::Instruction::llvm_n, LLVM::mlir_n##Op::getOperationName() }
-static const DenseMap<unsigned, StringRef> opcMap = {
-    // Ret is handled specially.
-    // Br is handled specially.
-    // FIXME: switch
-    // FIXME: indirectbr
-    // FIXME: invoke
-    INST(Resume, Resume),
-    // FIXME: unreachable
-    // FIXME: cleanupret
-    // FIXME: catchret
-    // FIXME: catchswitch
-    // FIXME: callbr
-    // FIXME: fneg
-    INST(Add, Add), INST(FAdd, FAdd), INST(Sub, Sub), INST(FSub, FSub),
-    INST(Mul, Mul), INST(FMul, FMul), INST(UDiv, UDiv), INST(SDiv, SDiv),
-    INST(FDiv, FDiv), INST(URem, URem), INST(SRem, SRem), INST(FRem, FRem),
-    INST(Shl, Shl), INST(LShr, LShr), INST(AShr, AShr), INST(And, And),
-    INST(Or, Or), INST(Xor, XOr), INST(Alloca, Alloca), INST(Load, Load),
-    INST(Store, Store),
-    // Getelementptr is handled specially.
-    INST(Ret, Return), INST(Fence, Fence),
-    // FIXME: atomiccmpxchg
-    // FIXME: atomicrmw
-    INST(Trunc, Trunc), INST(ZExt, ZExt), INST(SExt, SExt),
-    INST(FPToUI, FPToUI), INST(FPToSI, FPToSI), INST(UIToFP, UIToFP),
-    INST(SIToFP, SIToFP), INST(FPTrunc, FPTrunc), INST(FPExt, FPExt),
-    INST(PtrToInt, PtrToInt), INST(IntToPtr, IntToPtr), INST(BitCast, Bitcast),
-    INST(AddrSpaceCast, AddrSpaceCast),
-    // FIXME: cleanuppad
-    // FIXME: catchpad
-    // ICmp is handled specially.
-    // FIXME: fcmp
-    // PHI is handled specially.
-    INST(Freeze, Freeze), INST(Call, Call),
-    // FIXME: select
-    // FIXME: vaarg
-    // FIXME: extractelement
-    // FIXME: insertelement
-    // FIXME: shufflevector
-    // FIXME: extractvalue
-    // FIXME: insertvalue
-    // FIXME: landingpad
-};
+  static const DenseMap<unsigned, StringRef> opcMap = {
+      // Ret is handled specially.
+      // Br is handled specially.
+      // FIXME: switch
+      // FIXME: indirectbr
+      // FIXME: invoke
+      INST(Resume, Resume),
+      // FIXME: unreachable
+      // FIXME: cleanupret
+      // FIXME: catchret
+      // FIXME: catchswitch
+      // FIXME: callbr
+      // FIXME: fneg
+      INST(Add, Add), INST(FAdd, FAdd), INST(Sub, Sub), INST(FSub, FSub),
+      INST(Mul, Mul), INST(FMul, FMul), INST(UDiv, UDiv), INST(SDiv, SDiv),
+      INST(FDiv, FDiv), INST(URem, URem), INST(SRem, SRem), INST(FRem, FRem),
+      INST(Shl, Shl), INST(LShr, LShr), INST(AShr, AShr), INST(And, And),
+      INST(Or, Or), INST(Xor, XOr), INST(Alloca, Alloca), INST(Load, Load),
+      INST(Store, Store),
+      // Getelementptr is handled specially.
+      INST(Ret, Return), INST(Fence, Fence),
+      // FIXME: atomiccmpxchg
+      // FIXME: atomicrmw
+      INST(Trunc, Trunc), INST(ZExt, ZExt), INST(SExt, SExt),
+      INST(FPToUI, FPToUI), INST(FPToSI, FPToSI), INST(UIToFP, UIToFP),
+      INST(SIToFP, SIToFP), INST(FPTrunc, FPTrunc), INST(FPExt, FPExt),
+      INST(PtrToInt, PtrToInt), INST(IntToPtr, IntToPtr),
+      INST(BitCast, Bitcast), INST(AddrSpaceCast, AddrSpaceCast),
+      // FIXME: cleanuppad
+      // FIXME: catchpad
+      // ICmp is handled specially.
+      // FIXME: fcmp
+      // PHI is handled specially.
+      INST(Freeze, Freeze), INST(Call, Call),
+      // FIXME: select
+      // FIXME: vaarg
+      // FIXME: extractelement
+      // FIXME: insertelement
+      // FIXME: shufflevector
+      // FIXME: extractvalue
+      // FIXME: insertvalue
+      // FIXME: landingpad
+  };
 #undef INST
+
+  return opcMap.lookup(opcode);
+}
 
 static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate p) {
   switch (p) {
@@ -621,7 +626,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::AddrSpaceCast:
   case llvm::Instruction::Freeze:
   case llvm::Instruction::BitCast: {
-    OperationState state(loc, opcMap.lookup(inst->getOpcode()));
+    OperationState state(loc, lookupOperationNameFromOpcode(inst->getOpcode()));
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands());
     for (auto *op : inst->operand_values()) {
