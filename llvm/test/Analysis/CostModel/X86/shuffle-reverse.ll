@@ -178,8 +178,8 @@ define void @test_vXi32(<2 x i32> %src64, <4 x i32> %src128, <8 x i32> %src256, 
 
 define void @test_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src128, <16 x i16> %src256, <32 x i16> %src512) {
 ; SSE2-LABEL: 'test_vXi16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32 = shufflevector <2 x i16> %src32, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = shufflevector <4 x i16> %src64, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32 = shufflevector <2 x i16> %src32, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64 = shufflevector <4 x i16> %src64, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128 = shufflevector <8 x i16> %src128, <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V256 = shufflevector <16 x i16> %src256, <16 x i16> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V512 = shufflevector <32 x i16> %src512, <32 x i16> undef, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -259,8 +259,8 @@ define void @test_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src128, <
 
 define void @test_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <16 x i8> %src128, <32 x i8> %src256, <64 x i8> %src512) {
 ; SSE2-LABEL: 'test_vXi8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16 = shufflevector <2 x i8> %src16, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32 = shufflevector <4 x i8> %src32, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <2 x i8> %src16, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32 = shufflevector <4 x i8> %src32, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V64 = shufflevector <8 x i8> %src64, <8 x i8> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128 = shufflevector <16 x i8> %src128, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V256 = shufflevector <32 x i8> %src256, <32 x i8> undef, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
