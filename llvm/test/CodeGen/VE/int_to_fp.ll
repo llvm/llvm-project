@@ -190,9 +190,7 @@ define double @ul2d(i64 %a) {
 ; CHECK-NEXT:    lea %s2, 1048576
 ; CHECK-NEXT:    lea.sl %s2, -986710016(, %s2)
 ; CHECK-NEXT:    fadd.d %s1, %s1, %s2
-; CHECK-NEXT:    lea %s2, -1
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    and %s0, %s0, %s2
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, 1127219200
 ; CHECK-NEXT:    or %s0, %s0, %s2
 ; CHECK-NEXT:    fadd.d %s0, %s0, %s1
