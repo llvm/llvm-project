@@ -50,11 +50,6 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
 
-  virtual lldb_private::formatters::StringPrinter::EscapingHelper
-      GetStringPrinterEscapingHelper(
-          lldb_private::formatters::StringPrinter::GetPrintableElementType)
-          override;
-
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
 
   const char *GetLanguageSpecificTypeLookupHelp() override;
