@@ -6300,6 +6300,15 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case parser::OmpBlockDirective::Directive::Workshare:
     PushContext(beginDir.source, OmpDirective::WORKSHARE);
     break;
+  case parser::OmpBlockDirective::Directive::ParallelWorkshare:
+    PushContext(beginDir.source, OmpDirective::PARALLEL_WORKSHARE);
+    break;
+  case parser::OmpBlockDirective::Directive::TargetTeams:
+    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS);
+    break;
+  case parser::OmpBlockDirective::Directive::TargetParallel:
+    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL);
+    break;
   default:
     // TODO others
     break;
