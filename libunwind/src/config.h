@@ -104,7 +104,8 @@
     (!defined(__APPLE__) && defined(__arm__)) ||                               \
     defined(__aarch64__) ||                                                    \
     defined(__mips__) ||                                                       \
-    defined(__riscv)
+    defined(__riscv) ||                                                        \
+    defined(__hexagon__)
 #if !defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS
 #endif

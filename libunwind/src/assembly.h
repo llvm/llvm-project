@@ -75,9 +75,16 @@
 #define EXPORT_SYMBOL(name)
 #define HIDDEN_SYMBOL(name) .hidden name
 #define WEAK_SYMBOL(name) .weak name
+
+#if defined(__hexagon__)
+#define WEAK_ALIAS(name, aliasname) \
+  WEAK_SYMBOL(aliasname) SEPARATOR                                             \
+  .equiv SYMBOL_NAME(aliasname), SYMBOL_NAME(name)
+#else
 #define WEAK_ALIAS(name, aliasname)                                            \
   WEAK_SYMBOL(aliasname) SEPARATOR                                             \
   SYMBOL_NAME(aliasname) = SYMBOL_NAME(name)
+#endif
 
 #if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
     defined(__linux__)

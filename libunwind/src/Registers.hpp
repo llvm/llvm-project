@@ -34,6 +34,7 @@ enum {
   REGISTERS_MIPS_O32,
   REGISTERS_MIPS_NEWABI,
   REGISTERS_SPARC,
+  REGISTERS_HEXAGON,
   REGISTERS_RISCV,
 };
 
@@ -3527,6 +3528,187 @@ inline const char *Registers_sparc::getRegisterName(int regNum) {
   }
 }
 #endif // _LIBUNWIND_TARGET_SPARC
+
+#if defined(_LIBUNWIND_TARGET_HEXAGON)
+/// Registers_hexagon holds the register state of a thread in a Hexagon QDSP6
+/// process.
+class _LIBUNWIND_HIDDEN Registers_hexagon {
+public:
+  Registers_hexagon();
+  Registers_hexagon(const void *registers);
+
+  bool        validRegister(int num) const;
+  uint32_t    getRegister(int num) const;
+  void        setRegister(int num, uint32_t value);
+  bool        validFloatRegister(int num) const;
+  double      getFloatRegister(int num) const;
+  void        setFloatRegister(int num, double value);
+  bool        validVectorRegister(int num) const;
+  v128        getVectorRegister(int num) const;
+  void        setVectorRegister(int num, v128 value);
+  const char *getRegisterName(int num);
+  void        jumpto();
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_HEXAGON; }
+  static int  getArch() { return REGISTERS_HEXAGON; }
+
+  uint32_t  getSP() const         { return _registers.__r[UNW_HEXAGON_R29]; }
+  void      setSP(uint32_t value) { _registers.__r[UNW_HEXAGON_R29] = value; }
+  uint32_t  getIP() const         { return _registers.__r[UNW_HEXAGON_PC]; }
+  void      setIP(uint32_t value) { _registers.__r[UNW_HEXAGON_PC] = value; }
+
+private:
+  struct hexagon_thread_state_t {
+    unsigned int __r[35];
+  };
+
+  hexagon_thread_state_t _registers;
+};
+
+inline Registers_hexagon::Registers_hexagon(const void *registers) {
+  static_assert((check_fit<Registers_hexagon, unw_context_t>::does_fit),
+                "hexagon registers do not fit into unw_context_t");
+  memcpy(&_registers, static_cast<const uint8_t *>(registers),
+         sizeof(_registers));
+}
+
+inline Registers_hexagon::Registers_hexagon() {
+  memset(&_registers, 0, sizeof(_registers));
+}
+
+inline bool Registers_hexagon::validRegister(int regNum) const {
+  if (regNum <= UNW_HEXAGON_R31)
+    return true;
+  return false;
+}
+
+inline uint32_t Registers_hexagon::getRegister(int regNum) const {
+  if (regNum >= UNW_HEXAGON_R0 && regNum <= UNW_HEXAGON_R31)
+    return _registers.__r[regNum - UNW_HEXAGON_R0];
+
+  switch (regNum) {
+  case UNW_REG_IP:
+    return _registers.__r[UNW_HEXAGON_PC];
+  case UNW_REG_SP:
+    return _registers.__r[UNW_HEXAGON_R29];
+  }
+  _LIBUNWIND_ABORT("unsupported hexagon register");
+}
+
+inline void Registers_hexagon::setRegister(int regNum, uint32_t value) {
+  if (regNum >= UNW_HEXAGON_R0 && regNum <= UNW_HEXAGON_R31) {
+    _registers.__r[regNum - UNW_HEXAGON_R0] = value;
+    return;
+  }
+
+  switch (regNum) {
+  case UNW_REG_IP:
+    _registers.__r[UNW_HEXAGON_PC] = value;
+    return;
+  case UNW_REG_SP:
+    _registers.__r[UNW_HEXAGON_R29] = value;
+    return;
+  }
+  _LIBUNWIND_ABORT("unsupported hexagon register");
+}
+
+inline bool Registers_hexagon::validFloatRegister(int /* regNum */) const {
+  return false;
+}
+
+inline double Registers_hexagon::getFloatRegister(int /* regNum */) const {
+  _LIBUNWIND_ABORT("hexagon float support not implemented");
+}
+
+inline void Registers_hexagon::setFloatRegister(int /* regNum */,
+                                             double /* value */) {
+  _LIBUNWIND_ABORT("hexagon float support not implemented");
+}
+
+inline bool Registers_hexagon::validVectorRegister(int /* regNum */) const {
+  return false;
+}
+
+inline v128 Registers_hexagon::getVectorRegister(int /* regNum */) const {
+  _LIBUNWIND_ABORT("hexagon vector support not implemented");
+}
+
+inline void Registers_hexagon::setVectorRegister(int /* regNum */, v128 /* value */) {
+  _LIBUNWIND_ABORT("hexagon vector support not implemented");
+}
+
+inline const char *Registers_hexagon::getRegisterName(int regNum) {
+  switch (regNum) {
+  case UNW_HEXAGON_R0:
+    return "r0";
+  case UNW_HEXAGON_R1:
+    return "r1";
+  case UNW_HEXAGON_R2:
+    return "r2";
+  case UNW_HEXAGON_R3:
+    return "r3";
+  case UNW_HEXAGON_R4:
+    return "r4";
+  case UNW_HEXAGON_R5:
+    return "r5";
+  case UNW_HEXAGON_R6:
+    return "r6";
+  case UNW_HEXAGON_R7:
+    return "r7";
+  case UNW_HEXAGON_R8:
+    return "r8";
+  case UNW_HEXAGON_R9:
+    return "r9";
+  case UNW_HEXAGON_R10:
+    return "r10";
+  case UNW_HEXAGON_R11:
+    return "r11";
+  case UNW_HEXAGON_R12:
+    return "r12";
+  case UNW_HEXAGON_R13:
+    return "r13";
+  case UNW_HEXAGON_R14:
+    return "r14";
+  case UNW_HEXAGON_R15:
+    return "r15";
+  case UNW_HEXAGON_R16:
+    return "r16";
+  case UNW_HEXAGON_R17:
+    return "r17";
+  case UNW_HEXAGON_R18:
+    return "r18";
+  case UNW_HEXAGON_R19:
+    return "r19";
+  case UNW_HEXAGON_R20:
+    return "r20";
+  case UNW_HEXAGON_R21:
+    return "r21";
+  case UNW_HEXAGON_R22:
+    return "r22";
+  case UNW_HEXAGON_R23:
+    return "r23";
+  case UNW_HEXAGON_R24:
+    return "r24";
+  case UNW_HEXAGON_R25:
+    return "r25";
+  case UNW_HEXAGON_R26:
+    return "r26";
+  case UNW_HEXAGON_R27:
+    return "r27";
+  case UNW_HEXAGON_R28:
+    return "r28";
+  case UNW_HEXAGON_R29:
+    return "r29";
+  case UNW_HEXAGON_R30:
+    return "r30";
+  case UNW_HEXAGON_R31:
+    return "r31";
+  default:
+    return "unknown register";
+  }
+
+}
+#endif // _LIBUNWIND_TARGET_HEXAGON
+
 
 #if defined(_LIBUNWIND_TARGET_RISCV)
 /// Registers_riscv holds the register state of a thread in a 64-bit RISC-V
