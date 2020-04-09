@@ -6465,7 +6465,9 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "vfmat" || Mnemonic == "vfmab" ||
       Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
       Mnemonic == "sb"    || Mnemonic == "ssbb"  ||
-      Mnemonic == "pssbb" ||
+      Mnemonic == "pssbb" || Mnemonic == "vsmmla" ||
+      Mnemonic == "vummla" || Mnemonic == "vusmmla" ||
+      Mnemonic == "vusdot" || Mnemonic == "vsudot" ||
       Mnemonic == "bfcsel" || Mnemonic == "wls" ||
       Mnemonic == "dls" || Mnemonic == "le" || Mnemonic == "csel" ||
       Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
