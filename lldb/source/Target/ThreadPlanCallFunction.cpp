@@ -13,6 +13,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -417,7 +418,8 @@ void ThreadPlanCallFunction::SetBreakpoints() {
     }
   }
   if (GetExpressionLanguage() == eLanguageTypeSwift) {
-    auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
+    auto *swift_runtime 
+        = SwiftLanguageRuntime::Get(m_process.shared_from_this());
     if (swift_runtime) {
       llvm::StringRef backstop_name = swift_runtime->GetErrorBackstopName();
       if (!backstop_name.empty()) {

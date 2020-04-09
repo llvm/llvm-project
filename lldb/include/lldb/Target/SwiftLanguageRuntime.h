@@ -23,6 +23,7 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
 

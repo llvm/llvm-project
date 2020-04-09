@@ -13,6 +13,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
@@ -175,7 +176,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   if (frame_idx == 0) {
     StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
     if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
-      auto *swift_runtime = SwiftLanguageRuntime::Get(m_process);
+      auto *swift_runtime 
+          = SwiftLanguageRuntime::Get(m_process.shared_from_this());
       if (swift_runtime) {
         m_swift_error_return =
             swift_runtime->GetErrorReturnLocationBeforeReturn(
@@ -543,7 +545,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     return;
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it.
-  auto *swift_runtime = SwiftLanguageRuntime::Get(m_process);
+  auto *swift_runtime = SwiftLanguageRuntime::Get(m_process.shared_from_this());
   if (swift_runtime) {
     // In some ABI's the error is in a memory location in the caller's frame
     // and we need to fetch that location from the frame before we leave the
