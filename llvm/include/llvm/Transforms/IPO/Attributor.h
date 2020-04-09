@@ -894,6 +894,12 @@ struct Attributor {
   /// Record that \p F is deleted after information was manifested.
   void deleteAfterManifest(Function &F) { ToBeDeletedFunctions.insert(&F); }
 
+  /// If \p V is assumed to be a constant, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`.
+  Optional<Constant *> getAssumedConstant(const Value &V,
+                                          const AbstractAttribute &AA,
+                                          bool &UsedAssumedInformation);
+
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
@@ -1916,7 +1922,10 @@ raw_ostream &operator<<(raw_ostream &OS, const AbstractState &State);
 template <typename base_ty, base_ty BestState, base_ty WorstState>
 raw_ostream &
 operator<<(raw_ostream &OS,
-           const IntegerStateBase<base_ty, BestState, WorstState> &State);
+           const IntegerStateBase<base_ty, BestState, WorstState> &S) {
+  return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
+            << static_cast<const AbstractState &>(S);
+}
 raw_ostream &operator<<(raw_ostream &OS, const IntegerRangeState &State);
 ///}
 
@@ -2232,6 +2241,11 @@ public:
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAIsDead &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Determine if \p F might catch asynchronous exceptions.
+  static bool mayCatchAsynchronousExceptions(const Function &F) {
+    return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
+  }
 
   /// Unique ID (due to the unique address)
   static const char ID;
