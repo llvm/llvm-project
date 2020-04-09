@@ -161,13 +161,13 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        for (const char *GpuArchName :
-             {"sm_30", "sm_32", "sm_35", "sm_37", "sm_50", "sm_52", "sm_53",
-              "sm_60", "sm_61", "sm_62", "sm_70", "sm_72", "sm_75"}) {
-          const CudaArch GpuArch = StringToCudaArch(GpuArchName);
-          if (Version >= MinVersionForCudaArch(GpuArch) &&
-              Version <= MaxVersionForCudaArch(GpuArch))
-            LibDeviceMap[GpuArchName] = FilePath;
+        for (int Arch = (int)CudaArch::SM_30, E = (int)CudaArch::LAST; Arch < E;
+             ++Arch) {
+          CudaArch GpuArch = static_cast<CudaArch>(Arch);
+          if (!IsNVIDIAGpuArch(GpuArch))
+            continue;
+          std::string GpuArchName(CudaArchToString(GpuArch));
+          LibDeviceMap[GpuArchName] = FilePath;
         }
       }
     } else {
@@ -471,10 +471,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       continue;
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
-    const char *Arch =
-        (II.getType() == types::TY_PP_Asm)
-            ? CudaVirtualArchToString(VirtualArchForCudaArch(gpu_arch))
-            : gpu_arch_str;
+    const char *Arch = (II.getType() == types::TY_PP_Asm)
+                           ? CudaArchToVirtualArchString(gpu_arch)
+                           : gpu_arch_str;
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("--image=profile=") +
                                          Arch + ",file=" + II.getFilename()));
   }
