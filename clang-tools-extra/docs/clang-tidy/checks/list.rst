@@ -404,7 +404,7 @@ Clang-Tidy Checks
    `hicpp-new-delete-operators <hicpp-new-delete-operators.html>`_, `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
    `hicpp-no-array-decay <hicpp-no-array-decay.html>`_, `cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines-pro-bounds-array-to-pointer-decay.html>`_,
    `hicpp-no-malloc <hicpp-no-malloc.html>`_, `cppcoreguidelines-no-malloc <cppcoreguidelines-no-malloc.html>`_,
-   `hicpp-noexcept-move <hicpp-noexcept-move.html>`_, `misc-noexcept-moveconstructor <misc-noexcept-moveconstructor.html>`_,
+   `hicpp-noexcept-move <hicpp-noexcept-move.html>`_, `performance-noexcept-move-constructor <performance-noexcept-move-constructor.html>`_,
    `hicpp-special-member-functions <hicpp-special-member-functions.html>`_, `cppcoreguidelines-special-member-functions <cppcoreguidelines-special-member-functions.html>`_,
    `hicpp-static-assert <hicpp-static-assert.html>`_, `misc-static-assert <misc-static-assert.html>`_, "Yes"
    `hicpp-undelegated-constructor <hicpp-undelegated-constructor.html>`_, `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
