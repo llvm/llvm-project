@@ -1,4 +1,7 @@
-// Check that we automatically add relevant linker flags for Android aarch64.
+// Check that we add relevant linker flags for Android ARM/AArch64.
+
+// RUN: %clang -### -target arm-linux-androideabi %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=MAX-PAGE-SIZE %s
 
 // RUN: %clang -target aarch64-none-linux-android \
 // RUN:   -### -v %s 2> %t
@@ -19,4 +22,4 @@
 // GENERIC-ARM: --fix-cortex-a53-843419
 // CORTEX-A53: --fix-cortex-a53-843419
 // CORTEX-A57-NOT: --fix-cortex-a53-843419
-// MAX-PAGE-SIZE: max-page-size=4096
+// MAX-PAGE-SIZE: "-z" "max-page-size=4096"
