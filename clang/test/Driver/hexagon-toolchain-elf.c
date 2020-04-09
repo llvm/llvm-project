@@ -597,10 +597,3 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK084 %s
 // CHECK084:          "-fno-use-init-array"
-// -----------------------------------------------------------------------------
-// Check default linker for elf
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-elf %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK092 %s
-// CHECK092:          hexagon-link
-// -----------------------------------------------------------------------------
