@@ -7797,9 +7797,9 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
 /// LowerSELECT_CC - Lower floating point select_cc's into fsel instruction when
 /// possible.
 SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
-  // Not FP? Not a fsel.
+  // Not FP, or using SPE? Not a fsel.
   if (!Op.getOperand(0).getValueType().isFloatingPoint() ||
-      !Op.getOperand(2).getValueType().isFloatingPoint())
+      !Op.getOperand(2).getValueType().isFloatingPoint() || Subtarget.hasSPE())
     return Op;
 
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
