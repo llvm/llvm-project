@@ -282,15 +282,18 @@ lldb::ThreadPlanSP ThreadPlanStack::GetPlanByIndex(uint32_t plan_idx,
   return {};
 }
 
-lldb::ValueObjectSP ThreadPlanStack::GetReturnValueObject() const {
+lldb::ValueObjectSP 
+ThreadPlanStack::GetReturnValueObject(bool &is_error) const {
   if (m_completed_plans.empty())
     return {};
 
   for (int i = m_completed_plans.size() - 1; i >= 0; i--) {
     lldb::ValueObjectSP return_valobj_sp;
     return_valobj_sp = m_completed_plans[i]->GetReturnValueObject();
-    if (return_valobj_sp)
+    if (return_valobj_sp) {
+      is_error = m_completed_plans[i]->IsReturnValueSwiftErrorValue();
       return return_valobj_sp;
+    }
   }
   return {};
 }

@@ -1115,18 +1115,13 @@ ThreadPlan *Thread::GetCurrentPlan() const {
 ValueObjectSP Thread::GetReturnValueObject(bool *is_swift_error_value) {
   if (is_swift_error_value)
     *is_swift_error_value = false;
-
-  if (!m_completed_plan_stack.empty()) {
-    for (int i = m_completed_plan_stack.size() - 1; i >= 0; i--) {
-      ValueObjectSP return_valobj_sp;
-      return_valobj_sp = m_completed_plan_stack[i]->GetReturnValueObject();
-      if (return_valobj_sp) {
-        if (is_swift_error_value)
-          *is_swift_error_value =
-              m_completed_plan_stack[i]->IsReturnValueSwiftErrorValue();
-        return return_valobj_sp;
-      }
-    }
+    
+  bool is_error;
+  ValueObjectSP return_valobj_sp = GetPlans().GetReturnValueObject(is_error);
+  if (return_valobj_sp) {
+    if (is_swift_error_value)
+      *is_swift_error_value = is_error;
+    return return_valobj_sp;
   }
   return ValueObjectSP();
 }
