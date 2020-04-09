@@ -201,35 +201,11 @@ public:
     TCC_Expensive = 4 ///< The cost of a 'div' instruction on x86.
   };
 
-  /// Estimate the cost of a specific operation when lowered.
-  ///
-  /// Note that this is designed to work on an arbitrary synthetic opcode, and
-  /// thus work for hypothetical queries before an instruction has even been
-  /// formed. However, this does *not* work for GEPs, and must not be called
-  /// for a GEP instruction. Instead, use the dedicated getGEPCost interface as
-  /// analyzing a GEP's cost required more information.
-  ///
-  /// Typically only the result type is required, and the operand type can be
-  /// omitted. However, if the opcode is one of the cast instructions, the
-  /// operand type is required.
-  ///
-  /// The returned cost is defined in terms of \c TargetCostConstants, see its
-  /// comments for a detailed explanation of the cost values.
-  int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy = nullptr) const;
-
   /// Estimate the cost of a GEP operation when lowered.
-  ///
-  /// The contract for this function is the same as \c getOperationCost except
-  /// that it supports an interface that provides extra information specific to
-  /// the GEP operation.
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) const;
 
   /// Estimate the cost of a EXT operation when lowered.
-  ///
-  /// The contract for this function is the same as \c getOperationCost except
-  /// that it supports an interface that provides extra information specific to
-  /// the EXT operation.
   int getExtCost(const Instruction *I, const Value *Src) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
@@ -277,15 +253,7 @@ public:
   /// Estimate the cost of a given IR user when lowered.
   ///
   /// This can estimate the cost of either a ConstantExpr or Instruction when
-  /// lowered. It has two primary advantages over the \c getOperationCost and
-  /// \c getGEPCost above, and one significant disadvantage: it can only be
-  /// used when the IR construct has already been formed.
-  ///
-  /// The advantages are that it can inspect the SSA use graph to reason more
-  /// accurately about the cost. For example, all-constant-GEPs can often be
-  /// folded into a load or other instruction, but if they are used in some
-  /// other context they may not be folded. This routine can distinguish such
-  /// cases.
+  /// lowered.
   ///
   /// \p Operands is a list of operands which can be a result of transformations
   /// of the current operands. The number of the operands on the list must equal
@@ -1187,7 +1155,6 @@ class TargetTransformInfo::Concept {
 public:
   virtual ~Concept() = 0;
   virtual const DataLayout &getDataLayout() const = 0;
-  virtual int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) = 0;
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands) = 0;
   virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
@@ -1429,9 +1396,6 @@ public:
     return Impl.getDataLayout();
   }
 
-  int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) override {
-    return Impl.getOperationCost(Opcode, Ty, OpTy);
-  }
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);

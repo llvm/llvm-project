@@ -146,13 +146,6 @@ TargetTransformInfo &TargetTransformInfo::operator=(TargetTransformInfo &&RHS) {
   return *this;
 }
 
-int TargetTransformInfo::getOperationCost(unsigned Opcode, Type *Ty,
-                                          Type *OpTy) const {
-  int Cost = TTIImpl->getOperationCost(Opcode, Ty, OpTy);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
 unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
   return TTIImpl->getInliningThresholdMultiplier();
 }
