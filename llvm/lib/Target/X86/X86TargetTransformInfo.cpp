@@ -949,6 +949,42 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     }
   }
 
+  // Handle some common (illegal) sub-vector types as they are often very cheap
+  // to shuffle even on targets without PSHUFB.
+  EVT VT = TLI->getValueType(DL, Tp);
+  if (VT.isSimple() && VT.isVector() && VT.getSizeInBits() < 128 &&
+      !ST->hasSSSE3()) {
+     static const CostTblEntry SSE2SubVectorShuffleTbl[] = {
+      {TTI::SK_Broadcast,        MVT::v4i16, 1}, // pshuflw
+      {TTI::SK_Broadcast,        MVT::v2i16, 1}, // pshuflw
+      {TTI::SK_Broadcast,        MVT::v8i8,  2}, // punpck/pshuflw
+      {TTI::SK_Broadcast,        MVT::v4i8,  2}, // punpck/pshuflw
+      {TTI::SK_Broadcast,        MVT::v2i8,  1}, // punpck
+
+      {TTI::SK_Reverse,          MVT::v4i16, 1}, // pshuflw
+      {TTI::SK_Reverse,          MVT::v2i16, 1}, // pshuflw
+      {TTI::SK_Reverse,          MVT::v4i8,  3}, // punpck/pshuflw/packus
+      {TTI::SK_Reverse,          MVT::v2i8,  1}, // punpck
+
+      {TTI::SK_PermuteTwoSrc,    MVT::v4i16, 2}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v2i16, 2}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v8i8,  7}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v4i8,  4}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v2i8,  2}, // punpck
+
+      {TTI::SK_PermuteSingleSrc, MVT::v4i16, 1}, // pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v2i16, 1}, // pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v8i8,  5}, // punpck/pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v4i8,  3}, // punpck/pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v2i8,  1}, // punpck
+    };
+
+    if (ST->hasSSE2())
+      if (const auto *Entry =
+              CostTableLookup(SSE2SubVectorShuffleTbl, Kind, VT.getSimpleVT()))
+        return Entry->Cost;
+  }
+
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
   // type remains the same.
