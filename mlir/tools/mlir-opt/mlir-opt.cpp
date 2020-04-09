@@ -39,6 +39,7 @@ void registerSimpleParametricTilingPass();
 void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAllReduceLoweringPass();
+void registerTestLinalgMatmulToVectorPass();
 void registerTestLoopPermutationPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
@@ -101,6 +102,7 @@ void registerTestPasses() {
   registerSymbolTestPasses();
   registerTestAffineDataCopyPass();
   registerTestAllReduceLoweringPass();
+  registerTestLinalgMatmulToVectorPass();
   registerTestLoopPermutationPass();
   registerTestCallGraphPass();
   registerTestConstantFold();
