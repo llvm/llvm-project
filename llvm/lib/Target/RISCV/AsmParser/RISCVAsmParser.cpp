@@ -445,6 +445,17 @@ public:
     return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
+  bool isUImmLog2XLenHalf() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    if (!evaluateConstantImm(getImm(), Imm, VK) ||
+        VK != RISCVMCExpr::VK_RISCV_None)
+      return false;
+    return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
+  }
+
   bool isUImm5() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -471,7 +482,7 @@ public:
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<6>(Imm) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+	    VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -905,6 +916,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
+  case Match_InvalidUImmLog2XLenHalf:
+    if (isRV64())
+      return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidSImm6:
