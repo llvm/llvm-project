@@ -85,7 +85,7 @@ static bool readStringFromAddress(
   read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                   lldb::eTypeSummaryUncapped);
   read_options.SetBinaryZeroIsTerminator(false);
-  read_options.SetLanguage(lldb::eLanguageTypeSwift);
+  read_options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
 
   return StringPrinter::ReadStringAndDumpToStream<
       StringPrinter::StringElementType::UTF8>(read_options);
@@ -281,7 +281,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     options.SetStream(&stream);
     options.SetSourceSize(count);
     options.SetBinaryZeroIsTerminator(false);
-    options.SetLanguage(lldb::eLanguageTypeSwift);
+    options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
 
@@ -421,7 +421,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
   read_options.SetStream(&stream);
   read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                   lldb::eTypeSummaryUncapped);
-  read_options.SetLanguage(lldb::eLanguageTypeSwift);
+  read_options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
 
   return StringPrinter::ReadStringAndDumpToStream<
       StringPrinter::StringElementType::UTF8>(read_options);
@@ -710,7 +710,7 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
   read_options.SetStream(&stream);
   read_options.SetQuote('"');
   read_options.SetNeedsZeroTermination(true);
-  read_options.SetLanguage(lldb::eLanguageTypeSwift);
+  read_options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
 
   return StringPrinter::ReadStringAndDumpToStream<
       StringPrinter::StringElementType::ASCII>(read_options);
