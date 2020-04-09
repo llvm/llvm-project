@@ -1061,6 +1061,12 @@ def TestRewriteOp : TEST_Op<"rewrite">,
   Arguments<(ins AnyType)>, Results<(outs AnyType)>;
 def : Pat<(TestRewriteOp $input), (replaceWithValue $input)>;
 
+// Check that patterns can specify bounded recursion when rewriting.
+def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
+  let arguments = (ins I64Attr:$depth);
+  let assemblyFormat = "$depth attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Type Legalization
 //===----------------------------------------------------------------------===//

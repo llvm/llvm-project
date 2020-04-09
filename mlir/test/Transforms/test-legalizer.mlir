@@ -143,6 +143,13 @@ func @create_block() {
   return
 }
 
+// CHECK-LABEL: @bounded_recursion
+func @bounded_recursion() {
+  // CHECK: test.recursive_rewrite 0
+  test.recursive_rewrite 3
+  return
+}
+
 // -----
 
 func @fail_to_convert_illegal_op() -> i32 {
