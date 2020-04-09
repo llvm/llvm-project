@@ -109,8 +109,8 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 };
 
 /// Basic common sub-expression elimination.
-struct BasicCSE : public FunctionPass<BasicCSE> {
-  BasicCSE() = default;
+struct BasicCSE : public mlir::PassWrapper<BasicCSE, mlir::FunctionPass> {
+  BasicCSE() {}
   BasicCSE(const BasicCSE &) {}
 
   /// Shared implementation of operation elimination and scoped map definitions.
@@ -160,7 +160,7 @@ struct BasicCSE : public FunctionPass<BasicCSE> {
       cleanupBlock(&block);
   }
 
-  void runOnFunction() override;
+  void runOnFunction() override final;
 
 private:
   /// Operations marked as dead and to be erased.
@@ -317,9 +317,6 @@ void BasicCSE::runOnFunction() {
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> fir::createCSEPass() {
+std::unique_ptr<mlir::Pass> fir::createCSEPass() {
   return std::make_unique<BasicCSE>();
 }
-
-static PassRegistration<BasicCSE>
-    pass("basiccse", "Eliminate common sub-expressions in functions");

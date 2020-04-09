@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_CONVERT_EXPR_H_
-#define FORTRAN_LOWER_CONVERT_EXPR_H_
+#ifndef FORTRAN_LOWER_CONVERT_EXPR_H
+#define FORTRAN_LOWER_CONVERT_EXPR_H
 
 #include "Intrinsics.h"
 
@@ -70,4 +70,4 @@ mlir::Value createSomeAddress(mlir::Location loc, AbstractConverter &converter,
 } // namespace lower
 } // namespace Fortran
 
-#endif // FORTRAN_LOWER_CONVERT_EXPR_H_
+#endif // FORTRAN_LOWER_CONVERT_EXPR_H

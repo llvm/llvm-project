@@ -1,17 +1,38 @@
 NEED ATTENTION
 ______________
 
-[Eric] error: branch has N operands for successor #M, but target block has K
-[Eric] UNREACHABLE executed at Lower/ConvertExpr.cpp:403!  CHAR comparison
+[Eric]
 
-[Varun] UNREACHABLE executed at Lower/Bridge.cpp:1061!  DATA
-[Varun] UNREACHABLE executed at Lower/Bridge.cpp:1241!  local w/ initializer (implied SAVE)
+  We do not correctly handle adjusted arrays of CHARACTER with adjusted LEN
+  . bbc: IR/Types.h:279: U mlir::Type::cast() const [U = fir::ReferenceType]: Assertion `isa<U>()' failed.
 
-UNREACHABLE executed at Lower/Bridge.cpp:1236!  adjustable array?
-UNREACHABLE executed at Lower/ConvertExpr.cpp:798!  intrinsic subroutine
+[Varun]
+
+  DATA statement
+  . UNREACHABLE executed at Lower/Bridge.cpp:1102!
+
+  Lowering globals in general
+  . UNREACHABLE executed at Lower/Bridge.cpp:1294!
+
+[Unassigned]
+
+  Intrinsics lowering problems (3)
+  . bbc: Lower/Intrinsics.cpp:474: Assertion `!bestMatchDistance.isLoosingPrecision() && "runtime selection looses precision"' failed.
+  . bbc: Lower/Intrinsics.cpp:504: Assertion `arg != nullptr' failed.
+  . bbc: Lower/Intrinsics.cpp:628: Assertion `false && "no runtime found for this intrinsics"' failed.
+
 
 FIXED
 _____
+
+
+CHARACTER comparison calls: UNREACHABLE executed at Lower/ConvertExpr.cpp:405!
+
+UNREACHABLE executed at Lower/ConvertExpr.cpp:798!  intrinsic subroutine
+
+UNREACHABLE executed at Lower/Bridge.cpp:1243!  adjustable array
+
+error: branch has N operands for successor #M, but target block has K
 
 UNREACHABLE executed at Lower/IO.cpp:764!       FORMAT
 

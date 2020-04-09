@@ -2297,10 +2297,14 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect.  An
 /// MLIR pass is used to lower residual Std dialect to LLVM IR dialect.
-struct FIRToLLVMLoweringPass : public mlir::ModulePass<FIRToLLVMLoweringPass> {
+struct FIRToLLVMLoweringPass
+    : public mlir::PassWrapper<FIRToLLVMLoweringPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
   FIRToLLVMLoweringPass(fir::NameUniquer &uniquer) : uniquer{uniquer} {}
 
-  void runOnModule() override {
+  mlir::ModuleOp getModule() { return getOperation(); }
+
+  void runOnOperation() override final {
     if (disableFirToLLVMIR)
       return;
 
@@ -2362,10 +2366,14 @@ private:
 };
 
 /// Lower from LLVM IR dialect to proper LLVM-IR and dump the module
-struct LLVMIRLoweringPass : public mlir::ModulePass<LLVMIRLoweringPass> {
+struct LLVMIRLoweringPass
+    : public mlir::PassWrapper<LLVMIRLoweringPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
   LLVMIRLoweringPass(raw_ostream &output) : output{output} {}
 
-  void runOnModule() override {
+  mlir::ModuleOp getModule() { return getOperation(); }
+
+  void runOnOperation() override final {
     if (disableLLVM)
       return;
 
