@@ -1048,6 +1048,10 @@ int main (int argc, char **argv) {
 // OMP5-NEXT: #pragma omp target defaultmap(none: scalar)
   bar();
 // OMP5-NEXT: bar();
+#pragma omp target defaultmap(none)
+  // OMP5-NEXT: #pragma omp target defaultmap(none)
+  bar();
+  // OMP5-NEXT: bar();
   return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
 }
 
