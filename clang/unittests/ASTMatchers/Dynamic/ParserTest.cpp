@@ -221,6 +221,15 @@ TEST(ParserTest, FullParserTest) {
   EXPECT_FALSE(matches("int x = 1 - false;", M));
   EXPECT_FALSE(matches("int x = true - 1;", M));
 
+  Code = "implicitCastExpr(hasCastKind(\"CK_IntegralToBoolean\"))";
+  llvm::Optional<DynTypedMatcher> implicitIntBooleanCast(
+      Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error));
+  EXPECT_EQ("", Error.toStringFull());
+  Matcher<Stmt> MCastStmt =
+      implicitIntBooleanCast->unconditionalConvertTo<Stmt>();
+  EXPECT_TRUE(matches("bool X = 1;", MCastStmt));
+  EXPECT_FALSE(matches("bool X = true;", MCastStmt));
+
   Code = "functionDecl(hasParameter(1, hasName(\"x\")))";
   llvm::Optional<DynTypedMatcher> HasParameter(
       Parser::parseMatcherExpression(Code, &Error));
