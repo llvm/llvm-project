@@ -110,7 +110,8 @@ public:
   /// Handle call instruction. If \p I is a call that can be widened for \p
   /// Range.Start, return a new VPWidenCallRecipe. Range.End may be decreased to
   /// ensure same decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(Instruction *I, VFRange &Range);
+  VPWidenCallRecipe *tryToWidenCall(Instruction *I, VFRange &Range,
+                                    VPlan &Plan);
 
   /// Check if \p I can be widened within the given VF \p Range. If \p I can be
   /// widened for \p Range.Start, build a new VPWidenRecipe and return it.
