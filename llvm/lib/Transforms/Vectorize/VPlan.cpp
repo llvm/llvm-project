@@ -802,6 +802,29 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << "\\l\"";
 }
 
+void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
+  Value *CanonicalIV = State.CanonicalIV;
+  Type *STy = CanonicalIV->getType();
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  Value *VStart = Builder.CreateVectorSplat(State.VF, CanonicalIV, "broadcast");
+  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
+    SmallVector<Constant *, 8> Indices;
+    for (unsigned Lane = 0, VF = State.VF; Lane < VF; ++Lane)
+      Indices.push_back(ConstantInt::get(STy, Part * VF + Lane));
+    Constant *VStep = ConstantVector::get(Indices);
+    // Add the consecutive indices to the vector value.
+    Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
+    State.set(getVPValue(), CanonicalVectorIV, Part);
+  }
+}
+
+void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
+  O << " +\n" << Indent << "\"EMIT ";
+  getVPValue()->printAsOperand(O, SlotTracker);
+  O << " = WIDEN-CANONICAL-INDUCTION \\l\"";
+}
+
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
@@ -901,6 +924,8 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &Recipe : *VPBB) {
     if (const auto *VPI = dyn_cast<VPInstruction>(&Recipe))
       assignSlot(VPI);
+    else if (const auto *VPIV = dyn_cast<VPWidenCanonicalIVRecipe>(&Recipe))
+      assignSlot(VPIV->getVPValue());
   }
 }
 

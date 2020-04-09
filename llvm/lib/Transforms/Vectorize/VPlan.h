@@ -329,6 +329,9 @@ struct VPTransformState {
   /// Values they correspond to.
   VPValue2ValueTy VPValue2Value;
 
+  /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
+  Value *CanonicalIV = nullptr;
+
   /// Hold the trip count of the scalar loop.
   Value *TripCount = nullptr;
 
@@ -610,6 +613,7 @@ public:
     VPPredInstPHISC,
     VPReplicateSC,
     VPWidenCallSC,
+    VPWidenCanonicalIVSC,
     VPWidenGEPSC,
     VPWidenIntOrFpInductionSC,
     VPWidenMemoryInstructionSC,
@@ -1137,6 +1141,36 @@ public:
   }
 
   /// Generate the wide load/store.
+  void execute(VPTransformState &State) override;
+
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+};
+
+/// A Recipe for widening the canonical induction variable of the vector loop.
+class VPWidenCanonicalIVRecipe : public VPRecipeBase {
+private:
+  /// A VPValue representing the canonical vector IV.
+  VPValue Val;
+
+public:
+  VPWidenCanonicalIVRecipe() : VPRecipeBase(VPWidenCanonicalIVSC) {}
+  ~VPWidenCanonicalIVRecipe() override = default;
+
+  /// Return the VPValue representing the canonical vector induction variable of
+  /// the vector loop.
+  const VPValue *getVPValue() const { return &Val; }
+  VPValue *getVPValue() { return &Val; }
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *V) {
+    return V->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
+  }
+
+  /// Generate a canonical vector induction variable of the vector loop, with
+  /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
+  /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.

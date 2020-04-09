@@ -6585,6 +6585,7 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
                          &ILV,   CallbackILV};
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   State.TripCount = ILV.getOrCreateTripCount(nullptr);
+  State.CanonicalIV = ILV.Induction;
 
   //===------------------------------------------------===//
   //
@@ -6771,7 +6772,15 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
 
     // Introduce the early-exit compare IV <= BTC to form header block mask.
     // This is used instead of IV < TC because TC may wrap, unlike BTC.
-    VPValue *IV = Plan->getVPValue(Legal->getPrimaryInduction());
+    // Start by constructing the desired canonical IV.
+    VPValue *IV = nullptr;
+    if (Legal->getPrimaryInduction())
+      IV = Plan->getVPValue(Legal->getPrimaryInduction());
+    else {
+      auto IVRecipe = new VPWidenCanonicalIVRecipe();
+      Builder.getInsertBlock()->appendRecipe(IVRecipe);
+      IV = IVRecipe->getVPValue();
+    }
     VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
     BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
     return BlockMaskCache[BB] = BlockMask;
@@ -7130,12 +7139,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
       NeedDef.insert(Branch->getCondition());
   }
 
-  // If the tail is to be folded by masking, the primary induction variable
-  // needs to be represented in VPlan for it to model early-exit masking.
+  // If the tail is to be folded by masking, the primary induction variable, if
+  // exists needs to be represented in VPlan for it to model early-exit masking.
   // Also, both the Phi and the live-out instruction of each reduction are
   // required in order to introduce a select between them in VPlan.
   if (CM.foldTailByMasking()) {
-    NeedDef.insert(Legal->getPrimaryInduction());
+    if (Legal->getPrimaryInduction())
+      NeedDef.insert(Legal->getPrimaryInduction());
     for (auto &Reduction : Legal->getReductionVars()) {
       NeedDef.insert(Reduction.first);
       NeedDef.insert(Reduction.second.getLoopExitInstr());
@@ -7572,9 +7582,8 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                               !PreferPredicateOverEpilog;
 
   // 2) Next, if disabling predication is requested on the command line, honour
-  // this and request a scalar epilogue. Also do this if we don't have a
-  // primary induction variable, which is required for predication.
-  if (PredicateOptDisabled || !LVL.getPrimaryInduction())
+  // this and request a scalar epilogue.
+  if (PredicateOptDisabled)
     return CM_ScalarEpilogueAllowed;
 
   // 3) and 4) look if enabling predication is requested on the command line,

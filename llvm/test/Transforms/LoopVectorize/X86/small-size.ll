@@ -168,9 +168,17 @@ define void @example2(i32 %n, i32 %x) optsize {
   ret void
 }
 
-; N is unknown, we need a tail. Can't vectorize because loop has no primary
-; induction.
+; Loop has no primary induction as its integer IV has step -1 starting at
+; unknown N, but can still be vectorized.
 ;CHECK-LABEL: @example3(
+; CHECK:       vector.ph:
+; CHECK:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> {{.*}}, <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0,
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> undef, i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VPIV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK:    {{.*}} = icmp ule <4 x i64> [[VPIV]], [[BROADCAST_SPLAT2]]
 ;CHECK-NOT: <4 x i32>
 ;CHECK: ret void
 define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture %q) optsize {
@@ -237,12 +245,12 @@ define void @example23b(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !10
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[TMP7:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:         br i1 undef, label [[TMP7]], label [[TMP6]], !llvm.loop !7
+; CHECK:         br i1 undef, label [[TMP7]], label [[TMP6]], !llvm.loop !11
 ; CHECK:         ret void
 ;
   br label %1
@@ -353,12 +361,12 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK:       pred.store.continue22:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 260
-; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !8
+; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !12
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[TMP34:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[TMP33:%.*]]
-; CHECK:         br i1 undef, label [[TMP34]], label [[TMP33]], !llvm.loop !9
+; CHECK:         br i1 undef, label [[TMP34]], label [[TMP33]], !llvm.loop !13
 ; CHECK:         ret void
 ;
   br label %1
