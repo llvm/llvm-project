@@ -122,7 +122,7 @@ void PerTargetMIParsingState::initNames2Regs() {
 }
 
 bool PerTargetMIParsingState::getRegisterByName(StringRef RegName,
-                                                unsigned &Reg) {
+                                                Register &Reg) {
   initNames2Regs();
   auto RegInfo = Names2Regs.find(RegName);
   if (RegInfo == Names2Regs.end())
@@ -321,7 +321,7 @@ PerFunctionMIParsingState::PerFunctionMIParsingState(MachineFunction &MF,
   : MF(MF), SM(&SM), IRSlots(IRSlots), Target(T) {
 }
 
-VRegInfo &PerFunctionMIParsingState::getVRegInfo(unsigned Num) {
+VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
   auto I = VRegInfos.insert(std::make_pair(Num, nullptr));
   if (I.second) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -426,9 +426,9 @@ public:
   bool parseBasicBlocks();
   bool parse(MachineInstr *&MI);
   bool parseStandaloneMBB(MachineBasicBlock *&MBB);
-  bool parseStandaloneNamedRegister(unsigned &Reg);
+  bool parseStandaloneNamedRegister(Register &Reg);
   bool parseStandaloneVirtualRegister(VRegInfo *&Info);
-  bool parseStandaloneRegister(unsigned &Reg);
+  bool parseStandaloneRegister(Register &Reg);
   bool parseStandaloneStackObject(int &FI);
   bool parseStandaloneMDNode(MDNode *&Node);
 
@@ -439,10 +439,10 @@ public:
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
 
-  bool parseNamedRegister(unsigned &Reg);
+  bool parseNamedRegister(Register &Reg);
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
-  bool parseRegister(unsigned &Reg, VRegInfo *&VRegInfo);
+  bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
   bool parseRegisterFlag(unsigned &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
@@ -474,7 +474,7 @@ public:
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
-  bool parseCFIRegister(unsigned &Reg);
+  bool parseCFIRegister(Register &Reg);
   bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
@@ -775,7 +775,7 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
   do {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
-    unsigned Reg = 0;
+    Register Reg;
     if (parseNamedRegister(Reg))
       return true;
     lex();
@@ -1083,7 +1083,7 @@ bool MIParser::parseStandaloneMBB(MachineBasicBlock *&MBB) {
   return false;
 }
 
-bool MIParser::parseStandaloneNamedRegister(unsigned &Reg) {
+bool MIParser::parseStandaloneNamedRegister(Register &Reg) {
   lex();
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a named register");
@@ -1107,7 +1107,7 @@ bool MIParser::parseStandaloneVirtualRegister(VRegInfo *&Info) {
   return false;
 }
 
-bool MIParser::parseStandaloneRegister(unsigned &Reg) {
+bool MIParser::parseStandaloneRegister(Register &Reg) {
   lex();
   if (Token.isNot(MIToken::NamedRegister) &&
       Token.isNot(MIToken::VirtualRegister))
@@ -1158,7 +1158,7 @@ static const char *printImplicitRegisterFlag(const MachineOperand &MO) {
 }
 
 static std::string getRegisterName(const TargetRegisterInfo *TRI,
-                                   unsigned Reg) {
+                                   Register Reg) {
   assert(Register::isPhysicalRegister(Reg) && "expected phys reg");
   return StringRef(TRI->getName(Reg)).lower();
 }
@@ -1258,7 +1258,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
   return false;
 }
 
-bool MIParser::parseNamedRegister(unsigned &Reg) {
+bool MIParser::parseNamedRegister(Register &Reg) {
   assert(Token.is(MIToken::NamedRegister) && "Needs NamedRegister token");
   StringRef Name = Token.stringValue();
   if (PFS.Target.getRegisterByName(Name, Reg))
@@ -1286,7 +1286,7 @@ bool MIParser::parseVirtualRegister(VRegInfo *&Info) {
   return false;
 }
 
-bool MIParser::parseRegister(unsigned &Reg, VRegInfo *&Info) {
+bool MIParser::parseRegister(Register &Reg, VRegInfo *&Info) {
   switch (Token.kind()) {
   case MIToken::underscore:
     Reg = 0;
@@ -1480,7 +1480,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
   }
   if (!Token.isRegister())
     return error("expected a register after register flags");
-  unsigned Reg;
+  Register Reg;
   VRegInfo *RegInfo;
   if (parseRegister(Reg, RegInfo))
     return true;
@@ -2173,10 +2173,10 @@ bool MIParser::parseCFIOffset(int &Offset) {
   return false;
 }
 
-bool MIParser::parseCFIRegister(unsigned &Reg) {
+bool MIParser::parseCFIRegister(Register &Reg) {
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a cfi register");
-  unsigned LLVMReg;
+  Register LLVMReg;
   if (parseNamedRegister(LLVMReg))
     return true;
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
@@ -2208,7 +2208,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
   int Offset;
-  unsigned Reg;
+  Register Reg;
   unsigned CFIIndex;
   switch (Kind) {
   case MIToken::kw_cfi_same_value:
@@ -2274,7 +2274,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
     break;
   case MIToken::kw_cfi_register: {
-    unsigned Reg2;
+    Register Reg2;
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIRegister(Reg2))
       return true;
@@ -2504,7 +2504,7 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   while (true) {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
-    unsigned Reg;
+    Register Reg;
     if (parseNamedRegister(Reg))
       return true;
     lex();
@@ -2530,7 +2530,7 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   while (true) {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
-    unsigned Reg;
+    Register Reg;
     if (parseNamedRegister(Reg))
       return true;
     lex();
@@ -3207,13 +3207,13 @@ bool llvm::parseMBBReference(PerFunctionMIParsingState &PFS,
 }
 
 bool llvm::parseRegisterReference(PerFunctionMIParsingState &PFS,
-                                  unsigned &Reg, StringRef Src,
+                                  Register &Reg, StringRef Src,
                                   SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneRegister(Reg);
 }
 
 bool llvm::parseNamedRegisterReference(PerFunctionMIParsingState &PFS,
-                                       unsigned &Reg, StringRef Src,
+                                       Register &Reg, StringRef Src,
                                        SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneNamedRegister(Reg);
 }
