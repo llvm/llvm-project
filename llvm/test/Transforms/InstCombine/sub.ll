@@ -1352,7 +1352,6 @@ define <2 x i32> @test63vec(<2 x i32> %A) {
   ret <2 x i32> %D
 }
 
-; FIXME: Transform (neg (max ~X, C)) -> ((min X, ~C) + 1). Same for min.
 define i32 @test64(i32 %x) {
 ; CHECK-LABEL: @test64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 255
