@@ -1,4 +1,4 @@
-# XFAIL: system-windows
+# XFAIL: system-windows, lldb-repro
 # REQUIRES: native && target-x86_64 && native-cpu-avx
 # RUN: %clangxx_host %p/Inputs/x86-ymm-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
