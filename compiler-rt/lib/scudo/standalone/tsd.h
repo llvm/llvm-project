@@ -23,7 +23,7 @@
 
 namespace scudo {
 
-template <class Allocator> struct ALIGNED(SCUDO_CACHE_LINE_SIZE) TSD {
+template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   typename Allocator::CacheT Cache;
   typename Allocator::QuarantineCacheT QuarantineCache;
   u8 DestructorIterations;

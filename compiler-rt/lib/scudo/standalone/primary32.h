@@ -225,7 +225,7 @@ private:
     u64 LastReleaseAtNs;
   };
 
-  struct ALIGNED(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
+  struct alignas(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
     HybridMutex Mutex;
     SinglyLinkedList<TransferBatch> FreeList;
     uptr CurrentRegion;
