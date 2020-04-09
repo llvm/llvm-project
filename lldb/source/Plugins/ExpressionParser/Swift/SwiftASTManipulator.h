@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace swift {
-class CatchStmt;
+class CaseStmt;
 class DoCatchStmt;
 class ExtensionDecl;
 class FuncDecl;
@@ -132,7 +132,7 @@ protected:
   swift::DoCatchStmt *m_do_stmt = nullptr;
   /// The body of the catch - we patch the assignment there to capture
   /// any error thrown.
-  swift::CatchStmt *m_catch_stmt = nullptr;
+  swift::CaseStmt *m_catch_stmt = nullptr;
 };
 
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
