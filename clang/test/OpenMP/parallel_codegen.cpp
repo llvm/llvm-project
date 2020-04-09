@@ -64,7 +64,7 @@ int main (int argc, char **argv) {
 // ALL: store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // ALL: [[VLA:%.+]] = alloca i32, i{{[0-9]+}} [[VLA_SIZE:%[^,]+]],
 // CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
-// CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64)* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]])
+// CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}})* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]])
 // CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
 // IRBUILDER:   call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* [[VLA]])
 // ALL:  [[ARGV:%.+]] = load i8**, i8*** {{%[a-z0-9.]+}}
@@ -121,13 +121,13 @@ int main (int argc, char **argv) {
 // ALL-DEBUG-DAG: define linkonce_odr void [[FOO]](i32 %argc)
 
 // CHECK:           define internal {{.*}}void [[OMP_OUTLINED1]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]])
-// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64, i32*, i32*)* [[OMP_OUTLINED11:@.+]] to void (i32*, i32*, ...)*), i64 %{{.+}}, i32* %{{.+}}, i32* %{{.+}})
+// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*, i32*)* [[OMP_OUTLINED11:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} %{{.+}}, i32* %{{.+}}, i32* %{{.+}})
 
 // CHECK:           define internal {{.*}}void [[OMP_OUTLINED11]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]], i32* {{.+}} %{{.+}})
 // CHECK-NOT:       load i32, i32* @
 
 // CHECK:           define internal {{.*}}void [[OMP_OUTLINED2]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
-// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64, i32*)* [[OMP_OUTLINED21:@.+]] to void (i32*, i32*, ...)*), i64 %{{.+}}, i32* %{{.+}})
+// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED21:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} %{{.+}}, i32* %{{.+}})
 
 
 // CHECK:           define internal {{.*}}void [[OMP_OUTLINED21]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
