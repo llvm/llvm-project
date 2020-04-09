@@ -63,7 +63,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
       // Splat the constant if needed.
       if (IntIdxTy->isVectorTy() && !OpC->getType()->isVectorTy())
-        OpC = ConstantVector::getSplat(IntIdxTy->getVectorElementCount(), OpC);
+        OpC = ConstantVector::getSplat(
+            cast<VectorType>(IntIdxTy)->getElementCount(), OpC);
 
       Constant *Scale = ConstantInt::get(IntIdxTy, Size);
       Constant *OC = ConstantExpr::getIntegerCast(OpC, IntIdxTy, true /*SExt*/);
@@ -76,7 +77,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
     // Splat the index if needed.
     if (IntIdxTy->isVectorTy() && !Op->getType()->isVectorTy())
-      Op = Builder->CreateVectorSplat(IntIdxTy->getVectorNumElements(), Op);
+      Op = Builder->CreateVectorSplat(
+          cast<VectorType>(IntIdxTy)->getNumElements(), Op);
 
     // Convert to correct type.
     if (Op->getType() != IntIdxTy)

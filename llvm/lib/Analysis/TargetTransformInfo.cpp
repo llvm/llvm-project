@@ -874,7 +874,7 @@ static bool matchPairwiseShuffleMask(ShuffleVectorInst *SI, bool IsLeft,
   else if (!SI)
     return false;
 
-  SmallVector<int, 32> Mask(SI->getType()->getVectorNumElements(), -1);
+  SmallVector<int, 32> Mask(SI->getType()->getNumElements(), -1);
 
   // Build a mask of 0, 2, ... (left) or 1, 3, ... (right) depending on whether
   // we look at the left or right side.
@@ -1036,8 +1036,8 @@ static ReductionKind matchPairwiseReduction(const ExtractElementInst *ReduxRoot,
   if (!RD)
     return RK_None;
 
-  Type *VecTy = RdxStart->getType();
-  unsigned NumVecElems = VecTy->getVectorNumElements();
+  auto *VecTy = cast<VectorType>(RdxStart->getType());
+  unsigned NumVecElems = VecTy->getNumElements();
   if (!isPowerOf2_32(NumVecElems))
     return RK_None;
 
@@ -1101,8 +1101,8 @@ matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
   if (!RD)
     return RK_None;
 
-  Type *VecTy = ReduxRoot->getOperand(0)->getType();
-  unsigned NumVecElems = VecTy->getVectorNumElements();
+  auto *VecTy = cast<VectorType>(ReduxRoot->getOperand(0)->getType());
+  unsigned NumVecElems = VecTy->getNumElements();
   if (!isPowerOf2_32(NumVecElems))
     return RK_None;
 
