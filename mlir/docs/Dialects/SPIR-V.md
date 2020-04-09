@@ -196,7 +196,7 @@ explicit capturing.
     friendly to compiler analyses and transformations. More discussions can be
     found in the [Function](#function) section later.
 
-### Model entry points and execution models as normal ops
+#### Model entry points and execution models as normal ops
 
 *   A SPIR-V module can have multiple entry points. And these entry points refer
     to the function and interface variables. It’s not suitable to model them as
@@ -734,6 +734,42 @@ func @foo() -> () {
 }
 ```
 
+## Version, extensions, capabilities
+
+SPIR-V supports versions, extensions, and capabilities as ways to indicate the
+availability of various features (types, ops, enum cases) on target hardware.
+For example, non-uniform group operations were missing before v1.3, and they
+require special capabilites like `GroupNonUniformArithmetic` to be used. These
+availability information relates to [target environment](#target-environment)
+and affects the legality of patterns during dialect conversion.
+
+SPIR-V ops' availability requirements are modeled with
+[op interfaces][MlirOpInterface]:
+
+*   `QueryMinVersionInterface` and `QueryMaxVersionInterface` for vesion
+    requirements
+*   `QueryExtensionInterface` for extension requirements
+*   `QueryCapabilityInterface` for capability requirements
+
+These interface declarations are auto-generated from TableGen defintions
+included in [`SPIRVBase.td`][MlirSpirvBase]. At the moment all SPIR-V ops
+implements the above interfaces.
+
+SPIR-V ops' availability implemention methods are automatically synthesized
+from the availability specification on each op and enum attribute in TableGen.
+An op needs to look into not only the opcode but also operands to derive its
+availability requirements. For example, `spv.ControlBarrier` requires no
+special capability if the execution scope is `Subgroup`, but it will require
+the `VulkanMemoryModel` capability if the scope is `QueueFamily`.
+
+SPIR-V types' availability implementation methods are manually written as
+overrides in the SPIR-V [type hierarchy][MlirSpirvTypes].
+
+These availability requirements serve as the "ingredients" for the
+[`SPIRVConversionTarget`](#spirvconversiontarget) and
+[`SPIRVTypeConverter`](#spirvtypeconverter) to perform op and type conversions,
+by following the requirements in [target environment](#target-environment).
+
 ## Target environment
 
 SPIR-V aims to support multiple execution environments as specified by client
@@ -943,22 +979,35 @@ register other legality constraints into the returned `SPIRVConversionTarget`.
 ### `SPIRVTypeConverter`
 
 The `mlir::SPIRVTypeConverter` derives from `mlir::TypeConverter` and provides
-type conversion for standard types to SPIR-V types:
+type conversion for standard types to SPIR-V types conforming to the [target
+environment](#target-environment) it is constructed with. If the required
+extension/capability for the resultant type is not available in the given
+target environment, `convertType()` will return a null type.
 
-*   [Standard Integer][MlirIntegerType] -> Standard Integer
-*   [Standard Float][MlirFloatType] -> Standard Float
-*   [Vector Type][MlirVectorType] -> Vector Type
-*   [Memref Type][MlirMemrefType] with static shape and stride -> `spv.array`
-    with number of elements obtained from the layout specification of the
-    `memref`, and same element type.
+Standard scalar types are converted to their corresponding SPIR-V scalar types.
 
-(TODO: Generate the conversion matrix from comments automatically)
+(TODO: Note that if the bitwidth is not available in the target environment,
+it will be unconditionally converted to 32-bit. This should be switched to
+properly emulating non-32-bit scalar types.)
 
-[Index Type][MlirIndexType] need special handling since they are not directly
-supported in SPIR-V. Currently the `index` type is converted to `i32`.
+[Standard index Type][MlirIndexType] need special handling since they are not
+directly supported in SPIR-V. Currently the `index` type is converted to `i32`.
 
 (TODO: Allow for configuring the integer width to use for `index` types in the
 SPIR-V dialect)
+
+SPIR-V only supports vectors of 2/3/4 elements; so
+[standard vector types][MlirVectorType] of these length can be converted
+directly.
+
+(TODO: Convert other vectors of lengths to scalars or arrays)
+
+[Standard memref types][MlirMemrefType] with static shape and stride are
+converted to `spv.ptr<spv.struct<spv.array<...>>>`s. The resultant SPIR-V array
+types has the same element type as the source memref and its number of elements
+is obtained from the layout specification of the memref. The storage class of
+the pointer type are derived from the memref's memory space with
+`SPIRVTypeConverter::getStorageClassForMemorySpace()`.
 
 ### `SPIRVOpLowering`
 
@@ -1250,6 +1299,7 @@ dialect.
 [MlirDialectConversionTypeConversion]: ../DialectConversion.md#type-converter
 [MlirDialectConversionRewritePattern]: ../DialectConversion.md#conversion-patterns
 [MlirDialectConversionSignatureConversion]: ../DialectConversion.md#region-signature-conversion
+[MlirOpInterface]: ../Interfaces/#operation-interfaces
 [MlirIntegerType]: ../LangRef.md#integer-type
 [MlirFloatType]: ../LangRef.md#floating-point-types
 [MlirVectorType]: ../LangRef.md#vector-type
