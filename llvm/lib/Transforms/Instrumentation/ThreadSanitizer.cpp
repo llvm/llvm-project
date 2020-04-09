@@ -441,6 +441,11 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // the module constructor.
   if (F.getName() == kTsanModuleCtorName)
     return false;
+  // Naked functions can not have prologue/epilogue
+  // (__tsan_func_entry/__tsan_func_exit) generated, so don't instrument them at
+  // all.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
   initialize(*F.getParent());
   SmallVector<Instruction*, 8> AllLoadsAndStores;
   SmallVector<Instruction*, 8> LocalLoadsAndStores;
