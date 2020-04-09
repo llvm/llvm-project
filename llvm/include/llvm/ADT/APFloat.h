@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
@@ -182,13 +183,15 @@ struct APFloatBase {
   };
 
   /// IEEE-754R 4.3: Rounding-direction attributes.
-  enum roundingMode {
-    rmNearestTiesToEven,
-    rmTowardPositive,
-    rmTowardNegative,
-    rmTowardZero,
-    rmNearestTiesToAway
-  };
+  using roundingMode = llvm::RoundingMode;
+
+  static constexpr roundingMode rmNearestTiesToEven =
+                                                RoundingMode::NearestTiesToEven;
+  static constexpr roundingMode rmTowardPositive = RoundingMode::TowardPositive;
+  static constexpr roundingMode rmTowardNegative = RoundingMode::TowardNegative;
+  static constexpr roundingMode rmTowardZero     = RoundingMode::TowardZero;
+  static constexpr roundingMode rmNearestTiesToAway =
+                                                RoundingMode::NearestTiesToAway;
 
   /// IEEE-754R 7: Default exception handling.
   ///
