@@ -790,8 +790,13 @@ private:
   /// Hold the call to be widened.
   CallInst &Ingredient;
 
+  /// Hold VPValues for the arguments of the call.
+  VPUser User;
+
 public:
-  VPWidenCallRecipe(CallInst &I) : VPRecipeBase(VPWidenCallSC), Ingredient(I) {}
+  template <typename IterT>
+  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
+      : VPRecipeBase(VPWidenCallSC), Ingredient(I), User(CallArguments) {}
 
   ~VPWidenCallRecipe() override = default;
 

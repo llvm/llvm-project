@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -147,6 +148,12 @@ public:
   VPUser(ArrayRef<VPValue *> Operands) : VPUser(VPValue::VPUserSC, Operands) {}
   VPUser(std::initializer_list<VPValue *> Operands)
       : VPUser(ArrayRef<VPValue *>(Operands)) {}
+  template <typename IterT>
+  VPUser(iterator_range<IterT> Operands) : VPValue(VPValue::VPUserSC) {
+    for (VPValue *Operand : Operands)
+      addOperand(Operand);
+  }
+
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
 
