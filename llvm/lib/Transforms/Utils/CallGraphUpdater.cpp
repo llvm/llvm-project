@@ -106,6 +106,7 @@ void CallGraphUpdater::removeFunction(Function &DeadFn) {
 }
 
 void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {
+  OldFn.removeDeadConstantUsers();
   ReplacedFunctions.insert(&OldFn);
   if (CG) {
     // Update the call graph for the newly promoted function.
