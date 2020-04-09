@@ -1478,6 +1478,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["enqcmd"]          = HasLeaf7 && ((ECX >> 29) & 1);
 
   Features["serialize"]       = HasLeaf7 && ((EDX >> 14) & 1);
+  Features["tsxldtrk"]        = HasLeaf7 && ((EDX >> 16) & 1);
   // There are two CPUID leafs which information associated with the pconfig
   // instruction:
   // EAX=0x7, ECX=0x0 indicates the availability of the instruction (via the 18th
