@@ -75,6 +75,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned DSP : 1;
   unsigned Unaligned : 1;
   unsigned DotProd : 1;
+  unsigned HasMatMul : 1;
 
   enum {
     LDREX_B = (1 << 0), /// byte (8-bit)
