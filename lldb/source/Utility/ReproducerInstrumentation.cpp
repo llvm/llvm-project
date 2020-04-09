@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Utility/Reproducer.h"
+#include <thread>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -93,6 +94,10 @@ bool Registry::Replay(llvm::StringRef buffer) {
 
     GetReplayer(id)->operator()(deserializer);
   }
+
+  // Add a small artificial delay to ensure that all asynchronous events have
+  // completed before we exit.
+  std::this_thread::sleep_for (std::chrono::milliseconds(100));
 
   return true;
 }
