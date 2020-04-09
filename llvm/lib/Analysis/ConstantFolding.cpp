@@ -155,11 +155,11 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If the element types match, IR can fold it.
   unsigned NumDstElt = DestVTy->getNumElements();
-  unsigned NumSrcElt = C->getType()->getVectorNumElements();
+  unsigned NumSrcElt = cast<VectorType>(C->getType())->getNumElements();
   if (NumDstElt == NumSrcElt)
     return ConstantExpr::getBitCast(C, DestTy);
 
-  Type *SrcEltTy = C->getType()->getVectorElementType();
+  Type *SrcEltTy = cast<VectorType>(C->getType())->getElementType();
   Type *DstEltTy = DestVTy->getElementType();
 
   // Otherwise, we're changing the number of elements in a vector, which
@@ -218,7 +218,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
         if (Src && isa<UndefValue>(Src))
-          Src = Constant::getNullValue(C->getType()->getVectorElementType());
+          Src = Constant::getNullValue(
+              cast<VectorType>(C->getType())->getElementType());
         else
           Src = dyn_cast_or_null<ConstantInt>(Src);
         if (!Src)  // Reject constantexpr elements.
@@ -469,8 +470,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
       NumElts = AT->getNumElements();
       EltTy = AT->getElementType();
     } else {
-      NumElts = C->getType()->getVectorNumElements();
-      EltTy = C->getType()->getVectorElementType();
+      NumElts = cast<VectorType>(C->getType())->getNumElements();
+      EltTy = cast<VectorType>(C->getType())->getElementType();
     }
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
@@ -508,7 +509,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
                                           const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
-  if (LoadTy->isVectorTy() && LoadTy->getVectorIsScalable())
+  if (LoadTy->isVectorTy() && cast<VectorType>(LoadTy)->isScalable())
     return nullptr;
 
   auto *PTy = cast<PointerType>(C->getType());
@@ -836,7 +837,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized() ||
-      (SrcElemTy->isVectorTy() && SrcElemTy->getVectorIsScalable()))
+      (SrcElemTy->isVectorTy() && cast<VectorType>(SrcElemTy)->isScalable()))
     return nullptr;
 
   if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy,
@@ -2571,7 +2572,7 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
 
   // Do not iterate on scalable vector. The number of elements is unknown at
   // compile-time.
-  if (VTy->getVectorIsScalable())
+  if (VTy->isScalable())
     return nullptr;
 
   if (IntrinsicID == Intrinsic::masked_load) {
