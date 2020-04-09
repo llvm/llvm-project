@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
+//
 // Builder routines for constructing the FIR dialect of MLIR. As FIR is a
 // dialect of MLIR, it makes extensive use of MLIR interfaces and MLIR's coding
 // style (https://mlir.llvm.org/getting_started/DeveloperGuide/) is used in this

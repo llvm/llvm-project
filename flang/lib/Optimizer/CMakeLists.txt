@@ -10,10 +10,17 @@ add_flang_library(FIROptimizer
   Support/InternalNames.cpp
   Support/KindMapping.cpp
 
-  CodeGen/CGOps.cpp
+  Analysis/IteratedDominanceFrontier.cpp
+
+  CodeGen/CodeGen.cpp
   CodeGen/PreCGRewrite.cpp
 
+  Transforms/ControlFlowConverter.cpp
+  Transforms/CSE.cpp
   Transforms/Inliner.cpp
+  Transforms/MemToReg.cpp
+  Transforms/AffinePromotion.cpp
+  Transforms/RewriteLoop.cpp
 
   DEPENDS
   FIROpsIncGen

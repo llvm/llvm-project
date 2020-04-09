@@ -29,6 +29,13 @@ config.suffixes = ['.c', '.cpp', '.f', '.F', '.ff', '.FOR', '.for', '.f77', '.f9
                    '.ff90', '.f95', '.F95', '.ff95', '.fpp', '.FPP', '.cuf'
                    '.CUF', '.f18', '.F18', '.fir', '.f03', '.F03', '.f08', '.F08']
 
+# test_source_root: The root path where tests are located.
+config.test_source_root = os.path.dirname(__file__)
+
+
+# test_exec_root: The root path where tests should be run.
+config.test_exec_root = os.path.join(config.flang_obj_root, 'test')
+
 config.substitutions.append(('%PATH%', config.environment['PATH']))
 
 llvm_config.use_default_substitutions()
@@ -54,6 +61,10 @@ config.test_exec_root = os.path.join(config.flang_obj_root, 'test')
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment('PATH', config.flang_tools_dir, append_path=True)
 llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
+# For out-of-tree builds, path to bbc and tco needs to be added
+
+if config.llvm_tools_dir != config.flang_llvm_tools_dir :
+  llvm_config.with_environment('PATH', config.flang_llvm_tools_dir, append_path=True)
 
 if config.flang_standalone_build:
     # For builds with FIR, set path for tco and enable related tests
@@ -61,6 +72,15 @@ if config.flang_standalone_build:
         config.available_features.add('fir')
         if config.llvm_tools_dir != config.flang_llvm_tools_dir:
             llvm_config.with_environment('PATH', config.flang_llvm_tools_dir, append_path=True)
+
+config.substitutions.append(('%B', config.flang_obj_root))
+config.substitutions.append(("%L", config.flang_lib_dir))
+if len(config.macos_sysroot) > 0:
+  config.substitutions.append(("%CXX", config.cplusplus_executable + " -isysroot " + config.macos_sysroot))
+  config.substitutions.append(("%CC", config.c_executable + " -isysroot " + config.macos_sysroot))
+else:
+  config.substitutions.append(("%CXX", config.cplusplus_executable))
+  config.substitutions.append(("%CC", config.c_executable))
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.

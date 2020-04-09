@@ -11,8 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/OptPasses.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser.h"
@@ -24,11 +29,13 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
+// list of program return codes
 static cl::opt<std::string>
     inputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
@@ -40,6 +47,10 @@ static cl::opt<std::string> outputFilename("o",
 static cl::opt<bool> emitFir("emit-fir",
                              cl::desc("Parse and pretty-print the input"),
                              cl::init(false));
+
+static cl::opt<std::string> targetTriple("target",
+                                         cl::desc("specify a target triple"),
+                                         cl::init("native"));
 
 static void printModuleBody(mlir::ModuleOp mod, raw_ostream &output) {
   for (auto &op : mod.getBody()->without_terminator())
@@ -64,6 +75,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
   mlir::MLIRContext context(registry);
+  fir::support::loadDialects(context);
   auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
 
   if (!owningRef) {
@@ -79,21 +91,48 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   ToolOutputFile out(outputFilename, ec, sys::fs::OF_None);
 
   // run passes
-  mlir::PassManager pm{&context};
+  fir::KindMapping kindMap{&context};
+  fir::setTargetTriple(*owningRef, targetTriple);
+  fir::setKindMapping(*owningRef, kindMap);
+  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
+  pm.enableVerifier(/*verifyPasses=*/true);
   mlir::applyPassManagerCLOptions(pm);
   if (emitFir) {
     // parse the input and pretty-print it back out
     // -emit-fir intentionally disables all the passes
+  } else if (passPipeline.hasAnyOccurrences()) {
+    // FIXME: handle result
+    (void)passPipeline.addToPipeline(pm, [&](const Twine &msg) {
+      mlir::emitError(mlir::UnknownLoc::get(&context)) << msg;
+      return mlir::failure();
+    });
   } else {
-    // TODO: Actually add passes when added to FIR code base
-    // add all the passes
-    // the user can disable them individually
+    // simplify the IR
+    pm.addNestedPass<mlir::FuncOp>(fir::createArrayValueCopyPass());
+    pm.addPass(mlir::createCanonicalizerPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+    pm.addPass(mlir::createInlinerPass());
+    pm.addPass(mlir::createCSEPass());
+
+    // convert control flow to CFG form
+    pm.addNestedPass<mlir::FuncOp>(fir::createFirToCfgPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createControlFlowLoweringPass());
+    pm.addPass(mlir::createLowerToCFGPass());
+
+    pm.addPass(mlir::createCanonicalizerPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+
+    // pm.addPass(fir::createMemToRegPass());
+    pm.addPass(fir::createFirCodeGenRewritePass());
+    pm.addPass(fir::createFirTargetRewritePass());
+    pm.addPass(fir::createFIRToLLVMPass());
+    pm.addPass(fir::createLLVMDialectToLLVMPass(out.os()));
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if (emitFir)
+    if (emitFir || passPipeline.hasAnyOccurrences())
       printModuleBody(*owningRef, out.os());
     out.keep();
     return mlir::success();
@@ -106,8 +145,13 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerMLIRPassesForFortranTools();
+  fir::support::registerFIRPasses();
+  fir::registerOptPasses();
+
   [[maybe_unused]] InitLLVM y(argc, argv);
+  InitializeAllTargets();
+  mlir::registerAsmPrinterCLOptions();
+  mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   cl::ParseCommandLineOptions(argc, argv, "Tilikum Crossing Optimizer\n");

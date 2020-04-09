@@ -1,26 +1,13 @@
-# Flang
 
-Flang is a ground-up implementation of a Fortran front end written in modern
-C++. It started off as the f18 project (https://github.com/flang-compiler/f18)
-with an aim to replace the previous flang project
-(https://github.com/flang-compiler/flang) and address its various deficiencies.
-F18 was subsequently accepted into the LLVM project and rechristened as Flang.
+# FIR
 
-## Getting Started
+This file should not be upstreamed to llvm-project.
 
-Read more about flang in the [docs directory](docs).
-Start with the [compiler overview](docs/Overview.md).
+## Monorepo now contains Flang!
 
-To better understand Fortran as a language
-and the specific grammar accepted by flang,
-read [Fortran For C Programmers](docs/FortranForCProgrammers.md)
-and
-flang's specifications of the [Fortran grammar](docs/f2018-grammar.md)
-and
-the [OpenMP grammar](docs/OpenMP-4.5-grammar.md).
+### In-tree build
 
-Treatment of language extensions is covered
-in [this document](docs/Extensions.md).
+1. Get the stuff.
 
 To understand the compilers handling of intrinsics,
 see the [discussion of intrinsics](docs/Intrinsics.md).
@@ -36,122 +23,105 @@ also review [how flang uses modern C++ features](docs/C++17.md).
 If you are interested in writing new documentation, follow 
 [markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/main/llvm/docs/MarkdownQuickstartTemplate.md).
 
-## Supported C++ compilers
-
-Flang is written in C++17.
-
-The code has been compiled and tested with
-GCC versions from 7.2.0 to 9.3.0.
-
-The code has been compiled and tested with
-clang version 7.0, 8.0, 9.0 and 10.0
-using either GNU's libstdc++ or LLVM's libc++.
-
-The code has been compiled on
-AArch64, x86\_64 and ppc64le servers
-with CentOS7, Ubuntu18.04, Rhel, MacOs, Mojave, XCode and
-Apple Clang version 10.0.1.
-
-The code does not compile with Windows and a compiler that does not have
-support for C++17.
-
-## Building Flang out of tree
-These instructions are for building Flang separately from LLVM; if you are
-building Flang alongside LLVM then follow the standard LLVM build instructions
-and add flang to `LLVM_ENABLE_PROJECTS` instead, as detailed there.
-
-### LLVM dependency
-
-The instructions to build LLVM can be found at
-https://llvm.org/docs/GettingStarted.html. If you are building flang as part
-of LLVM, follow those instructions and add flang to `LLVM_ENABLE_PROJECTS`.
-
-We highly recommend using the same compiler to compile both llvm and flang.
-
-The flang CMakeList.txt file uses
-* `LLVM_DIR` to find the installed LLVM components
-* `MLIR_DIR` to find the installed MLIR components
-* `CLANG_DIR` to find the installed Clang components
-
-To get the correct LLVM, MLIR and Clang libraries included in your flang build,
-define `LLVM_DIR`, `MLIR_DIR` and `CLANG_DIR` on the cmake command line.
-```
-LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm \
-MLIR=<LLVM_BUILD_DIR>/lib/cmake/mlir \
-CLANG=<LLVM_BUILD_DIR>/lib/cmake/clang \
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ...
-```
-where `LLVM_BUILD_DIR` is
-the top-level directory where LLVM was built.
-
-### Building flang with GCC
-
-By default,
-cmake will search for g++ on your PATH.
-The g++ version must be one of the supported versions
-in order to build flang.
-
-Or, cmake will use the variable CXX to find the C++ compiler. CXX should include
-the full path to the compiler or a name that will be found on your PATH, e.g.
-g++-8.3, assuming g++-8.3 is on your PATH.
+2. Get "on" the right branches.
 
 ```
-export CXX=g++-8.3
-```
-or
-```
-CXX=/opt/gcc-8.3/bin/g++-8.3 cmake ...
+  (cd f18-llvm-project ; git checkout fir-dev)
 ```
 
-### Building flang with clang
+3. (not needed!)
+             
+4. Create a build space for cmake and make (or ninja)
 
-To build flang with clang,
-cmake needs to know how to find clang++
-and the GCC library and tools that were used to build clang++.
-
-CXX should include the full path to clang++
-or clang++ should be found on your PATH.
 ```
-export CXX=clang++
+  mkdir build
+  cd build
+  cmake ../f18-llvm-project/llvm -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS="flang;mlir" -DCMAKE_CXX_STANDARD=17 -DLLVM_BUILD_TOOLS=On -DLLVM_INSTALL_UTILS=On <other-arguments>
 ```
 
-### Installation Directory
+5. Build everything
 
-To specify a custom install location,
-add
-`-DCMAKE_INSTALL_PREFIX=<INSTALL_PREFIX>`
-to the cmake command
-where `<INSTALL_PREFIX>`
-is the path where flang should be installed.
-
-### Build Types
-
-To create a debug build,
-add
-`-DCMAKE_BUILD_TYPE=Debug`
-to the cmake command.
-Debug builds execute slowly.
-
-To create a release build,
-add
-`-DCMAKE_BUILD_TYPE=Release`
-to the cmake command.
-Release builds execute quickly.
-
-### Build Flang out of tree
 ```
-cd ~/flang/build
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ~/flang/src
-make
+  make
+  make check-flang
+  make install
 ```
 
-### Disable The New Flang Driver
-The new Flang compiler driver, `flang-new`, is implemented in terms of
-`clangDriver` and hence it introduces a dependency on Clang. This dependency is
-otherwise not required. If you do not require the new driver, you can disable
-it by adding `-DFLANG_BUILD_NEW_DRIVER=OFF` to your CMake invocation. With the
-new driver disabled, you no longer need to add `clang` to
-`LLVM_ENABLE_PROJECTS` (or to specify `CLANG_DIR` when building out-of-tree).
+### Out-of-tree build
+
+Assuming someone was nice enough to build MLIR and LLVM libraries and
+install them in a convenient place for you, then you may want to do a
+standalone build.
+
+1. Get the stuff is the same as above. Get the code from the same repos.
+
+2. Get on the right branches. Again, same as above.
+
+3. Create a build space for cmake and make (or ninja)
+
+```
+  mkdir build
+  cd build
+  export CC=<my-favorite-C-compiler>
+  export CXX=<my-favorite-C++-compiler>
+  cmake -GNinja ../f18-llvm-project/llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS=mlir -DCMAKE_CXX_STANDARD=17 -DLLVM_BUILD_TOOLS=On -DLLVM_INSTALL_UTILS=On -DCMAKE_INSTALL_PREFIX=<install-llvm-here> <other-arguments>
+```
+
+5. Build and install
+
+```
+  ninja
+  ninja install
+```
+
+6. Add the new installation to your PATH
+
+```
+  PATH=<install-llvm-here>/bin:$PATH
+```
+
+7. Create a build space for another round of cmake and make (or ninja)
+
+```
+  mkdir build-flang
+  cd build-flang
+  cmake -GNinja ../f18 -DLLVM_DIR=<install-llvm-here> -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_TARGETS_TO_BUILD=X86 -DCMAKE_CXX_STANDARD=17 -DLLVM_BUILD_TOOLS=On -DCMAKE_INSTALL_PREFIX=<install-flang-here> <other-arguments>
+```
+Note: if you plan on running lit regression tests, you should either:
+- Use `-DLLVM_DIR=<build-llvm-here>` instead of `-DLLVM_DIR=<install-llvm-here>`
+- Or, keep `-DLLVM_DIR=<install-llvm-here>` but add `-DLLVM_EXTERNAL_LIT=<path to llvm-lit>`.
+A valid `llvm-lit` path is `<build-llvm-here>/bin/llvm-lit`.
+Note that LLVM must also have been built with `-DLLVM_INSTALL_UTILS=On` so that tools required by tests like `FileCheck` are available in `<install-llvm-here>`.
+
+8. Build and install
+
+```
+  ninja
+  ninja check-flang
+  ninja install
+```
+
+### Running regression tests
+
+Inside `build` for in-tree builds or inside `build-flang` for out-of-tree builds:
+
+```
+  ninja check-flang
+```
+
+### Build The New Flang Driver
+The new Flang driver, `flang-new`, is currently under active development and
+should be considered as an experimental feature. For this reason it is disabled
+by default. This will change once the new driver replaces the _throwaway_
+driver, `flang`.
+
+In order to build the new driver, add `-DFLANG_BUILD_NEW_DRIVER=ON` to your
+CMake invocation line. Additionally, when building out-of-tree, use `CLANG_DIR`
+(similarly to `LLVM_DIR` and `MLIR_DIR`) to find the installed Clang
+components.
+
+**Note:** `CLANG_DIR` is only required when building the new Flang driver,
+which currently depends on Clang.
 
 # How to Run Tests
 
@@ -212,7 +182,7 @@ make check-flang
 # How to Generate Documentation
 
 ## Generate FIR Documentation
-If flang was built with `-DLINK_WITH_FIR=On` (`On` by default), it is possible to
+It is possible to
 generate FIR language documentation by running `make flang-doc`. This will
 create `docs/Dialect/FIRLangRef.md` in flang build directory.
 
