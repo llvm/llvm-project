@@ -157,8 +157,8 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
   }
   Offsets = GEP->getOperand(1);
   // Paranoid check whether the number of parallel lanes is the same
-  assert(Ty->getVectorNumElements() ==
-         Offsets->getType()->getVectorNumElements());
+  assert(cast<VectorType>(Ty)->getNumElements() ==
+         cast<VectorType>(Offsets->getType())->getNumElements());
   // Only <N x i32> offsets can be integrated into an arm gather, any smaller
   // type would have to be sign extended by the gep - and arm gathers can only
   // zero extend. Additionally, the offsets do have to originate from a zext of
@@ -168,7 +168,7 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
     return nullptr;
   if (ZExtInst *ZextOffs = dyn_cast<ZExtInst>(Offsets))
     Offsets = ZextOffs->getOperand(0);
-  else if (!(Offsets->getType()->getVectorNumElements() == 4 &&
+  else if (!(cast<VectorType>(Offsets->getType())->getNumElements() == 4 &&
              Offsets->getType()->getScalarSizeInBits() == 32))
     return nullptr;
 
@@ -191,9 +191,9 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
 void MVEGatherScatterLowering::lookThroughBitcast(Value *&Ptr) {
   // Look through bitcast instruction if #elements is the same
   if (auto *BitCast = dyn_cast<BitCastInst>(Ptr)) {
-    Type *BCTy = BitCast->getType();
-    Type *BCSrcTy = BitCast->getOperand(0)->getType();
-    if (BCTy->getVectorNumElements() == BCSrcTy->getVectorNumElements()) {
+    auto *BCTy = cast<VectorType>(BitCast->getType());
+    auto *BCSrcTy = cast<VectorType>(BitCast->getOperand(0)->getType());
+    if (BCTy->getNumElements() == BCSrcTy->getNumElements()) {
       LLVM_DEBUG(
           dbgs() << "masked gathers/scatters: looking through bitcast\n");
       Ptr = BitCast->getOperand(0);
@@ -223,14 +223,14 @@ Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   // @llvm.masked.gather.*(Ptrs, alignment, Mask, Src0)
   // Attempt to turn the masked gather in I into a MVE intrinsic
   // Potentially optimising the addressing modes as we do so.
-  Type *Ty = I->getType();
+  auto *Ty = cast<VectorType>(I->getType());
   Value *Ptr = I->getArgOperand(0);
   unsigned Alignment = cast<ConstantInt>(I->getArgOperand(1))->getZExtValue();
   Value *Mask = I->getArgOperand(2);
   Value *PassThru = I->getArgOperand(3);
 
-  if (!isLegalTypeAndAlignment(Ty->getVectorNumElements(),
-                               Ty->getScalarSizeInBits(), Alignment))
+  if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
+                               Alignment))
     return nullptr;
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
@@ -267,9 +267,9 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
                                                            Value *Ptr,
                                                            IRBuilder<> &Builder) {
   using namespace PatternMatch;
-  Type *Ty = I->getType();
+  auto *Ty = cast<VectorType>(I->getType());
   LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
-  if (Ty->getVectorNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
+  if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
   Value *Mask = I->getArgOperand(2);
@@ -357,11 +357,12 @@ Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   Value *Input = I->getArgOperand(0);
   Value *Ptr = I->getArgOperand(1);
   unsigned Alignment = cast<ConstantInt>(I->getArgOperand(2))->getZExtValue();
-  Type *Ty = Input->getType();
+  auto *Ty = cast<VectorType>(Input->getType());
 
-  if (!isLegalTypeAndAlignment(Ty->getVectorNumElements(),
-                               Ty->getScalarSizeInBits(), Alignment))
+  if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
+                               Alignment))
     return nullptr;
+
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
@@ -386,9 +387,9 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
   Value *Mask = I->getArgOperand(3);
-  Type *Ty = Input->getType();
+  auto *Ty = cast<VectorType>(Input->getType());
   // Only QR variants allow truncating
-  if (!(Ty->getVectorNumElements() == 4 && Ty->getScalarSizeInBits() == 32)) {
+  if (!(Ty->getNumElements() == 4 && Ty->getScalarSizeInBits() == 32)) {
     // Can't build an intrinsic for this
     return nullptr;
   }
