@@ -345,10 +345,8 @@ static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
-namespace llvm {
-
 static StringSet<> DisasmSymbolSet;
-StringSet<> FoundSectionSet;
+StringSet<> objdump::FoundSectionSet;
 static StringRef ToolName;
 
 namespace {
@@ -385,6 +383,8 @@ static FilterResult checkSectionFilter(object::SectionRef S) {
   return {/*Keep=*/is_contained(FilterSections, SecName),
           /*IncrementIndex=*/true};
 }
+
+namespace llvm {
 
 SectionFilter ToolSectionFilter(object::ObjectFile const &O, uint64_t *Idx) {
   // Start at UINT64_MAX so that the first index returned after an increment is
