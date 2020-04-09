@@ -164,8 +164,8 @@ struct LargeBlockInfo {
 };
 
 template <typename LOAD, typename STORE, typename ALLOCA, typename UNDEF>
-struct MemToReg
-    : public mlir::FunctionPass<MemToReg<LOAD, STORE, ALLOCA, UNDEF>> {
+struct MemToReg : public mlir::PassWrapper<MemToReg<LOAD, STORE, ALLOCA, UNDEF>,
+                                           mlir::FunctionPass> {
   explicit MemToReg() {}
 
   std::vector<ALLOCA> allocas;
@@ -752,10 +752,6 @@ struct MemToReg
 using MemToRegPass =
     MemToReg<fir::LoadOp, fir::StoreOp, fir::AllocaOp, fir::UndefOp>;
 
-std::unique_ptr<mlir::OpPassBase<mlir::FuncOp>> fir::createMemToRegPass() {
+std::unique_ptr<mlir::Pass> fir::createMemToRegPass() {
   return std::make_unique<MemToRegPass>();
 }
-
-// Register the Mem To Reg pass
-static mlir::PassRegistration<MemToRegPass>
-    pass("mem-to-reg", "Conversion from mem to reg form");

@@ -188,7 +188,8 @@ struct SelectTypeOpConversion : public FIROpConversion<SelectTypeOp> {
 };
 
 /// Convert affine dialect, fir.select_type to standard dialect
-class FIRToStdLoweringPass : public mlir::FunctionPass<FIRToStdLoweringPass> {
+class FIRToStdLoweringPass
+    : public mlir::PassWrapper<FIRToStdLoweringPass, mlir::FunctionPass> {
 public:
   explicit FIRToStdLoweringPass(const KindMapping &kindMap)
       : kindMap{kindMap} {}

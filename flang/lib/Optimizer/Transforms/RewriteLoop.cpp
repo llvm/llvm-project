@@ -54,7 +54,7 @@ public:
 /// Promote fir.loop and fir.where to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
-    : public mlir::FunctionPass<AffineDialectPromotion> {
+    : public mlir::PassWrapper<AffineDialectPromotion, mlir::FunctionPass> {
 public:
   void runOnFunction() override {
     if (disableAffinePromo)
@@ -162,7 +162,8 @@ public:
 };
 
 /// Convert `fir.loop` and `fir.where` to `loop.for` and `loop.if`.
-class LoopDialectConversion : public mlir::FunctionPass<LoopDialectConversion> {
+class LoopDialectConversion
+    : public mlir::PassWrapper<LoopDialectConversion, mlir::FunctionPass> {
 public:
   void runOnFunction() override {
     if (disableLoopConversion)
