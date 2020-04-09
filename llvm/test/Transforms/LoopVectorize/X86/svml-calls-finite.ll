@@ -185,3 +185,61 @@ for.end:                                          ; preds = %for.body
 !51 = distinct !{!51, !52, !53}
 !52 = !{!"llvm.loop.vectorize.width", i32 4}
 !53 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare float @__exp2f_finite(float) #0
+
+define void @exp2f_finite(float* nocapture %varray) {
+; CHECK-LABEL: @exp2f_finite(
+; CHECK:    call <4 x float> @__svml_exp2f4(<4 x float> %{{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @__exp2f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %iv
+  store float %call, float* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !61
+
+for.end:
+  ret void
+}
+
+!61 = distinct !{!61, !62, !63}
+!62 = !{!"llvm.loop.vectorize.width", i32 4}
+!63 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare double @__exp2_finite(double) #0
+
+define void @exp2_finite(double* nocapture %varray) {
+; CHECK-LABEL: @exp2_finite(
+; CHECK:    call <4 x double> @__svml_exp24(<4 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__exp2_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %iv
+  store double %call, double* %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !71
+
+for.end:
+  ret void
+}
+
+!71 = distinct !{!71, !72, !73}
+!72 = !{!"llvm.loop.vectorize.width", i32 4}
+!73 = !{!"llvm.loop.vectorize.enable", i1 true}
