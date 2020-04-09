@@ -38,5 +38,4 @@ if(LLVM_BUILD_LLVM_DYLIB)
     mlir-shlib.cpp
     )
   target_link_libraries(MLIR PRIVATE LLVM ${LLVM_PTHREAD_LIB})
-  whole_archive_link(MLIR ${mlir_libs})
 endif()
