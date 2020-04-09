@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangPersistentVariables.h"
-#include "lldb/Expression/IRExecutionUnit.h"
+#include "ClangASTImporter.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"

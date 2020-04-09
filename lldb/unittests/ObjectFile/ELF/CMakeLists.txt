@@ -7,6 +7,7 @@ add_lldb_unittest(ObjectFileELFTests
     lldbCore
     lldbUtilityHelpers
     LLVMTestingSupport
+    lldbPluginPlatformMacOSX
   )
 
 set(test_inputs

@@ -6,6 +6,7 @@ add_lldb_unittest(ScriptInterpreterPythonTests
     lldbHost
     lldbPluginScriptInterpreterPython
     LLVMTestingSupport
+    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
   )

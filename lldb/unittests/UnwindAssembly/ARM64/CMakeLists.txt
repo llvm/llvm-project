@@ -8,6 +8,7 @@ add_lldb_unittest(Arm64InstEmulationTests
     lldbPluginDisassemblerLLVM
     lldbPluginInstructionARM64
     lldbPluginProcessUtility
+    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
     ${LLVM_TARGETS_TO_BUILD})

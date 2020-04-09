@@ -54,6 +54,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
     lldbPluginObjCLanguage
     lldbPluginCPlusPlusLanguage
     lldbPluginExpressionParserClang
+    lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
     clangBasic

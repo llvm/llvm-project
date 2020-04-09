@@ -288,12 +288,10 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString
-CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
-  if (IsValid()) {
+ConstString CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
+  if (IsValid())
     return m_type_system->GetDisplayTypeName(m_type, sc);
-  }
-  return ConstString();
+  return ConstString("<invalid>");
 }
 
 ConstString CompilerType::GetMangledTypeName() const {

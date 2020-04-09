@@ -7,6 +7,7 @@ add_lldb_unittest(SymbolFileNativePDBTests
     lldbSymbol
     lldbPluginSymbolFileNativePDB
     lldbUtilityHelpers
+    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
     DebugInfoPDB

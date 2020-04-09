@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjCRuntimeSyntheticProvider.h"
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/DeclVendor.h"
 
 #include "lldb/lldb-public.h"

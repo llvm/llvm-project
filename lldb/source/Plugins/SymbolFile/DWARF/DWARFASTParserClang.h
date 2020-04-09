@@ -21,8 +21,9 @@
 #include "LogChannelDWARF.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangASTImporter.h"
+
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <vector>
 

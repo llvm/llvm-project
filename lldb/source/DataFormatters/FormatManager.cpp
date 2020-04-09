@@ -18,6 +18,8 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Log.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -193,14 +195,17 @@ void FormatManager::GetPossibleMatches(
     entries.push_back(
         {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
-    const SymbolContext *sc = nullptr;
-    if (valobj.GetFrameSP())
-      sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+    TypeSystem *ts = compiler_type.GetTypeSystem();
+    if (ts && !llvm::isa<TypeSystemClang>(ts)) {
+      const SymbolContext *sc = nullptr;
+      if (valobj.GetFrameSP())
+        sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
 
-    ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
-    if (display_type_name != type_name)
-      entries.push_back({display_type_name, reason, did_strip_ptr,
-                         did_strip_ref, did_strip_typedef});
+      ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
+      if (display_type_name != type_name)
+        entries.push_back({display_type_name, reason, did_strip_ptr,
+                           did_strip_ref, did_strip_typedef});
+    }
   }
 
   for (bool is_rvalue_ref = true, j = true;

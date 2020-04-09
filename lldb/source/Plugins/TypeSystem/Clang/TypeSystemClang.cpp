@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "TypeSystemClang.h"
 
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -40,9 +40,13 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangFunctionCaller.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Flags.h"
@@ -53,10 +57,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -3512,6 +3512,20 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
     }
   }
   return ConstString(type_name);
+}
+
+ConstString
+TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                    const SymbolContext *) {
+  if (!type)
+    return ConstString();
+
+  clang::QualType qual_type(GetQualType(type));
+  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
+  printing_policy.SuppressTagKeyword = true;
+  printing_policy.SuppressScope = false;
+  printing_policy.SuppressUnwrittenScope = true;
+  return ConstString(qual_type.getAsString(printing_policy));
 }
 
 uint32_t

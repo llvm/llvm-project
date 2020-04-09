@@ -7,4 +7,5 @@ add_lldb_library(lldbPluginPlatformPOSIX PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    lldbPluginTypeSystemClang
   )

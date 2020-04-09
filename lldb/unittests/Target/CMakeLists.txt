@@ -15,6 +15,7 @@ add_lldb_unittest(TargetTests
       lldbSymbol
       lldbUtility
       lldbUtilityHelpers
+      lldbPluginPlatformMacOSX
     LINK_COMPONENTS
       Support
   )

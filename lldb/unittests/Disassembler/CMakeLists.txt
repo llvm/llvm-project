@@ -8,6 +8,7 @@ if("ARM" IN_LIST LLVM_TARGETS_TO_BUILD)
       lldbTarget
       lldbPluginDisassemblerLLVM
       lldbPluginProcessUtility
+      lldbPluginPlatformMacOSX
     LINK_COMPONENTS
       Support
       ${LLVM_TARGETS_TO_BUILD})

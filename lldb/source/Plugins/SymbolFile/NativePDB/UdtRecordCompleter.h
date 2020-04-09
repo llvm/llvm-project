@@ -9,7 +9,7 @@
 #ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 #define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 
-#include "lldb/Symbol/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"

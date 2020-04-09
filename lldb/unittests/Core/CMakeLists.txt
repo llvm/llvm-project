@@ -12,6 +12,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginSymbolFileSymtab
     lldbUtilityHelpers
     LLVMTestingSupport
+    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
   )
