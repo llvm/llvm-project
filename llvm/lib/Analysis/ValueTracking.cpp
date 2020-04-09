@@ -1121,7 +1121,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
                                          const Query &Q) {
   unsigned BitWidth = Known.getBitWidth();
 
-  KnownBits Known2(Known);
+  KnownBits Known2(BitWidth);
   switch (I->getOpcode()) {
   default: break;
   case Instruction::Load:
@@ -1534,7 +1534,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
           computeKnownBits(R, Known2, Depth + 1, RecQ);
 
           // We need to take the minimum number of known bits
-          KnownBits Known3(Known);
+          KnownBits Known3(BitWidth);
           RecQ.CxtI = LInst;
           computeKnownBits(L, Known3, Depth + 1, RecQ);
 
@@ -1688,7 +1688,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (II->getIntrinsicID() == Intrinsic::fshr)
           ShiftAmt = BitWidth - ShiftAmt;
 
-        KnownBits Known3(Known);
+        KnownBits Known3(BitWidth);
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known3, Depth + 1, Q);
 
