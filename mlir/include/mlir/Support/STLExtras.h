@@ -93,11 +93,13 @@ inline void interleaveComma(const Container &c, raw_ostream &os) {
 /// Note: We specify an explicit alignment here to allow use with PointerIntPair
 /// and other utilities/data structures that require a known pointer alignment.
 struct alignas(8) ClassID {
-  template <typename T> static ClassID *getID() {
+  template <typename T>
+  LLVM_EXTERNAL_VISIBILITY static ClassID *getID() {
     static ClassID id;
     return &id;
   }
-  template <template <typename T> class Trait> static ClassID *getID() {
+  template <template <typename T> class Trait>
+  LLVM_EXTERNAL_VISIBILITY static ClassID *getID() {
     static ClassID id;
     return &id;
   }
