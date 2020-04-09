@@ -745,8 +745,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
       return Op1;
     }
 
-    Known0.Zero |= Known1.Zero;
-    Known0.One &= Known1.One;
+    Known0 &= Known1;
     if (Known0.isConstant())
       return ConstantInt::get(Op0->getType(), Known0.getConstant());
   }
