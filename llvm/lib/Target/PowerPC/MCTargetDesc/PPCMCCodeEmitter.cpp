@@ -104,6 +104,20 @@ unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+unsigned long
+PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
+
+  // Add a fixup for the immediate field.
+  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 1, MO.getExpr(),
+                                   (MCFixupKind)PPC::fixup_ppc_pcrel34));
+  return 0;
+}
+
 unsigned PPCMCCodeEmitter::getMemRIEncoding(const MCInst &MI, unsigned OpNo,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
@@ -175,6 +189,16 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     report_fatal_error("Operand must be 0");
 
   const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isExpr()) {
+    const MCExpr *Expr = MO.getExpr();
+    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
+    assert(SRE->getKind() == MCSymbolRefExpr::VK_PCREL &&
+           "VariantKind must be VK_PCREL");
+    Fixups.push_back(
+        MCFixup::create(IsLittleEndian ? 0 : 1, Expr,
+                        static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
+    return 0;
+  }
   return ((getMachineOpValue(MI, MO, Fixups, STI)) & 0x3FFFFFFFFUL) | RegBits;
 }
 
