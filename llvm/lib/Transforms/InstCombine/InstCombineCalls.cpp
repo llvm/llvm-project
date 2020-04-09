@@ -523,7 +523,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   auto Vec = II.getArgOperand(0);
   auto Amt = II.getArgOperand(1);
   auto VT = cast<VectorType>(II.getType());
-  auto SVT = VT->getVectorElementType();
+  auto SVT = VT->getElementType();
   int NumElts = VT->getNumElements();
   int BitWidth = SVT->getIntegerBitWidth();
 
@@ -620,10 +620,10 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
     return UndefValue::get(ResTy);
 
-  Type *ArgTy = Arg0->getType();
+  auto *ArgTy = cast<VectorType>(Arg0->getType());
   unsigned NumLanes = ResTy->getPrimitiveSizeInBits() / 128;
-  unsigned NumSrcElts = ArgTy->getVectorNumElements();
-  assert(ResTy->getVectorNumElements() == (2 * NumSrcElts) &&
+  unsigned NumSrcElts = ArgTy->getNumElements();
+  assert(cast<VectorType>(ResTy)->getNumElements() == (2 * NumSrcElts) &&
          "Unexpected packing types");
 
   unsigned NumSrcEltsPerLane = NumSrcElts / NumLanes;
@@ -680,14 +680,14 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   Value *Arg = II.getArgOperand(0);
   Type *ResTy = II.getType();
-  Type *ArgTy = Arg->getType();
 
   // movmsk(undef) -> zero as we must ensure the upper bits are zero.
   if (isa<UndefValue>(Arg))
     return Constant::getNullValue(ResTy);
 
+  auto *ArgTy = dyn_cast<VectorType>(Arg->getType());
   // We can't easily peek through x86_mmx types.
-  if (!ArgTy->isVectorTy())
+  if (!ArgTy)
     return nullptr;
 
   // Expand MOVMSK to compare/bitcast/zext:
@@ -695,8 +695,8 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   // %cmp = icmp slt <16 x i8> %x, zeroinitializer
   // %int = bitcast <16 x i1> %cmp to i16
   // %res = zext i16 %int to i32
-  unsigned NumElts = ArgTy->getVectorNumElements();
-  Type *IntegerVecTy = VectorType::getInteger(cast<VectorType>(ArgTy));
+  unsigned NumElts = ArgTy->getNumElements();
+  Type *IntegerVecTy = VectorType::getInteger(ArgTy);
   Type *IntegerTy = Builder.getIntNTy(NumElts);
 
   Value *Res = Builder.CreateBitCast(Arg, IntegerVecTy);
@@ -1036,7 +1036,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
 
   auto *VecTy = cast<VectorType>(II.getType());
   auto *MaskEltTy = Type::getInt32Ty(II.getContext());
-  unsigned NumElts = VecTy->getVectorNumElements();
+  unsigned NumElts = VecTy->getNumElements();
   bool IsPD = VecTy->getScalarType()->isDoubleTy();
   unsigned NumLaneElts = IsPD ? 2 : 4;
   assert(NumElts == 16 || NumElts == 8 || NumElts == 4 || NumElts == 2);
@@ -1955,8 +1955,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
 
   // For vector result intrinsics, use the generic demanded vector support.
-  if (II->getType()->isVectorTy()) {
-    auto VWidth = II->getType()->getVectorNumElements();
+  if (auto *IIVTy = dyn_cast<VectorType>(II->getType())) {
+    auto VWidth = IIVTy->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
@@ -2505,8 +2505,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
     if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
                                    &DT) >= 16) {
-      Type *VTy = VectorType::get(Builder.getFloatTy(),
-                                  II->getType()->getVectorNumElements());
+      Type *VTy =
+          VectorType::get(Builder.getFloatTy(),
+                          cast<VectorType>(II->getType())->getElementCount());
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(VTy));
       Value *Load = Builder.CreateLoad(VTy, Ptr);
@@ -2526,8 +2527,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
     if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
                                    &DT) >= 16) {
-      Type *VTy = VectorType::get(Builder.getFloatTy(),
-          II->getArgOperand(0)->getType()->getVectorNumElements());
+      Type *VTy = VectorType::get(
+          Builder.getFloatTy(),
+          cast<VectorType>(II->getArgOperand(0)->getType())->getElementCount());
       Value *TOp = Builder.CreateFPTrunc(II->getArgOperand(0), VTy);
       Type *OpPtrTy = PointerType::getUnqual(VTy);
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
@@ -2676,7 +2678,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // These intrinsics only demand the 0th element of their input vectors. If
     // we can simplify the input based on that, do so now.
     Value *Arg = II->getArgOperand(0);
-    unsigned VWidth = Arg->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(Arg->getType())->getNumElements();
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg, VWidth, 1))
       return replaceOperand(*II, 0, V);
     break;
@@ -2726,7 +2728,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     bool MadeChange = false;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    unsigned VWidth = Arg0->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(Arg0->getType())->getNumElements();
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg0, VWidth, 1)) {
       replaceOperand(*II, 0, V);
       MadeChange = true;
@@ -2944,7 +2946,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *Arg1 = II->getArgOperand(1);
     assert(Arg1->getType()->getPrimitiveSizeInBits() == 128 &&
            "Unexpected packed shift size");
-    unsigned VWidth = Arg1->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(Arg1->getType())->getNumElements();
 
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg1, VWidth, VWidth / 2))
       return replaceOperand(*II, 1, V);
@@ -3011,7 +3013,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       bool MadeChange = false;
       Value *Arg0 = II->getArgOperand(0);
       Value *Arg1 = II->getArgOperand(1);
-      unsigned VWidth = Arg0->getType()->getVectorNumElements();
+      unsigned VWidth = cast<VectorType>(Arg0->getType())->getNumElements();
 
       APInt UndefElts1(VWidth, 0);
       APInt DemandedElts1 = APInt::getSplat(VWidth,
@@ -3051,8 +3053,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse4a_extrq: {
     Value *Op0 = II->getArgOperand(0);
     Value *Op1 = II->getArgOperand(1);
-    unsigned VWidth0 = Op0->getType()->getVectorNumElements();
-    unsigned VWidth1 = Op1->getType()->getVectorNumElements();
+    unsigned VWidth0 = cast<VectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth1 = cast<VectorType>(Op1->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth0 == 2 &&
            VWidth1 == 16 && "Unexpected operand sizes");
@@ -3090,7 +3092,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // EXTRQI: Extract Length bits starting from Index. Zero pad the remaining
     // bits of the lower 64-bits. The upper 64-bits are undefined.
     Value *Op0 = II->getArgOperand(0);
-    unsigned VWidth = Op0->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(Op0->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 && VWidth == 2 &&
            "Unexpected operand size");
 
@@ -3112,10 +3114,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse4a_insertq: {
     Value *Op0 = II->getArgOperand(0);
     Value *Op1 = II->getArgOperand(1);
-    unsigned VWidth = Op0->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(Op0->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth == 2 &&
-           Op1->getType()->getVectorNumElements() == 2 &&
+           cast<VectorType>(Op1->getType())->getNumElements() == 2 &&
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
@@ -3146,8 +3148,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // undefined.
     Value *Op0 = II->getArgOperand(0);
     Value *Op1 = II->getArgOperand(1);
-    unsigned VWidth0 = Op0->getType()->getVectorNumElements();
-    unsigned VWidth1 = Op1->getType()->getVectorNumElements();
+    unsigned VWidth0 = cast<VectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth1 = cast<VectorType>(Op1->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth0 == 2 &&
            VWidth1 == 2 && "Unexpected operand sizes");
@@ -3214,8 +3216,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
              II->getType()->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
 
-      unsigned NumMaskElts = Mask->getType()->getVectorNumElements();
-      unsigned NumOperandElts = II->getType()->getVectorNumElements();
+      unsigned NumMaskElts =
+          cast<VectorType>(Mask->getType())->getNumElements();
+      unsigned NumOperandElts =
+          cast<VectorType>(II->getType())->getNumElements();
       if (NumMaskElts == NumOperandElts)
         return SelectInst::Create(BoolVec, Op1, Op0);
 
@@ -3306,7 +3310,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // the permutation mask with respect to 31 and reverse the order of
     // V1 and V2.
     if (Constant *Mask = dyn_cast<Constant>(II->getArgOperand(2))) {
-      assert(Mask->getType()->getVectorNumElements() == 16 &&
+      assert(cast<VectorType>(Mask->getType())->getNumElements() == 16 &&
              "Bad type for intrinsic!");
 
       // Check that all of the elements are integer constants or undefs.
@@ -3464,7 +3468,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       if (auto *CI = dyn_cast<ConstantInt>(XorMask)) {
         if (CI->getValue().trunc(16).isAllOnesValue()) {
           auto TrueVector = Builder.CreateVectorSplat(
-              II->getType()->getVectorNumElements(), Builder.getTrue());
+              cast<VectorType>(II->getType())->getNumElements(),
+              Builder.getTrue());
           return BinaryOperator::Create(Instruction::Xor, ArgArg, TrueVector);
         }
       }

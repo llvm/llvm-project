@@ -108,7 +108,8 @@ static Constant *getLogBase2(Type *Ty, Constant *C) {
     return nullptr;
 
   SmallVector<Constant *, 4> Elts;
-  for (unsigned I = 0, E = Ty->getVectorNumElements(); I != E; ++I) {
+  for (unsigned I = 0, E = cast<VectorType>(Ty)->getNumElements(); I != E;
+       ++I) {
     Constant *Elt = C->getAggregateElement(I);
     if (!Elt)
       return nullptr;
@@ -1433,7 +1434,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   // If it's a constant vector, flip any negative values positive.
   if (isa<ConstantVector>(Op1) || isa<ConstantDataVector>(Op1)) {
     Constant *C = cast<Constant>(Op1);
-    unsigned VWidth = C->getType()->getVectorNumElements();
+    unsigned VWidth = cast<VectorType>(C->getType())->getNumElements();
 
     bool hasNegative = false;
     bool hasMissing = false;
