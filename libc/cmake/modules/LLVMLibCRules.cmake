@@ -142,7 +142,12 @@ function(add_object_library target_name)
       ${target_name}
       ${ADD_OBJECT_DEPENDS}
     )
-    foreach(obj_target IN LISTS ADD_ENTRYPOINT_OBJ_SPECIAL_OBJECTS)
+    foreach(obj_target IN LISTS ADD_OBJECT_DEPENDS)
+      if(NOT TARGET ${obj_target})
+        # Not all targets will be visible. So, we will ignore those which aren't
+        # visible yet.
+        continue()
+      endif()
       get_target_property(obj_type ${obj_target} "TARGET_TYPE")
       if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})))
         continue()
