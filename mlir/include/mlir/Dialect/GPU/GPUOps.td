@@ -85,7 +85,8 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
-def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
+def GPU_GPUFuncOp : GPU_Op<"func", [AutomaticAllocationScope, FunctionLike,
+                                    IsolatedFromAbove, Symbol]> {
   let summary = "Function executable on a GPU";
 
   let description = [{

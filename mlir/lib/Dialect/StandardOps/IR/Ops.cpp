@@ -295,8 +295,7 @@ static ParseResult parseAllocLikeOp(OpAsmParser &parser,
 
 template <typename AllocLikeOp>
 static LogicalResult verify(AllocLikeOp op) {
-  static_assert(std::is_same<AllocLikeOp, AllocOp>::value ||
-                    std::is_same<AllocLikeOp, AllocaOp>::value,
+  static_assert(llvm::is_one_of<AllocLikeOp, AllocOp, AllocaOp>::value,
                 "applies to only alloc or alloca");
   auto memRefType = op.getResult().getType().template dyn_cast<MemRefType>();
   if (!memRefType)
@@ -321,7 +320,19 @@ static LogicalResult verify(AllocLikeOp op) {
   for (auto operandType : op.getOperandTypes())
     if (!operandType.isIndex())
       return op.emitOpError("requires operands to be of type Index");
-  return success();
+
+  if (std::is_same<AllocLikeOp, AllocOp>::value)
+    return success();
+
+  // An alloca op needs to have an ancestor with an allocation scope trait.
+  auto *parentOp = op.getParentOp();
+  while (parentOp) {
+    if (parentOp->template hasTrait<OpTrait::AutomaticAllocationScope>())
+      return success();
+    parentOp = parentOp->getParentOp();
+  }
+  return op.emitOpError(
+      "requires an ancestor op with AutomaticAllocationScope trait");
 }
 
 namespace {
