@@ -104,8 +104,7 @@ define i64 @d2ull(double %x) {
 ; CHECK-NEXT:    fcmp.d %s2, %s0, %s1
 ; CHECK-NEXT:    fsub.d %s1, %s0, %s1
 ; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
-; CHECK-NEXT:    lea.sl %s3, -2147483648
-; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    xor %s1, %s1, (1)1
 ; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
 ; CHECK-NEXT:    cmov.d.lt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -205,8 +204,7 @@ define i64 @f2ull(float %x) {
 ; CHECK-NEXT:    fsub.s %s1, %s0, %s1
 ; CHECK-NEXT:    cvt.d.s %s1, %s1
 ; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
-; CHECK-NEXT:    lea.sl %s3, -2147483648
-; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    xor %s1, %s1, (1)1
 ; CHECK-NEXT:    cvt.d.s %s0, %s0
 ; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
 ; CHECK-NEXT:    cmov.s.lt %s1, %s0, %s2
@@ -424,9 +422,7 @@ define double @ull2d(i64 %x) {
 ; CHECK-NEXT:    lea %s2, 1048576
 ; CHECK-NEXT:    lea.sl %s2, -986710016(, %s2)
 ; CHECK-NEXT:    fadd.d %s1, %s1, %s2
-; CHECK-NEXT:    lea %s2, -1
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    and %s0, %s0, %s2
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, 1127219200
 ; CHECK-NEXT:    or %s0, %s0, %s2
 ; CHECK-NEXT:    fadd.d %s0, %s0, %s1
