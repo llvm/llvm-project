@@ -2,6 +2,7 @@
 
 // RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
 // UNSUPPORTED: !fir
+// XFAIL: *
 
 // CHECK-LABEL: func @it1() -> !fir.int<4>
 func @it1() -> !fir.int<4>
