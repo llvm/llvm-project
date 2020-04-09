@@ -229,7 +229,7 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("sp", VE::SX11)    // Stack pointer
                      .Case("fp", VE::SX9)     // Frame pointer
                      .Case("sl", VE::SX8)     // Stack limit
-                     .Case("lr", VE::SX10)    // Link regsiter
+                     .Case("lr", VE::SX10)    // Link register
                      .Case("tp", VE::SX14)    // Thread pointer
                      .Case("outer", VE::SX12) // Outer regiser
                      .Case("info", VE::SX17)  // Info area register
