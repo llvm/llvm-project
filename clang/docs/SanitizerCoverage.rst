@@ -139,6 +139,28 @@ Users need to implement a single function to capture the counters at startup.
     // Capture this array in order to read/modify the counters.
   }
 
+
+Inline bool-flag
+================
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=inline-bool-flag`` the compiler will insert
+setting an inline boolean to true on every edge.
+This is similar to ``-fsanitize-coverage=inline-8bit-counter`` but instead of
+an increment of a counter, it just sets a boolean to true.
+
+Users need to implement a single function to capture the flags at startup.
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_bool_flag_init(bool *start, bool *end) {
+    // [start,end) is the array of boolean flags created for the current DSO.
+    // Capture this array in order to read/modify the flags.
+  }
+
+
 PC-Table
 ========
 
@@ -150,8 +172,8 @@ significant binary size overhead. For more information, see
 `Bug 34636 <https://bugs.llvm.org/show_bug.cgi?id=34636>`_.
 
 With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
-instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
-``-fsanitize-coverage=trace-pc-guard``.
+instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters``,
+or ``-fsanitize-coverage=inline-bool-flag``, or ``-fsanitize-coverage=trace-pc-guard``.
 
 Users need to implement a single function to capture the PC table at startup:
 
@@ -164,8 +186,9 @@ Users need to implement a single function to capture the PC table at startup:
     // pairs [PC,PCFlags] for every instrumented block in the current DSO.
     // Capture this array in order to read the PCs and their Flags.
     // The number of PCs and PCFlags for a given DSO is the same as the number
-    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
-    // trace_pc_guard callbacks (-fsanitize-coverage=trace-pc-guard)
+    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters), or
+    // boolean flags (-fsanitize-coverage=inline=bool-flags), or trace_pc_guard
+    // callbacks (-fsanitize-coverage=trace-pc-guard).
     // A PCFlags describes the basic block:
     //  * bit0: 1 if the block is the function entry block, 0 otherwise.
   }
