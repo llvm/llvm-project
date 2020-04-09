@@ -124,7 +124,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
     // Perform some additional validation on the return address.
     uint32_t permissions = 0;
-    if (!m_process->GetLoadAddressPermissions(m_return_addr,
+    if (!m_process.GetLoadAddressPermissions(m_return_addr,
                                               permissions)) {
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): Return address (0x%" PRIx64
               ") permissions not found.", static_cast<void *>(this),
