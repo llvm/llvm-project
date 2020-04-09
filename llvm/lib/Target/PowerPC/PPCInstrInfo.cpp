@@ -2046,7 +2046,9 @@ ArrayRef<std::pair<unsigned, const char *>>
 PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace PPCII;
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_PLT, "ppc-plt"}, {MO_PIC_FLAG, "ppc-pic"}};
+      {MO_PLT, "ppc-plt"},
+      {MO_PIC_FLAG, "ppc-pic"},
+      {MO_PCREL_FLAG, "ppc-pcrel"}};
   return makeArrayRef(TargetFlags);
 }
 

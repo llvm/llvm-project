@@ -337,3 +337,43 @@ let Predicates = [PrefixInstrs] in {
   }
 }
 
+// TODO: We have an added complexity of 500 here. This is only a temporary
+// solution to have tablegen consider these patterns first. The way we do
+// addressing for PowerPC is complex depending on available D form, X form, or
+// aligned D form loads/stores like DS and DQ forms. The prefixed
+// instructions in this file also add additional PC Relative loads/stores
+// and D form loads/stores with 34 bit immediates. It is very difficult to force
+// instruction selection to consistently pick these first without the current
+// added complexity. Once pc-relative implementation is complete, a set of
+// follow-up patches will address this refactoring and the AddedComplexity will
+// be removed.
+let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
+  // Load f32
+  def : Pat<(f32 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLFSpc $addr, 0)>;
+
+  // Load f64
+  def : Pat<(f64 (extloadf32 (PPCmatpcreladdr pcreladdr:$addr))),
+            (COPY_TO_REGCLASS (PLFSpc $addr, 0), VSFRC)>;
+  def : Pat<(f64 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLFDpc $addr, 0)>;
+
+  // Load f128
+  def : Pat<(f128 (load (PPCmatpcreladdr pcreladdr:$addr))),
+            (COPY_TO_REGCLASS (PLXVpc $addr, 0), VRRC)>;
+
+  // Load v4i32
+  def : Pat<(v4i32 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLXVpc $addr, 0)>;
+
+  // Load v2i64
+  def : Pat<(v2i64 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLXVpc $addr, 0)>;
+
+  // Load v4f32
+  def : Pat<(v4f32 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLXVpc $addr, 0)>;
+
+  // Load v2f64
+  def : Pat<(v2f64 (load (PPCmatpcreladdr pcreladdr:$addr))), (PLXVpc $addr, 0)>;
+
+  // If the PPCmatpcreladdr node is not caught by any other pattern it should be
+  // caught here and turned into a paddi instruction to materialize the address.
+  def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+}
+

@@ -296,6 +296,10 @@ namespace {
       return true;
     }
 
+    bool SelectAddrPCRel(SDValue N, SDValue &Base) {
+      return PPCLowering->SelectAddressPCRel(N, Base);
+    }
+
     /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
     /// inline asm expressions.  It is always correct to compute the value into
     /// a register.  The case of adding a (possibly relocatable) constant to a

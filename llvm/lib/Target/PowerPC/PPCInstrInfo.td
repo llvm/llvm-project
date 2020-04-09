@@ -319,6 +319,9 @@ def SDTDynAreaOp  : SDTypeProfile<1, 1, []>;
 def PPCdynalloc   : SDNode<"PPCISD::DYNALLOC", SDTDynOp, [SDNPHasChain]>;
 def PPCdynareaoffset   : SDNode<"PPCISD::DYNAREAOFFSET", SDTDynAreaOp, [SDNPHasChain]>;
 
+// PC Relative Specific Nodes
+def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
 //
@@ -730,6 +733,7 @@ def PPCS34ImmAsmOperand : AsmOperandClass {
 }
 def s34imm : Operand<i64> {
   let PrintMethod = "printS34ImmOperand";
+  let EncoderMethod = "getImm34Encoding";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
 }
@@ -976,6 +980,9 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 
 /// This is just the offset part of iaddr, used for preinc.
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
+
+// PC Relative Address
+def pcreladdr : ComplexPattern<iPTR, 1, "SelectAddrPCRel", [], []>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
