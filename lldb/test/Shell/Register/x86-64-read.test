@@ -1,4 +1,4 @@
-# XFAIL: system-windows
+# XFAIL: system-window, lldb-repros
 # REQUIRES: native && target-x86_64
 # RUN: %clangxx_host %p/Inputs/x86-64-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
