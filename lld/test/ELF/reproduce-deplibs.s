@@ -1,8 +1,4 @@
-# REQUIRES: x86, shell
-
-## The 'shell' requirement is to prevent this test from running by default on
-## Windows as the extraction of the tar archive can cause problems related to
-## path length limits.
+# REQUIRES: x86
 
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
@@ -13,8 +9,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o bar.o
 
 # RUN: ld.lld bar.o -o /dev/null --reproduce repro.tar
-# RUN: tar xf repro.tar
-# RUN: cmp foo.a repro/%:t.dir/foo.a
+# RUN: tar tf repro.tar | FileCheck -DPATH='%:t.dir' %s
+
+# CHECK: [[PATH]]/foo.a
 
 .globl _start
 _start:
