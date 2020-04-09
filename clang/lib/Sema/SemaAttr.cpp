@@ -940,7 +940,7 @@ void Sema::ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC) {
   }
 }
 
-void Sema::setRoundingMode(LangOptions::FPRoundingModeKind FPR) {
+void Sema::setRoundingMode(llvm::RoundingMode FPR) {
   FPFeatures.setRoundingMode(FPR);
 }
 

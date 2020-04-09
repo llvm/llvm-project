@@ -253,7 +253,7 @@ namespace llvm {
   public:
     bool isUnaryOp() const;
     bool isTernaryOp() const;
-    Optional<fp::RoundingMode> getRoundingMode() const;
+    Optional<RoundingMode> getRoundingMode() const;
     Optional<fp::ExceptionBehavior> getExceptionBehavior() const;
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:

@@ -760,7 +760,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
 CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
     Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource,
     const Twine &Name, MDNode *FPMathTag,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   Value *RoundingV = getConstrainedFPRounding(Rounding);
   Value *ExceptV = getConstrainedFPExcept(Except);
@@ -794,7 +794,7 @@ Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
 CallInst *IRBuilderBase::CreateConstrainedFPCast(
     Intrinsic::ID ID, Value *V, Type *DestTy,
     Instruction *FMFSource, const Twine &Name, MDNode *FPMathTag,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
@@ -857,7 +857,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
 
 CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   llvm::SmallVector<Value *, 6> UseArgs;
 
