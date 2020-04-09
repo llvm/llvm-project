@@ -362,10 +362,17 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   if (log)
     LLDB_LOGF(log, "%p Communication::ReadThread () thread exiting...", p);
 
-  comm->BroadcastEvent(eBroadcastBitNoMorePendingInput);
+  // Handle threads wishing to synchronize with us.
   {
-    std::lock_guard<std::mutex> guard(comm->m_synchronize_mutex);
+    // Prevent new ones from showing up.
     comm->m_read_thread_did_exit = true;
+
+    // Unblock any existing thread waiting for the synchronization signal.
+    comm->BroadcastEvent(eBroadcastBitNoMorePendingInput);
+
+    // Wait for the thread to finish...
+    std::lock_guard<std::mutex> guard(comm->m_synchronize_mutex);
+    // ... and disconnect.
     if (disconnect)
       comm->Disconnect();
   }
