@@ -39,6 +39,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFEntryInserterPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
+  initializeFixupStatepointCallerSavedPass(Registry);
   initializeFuncletLayoutPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
