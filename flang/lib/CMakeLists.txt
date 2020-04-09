@@ -1,13 +1,18 @@
+if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+  if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-string-conversion -Wno-covered-switch-default")
+  endif()
+endif()
+
 add_subdirectory(Common)
 add_subdirectory(Evaluate)
 add_subdirectory(Decimal)
 add_subdirectory(Lower)
 add_subdirectory(Parser)
+add_subdirectory(Optimizer)
 add_subdirectory(Semantics)
 
 if(FLANG_BUILD_NEW_DRIVER)
   add_subdirectory(Frontend)
   add_subdirectory(FrontendTool)
 endif()
-
-add_subdirectory(Optimizer)

@@ -766,7 +766,6 @@ inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
   return *x < *y;
 }
 using SymbolSet = std::set<SymbolRef>;
-
 } // namespace Fortran::semantics
 
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.

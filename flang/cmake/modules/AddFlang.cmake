@@ -1,3 +1,11 @@
+#===-- cmake/modules/AddFlang.cmake ----------------------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===------------------------------------------------------------------------===#
+
 macro(set_flang_windows_version_resource_properties name)
   if (DEFINED windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file}

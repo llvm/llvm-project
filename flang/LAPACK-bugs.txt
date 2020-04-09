@@ -1,0 +1,23 @@
+NEED ATTENTION
+______________
+
+[Eric] error: branch has N operands for successor #M, but target block has K
+[Eric] UNREACHABLE executed at Lower/ConvertExpr.cpp:403!  CHAR comparison
+
+[Varun] UNREACHABLE executed at Lower/Bridge.cpp:1061!  DATA
+[Varun] UNREACHABLE executed at Lower/Bridge.cpp:1241!  local w/ initializer (implied SAVE)
+
+UNREACHABLE executed at Lower/Bridge.cpp:1236!  adjustable array?
+UNREACHABLE executed at Lower/ConvertExpr.cpp:798!  intrinsic subroutine
+
+FIXED
+_____
+
+UNREACHABLE executed at Lower/IO.cpp:764!       FORMAT
+
+UNREACHABLE executed at Lower/ConvertExpr.cpp:848!  temps on call?
+
+Block.cpp:200: mlir::Operation *mlir::Block::getTerminator(): Assertion `!empty() && !back().isKnownNonTerminator()' failed.
+
+error: 'std.return' op must be the last operation in the parent block
+

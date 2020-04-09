@@ -50,6 +50,7 @@ bool canLegallyInline(mlir::Operation *op, mlir::Region *reg,
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
+bool isAlwaysExecuteLoopBody();
 } // namespace fir
 
 #endif // OPTIMIZER_TRANSFORMS_PASSES_H
