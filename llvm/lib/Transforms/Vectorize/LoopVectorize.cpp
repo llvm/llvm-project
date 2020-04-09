@@ -4362,11 +4362,8 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
 
 void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
                                                VPTransformState &State) {
-  // Ignore dbg intrinsics.
-  // TODO: Debug intrinsics should be skipped/handled during VPlan construction
-  // rather than dropping them here.
-  if (isa<DbgInfoIntrinsic>(I))
-    return;
+  assert(!isa<DbgInfoIntrinsic>(I) &&
+         "DbgInfoIntrinsic should have been dropped during VPlan construction");
   setDebugLocFromInst(Builder, &I);
 
   Module *M = I.getParent()->getParent()->getParent();
@@ -7247,6 +7244,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     Builder.setInsertPoint(VPBB);
 
     // Introduce each ingredient into VPlan.
+    // TODO: Model and preserve debug instrinsics in VPlan.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       Instruction *Instr = &I;
 
