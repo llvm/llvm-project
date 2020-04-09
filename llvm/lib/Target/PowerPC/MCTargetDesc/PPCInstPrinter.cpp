@@ -400,9 +400,13 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
 
 void PPCInstPrinter::printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) {
-  long long Value = MI->getOperand(OpNo).getImm();
-  assert(isInt<34>(Value) && "Invalid s34imm argument!");
-  O << (long long)Value;
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<34>(Value) && "Invalid s34imm argument!");
+    O << (long long)Value;
+  }
+  else
+    printOperand(MI, OpNo, O);
 }
 
 void PPCInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,

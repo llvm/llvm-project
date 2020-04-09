@@ -162,12 +162,9 @@ entry:
 
 define dso_local double @UsesX2AsConstPoolTOC() local_unnamed_addr {
 ; CHECK-S-LABEL: UsesX2AsConstPoolTOC:
-; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep7@ha
-; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep7@l
-; CHECK-S:       .localentry     UsesX2AsConstPoolTOC, .Lfunc_lep7-.Lfunc_gep7
+; CHECK-S-NOT:       .localentry
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
-; CHECK-S-NEXT:    lfd f1, .LCPI7_0@toc@l(r3)
+; CHECK-S-NEXT:    plfd f1, .LCPI7_0@PCREL(0), 1
 ; CHECK-S-NEXT:    blr
 entry:
   ret double 0x404124A4EBDD334C
