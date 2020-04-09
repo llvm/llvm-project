@@ -95,7 +95,3 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK007 %s
 // CHECK007:          "-internal-isystem" "{{.*}}hexagon{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
-// -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux-musl %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK008 %s
-// CHECK008:          ld.lld
