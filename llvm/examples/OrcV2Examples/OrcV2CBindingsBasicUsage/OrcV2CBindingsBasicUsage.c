@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
   LLVMOrcLLJITRef J;
   {
     LLVMErrorRef Err;
-    if ((Err = LLVMOrcCreateDefaultLLJIT(&J))) {
+    if ((Err = LLVMOrcCreateLLJIT(&J, 0))) {
       MainResult = handleError(Err);
       goto llvm_shutdown;
     }

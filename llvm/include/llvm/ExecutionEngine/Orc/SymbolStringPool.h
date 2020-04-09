@@ -48,6 +48,7 @@ private:
 
 /// Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr {
+  friend class OrcV2CAPIHelper;
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
 
@@ -106,7 +107,8 @@ public:
   }
 
 private:
-  using PoolEntryPtr = SymbolStringPool::PoolMapEntry *;
+  using PoolEntry = SymbolStringPool::PoolMapEntry;
+  using PoolEntryPtr = PoolEntry *;
 
   SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
       : S(S) {
