@@ -110,8 +110,7 @@ define zeroext i8 @remu8(i8 zeroext %a, i8 zeroext %b) {
 define i64 @remi64ri(i64 %a, i64 %b) {
 ; CHECK-LABEL: remi64ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divs.l %s1, %s0, %s1
+; CHECK-NEXT:    divs.l %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.l %s1, 3, %s1
 ; CHECK-NEXT:    subs.l %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -123,8 +122,7 @@ define i64 @remi64ri(i64 %a, i64 %b) {
 define i32 @remi32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: remi32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divs.w.sx %s1, %s0, %s1
+; CHECK-NEXT:    divs.w.sx %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.w.sx %s1, 3, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -136,8 +134,7 @@ define i32 @remi32ri(i32 %a, i32 %b) {
 define i64 @remu64ri(i64 %a, i64 %b) {
 ; CHECK-LABEL: remu64ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divu.l %s1, %s0, %s1
+; CHECK-NEXT:    divu.l %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.l %s1, 3, %s1
 ; CHECK-NEXT:    subs.l %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -149,8 +146,7 @@ define i64 @remu64ri(i64 %a, i64 %b) {
 define i32 @remu32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: remu32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divu.w %s1, %s0, %s1
+; CHECK-NEXT:    divu.w %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.w.sx %s1, 3, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
