@@ -104,7 +104,7 @@ unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-unsigned long
+uint64_t
 PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
                                    SmallVectorImpl<MCFixup> &Fixups,
                                    const MCSubtargetInfo &STI) const {
