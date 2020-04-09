@@ -1,7 +1,7 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-full | FileCheck %s --check-prefix UNROLL-FULL
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-full -unroll-full-threshold=2 | FileCheck %s --check-prefix SHORT
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-factor=4 | FileCheck %s --check-prefix UNROLL-BY-4
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-factor=1 | FileCheck %s --check-prefix UNROLL-BY-1
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full" | FileCheck %s --check-prefix UNROLL-FULL
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full unroll-full-threshold=2" | FileCheck %s --check-prefix SHORT
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=4" | FileCheck %s --check-prefix UNROLL-BY-4
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=1" | FileCheck %s --check-prefix UNROLL-BY-1
 
 // UNROLL-FULL-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>

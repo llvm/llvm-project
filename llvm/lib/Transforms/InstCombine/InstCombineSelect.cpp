@@ -301,10 +301,11 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 
     // The select condition may be a vector. We may only change the operand
     // type if the vector width remains the same (and matches the condition).
-    if (CondTy->isVectorTy()) {
+    if (auto *CondVTy = dyn_cast<VectorType>(CondTy)) {
       if (!FIOpndTy->isVectorTy())
         return nullptr;
-      if (CondTy->getVectorNumElements() != FIOpndTy->getVectorNumElements())
+      if (CondVTy->getNumElements() !=
+          cast<VectorType>(FIOpndTy)->getNumElements())
         return nullptr;
 
       // TODO: If the backend knew how to deal with casts better, we could
@@ -1935,7 +1936,7 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
   if (!CondVal->getType()->isVectorTy() || !match(CondVal, m_Constant(CondC)))
     return nullptr;
 
-  unsigned NumElts = CondVal->getType()->getVectorNumElements();
+  unsigned NumElts = cast<VectorType>(CondVal->getType())->getNumElements();
   SmallVector<Constant *, 16> Mask;
   Mask.reserve(NumElts);
   Type *Int32Ty = Type::getInt32Ty(CondVal->getContext());
@@ -1971,8 +1972,8 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
 /// is likely better for vector codegen.
 static Instruction *canonicalizeScalarSelectOfVecs(
     SelectInst &Sel, InstCombiner &IC) {
-  Type *Ty = Sel.getType();
-  if (!Ty->isVectorTy())
+  auto *Ty = dyn_cast<VectorType>(Sel.getType());
+  if (!Ty)
     return nullptr;
 
   // We can replace a single-use extract with constant index.
@@ -1983,7 +1984,7 @@ static Instruction *canonicalizeScalarSelectOfVecs(
   // select (extelt V, Index), T, F --> select (splat V, Index), T, F
   // Splatting the extracted condition reduces code (we could directly create a
   // splat shuffle of the source vector to eliminate the intermediate step).
-  unsigned NumElts = Ty->getVectorNumElements();
+  unsigned NumElts = Ty->getNumElements();
   return IC.replaceOperand(Sel, 0, IC.Builder.CreateVectorSplat(NumElts, Cond));
 }
 

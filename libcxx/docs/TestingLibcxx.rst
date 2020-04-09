@@ -10,7 +10,7 @@ Getting Started
 
 libc++ uses LIT to configure and run its tests.
 
-The primary way to run the libc++ tests is by using `make check-cxx`.
+The primary way to run the libc++ tests is by using ``make check-cxx``.
 
 However since libc++ can be used in any number of possible
 configurations it is important to customize the way LIT builds and runs
@@ -21,38 +21,18 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 
 .. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
 
-Setting up the Environment
---------------------------
+Usage
+-----
 
-After building libc++ you must setup your environment to test libc++ using
-LIT.
-
-#. Create a shortcut to the actual lit executable so that you can invoke it
-   easily from the command line.
-
-   .. code-block:: bash
-
-     $ alias lit='python path/to/llvm/utils/lit/lit.py'
-
-#. Tell LIT where to find your build configuration.
-
-   .. code-block:: bash
-
-     $ export LIBCXX_SITE_CONFIG=path/to/build-libcxx/test/lit.site.cfg
-
-Example Usage
--------------
-
-Once you have your environment set up and you have built libc++ you can run
-parts of the libc++ test suite by simply running `lit` on a specified test or
-directory. For example:
+After building libc++, you can run parts of the libc++ test suite by simply
+running ``llvm-lit`` on a specified test or directory. For example:
 
 .. code-block:: bash
 
-  $ cd path/to/src/libcxx
-  $ lit -sv test/std/re # Run all of the std::regex tests
-  $ lit -sv test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
-  $ lit -sv test/std/atomics test/std/threads # Test std::thread and std::atomic
+  $ cd <monorepo-root>
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/re # Run all of the std::regex tests
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
 can be specified using the `--param=<name>=<val>` flag. The most common option
@@ -62,30 +42,54 @@ that. However if you want to manually specify the option like so:
 
 .. code-block:: bash
 
-  $ lit -sv test/std/containers # Run the tests with the newest -std
-  $ lit -sv --param=std=c++03 test/std/containers # Run the tests in C++03
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers # Run the tests with the newest -std
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers --param=std=c++03 # Run the tests in C++03
 
 Occasionally you'll want to add extra compile or link flags when testing.
 You can do this as follows:
 
 .. code-block:: bash
 
-  $ lit -sv --param=compile_flags='-Wcustom-warning'
-  $ lit -sv --param=link_flags='-L/custom/library/path'
+  $ <build>/bin/llvm-lit -sv libcxx/test --param=compile_flags='-Wcustom-warning'
+  $ <build>/bin/llvm-lit -sv libcxx/test --param=link_flags='-L/custom/library/path'
 
 Some other common examples include:
 
 .. code-block:: bash
 
   # Specify a custom compiler.
-  $ lit -sv --param=cxx_under_test=/opt/bin/g++ test/std
+  $ <build>/bin/llvm-lit -sv libcxx/test/std --param=cxx_under_test=/opt/bin/g++
 
   # Enable warnings in the test suite
-  $ lit -sv --param=enable_warnings=true test/std
+  $ <build>/bin/llvm-lit -sv libcxx/test --param=enable_warnings=true
 
   # Use UBSAN when running the tests.
-  $ lit -sv --param=use_sanitizer=Undefined
+  $ <build>/bin/llvm-lit -sv libcxx/test --param=use_sanitizer=Undefined
 
+Using a custom site configuration
+---------------------------------
+
+By default, the libc++ test suite will use a site configuration that matches
+the current CMake configuration. It does so by generating a ``lit.site.cfg``
+file in the build directory from the ``libcxx/test/lit.site.cfg.in`` template,
+and pointing ``llvm-lit`` (which is a wrapper around ``llvm/utils/lit/lit.py``)
+to that file. So when you're running ``<build>/bin/llvm-lit``, the generated
+``lit.site.cfg`` file is always loaded first, followed by the actual config in
+``libcxx/test/lit.cfg``. However, it is sometimes desirable to use a custom
+site configuration. To do that, you can use ``--param=libcxx_site_config`` or
+the ``LIBCXX_SITE_CONFIG`` environment variable to point to the right site
+configuration file. However, you must stop using ``llvm-lit``, or else the
+generated ``lit.site.cfg`` will still be preferred:
+
+   .. code-block:: bash
+
+     $ LIBCXX_SITE_CONFIG=path/to/your/site/configuration llvm/utils/lit/lit.py -sv ...
+
+     $ llvm/utils/lit/lit.py -sv ... --param=libcxx_site_config=path/to/your/site/configuration
+
+In both of these cases, your custom site configuration should set up the
+``config`` object in a way that is compatible with what libc++'s ``config.py``
+module expects.
 
 LIT Options
 ===========

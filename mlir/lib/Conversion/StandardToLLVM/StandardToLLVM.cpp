@@ -1888,16 +1888,15 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
     OperandAdaptor<DimOp> transformed(operands);
     MemRefType type = dimOp.getOperand().getType().cast<MemRefType>();
 
-    auto shape = type.getShape();
     int64_t index = dimOp.getIndex();
     // Extract dynamic size from the memref descriptor.
-    if (ShapedType::isDynamic(shape[index]))
+    if (type.isDynamicDim(index))
       rewriter.replaceOp(op, {MemRefDescriptor(transformed.memrefOrTensor())
                                   .size(rewriter, op->getLoc(), index)});
     else
       // Use constant for static size.
-      rewriter.replaceOp(
-          op, createIndexConstant(rewriter, op->getLoc(), shape[index]));
+      rewriter.replaceOp(op, createIndexConstant(rewriter, op->getLoc(),
+                                                 type.getDimSize(index)));
     return success();
   }
 };

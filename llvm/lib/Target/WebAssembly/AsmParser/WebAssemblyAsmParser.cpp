@@ -233,10 +233,10 @@ public:
     Signatures.push_back(std::move(Sig));
   }
 
-  std::string *storeName(StringRef Name) {
+  StringRef storeName(StringRef Name) {
     std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
     Names.push_back(std::move(N));
-    return Names.back().get();
+    return *Names.back();
   }
 
   std::pair<StringRef, StringRef> nestingString(NestingType NT) {

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline='spv.module(inline)' -mlir-disable-inline-simplify | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline='spv.module(inline{disable-simplify})' | FileCheck %s
 
 spv.module Logical GLSL450 {
   spv.func @callee() "None" {

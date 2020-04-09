@@ -204,35 +204,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         case DW_AT_location:
         case DW_AT_const_value:
           has_location_or_const_value = true;
-          if (tag == DW_TAG_variable) {
-            const DWARFDebugInfoEntry *parent_die = die.GetParent();
-            while (parent_die != nullptr) {
-              switch (parent_die->Tag()) {
-              case DW_TAG_subprogram:
-              case DW_TAG_lexical_block:
-              case DW_TAG_inlined_subroutine:
-                // Even if this is a function level static, we don't add it. We
-                // could theoretically add these if we wanted to by
-                // introspecting into the DW_AT_location and seeing if the
-                // location describes a hard coded address, but we don't want
-                // the performance penalty of that right now.
-                is_global_or_static_variable = false;
-                parent_die = nullptr; // Terminate the while loop.
-                break;
+          is_global_or_static_variable = die.IsGlobalOrStaticVariable();
 
-              case DW_TAG_compile_unit:
-              case DW_TAG_partial_unit:
-                is_global_or_static_variable = true;
-                parent_die = nullptr; // Terminate the while loop.
-                break;
-
-              default:
-                parent_die =
-                    parent_die->GetParent(); // Keep going in the while loop.
-                break;
-              }
-            }
-          }
           break;
 
         case DW_AT_specification:

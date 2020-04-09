@@ -28,40 +28,15 @@ using namespace mlir;
 
 #define DEBUG_TYPE "affine-loop-tile"
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-static llvm::cl::opt<unsigned long long>
-    clCacheSizeKiB("affine-tile-cache-size",
-                   llvm::cl::desc("Set size of cache to tile for in KiB"),
-                   llvm::cl::cat(clOptionsCategory));
-
-// Separate full and partial tiles.
-static llvm::cl::opt<bool>
-    clSeparate("affine-tile-separate",
-               llvm::cl::desc("Separate full and partial tiles"),
-               llvm::cl::cat(clOptionsCategory));
-
-// Tile size to use for all loops (overrides -tile-sizes if provided).
-static llvm::cl::opt<unsigned>
-    clTileSize("affine-tile-size",
-               llvm::cl::desc("Use this tile size for all loops"),
-               llvm::cl::cat(clOptionsCategory));
-
-// List of tile sizes. If any of them aren't provided, they are filled with
-// clTileSize / kDefaultTileSize.
-static llvm::cl::list<unsigned> clTileSizes(
-    "affine-tile-sizes",
-    llvm::cl::desc(
-        "List of tile sizes for each perfect nest (overridden by -tile-size)"),
-    llvm::cl::ZeroOrMore, llvm::cl::cat(clOptionsCategory));
-
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
 struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
-  explicit LoopTiling(uint64_t cacheSizeBytes = kDefaultCacheMemCapacity,
-                      bool avoidMaxMinBounds = true)
-      : cacheSizeBytes(cacheSizeBytes), avoidMaxMinBounds(avoidMaxMinBounds) {}
+  LoopTiling() = default;
+  explicit LoopTiling(uint64_t cacheSizeBytes, bool avoidMaxMinBounds = true)
+      : avoidMaxMinBounds(avoidMaxMinBounds) {
+    this->cacheSizeInKiB = cacheSizeBytes / 1024;
+  }
 
   void runOnFunction() override;
   void getTileSizes(ArrayRef<AffineForOp> band,
@@ -69,12 +44,9 @@ struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
 
   // Default tile size if nothing is provided.
   constexpr static unsigned kDefaultTileSize = 4;
-  constexpr static uint64_t kDefaultCacheMemCapacity = 512 * 1024UL;
 
-  // Capacity of the cache to tile for.
-  uint64_t cacheSizeBytes;
   // If true, tile sizes are set to avoid max/min in bounds if possible.
-  bool avoidMaxMinBounds;
+  bool avoidMaxMinBounds = true;
 };
 
 } // end anonymous namespace
@@ -316,23 +288,19 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   if (band.empty())
     return;
 
+  // Use tileSize for all loops if specified.
+  if (tileSize.hasValue()) {
+    tileSizes->assign(band.size(), tileSize);
+    return;
+  }
+
+  // Use tileSizes and fill them with default tile size if it's short.
+  if (!this->tileSizes.empty()) {
+    tileSizes->assign(this->tileSizes.begin(), this->tileSizes.end());
+    tileSizes->resize(band.size(), kDefaultTileSize);
+    return;
+  }
   tileSizes->resize(band.size());
-
-  // Use clTileSize for all loops if specified.
-  if (clTileSize.getNumOccurrences() > 0) {
-    std::fill(tileSizes->begin(), tileSizes->end(), clTileSize);
-    return;
-  }
-
-  // Use clTileSizes and fill them with default tile size if it's short.
-  if (!clTileSizes.empty()) {
-    std::fill(tileSizes->begin(), tileSizes->end(),
-              LoopTiling::kDefaultTileSize);
-    std::copy(clTileSizes.begin(),
-              clTileSizes.begin() + std::min(clTileSizes.size(), band.size()),
-              tileSizes->begin());
-    return;
-  }
 
   // The first loop in the band.
   auto rootForOp = band[0];
@@ -356,6 +324,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   }
 
   // Check how many times larger the cache size is when compared to footprint.
+  uint64_t cacheSizeBytes = cacheSizeInKiB * 1024;
   uint64_t excessFactor = llvm::divideCeil(fp.getValue(), cacheSizeBytes);
   if (excessFactor <= 1) {
     // No need of any tiling - set tile size to 1.
@@ -388,10 +357,6 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
 }
 
 void LoopTiling::runOnFunction() {
-  // Override cache size if provided on command line.
-  if (clCacheSizeKiB.getNumOccurrences() > 0)
-    cacheSizeBytes = clCacheSizeKiB * 1024;
-
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
   getTileableBands(getFunction(), &bands);
@@ -399,7 +364,7 @@ void LoopTiling::runOnFunction() {
   // Tile each band.
   for (auto &band : bands) {
     // Set up tile sizes; fill missing tile sizes at the end with default tile
-    // size or clTileSize if one was provided.
+    // size or tileSize if one was provided.
     SmallVector<unsigned, 6> tileSizes;
     getTileSizes(band, &tileSizes);
     if (llvm::DebugFlag) {
@@ -413,7 +378,7 @@ void LoopTiling::runOnFunction() {
       return signalPassFailure();
 
     // Separate full and partial tiles.
-    if (clSeparate) {
+    if (separate) {
       auto intraTileLoops =
           MutableArrayRef<AffineForOp>(tiledNest).drop_front(band.size());
       separateFullTiles(intraTileLoops);
@@ -422,4 +387,3 @@ void LoopTiling::runOnFunction() {
 }
 
 constexpr unsigned LoopTiling::kDefaultTileSize;
-constexpr uint64_t LoopTiling::kDefaultCacheMemCapacity;

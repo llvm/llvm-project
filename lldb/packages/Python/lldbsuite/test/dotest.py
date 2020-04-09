@@ -954,7 +954,9 @@ def run_suite():
 
     setupSysPath()
 
+    import lldbconfig
     import lldb
+
     # Use host platform by default.
     lldb.selected_platform = lldb.SBPlatform.GetHostPlatform()
 

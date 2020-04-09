@@ -330,11 +330,10 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (addMemRefDimBounds) {
     auto memRefType = memref.getType().cast<MemRefType>();
     for (unsigned r = 0; r < rank; r++) {
-      cst.addConstantLowerBound(r, 0);
-      int64_t dimSize = memRefType.getDimSize(r);
-      if (ShapedType::isDynamic(dimSize))
+      cst.addConstantLowerBound(/*pos=*/r, /*lb=*/0);
+      if (memRefType.isDynamicDim(r))
         continue;
-      cst.addConstantUpperBound(r, dimSize - 1);
+      cst.addConstantUpperBound(/*pos=*/r, memRefType.getDimSize(r) - 1);
     }
   }
   cst.removeTrivialRedundancy();

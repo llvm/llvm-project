@@ -1074,7 +1074,8 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
       DemandedElts.getActiveBits() == 3)
     return nullptr;
 
-  unsigned VWidth = II->getType()->getVectorNumElements();
+  auto *IIVTy = cast<VectorType>(II->getType());
+  unsigned VWidth = IIVTy->getNumElements();
   if (VWidth == 1)
     return nullptr;
 
@@ -1180,7 +1181,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
   Intrinsic::matchIntrinsicSignature(FTy, TableRef, OverloadTys);
 
   Module *M = II->getParent()->getParent()->getParent();
-  Type *EltTy = II->getType()->getVectorElementType();
+  Type *EltTy = IIVTy->getElementType();
   Type *NewTy = (NewNumElts == 1) ? EltTy : VectorType::get(EltTy, NewNumElts);
 
   OverloadTys[0] = NewTy;
@@ -1227,7 +1228,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                                 APInt &UndefElts,
                                                 unsigned Depth,
                                                 bool AllowMultipleUsers) {
-  unsigned VWidth = V->getType()->getVectorNumElements();
+  unsigned VWidth = cast<VectorType>(V->getType())->getNumElements();
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
@@ -1386,7 +1387,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
            Shuffle->getOperand(1)->getType() &&
            "Expected shuffle operands to have same type");
     unsigned OpWidth =
-        Shuffle->getOperand(0)->getType()->getVectorNumElements();
+        cast<VectorType>(Shuffle->getOperand(0)->getType())->getNumElements();
     // Handle trivial case of a splat. Only check the first element of LHS
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
@@ -1799,7 +1800,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::x86_avx512_packusdw_512:
     case Intrinsic::x86_avx512_packuswb_512: {
       auto *Ty0 = II->getArgOperand(0)->getType();
-      unsigned InnerVWidth = Ty0->getVectorNumElements();
+      unsigned InnerVWidth = cast<VectorType>(Ty0)->getNumElements();
       assert(VWidth == (InnerVWidth * 2) && "Unexpected input size");
 
       unsigned NumLanes = Ty0->getPrimitiveSizeInBits() / 128;

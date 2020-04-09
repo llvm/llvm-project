@@ -79,6 +79,12 @@ namespace DR1560 {
   // CHECK-NOT: call {{.*}}@_ZN6DR15601AD1Ev
   // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN6DR15601AD1Ev {{.*}} @_ZGRN6DR15601rE
   // CHECK-NOT: call {{.*}}@_ZN6DR15601AD1Ev
+
+  // PR28184
+  void conditional_throw() {
+    int a;
+    (true ? throw 0 : a) = 0; // CHECK: call void @__cxa_throw({{.*}})
+  }
 }
 
 // CHECK-LABEL: define void @_Z5test7b(

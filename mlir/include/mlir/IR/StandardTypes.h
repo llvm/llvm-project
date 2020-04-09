@@ -252,7 +252,11 @@ public:
 
   /// If this is ranked type, return the size of the specified dimension.
   /// Otherwise, abort.
-  int64_t getDimSize(int64_t i) const;
+  int64_t getDimSize(unsigned idx) const;
+
+  /// Returns true if this dimension has a dynamic size (for ranked types);
+  /// aborts for unranked types.
+  bool isDynamicDim(unsigned idx) const;
 
   /// Returns the position of the dynamic dimension relative to just the dynamic
   /// dimensions, given its `index` within the shape.
@@ -276,7 +280,9 @@ public:
   }
 
   /// Whether the given dimension size indicates a dynamic dimension.
-  static constexpr bool isDynamic(int64_t dSize) { return dSize < 0; }
+  static constexpr bool isDynamic(int64_t dSize) {
+    return dSize == kDynamicSize;
+  }
   static constexpr bool isDynamicStrideOrOffset(int64_t dStrideOrOffset) {
     return dStrideOrOffset == kDynamicStrideOrOffset;
   }

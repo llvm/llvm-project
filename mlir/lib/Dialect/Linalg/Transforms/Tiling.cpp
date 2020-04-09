@@ -508,9 +508,7 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
 namespace {
 struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass() = default;
-  LinalgTilingPass(ArrayRef<int64_t> sizes) {
-    tileSizes->assign(sizes.begin(), sizes.end());
-  }
+  LinalgTilingPass(ArrayRef<int64_t> sizes) { tileSizes = sizes; }
 
   void runOnFunction() override {
     tileLinalgOps<loop::ForOp>(getFunction(), tileSizes);
@@ -521,7 +519,7 @@ struct LinalgTilingToParallelLoopsPass
     : public LinalgTilingToParallelLoopsBase<LinalgTilingToParallelLoopsPass> {
   LinalgTilingToParallelLoopsPass() = default;
   LinalgTilingToParallelLoopsPass(ArrayRef<int64_t> sizes) {
-    tileSizes->assign(sizes.begin(), sizes.end());
+    tileSizes = sizes;
   }
 
   void runOnFunction() override {
