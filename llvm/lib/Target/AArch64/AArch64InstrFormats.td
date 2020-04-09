@@ -511,6 +511,7 @@ def SImm4s2Operand  : SImmScaledMemoryIndexed<4, 2>;
 def SImm4s3Operand  : SImmScaledMemoryIndexed<4, 3>;
 def SImm4s4Operand  : SImmScaledMemoryIndexed<4, 4>;
 def SImm4s16Operand : SImmScaledMemoryIndexed<4, 16>;
+def SImm4s32Operand : SImmScaledMemoryIndexed<4, 32>;
 
 def simm4s1 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-8  && Imm <= 7; }]> {
@@ -542,6 +543,12 @@ def simm4s16 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }], SImmS16XForm> {
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = SImm4s16Operand;
+  let DecoderMethod = "DecodeSImm<4>";
+}
+def simm4s32 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >=-256  && Imm <= 224 && (Imm % 32) == 0x0; }]> {
+  let PrintMethod = "printImmScale<32>";
+  let ParserMatchClass = SImm4s32Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 
