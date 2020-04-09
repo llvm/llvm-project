@@ -134,7 +134,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
                      int FPDiff = 0)
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
-        StackSize(0) {}
+        StackSize(0), SPReg(0) {}
 
   bool isIncomingArgumentHandler() const override { return false; }
 
@@ -153,8 +153,8 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
       return FIReg;
     }
 
-    Register SPReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildCopy(SPReg, Register(AArch64::SP));
+    if (!SPReg)
+      SPReg = MIRBuilder.buildCopy(p0, Register(AArch64::SP)).getReg(0);
 
     Register OffsetReg = MRI.createGenericVirtualRegister(s64);
     MIRBuilder.buildConstant(OffsetReg, Offset);
@@ -209,6 +209,9 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   /// callee's. Unused elsewhere.
   int FPDiff;
   uint64_t StackSize;
+
+  // Cache the SP register vreg if we need it more than once in this call site.
+  Register SPReg;
 };
 } // namespace
 
