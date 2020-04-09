@@ -35,17 +35,19 @@ namespace {
 /// diagnostics in textual format for the 'text' output type.
 class TextDiagnostics : public PathDiagnosticConsumer {
   DiagnosticsEngine &DiagEng;
-  LangOptions LO;
+  const LangOptions &LO;
   const bool IncludePath = false;
   const bool ShouldEmitAsError = false;
   const bool ApplyFixIts = false;
+  const bool ShouldDisplayCheckerName = false;
 
 public:
-  TextDiagnostics(DiagnosticsEngine &DiagEng, LangOptions LO,
+  TextDiagnostics(DiagnosticsEngine &DiagEng, const LangOptions &LO,
                   bool ShouldIncludePath, const AnalyzerOptions &AnOpts)
       : DiagEng(DiagEng), LO(LO), IncludePath(ShouldIncludePath),
         ShouldEmitAsError(AnOpts.AnalyzerWerror),
-        ApplyFixIts(AnOpts.ShouldApplyFixIts) {}
+        ApplyFixIts(AnOpts.ShouldApplyFixIts),
+        ShouldDisplayCheckerName(AnOpts.ShouldDisplayCheckerNameForText) {}
   ~TextDiagnostics() override {}
 
   StringRef getName() const override { return "TextDiagnostics"; }
@@ -90,9 +92,13 @@ public:
          E = Diags.end();
          I != E; ++I) {
       const PathDiagnostic *PD = *I;
+      std::string WarningMsg =
+          (ShouldDisplayCheckerName ? " [" + PD->getCheckerName() + "]" : "")
+              .str();
+
       reportPiece(WarnID, PD->getLocation().asLocation(),
-                  PD->getShortDescription(), PD->path.back()->getRanges(),
-                  PD->path.back()->getFixits());
+                  (PD->getShortDescription() + WarningMsg).str(),
+                  PD->path.back()->getRanges(), PD->path.back()->getFixits());
 
       // First, add extra notes, even if paths should not be included.
       for (const auto &Piece : PD->path) {
@@ -100,7 +106,8 @@ public:
           continue;
 
         reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
+                    Piece->getString(), Piece->getRanges(),
+                    Piece->getFixits());
       }
 
       if (!IncludePath)
@@ -113,7 +120,8 @@ public:
           continue;
 
         reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
+                    Piece->getString(), Piece->getRanges(),
+                    Piece->getFixits());
       }
     }
 

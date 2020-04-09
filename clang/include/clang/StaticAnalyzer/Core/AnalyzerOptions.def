@@ -310,6 +310,10 @@ ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
                 "Apply the fix-it hints to the files",
                 false)
 
+ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
+                "Display the checker name for textual outputs",
+                true)
+
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
 //===----------------------------------------------------------------------===//
