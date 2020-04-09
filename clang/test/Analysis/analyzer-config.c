@@ -37,17 +37,22 @@
 // CHECK-NEXT: deadcode.DeadStores:WarnForDeadNestedAssignments = true
 // CHECK-NEXT: debug.AnalysisOrder:* = false
 // CHECK-NEXT: debug.AnalysisOrder:Bind = false
+// CHECK-NEXT: debug.AnalysisOrder:EndAnalysis = false
 // CHECK-NEXT: debug.AnalysisOrder:EndFunction = false
 // CHECK-NEXT: debug.AnalysisOrder:LiveSymbols = false
 // CHECK-NEXT: debug.AnalysisOrder:NewAllocator = false
 // CHECK-NEXT: debug.AnalysisOrder:PointerEscape = false
 // CHECK-NEXT: debug.AnalysisOrder:PostCall = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtArraySubscriptExpr = false
+// CHECK-NEXT: debug.AnalysisOrder:PostStmtCXXConstructExpr = false
+// CHECK-NEXT: debug.AnalysisOrder:PostStmtCXXDeleteExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtCXXNewExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtCastExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PostStmtOffsetOfExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PreCall = false
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtArraySubscriptExpr = false
+// CHECK-NEXT: debug.AnalysisOrder:PreStmtCXXConstructExpr = false
+// CHECK-NEXT: debug.AnalysisOrder:PreStmtCXXDeleteExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtCXXNewExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtCastExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtOffsetOfExpr = false
@@ -101,4 +106,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 98
+// CHECK-NEXT: num-entries = 103

@@ -608,8 +608,9 @@ namespace std {
   };
 
   struct nothrow_t {};
-
   extern const nothrow_t nothrow;
+
+  enum class align_val_t : size_t {};
 
   // libc++'s implementation
   template <class _E>
@@ -967,10 +968,33 @@ void* operator new[](std::size_t size, const std::nothrow_t&) throw() { return s
 void operator delete(void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
 void operator delete[](void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
 #else
-void* operator new(std::size_t, const std::nothrow_t&) throw();
-void* operator new[](std::size_t, const std::nothrow_t&) throw();
-void operator delete(void*, const std::nothrow_t&) throw();
-void operator delete[](void*, const std::nothrow_t&) throw();
+// C++20 standard draft 17.6.1, from "Header <new> synopsis", but with throw()
+// instead of noexcept:
+
+void *operator new(std::size_t size);
+void *operator new(std::size_t size, std::align_val_t alignment);
+void *operator new(std::size_t size, const std::nothrow_t &) throw();
+void *operator new(std::size_t size, std::align_val_t alignment,
+                   const std::nothrow_t &) throw();
+void operator delete(void *ptr) throw();
+void operator delete(void *ptr, std::size_t size) throw();
+void operator delete(void *ptr, std::align_val_t alignment) throw();
+void operator delete(void *ptr, std::size_t size, std::align_val_t alignment) throw();
+void operator delete(void *ptr, const std::nothrow_t &)throw();
+void operator delete(void *ptr, std::align_val_t alignment,
+                     const std::nothrow_t &)throw();
+void *operator new[](std::size_t size);
+void *operator new[](std::size_t size, std::align_val_t alignment);
+void *operator new[](std::size_t size, const std::nothrow_t &) throw();
+void *operator new[](std::size_t size, std::align_val_t alignment,
+                     const std::nothrow_t &) throw();
+void operator delete[](void *ptr) throw();
+void operator delete[](void *ptr, std::size_t size) throw();
+void operator delete[](void *ptr, std::align_val_t alignment) throw();
+void operator delete[](void *ptr, std::size_t size, std::align_val_t alignment) throw();
+void operator delete[](void *ptr, const std::nothrow_t &) throw();
+void operator delete[](void *ptr, std::align_val_t alignment,
+                       const std::nothrow_t &) throw();
 #endif
 
 void* operator new (std::size_t size, void* ptr) throw() { return ptr; };
