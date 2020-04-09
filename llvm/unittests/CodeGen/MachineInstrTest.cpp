@@ -383,30 +383,6 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getHeapAllocMarker());
 }
 
-#ifndef _WIN32
-// See discussion on https://reviews.llvm.org/D77685, this is throwing a SEH
-// exception when run on a Windows bot despite being UBSan-clean.
-TEST(MachineInstrClone, CopyCallSiteInfo) {
-  LLVMContext Ctx;
-  Module Mod("Module", Ctx);
-  auto MF = createMachineFunction(Ctx, Mod);
-  auto MBB = MF->CreateMachineBasicBlock();
-  auto MII = MBB->begin();
-
-  MCInstrDesc MCID = {0, 0,       0,       0,      0, (1ULL << MCID::Call),
-                      0, nullptr, nullptr, nullptr};
-
-  MachineFunction::CallSiteInfo CSInfo;
-  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  ASSERT_TRUE(MI->isCandidateForCallSiteEntry());
-  MBB->insert(MII, MI);
-  MF->addCallArgsForwardingRegs(MI, std::move(CSInfo));
-  EXPECT_EQ(MF->getCallSitesInfo().size(), 1u);
-  MF->CloneMachineInstrBundle(*MBB, MBB->end(), *MI);
-  EXPECT_EQ(MF->getCallSitesInfo().size(), 2u);
-}
-#endif
-
 static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");
 
 } // end namespace
