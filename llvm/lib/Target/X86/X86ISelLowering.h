@@ -1489,9 +1489,6 @@ namespace llvm {
     MachineBasicBlock *emitLongJmpShadowStackFix(MachineInstr &MI,
                                                  MachineBasicBlock *MBB) const;
 
-    MachineBasicBlock *emitFMA3Instr(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const;
-
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
 
