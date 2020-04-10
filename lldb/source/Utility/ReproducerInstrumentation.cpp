@@ -24,6 +24,25 @@ void IndexToObject::AddObjectForIndexImpl(unsigned idx, void *object) {
   m_mapping[idx] = object;
 }
 
+std::vector<void *> IndexToObject::GetAllObjects() const {
+  std::vector<std::pair<unsigned, void *>> pairs;
+  for (auto &e : m_mapping) {
+    pairs.emplace_back(e.first, e.second);
+  }
+
+  // Sort based on index.
+  std::sort(pairs.begin(), pairs.end(),
+            [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+
+  std::vector<void *> objects;
+  objects.reserve(pairs.size());
+  for (auto &p : pairs) {
+    objects.push_back(p.second);
+  }
+
+  return objects;
+}
+
 template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>() {
   return Deserialize<uint8_t *>();
 }
@@ -74,6 +93,11 @@ bool Registry::Replay(const FileSpec &file) {
 }
 
 bool Registry::Replay(llvm::StringRef buffer) {
+  Deserializer deserializer(buffer);
+  return Replay(deserializer);
+}
+
+bool Registry::Replay(Deserializer &deserializer) {
 #ifndef LLDB_REPRO_INSTR_TRACE
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
 #endif
@@ -82,7 +106,6 @@ bool Registry::Replay(llvm::StringRef buffer) {
   // during an interactive session.
   setvbuf(stdout, nullptr, _IONBF, 0);
 
-  Deserializer deserializer(buffer);
   while (deserializer.HasData(1)) {
     unsigned id = deserializer.Deserialize<unsigned>();
 

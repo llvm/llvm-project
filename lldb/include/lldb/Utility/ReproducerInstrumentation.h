@@ -255,6 +255,9 @@ public:
                  const_cast<typename std::remove_const<T>::type *>(&object)));
   }
 
+  /// Get all objects sorted by their index.
+  std::vector<void *> GetAllObjects() const;
+
 private:
   /// Helper method that does the actual lookup. The void* result is later cast
   /// by the caller.
@@ -343,6 +346,10 @@ public:
     unsigned result = Deserialize<unsigned>();
     assert(result == 0);
     (void)result;
+  }
+
+  std::vector<void *> GetAllObjects() const {
+    return m_index_to_object.GetAllObjects();
   }
 
 private:
@@ -511,6 +518,9 @@ public:
 
   /// Replay functions from a buffer.
   bool Replay(llvm::StringRef buffer);
+
+  /// Replay functions from a deserializer.
+  bool Replay(Deserializer &deserializer);
 
   /// Returns the ID for a given function address.
   unsigned GetID(uintptr_t addr);
