@@ -1521,7 +1521,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
 
     if (TS)
       TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym), LocalOffsetExp);
-  } else if (Subtarget->isELFv2ABI()) {
+  } else if (Subtarget->isELFv2ABI() && Subtarget->isUsingPCRelativeCalls()) {
     // When generating the entry point for a function we have a few scenarios
     // based on whether or not that function uses R2 and whether or not that
     // function makes calls (or is a leaf function).
