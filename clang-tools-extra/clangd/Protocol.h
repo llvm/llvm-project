@@ -654,6 +654,12 @@ struct DidCloseTextDocumentParams {
 };
 bool fromJSON(const llvm::json::Value &, DidCloseTextDocumentParams &);
 
+struct DidSaveTextDocumentParams {
+  /// The document that was saved.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, DidSaveTextDocumentParams &);
+
 struct TextDocumentContentChangeEvent {
   /// The range of the document that changed.
   llvm::Optional<Range> range;
