@@ -82,3 +82,36 @@ TEST_F(TestTypeSystemSwiftTypeRef, Array) {
   CompilerType int_array = GetCompilerType(b.Mangle(n));
   ASSERT_TRUE(int_array.IsArrayType(nullptr, nullptr, nullptr));
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Function) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.Node(
+        Node::Kind::Global,
+        b.Node(Node::Kind::TypeMangling,
+               b.Node(Node::Kind::Type,
+                      b.Node(Node::Kind::FunctionType,
+                             b.Node(Node::Kind::ArgumentTuple,
+                                    b.Node(Node::Kind::Type,
+                                           b.Node(Node::Kind::Tuple))),
+                             b.Node(Node::Kind::ReturnType,
+                                    b.Node(Node::Kind::Type,
+                                           b.Node(Node::Kind::Tuple)))))));
+    CompilerType void_void = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(void_void.IsFunctionType(nullptr));
+  }
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::ImplFunctionType,
+                                    b.Node(Node::Kind::ImplEscaping),
+                                    b.Node(Node::Kind::ImplConvention,
+                                           "@callee_guaranteed")))));
+    CompilerType opaque = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(opaque.IsFunctionType(nullptr));
+  }
+}
