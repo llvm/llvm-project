@@ -12,9 +12,9 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:    210120:       b       #4
+// CHECK-NEXT:    210120:       b       0x210124
 // CHECK: <__AArch64AbsLongThunk_big>:
-// CHECK-NEXT:    210124:       ldr     x16, #8
+// CHECK-NEXT:    210124:       ldr     x16, 0x21012c
 // CHECK-NEXT:    210128:       br      x16
 // CHECK: <$d>:
 // CHECK-NEXT:    21012c:       00 00 00 00     .word   0x00000000

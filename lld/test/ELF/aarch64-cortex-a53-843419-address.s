@@ -40,7 +40,7 @@
 // CHECK: <t3_ff8_ldr>:
 // CHECK-NEXT:      ff8:        20 00 00 d0     adrp    x0, #24576
 // CHECK-NEXT:      ffc:        21 00 40 f9     ldr             x1, [x1]
-// CHECK-NEXT:     1000:        f9 0f 00 14     b       #16356
+// CHECK-NEXT:     1000:        f9 0f 00 14     b       0x4fe4
 // CHECK-NEXT:     1004:        c0 03 5f d6     ret
         .section .text.01, "ax", %progbits
         .balign 4096
@@ -62,7 +62,7 @@ $x.999:
 // CHECK: <t3_ffc_ldrsimd>:
 // CHECK-NEXT:     1ffc:        20 00 00 b0     adrp    x0, #20480
 // CHECK-NEXT:     2000:        21 00 40 bd     ldr             s1, [x1]
-// CHECK-NEXT:     2004:        fa 0b 00 14     b       #12264
+// CHECK-NEXT:     2004:        fa 0b 00 14     b       0x4fec
 // CHECK-NEXT:     2008:        c0 03 5f d6     ret
         .globl t3_ffc_ldrsimd
         .type t3_ffc_ldrsimd, %function
@@ -99,7 +99,7 @@ t3_ff8_ldralldata:
 // CHECK: <t3_ffc_ldr>:
 // CHECK-NEXT:     3ff8:        00 00 00 f0     adrp    x0, #12288
 // CHECK-NEXT:     3ffc:        21 00 40 f9     ldr             x1, [x1]
-// CHECK-NEXT:     4000:        fd 03 00 14     b       #4084
+// CHECK-NEXT:     4000:        fd 03 00 14     b       0x4ff4
 // CHECK-NEXT:     4004:        c0 03 5f d6     ret
         .space 4096 - 12
         .globl t3_ffc_ldr
@@ -112,13 +112,13 @@ t3_ff8_ldralldata:
 
 // CHECK: <__CortexA53843419_1000>:
 // CHECK-NEXT:     4fe4:        00 0c 40 f9     ldr     x0, [x0, #24]
-// CHECK-NEXT:     4fe8:        07 f0 ff 17     b       #-16356
+// CHECK-NEXT:     4fe8:        07 f0 ff 17     b       0x1004
 // CHECK: <__CortexA53843419_2004>:
 // CHECK-NEXT:     4fec:        02 0c 40 f9     ldr     x2, [x0, #24]
-// CHECK-NEXT:     4ff0:        06 f4 ff 17     b       #-12264
+// CHECK-NEXT:     4ff0:        06 f4 ff 17     b       0x2008
 // CHECK: <__CortexA53843419_4000>:
 // CHECK-NEXT:     4ff4:        00 0c 40 f9     ldr     x0, [x0, #24]
-// CHECK-NEXT:     4ff8:        03 fc ff 17     b       #-4084
+// CHECK-NEXT:     4ff8:        03 fc ff 17     b       0x4004
 
         .section .text.02, "ax", %progbits
         .space 4096 - 36
@@ -131,7 +131,7 @@ t3_ff8_ldralldata:
 // CHECK: <t3_ffc_str>:
 // CHECK-NEXT:     4ffc:        00 00 00 d0     adrp    x0, #8192
 // CHECK-NEXT:     5000:        21 00 00 f9     str             x1, [x1]
-// CHECK-NEXT:     5004:        fb 03 00 14     b       #4076
+// CHECK-NEXT:     5004:        fb 03 00 14     b       0x5ff0
 // CHECK-NEXT:     5008:        c0 03 5f d6     ret
 
         .section .newisd, "ax", %progbits
@@ -146,7 +146,7 @@ t3_ffc_str:
 
 // CHECK: <__CortexA53843419_5004>:
 // CHECK-NEXT:     5ff0:        00 0c 40 f9     ldr     x0, [x0, #24]
-// CHECK-NEXT:     5ff4:        05 fc ff 17     b       #-4076
+// CHECK-NEXT:     5ff4:        05 fc ff 17     b       0x5008
 
         // Start a new OutputSection (see Linker Script) so the
         // start address will be affected by any patches added to previous
@@ -156,7 +156,7 @@ t3_ffc_str:
 // CHECK: <t3_ff8_str>:
 // CHECK-NEXT:     5ff8:        00 00 00 b0     adrp    x0, #4096
 // CHECK-NEXT:     5ffc:        21 00 00 f9     str             x1, [x1]
-// CHECK-NEXT:     6000:        03 00 00 14     b       #12
+// CHECK-NEXT:     6000:        03 00 00 14     b       0x600c
 // CHECK-NEXT:     6004:        c0 03 5f d6     ret
 
         .section .newos, "ax", %progbits
@@ -174,7 +174,7 @@ _start:
 
 // CHECK: <__CortexA53843419_6000>:
 // CHECK-NEXT:     600c:        00 0c 40 f9     ldr     x0, [x0, #24]
-// CHECK-NEXT:     6010:        fd ff ff 17     b       #-12
+// CHECK-NEXT:     6010:        fd ff ff 17     b       0x6004
 
         .data
         .globl dat
