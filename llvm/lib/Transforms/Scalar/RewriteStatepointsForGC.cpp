@@ -2630,10 +2630,9 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
 
     unsigned VF = 0;
     for (unsigned i = 0; i < I.getNumOperands(); i++)
-      if (I.getOperand(i)->getType()->isVectorTy()) {
-        assert(VF == 0 ||
-               VF == I.getOperand(i)->getType()->getVectorNumElements());
-        VF = I.getOperand(i)->getType()->getVectorNumElements();
+      if (auto *OpndVTy = dyn_cast<VectorType>(I.getOperand(i)->getType())) {
+        assert(VF == 0 || VF == OpndVTy->getNumElements());
+        VF = OpndVTy->getNumElements();
       }
 
     // It's the vector to scalar traversal through the pointer operand which
