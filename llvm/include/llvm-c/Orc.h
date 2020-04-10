@@ -292,20 +292,22 @@ LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
 
 /**
- * Add a buffer representing an object file to the given LLJIT instance. This
- * operation transfers ownership of the buffer to the LLJIT instance. The
- * buffer should not be disposed of or referenced once this function returns.
+ * Add a buffer representing an object file to the given JITDylib in the given
+ * LLJIT instance. This operation transfers ownership of the buffer to the
+ * LLJIT instance. The buffer should not be disposed of or referenced once this
+ * function returns.
  */
-LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J,
+LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
                                        LLVMMemoryBufferRef ObjBuffer);
 
 /**
- * Add an IR module to the main JITDylib of the given LLJIT instance. This
+ * Add an IR module to the given JITDylib of the given LLJIT instance. This
  * operation transfers ownership of the TSM argument to the LLJIT instance.
  * The TSM argument should not be 3disposed of or referenced once this
  * function returns.
  */
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
+                                         LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM);
 /**
  * Look up the given symbol in the main JITDylib of the given LLJIT instance.

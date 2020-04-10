@@ -161,8 +161,9 @@ int main(int argc, char *argv[]) {
 
   // Add our demo module to the JIT.
   {
+    LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
     LLVMErrorRef Err;
-    if ((Err = LLVMOrcLLJITAddLLVMIRModule(J, TSM))) {
+    if ((Err = LLVMOrcLLJITAddLLVMIRModule(J, MainJD, TSM))) {
       // If adding the ThreadSafeModule fails then we need to clean it up
       // ourselves. If adding it succeeds the JIT will manage the memory.
       LLVMOrcDisposeThreadSafeModule(TSM);
