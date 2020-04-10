@@ -190,6 +190,10 @@ LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getMainJITDylib());
 }
 
+const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J) {
+  return unwrap(J)->getTargetTriple().str().c_str();
+}
+
 char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J) {
   return unwrap(J)->getDataLayout().getGlobalPrefix();
 }
@@ -198,6 +202,12 @@ LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName) {
   return wrap(OrcV2CAPIHelper::releaseSymbolStringPtr(
       unwrap(J)->mangleAndIntern(UnmangledName)));
+}
+
+LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J,
+                                       LLVMMemoryBufferRef ObjBuffer) {
+  return wrap(unwrap(J)->addObjectFile(
+      std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
 }
 
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
