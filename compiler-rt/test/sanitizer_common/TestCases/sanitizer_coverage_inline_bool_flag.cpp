@@ -1,7 +1,7 @@
 // Tests -fsanitize-coverage=inline-bool-flag,pc-table
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// UNSUPPORTED: i386-darwin
+// UNSUPPORTED: i386-darwin, x86_64-darwin
 //
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-bool-flag,pc-table -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
