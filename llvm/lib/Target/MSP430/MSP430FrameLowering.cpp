@@ -200,6 +200,31 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
+const char *MSP430FrameLowering::tailCallNameForRestoringCalleSavedRegisters(MutableArrayRef<CalleeSavedInfo> CSI) const {
+  static unsigned Registers[] = {
+    /*MSP430::R4, ??? */ MSP430::R5, MSP430::R6, MSP430::R7,
+    MSP430::R8, MSP430::R9, MSP430::R10,
+  };
+  static const char *RestorerNames[] = {
+    nullptr,
+    "__mspabi_func_epilog_1",
+    "__mspabi_func_epilog_2",
+    "__mspabi_func_epilog_3",
+    "__mspabi_func_epilog_4",
+    "__mspabi_func_epilog_5",
+    "__mspabi_func_epilog_6",
+    "__mspabi_func_epilog_7",
+  };
+  const unsigned TotalCount = sizeof(Registers) / sizeof(Registers[0]);
+  const unsigned PoppedCount = CSI.size();
+  for (unsigned i = 0; i < PoppedCount; ++i) {
+    if (CSI[i].getReg() != Registers[TotalCount - PoppedCount + i]) {
+      return nullptr;
+    }
+  }
+  return RestorerNames[PoppedCount];
+}
+
 bool MSP430FrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -211,6 +236,12 @@ bool MSP430FrameLowering::restoreCalleeSavedRegisters(
 
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  const char *RestorerName = tailCallNameForRestoringCalleSavedRegisters(CSI);
+  if (RestorerName != nullptr) {
+    BuildMI(MBB, MI, DL, TII.get(MSP430::JMP)).addExternalSymbol(RestorerName);
+    return true;
+  }
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i)
     BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), CSI[i].getReg());
