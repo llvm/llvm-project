@@ -142,6 +142,8 @@ private:
     APInt OtherOffset;
     // Scaled variable (non-constant) indices.
     SmallVector<VariableGEPIndex, 4> VarIndices;
+    // Is GEP index scale compile-time constant.
+    bool HasCompileTimeConstantScale;
   };
 
   /// Tracks phi nodes we have visited.
