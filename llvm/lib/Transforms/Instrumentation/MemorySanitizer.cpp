@@ -392,6 +392,14 @@ static const MemoryMapParams Linux_PowerPC64_MemoryMapParams = {
   0x1C0000000000,  // OriginBase
 };
 
+// s390x Linux
+static const MemoryMapParams Linux_S390X_MemoryMapParams = {
+    0xC00000000000, // AndMask
+    0,              // XorMask (not used)
+    0x080000000000, // ShadowBase
+    0x1C0000000000, // OriginBase
+};
+
 // aarch64 Linux
 static const MemoryMapParams Linux_AArch64_MemoryMapParams = {
   0,               // AndMask (not used)
@@ -439,6 +447,11 @@ static const PlatformMemoryMapParams Linux_PowerPC_MemoryMapParams = {
   &Linux_PowerPC64_MemoryMapParams,
 };
 
+static const PlatformMemoryMapParams Linux_S390_MemoryMapParams = {
+    nullptr,
+    &Linux_S390X_MemoryMapParams,
+};
+
 static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
   nullptr,
   &Linux_AArch64_MemoryMapParams,
@@ -484,6 +497,7 @@ private:
   friend struct VarArgMIPS64Helper;
   friend struct VarArgAArch64Helper;
   friend struct VarArgPowerPC64Helper;
+  friend struct VarArgSystemZHelper;
 
   void initializeModule(Module &M);
   void initializeCallbacks(Module &M);
@@ -796,14 +810,25 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
     std::string FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
+    SmallVector<std::pair<unsigned, Attribute>, 2> MaybeWarningFnAttrs;
+    MaybeWarningFnAttrs.push_back(std::make_pair(
+        AttributeList::FirstArgIndex, Attribute::get(*C, Attribute::ZExt)));
+    MaybeWarningFnAttrs.push_back(std::make_pair(
+        AttributeList::FirstArgIndex + 1, Attribute::get(*C, Attribute::ZExt)));
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
-        FunctionName, IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8),
-        IRB.getInt32Ty());
+        FunctionName, AttributeList::get(*C, MaybeWarningFnAttrs),
+        IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
 
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
+    SmallVector<std::pair<unsigned, Attribute>, 2> MaybeStoreOriginFnAttrs;
+    MaybeStoreOriginFnAttrs.push_back(std::make_pair(
+        AttributeList::FirstArgIndex, Attribute::get(*C, Attribute::ZExt)));
+    MaybeStoreOriginFnAttrs.push_back(std::make_pair(
+        AttributeList::FirstArgIndex + 2, Attribute::get(*C, Attribute::ZExt)));
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
-        FunctionName, IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8),
-        IRB.getInt8PtrTy(), IRB.getInt32Ty());
+        FunctionName, AttributeList::get(*C, MaybeStoreOriginFnAttrs),
+        IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt8PtrTy(),
+        IRB.getInt32Ty());
   }
 
   MsanSetAllocaOrigin4Fn = M.getOrInsertFunction(
@@ -923,6 +948,9 @@ void MemorySanitizer::initializeModule(Module &M) {
           case Triple::ppc64:
           case Triple::ppc64le:
             MapParams = Linux_PowerPC_MemoryMapParams.bits64;
+            break;
+          case Triple::systemz:
+            MapParams = Linux_S390_MemoryMapParams.bits64;
             break;
           case Triple::aarch64:
           case Triple::aarch64_be:
@@ -4602,6 +4630,318 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   }
 };
 
+/// SystemZ-specific implementation of VarArgHelper.
+struct VarArgSystemZHelper : public VarArgHelper {
+  static const unsigned SystemZGpOffset = 16;
+  static const unsigned SystemZGpEndOffset = 56;
+  static const unsigned SystemZFpOffset = 128;
+  static const unsigned SystemZFpEndOffset = 160;
+  static const unsigned SystemZMaxVrArgs = 8;
+  static const unsigned SystemZRegSaveAreaSize = 160;
+  static const unsigned SystemZOverflowOffset = 160;
+  static const unsigned SystemZVAListTagSize = 32;
+  static const unsigned SystemZOverflowArgAreaPtrOffset = 16;
+  static const unsigned SystemZRegSaveAreaPtrOffset = 24;
+
+  Function &F;
+  MemorySanitizer &MS;
+  MemorySanitizerVisitor &MSV;
+  Value *VAArgTLSCopy = nullptr;
+  Value *VAArgTLSOriginCopy = nullptr;
+  Value *VAArgOverflowSize = nullptr;
+
+  SmallVector<CallInst *, 16> VAStartInstrumentationList;
+
+  enum class ArgKind {
+    GeneralPurpose,
+    FloatingPoint,
+    Vector,
+    Memory,
+    Indirect,
+  };
+
+  enum class ShadowExtension { None, Zero, Sign };
+
+  VarArgSystemZHelper(Function &F, MemorySanitizer &MS,
+                      MemorySanitizerVisitor &MSV)
+      : F(F), MS(MS), MSV(MSV) {}
+
+  ArgKind classifyArgument(Type *T, bool IsSoftFloatABI) {
+    // T is a SystemZABIInfo::classifyArgumentType() output, and there are
+    // only a few possibilities of what it can be. In particular, enums, single
+    // element structs and large types have already been taken care of.
+
+    // Some i128 and fp128 arguments are converted to pointers only in the
+    // back end.
+    if (T->isIntegerTy(128) || T->isFP128Ty())
+      return ArgKind::Indirect;
+    if (T->isFloatingPointTy())
+      return IsSoftFloatABI ? ArgKind::GeneralPurpose : ArgKind::FloatingPoint;
+    if (T->isIntegerTy() || T->isPointerTy())
+      return ArgKind::GeneralPurpose;
+    if (T->isVectorTy())
+      return ArgKind::Vector;
+    return ArgKind::Memory;
+  }
+
+  ShadowExtension getShadowExtension(const CallSite &CS, unsigned ArgNo) {
+    // ABI says: "One of the simple integer types no more than 64 bits wide.
+    // ... If such an argument is shorter than 64 bits, replace it by a full
+    // 64-bit integer representing the same number, using sign or zero
+    // extension". Shadow for an integer argument has the same type as the
+    // argument itself, so it can be sign or zero extended as well.
+    bool ZExt = CS.paramHasAttr(ArgNo, Attribute::ZExt);
+    bool SExt = CS.paramHasAttr(ArgNo, Attribute::SExt);
+    if (ZExt) {
+      assert(!SExt);
+      return ShadowExtension::Zero;
+    }
+    if (SExt) {
+      assert(!ZExt);
+      return ShadowExtension::Sign;
+    }
+    return ShadowExtension::None;
+  }
+
+  void visitCallSite(CallSite &CS, IRBuilder<> &IRB) override {
+    bool IsSoftFloatABI = CS.getCalledFunction()
+                              ->getFnAttribute("use-soft-float")
+                              .getValueAsString() == "true";
+    unsigned GpOffset = SystemZGpOffset;
+    unsigned FpOffset = SystemZFpOffset;
+    unsigned VrIndex = 0;
+    unsigned OverflowOffset = SystemZOverflowOffset;
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    for (CallSite::arg_iterator ArgIt = CS.arg_begin(), End = CS.arg_end();
+         ArgIt != End; ++ArgIt) {
+      Value *A = *ArgIt;
+      unsigned ArgNo = CS.getArgumentNo(ArgIt);
+      bool IsFixed = ArgNo < CS.getFunctionType()->getNumParams();
+      // SystemZABIInfo does not produce ByVal parameters.
+      assert(!CS.paramHasAttr(ArgNo, Attribute::ByVal));
+      Type *T = A->getType();
+      ArgKind AK = classifyArgument(T, IsSoftFloatABI);
+      if (AK == ArgKind::Indirect) {
+        T = PointerType::get(T, 0);
+        AK = ArgKind::GeneralPurpose;
+      }
+      if (AK == ArgKind::GeneralPurpose && GpOffset >= SystemZGpEndOffset)
+        AK = ArgKind::Memory;
+      if (AK == ArgKind::FloatingPoint && FpOffset >= SystemZFpEndOffset)
+        AK = ArgKind::Memory;
+      if (AK == ArgKind::Vector && (VrIndex >= SystemZMaxVrArgs || !IsFixed))
+        AK = ArgKind::Memory;
+      Value *ShadowBase = nullptr;
+      Value *OriginBase = nullptr;
+      ShadowExtension SE = ShadowExtension::None;
+      switch (AK) {
+      case ArgKind::GeneralPurpose: {
+        // Always keep track of GpOffset, but store shadow only for varargs.
+        uint64_t ArgSize = 8;
+        if (GpOffset + ArgSize <= kParamTLSSize) {
+          if (!IsFixed) {
+            SE = getShadowExtension(CS, ArgNo);
+            uint64_t GapSize = 0;
+            if (SE == ShadowExtension::None) {
+              uint64_t ArgAllocSize = DL.getTypeAllocSize(T);
+              assert(ArgAllocSize <= ArgSize);
+              GapSize = ArgSize - ArgAllocSize;
+            }
+            ShadowBase = getShadowAddrForVAArgument(IRB, GpOffset + GapSize);
+            if (MS.TrackOrigins)
+              OriginBase = getOriginPtrForVAArgument(IRB, GpOffset + GapSize);
+          }
+          GpOffset += ArgSize;
+        } else {
+          GpOffset = kParamTLSSize;
+        }
+        break;
+      }
+      case ArgKind::FloatingPoint: {
+        // Always keep track of FpOffset, but store shadow only for varargs.
+        uint64_t ArgSize = 8;
+        if (FpOffset + ArgSize <= kParamTLSSize) {
+          if (!IsFixed) {
+            // PoP says: "A short floating-point datum requires only the
+            // left-most 32 bit positions of a floating-point register".
+            // Therefore, in contrast to AK_GeneralPurpose and AK_Memory,
+            // don't extend shadow and don't mind the gap.
+            ShadowBase = getShadowAddrForVAArgument(IRB, FpOffset);
+            if (MS.TrackOrigins)
+              OriginBase = getOriginPtrForVAArgument(IRB, FpOffset);
+          }
+          FpOffset += ArgSize;
+        } else {
+          FpOffset = kParamTLSSize;
+        }
+        break;
+      }
+      case ArgKind::Vector: {
+        // Keep track of VrIndex. No need to store shadow, since vector varargs
+        // go through AK_Memory.
+        assert(IsFixed);
+        VrIndex++;
+        break;
+      }
+      case ArgKind::Memory: {
+        // Keep track of OverflowOffset and store shadow only for varargs.
+        // Ignore fixed args, since we need to copy only the vararg portion of
+        // the overflow area shadow.
+        if (!IsFixed) {
+          uint64_t ArgAllocSize = DL.getTypeAllocSize(T);
+          uint64_t ArgSize = alignTo(ArgAllocSize, 8);
+          if (OverflowOffset + ArgSize <= kParamTLSSize) {
+            SE = getShadowExtension(CS, ArgNo);
+            uint64_t GapSize =
+                SE == ShadowExtension::None ? ArgSize - ArgAllocSize : 0;
+            ShadowBase =
+                getShadowAddrForVAArgument(IRB, OverflowOffset + GapSize);
+            if (MS.TrackOrigins)
+              OriginBase =
+                  getOriginPtrForVAArgument(IRB, OverflowOffset + GapSize);
+            OverflowOffset += ArgSize;
+          } else {
+            OverflowOffset = kParamTLSSize;
+          }
+        }
+        break;
+      }
+      case ArgKind::Indirect:
+        llvm_unreachable("Indirect must be converted to GeneralPurpose");
+      }
+      if (ShadowBase == nullptr)
+        continue;
+      Value *Shadow = MSV.getShadow(A);
+      if (SE != ShadowExtension::None)
+        Shadow = MSV.CreateShadowCast(IRB, Shadow, IRB.getInt64Ty(),
+                                      /*Signed*/ SE == ShadowExtension::Sign);
+      ShadowBase = IRB.CreateIntToPtr(
+          ShadowBase, PointerType::get(Shadow->getType(), 0), "_msarg_va_s");
+      IRB.CreateStore(Shadow, ShadowBase);
+      if (MS.TrackOrigins) {
+        Value *Origin = MSV.getOrigin(A);
+        unsigned StoreSize = DL.getTypeStoreSize(Shadow->getType());
+        MSV.paintOrigin(IRB, Origin, OriginBase, StoreSize,
+                        kMinOriginAlignment);
+      }
+    }
+    Constant *OverflowSize = ConstantInt::get(
+        IRB.getInt64Ty(), OverflowOffset - SystemZOverflowOffset);
+    IRB.CreateStore(OverflowSize, MS.VAArgOverflowSizeTLS);
+  }
+
+  Value *getShadowAddrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
+    Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
+    return IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
+  }
+
+  Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
+    Value *Base = IRB.CreatePointerCast(MS.VAArgOriginTLS, MS.IntptrTy);
+    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
+    return IRB.CreateIntToPtr(Base, PointerType::get(MS.OriginTy, 0),
+                              "_msarg_va_o");
+  }
+
+  void unpoisonVAListTagForInst(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *VAListTag = I.getArgOperand(0);
+    Value *ShadowPtr, *OriginPtr;
+    const Align Alignment = Align(8);
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment,
+                               /*isStore*/ true);
+    IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
+                     SystemZVAListTagSize, Alignment, false);
+  }
+
+  void visitVAStartInst(VAStartInst &I) override {
+    VAStartInstrumentationList.push_back(&I);
+    unpoisonVAListTagForInst(I);
+  }
+
+  void visitVACopyInst(VACopyInst &I) override { unpoisonVAListTagForInst(I); }
+
+  void copyRegSaveArea(IRBuilder<> &IRB, Value *VAListTag) {
+    Type *RegSaveAreaPtrTy = Type::getInt64PtrTy(*MS.C);
+    Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
+        IRB.CreateAdd(
+            IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
+            ConstantInt::get(MS.IntptrTy, SystemZRegSaveAreaPtrOffset)),
+        PointerType::get(RegSaveAreaPtrTy, 0));
+    Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
+    Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+    const Align Alignment = Align(8);
+    std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
+        MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(), Alignment,
+                               /*isStore*/ true);
+    // TODO(iii): copy only fragments filled by visitCallSite()
+    IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
+                     SystemZRegSaveAreaSize);
+    if (MS.TrackOrigins)
+      IRB.CreateMemCpy(RegSaveAreaOriginPtr, Alignment, VAArgTLSOriginCopy,
+                       Alignment, SystemZRegSaveAreaSize);
+  }
+
+  void copyOverflowArea(IRBuilder<> &IRB, Value *VAListTag) {
+    Type *OverflowArgAreaPtrTy = Type::getInt64PtrTy(*MS.C);
+    Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
+        IRB.CreateAdd(
+            IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
+            ConstantInt::get(MS.IntptrTy, SystemZOverflowArgAreaPtrOffset)),
+        PointerType::get(OverflowArgAreaPtrTy, 0));
+    Value *OverflowArgAreaPtr =
+        IRB.CreateLoad(OverflowArgAreaPtrTy, OverflowArgAreaPtrPtr);
+    Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
+    const Align Alignment = Align(8);
+    std::tie(OverflowArgAreaShadowPtr, OverflowArgAreaOriginPtr) =
+        MSV.getShadowOriginPtr(OverflowArgAreaPtr, IRB, IRB.getInt8Ty(),
+                               Alignment, /*isStore*/ true);
+    Value *SrcPtr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), VAArgTLSCopy,
+                                           SystemZOverflowOffset);
+    IRB.CreateMemCpy(OverflowArgAreaShadowPtr, Alignment, SrcPtr, Alignment,
+                     VAArgOverflowSize);
+    if (MS.TrackOrigins) {
+      SrcPtr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), VAArgTLSOriginCopy,
+                                      SystemZOverflowOffset);
+      IRB.CreateMemCpy(OverflowArgAreaOriginPtr, Alignment, SrcPtr, Alignment,
+                       VAArgOverflowSize);
+    }
+  }
+
+  void finalizeInstrumentation() override {
+    assert(!VAArgOverflowSize && !VAArgTLSCopy &&
+           "finalizeInstrumentation called twice");
+    if (!VAStartInstrumentationList.empty()) {
+      // If there is a va_start in this function, make a backup copy of
+      // va_arg_tls somewhere in the function entry block.
+      IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+      VAArgOverflowSize =
+          IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
+      Value *CopySize =
+          IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, SystemZOverflowOffset),
+                        VAArgOverflowSize);
+      VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
+      IRB.CreateMemCpy(VAArgTLSCopy, Align(8), MS.VAArgTLS, Align(8), CopySize);
+      if (MS.TrackOrigins) {
+        VAArgTLSOriginCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
+        IRB.CreateMemCpy(VAArgTLSOriginCopy, Align(8), MS.VAArgOriginTLS,
+                         Align(8), CopySize);
+      }
+    }
+
+    // Instrument va_start.
+    // Copy va_list shadow from the backup copy of the TLS contents.
+    for (size_t VaStartNo = 0, VaStartNum = VAStartInstrumentationList.size();
+         VaStartNo < VaStartNum; VaStartNo++) {
+      CallInst *OrigInst = VAStartInstrumentationList[VaStartNo];
+      IRBuilder<> IRB(OrigInst->getNextNode());
+      Value *VAListTag = OrigInst->getArgOperand(0);
+      copyRegSaveArea(IRB, VAListTag);
+      copyOverflowArea(IRB, VAListTag);
+    }
+  }
+};
+
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
   VarArgNoOpHelper(Function &F, MemorySanitizer &MS,
@@ -4632,6 +4972,8 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   else if (TargetTriple.getArch() == Triple::ppc64 ||
            TargetTriple.getArch() == Triple::ppc64le)
     return new VarArgPowerPC64Helper(Func, Msan, Visitor);
+  else if (TargetTriple.getArch() == Triple::systemz)
+    return new VarArgSystemZHelper(Func, Msan, Visitor);
   else
     return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
