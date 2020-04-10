@@ -1,4 +1,4 @@
-//===--- OptimalLayout.cpp - Optimal data layout algorithm ----------------===//
+//===--- OptimizedStructLayout.cpp - Optimal data layout algorithm ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the performOptimalLayout interface.
+// This file implements the performOptimizedStructLayout interface.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/OptimalLayout.h"
+#include "llvm/Support/OptimizedStructLayout.h"
 
 using namespace llvm;
 
+using Field = OptimizedStructLayoutField;
+
 #ifndef NDEBUG
-static void checkValidLayout(ArrayRef<OptimalLayoutField> Fields, uint64_t Size,
+static void checkValidLayout(ArrayRef<Field> Fields, uint64_t Size,
                              Align MaxAlign) {
   uint64_t LastEnd = 0;
   Align ComputedMaxAlign;
@@ -37,7 +39,7 @@ static void checkValidLayout(ArrayRef<OptimalLayoutField> Fields, uint64_t Size,
 #endif
 
 std::pair<uint64_t, Align>
-llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
+llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
 #ifndef NDEBUG
   // Do some simple precondition checks.
   {
@@ -101,8 +103,7 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
   // important if we get into the gap-filling stage below, but it
   // doesn't hurt here.
   array_pod_sort(FirstFlexible, E,
-                 [](const OptimalLayoutField *lhs,
-                    const OptimalLayoutField *rhs) -> int {
+                 [](const Field *lhs, const Field *rhs) -> int {
     // Decreasing alignment.
     if (lhs->Alignment != rhs->Alignment)
       return (lhs->Alignment < rhs->Alignment ? 1 : -1);
@@ -240,13 +241,13 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
     /// monotonically descending in size and otherwise in the original order.
     ///
     /// We remove the queue from the array as soon as this is empty.
-    OptimalLayoutField *Head;
+    OptimizedStructLayoutField *Head;
 
     /// The alignment requirement of the queue.
     Align Alignment;
 
-    static OptimalLayoutField *getNext(OptimalLayoutField *Cur) {
-      return static_cast<OptimalLayoutField*>(Cur->Scratch);
+    static Field *getNext(Field *Cur) {
+      return static_cast<Field *>(Cur->Scratch);
     }
   };
   SmallVector<AlignmentQueue, 8> FlexibleFieldsByAlignment;
@@ -290,9 +291,7 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
 #endif
 
   /// Helper function to remove a field from a queue.
-  auto spliceFromQueue = [&](AlignmentQueue *Queue,
-                             OptimalLayoutField *Last,
-                             OptimalLayoutField *Cur) {
+  auto spliceFromQueue = [&](AlignmentQueue *Queue, Field *Last, Field *Cur) {
     assert(Last ? Queue->getNext(Last) == Cur : Queue->Head == Cur);
 
     // If we're removing Cur from a non-initial position, splice it out
@@ -319,7 +318,7 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
 
   // Do layout into a local array.  Doing this in-place on Fields is
   // not really feasible.
-  SmallVector<OptimalLayoutField, 16> Layout;
+  SmallVector<Field, 16> Layout;
   Layout.reserve(Fields.size());
 
   // The offset that we're currently looking to insert at (or after).
@@ -327,9 +326,7 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
 
   // Helper function to splice Cur out of the given queue and add it
   // to the layout at the given offset.
-  auto addToLayout = [&](AlignmentQueue *Queue,
-                         OptimalLayoutField *Last,
-                         OptimalLayoutField *Cur,
+  auto addToLayout = [&](AlignmentQueue *Queue, Field *Last, Field *Cur,
                          uint64_t Offset) -> bool {
     assert(Offset == alignTo(LastEnd, Cur->Alignment));
 
@@ -362,8 +359,8 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
 
     // Find the matching field.  Note that this should always find
     // something because of the MinSize check above.
-    for (OptimalLayoutField *Cur = Queue->Head, *Last = nullptr;
-           true; Last = Cur, Cur = Queue->getNext(Cur)) {
+    for (Field *Cur = Queue->Head, *Last = nullptr; true;
+           Last = Cur, Cur = Queue->getNext(Cur)) {
       assert(Cur && "didn't find a match in queue despite its MinSize");
       if (Cur->Size <= MaxViableSize)
         return addToLayout(Queue, Last, Cur, StartOffset);
@@ -441,7 +438,7 @@ llvm::performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields) {
   // Copy the layout back into place.
   assert(Layout.size() == Fields.size());
   memcpy(Fields.data(), Layout.data(),
-         Fields.size() * sizeof(OptimalLayoutField));
+         Fields.size() * sizeof(OptimizedStructLayoutField));
 
 #ifndef NDEBUG
   // Make a final check that the layout is valid.

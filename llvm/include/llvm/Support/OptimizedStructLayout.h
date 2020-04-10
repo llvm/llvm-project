@@ -1,4 +1,4 @@
-//===-- OptimalLayout.h - Optimal data layout algorithm -----------*- C++ -*-=//
+//===-- OptimizedStructLayout.h - Struct layout algorithm ---------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,19 +8,31 @@
 ///
 /// This file provides an interface for laying out a sequence of fields
 /// as a struct in a way that attempts to minimizes the total space
-/// requirements of the struct.
+/// requirements of the struct while still satisfying the layout
+/// requirements of the individual fields.  The resulting layout may be
+/// substantially more compact than simply laying out the fields in their
+/// original order.
 ///
-/// The word "optimal" is a misnomer in several ways.  First, minimizing
-/// space usage doesn't necessarily yield optimal performance because it
-/// may decrease locality.  Second, there is no known efficient algorithm
-/// that guarantees a minimal layout for arbitrary inputs.  Nonetheless,
-/// this algorithm is likely to produce much more compact layouts than
-/// would be produced by just allocating space in a buffer.
+/// Fields may be pre-assigned fixed offsets.  They may also be given sizes
+/// that are not multiples of their alignments.  There is no currently no
+/// way to describe that a field has interior padding that other fields may
+/// be allocated into.
+///
+/// This algorithm does not claim to be "optimal" for several reasons:
+///
+/// - First, it does not guarantee that the result is minimal in size.
+///   There is no known efficient algoorithm to achieve minimality for
+///   unrestricted inputs.  Nonetheless, this algorithm 
+///
+/// - Second, there are other ways that a struct layout could be optimized
+///   besides space usage, such as locality.  This layout may have a mixed
+///   impact on locality: less overall memory may be used, but adjacent
+///   fields in the original array may be moved further from one another.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_OPTIMALLAYOUT_H
-#define LLVM_SUPPORT_OPTIMALLAYOUT_H
+#ifndef LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
+#define LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 
 #include "llvm/Support/Alignment.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -29,13 +41,13 @@
 namespace llvm {
 
 /// A field in a structure.
-struct OptimalLayoutField {
+struct OptimizedStructLayoutField {
   /// A special value for Offset indicating that the field can be moved
   /// anywhere.
   static constexpr uint64_t FlexibleOffset = ~(uint64_t)0;
 
-  OptimalLayoutField(const void *Id, uint64_t Size, Align Alignment,
-                     uint64_t FixedOffset = FlexibleOffset)
+  OptimizedStructLayoutField(const void *Id, uint64_t Size, Align Alignment,
+                             uint64_t FixedOffset = FlexibleOffset)
       : Offset(FixedOffset), Size(Size), Id(Id), Alignment(Alignment) {
     assert(Size > 0 && "adding an empty field to the layout");
   }
@@ -122,8 +134,8 @@ struct OptimalLayoutField {
 /// The return value is the total size of the struct and its required
 /// alignment.  Note that the total size is not rounded up to a multiple
 /// of the required alignment; clients which require this can do so easily.
-std::pair<uint64_t, Align>
-performOptimalLayout(MutableArrayRef<OptimalLayoutField> Fields);
+std::pair<uint64_t, Align> performOptimizedStructLayout(
+                        MutableArrayRef<OptimizedStructLayoutField> Fields);
 
 } // namespace llvm
 
