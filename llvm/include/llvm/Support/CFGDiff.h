@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_CFGDIFF_H
-#define LLVM_IR_CFGDIFF_H
+#ifndef LLVM_SUPPORT_CFGDIFF_H
+#define LLVM_SUPPORT_CFGDIFF_H
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -248,4 +247,4 @@ struct GraphTraits<std::pair<const GraphDiff<T, B> *, Inverse<T>>>
     : CFGViewChildren<Inverse<T>, B, true> {};
 } // end namespace llvm
 
-#endif // LLVM_IR_CFGDIFF_H
+#endif // LLVM_SUPPORT_CFGDIFF_H
