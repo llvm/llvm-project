@@ -58,13 +58,6 @@ struct SemiNCAInfo {
   using TreeNodePtr = DomTreeNodeBase<NodeT> *;
   using RootsT = decltype(DomTreeT::Roots);
   static constexpr bool IsPostDom = DomTreeT::IsPostDominator;
-  using GraphDiffT = GraphDiff<NodePtr, IsPostDom>;
-  using GraphDiffNodePair = std::pair<const GraphDiffT *, NodePtr>;
-  using GraphDiffInvNodePair = std::pair<const GraphDiffT *, Inverse<NodePtr>>;
-  using GraphDiffNodePairIfDomT =
-      std::conditional_t<!IsPostDom, GraphDiffInvNodePair, GraphDiffNodePair>;
-  using GraphDiffNodePairIfPDomT =
-      std::conditional_t<IsPostDom, GraphDiffInvNodePair, GraphDiffNodePair>;
 
   // Information record used by Semi-NCA during tree construction.
   struct InfoRec {
@@ -84,27 +77,28 @@ struct SemiNCAInfo {
   using UpdateT = typename DomTreeT::UpdateType;
   using UpdateKind = typename DomTreeT::UpdateKind;
   struct BatchUpdateInfo {
-    // Note: Updates inside PreViewCFG are aleady legalized.
-    BatchUpdateInfo(GraphDiffT &PreViewCFG)
-        : PreViewCFG(PreViewCFG),
-          NumLegalized(PreViewCFG.getNumLegalizedUpdates()) {}
+    SmallVector<UpdateT, 4> Updates;
+    using NodePtrAndKind = PointerIntPair<NodePtr, 1, UpdateKind>;
 
+    // In order to be able to walk a CFG that is out of sync with the CFG
+    // DominatorTree last knew about, use the list of updates to reconstruct
+    // previous CFG versions of the current CFG. For each node, we store a set
+    // of its virtually added/deleted future successors and predecessors.
+    // Note that these children are from the future relative to what the
+    // DominatorTree knows about -- using them to gets us some snapshot of the
+    // CFG from the past (relative to the state of the CFG).
+    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FutureSuccessors;
+    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FuturePredecessors;
     // Remembers if the whole tree was recalculated at some point during the
     // current batch update.
     bool IsRecalculated = false;
-    GraphDiffT &PreViewCFG;
-    const size_t NumLegalized;
   };
 
   BatchUpdateInfo *BatchUpdates;
   using BatchUpdatePtr = BatchUpdateInfo *;
-  std::unique_ptr<GraphDiffT> EmptyGD;
 
   // If BUI is a nullptr, then there's no batch update in progress.
-  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {
-    if (!BatchUpdates)
-      EmptyGD = std::make_unique<GraphDiffT>();
-  }
+  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {}
 
   void clear() {
     NumToNode = {nullptr}; // Restore to initial state with a dummy start node.
@@ -112,6 +106,67 @@ struct SemiNCAInfo {
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
   }
+
+  template <bool Inverse>
+  struct ChildrenGetter {
+    using ResultTy = SmallVector<NodePtr, 8>;
+
+    static ResultTy Get(NodePtr N, std::integral_constant<bool, false>) {
+      auto RChildren = reverse(children<NodePtr>(N));
+      return ResultTy(RChildren.begin(), RChildren.end());
+    }
+
+    static ResultTy Get(NodePtr N, std::integral_constant<bool, true>) {
+      auto IChildren = inverse_children<NodePtr>(N);
+      return ResultTy(IChildren.begin(), IChildren.end());
+    }
+
+    using Tag = std::integral_constant<bool, Inverse>;
+
+    // The function below is the core part of the batch updater. It allows the
+    // Depth Based Search algorithm to perform incremental updates in lockstep
+    // with updates to the CFG. We emulated lockstep CFG updates by getting its
+    // next snapshots by reverse-applying future updates.
+    static ResultTy Get(NodePtr N, BatchUpdatePtr BUI) {
+      ResultTy Res = Get(N, Tag());
+      // If there's no batch update in progress, simply return node's children.
+      if (!BUI) return Res;
+
+      // CFG children are actually its *most current* children, and we have to
+      // reverse-apply the future updates to get the node's children at the
+      // point in time the update was performed.
+      auto &FutureChildren = (Inverse != IsPostDom) ? BUI->FuturePredecessors
+                                                    : BUI->FutureSuccessors;
+      auto FCIt = FutureChildren.find(N);
+      if (FCIt == FutureChildren.end()) return Res;
+
+      for (auto ChildAndKind : FCIt->second) {
+        const NodePtr Child = ChildAndKind.getPointer();
+        const UpdateKind UK = ChildAndKind.getInt();
+
+        // Reverse-apply the future update.
+        if (UK == UpdateKind::Insert) {
+          // If there's an insertion in the future, it means that the edge must
+          // exist in the current CFG, but was not present in it before.
+          assert(llvm::find(Res, Child) != Res.end()
+                 && "Expected child not found in the CFG");
+          Res.erase(std::remove(Res.begin(), Res.end(), Child), Res.end());
+          LLVM_DEBUG(dbgs() << "\tHiding edge " << BlockNamePrinter(N) << " -> "
+                            << BlockNamePrinter(Child) << "\n");
+        } else {
+          // If there's an deletion in the future, it means that the edge cannot
+          // exist in the current CFG, but existed in it before.
+          assert(llvm::find(Res, Child) == Res.end() &&
+                 "Unexpected child found in the CFG");
+          LLVM_DEBUG(dbgs() << "\tShowing virtual edge " << BlockNamePrinter(N)
+                            << " -> " << BlockNamePrinter(Child) << "\n");
+          Res.push_back(Child);
+        }
+      }
+
+      return Res;
+    }
+  };
 
   NodePtr getIDom(NodePtr BB) const {
     auto InfoIt = NodeToInfo.find(BB);
@@ -180,12 +235,8 @@ struct SemiNCAInfo {
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
-      using DirectedNodeT =
-          std::conditional_t<Direction, Inverse<NodePtr>, NodePtr>;
-      using GraphDiffBBPair = std::pair<const GraphDiffT *, DirectedNodeT>;
-      const auto *GD = BatchUpdates ? &BatchUpdates->PreViewCFG : EmptyGD.get();
-      for (auto &Pair : children<GraphDiffBBPair>({GD, BB})) {
-        const NodePtr Succ = Pair.second;
+      for (const NodePtr Succ :
+           ChildrenGetter<Direction>::Get(BB, BatchUpdates)) {
         const auto SIT = NodeToInfo.find(Succ);
         // Don't visit nodes more than once but remember to collect
         // ReverseChildren.
@@ -320,9 +371,7 @@ struct SemiNCAInfo {
   // to CFG nodes within infinite loops.
   static bool HasForwardSuccessors(const NodePtr N, BatchUpdatePtr BUI) {
     assert(N && "N must be a valid node");
-    GraphDiffT EmptyGD;
-    auto &GD = BUI ? BUI->PreViewCFG : EmptyGD;
-    return !llvm::empty(children<GraphDiffNodePair>({&GD, N}));
+    return !ChildrenGetter<false>::Get(N, BUI).empty();
   }
 
   static NodePtr GetEntryNode(const DomTreeT &DT) {
@@ -746,11 +795,8 @@ struct SemiNCAInfo {
         //
         // Invariant: there is an optimal path from `To` to TN with the minimum
         // depth being CurrentLevel.
-        GraphDiffT EmptyGD;
-        auto &GD = BUI ? BUI->PreViewCFG : EmptyGD;
-        for (auto &Pair :
-             children<GraphDiffNodePairIfPDomT>({&GD, TN->getBlock()})) {
-          const NodePtr Succ = Pair.second;
+        for (const NodePtr Succ :
+             ChildrenGetter<IsPostDom>::Get(TN->getBlock(), BUI)) {
           const TreeNodePtr SuccTN = DT.getNode(Succ);
           assert(SuccTN &&
                  "Unreachable successor found at reachable insertion");
@@ -880,12 +926,8 @@ struct SemiNCAInfo {
     // the DomTree about it.
     // The check is O(N), so run it only in debug configuration.
     auto IsSuccessor = [BUI](const NodePtr SuccCandidate, const NodePtr Of) {
-      GraphDiffT EmptyGD;
-      auto &GD = BUI ? BUI->PreViewCFG : EmptyGD;
-      for (auto &Pair : children<GraphDiffNodePairIfPDomT>({&GD, Of}))
-        if (Pair.second == SuccCandidate)
-          return true;
-      return false;
+      auto Successors = ChildrenGetter<IsPostDom>::Get(Of, BUI);
+      return llvm::find(Successors, SuccCandidate) != Successors.end();
     };
     (void)IsSuccessor;
     assert(!IsSuccessor(To, From) && "Deleted edge still exists in the CFG!");
@@ -971,17 +1013,15 @@ struct SemiNCAInfo {
                                const TreeNodePtr TN) {
     LLVM_DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN)
                       << "\n");
-    auto TNB = TN->getBlock();
-    GraphDiffT EmptyGD;
-    auto &GD = BUI ? BUI->PreViewCFG : EmptyGD;
-    for (auto &Pair : children<GraphDiffNodePairIfDomT>({&GD, TNB})) {
-      const NodePtr Pred = Pair.second;
+    for (const NodePtr Pred :
+         ChildrenGetter<!IsPostDom>::Get(TN->getBlock(), BUI)) {
       LLVM_DEBUG(dbgs() << "\tPred " << BlockNamePrinter(Pred) << "\n");
       if (!DT.getNode(Pred)) continue;
 
-      const NodePtr Support = DT.findNearestCommonDominator(TNB, Pred);
+      const NodePtr Support =
+          DT.findNearestCommonDominator(TN->getBlock(), Pred);
       LLVM_DEBUG(dbgs() << "\tSupport " << BlockNamePrinter(Support) << "\n");
-      if (Support != TNB) {
+      if (Support != TN->getBlock()) {
         LLVM_DEBUG(dbgs() << "\t" << BlockNamePrinter(TN)
                           << " is reachable from support "
                           << BlockNamePrinter(Support) << "\n");
@@ -1112,23 +1152,53 @@ struct SemiNCAInfo {
   //===--------------------- DomTree Batch Updater --------------------------===
   //~~
 
-  static void ApplyUpdates(DomTreeT &DT, GraphDiffT &PreViewCFG) {
-    const size_t NumUpdates = PreViewCFG.getNumLegalizedUpdates();
+  static void ApplyUpdates(DomTreeT &DT, ArrayRef<UpdateT> Updates) {
+    const size_t NumUpdates = Updates.size();
     if (NumUpdates == 0)
       return;
 
     // Take the fast path for a single update and avoid running the batch update
     // machinery.
     if (NumUpdates == 1) {
-      UpdateT Update = PreViewCFG.popUpdateForIncrementalUpdates();
+      const auto &Update = Updates.front();
       if (Update.getKind() == UpdateKind::Insert)
-        InsertEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
+        DT.insertEdge(Update.getFrom(), Update.getTo());
       else
-        DeleteEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
+        DT.deleteEdge(Update.getFrom(), Update.getTo());
+
       return;
     }
 
-    BatchUpdateInfo BUI(PreViewCFG);
+    BatchUpdateInfo BUI;
+    LLVM_DEBUG(dbgs() << "Legalizing " << BUI.Updates.size() << " updates\n");
+    cfg::LegalizeUpdates<NodePtr>(Updates, BUI.Updates, IsPostDom);
+
+    const size_t NumLegalized = BUI.Updates.size();
+    BUI.FutureSuccessors.reserve(NumLegalized);
+    BUI.FuturePredecessors.reserve(NumLegalized);
+
+    // Use the legalized future updates to initialize future successors and
+    // predecessors. Note that these sets will only decrease size over time, as
+    // the next CFG snapshots slowly approach the actual (current) CFG.
+    for (UpdateT &U : BUI.Updates) {
+      BUI.FutureSuccessors[U.getFrom()].push_back({U.getTo(), U.getKind()});
+      BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
+    }
+
+#if 0
+    // FIXME: The LLVM_DEBUG macro only plays well with a modular
+    // build of LLVM when the header is marked as textual, but doing
+    // so causes redefinition errors.
+    LLVM_DEBUG(dbgs() << "About to apply " << NumLegalized << " updates\n");
+    LLVM_DEBUG(if (NumLegalized < 32) for (const auto &U
+                                           : reverse(BUI.Updates)) {
+      dbgs() << "\t";
+      U.dump();
+      dbgs() << "\n";
+    });
+    LLVM_DEBUG(dbgs() << "\n");
+#endif
+
     // Recalculate the DominatorTree when the number of updates
     // exceeds a threshold, which usually makes direct updating slower than
     // recalculation. We select this threshold proportional to the
@@ -1138,21 +1208,21 @@ struct SemiNCAInfo {
 
     // Make unittests of the incremental algorithm work
     if (DT.DomTreeNodes.size() <= 100) {
-      if (BUI.NumLegalized > DT.DomTreeNodes.size())
+      if (NumLegalized > DT.DomTreeNodes.size())
         CalculateFromScratch(DT, &BUI);
-    } else if (BUI.NumLegalized > DT.DomTreeNodes.size() / 40)
+    } else if (NumLegalized > DT.DomTreeNodes.size() / 40)
       CalculateFromScratch(DT, &BUI);
 
     // If the DominatorTree was recalculated at some point, stop the batch
     // updates. Full recalculations ignore batch updates and look at the actual
     // CFG.
-    for (size_t i = 0; i < BUI.NumLegalized && !BUI.IsRecalculated; ++i)
+    for (size_t i = 0; i < NumLegalized && !BUI.IsRecalculated; ++i)
       ApplyNextUpdate(DT, BUI);
   }
 
   static void ApplyNextUpdate(DomTreeT &DT, BatchUpdateInfo &BUI) {
-    // Popping the next update, will move the PreViewCFG to the next snapshot.
-    UpdateT CurrentUpdate = BUI.PreViewCFG.popUpdateForIncrementalUpdates();
+    assert(!BUI.Updates.empty() && "No updates to apply!");
+    UpdateT CurrentUpdate = BUI.Updates.pop_back_val();
 #if 0
     // FIXME: The LLVM_DEBUG macro only plays well with a modular
     // build of LLVM when the header is marked as textual, but doing
@@ -1160,6 +1230,21 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "Applying update: ");
     LLVM_DEBUG(CurrentUpdate.dump(); dbgs() << "\n");
 #endif
+
+    // Move to the next snapshot of the CFG by removing the reverse-applied
+    // current update. Since updates are performed in the same order they are
+    // legalized it's sufficient to pop the last item here.
+    auto &FS = BUI.FutureSuccessors[CurrentUpdate.getFrom()];
+    assert(FS.back().getPointer() == CurrentUpdate.getTo() &&
+           FS.back().getInt() == CurrentUpdate.getKind());
+    FS.pop_back();
+    if (FS.empty()) BUI.FutureSuccessors.erase(CurrentUpdate.getFrom());
+
+    auto &FP = BUI.FuturePredecessors[CurrentUpdate.getTo()];
+    assert(FP.back().getPointer() == CurrentUpdate.getFrom() &&
+           FP.back().getInt() == CurrentUpdate.getKind());
+    FP.pop_back();
+    if (FP.empty()) BUI.FuturePredecessors.erase(CurrentUpdate.getTo());
 
     if (CurrentUpdate.getKind() == UpdateKind::Insert)
       InsertEdge(DT, &BUI, CurrentUpdate.getFrom(), CurrentUpdate.getTo());
@@ -1518,11 +1603,19 @@ void Calculate(DomTreeT &DT) {
 template <typename DomTreeT>
 void CalculateWithUpdates(DomTreeT &DT,
                           ArrayRef<typename DomTreeT::UpdateType> Updates) {
-  // FIXME: Updated to use the PreViewCFG and behave the same as until now.
-  // This behavior is however incorrect; this actually needs the PostViewCFG.
-  GraphDiff<typename DomTreeT::NodePtr, DomTreeT::IsPostDominator> PreViewCFG(
-      Updates, /*ReverseApplyUpdates=*/true);
-  typename SemiNCAInfo<DomTreeT>::BatchUpdateInfo BUI(PreViewCFG);
+  // TODO: Move BUI creation in common method, reuse in ApplyUpdates.
+  typename SemiNCAInfo<DomTreeT>::BatchUpdateInfo BUI;
+  LLVM_DEBUG(dbgs() << "Legalizing " << BUI.Updates.size() << " updates\n");
+  cfg::LegalizeUpdates<typename DomTreeT::NodePtr>(Updates, BUI.Updates,
+                                                   DomTreeT::IsPostDominator);
+  const size_t NumLegalized = BUI.Updates.size();
+  BUI.FutureSuccessors.reserve(NumLegalized);
+  BUI.FuturePredecessors.reserve(NumLegalized);
+  for (auto &U : BUI.Updates) {
+    BUI.FutureSuccessors[U.getFrom()].push_back({U.getTo(), U.getKind()});
+    BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
+  }
+
   SemiNCAInfo<DomTreeT>::CalculateFromScratch(DT, &BUI);
 }
 
@@ -1542,9 +1635,8 @@ void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
 
 template <class DomTreeT>
 void ApplyUpdates(DomTreeT &DT,
-                  GraphDiff<typename DomTreeT::NodePtr,
-                            DomTreeT::IsPostDominator> &PreViewCFG) {
-  SemiNCAInfo<DomTreeT>::ApplyUpdates(DT, PreViewCFG);
+                  ArrayRef<typename DomTreeT::UpdateType> Updates) {
+  SemiNCAInfo<DomTreeT>::ApplyUpdates(DT, Updates);
 }
 
 template <class DomTreeT>

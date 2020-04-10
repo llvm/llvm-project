@@ -90,10 +90,9 @@ template void llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBPostDomTree>(
     DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
 
 template void llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, DomTreeBuilder::BBDomTreeGraphDiff &);
+    DomTreeBuilder::BBDomTree &DT, DomTreeBuilder::BBUpdates);
 template void llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT,
-    DomTreeBuilder::BBPostDomTreeGraphDiff &);
+    DomTreeBuilder::BBPostDomTree &DT, DomTreeBuilder::BBUpdates);
 
 template bool llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
     const DomTreeBuilder::BBDomTree &DT,
