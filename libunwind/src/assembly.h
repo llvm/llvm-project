@@ -28,7 +28,7 @@
 #ifdef _ARCH_PWR8
 #define PPC64_HAS_VMX
 #endif
-#elif defined(__arm64__)
+#elif defined(__APPLE__) && defined(__aarch64__)
 #define SEPARATOR %%
 #else
 #define SEPARATOR ;
