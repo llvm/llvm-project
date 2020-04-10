@@ -1,0 +1,75 @@
+// RUN: mlir-linalg-ods-gen %s -gen-ods-decl=1 | FileCheck %s --check-prefix=ODS
+// RUN: mlir-linalg-ods-gen %s -gen-impl=1 | FileCheck %s --check-prefix=IMPL
+
+// RUN: mlir-linalg-ods-gen %s -gen-ods-decl=1 -test-emit-include-td-header \
+// RUN: | mlir-tblgen -gen-op-decls -I %S/../../include
+
+// ODS-LABEL: def matvecOp : LinalgNamedStructured_Op<"matvec", [
+//  ODS-NEXT:   NInputs<2>,
+//  ODS-NEXT:   NOutputs<1>,
+//  ODS-NEXT:   NamedStructuredOpTraits]>
+//
+// IMPL-LABEL:  matvec::referenceIterators() {
+//  IMPL-NEXT:  { {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
+//
+//       IMPL:  matvec::referenceIndexingMaps() {
+//       IMPL:  AffineMap::get(2, 0, {d0, d1}),
+//  IMPL-NEXT:  AffineMap::get(2, 0, {d1}),
+//  IMPL-NEXT:  AffineMap::get(2, 0, {d0}) };
+//
+//       IMPL:  matvec::regionBuilder(ArrayRef<BlockArgument> args) {
+//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//
+def matvec(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
+  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+}
+
+// ODS-LABEL: def matmulOp : LinalgNamedStructured_Op<"matmul", [
+//  ODS-NEXT:   NInputs<2>,
+//  ODS-NEXT:   NOutputs<1>,
+//  ODS-NEXT:   NamedStructuredOpTraits]>
+//
+// IMPL-LABEL:  matmul::referenceIterators() {
+//  IMPL-NEXT:  { {{.*}}Parallel{{.*}}, {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
+//
+//       IMPL:  matmul::referenceIndexingMaps() {
+//       IMPL:  AffineMap::get(3, 0, {d0, d2}),
+//  IMPL-NEXT:  AffineMap::get(3, 0, {d2, d1}),
+//  IMPL-NEXT:  AffineMap::get(3, 0, {d0, d1}) };
+//
+//       IMPL:  matmul::regionBuilder(ArrayRef<BlockArgument> args) {
+//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//
+def matmul(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
+  C(m, n) = std_addf<k>(std_mulf(A(m, k), B(k, n)));
+}
+
+// ODS-LABEL: def batchmatmulOp : LinalgNamedStructured_Op<"batchmatmul", [
+//  ODS-NEXT:   NInputs<2>,
+//  ODS-NEXT:   NOutputs<1>,
+//  ODS-NEXT:   NamedStructuredOpTraits]>
+//
+// IMPL-LABEL:  batchmatmul::referenceIterators() {
+//  IMPL-NEXT:  { {{.*}}Parallel{{.*}}, {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
+//
+//       IMPL:  batchmatmul::referenceIndexingMaps() {
+//       IMPL:  AffineMap::get(4, 0, {d0, d1, d3}),
+//  IMPL-NEXT:  AffineMap::get(4, 0, {d3, d2}),
+//  IMPL-NEXT:  AffineMap::get(4, 0, {d0, d1, d2}) };
+//
+//       IMPL:  batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
+//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//
+//       TBLGEN: batchmatmulOp
+def batchmatmul(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}

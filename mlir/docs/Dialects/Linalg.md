@@ -451,6 +451,93 @@ from a description in terms of only the generic op interface.
 This is the main reason there are only a small number of ops today: we expect
 them to be auto-generated from Tablegen soon.
 
+### Named Payload Ops Specification
+
+Linalg provides a declarative specification and a generation tool
+(`mlir-linalg-ods-gen`) to automatically produce named ops from a notation that
+is inspired by Einstein notation.
+
+The syntax and semantics used in `mlir-linalg-ods-gen` are very much in flight
+and borrow from Tensor Comprehensions (TC) but differ in a few dimensions, to
+better adapt to Linalg:
+
+1.  The input and output tensor parameters are specified as `id :
+    type(symbolic-affine-expression-list)` (e.g. `A : f32(M, N + M)`) and each
+    new symbol is discovered eagerly. TC on the other hand does not allow
+    general symbolic affine expressions.
+1.  The output shapes are specified explicitly, in TC they are always derived
+    from the input shapes.
+1.  The operations used to specify computations use EDSC intrinsics so that they
+    can easily be parsed and emitted into a simple region builder without
+    resorting to more general MLIR parsing.
+1.  Reduction dimensions are specified with angle bracket notation on the 
+    operation they apply to (e.g. `std_add<k>` specifies that `k` is a reduction
+    dimension). In TC, a reduction is specified with `op=` operator and the
+    reduction dimensions are inferred.
+1.  The parallel and reduction dimension are ordered by the textual program
+    order. For instance, in the comprehension `O(i, j) = std_add<k, l>(...)`,
+    `i` (resp. `j`) is a parallel iterator encoded by affine dimension of
+    position `0` (resp. `1`); `k` (resp. `l`) is a reduction iterator encoded by
+    an affine dimension of position `2` (resp. `3`).
+
+These decisions and syntax are subject to evolution and change. In particular,
+op-specific attributes, dynamic ranks, some form of templating, shape
+calculation function specification, etc. may be added in the future.
+
+At this time, the following restrictions are imposed on the syntax and
+semantics:
+
+1.  Each def may only contain a single comprehension but each comprehension may
+    perform multiple updates.
+2.  Each tensor may only be used with a single indexing expression.
+
+The following specification may be used to define a named `batchmatmul` op:
+
+```
+def batchmatmul(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}
+```
+
+When `mlir-linalg-ods-gen -gen-ods-decl=1` is called, the following ODS is
+produced:
+
+```
+  def batchmatmulOp : LinalgNamedStructured_Op<"batchmatmul", [
+    NInputs<2>,
+    NOutputs<1>,
+    NamedStructuredOpTraits]> { ... }
+```
+
+When `mlir-linalg-ods-gen -gen-impl=1` is called, the following C++ is produced:
+
+```
+llvm::Optional<SmallVector<StringRef, 8>> batchmatmul::referenceIterators() {
+  return SmallVector<StringRef, 8>{
+    getParallelIteratorTypeName(),
+    getParallelIteratorTypeName(),
+    getParallelIteratorTypeName(),
+    getReductionIteratorTypeName() };
+}
+llvm::Optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
+  MLIRContext *context = getContext();
+  AffineExpr d0, d1, d2, d3;
+  bindDims(context, d0, d1, d2, d3);
+  return SmallVector<AffineMap, 8>{
+      AffineMap::get(4, 0, {d0, d1, d3}),
+      AffineMap::get(4, 0, {d3, d2}),
+      AffineMap::get(4, 0, {d0, d1, d2}) };
+}
+void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
+  using namespace edsc;
+  using namespace intrinsics;
+  ValueHandle _0(args[0]), _1(args[1]), _2(args[2]);
+  ValueHandle _4 = std_mulf(_0, _1);
+  ValueHandle _5 = std_addf(_2, _4);
+  (linalg_yield(ValueRange{ _5 }));
+}
+```
+
 ## Open Issues and Design Alternatives<a name="open_issues"></a>
 Multiple open issues and design alternatives are in flight and it is time to
 lay them out for the community to discuss and pick apart:
