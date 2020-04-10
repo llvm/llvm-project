@@ -55,6 +55,7 @@ add_lldb_library(lldbSymbol
     lldbTarget
     lldbUtility
     lldbPluginObjCLanguage
+    lldbPluginPlatformMacOSX
 
   LINK_COMPONENTS
     Support
