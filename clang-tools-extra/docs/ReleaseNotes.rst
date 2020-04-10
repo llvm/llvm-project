@@ -92,7 +92,7 @@ New checks
 
   Finds ``cnd_wait``, ``cnd_timedwait``, ``wait``, ``wait_for``, or
   ``wait_until`` function calls when the function is not invoked from a loop
-  that checks whether a condition predicate holds or the function has a 
+  that checks whether a condition predicate holds or the function has a
   condition parameter.
 
 - New :doc:`bugprone-reserved-identifier
@@ -134,6 +134,12 @@ New checks
 
   Finds recursive functions and diagnoses them.
 
+- New :doc:`objc-nsinvocation-argument-lifetime
+  <clang-tidy/checks/objc-nsinvocation-argument-lifetime>` check.
+
+  Finds calls to ``NSInvocation`` methods under ARC that don't have proper
+  argument object lifetimes.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -161,7 +167,7 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`readability-qualified-auto
-  <clang-tidy/checks/readability-qualified-auto>` check now supports a 
+  <clang-tidy/checks/readability-qualified-auto>` check now supports a
   `AddConstToQualified` to enable adding ``const`` qualifiers to variables
   typed with ``auto *`` and ``auto &``.
 
