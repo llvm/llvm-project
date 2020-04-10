@@ -816,5 +816,8 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     return OFFLOAD_FAIL;
   }
 
-  return Device.RTL->synchronize(device_id, &AsyncInfo);
+  if (Device.RTL->synchronize)
+    return Device.RTL->synchronize(device_id, &AsyncInfo);
+
+  return OFFLOAD_SUCCESS;
 }

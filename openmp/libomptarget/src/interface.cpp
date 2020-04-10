@@ -108,18 +108,18 @@ EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
     return;
   }
 
-  DeviceTy& Device = Devices[device_id];
+  DeviceTy &Device = Devices[device_id];
 
 #ifdef OMPTARGET_DEBUG
-  for (int i=0; i<arg_num; ++i) {
+  for (int i = 0; i < arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-        ", Type=0x%" PRIx64 "\n", i, DPxPTR(args_base[i]), DPxPTR(args[i]),
-        arg_sizes[i], arg_types[i]);
+       ", Type=0x%" PRIx64 "\n",
+       i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i]);
   }
 #endif
 
-  int rc = target_data_begin(Device, arg_num, args_base,
-      args, arg_sizes, arg_types);
+  int rc = target_data_begin(Device, arg_num, args_base, args, arg_sizes,
+                             arg_types, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
@@ -171,8 +171,8 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
   }
 #endif
 
-  int rc = target_data_end(Device, arg_num, args_base,
-      args, arg_sizes, arg_types);
+  int rc = target_data_end(Device, arg_num, args_base, args, arg_sizes,
+                           arg_types, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
