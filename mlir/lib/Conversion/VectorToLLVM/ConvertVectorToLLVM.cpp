@@ -1244,7 +1244,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
     populateVectorContractLoweringPatterns(patterns, &getContext());
-    applyPatternsGreedily(getOperation(), patterns);
+    applyPatternsAndFoldGreedily(getOperation(), patterns);
   }
 
   // Convert to the LLVM IR dialect.

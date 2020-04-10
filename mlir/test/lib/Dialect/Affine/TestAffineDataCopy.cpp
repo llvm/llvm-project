@@ -97,7 +97,7 @@ void TestAffineDataCopy::runOnFunction() {
   OwningRewritePatternList patterns;
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
-  applyPatternsGreedily(getFunction(), std::move(patterns));
+  applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
 }
 
 namespace mlir {
