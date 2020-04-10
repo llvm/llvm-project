@@ -23,7 +23,7 @@ struct TestVectorToLoopsPass
     OwningRewritePatternList patterns;
     auto *context = &getContext();
     populateVectorToAffineLoopsConversionPatterns(context, patterns);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 

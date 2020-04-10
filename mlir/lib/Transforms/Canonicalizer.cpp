@@ -32,7 +32,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
       op->getCanonicalizationPatterns(patterns, context);
 
     Operation *op = getOperation();
-    applyPatternsGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
   }
 };
 } // end anonymous namespace

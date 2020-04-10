@@ -36,7 +36,7 @@ struct DeclarativeTransforms
     SubViewOp::getCanonicalizationPatterns(patterns, context);
     ViewOp::getCanonicalizationPatterns(patterns, context);
     populateWithGenerated(context, &patterns);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 } // end anonymous namespace

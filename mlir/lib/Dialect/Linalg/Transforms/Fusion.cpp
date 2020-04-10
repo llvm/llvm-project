@@ -572,7 +572,7 @@ struct FusionOfTensorOpsPass
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
     patterns.insert<FuseGenericTensorOps>(op->getContext());
-    applyPatternsGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
   };
 };
 
