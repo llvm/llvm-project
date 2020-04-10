@@ -1,3 +1,6 @@
+# TODO: Remove the need for global constructors within IR/
+add_flag_if_supported("-Wno-global-constructors" WNO_GLOBAL_CONSTRUCTOR_MLIR_IR)
+
 file(GLOB globbed *.c *.cpp)
 add_mlir_library(MLIRIR
   ${globbed}
