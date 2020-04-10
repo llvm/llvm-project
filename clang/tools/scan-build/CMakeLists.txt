@@ -5,21 +5,26 @@ include(GNUInstallDirs)
 if (WIN32 AND NOT CYGWIN)
   set(BinFiles
         scan-build
-        scan-build.bat)
+        scan-build.bat
+	)
   set(LibexecFiles
         ccc-analyzer
         c++-analyzer
         ccc-analyzer.bat
-        c++-analyzer.bat)
+        c++-analyzer.bat
+	)
 else()
   set(BinFiles
-        scan-build)
+        scan-build
+	)
   set(LibexecFiles
         ccc-analyzer
-        c++-analyzer)
+        c++-analyzer
+	)
   if (APPLE)
     list(APPEND BinFiles
-           set-xcode-analyzer)
+           set-xcode-analyzer
+	   )
   endif()
 endif()
 
