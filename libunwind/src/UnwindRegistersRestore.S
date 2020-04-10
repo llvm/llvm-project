@@ -557,7 +557,7 @@ Lnovec:
   lwz     %r3,  20(%r3)   // do r3 last
   bctr
 
-#elif defined(__arm64__) || defined(__aarch64__)
+#elif defined(__aarch64__)
 
 //
 // void libunwind::Registers_arm64::jumpto()
