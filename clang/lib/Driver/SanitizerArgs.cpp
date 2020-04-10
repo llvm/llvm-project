@@ -151,6 +151,40 @@ static void addDefaultBlacklists(const Driver &D, SanitizerMask Kinds,
   }
 }
 
+/// Parse -f(no-)?sanitize-(coverage-)?(white|black)list argument's values,
+/// diagnosing any invalid file paths and validating special case list format.
+static void parseSpecialCaseListArg(const Driver &D,
+                                    const llvm::opt::ArgList &Args,
+                                    std::vector<std::string> &SCLFiles,
+                                    llvm::opt::OptSpecifier SCLOptionID,
+                                    llvm::opt::OptSpecifier NoSCLOptionID,
+                                    unsigned MalformedSCLErrorDiagID) {
+  for (const auto *Arg : Args) {
+    // Match -fsanitize-(coverage-)?(white|black)list.
+    if (Arg->getOption().matches(SCLOptionID)) {
+      Arg->claim();
+      std::string SCLPath = Arg->getValue();
+      if (D.getVFS().exists(SCLPath)) {
+        SCLFiles.push_back(SCLPath);
+      } else {
+        D.Diag(clang::diag::err_drv_no_such_file) << SCLPath;
+      }
+      // Match -fno-sanitize-blacklist.
+    } else if (Arg->getOption().matches(NoSCLOptionID)) {
+      Arg->claim();
+      SCLFiles.clear();
+    }
+  }
+  // Validate special case list format.
+  {
+    std::string BLError;
+    std::unique_ptr<llvm::SpecialCaseList> SCL(
+        llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
+    if (!SCL.get())
+      D.Diag(MalformedSCLErrorDiagID) << BLError;
+  }
+}
+
 /// Sets group bits for every group that has at least one representative already
 /// enabled in \p Kinds.
 static SanitizerMask setGroupBits(SanitizerMask Kinds) {
@@ -561,37 +595,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Setup blacklist files.
   // Add default blacklist from resource directory.
   addDefaultBlacklists(D, Kinds, SystemBlacklistFiles);
-  // Parse -f(no-)sanitize-blacklist options.
-  for (const auto *Arg : Args) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_blacklist)) {
-      Arg->claim();
-      std::string BLPath = Arg->getValue();
-      if (D.getVFS().exists(BLPath)) {
-        UserBlacklistFiles.push_back(BLPath);
-      } else {
-        D.Diag(clang::diag::err_drv_no_such_file) << BLPath;
-      }
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_blacklist)) {
-      Arg->claim();
-      UserBlacklistFiles.clear();
-      SystemBlacklistFiles.clear();
-    }
-  }
-  // Validate blacklists format.
-  {
-    std::string BLError;
-    std::unique_ptr<llvm::SpecialCaseList> SCL(
-        llvm::SpecialCaseList::create(UserBlacklistFiles, D.getVFS(), BLError));
-    if (!SCL.get())
-      D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
-  }
-  {
-    std::string BLError;
-    std::unique_ptr<llvm::SpecialCaseList> SCL(llvm::SpecialCaseList::create(
-        SystemBlacklistFiles, D.getVFS(), BLError));
-    if (!SCL.get())
-      D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
-  }
+
+  // Parse -f(no-)?sanitize-blacklist options.
+  // This also validates special case lists format.
+  // Here, OptSpecifier() acts as a never-matching command-line argument.
+  // So, there is no way to append to system blacklist but it can be cleared.
+  parseSpecialCaseListArg(D, Args, SystemBlacklistFiles, OptSpecifier(),
+                          options::OPT_fno_sanitize_blacklist,
+                          clang::diag::err_drv_malformed_sanitizer_blacklist);
+  parseSpecialCaseListArg(D, Args, UserBlacklistFiles,
+                          options::OPT_fsanitize_blacklist,
+                          options::OPT_fno_sanitize_blacklist,
+                          clang::diag::err_drv_malformed_sanitizer_blacklist);
 
   // Parse -f[no-]sanitize-memory-track-origins[=level] options.
   if (AllAddedKinds & SanitizerKind::Memory) {
@@ -745,6 +760,21 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       CoverageFeatures |= CoverageFunc;
   }
 
+  // Parse -fsanitize-coverage-(black|white)list options if coverage enabled.
+  // This also validates special case lists format.
+  // Here, OptSpecifier() acts as a never-matching command-line argument.
+  // So, there is no way to clear coverage lists but you can append to them.
+  if (CoverageFeatures) {
+    parseSpecialCaseListArg(
+        D, Args, CoverageWhitelistFiles,
+        options::OPT_fsanitize_coverage_whitelist, OptSpecifier(),
+        clang::diag::err_drv_malformed_sanitizer_coverage_whitelist);
+    parseSpecialCaseListArg(
+        D, Args, CoverageBlacklistFiles,
+        options::OPT_fsanitize_coverage_blacklist, OptSpecifier(),
+        clang::diag::err_drv_malformed_sanitizer_coverage_blacklist);
+  }
+
   SharedRuntime =
       Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
                    TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
@@ -871,6 +901,17 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
   return Res;
 }
 
+static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const char *SCLOptFlag,
+                                  const std::vector<std::string> &SCLFiles) {
+  for (const auto &SCLPath : SCLFiles) {
+    SmallString<64> SCLOpt(SCLOptFlag);
+    SCLOpt += SCLPath;
+    CmdArgs.push_back(Args.MakeArgString(SCLOpt));
+  }
+}
+
 static void addIncludeLinkerOption(const ToolChain &TC,
                                    const llvm::opt::ArgList &Args,
                                    llvm::opt::ArgStringList &CmdArgs,
@@ -933,6 +974,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(F.second);
   }
+  addSpecialCaseListOpt(
+      Args, CmdArgs, "-fsanitize-coverage-whitelist=", CoverageWhitelistFiles);
+  addSpecialCaseListOpt(
+      Args, CmdArgs, "-fsanitize-coverage-blacklist=", CoverageBlacklistFiles);
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
     // Instruct the code generator to embed linker directives in the object file
@@ -968,16 +1013,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-trap=" + toString(TrapSanitizers)));
 
-  for (const auto &BLPath : UserBlacklistFiles) {
-    SmallString<64> BlacklistOpt("-fsanitize-blacklist=");
-    BlacklistOpt += BLPath;
-    CmdArgs.push_back(Args.MakeArgString(BlacklistOpt));
-  }
-  for (const auto &BLPath : SystemBlacklistFiles) {
-    SmallString<64> BlacklistOpt("-fsanitize-system-blacklist=");
-    BlacklistOpt += BLPath;
-    CmdArgs.push_back(Args.MakeArgString(BlacklistOpt));
-  }
+  addSpecialCaseListOpt(Args, CmdArgs,
+                        "-fsanitize-blacklist=", UserBlacklistFiles);
+  addSpecialCaseListOpt(Args, CmdArgs,
+                        "-fsanitize-system-blacklist=", SystemBlacklistFiles);
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
