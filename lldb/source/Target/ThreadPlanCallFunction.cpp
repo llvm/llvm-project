@@ -429,7 +429,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
         const LazyBool skip_prologue = eLazyBoolNo;
         const bool is_internal = true;
         const bool is_hardware = false;
-        m_error_backstop_bp_sp = process_sp->GetTarget().CreateBreakpoint(
+        m_error_backstop_bp_sp = m_process.GetTarget().CreateBreakpoint(
             &stdlib_module_list, NULL, backstop_name.str().c_str(),
             eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
             is_internal, is_hardware);
@@ -477,45 +477,42 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
     }
   }
   if (m_error_backstop_bp_sp) {
-    ProcessSP process_sp(m_thread.CalculateProcess());
-    if (process_sp) {
-      uint64_t break_site_id = stop_info_sp->GetValue();
-      if (process_sp->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
-              break_site_id, m_error_backstop_bp_sp->GetID())) {
-        // Our expression threw an uncaught exception.  That will happen in REPL
-        // & Playground, though not in
-        // the regular expression parser.  In that case, we should fetch the
-        // actual return value from the
-        // argument passed to this function, and set that as the return value.
-        SetPlanComplete(true);
-        StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
-        PersistentExpressionState *persistent_state =
-            GetTarget().GetPersistentExpressionStateForLanguage(
-                eLanguageTypeSwift);
-        const bool is_error = true;
-        auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
-        ConstString persistent_variable_name(
-            persistent_state->GetNextPersistentVariableName(GetTarget(),
-                                                            prefix));
-        if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
-                frame_sp, persistent_variable_name)) {
+    uint64_t break_site_id = stop_info_sp->GetValue();
+    if (m_process.GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+            break_site_id, m_error_backstop_bp_sp->GetID())) {
+      // Our expression threw an uncaught exception.  That will happen in REPL
+      // & Playground, though not in
+      // the regular expression parser.  In that case, we should fetch the
+      // actual return value from the
+      // argument passed to this function, and set that as the return value.
+      SetPlanComplete(true);
+      StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+      PersistentExpressionState *persistent_state =
+          GetTarget().GetPersistentExpressionStateForLanguage(
+              eLanguageTypeSwift);
+      const bool is_error = true;
+      auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
+      ConstString persistent_variable_name(
+          persistent_state->GetNextPersistentVariableName(GetTarget(),
+                                                          prefix));
+      if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+              frame_sp, persistent_variable_name)) {
 
-          DataExtractor data;
-          Status data_error;
-          uint64_t data_size =
-              m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
+        DataExtractor data;
+        Status data_error;
+        uint64_t data_size =
+            m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
 
-          if (data_size == data.GetAddressByteSize()) {
-            lldb::offset_t offset = 0;
-            lldb::addr_t addr = data.GetAddress(&offset);
+        if (data_size == data.GetAddressByteSize()) {
+          lldb::offset_t offset = 0;
+          lldb::addr_t addr = data.GetAddress(&offset);
 
-            SwiftLanguageRuntime::RegisterGlobalError(
-                GetTarget(), persistent_variable_name, addr);
-          }
-
-          m_hit_error_backstop = true;
-          return true;
+          SwiftLanguageRuntime::RegisterGlobalError(
+              GetTarget(), persistent_variable_name, addr);
         }
+
+        m_hit_error_backstop = true;
+        return true;
       }
     }
   }

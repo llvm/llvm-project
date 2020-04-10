@@ -339,7 +339,7 @@ bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
 
   break_id_t bp_site_id = stop_info_sp->GetValue();
   BreakpointSiteSP bp_site_sp =
-      m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id);
+      m_process.GetBreakpointSiteList().FindByID(bp_site_id);
   if (!bp_site_sp)
     return false;
 

@@ -131,7 +131,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
     // Perform some additional validation on the return address.
     uint32_t permissions = 0;
-    if (!m_process->GetLoadAddressPermissions(m_return_addr,
+    if (!m_process.GetLoadAddressPermissions(m_return_addr,
                                               permissions)) {
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): Return address (0x%" PRIx64
               ") permissions not found.", static_cast<void *>(this),
@@ -175,7 +175,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   // step out.  That's more than I have time to do right now.
 
   if (frame_idx == 0) {
-    StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+    StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
     if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
       auto *swift_runtime 
           = SwiftLanguageRuntime::Get(m_process.shared_from_this());
@@ -546,11 +546,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     return;
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it.
-<<<<<<< HEAD
-  auto *swift_runtime = SwiftLanguageRuntime::Get(m_thread.GetProcess());
-=======
   auto *swift_runtime = SwiftLanguageRuntime::Get(m_process.shared_from_this());
->>>>>>> 57e01f5b22ad... Fix the master-next build after merging in the ThreadPlanStack changes.
   if (swift_runtime) {
     // In some ABI's the error is in a memory location in the caller's frame
     // and we need to fetch that location from the frame before we leave the
@@ -558,7 +554,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     // so we need to fetch the value of the address AFTER leaving the frame.
     if (m_swift_error_check_after_return)
     {
-      StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+      StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
       if (!frame_sp)
           return;
 
