@@ -197,6 +197,11 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
+  /// Returns true if the function is one of the "Constrained Floating-Point
+  /// Intrinsics". Returns false if not, and returns false when
+  /// getIntrinsicID() returns Intrinsic::not_intrinsic.
+  bool isConstrainedFPIntrinsic() const;
+
   static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
   /// Recalculate the ID for this function if it is an Intrinsic defined
