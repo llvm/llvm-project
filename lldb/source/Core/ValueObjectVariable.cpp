@@ -259,22 +259,26 @@ bool ValueObjectVariable::UpdateValue() {
       }
 
       // BEGIN Swift
-      if (variable->GetType() && variable->GetType()->IsSwiftFixedValueBuffer())
-        if (auto process_sp = GetProcessSP())
-          if (auto runtime = process_sp->GetLanguageRuntime(
-                  compiler_type.GetMinimumLanguage())) {
-            if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
-              lldb::addr_t addr =
-                  m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-              if (addr != LLDB_INVALID_ADDRESS) {
-                Target &target = process_sp->GetTarget();
-                size_t ptr_size = process_sp->GetAddressByteSize();
-                lldb::addr_t deref_addr;
-                target.ReadMemory(addr, false, &deref_addr, ptr_size, m_error);
-                m_value.GetScalar() = deref_addr;
+      if (auto type = variable->GetType())
+        if (llvm::dyn_cast_or_null<TypeSystemSwift>(
+                type->GetForwardCompilerType().GetTypeSystem()) &&
+            TypePayloadSwift(type->GetPayload()).IsFixedValueBuffer())
+          if (auto process_sp = GetProcessSP())
+            if (auto runtime = process_sp->GetLanguageRuntime(
+                    compiler_type.GetMinimumLanguage())) {
+              if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
+                lldb::addr_t addr =
+                    m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+                if (addr != LLDB_INVALID_ADDRESS) {
+                  Target &target = process_sp->GetTarget();
+                  size_t ptr_size = process_sp->GetAddressByteSize();
+                  lldb::addr_t deref_addr;
+                  target.ReadMemory(addr, false, &deref_addr, ptr_size,
+                                    m_error);
+                  m_value.GetScalar() = deref_addr;
+                }
               }
             }
-          }
       // END Swift
 
       switch (value_type) {

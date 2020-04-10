@@ -129,7 +129,7 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
 
       if (TypeSystemClang::IsObjCObjectOrInterfaceType(
               type_sp->GetForwardCompilerType())) {
-        if (type_sp->IsCompleteObjCClass()) {
+        if (TypePayloadClang(type_sp->GetPayload()).IsCompleteObjCClass()) {
           m_complete_class_cache[name] = type_sp;
           return type_sp;
         }
