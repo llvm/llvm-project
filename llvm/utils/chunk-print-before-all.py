@@ -24,9 +24,10 @@ def print_chunk(lines):
 is_dump = False
 cur = []
 for line in sys.stdin:
-    if line.startswith("*** IR Dump Before ") and len(cur) != 0:
-        print_chunk(cur);
-        cur = []
+    if line.startswith("*** IR Dump Before "):
+        if len(cur) != 0:
+            print_chunk(cur);
+            cur = []
         cur.append("; " + line)
     elif line.startswith("Stack dump:"):
         print_chunk(cur);
