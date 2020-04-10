@@ -93,6 +93,10 @@ DictionaryAttr Builder::getDictionaryAttr(ArrayRef<NamedAttribute> value) {
   return DictionaryAttr::get(value, context);
 }
 
+IntegerAttr Builder::getIndexAttr(int64_t value) {
+  return IntegerAttr::get(getIndexType(), APInt(64, value));
+}
+
 IntegerAttr Builder::getI64IntegerAttr(int64_t value) {
   return IntegerAttr::get(getIntegerType(64), APInt(64, value));
 }
