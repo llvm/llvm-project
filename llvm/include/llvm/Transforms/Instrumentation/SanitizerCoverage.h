@@ -40,7 +40,10 @@ private:
 
 // Insert SanitizerCoverage instrumentation.
 ModulePass *createModuleSanitizerCoverageLegacyPassPass(
-    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
+    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
+    const std::vector<std::string> &WhitelistFiles = std::vector<std::string>(),
+    const std::vector<std::string> &BlacklistFiles =
+        std::vector<std::string>());
 
 } // namespace llvm
 
