@@ -14,14 +14,10 @@
 #ifndef LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
 #define LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfileSummary.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <memory>
 
@@ -29,6 +25,7 @@ namespace llvm {
 class BasicBlock;
 class BlockFrequencyInfo;
 class CallSite;
+class Instruction;
 class ProfileSummary;
 /// Analysis providing profile information.
 ///
