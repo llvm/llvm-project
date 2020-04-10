@@ -35,6 +35,7 @@ set(MLIR_TEST_DEPENDS
   MLIRUnitTests
   mlir-cpu-runner
   mlir-edsc-builder-api-test
+  mlir-linalg-ods-gen
   mlir-opt
   mlir-sdbm-api-test
   mlir-tblgen
