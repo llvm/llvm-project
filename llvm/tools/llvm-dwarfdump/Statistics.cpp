@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-dwarfdump.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -15,11 +16,10 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
 
-#include "SectionSizes.h"
-
 #define DEBUG_TYPE "dwarfdump"
 using namespace llvm;
-using namespace object;
+using namespace llvm::dwarfdump;
+using namespace llvm::object;
 
 /// This represents the number of categories of debug location coverage being
 /// calculated. The first category is the number of variables with 0% location
@@ -27,6 +27,7 @@ using namespace object;
 /// location coverage.
 constexpr int NumOfCoverageCategories = 12;
 
+namespace {
 /// Holds statistics for one function (or other entity that has a PC range and
 /// contains variables, such as a compile unit).
 struct PerFunctionStats {
@@ -141,6 +142,7 @@ struct LocationStats {
   /// Total number of local variables processed.
   unsigned NumVar = 0;
 };
+} // namespace
 
 /// Collect debug location statistics for one DIE.
 static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
@@ -510,8 +512,9 @@ static void printSectionSizes(raw_ostream &OS, const SectionSizes &Sizes) {
 /// of particular optimizations. The raw numbers themselves are not particularly
 /// useful, only the delta between compiling the same program with different
 /// compilers is.
-bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                               const Twine &Filename, raw_ostream &OS) {
+bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                                          const Twine &Filename,
+                                          raw_ostream &OS) {
   StringRef FormatName = Obj.getFileFormatName();
   GlobalStats GlobalStats;
   LocationStats LocStats;
