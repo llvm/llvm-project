@@ -734,11 +734,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                                     : AMDGPU::V_LSHLREV_B32_e32;
     auto First = BuildMI(MBB, &*Last, DL, get(OpcFirst), DestReg);
     if (DstLow == SrcLow) { // alignbyte
-      First.addReg(SrcLow ? SrcReg : DestReg,
-                   SrcLow ? getKillRegState(KillSrc) : RegState::Undef)
-           .addReg(SrcLow ? DestReg : SrcReg,
-                   SrcLow ? RegState::Undef :getKillRegState(KillSrc))
-           .addImm(2);
+      First
+          .addReg(SrcLow ? SrcReg : DestReg,
+                  SrcLow ? getKillRegState(KillSrc) : unsigned(RegState::Undef))
+          .addReg(SrcLow ? DestReg : SrcReg,
+                  SrcLow ? unsigned(RegState::Undef) : getKillRegState(KillSrc))
+          .addImm(2);
     } else {
       First.addImm(16)
            .addReg(DestReg, RegState::Undef);
