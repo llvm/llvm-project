@@ -32,7 +32,6 @@ namespace llvm {
 class BasicBlock;
 class BlockFrequencyInfo;
 class Function;
-class ProfileSummaryInfo;
 
 enum class PGSOQueryType {
   IRPass, // A query call from an IR-level transform pass.
