@@ -261,7 +261,7 @@ protected:
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
-  uint32_t getSymbolFlags(DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   uint8_t getSymbolBinding(DataRefImpl Symb) const override;
   uint8_t getSymbolOther(DataRefImpl Symb) const override;
   uint8_t getSymbolELFType(DataRefImpl Symb) const override;
@@ -609,7 +609,7 @@ ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
 }
 
 template <class ELFT>
-uint32_t ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
+Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
   const Elf_Sym *ESym = getSymbol(Sym);
 
   uint32_t Result = SymbolRef::SF_None;
@@ -626,12 +626,23 @@ uint32_t ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
   if (ESym->getType() == ELF::STT_FILE || ESym->getType() == ELF::STT_SECTION)
     Result |= SymbolRef::SF_FormatSpecific;
 
-  auto DotSymtabSecSyms = EF.symbols(DotSymtabSec);
-  if (DotSymtabSecSyms && ESym == (*DotSymtabSecSyms).begin())
-    Result |= SymbolRef::SF_FormatSpecific;
-  auto DotDynSymSecSyms = EF.symbols(DotDynSymSec);
-  if (DotDynSymSecSyms && ESym == (*DotDynSymSecSyms).begin())
-    Result |= SymbolRef::SF_FormatSpecific;
+  if (Expected<typename ELFT::SymRange> SymbolsOrErr =
+          EF.symbols(DotSymtabSec)) {
+    // Set the SF_FormatSpecific flag for the 0-index null symbol.
+    if (ESym == SymbolsOrErr->begin())
+      Result |= SymbolRef::SF_FormatSpecific;
+  } else
+    // TODO: Test this error.
+    return SymbolsOrErr.takeError();
+
+  if (Expected<typename ELFT::SymRange> SymbolsOrErr =
+          EF.symbols(DotDynSymSec)) {
+    // Set the SF_FormatSpecific flag for the 0-index null symbol.
+    if (ESym == SymbolsOrErr->begin())
+      Result |= SymbolRef::SF_FormatSpecific;
+  } else
+    // TODO: Test this error.
+    return SymbolsOrErr.takeError();
 
   if (EF.getHeader()->e_machine == ELF::EM_ARM) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {

@@ -55,11 +55,14 @@ bool SectionRef::containsSymbol(SymbolRef S) const {
 }
 
 uint64_t ObjectFile::getSymbolValue(DataRefImpl Ref) const {
-  uint32_t Flags = getSymbolFlags(Ref);
-  if (Flags & SymbolRef::SF_Undefined)
-    return 0;
-  if (Flags & SymbolRef::SF_Common)
-    return getCommonSymbolSize(Ref);
+  if (Expected<uint32_t> FlagsOrErr = getSymbolFlags(Ref)) {
+    if (*FlagsOrErr & SymbolRef::SF_Undefined)
+      return 0;
+    if (*FlagsOrErr & SymbolRef::SF_Common)
+      return getCommonSymbolSize(Ref);
+  } else
+    // TODO: Actually report errors helpfully.
+    report_fatal_error(FlagsOrErr.takeError());
   return getSymbolValueImpl(Ref);
 }
 
