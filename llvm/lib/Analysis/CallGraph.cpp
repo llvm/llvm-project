@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -31,9 +32,10 @@ using namespace llvm;
 CallGraph::CallGraph(Module &M)
     : M(M), ExternalCallingNode(getOrInsertFunction(nullptr)),
       CallsExternalNode(std::make_unique<CallGraphNode>(nullptr)) {
-  // Add every function to the call graph.
+  // Add every interesting function to the call graph.
   for (Function &F : M)
-    addToCallGraph(&F);
+    if (!isDbgInfoIntrinsic(F.getIntrinsicID()))
+      addToCallGraph(&F);
 }
 
 CallGraph::CallGraph(CallGraph &&Arg)
