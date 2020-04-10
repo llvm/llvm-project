@@ -41,7 +41,7 @@ namespace llvm {
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
 class BitVector;
-class LiveRangeCalc;
+class LiveIntervalCalc;
 class MachineBlockFrequencyInfo;
 class MachineDominatorTree;
 class MachineFunction;
@@ -59,7 +59,7 @@ class VirtRegMap;
     AliasAnalysis *AA;
     SlotIndexes* Indexes;
     MachineDominatorTree *DomTree = nullptr;
-    LiveRangeCalc *LRCalc = nullptr;
+    LiveIntervalCalc *LICalc = nullptr;
 
     /// Special pool allocator for VNInfo's (LiveInterval val#).
     VNInfo::Allocator VNInfoAllocator;
