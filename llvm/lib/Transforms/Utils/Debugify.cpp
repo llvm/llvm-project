@@ -176,6 +176,52 @@ bool llvm::applyDebugifyMetadata(
   return true;
 }
 
+bool llvm::stripDebugifyMetadata(Module &M) {
+  bool Changed = false;
+
+  // Remove the llvm.debugify module-level named metadata.
+  NamedMDNode *DebugifyMD = M.getNamedMetadata("llvm.debugify");
+  if (DebugifyMD) {
+    M.eraseNamedMetadata(DebugifyMD);
+    Changed = true;
+  }
+
+  // Strip out all debug intrinsics and supporting metadata (subprograms, types,
+  // variables, etc).
+  Changed |= StripDebugInfo(M);
+
+  // Strip out the dead dbg.value prototype.
+  Function *DbgValF = M.getFunction("llvm.dbg.value");
+  if (DbgValF) {
+    assert(DbgValF->isDeclaration() && DbgValF->use_empty() &&
+           "Not all debug info stripped?");
+    DbgValF->eraseFromParent();
+    Changed = true;
+  }
+
+  // Strip out the module-level Debug Info Version metadata.
+  // FIXME: There must be an easier way to remove an operand from a NamedMDNode.
+  NamedMDNode *NMD = M.getModuleFlagsMetadata();
+  assert(NMD && "debugify metadata present without Debug Info Version set?");
+  SmallVector<MDNode *, 4> Flags;
+  for (MDNode *Flag : NMD->operands())
+    Flags.push_back(Flag);
+  NMD->clearOperands();
+  for (MDNode *Flag : Flags) {
+    MDString *Key = dyn_cast_or_null<MDString>(Flag->getOperand(1));
+    if (Key->getString() == "Debug Info Version") {
+      Changed = true;
+      continue;
+    }
+    NMD->addOperand(Flag);
+  }
+  // If we left it empty we might as well remove it.
+  if (NMD->getNumOperands() == 0)
+    NMD->eraseFromParent();
+
+  return Changed;
+}
+
 namespace {
 /// Return true if a mis-sized diagnostic is issued for \p DVI.
 bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
@@ -305,12 +351,9 @@ bool checkDebugifyMetadata(Module &M,
     dbg() << " [" << NameOfWrappedPass << "]";
   dbg() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
 
-  // Strip the Debugify Metadata if required.
-  if (Strip) {
-    StripDebugInfo(M);
-    M.eraseNamedMetadata(NMD);
-    return true;
-  }
+  // Strip debugify metadata if required.
+  if (Strip)
+    return stripDebugifyMetadata(M);
 
   return false;
 }
