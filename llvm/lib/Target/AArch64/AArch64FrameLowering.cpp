@@ -1070,9 +1070,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // Set tagged base pointer to the bottom of the stack frame.
+  // Set tagged base pointer to the requested stack slot.
   // Ideally it should match SP value after prologue.
-  AFI->setTaggedBasePointerOffset(MFI.getStackSize());
+  Optional<int> TBPI = AFI->getTaggedBasePointerIndex();
+  if (TBPI)
+    AFI->setTaggedBasePointerOffset(-MFI.getObjectOffset(*TBPI));
+  else
+    AFI->setTaggedBasePointerOffset(MFI.getStackSize());
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
 
