@@ -5,3 +5,15 @@ func @omp_barrier() -> () {
   omp.barrier
   return
 }
+
+func @omp_taskwait() -> () {
+  // CHECK: omp.taskwait
+  omp.taskwait
+  return
+}
+
+func @omp_taskyield() -> () {
+  // CHECK: omp.taskyield
+  omp.taskyield
+  return
+}

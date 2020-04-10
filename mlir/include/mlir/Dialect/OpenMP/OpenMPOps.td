@@ -30,8 +30,27 @@ def BarrierOp : OpenMP_Op<"barrier"> {
     the construct appears.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
+}
+
+def TaskwaitOp : OpenMP_Op<"taskwait"> {
+  let summary = "taskwait construct";
+  let description = [{
+    The taskwait construct specifies a wait on the completion of child tasks
+    of the current task.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def TaskyieldOp : OpenMP_Op<"taskyield"> {
+  let summary = "taskyield construct";
+  let description = [{
+    The taskyield construct specifies that the current task can be suspended
+    in favor of execution of a different task.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // OPENMP_OPS
