@@ -87,6 +87,10 @@ elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
 elif [ "`uname -a | grep NetBSD`" != "" ]; then
+	# The resulting object still depends on libc.
+	# We removed this dependency for Go runtime for other OSes,
+	# and we should remove it for NetBSD as well, but there is no pressing need.
+	DEPENDS_ON_LIBC=1
 	SUFFIX="netbsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
 	ARCHCFLAGS="-m64"
