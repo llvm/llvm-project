@@ -38,7 +38,7 @@ ExternalASTSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
-ExternalASTSource::ASTSourceDescriptor::ASTSourceDescriptor(const Module &M)
+ExternalASTSource::ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
   : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();
