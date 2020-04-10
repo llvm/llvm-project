@@ -69,7 +69,8 @@ std::tuple<XcodeSDK::Type, llvm::VersionTuple> XcodeSDK::Parse() const {
   llvm::StringRef input(m_name);
   XcodeSDK::Type sdk = ParseSDKName(input);
   llvm::VersionTuple version = ParseSDKVersion(input);
-  return {sdk, version};
+  return std::make_tuple<XcodeSDK::Type, llvm::VersionTuple>(
+      std::move(sdk), std::move(version));
 }
 
 llvm::VersionTuple XcodeSDK::GetVersion() const {
