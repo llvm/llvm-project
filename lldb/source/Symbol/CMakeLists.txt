@@ -69,6 +69,7 @@ add_lldb_library(lldbSymbol
     lldbTarget
     lldbUtility
     lldbPluginObjCLanguage
+    lldbPluginPlatformMacOSX
     ${SWIFT_LIBS}
 
   LINK_COMPONENTS
