@@ -660,7 +660,8 @@ def LLVM_GlobalOp
 }
 
 def LLVM_LLVMFuncOp
-    : LLVM_ZeroResultOp<"func", [IsolatedFromAbove, FunctionLike, Symbol]>,
+    : LLVM_ZeroResultOp<"func", [AutomaticAllocationScope, IsolatedFromAbove,
+                                 FunctionLike, Symbol]>,
       Arguments<(ins DefaultValuedAttr<Linkage,
                                        "Linkage::External">:$linkage,
                      OptionalAttr<FlatSymbolRefAttr>:$personality,
