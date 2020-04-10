@@ -243,7 +243,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
-        if (operand->isVariadic()) {
+        if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
                                op.getOperationName(), i);
@@ -296,7 +296,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
     // of op definition.
     Constraint constraint = matcher.getAsConstraint();
     if (operand->constraint != constraint) {
-      if (operand->isVariadic()) {
+      if (operand->isVariableLength()) {
         auto error = formatv(
             "further constrain op {0}'s variadic operand #{1} unsupported now",
             op.getOperationName(), argIndex);

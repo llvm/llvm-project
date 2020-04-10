@@ -227,6 +227,9 @@ public:
   ParseResult parseTypeListNoParens(SmallVectorImpl<Type> &elements);
   ParseResult parseTypeListParens(SmallVectorImpl<Type> &elements);
 
+  /// Optionally parse a type.
+  OptionalParseResult parseOptionalType(Type &type);
+
   /// Parse an arbitrary type.
   Type parseType();
 
@@ -898,6 +901,31 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
 //===----------------------------------------------------------------------===//
 // Type Parsing
 //===----------------------------------------------------------------------===//
+
+/// Optionally parse a type.
+OptionalParseResult Parser::parseOptionalType(Type &type) {
+  // There are many different starting tokens for a type, check them here.
+  switch (getToken().getKind()) {
+  case Token::l_paren:
+  case Token::kw_memref:
+  case Token::kw_tensor:
+  case Token::kw_complex:
+  case Token::kw_tuple:
+  case Token::kw_vector:
+  case Token::inttype:
+  case Token::kw_bf16:
+  case Token::kw_f16:
+  case Token::kw_f32:
+  case Token::kw_f64:
+  case Token::kw_index:
+  case Token::kw_none:
+  case Token::exclamation_identifier:
+    return failure(!(type = parseType()));
+
+  default:
+    return llvm::None;
+  }
+}
 
 /// Parse an arbitrary type.
 ///
@@ -4507,6 +4535,11 @@ public:
   /// Parse a type.
   ParseResult parseType(Type &result) override {
     return failure(!(result = parser.parseType()));
+  }
+
+  /// Parse an optional type.
+  OptionalParseResult parseOptionalType(Type &result) override {
+    return parser.parseOptionalType(result);
   }
 
   /// Parse an arrow followed by a type list.
