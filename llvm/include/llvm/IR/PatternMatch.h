@@ -275,7 +275,7 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
           return this->isValue(CI->getValue());
 
         // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = V->getType()->getVectorNumElements();
+        unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
         bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
@@ -334,7 +334,7 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
           return this->isValue(CF->getValueAPF());
 
         // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = V->getType()->getVectorNumElements();
+        unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
         bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
@@ -2173,8 +2173,8 @@ public:
 
     if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
       Type *PtrTy = cast<Operator>(V)->getOperand(0)->getType();
-      Type *DerefTy = PtrTy->getPointerElementType();
-      if (DerefTy->isVectorTy() && DerefTy->getVectorIsScalable() &&
+      auto *DerefTy = dyn_cast<VectorType>(PtrTy->getPointerElementType());
+      if (DerefTy && DerefTy->isScalable() &&
           DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
         return true;
     }

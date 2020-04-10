@@ -464,7 +464,7 @@ static void PrintLLVMName(raw_ostream &OS, const Value *V) {
 
 static void PrintShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   Out << ", <";
-  if (Ty->getVectorIsScalable())
+  if (cast<VectorType>(Ty)->isScalable())
     Out << "vscale x ";
   Out << Mask.size() << " x i32> ";
   bool FirstElt = true;
@@ -1504,13 +1504,14 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
-    Type *ETy = CV->getType()->getVectorElementType();
+    auto *CVVTy = cast<VectorType>(CV->getType());
+    Type *ETy = CVVTy->getElementType();
     Out << '<';
     TypePrinter.print(ETy, Out);
     Out << ' ';
     WriteAsOperandInternal(Out, CV->getAggregateElement(0U), &TypePrinter,
                            Machine, Context);
-    for (unsigned i = 1, e = CV->getType()->getVectorNumElements(); i != e;++i){
+    for (unsigned i = 1, e = CVVTy->getNumElements(); i != e; ++i) {
       Out << ", ";
       TypePrinter.print(ETy, Out);
       Out << ' ';
