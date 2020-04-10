@@ -1909,7 +1909,7 @@ bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (U.getType()->getVectorNumElements() == 1) {
+  if (cast<VectorType>(U.getType())->getNumElements() == 1) {
     Register Elt = getOrCreateVReg(*U.getOperand(1));
     auto &Regs = *VMap.getVRegs(U);
     if (Regs.empty()) {
@@ -1933,7 +1933,7 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (U.getOperand(0)->getType()->getVectorNumElements() == 1) {
+  if (cast<VectorType>(U.getOperand(0)->getType())->getNumElements() == 1) {
     Register Elt = getOrCreateVReg(*U.getOperand(0));
     auto &Regs = *VMap.getVRegs(U);
     if (Regs.empty()) {
