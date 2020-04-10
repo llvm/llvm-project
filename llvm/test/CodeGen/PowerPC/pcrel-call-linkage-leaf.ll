@@ -1,11 +1,14 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s \
-; RUN:   | FileCheck %s --check-prefix=CHECK-S
+; RUN:   | FileCheck %s --check-prefixes=CHECK-S,CHECK-ALL
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-P9,CHECK-ALL
 
 @global_int = common dso_local local_unnamed_addr global i32 0, align 4
 
 define dso_local signext i32 @NoTOC() local_unnamed_addr {
-; CHECK-S-LABEL: NoTOC:
+; CHECK-ALL-LABEL: NoTOC:
 ; CHECK-S-NOT:     .localentry
 ; CHECK-S:         li r3, 42
 ; CHECK-S-NEXT:    blr
@@ -14,7 +17,7 @@ entry:
 }
 
 define dso_local signext i32 @AsmClobberX2(i32 signext %a, i32 signext %b) local_unnamed_addr {
-; CHECK-S-LABEL: AsmClobberX2:
+; CHECK-ALL-LABEL: AsmClobberX2:
 ; CHECK-S:         .localentry AsmClobberX2, 1
 ; CHECK-S:         add r3, r4, r3
 ; CHECK-S:         #APP
@@ -32,7 +35,7 @@ entry:
 ;        should be replaced with @pcrel and we won't need R2 and so the problem
 ;        goes away.
 define dso_local signext i32 @AsmClobberX2WithTOC(i32 signext %a, i32 signext %b) local_unnamed_addr {
-; CHECK-S-LABEL: AsmClobberX2WithTOC:
+; CHECK-ALL-LABEL: AsmClobberX2WithTOC:
 ; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep2@ha
 ; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep2@l
 ; CHECK-S:         .localentry     AsmClobberX2WithTOC, .Lfunc_lep2-.Lfunc_gep2
@@ -54,9 +57,10 @@ entry:
 }
 
 define dso_local signext i32 @AsmClobberX5(i32 signext %a, i32 signext %b) local_unnamed_addr {
-; CHECK-S-LABEL: AsmClobberX5:
+; CHECK-ALL-LABEL: AsmClobberX5:
 ; CHECK-S:         .localentry AsmClobberX5, 1
-; CHECK-S-NEXT:  # %bb.0: # %entry
+; CHECK-P9-NOT:    .localentry
+; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    #APP
@@ -71,8 +75,9 @@ entry:
 
 ; Clobber all GPRs except R2.
 define dso_local signext i32 @AsmClobberNotR2(i32 signext %a, i32 signext %b) local_unnamed_addr {
-; CHECK-S-LABEL: AsmClobberNotR2:
+; CHECK-ALL-LABEL: AsmClobberNotR2:
 ; CHECK-S:         .localentry AsmClobberNotR2, 1
+; CHECK-P9-NOT:    .localentry
 ; CHECK-S:         add r3, r4, r3
 ; CHECK-S:         stw r3, -148(r1) # 4-byte Folded Spill
 ; CHECK-S-NEXT:    #APP
@@ -89,9 +94,10 @@ entry:
 ; Increase register pressure enough to force the register allocator to
 ; make use of R2.
 define dso_local signext i32 @X2IsCallerSaved(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e, i32 signext %f, i32 signext %g, i32 signext %h) local_unnamed_addr {
-; CHECK-S-LABEL: X2IsCallerSaved:
+; CHECK-ALL-LABEL: X2IsCallerSaved:
 ; CHECK-S:         .localentry X2IsCallerSaved, 1
-; CHECK-S-NEXT:  # %bb.0: # %entry
+; CHECK-P9-NOT:    .localentry
+; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-S-NEXT:    add r11, r4, r3
 ; CHECK-S-NEXT:    subf r29, r9, r8
@@ -146,11 +152,11 @@ entry:
 
 
 define dso_local signext i32 @UsesX2AsTOC() local_unnamed_addr {
-; CHECK-S-LABEL: UsesX2AsTOC:
+; CHECK-ALL-LABEL: UsesX2AsTOC:
 ; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep6@ha
 ; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep6@l
 ; CHECK-S:       .localentry     UsesX2AsTOC, .Lfunc_lep6-.Lfunc_gep6
-; CHECK-S:       # %bb.0: # %entry
+; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    addis r3, r2, global_int@toc@ha
 ; CHECK-S-NEXT:    lwa r3, global_int@toc@l(r3)
 ; CHECK-S-NEXT:    blr
@@ -161,9 +167,9 @@ entry:
 
 
 define dso_local double @UsesX2AsConstPoolTOC() local_unnamed_addr {
-; CHECK-S-LABEL: UsesX2AsConstPoolTOC:
+; CHECK-ALL-LABEL: UsesX2AsConstPoolTOC:
 ; CHECK-S-NOT:       .localentry
-; CHECK-S:       # %bb.0: # %entry
+; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    plfd f1, .LCPI7_0@PCREL(0), 1
 ; CHECK-S-NEXT:    blr
 entry:
