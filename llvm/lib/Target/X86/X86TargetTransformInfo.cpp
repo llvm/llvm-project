@@ -2539,10 +2539,14 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     // should be very cheap (assume cost = 1). For insertions we need to shuffle
     // the elements to its destination. In both cases we must handle the
     // subvector move(s).
+    // If the vector type is already less than 128-bits then don't reduce it.
     // TODO: Under what circumstances should we shuffle using the full width?
     int ShuffleCost = 1;
     if (Opcode == Instruction::InsertElement) {
-      Type *SubTy = VectorType::get(Val->getVectorElementType(), SubNumElts);
+      Type *SubTy = Val;
+      EVT VT = TLI->getValueType(DL, Val);
+      if (VT.getScalarType() != MScalarTy || VT.getSizeInBits() >= 128)
+        SubTy = VectorType::get(ScalarType, SubNumElts);
       ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, 0, SubTy);
     }
     int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;

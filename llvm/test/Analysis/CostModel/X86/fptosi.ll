@@ -121,9 +121,9 @@ define i32 @fptosi_double_i16(i32 %arg) {
 define i32 @fptosi_double_i8(i32 %arg) {
 ; SSE2-LABEL: 'fptosi_double_i8'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptosi double undef to i8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V2I8 = fptosi <2 x double> undef to <2 x i8>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V4I8 = fptosi <4 x double> undef to <4 x i8>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %V8I8 = fptosi <8 x double> undef to <8 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I8 = fptosi <2 x double> undef to <2 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V4I8 = fptosi <4 x double> undef to <4 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V8I8 = fptosi <8 x double> undef to <8 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptosi_double_i8'
@@ -265,9 +265,9 @@ define i32 @fptosi_float_i16(i32 %arg) {
 define i32 @fptosi_float_i8(i32 %arg) {
 ; SSE2-LABEL: 'fptosi_float_i8'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptosi float undef to i8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V4I8 = fptosi <4 x float> undef to <4 x i8>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %V8I8 = fptosi <8 x float> undef to <8 x i8>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %V16I8 = fptosi <16 x float> undef to <16 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V4I8 = fptosi <4 x float> undef to <4 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V8I8 = fptosi <8 x float> undef to <8 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V16I8 = fptosi <16 x float> undef to <16 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptosi_float_i8'
