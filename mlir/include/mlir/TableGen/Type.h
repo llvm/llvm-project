@@ -34,8 +34,15 @@ public:
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Type; }
 
+  // Returns true if this is an optional type constraint.
+  bool isOptional() const;
+
   // Returns true if this is a variadic type constraint.
   bool isVariadic() const;
+
+  // Returns true if this is a variable length type constraint. This is either
+  // variadic or optional.
+  bool isVariableLength() const { return isOptional() || isVariadic(); }
 
   // Returns the builder call for this constraint if this is a buildable type,
   // returns None otherwise.

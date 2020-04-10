@@ -1179,39 +1179,41 @@ def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
 }
 
 // Test various mixings of result type formatting.
-class FormatResultBase<string name, string fmt> : TEST_Op<name> {
+class FormatResultBase<string suffix, string fmt>
+    : TEST_Op<"format_result_" # suffix # "_op"> {
   let results = (outs I64:$buildable_res, AnyMemRef:$result);
   let assemblyFormat = fmt;
 }
-def FormatResultAOp : FormatResultBase<"format_result_a_op", [{
+def FormatResultAOp : FormatResultBase<"a", [{
   type($result) attr-dict
 }]>;
-def FormatResultBOp : FormatResultBase<"format_result_b_op", [{
+def FormatResultBOp : FormatResultBase<"b", [{
   type(results) attr-dict
 }]>;
-def FormatResultCOp : FormatResultBase<"format_result_c_op", [{
+def FormatResultCOp : FormatResultBase<"c", [{
   functional-type($buildable_res, $result) attr-dict
 }]>;
 
 // Test various mixings of operand type formatting.
-class FormatOperandBase<string name, string fmt> : TEST_Op<name> {
+class FormatOperandBase<string suffix, string fmt>
+    : TEST_Op<"format_operand_" # suffix # "_op"> {
   let arguments = (ins I64:$buildable, AnyMemRef:$operand);
   let assemblyFormat = fmt;
 }
 
-def FormatOperandAOp : FormatOperandBase<"format_operand_a_op", [{
+def FormatOperandAOp : FormatOperandBase<"a", [{
   operands `:` type(operands) attr-dict
 }]>;
-def FormatOperandBOp : FormatOperandBase<"format_operand_b_op", [{
+def FormatOperandBOp : FormatOperandBase<"b", [{
   operands `:` type($operand) attr-dict
 }]>;
-def FormatOperandCOp : FormatOperandBase<"format_operand_c_op", [{
+def FormatOperandCOp : FormatOperandBase<"c", [{
   $buildable `,` $operand `:` type(operands) attr-dict
 }]>;
-def FormatOperandDOp : FormatOperandBase<"format_operand_d_op", [{
+def FormatOperandDOp : FormatOperandBase<"d", [{
   $buildable `,` $operand `:` type($operand) attr-dict
 }]>;
-def FormatOperandEOp : FormatOperandBase<"format_operand_e_op", [{
+def FormatOperandEOp : FormatOperandBase<"e", [{
   $buildable `,` $operand `:` type($buildable) `,` type($operand) attr-dict
 }]>;
 
@@ -1219,6 +1221,25 @@ def FormatSuccessorAOp : TEST_Op<"format_successor_a_op", [Terminator]> {
   let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
   let assemblyFormat = "$targets attr-dict";
 }
+
+// Test various mixings of optional operand and result type formatting.
+class FormatOptionalOperandResultOpBase<string suffix, string fmt>
+    : TEST_Op<"format_optional_operand_result_" # suffix # "_op",
+              [AttrSizedOperandSegments]> {
+  let arguments = (ins Optional<I64>:$optional, Variadic<I64>:$variadic);
+  let results = (outs Optional<I64>:$optional_res);
+  let assemblyFormat = fmt;
+}
+
+def FormatOptionalOperandResultAOp : FormatOptionalOperandResultOpBase<"a", [{
+  `(` $optional `:` type($optional) `)` `:` type($optional_res)
+  (`[` $variadic^ `]`)? attr-dict
+}]>;
+
+def FormatOptionalOperandResultBOp : FormatOptionalOperandResultOpBase<"b", [{
+  (`(` $optional^ `:` type($optional) `)`)? `:` type($optional_res)
+  (`[` $variadic^ `]`)? attr-dict
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Test SideEffects

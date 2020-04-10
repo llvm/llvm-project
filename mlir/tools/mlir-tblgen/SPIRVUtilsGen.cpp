@@ -807,11 +807,11 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
     if (auto valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
-      if (valueArg->isVariadic()) {
+      if (valueArg->isVariableLength()) {
         if (i != e - 1) {
-          PrintFatalError(loc,
-                          "SPIR-V ops can have Variadic<..> argument only if "
-                          "it's the last argument");
+          PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
+                               "Optional<...> arguments only if "
+                               "it's the last argument");
         }
         os << tabs
            << formatv("for (; {0} < {1}.size(); ++{0})", wordIndex, words);
@@ -829,7 +829,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
                 words, wordIndex);
       os << tabs << "  }\n";
       os << tabs << formatv("  {0}.push_back(arg);\n", operands);
-      if (!valueArg->isVariadic()) {
+      if (!valueArg->isVariableLength()) {
         os << tabs << formatv("  {0}++;\n", wordIndex);
       }
       operandNum++;
