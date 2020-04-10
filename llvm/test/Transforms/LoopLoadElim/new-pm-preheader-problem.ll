@@ -1,7 +1,5 @@
-; XFAIL: *
 ; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
-; This test demonstrates an assertion failure due to missing preheader in new PM.
-; REQUIRES: asserts
+; Make sure it doesn't crash in new pass manager due to missing preheader.
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @test(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i64 %N, i1 %C) {
