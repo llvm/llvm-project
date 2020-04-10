@@ -944,42 +944,45 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
                                           MVT &RegisterVT,
                                           TargetLoweringBase *TLI) {
   // Figure out the right, legal destination reg to copy into.
-  unsigned NumElts = VT.getVectorNumElements();
+  ElementCount EC = VT.getVectorElementCount();
   MVT EltTy = VT.getVectorElementType();
 
   unsigned NumVectorRegs = 1;
 
-  // FIXME: We don't support non-power-of-2-sized vectors for now.  Ideally we
-  // could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(NumElts)) {
-    NumVectorRegs = NumElts;
-    NumElts = 1;
+  // FIXME: We don't support non-power-of-2-sized vectors for now.
+  // Ideally we could break down into LHS/RHS like LegalizeDAG does.
+  if (!isPowerOf2_32(EC.Min)) {
+    // Split EC to unit size (scalable property is preserved).
+    NumVectorRegs = EC.Min;
+    EC = EC / NumVectorRegs;
   }
 
-  // Divide the input until we get to a supported size.  This will always
-  // end with a scalar if the target doesn't support vectors.
-  while (NumElts > 1 && !TLI->isTypeLegal(MVT::getVectorVT(EltTy, NumElts))) {
-    NumElts >>= 1;
+  // Divide the input until we get to a supported size. This will
+  // always end up with an EC that represent a scalar or a scalable
+  // scalar.
+  while (EC.Min > 1 && !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
+    EC.Min >>= 1;
     NumVectorRegs <<= 1;
   }
 
   NumIntermediates = NumVectorRegs;
 
-  MVT NewVT = MVT::getVectorVT(EltTy, NumElts);
+  MVT NewVT = MVT::getVectorVT(EltTy, EC);
   if (!TLI->isTypeLegal(NewVT))
     NewVT = EltTy;
   IntermediateVT = NewVT;
 
-  unsigned NewVTSize = NewVT.getSizeInBits();
+  unsigned LaneSizeInBits = NewVT.getScalarSizeInBits().getFixedSize();
 
   // Convert sizes such as i33 to i64.
-  if (!isPowerOf2_32(NewVTSize))
-    NewVTSize = NextPowerOf2(NewVTSize);
+  if (!isPowerOf2_32(LaneSizeInBits))
+    LaneSizeInBits = NextPowerOf2(LaneSizeInBits);
 
   MVT DestVT = TLI->getRegisterType(NewVT);
   RegisterVT = DestVT;
   if (EVT(DestVT).bitsLT(NewVT))    // Value is expanded, e.g. i64 -> i16.
-    return NumVectorRegs*(NewVTSize/DestVT.getSizeInBits());
+    return NumVectorRegs *
+           (LaneSizeInBits / DestVT.getScalarSizeInBits().getFixedSize());
 
   // Otherwise, promotion or legal types use the same number of registers as
   // the vector decimated to the appropriate level.
