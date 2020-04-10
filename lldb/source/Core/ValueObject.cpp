@@ -51,6 +51,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 
 // BEGIN SWIFT
 #include "lldb/Symbol/SwiftASTContext.h"

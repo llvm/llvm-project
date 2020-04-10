@@ -384,8 +384,7 @@ public:
   ///
   /// See the class comment for more details. It is illegal to call this on
   /// non-memory instructions.
-  MemDepResult getDependency(Instruction *QueryInst,
-                             OrderedBasicBlock *OBB = nullptr);
+  MemDepResult getDependency(Instruction *QueryInst);
 
   /// Perform a full dependency query for the specified call, returning the set
   /// of blocks that the value is potentially live across.
@@ -451,14 +450,12 @@ public:
                                         BasicBlock::iterator ScanIt,
                                         BasicBlock *BB,
                                         Instruction *QueryInst = nullptr,
-                                        unsigned *Limit = nullptr,
-                                        OrderedBasicBlock *OBB = nullptr);
+                                        unsigned *Limit = nullptr);
 
   MemDepResult
   getSimplePointerDependencyFrom(const MemoryLocation &MemLoc, bool isLoad,
                                  BasicBlock::iterator ScanIt, BasicBlock *BB,
-                                 Instruction *QueryInst, unsigned *Limit,
-                                 OrderedBasicBlock *OBB);
+                                 Instruction *QueryInst, unsigned *Limit);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not

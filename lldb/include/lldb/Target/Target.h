@@ -16,8 +16,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
@@ -25,12 +23,12 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Core/SwiftASTContextReader.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ABI.h"
@@ -45,6 +43,11 @@
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
+
+class ClangModulesDeclVendor;
+class SwiftPersistentExpressionState;
+class SharedMutex;
+class SwiftASTContextForExpressions;
 
 OptionEnumValues GetDynamicValueTypes();
 
@@ -224,12 +227,17 @@ public:
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
+  
+  bool GetOSPluginReportsAllThreads() const;
+
+  void SetOSPluginReportsAllThreads(bool does_report);
 
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
 
   void UpdateLaunchInfoFromProperties();
+
 
 private:
   // Callbacks for m_launch_info.

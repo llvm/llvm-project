@@ -9,6 +9,7 @@
 #ifndef liblldb_UserSettingsController_h_
 #define liblldb_UserSettingsController_h_
 
+#include "lldb/Core/Value.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"

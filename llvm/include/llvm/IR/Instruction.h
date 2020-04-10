@@ -45,6 +45,10 @@ class Instruction : public User,
   BasicBlock *Parent;
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
+  /// Relative order of this instruction in its parent basic block. Used for
+  /// O(1) local dominance checks between instructions.
+  mutable unsigned Order = 0;
+
   enum {
     /// This is a bit stored in the SubClassData field which indicates whether
     /// this instruction has metadata attached to it or not.
@@ -116,6 +120,13 @@ public:
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right after MovePos.
   void moveAfter(Instruction *MovePos);
+
+  /// Given an instruction Other in the same basic block as this instruction,
+  /// return true if this instruction comes before Other. In this worst case,
+  /// this takes linear time in the number of instructions in the block. The
+  /// results are cached, so in common cases when the block remains unmodified,
+  /// it takes constant time.
+  bool comesBefore(const Instruction *Other) const;
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.
@@ -738,6 +749,7 @@ public:
 
 private:
   friend class SymbolTableListTraits<Instruction>;
+  friend class BasicBlock; // For renumbering.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
   // subclasses cannot accidentally use it.

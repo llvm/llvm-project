@@ -13,6 +13,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -149,7 +150,7 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   if (log && log->GetVerbose()) {
     StreamString strm;
-    RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
+    RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
 
     log->PutCString(message);
 
@@ -181,19 +182,19 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 
   if (!m_takedown_done) {
+    Thread &thread = GetThread();
     if (success) {
       SetReturnValue();
     }
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): DoTakedown called for thread "
               "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
-              static_cast<void *>(this), m_thread.GetID(), m_valid,
-              IsPlanComplete());
+              static_cast<void *>(this), m_tid, m_valid, IsPlanComplete());
     m_takedown_done = true;
     m_stop_address =
-        m_thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
+        thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
     m_real_stop_info_sp = GetPrivateStopInfo();
-    if (!m_thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state)) {
+    if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state)) {
       LLDB_LOGF(log,
                 "ThreadPlanCallFunction(%p): DoTakedown failed to restore "
                 "register state",
@@ -208,8 +209,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): DoTakedown called as no-op for "
               "thread 0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
-              static_cast<void *>(this), m_thread.GetID(), m_valid,
-              IsPlanComplete());
+              static_cast<void *>(this), m_tid, m_valid, IsPlanComplete());
   }
 }
 
@@ -219,9 +219,8 @@ void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
     s->Printf("Function call thread plan");
   } else {
-    TargetSP target_sp(m_thread.CalculateTarget());
     s->Printf("Thread plan to call 0x%" PRIx64,
-              m_function_addr.GetLoadAddress(target_sp.get()));
+              m_function_addr.GetLoadAddress(&GetTarget()));
   }
 }
 
@@ -286,11 +285,9 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
   // m_ignore_breakpoints.
 
   if (stop_reason == eStopReasonBreakpoint) {
-    ProcessSP process_sp(m_thread.CalculateProcess());
     uint64_t break_site_id = m_real_stop_info_sp->GetValue();
     BreakpointSiteSP bp_site_sp;
-    if (process_sp)
-      bp_site_sp = process_sp->GetBreakpointSiteList().FindByID(break_site_id);
+    bp_site_sp = m_process.GetBreakpointSiteList().FindByID(break_site_id);
     if (bp_site_sp) {
       uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
       bool is_internal = true;
@@ -378,10 +375,11 @@ void ThreadPlanCallFunction::DidPush() {
   GetThread().SetStopInfoToNothing();
 
 #ifndef SINGLE_STEP_EXPRESSIONS
-  m_subplan_sp = std::make_shared<ThreadPlanRunToAddress>(
-      m_thread, m_start_addr, m_stop_other_threads);
+  Thread &thread = GetThread();
+  m_subplan_sp = std::make_shared<ThreadPlanRunToAddress>(thread, m_start_addr, 
+                                                          m_stop_other_threads);
 
-  m_thread.QueueThreadPlan(m_subplan_sp, false);
+  thread.QueueThreadPlan(m_subplan_sp, false);
   m_subplan_sp->SetPrivate(true);
 #endif
 }
@@ -403,41 +401,38 @@ bool ThreadPlanCallFunction::MischiefManaged() {
 }
 
 void ThreadPlanCallFunction::SetBreakpoints() {
-  ProcessSP process_sp(m_thread.CalculateProcess());
-  if (process_sp) {
-    if (m_trap_exceptions) {
-      m_cxx_language_runtime =
-          process_sp->GetLanguageRuntime(eLanguageTypeC_plus_plus);
-      m_objc_language_runtime =
-          process_sp->GetLanguageRuntime(eLanguageTypeObjC);
+  if (m_trap_exceptions) {
+    m_cxx_language_runtime =
+        m_process.GetLanguageRuntime(eLanguageTypeC_plus_plus);
+    m_objc_language_runtime = m_process.GetLanguageRuntime(eLanguageTypeObjC);
 
-      if (m_cxx_language_runtime) {
-        m_should_clear_cxx_exception_bp =
-            !m_cxx_language_runtime->ExceptionBreakpointsAreSet();
-        m_cxx_language_runtime->SetExceptionBreakpoints();
-      }
-      if (m_objc_language_runtime) {
-        m_should_clear_objc_exception_bp =
-            !m_objc_language_runtime->ExceptionBreakpointsAreSet();
-        m_objc_language_runtime->SetExceptionBreakpoints();
-      }
+    if (m_cxx_language_runtime) {
+      m_should_clear_cxx_exception_bp =
+          !m_cxx_language_runtime->ExceptionBreakpointsAreSet();
+      m_cxx_language_runtime->SetExceptionBreakpoints();
     }
-    if (GetExpressionLanguage() == eLanguageTypeSwift) {
-      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
-      if (swift_runtime) {
-        llvm::StringRef backstop_name = swift_runtime->GetErrorBackstopName();
-        if (!backstop_name.empty()) {
-          FileSpecList stdlib_module_list;
-          stdlib_module_list.Append(
-              FileSpec(swift_runtime->GetStandardLibraryName().GetStringRef()));
-          const LazyBool skip_prologue = eLazyBoolNo;
-          const bool is_internal = true;
-          const bool is_hardware = false;
-          m_error_backstop_bp_sp = process_sp->GetTarget().CreateBreakpoint(
-              &stdlib_module_list, NULL, backstop_name.str().c_str(),
-              eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
-              is_internal, is_hardware);
-        }
+    if (m_objc_language_runtime) {
+      m_should_clear_objc_exception_bp =
+          !m_objc_language_runtime->ExceptionBreakpointsAreSet();
+      m_objc_language_runtime->SetExceptionBreakpoints();
+    }
+  }
+  if (GetExpressionLanguage() == eLanguageTypeSwift) {
+    auto *swift_runtime 
+        = SwiftLanguageRuntime::Get(m_process.shared_from_this());
+    if (swift_runtime) {
+      llvm::StringRef backstop_name = swift_runtime->GetErrorBackstopName();
+      if (!backstop_name.empty()) {
+        FileSpecList stdlib_module_list;
+        stdlib_module_list.Append(
+            FileSpec(swift_runtime->GetStandardLibraryName().GetStringRef()));
+        const LazyBool skip_prologue = eLazyBoolNo;
+        const bool is_internal = true;
+        const bool is_hardware = false;
+        m_error_backstop_bp_sp = m_process.GetTarget().CreateBreakpoint(
+            &stdlib_module_list, NULL, backstop_name.str().c_str(),
+            eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
+            is_internal, is_hardware);
       }
     }
   }
@@ -482,45 +477,42 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
     }
   }
   if (m_error_backstop_bp_sp) {
-    ProcessSP process_sp(m_thread.CalculateProcess());
-    if (process_sp) {
-      uint64_t break_site_id = stop_info_sp->GetValue();
-      if (process_sp->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
-              break_site_id, m_error_backstop_bp_sp->GetID())) {
-        // Our expression threw an uncaught exception.  That will happen in REPL
-        // & Playground, though not in
-        // the regular expression parser.  In that case, we should fetch the
-        // actual return value from the
-        // argument passed to this function, and set that as the return value.
-        SetPlanComplete(true);
-        StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
-        PersistentExpressionState *persistent_state =
-            GetTarget().GetPersistentExpressionStateForLanguage(
-                eLanguageTypeSwift);
-        const bool is_error = true;
-        auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
-        ConstString persistent_variable_name(
-            persistent_state->GetNextPersistentVariableName(GetTarget(),
-                                                            prefix));
-        if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
-                frame_sp, persistent_variable_name)) {
+    uint64_t break_site_id = stop_info_sp->GetValue();
+    if (m_process.GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+            break_site_id, m_error_backstop_bp_sp->GetID())) {
+      // Our expression threw an uncaught exception.  That will happen in REPL
+      // & Playground, though not in
+      // the regular expression parser.  In that case, we should fetch the
+      // actual return value from the
+      // argument passed to this function, and set that as the return value.
+      SetPlanComplete(true);
+      StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+      PersistentExpressionState *persistent_state =
+          GetTarget().GetPersistentExpressionStateForLanguage(
+              eLanguageTypeSwift);
+      const bool is_error = true;
+      auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
+      ConstString persistent_variable_name(
+          persistent_state->GetNextPersistentVariableName(GetTarget(),
+                                                          prefix));
+      if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+              frame_sp, persistent_variable_name)) {
 
-          DataExtractor data;
-          Status data_error;
-          uint64_t data_size =
-              m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
+        DataExtractor data;
+        Status data_error;
+        uint64_t data_size =
+            m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
 
-          if (data_size == data.GetAddressByteSize()) {
-            lldb::offset_t offset = 0;
-            lldb::addr_t addr = data.GetAddress(&offset);
+        if (data_size == data.GetAddressByteSize()) {
+          lldb::offset_t offset = 0;
+          lldb::addr_t addr = data.GetAddress(&offset);
 
-            SwiftLanguageRuntime::RegisterGlobalError(
-                GetTarget(), persistent_variable_name, addr);
-          }
-
-          m_hit_error_backstop = true;
-          return true;
+          SwiftLanguageRuntime::RegisterGlobalError(
+              GetTarget(), persistent_variable_name, addr);
         }
+
+        m_hit_error_backstop = true;
+        return true;
       }
     }
   }
@@ -537,11 +529,10 @@ bool ThreadPlanCallFunction::RestoreThreadState() {
 }
 
 void ThreadPlanCallFunction::SetReturnValue() {
-  ProcessSP process_sp(m_thread.GetProcess());
-  const ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
+  const ABI *abi = m_process.GetABI().get();
   if (abi && m_return_type.IsValid()) {
     const bool persistent = false;
     m_return_valobj_sp =
-        abi->GetReturnValueObject(m_thread, m_return_type, persistent);
+        abi->GetReturnValueObject(GetThread(), m_return_type, persistent);
   }
 }
