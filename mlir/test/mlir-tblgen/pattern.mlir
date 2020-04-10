@@ -17,11 +17,8 @@ func @verifyDesignatedLoc(%arg0 : i32) -> i32 {
   %2 = "test.loc_src"(%1) : (i32) -> i32 loc("loc1")
 
   // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc("loc1")
-  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc(fused[
-  // CHECK-SAME: "loc1"
-  // CHECK-SAME: "loc3"
-  // CHECK-SAME: "loc2"
-  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc(fused["loc2", "loc3"])
+  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc("named")
+  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc(fused<"fused">["loc2", "loc3"])
   return %1 : i32
 }
 
