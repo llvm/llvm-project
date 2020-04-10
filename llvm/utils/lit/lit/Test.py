@@ -1,3 +1,4 @@
+import itertools
 import os
 from xml.sax.saxutils import quoteattr
 from json import JSONEncoder
@@ -162,7 +163,7 @@ class Result(object):
         addMicroResult(microResult)
 
         Attach a micro-test result to the test result, with the given name and
-        result.  It is an error to attempt to attach a micro-test with the 
+        result.  It is an error to attempt to attach a micro-test with the
         same name multiple times.
 
         Each micro-test result must be an instance of the Result class.
@@ -358,6 +359,26 @@ class Test:
                     if BooleanExpression.evaluate(item, features, triple)]
         except ValueError as e:
             raise ValueError('Error in UNSUPPORTED list:\n%s' % str(e))
+
+    def getUsedFeatures(self):
+        """
+        getUsedFeatures() -> list of strings
+
+        Returns a list of all features appearing in XFAIL, UNSUPPORTED and
+        REQUIRES annotations for this test.
+        """
+        import lit.TestRunner
+        parsed = lit.TestRunner._parseKeywords(self.getSourcePath(), require_script=False)
+        feature_keywords = ('UNSUPPORTED:', 'REQUIRES:', 'XFAIL:')
+        boolean_expressions = itertools.chain.from_iterable(
+            parsed[k] or [] for k in feature_keywords
+        )
+        tokens = itertools.chain.from_iterable(
+            BooleanExpression.tokenize(expr) for expr in
+                boolean_expressions if expr != '*'
+        )
+        identifiers = set(filter(BooleanExpression.isIdentifier, tokens))
+        return identifiers
 
     def isEarlyTest(self):
         """
