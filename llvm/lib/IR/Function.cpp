@@ -320,6 +320,18 @@ static MutableArrayRef<Argument> makeArgArray(Argument *Args, size_t Count) {
   return MutableArrayRef<Argument>(Args, Count);
 }
 
+bool Function::isConstrainedFPIntrinsic() const {
+  switch (getIntrinsicID()) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:
+#include "llvm/IR/ConstrainedOps.def"
+    return true;
+#undef INSTRUCTION
+  default:
+    return false;
+  }
+}
+
 void Function::clearArguments() {
   for (Argument &A : makeArgArray(Arguments, NumArgs)) {
     A.setName("");
