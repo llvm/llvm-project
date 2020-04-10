@@ -233,6 +233,8 @@ def scrub_asm_powerpc(asm, args):
   asm = common.SCRUB_LOOP_COMMENT_RE.sub(r'#', asm)
   # Strip trailing whitespace.
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  # Stripe the tailing token '#', except the line only has token '#'.
+  asm = common.SCRUB_TAILING_COMMENT_TOKEN_RE.sub(r'', asm)
   return asm
 
 def scrub_asm_mips(asm, args):
