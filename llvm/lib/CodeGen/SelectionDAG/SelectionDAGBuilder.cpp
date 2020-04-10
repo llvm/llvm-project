@@ -3751,8 +3751,9 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
   bool IsVectorGEP = I.getType()->isVectorTy();
-  ElementCount VectorElementCount = IsVectorGEP ?
-    I.getType()->getVectorElementCount() : ElementCount(0, false);
+  ElementCount VectorElementCount =
+      IsVectorGEP ? cast<VectorType>(I.getType())->getElementCount()
+                  : ElementCount(0, false);
 
   if (IsVectorGEP && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
@@ -4312,7 +4313,7 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   IndexType = ISD::SIGNED_SCALED;
 
   if (STy || !Index.getValueType().isVector()) {
-    unsigned GEPWidth = GEP->getType()->getVectorNumElements();
+    unsigned GEPWidth = cast<VectorType>(GEP->getType())->getNumElements();
     EVT VT = EVT::getVectorVT(Context, Index.getValueType(), GEPWidth);
     Index = DAG.getSplatBuildVector(VT, SDLoc(Index), Index);
   }
