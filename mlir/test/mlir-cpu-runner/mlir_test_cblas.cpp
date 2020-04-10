@@ -1,4 +1,4 @@
-//===- cblas.cpp - Simple Blas subset implementation ----------------------===//
+//===- mlir_test_cblas.cpp - Simple Blas subset implementation ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,24 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/cblas.h"
+#include "include/mlir_test_cblas.h"
 #include <assert.h>
 
-extern "C" float cblas_sdot(const int N, const float *X, const int incX,
-                            const float *Y, const int incY) {
+extern "C" float mlir_test_cblas_sdot(const int N, const float *X,
+                                      const int incX, const float *Y,
+                                      const int incY) {
   float res = 0.0f;
   for (int i = 0; i < N; ++i)
     res += X[i * incX] * Y[i * incY];
   return res;
 }
 
-extern "C" void cblas_sgemm(const enum CBLAS_ORDER Order,
-                            const enum CBLAS_TRANSPOSE TransA,
-                            const enum CBLAS_TRANSPOSE TransB, const int M,
-                            const int N, const int K, const float alpha,
-                            const float *A, const int lda, const float *B,
-                            const int ldb, const float beta, float *C,
-                            const int ldc) {
+extern "C" void mlir_test_cblas_sgemm(
+    const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
+    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const float alpha, const float *A, const int lda, const float *B,
+    const int ldb, const float beta, float *C, const int ldc) {
   assert(Order == CBLAS_ORDER::CblasRowMajor);
   assert(TransA == CBLAS_TRANSPOSE::CblasNoTrans);
   assert(TransB == CBLAS_TRANSPOSE::CblasNoTrans);
