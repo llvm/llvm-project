@@ -100,9 +100,7 @@ void mlir::registerPass(StringRef arg, StringRef description,
   // TODO: We should use the 'arg' as the lookup key instead of the pass id.
   const PassID *passID = function()->getPassID();
   PassInfo passInfo(arg, description, passID, function);
-  bool inserted = passRegistry->try_emplace(passID, passInfo).second;
-  assert(inserted && "Pass registered multiple times");
-  (void)inserted;
+  passRegistry->try_emplace(passID, passInfo);
 }
 
 /// Returns the pass info for the specified pass class or null if unknown.
