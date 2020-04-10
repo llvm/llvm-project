@@ -404,7 +404,15 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
         node->getKind() != Node::Kind::Global)
       return false;
     node = node->getFirstChild();
-    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Function)
+    if (node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::TypeMangling)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
+      return false;
+    node = node->getFirstChild();
+    if (node->getKind() != Node::Kind::FunctionType &&
+        node->getKind() != Node::Kind::ImplFunctionType)
       return false;
     return true;
   };
