@@ -2709,7 +2709,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : *FreeInstrBB) {
+    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
       if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
