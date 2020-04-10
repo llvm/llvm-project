@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // type_traits
-// XFAIL: apple-clang-6.0
-//  The Apple-6 compiler gets is_constructible<void ()> wrong.
 
 // template <class T, class... Args>
 //   struct is_constructible;

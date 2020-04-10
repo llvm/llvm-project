@@ -12,11 +12,6 @@
 // allocator:
 // T* allocate(size_t n);
 
-// When back-deploying to macosx10.7, the RTTI for exception classes
-// incorrectly provided by libc++.dylib is mixed with the one in
-// libc++abi.dylib and exceptions are not caught properly.
-// XFAIL: with_system_cxx_lib=macosx10.7
-
 #include <memory>
 #include <cassert>
 

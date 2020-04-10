@@ -8,10 +8,6 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// NOTE: atomic<> of a TriviallyCopyable class is wrongly rejected by older
-// clang versions. It was fixed right before the llvm 3.5 release. See PR18097.
-// XFAIL: apple-clang-6.0, clang-3.4, clang-3.3
-
 // <atomic>
 
 // template <class T>
