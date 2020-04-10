@@ -15,6 +15,7 @@ static_library("objc") {
     "DeallocInCategoryCheck.cpp",
     "ForbiddenSubclassingCheck.cpp",
     "MissingHashCheck.cpp",
+    "NSInvocationArgumentLifetimeCheck.cpp",
     "ObjCTidyModule.cpp",
     "PropertyDeclarationCheck.cpp",
     "SuperSelfCheck.cpp",
