@@ -197,3 +197,7 @@ float ynf(int __a, float __b);
  * math functions.
  */
 #define HUGE_VAL (__builtin_huge_val())
+
+#ifdef __cplusplus
+#include <cmath>
+#endif
