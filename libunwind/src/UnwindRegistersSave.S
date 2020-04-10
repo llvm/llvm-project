@@ -945,6 +945,52 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   # zero epcr
   l.sw     132(r3), r0
 
+#elif defined(__hexagon__)
+#
+# extern int unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in r0
+#
+#define OFFSET(offset) (offset/4)
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  memw(r0+#32) = r8
+  memw(r0+#36) = r9
+  memw(r0+#40) = r10
+  memw(r0+#44) = r11
+
+  memw(r0+#48) = r12
+  memw(r0+#52) = r13
+  memw(r0+#56) = r14
+  memw(r0+#60) = r15
+
+  memw(r0+#64) = r16
+  memw(r0+#68) = r17
+  memw(r0+#72) = r18
+  memw(r0+#76) = r19
+
+  memw(r0+#80) = r20
+  memw(r0+#84) = r21
+  memw(r0+#88) = r22
+  memw(r0+#92) = r23
+
+  memw(r0+#96) = r24
+  memw(r0+#100) = r25
+  memw(r0+#104) = r26
+  memw(r0+#108) = r27
+
+  memw(r0+#112) = r28
+  memw(r0+#116) = r29
+  memw(r0+#120) = r30
+  memw(r0+#124) = r31
+  r1 = c4   // Predicate register
+  memw(r0+#128) = r1
+  r1 = memw(r30)           // *FP == Saved FP
+  r1 = r31
+  memw(r0+#132) = r1
+
+  jumpr r31
+
 #elif defined(__sparc__)
 
 #
