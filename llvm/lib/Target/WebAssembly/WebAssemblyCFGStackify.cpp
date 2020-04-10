@@ -1109,6 +1109,9 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
       MachineInstr *RangeBegin = nullptr, *RangeEnd = nullptr;
       std::tie(RangeBegin, RangeEnd) = Range;
       auto *MBB = RangeBegin->getParent();
+      // Store the first function call from this range, because RangeBegin can
+      // be moved to point EH_LABEL before the call
+      MachineInstr *RangeBeginCall = RangeBegin;
 
       // Include possible EH_LABELs in the range
       if (RangeBegin->getIterator() != MBB->begin() &&
@@ -1126,9 +1129,27 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
         }
       }
 
+      // Local expression tree before the first call of this range should go
+      // after the nested TRY.
+      SmallPtrSet<const MachineInstr *, 4> AfterSet;
+      AfterSet.insert(RangeBegin);
+      AfterSet.insert(RangeBeginCall);
+      for (auto I = MachineBasicBlock::iterator(RangeBeginCall),
+                E = MBB->begin();
+           I != E; --I) {
+        if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
+          continue;
+        if (WebAssembly::isChild(*std::prev(I), MFI))
+          AfterSet.insert(&*std::prev(I));
+        else
+          break;
+      }
+
       // Create the nested try instruction.
+      auto InsertPos = getLatestInsertPos(
+          MBB, SmallPtrSet<const MachineInstr *, 4>(), AfterSet);
       MachineInstr *NestedTry =
-          BuildMI(*MBB, *RangeBegin, RangeBegin->getDebugLoc(),
+          BuildMI(*MBB, InsertPos, RangeBegin->getDebugLoc(),
                   TII.get(WebAssembly::TRY))
               .addImm(int64_t(WebAssembly::BlockType::Void));
 
