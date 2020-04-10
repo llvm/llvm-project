@@ -97,7 +97,7 @@ public:
        llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
        lldb::user_id_t encoding_uid, EncodingDataType encoding_uid_type,
        const Declaration &decl, const CompilerType &compiler_qual_type,
-       ResolveState compiler_type_resolve_state);
+       ResolveState compiler_type_resolve_state, uint32_t opaque_payload = 0);
 
   // This makes an invalid type.  Used for functions that return a Type when
   // they get an error.
@@ -196,11 +196,11 @@ public:
 
   uint32_t GetEncodingMask();
 
-  bool IsCompleteObjCClass() { return m_is_complete_objc_class; }
-
-  void SetIsCompleteObjCClass(bool is_complete_objc_class) {
-    m_is_complete_objc_class = is_complete_objc_class;
-  }
+  typedef uint32_t Payload;
+  /// Return the language-specific payload.
+  Payload GetPayload() { return m_payload; }
+  /// Return the language-specific payload.
+  void SetPayload(Payload opaque_payload) { m_payload = opaque_payload; }
 
 protected:
   ConstString m_name;
@@ -215,7 +215,8 @@ protected:
   Declaration m_decl;
   CompilerType m_compiler_type;
   ResolveState m_compiler_type_resolve_state;
-  bool m_is_complete_objc_class;
+  /// Language-specific flags.
+  Payload m_payload;
 
   Type *GetEncodingType();
 
