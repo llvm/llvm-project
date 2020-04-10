@@ -73,6 +73,7 @@ public:
 
   /// Vector type utilities.
   LLVMType getVectorElementType();
+  unsigned getVectorNumElements();
   bool isVectorTy();
 
   /// Function type utilities.

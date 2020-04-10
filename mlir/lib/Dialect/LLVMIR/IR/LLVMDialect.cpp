@@ -1774,6 +1774,9 @@ bool LLVMType::isArrayTy() { return getUnderlyingType()->isArrayTy(); }
 LLVMType LLVMType::getVectorElementType() {
   return get(getContext(), getUnderlyingType()->getVectorElementType());
 }
+unsigned LLVMType::getVectorNumElements() {
+  return getUnderlyingType()->getVectorNumElements();
+}
 bool LLVMType::isVectorTy() { return getUnderlyingType()->isVectorTy(); }
 
 /// Function type utilities.
