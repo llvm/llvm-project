@@ -240,6 +240,7 @@ Clang-Tidy Checks
    `objc-dealloc-in-category <objc-dealloc-in-category.html>`_,
    `objc-forbidden-subclassing <objc-forbidden-subclassing.html>`_,
    `objc-missing-hash <objc-missing-hash.html>`_,
+   `objc-nsinvocation-argument-lifetime <objc-nsinvocation-argument-lifetime.html>`_, "Yes"
    `objc-property-declaration <objc-property-declaration.html>`_, "Yes"
    `objc-super-self <objc-super-self.html>`_, "Yes"
    `openmp-exception-escape <openmp-exception-escape.html>`_,
