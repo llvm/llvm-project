@@ -271,6 +271,12 @@ LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
 LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J);
 
 /**
+ * Return the target triple for this LLJIT instance. This string is owned by
+ * the LLJIT instance and should not be freed by the client.
+ */
+const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J);
+
+/**
  * Returns the global prefix character according to the LLJIT's DataLayout.
  */
 char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
@@ -286,9 +292,18 @@ LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
 
 /**
+ * Add a buffer representing an object file to the given LLJIT instance. This
+ * operation transfers ownership of the buffer to the LLJIT instance. The
+ * buffer should not be disposed of or referenced once this function returns.
+ */
+LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J,
+                                       LLVMMemoryBufferRef ObjBuffer);
+
+/**
  * Add an IR module to the main JITDylib of the given LLJIT instance. This
- * operation takes ownership of the TSM argument which should not be disposed
- * of or referenced once this function returns.
+ * operation transfers ownership of the TSM argument to the LLJIT instance.
+ * The TSM argument should not be 3disposed of or referenced once this
+ * function returns.
  */
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
                                          LLVMOrcThreadSafeModuleRef TSM);
