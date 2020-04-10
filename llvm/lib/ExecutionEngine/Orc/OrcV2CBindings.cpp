@@ -56,6 +56,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
+
 LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name) {
   return wrap(
@@ -138,6 +140,26 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
 
   *Result = wrap(new JITTargetMachineBuilder(std::move(*JTMB)));
   return LLVMErrorSuccess;
+}
+
+LLVMOrcJITTargetMachineBuilderRef
+LLVMOrcJITTargetMachineBuilderFromTargetMachine(LLVMTargetMachineRef TM) {
+  auto *TemplateTM = unwrap(TM);
+
+  auto JTMB =
+      std::make_unique<JITTargetMachineBuilder>(TemplateTM->getTargetTriple());
+
+  (*JTMB)
+      .setCPU(TemplateTM->getTargetCPU().str())
+      .setRelocationModel(TemplateTM->getRelocationModel())
+      .setCodeModel(TemplateTM->getCodeModel())
+      .setCodeGenOptLevel(TemplateTM->getOptLevel())
+      .setFeatures(TemplateTM->getTargetFeatureString())
+      .setOptions(TemplateTM->Options);
+
+  LLVMDisposeTargetMachine(TM);
+
+  return wrap(JTMB.release());
 }
 
 void LLVMOrcDisposeJITTargetMachineBuilder(
