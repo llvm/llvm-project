@@ -23,7 +23,6 @@ namespace llvm {
   struct fltSemantics;
   class MachineFunction;
   class MemoryBuffer;
-  class Module;
 
   namespace FloatABI {
     enum ABIType {
