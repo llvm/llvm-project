@@ -83,11 +83,11 @@ class SoftPointerAuth {
   Module *M = nullptr;
 
   // Cached function pointers, initialized lazily.
-  Constant *SignPointerFn = nullptr;
-  Constant *AuthPointerFn = nullptr;
-  Constant *StripPointerFn = nullptr;
-  Constant *BlendDiscriminatorFn = nullptr;
-  Constant *SignGenericFn = nullptr;
+  FunctionCallee SignPointerFn = nullptr;
+  FunctionCallee AuthPointerFn = nullptr;
+  FunctionCallee StripPointerFn = nullptr;
+  FunctionCallee BlendDiscriminatorFn = nullptr;
+  FunctionCallee SignGenericFn = nullptr;
 
   Optional<IRBuilderTy> GlobalConstructorBuilder;
 
@@ -177,39 +177,38 @@ private:
   }
 
   /// Create a declaration for the given runtime function.
-  Constant *getOrInsertFunction(StringRef name, TypeTag resultTypeTag,
-                                ArrayRef<TypeTag> argTypeTags) {
+  FunctionCallee getOrInsertFunction(StringRef name, TypeTag resultTypeTag,
+                                     ArrayRef<TypeTag> argTypeTags) {
     auto resultType = getType(resultTypeTag);
     SmallVector<Type*, 4> argTypes;
     for (auto argTypeTag : argTypeTags)
       argTypes.push_back(getType(argTypeTag));
     auto functionType = FunctionType::get(resultType, argTypes, false);
-    return cast<Constant>(
-      M->getOrInsertFunction(name, functionType).getCallee());
+    return M->getOrInsertFunction(name, functionType);
   }
 
-  Constant *getSignPointerFn() {
+  FunctionCallee getSignPointerFn() {
     if (!SignPointerFn)
       SignPointerFn = getOrInsertFunction("__ptrauth_sign", VoidPtr,
                                           { VoidPtr, Key, Discriminator });
     return SignPointerFn;
   }
 
-  Constant *getAuthPointerFn() {
+  FunctionCallee getAuthPointerFn() {
     if (!AuthPointerFn)
       AuthPointerFn = getOrInsertFunction("__ptrauth_auth", VoidPtr,
                                           { VoidPtr, Key, Discriminator });
     return AuthPointerFn;
   }
 
-  Constant *getStripPointerFn() {
+  FunctionCallee getStripPointerFn() {
     if (!StripPointerFn)
       StripPointerFn = getOrInsertFunction("__ptrauth_strip", VoidPtr,
                                            { VoidPtr, Key });
     return StripPointerFn;
   }
 
-  Constant *getBlendDiscriminatorFn() {
+  FunctionCallee getBlendDiscriminatorFn() {
     if (!BlendDiscriminatorFn)
       BlendDiscriminatorFn = getOrInsertFunction("__ptrauth_blend",
                                                  Discriminator,
@@ -217,7 +216,7 @@ private:
     return BlendDiscriminatorFn;
   }
 
-  Constant *getSignGenericFn() {
+  FunctionCallee getSignGenericFn() {
     if (!SignGenericFn)
       SignGenericFn = getOrInsertFunction("__ptrauth_sign_generic", IntPtr,
                                           { IntPtr, Key, Discriminator });
@@ -825,12 +824,13 @@ bool SoftPointerAuth::transformPointerAuthCall(CallSite oldCall,
   CallSite newCall;
   if (oldCall.isInvoke()) {
     auto oldInvoke = cast<InvokeInst>(oldCall.getInstruction());
-    newCall = builder.CreateInvoke(callee,
+    newCall = builder.CreateInvoke(oldInvoke->getFunctionType(), callee,
                                    oldInvoke->getNormalDest(),
                                    oldInvoke->getUnwindDest(),
                                    args, opBundles);
   } else {
-    newCall = builder.CreateCall(callee, args, opBundles);
+    newCall =
+        builder.CreateCall(oldCall.getFunctionType(), callee, args, opBundles);
   }
 
   // Copy mandatory attributes.
