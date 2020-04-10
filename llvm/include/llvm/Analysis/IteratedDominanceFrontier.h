@@ -9,7 +9,7 @@
 #ifndef LLVM_ANALYSIS_IDF_H
 #define LLVM_ANALYSIS_IDF_H
 
-#include "llvm/IR/CFGDiff.h"
+#include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
 namespace llvm {
