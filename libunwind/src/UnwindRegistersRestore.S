@@ -808,6 +808,48 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.jr     r9
    l.nop
 
+#elif defined(__hexagon__)
+# On entry:
+#  thread_state pointer is in r2
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind17Registers_hexagon6jumptoEv)
+#
+# void libunwind::Registers_hexagon::jumpto()
+#
+  r8 = memw(r0+#32)
+  r9 = memw(r0+#36)
+  r10 = memw(r0+#40)
+  r11 = memw(r0+#44)
+
+  r12 = memw(r0+#48)
+  r13 = memw(r0+#52)
+  r14 = memw(r0+#56)
+  r15 = memw(r0+#60)
+
+  r16 = memw(r0+#64)
+  r17 = memw(r0+#68)
+  r18 = memw(r0+#72)
+  r19 = memw(r0+#76)
+
+  r20 = memw(r0+#80)
+  r21 = memw(r0+#84)
+  r22 = memw(r0+#88)
+  r23 = memw(r0+#92)
+
+  r24 = memw(r0+#96)
+  r25 = memw(r0+#100)
+  r26 = memw(r0+#104)
+  r27 = memw(r0+#108)
+
+  r28 = memw(r0+#112)
+  r29 = memw(r0+#116)
+  r30 = memw(r0+#120)
+  r31 = memw(r0+#132)
+
+  r1 = memw(r0+#128)
+  c4 = r1   // Predicate register
+  r1 = memw(r0+#4)
+  r0 = memw(r0)
+  jumpr r31
 #elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
 
 //
