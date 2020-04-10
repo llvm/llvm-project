@@ -1730,6 +1730,10 @@ public:
     return *TemplateArgs;
   }
 
+  void setTemplateArgs(TemplateArgumentList *Args) {
+    TemplateArgs = Args;
+  }
+
   /// Determine the kind of specialization that this
   /// declaration represents.
   TemplateSpecializationKind getSpecializationKind() const {
@@ -1760,6 +1764,10 @@ public:
   bool isExplicitInstantiationOrSpecialization() const {
     return isTemplateExplicitInstantiationOrSpecialization(
         getTemplateSpecializationKind());
+  }
+
+  void setSpecializedTemplate(ClassTemplateDecl *Specialized) {
+    SpecializedTemplate = Specialized;
   }
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {

@@ -637,6 +637,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (E->getType().getObjCLifetime() == Qualifiers::OCL_Weak)
     Cleanup.setExprNeedsCleanups(true);
 
+  if (E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
+    Cleanup.setExprNeedsCleanups(true);
+
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
@@ -6231,13 +6234,23 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   }
 
-  // Compound literals that have automatic storage duration are destroyed at
-  // the end of the scope. Emit diagnostics if it is or contains a C union type
-  // that is non-trivial to destruct.
-  if (!isFileScope)
+  if (!isFileScope && !getLangOpts().CPlusPlus) {
+    // Compound literals that have automatic storage duration are destroyed at
+    // the end of the scope in C; in C++, they're just temporaries.
+
+    // Emit diagnostics if it is or contains a C union type that is non-trivial
+    // to destruct.
     if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
       checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
                             NTCUC_CompoundLiteral, NTCUK_Destruct);
+
+    // Diagnose jumps that enter or exit the lifetime of the compound literal.
+    if (literalType.isDestructedType()) {
+      Cleanup.setExprNeedsCleanups(true);
+      ExprCleanupObjects.push_back(E);
+      getCurFunction()->setHasBranchProtectedScope();
+    }
+  }
 
   if (E->getType().hasNonTrivialToPrimitiveDefaultInitializeCUnion() ||
       E->getType().hasNonTrivialToPrimitiveCopyCUnion())

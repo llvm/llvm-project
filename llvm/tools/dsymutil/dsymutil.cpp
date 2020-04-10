@@ -246,6 +246,12 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (opt::Arg *OsoPrependPath = Args.getLastArg(OPT_oso_prepend_path))
     Options.LinkOpts.PrependPath = OsoPrependPath->getValue();
 
+  for (const auto &Arg : Args.getAllArgValues(OPT_object_prefix_map)) {
+    auto Split = StringRef(Arg).split('=');
+    Options.LinkOpts.ObjectPrefixMap.insert(
+        {std::string(Split.first), std::string(Split.second)});
+  }
+
   if (opt::Arg *OutputFile = Args.getLastArg(OPT_output))
     Options.OutputFile = OutputFile->getValue();
 

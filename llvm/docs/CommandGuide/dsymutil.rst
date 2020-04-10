@@ -71,6 +71,12 @@ OPTIONS
 
  Specifies a ``path`` to prepend to all debug symbol object file paths.
 
+.. option:: --object-prefix-map=<prefix=remapped>
+
+ Remap object file paths (but no source paths) before processing.  Use
+ this for Clang objects where the module cache location was remapped using
+ ``-fdebug-prefix-map``; to help dsymutil find the Clang module cache.
+ 
 .. option:: --papertrail
 
  When running dsymutil as part of your build system, it can be desirable for

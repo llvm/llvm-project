@@ -12,6 +12,7 @@ HELP: -no-odr
 HELP: -no-output
 HELP: -no-swiftmodule-timestamp
 HELP: -num-threads <threads>
+HELP: -object-prefix-map <prefix=remapped>
 HELP: -oso-prepend-path <path>
 HELP: -o <filename>
 HELP: -papertrail

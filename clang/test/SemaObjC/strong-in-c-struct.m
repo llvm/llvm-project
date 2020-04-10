@@ -54,3 +54,21 @@ L0:  // expected-note {{possible target of indirect goto}}
   func(^{ func2(x); });
   goto *ips; // expected-error {{cannot jump}}
 }
+
+void test_compound_literal0(int cond, id x) {
+  switch (cond) {
+  case 0:
+    (void)(Strong){ .a = x }; // expected-note {{jump enters lifetime of a compound literal that is non-trivial to destruct}}
+    break;
+  default: // expected-error {{cannot jump from switch statement to this case label}}
+    break;
+  }
+}
+
+void test_compound_literal1(id x) {
+  static void *ips[] = { &&L0 };
+L0:  // expected-note {{possible target of indirect goto}}
+  ;
+  (void)(Strong){ .a = x }; // expected-note {{jump exits lifetime of a compound literal that is non-trivial to destruct}}
+  goto *ips; // expected-error {{cannot jump}}
+}

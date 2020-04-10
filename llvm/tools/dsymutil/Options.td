@@ -110,6 +110,15 @@ def oso_prepend_path: Separate<["--", "-"], "oso-prepend-path">,
   Group<grp_general>;
 def: Joined<["--", "-"], "oso-prepend-path=">, Alias<oso_prepend_path>;
 
+def object_prefix_map: Separate<["--", "-"], "object-prefix-map">,
+    MetaVarName<"<prefix=remapped>">,
+    HelpText<"Remap object file paths (but no source paths) before processing."
+             "Use this for Clang objects where the module cache location was"
+             "remapped using -fdebug-prefix-map; to help dsymutil"
+             "find the Clang module cache.">,
+    Group<grp_general>;
+def: Joined<["--", "-"], "object-prefix-map=">, Alias<object_prefix_map>;
+
 def symbolmap: Separate<["--", "-"], "symbol-map">,
   MetaVarName<"<bcsymbolmap>">,
   HelpText<"Updates the existing dSYMs inplace using symbol map specified.">,

@@ -420,6 +420,7 @@ HANDLE_DW_AT(0x3e06, APPLE_ptrauth_extra_discriminator, 0, LLVM)
 HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 
 // Apple extensions.
+
 HANDLE_DW_AT(0x3fe1, APPLE_optimized, 0, APPLE)
 HANDLE_DW_AT(0x3fe2, APPLE_flags, 0, APPLE)
 HANDLE_DW_AT(0x3fe3, APPLE_isa, 0, APPLE)
