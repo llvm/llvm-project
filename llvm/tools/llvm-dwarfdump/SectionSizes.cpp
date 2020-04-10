@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SectionSizes.h"
+#include "llvm-dwarfdump.h"
 
 #define DEBUG_TYPE "dwarfdump"
 
 using namespace llvm;
-using namespace object;
+using namespace llvm::dwarfdump;
+using namespace llvm::object;
 
 static size_t getNameColumnWidth(const SectionSizes &Sizes,
                                  const StringRef SectionNameTitle) {
@@ -77,8 +78,9 @@ static void prettyPrintSectionSizes(const ObjectFile &Obj,
   OS << "----------------------------------------------------" << '\n';
 }
 
-void llvm::calculateSectionSizes(const ObjectFile &Obj, SectionSizes &Sizes,
-                                 const Twine &Filename) {
+void dwarfdump::calculateSectionSizes(const ObjectFile &Obj,
+                                      SectionSizes &Sizes,
+                                      const Twine &Filename) {
   // Get total size.
   Sizes.TotalObjectSize = Obj.getData().size();
 
@@ -101,8 +103,10 @@ void llvm::calculateSectionSizes(const ObjectFile &Obj, SectionSizes &Sizes,
   }
 }
 
-bool collectObjectSectionSizes(ObjectFile &Obj, DWARFContext & /*DICtx*/,
-                               const Twine &Filename, raw_ostream &OS) {
+bool dwarfdump::collectObjectSectionSizes(ObjectFile &Obj,
+                                          DWARFContext & /*DICtx*/,
+                                          const Twine &Filename,
+                                          raw_ostream &OS) {
   SectionSizes Sizes;
 
   // Get the section sizes.

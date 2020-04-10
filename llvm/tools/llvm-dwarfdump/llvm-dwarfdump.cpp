@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-dwarfdump.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -32,8 +33,10 @@
 #include <cstdlib>
 
 using namespace llvm;
-using namespace object;
+using namespace llvm::dwarfdump;
+using namespace llvm::object;
 
+namespace {
 /// Parser for options that take an optional offest argument.
 /// @{
 struct OffsetOption {
@@ -41,6 +44,7 @@ struct OffsetOption {
   bool HasValue = false;
   bool IsRequested = false;
 };
+} // namespace
 
 namespace llvm {
 namespace cl {
@@ -82,8 +86,8 @@ public:
   // An out-of-line virtual method to provide a 'home' for this class.
   void anchor() override {};
 };
-} // cl
-} // llvm
+} // namespace cl
+} // namespace llvm
 
 /// @}
 /// Command line options.
@@ -415,12 +419,6 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   return true;
 }
-
-bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                               const Twine &Filename, raw_ostream &OS);
-
-bool collectObjectSectionSizes(ObjectFile &Obj, DWARFContext & /*DICtx*/,
-                               const Twine &Filename, raw_ostream &OS);
 
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                            const Twine &Filename, raw_ostream &OS) {
