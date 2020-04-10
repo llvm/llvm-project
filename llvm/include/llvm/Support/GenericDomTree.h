@@ -29,7 +29,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -206,8 +205,7 @@ void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
 
 template <typename DomTreeT>
 void ApplyUpdates(DomTreeT &DT,
-                  GraphDiff<typename DomTreeT::NodePtr,
-                            DomTreeT::IsPostDominator> &PreViewCFG);
+                  ArrayRef<typename DomTreeT::UpdateType> Updates);
 
 template <typename DomTreeT>
 bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL);
@@ -517,13 +515,10 @@ protected:
   /// The type of updates is the same for DomTreeBase<T> and PostDomTreeBase<T>
   /// with the same template parameter T.
   ///
-  /// \param Updates An unordered sequence of updates to perform. The current
-  /// CFG and the reverse of these updates provides the pre-view of the CFG.
+  /// \param Updates An unordered sequence of updates to perform.
   ///
   void applyUpdates(ArrayRef<UpdateType> Updates) {
-    GraphDiff<NodePtr, IsPostDominator> PreViewCFG(
-        Updates, /*ReverseApplyUpdates=*/true);
-    DomTreeBuilder::ApplyUpdates(*this, PreViewCFG);
+    DomTreeBuilder::ApplyUpdates(*this, Updates);
   }
 
   /// Inform the dominator tree about a CFG edge insertion and update the tree.
