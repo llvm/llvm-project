@@ -246,43 +246,6 @@ for.inc:                                          ; preds = %for.cond
   ; CHECK: %var[[VARNO]] = phi i32 [ %var, %for.inc ]
 }
 
-; Debug info test
-define void @setjmp_debug_info() !dbg !3 {
-; CHECK-LABEL: @setjmp_debug_info
-entry:
-  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16, !dbg !4
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0, !dbg !5
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0, !dbg !6
-  call void @foo(), !dbg !7
-  ret void, !dbg !8
-; CHECK: entry:
-  ; CHECK-NEXT: call i8* @malloc(i32 40), !dbg ![[DL0:.*]]
-  ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL0]]
-  ; CHECK: alloca {{.*}}, !dbg ![[DL0]]
-  ; CHECK: call i32* @saveSetjmp{{.*}}, !dbg ![[DL1:.*]]
-  ; CHECK-NEXT: call i32 @getTempRet0{{.*}}, !dbg ![[DL1]]
-  ; CHECK-NEXT: br {{.*}}, !dbg ![[DL2:.*]]
-
-; CHECK: entry.split:
-  ; CHECK: call {{.*}} void @__invoke_void{{.*}}, !dbg ![[DL2]]
-
-; CHECK: entry.split.split:
-  ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL3:.*]]
-  ; CHECK-NEXT: call void @free{{.*}}, !dbg ![[DL3]]
-
-; CHECK: if.then1:
-  ; CHECK: call i32 @testSetjmp{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.end:
-  ; CHECK: call i32 @getTempRet0{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.then2:
-  ; CHECK: call void @emscripten_longjmp{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.end2:
-  ; CHECK: call void @setTempRet0{{.*}}, !dbg ![[DL2]]
-}
-
 declare void @foo()
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
