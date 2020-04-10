@@ -169,14 +169,15 @@ LLVMType Importer::processType(llvm::Type *type) {
     return LLVMType::getArrayTy(elementType, type->getArrayNumElements());
   }
   case llvm::Type::VectorTyID: {
-    if (type->getVectorIsScalable()) {
+    auto *typeVTy = llvm::cast<llvm::VectorType>(type);
+    if (typeVTy->isScalable()) {
       emitError(unknownLoc) << "scalable vector types not supported";
       return nullptr;
     }
-    LLVMType elementType = processType(type->getVectorElementType());
+    LLVMType elementType = processType(typeVTy->getElementType());
     if (!elementType)
       return nullptr;
-    return LLVMType::getVectorTy(elementType, type->getVectorNumElements());
+    return LLVMType::getVectorTy(elementType, typeVTy->getNumElements());
   }
   case llvm::Type::VoidTyID:
     return LLVMType::getVoidTy(dialect);
@@ -243,7 +244,8 @@ Type Importer::getStdTypeForAttr(LLVMType type) {
 
   // LLVM vectors can only contain scalars.
   if (type.isVectorTy()) {
-    auto numElements = type.getUnderlyingType()->getVectorElementCount();
+    auto numElements = llvm::cast<llvm::VectorType>(type.getUnderlyingType())
+                           ->getElementCount();
     if (numElements.Scalable) {
       emitError(unknownLoc) << "scalable vectors not supported";
       return nullptr;
@@ -269,7 +271,8 @@ Type Importer::getStdTypeForAttr(LLVMType type) {
     if (type.getArrayElementType().isVectorTy()) {
       LLVMType vectorType = type.getArrayElementType();
       auto numElements =
-          vectorType.getUnderlyingType()->getVectorElementCount();
+          llvm::cast<llvm::VectorType>(vectorType.getUnderlyingType())
+              ->getElementCount();
       if (numElements.Scalable) {
         emitError(unknownLoc) << "scalable vectors not supported";
         return nullptr;
