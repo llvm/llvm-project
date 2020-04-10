@@ -112,8 +112,8 @@ private:
   // Returns the symbol of the old value serving as the replacement.
   StringRef handleReplaceWithValue(DagNode tree);
 
-  // Returns the symbol of the value whose location to use.
-  std::string handleUseLocationOf(DagNode tree);
+  // Returns the location value to use.
+  std::string handleLocationDirective(DagNode tree);
 
   // Emits the C++ statement to build a new op out of the given DAG `tree` and
   // returns the variable name that this op is assigned to. If the root op in
@@ -681,27 +681,53 @@ StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
   return tree.getArgName(0);
 }
 
-std::string PatternEmitter::handleUseLocationOf(DagNode tree) {
+std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   assert(tree.isLocationDirective());
   auto lookUpArgLoc = [this, &tree](int idx) {
     const auto *const lookupFmt = "(*{0}.begin()).getLoc()";
     return symbolInfoMap.getAllRangeUse(tree.getArgName(idx), lookupFmt);
   };
 
-  if (tree.getNumArgs() != 1) {
-    std::string ret;
-    llvm::raw_string_ostream os(ret);
-    os << "rewriter.getFusedLoc({";
-    for (int i = 0, e = tree.getNumArgs(); i != e; ++i)
-      os << (i ? ", " : "") << lookUpArgLoc(i);
-    os << "})";
-    return os.str();
-  }
+  if (tree.getNumArgs() == 0)
+    llvm::PrintFatalError(
+        "At least one argument to location directive required");
 
   if (!tree.getSymbol().empty())
     PrintFatalError(loc, "cannot bind symbol to location");
 
-  return lookUpArgLoc(0);
+  if (tree.getNumArgs() == 1) {
+    DagLeaf leaf = tree.getArgAsLeaf(0);
+    if (leaf.isStringAttr())
+      return formatv("mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"), "
+                     "rewriter.getContext())",
+                     leaf.getStringAttr())
+          .str();
+    return lookUpArgLoc(0);
+  }
+
+  std::string ret;
+  llvm::raw_string_ostream os(ret);
+  std::string strAttr;
+  os << "rewriter.getFusedLoc({";
+  bool first = true;
+  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+    DagLeaf leaf = tree.getArgAsLeaf(i);
+    // Handle the optional string value.
+    if (leaf.isStringAttr()) {
+      if (!strAttr.empty())
+        llvm::PrintFatalError("Only one string attribute may be specified");
+      strAttr = leaf.getStringAttr();
+      continue;
+    }
+    os << (first ? "" : ", ") << lookUpArgLoc(i);
+    first = false;
+  }
+  os << "}";
+  if (!strAttr.empty()) {
+    os << ", rewriter.getStringAttr(\"" << strAttr << "\")";
+  }
+  os << ")";
+  return os.str();
 }
 
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
@@ -789,7 +815,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   if (numPatArgs != 0) {
     if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
       if (lastArg.isLocationDirective())
-        locToUse = handleUseLocationOf(lastArg);
+        locToUse = handleLocationDirective(lastArg);
   }
 
   auto inPattern = numPatArgs - !locToUse.empty();
