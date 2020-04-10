@@ -42,14 +42,27 @@ public:
     return m_dem.createNode(kind, text);
   }
   NodePointer Node(Kind kind, NodePointer child0 = nullptr,
-                   NodePointer child1 = nullptr) {
+                   NodePointer child1 = nullptr,
+                   NodePointer child2 = nullptr,
+                   NodePointer child3 = nullptr) {
     NodePointer node = m_dem.createNode(kind);
 
     if (child0)
       node->addChild(child0, m_dem);
     if (child1)
       node->addChild(child1, m_dem);
+    if (child2)
+      node->addChild(child2, m_dem);
+    if (child3)
+      node->addChild(child3, m_dem);
     return node;
+  }
+  NodePointer IntType() {
+    return Node(
+        Node::Kind::Type,
+        Node(Node::Kind::Structure,
+             Node(Node::Kind::Module, swift::STDLIB_NAME),
+             Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_INT)));
   }
 
   std::string Mangle(NodePointer node) { return mangleNode(node); }
@@ -63,22 +76,14 @@ TEST_F(TestTypeSystemSwiftTypeRef, Array) {
       Node::Kind::Global,
       b.Node(
           Node::Kind::TypeMangling,
-          b.Node(
-              Node::Kind::Type,
-              b.Node(
-                  Node::Kind::BoundGenericStructure,
-                  b.Node(Node::Kind::Type,
-                         b.Node(Node::Kind::Structure,
-                                b.Node(Node::Kind::Module, swift::STDLIB_NAME),
-                                b.Node(Node::Kind::Identifier, "Array"))),
-                  b.Node(
-                      Node::Kind::TypeList,
-                      b.Node(
-                          Node::Kind::Type,
-                          b.Node(Node::Kind::Structure,
-                                 b.Node(Node::Kind::Module, swift::STDLIB_NAME),
-                                 b.Node(Node::Kind::Identifier,
-                                        swift::BUILTIN_TYPE_NAME_INT))))))));
+          b.Node(Node::Kind::Type,
+                 b.Node(Node::Kind::BoundGenericStructure,
+                        b.Node(Node::Kind::Type,
+                               b.Node(Node::Kind::Structure,
+                                      b.Node(Node::Kind::Module,
+                                             swift::STDLIB_NAME),
+                                      b.Node(Node::Kind::Identifier, "Array"))),
+                        b.Node(Node::Kind::TypeList, b.IntType())))));
   CompilerType int_array = GetCompilerType(b.Mangle(n));
   ASSERT_TRUE(int_array.IsArrayType(nullptr, nullptr, nullptr));
 }
@@ -101,6 +106,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                                            b.Node(Node::Kind::Tuple)))))));
     CompilerType void_void = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(void_void.IsFunctionType(nullptr));
+    ASSERT_EQ(void_void.GetNumberOfFunctionArguments(), 0);
   }
   {
     NodePointer n =
@@ -111,7 +117,49 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                                     b.Node(Node::Kind::ImplEscaping),
                                     b.Node(Node::Kind::ImplConvention,
                                            "@callee_guaranteed")))));
-    CompilerType opaque = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(opaque.IsFunctionType(nullptr));
+    CompilerType impl_void_void = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(impl_void_void.IsFunctionType(nullptr));
+    ASSERT_EQ(impl_void_void.GetNumberOfFunctionArguments(), 0);
+  }
+  {
+    NodePointer n = b.Node(
+        Node::Kind::Global,
+        b.Node(
+            Node::Kind::TypeMangling,
+            b.Node(
+                Node::Kind::Type,
+                b.Node(Node::Kind::ImplFunctionType,
+                       b.Node(Node::Kind::ImplEscaping),
+                       b.Node(Node::Kind::ImplConvention, "@callee_guaranteed"),
+                       b.Node(Node::Kind::ImplParameter,
+                              b.Node(Node::Kind::ImplConvention, "@unowned"),
+                              b.IntType()),
+                       b.Node(Node::Kind::ImplParameter,
+                              b.Node(Node::Kind::ImplConvention, "@unowned"),
+                              b.IntType())))));
+    CompilerType impl_two_args = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(impl_two_args.IsFunctionType(nullptr));
+    ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2);
+  }
+  {
+    NodePointer n = b.Node(
+        Node::Kind::Global,
+        b.Node(
+            Node::Kind::TypeMangling,
+            b.Node(Node::Kind::Type,
+                   b.Node(Node::Kind::FunctionType,
+                          b.Node(Node::Kind::ArgumentTuple,
+                                 b.Node(Node::Kind::Type,
+                                        b.Node(Node::Kind::Tuple,
+                                               b.Node(Node::Kind::TupleElement,
+                                                      b.IntType()),
+                                               b.Node(Node::Kind::TupleElement,
+                                                      b.IntType())))),
+                          b.Node(Node::Kind::ReturnType,
+                                 b.Node(Node::Kind::Type,
+                                        b.Node(Node::Kind::Tuple)))))));
+    CompilerType two_args = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(two_args.IsFunctionType(nullptr));
+    ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2);
   }
 }

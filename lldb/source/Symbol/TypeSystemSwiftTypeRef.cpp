@@ -394,34 +394,68 @@ bool TypeSystemSwiftTypeRef::IsFloatingPointType(void *type, uint32_t &count,
   return m_swift_ast_context->IsFloatingPointType(ReconstructType(type), count,
                                                   is_complex);
 }
+
+/// Drill into a function type.
+static NodePointer GetFunctionTypeNode(NodePointer node) {
+  using namespace swift::Demangle;
+  if (!node || node->getNumChildren() != 1 ||
+      node->getKind() != Node::Kind::Global)
+    return nullptr;
+  node = node->getFirstChild();
+  if (node->getNumChildren() != 1 ||
+      node->getKind() != Node::Kind::TypeMangling)
+    return nullptr;
+  node = node->getFirstChild();
+  if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
+    return nullptr;
+  node = node->getFirstChild();
+  if (node->getKind() != Node::Kind::FunctionType &&
+      node->getKind() != Node::Kind::ImplFunctionType)
+    return nullptr;
+  return node;
+}
+
 bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
-  auto impl = [&]() {
+  auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler Dem;
     NodePointer node =
         GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
-    if (!node || node->getNumChildren() != 1 ||
-        node->getKind() != Node::Kind::Global)
-      return false;
-    node = node->getFirstChild();
-    if (node->getNumChildren() != 1 ||
-        node->getKind() != Node::Kind::TypeMangling)
-      return false;
-    node = node->getFirstChild();
-    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
-      return false;
-    node = node->getFirstChild();
-    if (node->getKind() != Node::Kind::FunctionType &&
-        node->getKind() != Node::Kind::ImplFunctionType)
-      return false;
-    return true;
+    return GetFunctionTypeNode(node);
   };
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsFunctionType(
                                 ReconstructType(type), nullptr));
 }
 size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
-  return m_swift_ast_context->GetNumberOfFunctionArguments(
-      ReconstructType(type));
+  auto impl = [&]() -> size_t {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node =
+        GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
+    if (!node)
+      return 0;
+    node = GetFunctionTypeNode(node);
+    if (!node)
+      return 0;
+    unsigned num_args = 0;
+    for (NodePointer child : *node) {
+      if (child->getKind() == Node::Kind::ImplParameter)
+        ++num_args;
+      if (child->getKind() == Node::Kind::ArgumentTuple &&
+          child->getNumChildren() == 1) {
+        NodePointer node = child->getFirstChild();
+        if (node->getNumChildren() != 1 ||
+            node->getKind() != Node::Kind::Type)
+          break;
+        node = node->getFirstChild();
+        if (node->getKind() == Node::Kind::Tuple)
+          return node->getNumChildren();
+      }
+    }
+    return num_args;
+  };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetNumberOfFunctionArguments(
+                                ReconstructType(type)));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
