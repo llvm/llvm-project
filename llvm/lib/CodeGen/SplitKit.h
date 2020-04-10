@@ -23,8 +23,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -327,21 +327,21 @@ private:
   ///    its def.  The full live range can be inferred exactly from the range
   ///    of RegIdx in RegAssign.
   /// 3. (Null, true).  As above, but the ranges in RegAssign are too large, and
-  ///    the live range must be recomputed using LiveRangeCalc::extend().
+  ///    the live range must be recomputed using ::extend().
   /// 4. (VNI, false) The value is mapped to a single new value.
   ///    The new value has no live ranges anywhere.
   ValueMap Values;
 
-  /// LRCalc - Cache for computing live ranges and SSA update.  Each instance
+  /// LICalc - Cache for computing live ranges and SSA update.  Each instance
   /// can only handle non-overlapping live ranges, so use a separate
-  /// LiveRangeCalc instance for the complement interval when in spill mode.
-  LiveRangeCalc LRCalc[2];
+  /// LiveIntervalCalc instance for the complement interval when in spill mode.
+  LiveIntervalCalc LICalc[2];
 
-  /// getLRCalc - Return the LRCalc to use for RegIdx.  In spill mode, the
+  /// getLICalc - Return the LICalc to use for RegIdx.  In spill mode, the
   /// complement interval can overlap the other intervals, so it gets its own
-  /// LRCalc instance.  When not in spill mode, all intervals can share one.
-  LiveRangeCalc &getLRCalc(unsigned RegIdx) {
-    return LRCalc[SpillMode != SM_Partition && RegIdx != 0];
+  /// LICalc instance.  When not in spill mode, all intervals can share one.
+  LiveIntervalCalc &getLICalc(unsigned RegIdx) {
+    return LICalc[SpillMode != SM_Partition && RegIdx != 0];
   }
 
   /// Find a subrange corresponding to the lane mask @p LM in the live
@@ -414,7 +414,7 @@ private:
   /// all predecessor values that reach this def. If @p LR is a subrange,
   /// the array @p Undefs is the set of all locations where it is undefined
   /// via <def,read-undef> in other subranges for the same register.
-  void extendPHIRange(MachineBasicBlock &B, LiveRangeCalc &LRC,
+  void extendPHIRange(MachineBasicBlock &B, LiveIntervalCalc &LIC,
                       LiveRange &LR, LaneBitmask LM,
                       ArrayRef<SlotIndex> Undefs);
 
