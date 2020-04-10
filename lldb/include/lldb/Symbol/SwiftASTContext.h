@@ -48,6 +48,11 @@ class ModuleDecl;
 class SourceFile;
 struct PrintOptions;
 class MemoryBufferSerializedModuleLoader;
+namespace Demangle {
+class Demangler;
+class Node;
+using NodePointer = Node *;
+} // namespace Demangle
 namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
@@ -406,9 +411,17 @@ public:
                            bool print_extensions_if_available) override;
 
 private:
+  /// Helper that creates an AST type from \p type.
   void *ReconstructType(void *type);
+  /// Cast \p opaque_type as a mangled name.
   const char *AsMangledName(void *opaque_type);
 
+  /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
+  /// and create a CompilerType from it.
+  CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
+                              swift::Demangle::NodePointer node);
+
+  /// The sibling SwiftASTContext.
   SwiftASTContext *m_swift_ast_context = nullptr;
 };
 

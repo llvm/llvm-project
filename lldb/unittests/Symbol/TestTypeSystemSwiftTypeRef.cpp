@@ -92,6 +92,15 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
   using namespace swift::Demangle;
   Demangler dem;
   NodeBuilder b(dem);
+  NodePointer int_node =
+      b.Node(Node::Kind::Global, b.Node(Node::Kind::TypeMangling,
+                                        b.Node(Node::Kind::Type, b.IntType())));
+  CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+  NodePointer void_node =
+      b.Node(Node::Kind::Global,
+             b.Node(Node::Kind::TypeMangling,
+                    b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))));
+  CompilerType void_type = GetCompilerType(b.Mangle(void_node));
   {
     NodePointer n = b.Node(
         Node::Kind::Global,
@@ -136,10 +145,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                               b.IntType()),
                        b.Node(Node::Kind::ImplParameter,
                               b.Node(Node::Kind::ImplConvention, "@unowned"),
-                              b.IntType())))));
+                              b.Node(Node::Kind::Tuple))))));
     CompilerType impl_two_args = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(impl_two_args.IsFunctionType(nullptr));
     ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2);
+    ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(0), int_type);
+    ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(1), void_type);
   }
   {
     NodePointer n = b.Node(
@@ -154,12 +165,14 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                                                b.Node(Node::Kind::TupleElement,
                                                       b.IntType()),
                                                b.Node(Node::Kind::TupleElement,
-                                                      b.IntType())))),
+                                                      b.Node(Node::Kind::Tuple))))),
                           b.Node(Node::Kind::ReturnType,
                                  b.Node(Node::Kind::Type,
                                         b.Node(Node::Kind::Tuple)))))));
     CompilerType two_args = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(two_args.IsFunctionType(nullptr));
     ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2);
+    ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(0), int_type);
+    ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
   }
 }
