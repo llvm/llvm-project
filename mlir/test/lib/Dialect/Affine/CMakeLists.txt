@@ -1,5 +1,6 @@
 add_llvm_library(MLIRAffineTransformsTestPasses
   TestAffineDataCopy.cpp
+  TestAffineLoopUnswitching.cpp
   TestLoopPermutation.cpp
   TestParallelismDetection.cpp
   TestVectorizationUtils.cpp
