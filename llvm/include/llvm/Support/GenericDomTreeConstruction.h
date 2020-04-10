@@ -322,7 +322,7 @@ struct SemiNCAInfo {
     assert(N && "N must be a valid node");
     GraphDiffT EmptyGD;
     auto &GD = BUI ? BUI->PreViewCFG : EmptyGD;
-    return !empty(children<GraphDiffNodePair>({&GD, N}));
+    return !llvm::empty(children<GraphDiffNodePair>({&GD, N}));
   }
 
   static NodePtr GetEntryNode(const DomTreeT &DT) {
