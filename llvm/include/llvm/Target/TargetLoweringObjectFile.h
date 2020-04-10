@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCObjectFileInfo.h"
