@@ -12,10 +12,6 @@
 
 // int overflow(int c);
 
-// There was an overflow in the dylib on older macOS versions
-// UNSUPPORTED: with_system_cxx_lib=macosx10.8
-// UNSUPPORTED: with_system_cxx_lib=macosx10.7
-
 #include <iostream>
 #include <string>
 #include <strstream>

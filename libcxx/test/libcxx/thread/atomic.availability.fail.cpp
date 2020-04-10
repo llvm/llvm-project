@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++98, c++03
 // REQUIRES: verify-support
 // REQUIRES: with_system_cxx_lib=macosx
-// REQUIRES: availability=macosx10.7 || availability=macosx10.8 || availability=macosx10.9 || availability=macosx10.10 || availability=macosx10.11 || availability=macosx10.12 || availability=macosx10.13 || availability=macosx10.14 || availability=macosx10.15
+// REQUIRES: availability=macosx10.9 || availability=macosx10.10 || availability=macosx10.11 || availability=macosx10.12 || availability=macosx10.13 || availability=macosx10.14 || availability=macosx10.15
 
 // Test the availability markup on the C++20 Synchronization Library
 // additions to <atomic>.
