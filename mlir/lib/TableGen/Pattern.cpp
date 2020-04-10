@@ -56,6 +56,10 @@ bool tblgen::DagLeaf::isEnumAttrCase() const {
   return isSubClassOf("EnumAttrCaseInfo");
 }
 
+bool tblgen::DagLeaf::isStringAttr() const {
+  return isa<llvm::StringInit>(def) || isa<llvm::CodeInit>(def);
+}
+
 tblgen::Constraint tblgen::DagLeaf::getAsConstraint() const {
   assert((isOperandMatcher() || isAttrMatcher()) &&
          "the DAG leaf must be operand or attribute");
@@ -81,6 +85,10 @@ llvm::StringRef tblgen::DagLeaf::getNativeCodeTemplate() const {
   return cast<llvm::DefInit>(def)->getDef()->getValueAsString("expression");
 }
 
+std::string tblgen::DagLeaf::getStringAttr() const {
+  assert(isStringAttr() && "the DAG leaf must be string attribute");
+  return def->getAsUnquotedString();
+}
 bool tblgen::DagLeaf::isSubClassOf(StringRef superclass) const {
   if (auto *defInit = dyn_cast_or_null<llvm::DefInit>(def))
     return defInit->getDef()->isSubClassOf(superclass);

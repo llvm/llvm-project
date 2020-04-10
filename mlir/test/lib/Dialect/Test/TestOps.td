@@ -1018,8 +1018,9 @@ def : Pat<(TestLocationSrcOp:$res1
             (TestLocationSrcOp:$res3 $input))),
           (TestLocationDstOp
             (TestLocationDstOp
-              (TestLocationDstOp $input, (location $res1))),
-	    (location $res2, $res3))>;
+              (TestLocationDstOp $input, (location $res1)),
+              (location "named")),
+            (location "fused", $res2, $res3))>;
 
 //===----------------------------------------------------------------------===//
 // Test Legalization

@@ -672,18 +672,24 @@ directive to provide finer control.
 (location $symbol0, $symbol1, ...)
 ```
 
-where all `$symbol` should be bound previously in the pattern.
+where all `$symbol` should be bound previously in the pattern and one optional
+string may be specified as an attribute. The following locations are creted:
+
+*   If only 1 symbol is specified then that symbol's location is used,
+*   If multiple are specified then a fused location is created;
+*   If no symbol is specified then string must be specified and a NamedLoc is
+    created instead;
 
 `location` must be used as the last argument to an op creation. For example,
 
 ```tablegen
 def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
-          (LocDst1Op (LocDst2Op ..., (location $src2)))>;
+          (LocDst1Op (LocDst2Op ..., (location $src2)), (location "outer"))>;
 ```
 
 In the above pattern, the generated `LocDst2Op` will use the matched location
-of `LocSrc2Op` while the root `LocDst1Op` node will still se the fused location
-of all source Ops.
+of `LocSrc2Op` while the root `LocDst1Op` node will used the named location
+`outer`.
 
 ### `replaceWithValue`
 
