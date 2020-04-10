@@ -29,7 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
-#include "llvm/Support/OptimalLayout.h"
+#include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -412,7 +412,7 @@ public:
 
     // Everything else has a flexible offset.
     } else {
-      Offset = OptimalLayoutField::FlexibleOffset;
+      Offset = OptimizedStructLayoutField::FlexibleOffset;
     }
 
     Fields.push_back({FieldSize, Offset, ForSpill, Ty, 0,
@@ -445,7 +445,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
 
   // Prepare the optimal-layout field array.
   // The Id in the layout field is a pointer to our Field for it.
-  SmallVector<OptimalLayoutField, 8> LayoutFields;
+  SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
   LayoutFields.reserve(Fields.size());
   for (auto &Field : Fields) {
     LayoutFields.emplace_back(&Field, Field.Size, Field.Alignment,
@@ -453,11 +453,11 @@ void FrameTypeBuilder::finish(StructType *Ty) {
   }
 
   // Perform layout.
-  auto SizeAndAlign = performOptimalLayout(LayoutFields);
+  auto SizeAndAlign = performOptimizedStructLayout(LayoutFields);
   StructSize = SizeAndAlign.first;
   StructAlign = SizeAndAlign.second;
 
-  auto getField = [](const OptimalLayoutField &LayoutField) -> Field & {
+  auto getField = [](const OptimizedStructLayoutField &LayoutField) -> Field & {
     return *static_cast<Field *>(const_cast<void*>(LayoutField.Id));
   };
 

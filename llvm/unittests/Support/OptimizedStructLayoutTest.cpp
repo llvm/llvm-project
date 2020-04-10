@@ -1,4 +1,4 @@
-//=== - llvm/unittest/Support/OptimalLayoutTest.cpp - Layout tests --------===//
+//=== - unittest/Support/OptimizedStructLayoutTest.cpp - Layout tests -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/OptimalLayout.h"
+#include "llvm/Support/OptimizedStructLayout.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -33,7 +33,7 @@ public:
   LayoutTest &flexible(uint64_t Size, uint64_t Alignment,
                        uint64_t ExpectedOffset) {
     Fields.push_back({Size, Align(Alignment),
-                      OptimalLayoutField::FlexibleOffset, ExpectedOffset});
+                      OptimizedStructLayoutField::FlexibleOffset, ExpectedOffset});
     return *this;
   }
 
@@ -43,12 +43,12 @@ public:
   }
 
   void verify(uint64_t ExpectedSize, uint64_t ExpectedAlignment) {
-    SmallVector<OptimalLayoutField, 8> LayoutFields;
+    SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
     LayoutFields.reserve(Fields.size());
     for (auto &F : Fields)
       LayoutFields.emplace_back(&F, F.Size, F.Alignment, F.ForcedOffset);
 
-    auto SizeAndAlign = performOptimalLayout(LayoutFields);
+    auto SizeAndAlign = performOptimizedStructLayout(LayoutFields);
 
     EXPECT_EQ(SizeAndAlign.first, ExpectedSize);
     EXPECT_EQ(SizeAndAlign.second, Align(ExpectedAlignment));
@@ -64,7 +64,7 @@ public:
 
 }
 
-TEST(OptimalLayoutTest, Basic) {
+TEST(OptimizedStructLayoutTest, Basic) {
   LayoutTest()
     .flexible(12, 4, 8)
     .flexible(8,  8, 0)
@@ -72,7 +72,7 @@ TEST(OptimalLayoutTest, Basic) {
     .verify(24, 8);
 }
 
-TEST(OptimalLayoutTest, OddSize) {
+TEST(OptimizedStructLayoutTest, OddSize) {
   LayoutTest()
     .flexible(8,  8, 16)
     .flexible(4,  4, 12)
@@ -81,7 +81,7 @@ TEST(OptimalLayoutTest, OddSize) {
     .verify(24, 8);
 }
 
-TEST(OptimalLayoutTest, Gaps) {
+TEST(OptimizedStructLayoutTest, Gaps) {
   LayoutTest()
     .fixed(4, 4, 8)
     .fixed(4, 4, 16)
@@ -92,7 +92,7 @@ TEST(OptimalLayoutTest, Gaps) {
     .verify(24, 4);
 }
 
-TEST(OptimalLayoutTest, Greed) {
+TEST(OptimizedStructLayoutTest, Greed) {
   // The greedy algorithm doesn't find the optimal layout here, which
   // would be to put the 5-byte field at the end.
   LayoutTest()
@@ -104,7 +104,7 @@ TEST(OptimalLayoutTest, Greed) {
     .verify(24, 4);
 }
 
-TEST(OptimalLayoutTest, Jagged) {
+TEST(OptimizedStructLayoutTest, Jagged) {
   LayoutTest()
     .flexible(1, 2, 18)
     .flexible(13, 8, 0)
@@ -112,7 +112,7 @@ TEST(OptimalLayoutTest, Jagged) {
     .verify(19, 8);
 }
 
-TEST(OptimalLayoutTest, GardenPath) {
+TEST(OptimizedStructLayoutTest, GardenPath) {
   // The 4-byte-aligned field is our highest priority, but the less-aligned
   // fields keep leaving the end offset mis-aligned.
   LayoutTest()
