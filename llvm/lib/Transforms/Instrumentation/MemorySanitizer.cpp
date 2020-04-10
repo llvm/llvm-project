@@ -2068,9 +2068,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   size_t VectorOrPrimitiveTypeSizeInBits(Type *Ty) {
     assert(!(Ty->isVectorTy() && Ty->getScalarType()->isPointerTy()) &&
            "Vector of pointers is not a valid shadow type");
-    return Ty->isVectorTy() ?
-      Ty->getVectorNumElements() * Ty->getScalarSizeInBits() :
-      Ty->getPrimitiveSizeInBits();
+    return Ty->isVectorTy() ? cast<VectorType>(Ty)->getNumElements() *
+                                  Ty->getScalarSizeInBits()
+                            : Ty->getPrimitiveSizeInBits();
   }
 
   /// Cast between two shadow types, extending or truncating as
@@ -2086,7 +2086,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
       return IRB.CreateIntCast(V, dstTy, Signed);
     if (dstTy->isVectorTy() && srcTy->isVectorTy() &&
-        dstTy->getVectorNumElements() == srcTy->getVectorNumElements())
+        cast<VectorType>(dstTy)->getNumElements() ==
+            cast<VectorType>(srcTy)->getNumElements())
       return IRB.CreateIntCast(V, dstTy, Signed);
     Value *V1 = IRB.CreateBitCast(V, Type::getIntNTy(*MS.C, srcSizeInBits));
     Value *V2 =
@@ -2130,9 +2131,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                            Value *OtherArg) {
     Constant *ShadowMul;
     Type *Ty = ConstArg->getType();
-    if (Ty->isVectorTy()) {
-      unsigned NumElements = Ty->getVectorNumElements();
-      Type *EltTy = Ty->getVectorElementType();
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      unsigned NumElements = VTy->getNumElements();
+      Type *EltTy = VTy->getElementType();
       SmallVector<Constant *, 16> Elements;
       for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
         if (ConstantInt *Elt =
@@ -2657,7 +2658,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(CopyOp->getType() == I.getType());
       assert(CopyOp->getType()->isVectorTy());
       Value *ResultShadow = getShadow(CopyOp);
-      Type *EltTy = ResultShadow->getType()->getVectorElementType();
+      Type *EltTy = cast<VectorType>(ResultShadow->getType())->getElementType();
       for (int i = 0; i < NumUsedElements; ++i) {
         ResultShadow = IRB.CreateInsertElement(
             ResultShadow, ConstantInt::getNullValue(EltTy),
@@ -2959,8 +2960,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
         Value *Acc = IRB.CreateExtractElement(
             MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
-        for (int i = 1, N = PassThru->getType()->getVectorNumElements(); i < N;
-             ++i) {
+        for (int i = 1,
+                 N = cast<VectorType>(PassThru->getType())->getNumElements();
+             i < N; ++i) {
           Value *More = IRB.CreateExtractElement(
               MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), i));
           Acc = IRB.CreateOr(Acc, More);
@@ -3020,7 +3022,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handlePclmulIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Type *ShadowTy = getShadowTy(&I);
-    unsigned Width = I.getArgOperand(0)->getType()->getVectorNumElements();
+    unsigned Width =
+        cast<VectorType>(I.getArgOperand(0)->getType())->getNumElements();
     assert(isa<ConstantInt>(I.getArgOperand(2)) &&
            "pclmul 3rd operand must be a constant");
     unsigned Imm = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
