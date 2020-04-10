@@ -1281,6 +1281,7 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
   static const TargetRegisterClass *const BaseClasses[] = {
     &AMDGPU::VGPR_LO16RegClass,
     &AMDGPU::VGPR_HI16RegClass,
+    &AMDGPU::SGPR_LO16RegClass,
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::AGPR_32RegClass,
@@ -1375,6 +1376,8 @@ bool SIRegisterInfo::hasAGPRs(const TargetRegisterClass *RC) const {
 const TargetRegisterClass *SIRegisterInfo::getEquivalentVGPRClass(
                                          const TargetRegisterClass *SRC) const {
   switch (getRegSizeInBits(*SRC)) {
+  case 16:
+    return &AMDGPU::VGPR_LO16RegClass;
   case 32:
     return &AMDGPU::VGPR_32RegClass;
   case 64:
@@ -1419,6 +1422,8 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentAGPRClass(
 const TargetRegisterClass *SIRegisterInfo::getEquivalentSGPRClass(
                                          const TargetRegisterClass *VRC) const {
   switch (getRegSizeInBits(*VRC)) {
+  case 16:
+    return &AMDGPU::SGPR_LO16RegClass;
   case 32:
     return &AMDGPU::SGPR_32RegClass;
   case 64:
@@ -1795,6 +1800,7 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AMDGPU::VGPR_HI16RegClassID:
     return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
+  case AMDGPU::SGPR_LO16RegClassID:
     return std::min(ST.getMaxNumSGPRs(Occupancy, true), ST.getMaxNumSGPRs(MF));
   }
 }
