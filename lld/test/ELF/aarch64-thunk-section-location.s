@@ -35,7 +35,7 @@ high_target:
  ret
 
 // CHECK: <__AArch64AbsLongThunk_high_target>:
-// CHECK-NEXT:  81d1008:       ldr     x16, #8
+// CHECK-NEXT:  81d1008:       ldr     x16, 0x81d1010
 // CHECK-NEXT:  81d100c:       br      x16
 // CHECK: <$d>:
 // CHECK-NEXT:  81d1010:       00 20 21 08     .word   0x08212000
