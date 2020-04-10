@@ -71,7 +71,6 @@ continue:
 ; CHECK: [[ANSWER_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ANSWER]]
 ; CHECK: G_STORE [[ANSWER_EXT]](s64), [[SLOT]]
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFFSET:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[SLOT:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFFSET]](s64)
 ; CHECK: G_STORE [[ONE]](s32), [[SLOT]]

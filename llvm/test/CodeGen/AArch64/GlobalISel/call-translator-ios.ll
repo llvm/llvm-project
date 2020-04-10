@@ -24,7 +24,6 @@ define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs)
 ; CHECK: [[C42_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[C42_LOC:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[C42_OFFS]](s64)
 ; CHECK: G_STORE [[C42]](s8), [[C42_LOC]](p0) :: (store 1 into stack)
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C12_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
 ; CHECK: [[C12_LOC:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[C12_OFFS]](s64)
 ; CHECK: G_STORE [[C12]](s8), [[C12_LOC]](p0) :: (store 1 into stack + 1)
@@ -65,7 +64,6 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF]](s64)
 ; CHECK: G_STORE [[LD1]](s64), [[ADDR]](p0) :: (store 8 into stack, align 1)
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]]
 ; CHECK: G_STORE [[LD2]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 1)
 define void @test_split_struct([2 x i64]* %ptr) {
