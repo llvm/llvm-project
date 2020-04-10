@@ -1,10 +1,10 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN:   | llvm-dwarfdump -lookup=0xffffffff - | \
+# RUN:   | not llvm-dwarfdump -lookup=0xffffffff - | \
 # RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
 # EMPTY: {{^$}}
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN:   | llvm-dwarfdump -lookup=0xffffffffffffffff - | \
+# RUN:   | not llvm-dwarfdump -lookup=0xffffffffffffffff - | \
 # RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
 # EMPTY: {{^$}}
 
