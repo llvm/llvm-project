@@ -42,7 +42,7 @@ class Run(object):
 
         Upon completion, each test in the run will have its result
         computed. Tests which were not actually executed (for any reason) will
-        be given an UNRESOLVED result.
+        be marked SKIPPED.
         """
         self.failures = 0
 
@@ -51,12 +51,13 @@ class Run(object):
         timeout = self.timeout or one_week
         deadline = time.time() + timeout
 
-        self._execute(deadline)
-
-        # Mark any tests that weren't run as UNRESOLVED.
-        for test in self.tests:
-            if test.result is None:
-                test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
+        try:
+            self._execute(deadline)
+        finally:
+            skipped = lit.Test.Result(lit.Test.SKIPPED)
+            for test in self.tests:
+                if test.result is None:
+                    test.setResult(skipped)
 
     def _execute(self, deadline):
         self._increase_process_limit()
