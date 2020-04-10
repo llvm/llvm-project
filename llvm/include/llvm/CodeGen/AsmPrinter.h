@@ -681,6 +681,9 @@ private:
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
 
+  /// This method emits a comment next to header for the current function.
+  virtual void emitFunctionHeaderComment();
+
   /// Emit a blob of inline asm to the output streamer.
   void
   emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,

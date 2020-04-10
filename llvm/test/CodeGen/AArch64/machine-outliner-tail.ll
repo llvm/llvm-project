@@ -1,6 +1,7 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-linux-gnu < %s | FileCheck %s
 
-; CHECK: OUTLINED_FUNCTION_0:
+; CHECK-LABEL: OUTLINED_FUNCTION_0:
+; CHECK-SAME: // @OUTLINED_FUNCTION_0 Tail Call
 ; CHECK:      mov     w0, #1
 ; CHECK-NEXT: mov     w1, #2
 ; CHECK-NEXT: mov     w2, #3
