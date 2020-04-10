@@ -911,6 +911,8 @@ void TargetPassConfig::addMachinePasses() {
   // Run post-ra passes.
   addPostRegAlloc();
 
+  addPass(&FixupStatepointCallerSavedID);
+
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOpt::None) {
     addPass(&PostRAMachineSinkingID);

@@ -55,6 +55,7 @@
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
+; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
