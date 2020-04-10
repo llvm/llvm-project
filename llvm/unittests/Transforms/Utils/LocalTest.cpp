@@ -1019,12 +1019,12 @@ TEST(Local, CanReplaceOperandWithVariable) {
   BasicBlock *BB0 = BasicBlock::Create(Ctx, "", TestBody);
   B.SetInsertPoint(BB0);
 
-  Value *Intrin = M.getOrInsertFunction("llvm.foo", FnType).getCallee();
-  Value *Func = M.getOrInsertFunction("foo", FnType).getCallee();
-  Value *VarArgFunc
-    = M.getOrInsertFunction("foo.vararg", VarArgFnType).getCallee();
-  Value *VarArgIntrin
-    = M.getOrInsertFunction("llvm.foo.vararg", VarArgFnType).getCallee();
+  FunctionCallee Intrin = M.getOrInsertFunction("llvm.foo", FnType);
+  FunctionCallee Func = M.getOrInsertFunction("foo", FnType);
+  FunctionCallee VarArgFunc
+    = M.getOrInsertFunction("foo.vararg", VarArgFnType);
+  FunctionCallee VarArgIntrin
+    = M.getOrInsertFunction("llvm.foo.vararg", VarArgFnType);
 
   auto *CallToIntrin = B.CreateCall(Intrin);
   auto *CallToFunc = B.CreateCall(Func);
