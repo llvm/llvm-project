@@ -20,15 +20,11 @@
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.8
-// XFAIL: with_system_cxx_lib=macosx10.7
 
 // The test will fail on deployment targets that do not support sized deallocation.
 // XFAIL: availability=macosx10.11
 // XFAIL: availability=macosx10.10
 // XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
 
 // AppleClang < 10 incorrectly warns that aligned allocation is not supported
 // even when it is supported.

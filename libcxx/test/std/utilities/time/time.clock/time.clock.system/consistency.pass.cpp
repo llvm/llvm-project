@@ -10,12 +10,6 @@
 // violation because Clock::is_steady is defined in both the dylib and this TU.
 // UNSUPPORTED: asan
 
-// Starting with C++17, Clock::is_steady is inlined (but not before LLVM-3.9!),
-// but before C++17 it requires the symbol to be present in the dylib, which
-// is only shipped starting with macosx10.9.
-// XFAIL: with_system_cxx_lib=macosx10.7 && (c++98 || c++03 || c++11 || c++14 || apple-clang-7 || apple-clang-8.0)
-// XFAIL: with_system_cxx_lib=macosx10.8 && (c++98 || c++03 || c++11 || c++14 || apple-clang-7 || apple-clang-8.0)
-
 // <chrono>
 
 // system_clock
