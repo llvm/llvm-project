@@ -200,14 +200,6 @@ func @illegaltype(i0) // expected-error {{invalid integer width}}
 
 // -----
 
-func @illegaltype(ui1) // expected-error {{cannot have signedness semantics for i1}}
-
-// -----
-
-func @illegaltype(si1) // expected-error {{cannot have signedness semantics for i1}}
-
-// -----
-
 func @malformed_for_percent() {
   affine.for i = 1 to 10 { // expected-error {{expected SSA operand}}
 

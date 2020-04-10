@@ -12,6 +12,7 @@
 #include "llvm-c/Orc.h"
 #include "llvm-c/Support.h"
 #include "llvm-c/Target.h"
+#include "llvm-c/TargetMachine.h"
 
 #include <stdio.h>
 
@@ -22,13 +23,7 @@ int handleError(LLVMErrorRef Err) {
   return 1;
 }
 
-LLVMOrcThreadSafeModuleRef createDemoModule() {
-  // Create a new ThreadSafeContext and underlying LLVMContext.
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
-
-  // Get a reference to the underlying LLVMContext.
-  LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSCtx);
-
+LLVMModuleRef createDemoModule(LLVMContextRef Ctx) {
   // Create a new LLVM module.
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext("demo", Ctx);
 
@@ -55,16 +50,7 @@ LLVMOrcThreadSafeModuleRef createDemoModule() {
   //  - Build the return instruction.
   LLVMBuildRet(Builder, Result);
 
-  // Our demo module is now complete. Wrap it and our ThreadSafeContext in a
-  // ThreadSafeModule.
-  LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(M, TSCtx);
-
-  // Dispose of our local ThreadSafeContext value. The underlying LLVMContext
-  // will be kept alive by our ThreadSafeModule, TSM.
-  LLVMOrcDisposeThreadSafeContext(TSCtx);
-
-  // Return the result.
-  return TSM;
+  return M;
 }
 
 int main(int argc, char *argv[]) {
@@ -83,22 +69,51 @@ int main(int argc, char *argv[]) {
   LLVMOrcLLJITRef J;
   {
     LLVMErrorRef Err;
-    if ((Err = LLVMOrcCreateDefaultLLJIT(&J))) {
+    if ((Err = LLVMOrcCreateLLJIT(&J, 0))) {
       MainResult = handleError(Err);
       goto llvm_shutdown;
     }
   }
 
-  // Create our demo module.
-  LLVMOrcThreadSafeModuleRef TSM = createDemoModule();
-
-  // Add our demo module to the JIT.
+  // Create our demo object file.
+  LLVMMemoryBufferRef ObjectFileBuffer;
   {
+    // Create a module.
+    LLVMContextRef Ctx = LLVMContextCreate();
+    LLVMModuleRef M = createDemoModule(Ctx);
+
+    // Get the Target.
+    const char *Triple = LLVMOrcLLJITGetTripleString(J);
+    LLVMTargetRef Target = 0;
+    char *ErrorMsg = 0;
+    if (LLVMGetTargetFromTriple(Triple, &Target, &ErrorMsg)) {
+      fprintf(stderr, "Error getting target for %s: %s\n", Triple, ErrorMsg);
+      LLVMDisposeModule(M);
+      LLVMContextDispose(Ctx);
+      goto jit_cleanup;
+    }
+
+    // Construct a TargetMachine.
+    LLVMTargetMachineRef TM =
+        LLVMCreateTargetMachine(Target, Triple, "", "", LLVMCodeGenLevelNone,
+                                LLVMRelocDefault, LLVMCodeModelDefault);
+
+    // Run CodeGen to produce the buffer.
+    if (LLVMTargetMachineEmitToMemoryBuffer(TM, M, LLVMObjectFile, &ErrorMsg,
+                                            &ObjectFileBuffer)) {
+      fprintf(stderr, "Error emitting object: %s\n", ErrorMsg);
+      LLVMDisposeTargetMachine(TM);
+      LLVMDisposeModule(M);
+      LLVMContextDispose(Ctx);
+      goto jit_cleanup;
+    }
+  }
+
+  // Add our object file buffer to the JIT.
+  {
+    LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
     LLVMErrorRef Err;
-    if ((Err = LLVMOrcLLJITAddLLVMIRModule(J, TSM))) {
-      // If adding the ThreadSafeModule fails then we need to clean it up
-      // ourselves. If adding it succeeds the JIT will manage the memory.
-      LLVMOrcDisposeThreadSafeModule(TSM);
+    if ((Err = LLVMOrcLLJITAddObjectFile(J, MainJD, ObjectFileBuffer))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
     }

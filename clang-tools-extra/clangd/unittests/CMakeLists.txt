@@ -30,6 +30,7 @@ add_unittest(ClangdUnitTests ClangdTests
   CancellationTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
+  ClangdLSPServerTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   CollectMacrosTests.cpp
@@ -55,6 +56,7 @@ add_unittest(ClangdUnitTests ClangdTests
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
+  LSPClient.cpp
   ParsedASTTests.cpp
   PathMappingTests.cpp
   PrintASTTests.cpp

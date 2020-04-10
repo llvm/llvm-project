@@ -10,6 +10,6 @@ set(LLVM_LINK_COMPONENTS
   nativecodegen
   )
 
-add_llvm_example(BasicOrcV2CBindings
-  BasicOrcV2CBindings.c
+add_llvm_example(OrcV2CBindingsBasicUsage
+  OrcV2CBindingsBasicUsage.c
   )

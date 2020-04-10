@@ -192,6 +192,7 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isExpr()) {
     const MCExpr *Expr = MO.getExpr();
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
+    (void)SRE;
     assert(SRE->getKind() == MCSymbolRefExpr::VK_PCREL &&
            "VariantKind must be VK_PCREL");
     Fixups.push_back(
