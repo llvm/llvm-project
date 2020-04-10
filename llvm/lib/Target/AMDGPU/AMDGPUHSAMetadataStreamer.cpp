@@ -153,7 +153,7 @@ ValueType MetadataStreamerV2::getValueType(Type *Ty, StringRef TypeName) const {
   case Type::PointerTyID:
     return getValueType(Ty->getPointerElementType(), TypeName);
   case Type::VectorTyID:
-    return getValueType(Ty->getVectorElementType(), TypeName);
+    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
   default:
     return ValueType::Struct;
   }
@@ -188,7 +188,7 @@ std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
   case Type::VectorTyID: {
     auto VecTy = cast<VectorType>(Ty);
     auto ElTy = VecTy->getElementType();
-    auto NumElements = VecTy->getVectorNumElements();
+    auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
   default:
@@ -600,7 +600,7 @@ StringRef MetadataStreamerV3::getValueType(Type *Ty, StringRef TypeName) const {
   case Type::PointerTyID:
     return getValueType(Ty->getPointerElementType(), TypeName);
   case Type::VectorTyID:
-    return getValueType(Ty->getVectorElementType(), TypeName);
+    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
   default:
     return "struct";
   }
@@ -635,7 +635,7 @@ std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
   case Type::VectorTyID: {
     auto VecTy = cast<VectorType>(Ty);
     auto ElTy = VecTy->getElementType();
-    auto NumElements = VecTy->getVectorNumElements();
+    auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
   default:
