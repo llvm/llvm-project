@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -3220,8 +3219,7 @@ bool X86TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!CI->isTailCall())
     return false;
 
-  ImmutableCallSite CS(CI);
-  CallingConv::ID CalleeCC = CS.getCallingConv();
+  CallingConv::ID CalleeCC = CI->getCallingConv();
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
