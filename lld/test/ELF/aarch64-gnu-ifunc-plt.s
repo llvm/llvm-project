@@ -39,10 +39,10 @@
 // DISASM:      <bar>:
 // DISASM-NEXT:    2102dc: ret
 // DISASM:      <_start>:
-// DISASM-NEXT:    2102e0: bl      #80 <zed2+0x210330>
-// DISASM-NEXT:    2102e4: bl      #92 <zed2+0x210340>
-// DISASM-NEXT:    2102e8: bl      #40 <bar2@plt>
-// DISASM-NEXT:    2102ec: bl      #52 <zed2@plt>
+// DISASM-NEXT:    2102e0: bl      0x210330 <zed2+0x210330>
+// DISASM-NEXT:    2102e4: bl      0x210340 <zed2+0x210340>
+// DISASM-NEXT:    2102e8: bl      0x210310 <bar2@plt>
+// DISASM-NEXT:    2102ec: bl      0x210320 <zed2@plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:

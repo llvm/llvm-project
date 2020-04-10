@@ -37,13 +37,13 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: 0000000010010120 <_start>:
-// CHECK-NEXT: 10010120: b       #4
-// CHECK-NEXT: 10010124: bl      #4
-// CHECK-NEXT: 10010128: b.eq    #4
-// CHECK-NEXT: 1001012c: cbz     x1, #4
+// CHECK-NEXT: 10010120: b       0x10010124
+// CHECK-NEXT: 10010124: bl      0x10010128
+// CHECK-NEXT: 10010128: b.eq    0x1001012c
+// CHECK-NEXT: 1001012c: cbz     x1, 0x10010130
 // CHECK-NEXT: 10010130: adr     x0, #0
 // CHECK-NEXT: 10010134: adrp    x0, #0
-// CHECK-NEXT: 10010138: ldr     x8, #0
+// CHECK-NEXT: 10010138: ldr     x8, 0x10010138
 // CHECK:      1001013c: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 10010140: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 10010144: 00 00 00 00     .word   0x00000000

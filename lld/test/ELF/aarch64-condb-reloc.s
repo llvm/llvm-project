@@ -25,9 +25,9 @@
 # CHECK-NEXT:    21013c: nop
 # CHECK-NEXT:    210140: nop
 # CHECK:      <_start>:
-# CHECK-NEXT:    210144: b.eq #-36 <_foo>
-# CHECK-NEXT:    210148: b.eq #-24 <_bar>
-# CHECK-NEXT:    21014c: b.eq #-16 <_dah>
+# CHECK-NEXT:    210144: b.eq 0x210120 <_foo>
+# CHECK-NEXT:    210148: b.eq 0x210130 <_bar>
+# CHECK-NEXT:    21014c: b.eq 0x21013c <_dah>
 
 #DSOREL:      Section {
 #DSOREL:        Index:
@@ -68,9 +68,9 @@
 #DSO-NEXT:     10354: nop
 #DSO-NEXT:     10358: nop
 #DSO:      <_start>:
-#DSO-NEXT:     1035c: b.eq #52 <_foo@plt>
-#DSO-NEXT:     10360: b.eq #64 <_bar@plt>
-#DSO-NEXT:     10364: b.eq #76 <_dah@plt>
+#DSO-NEXT:     1035c: b.eq 0x10390 <_foo@plt>
+#DSO-NEXT:     10360: b.eq 0x103a0 <_bar@plt>
+#DSO-NEXT:     10364: b.eq 0x103b0 <_dah@plt>
 #DSO-EMPTY:
 #DSO-NEXT: Disassembly of section .plt:
 #DSO-EMPTY:

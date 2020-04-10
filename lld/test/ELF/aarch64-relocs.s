@@ -83,7 +83,7 @@ call26:
 # CHECK: Disassembly of section .R_AARCH64_CALL26:
 # CHECK-EMPTY:
 # CHECK-NEXT: <call26>:
-# CHECK-NEXT:   210154:       ff ff ff 97     bl     #-4
+# CHECK-NEXT:   210154:       ff ff ff 97     bl     0x210150
 
 .section .R_AARCH64_JUMP26,"ax",@progbits
 jump26:
@@ -96,7 +96,7 @@ jump26:
 # CHECK: Disassembly of section .R_AARCH64_JUMP26:
 # CHECK-EMPTY:
 # CHECK-NEXT: <jump26>:
-# CHECK-NEXT:   210158:       fe ff ff 17     b      #-8
+# CHECK-NEXT:   210158:       fe ff ff 17     b      0x210150
 
 .section .R_AARCH64_LDST32_ABS_LO12_NC,"ax",@progbits
 ldst32:

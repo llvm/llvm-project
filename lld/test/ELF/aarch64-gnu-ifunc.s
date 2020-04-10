@@ -106,8 +106,8 @@
 // DISASM: <bar>:
 // DISASM-NEXT:  21018c: ret
 // DISASM:      <_start>:
-// DISASM-NEXT:  210190: bl  #16
-// DISASM-NEXT:  210194: bl  #28
+// DISASM-NEXT:  210190: bl  0x2101a0
+// DISASM-NEXT:  210194: bl  0x2101b0
 // DISASM-NEXT:  210198: add x2, x2, #344
 // DISASM-NEXT:  21019c: add x2, x2, #392
 // DISASM-EMPTY:
