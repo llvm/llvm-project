@@ -550,7 +550,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_nvvm_reflect);
   }
 
-  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary);
+  TLI.addAllVectorizableFunctions();
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
@@ -572,8 +572,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
-  VectorDescs = TLI.VectorDescs;
-  ScalarDescs = TLI.ScalarDescs;
+  for (unsigned i = 0; i < NumVecLibs; i++)
+    VecLibDescs[i] = TLI.VecLibDescs[i];
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
@@ -583,8 +583,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
-  VectorDescs = TLI.VectorDescs;
-  ScalarDescs = TLI.ScalarDescs;
+  for (unsigned i = 0; i < NumVecLibs; i++)
+    VecLibDescs[i] = TLI.VecLibDescs[i];
 }
 
 TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
@@ -1520,7 +1520,16 @@ static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
   return LHS.VectorFnName < S;
 }
 
-void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
+void TargetLibraryInfoImpl::addAllVectorizableFunctions() {
+  addVectorizableFunctionsFromVecLib(Accelerate, VecLibDescs[Accelerate]);
+  addVectorizableFunctionsFromVecLib(MASSV, VecLibDescs[MASSV]);
+  addVectorizableFunctionsFromVecLib(SVML, VecLibDescs[SVML]);
+}
+
+void TargetLibraryInfoImpl::addVectorizableFunctions(
+    ArrayRef<VecDesc> Fns, VectorLibraryDescriptors &VecLibDesc) {
+  auto &VectorDescs = VecLibDesc.VectorDescs;
+  auto &ScalarDescs = VecLibDesc.ScalarDescs;
   VectorDescs.insert(VectorDescs.end(), Fns.begin(), Fns.end());
   llvm::sort(VectorDescs, compareByScalarFnName);
 
@@ -1529,14 +1538,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
-    enum VectorLibrary VecLib) {
+    enum VectorLibrary VecLib, VectorLibraryDescriptors &VetLibDesc) {
   switch (VecLib) {
   case Accelerate: {
     const VecDesc VecFuncs[] = {
     #define TLI_DEFINE_ACCELERATE_VECFUNCS
     #include "llvm/Analysis/VecFuncs.def"
     };
-    addVectorizableFunctions(VecFuncs);
+    addVectorizableFunctions(VecFuncs, VetLibDesc);
     break;
   }
   case MASSV: {
@@ -1544,7 +1553,7 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     #define TLI_DEFINE_MASSV_VECFUNCS
     #include "llvm/Analysis/VecFuncs.def"
     };
-    addVectorizableFunctions(VecFuncs);
+    addVectorizableFunctions(VecFuncs, VetLibDesc);
     break;
   }
   case SVML: {
@@ -1552,29 +1561,34 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     #define TLI_DEFINE_SVML_VECFUNCS
     #include "llvm/Analysis/VecFuncs.def"
     };
-    addVectorizableFunctions(VecFuncs);
+    addVectorizableFunctions(VecFuncs, VetLibDesc);
     break;
   }
-  case NoLibrary:
+  default:
+    llvm_unreachable("Unexpected vector library");
     break;
   }
 }
 
-bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
+bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName,
+                                                   VectorLibrary vecLib) const {
   funcName = sanitizeFunctionName(funcName);
-  if (funcName.empty())
+  if (funcName.empty() || vecLib >= NumVecLibs)
     return false;
 
+  auto &VectorDescs = VecLibDescs[vecLib].VectorDescs;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, funcName, compareWithScalarFnName);
   return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
 }
 
-StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
-                                                       unsigned VF) const {
+StringRef
+TargetLibraryInfoImpl::getVectorizedFunction(StringRef F, unsigned VF,
+                                             VectorLibrary vecLib) const {
   F = sanitizeFunctionName(F);
-  if (F.empty())
+  if (F.empty() || vecLib >= NumVecLibs)
     return F;
+  auto &VectorDescs = VecLibDescs[vecLib].VectorDescs;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
@@ -1585,18 +1599,51 @@ StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
   return StringRef();
 }
 
-StringRef TargetLibraryInfoImpl::getScalarizedFunction(StringRef F,
-                                                       unsigned &VF) const {
+StringRef
+TargetLibraryInfoImpl::getScalarizedFunction(StringRef F, unsigned &VF,
+                                             VectorLibrary vecLib) const {
   F = sanitizeFunctionName(F);
-  if (F.empty())
+  if (F.empty() || vecLib >= NumVecLibs)
     return F;
 
+  auto &VectorDescs = VecLibDescs[vecLib].VectorDescs;
+  auto &ScalarDescs = VecLibDescs[vecLib].ScalarDescs;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
   if (I == VectorDescs.end() || StringRef(I->VectorFnName) != F)
     return StringRef();
   VF = I->VectorizationFactor;
   return I->ScalarFnName;
+}
+
+TargetLibraryInfo::TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
+                                     Optional<const Function *> F)
+    : Impl(&Impl), OverrideAsUnavailable(NumLibFuncs) {
+  if (!F)
+    return;
+
+  StringRef VectLib = (*F)->getFnAttribute("veclib").getValueAsString();
+  if (!VectLib.empty())
+    VectLibrary = getVecLibFromName(VectLib);
+  else
+    VectLibrary = ClVectorLibrary;
+
+  if ((*F)->hasFnAttribute("no-builtins"))
+    disableAllFunctions();
+  else {
+    // Disable individual libc/libm calls in TargetLibraryInfo.
+    LibFunc LF;
+    AttributeSet FnAttrs = (*F)->getAttributes().getFnAttributes();
+    for (const Attribute &Attr : FnAttrs) {
+      if (!Attr.isStringAttribute())
+        continue;
+      auto AttrStr = Attr.getKindAsString();
+      if (!AttrStr.consume_front("no-builtin-"))
+        continue;
+      if (getLibFunc(AttrStr, LF))
+        setUnavailable(LF);
+    }
+  }
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
@@ -1639,12 +1686,14 @@ char TargetLibraryInfoWrapperPass::ID = 0;
 
 void TargetLibraryInfoWrapperPass::anchor() {}
 
-unsigned TargetLibraryInfoImpl::getWidestVF(StringRef ScalarF) const {
+unsigned TargetLibraryInfoImpl::getWidestVF(StringRef ScalarF,
+                                            VectorLibrary vecLib) const {
   ScalarF = sanitizeFunctionName(ScalarF);
-  if (ScalarF.empty())
+  if (ScalarF.empty() || vecLib >= NumVecLibs)
     return 1;
 
   unsigned VF = 1;
+  auto &VectorDescs = VecLibDescs[vecLib].VectorDescs;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, ScalarF, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == ScalarF) {
