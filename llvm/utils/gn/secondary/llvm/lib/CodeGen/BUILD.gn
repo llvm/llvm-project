@@ -71,6 +71,7 @@ static_library("CodeGen") {
     "LiveDebugValues.cpp",
     "LiveDebugVariables.cpp",
     "LiveInterval.cpp",
+    "LiveIntervalCalc.cpp",
     "LiveIntervalUnion.cpp",
     "LiveIntervals.cpp",
     "LivePhysRegs.cpp",
