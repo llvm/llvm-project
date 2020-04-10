@@ -146,6 +146,12 @@ Changes to the Debug Info
   passed to the callee. The feature improves the debugging user experience when
   debugging optimized code.
 
+Changes to the LLVM tools
+---------------------------------
+
+* Added an option (--show-section-sizes) to llvm-dwarfdump to show the sizes
+  of all debug sections within a file.
+
 Changes to LLDB
 ===============
 
