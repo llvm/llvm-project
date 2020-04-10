@@ -204,15 +204,16 @@ LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName) {
       unwrap(J)->mangleAndIntern(UnmangledName)));
 }
 
-LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J,
+LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
                                        LLVMMemoryBufferRef ObjBuffer) {
   return wrap(unwrap(J)->addObjectFile(
-      std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
+      *unwrap(JD), std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
 }
 
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
+                                         LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM) {
-  return wrap(unwrap(J)->addIRModule(std::move(*unwrap(TSM))));
+  return wrap(unwrap(J)->addIRModule(*unwrap(JD), std::move(*unwrap(TSM))));
 }
 
 LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,

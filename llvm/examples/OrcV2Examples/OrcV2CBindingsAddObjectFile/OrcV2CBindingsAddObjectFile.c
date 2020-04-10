@@ -111,8 +111,9 @@ int main(int argc, char *argv[]) {
 
   // Add our object file buffer to the JIT.
   {
+    LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
     LLVMErrorRef Err;
-    if ((Err = LLVMOrcLLJITAddObjectFile(J, ObjectFileBuffer))) {
+    if ((Err = LLVMOrcLLJITAddObjectFile(J, MainJD, ObjectFileBuffer))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
     }
