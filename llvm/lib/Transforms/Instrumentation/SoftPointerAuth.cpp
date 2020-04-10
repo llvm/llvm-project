@@ -220,7 +220,7 @@ private:
     if (!SignGenericFn)
       SignGenericFn = getOrInsertFunction("__ptrauth_sign_generic", IntPtr,
                                           { IntPtr, Key, Discriminator });
-    return SignPointerFn;
+    return SignGenericFn;
   }
 };
 
