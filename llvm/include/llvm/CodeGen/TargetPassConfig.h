@@ -306,6 +306,15 @@ public:
   /// verification is enabled.
   void addVerifyPass(const std::string &Banner);
 
+  /// Add standard passes before a pass that's about to be added. For example,
+  /// the DebugifyMachineModulePass if it is enabled.
+  void addMachinePrePasses();
+
+  /// Add standard passes after a pass that has just been added. For example,
+  /// the MachineVerifier if it is enabled.
+  void addMachinePostPasses(const std::string &Banner, bool AllowPrint = true,
+                            bool AllowVerify = true);
+
   /// Check whether or not GlobalISel should abort on error.
   /// When this is disabled, GlobalISel will fall back on SDISel instead of
   /// erroring out.
