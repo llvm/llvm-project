@@ -37,6 +37,7 @@ public:
     return { Min * RHS, Scalable };
   }
   ElementCount operator/(unsigned RHS) {
+    assert(Min % RHS == 0 && "Min is not a multiple of RHS.");
     return { Min / RHS, Scalable };
   }
 
