@@ -23,7 +23,6 @@ class ExprCommandWithFixits(TestBase):
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "The expression was successful.")
         self.assertTrue("Fix-it applied" in ret_val.GetError(), "Found the applied FixIt.")
 
-    @expectedFailureAll(archs=["aarch64"], oslist=["linux"])
     def test_with_target(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
@@ -83,11 +82,21 @@ class ExprCommandWithFixits(TestBase):
             error_string.find("my_pointer->second.a") != -1,
             "Fix was right")
 
+    # The final function call runs into SIGILL on aarch64-linux.
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"])
+    def test_with_multiple_retries(self):
+        """Test calling expressions with errors that can be fixed by the FixIts."""
+        self.build()
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                        'Stop here to evaluate expressions',
+                                         lldb.SBFileSpec("main.cpp"))
 
         # Test repeatedly applying Fix-Its to expressions and reparsing them.
         multiple_runs_options = lldb.SBExpressionOptions()
         multiple_runs_options.SetAutoApplyFixIts(True)
         multiple_runs_options.SetTopLevel(True)
+
+        frame = self.thread.GetFrameAtIndex(0)
 
         # An expression that needs two parse attempts with one Fix-It each
         # to be successfully parsed.
