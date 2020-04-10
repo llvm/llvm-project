@@ -166,7 +166,7 @@ public:
   // Set the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
   void setFPFeatures(FPOptions F) {
-    CXXOperatorCallExprBits.FPFeatures = F.getInt();
+    CXXOperatorCallExprBits.FPFeatures = F.getAsOpaqueInt();
   }
   FPOptions getFPFeatures() const {
     return FPOptions(CXXOperatorCallExprBits.FPFeatures);
