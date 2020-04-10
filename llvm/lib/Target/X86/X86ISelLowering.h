@@ -1456,9 +1456,6 @@ namespace llvm {
     MachineBasicBlock *EmitLoweredSelect(MachineInstr &I,
                                          MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *EmitLoweredAtomicFP(MachineInstr &I,
-                                           MachineBasicBlock *BB) const;
-
     MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
