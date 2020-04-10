@@ -255,7 +255,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     auto *operand = op->getArg(*argIndex).get<NamedTypeConstraint *>();
     // If this operand is variadic, then return a range. Otherwise, return the
     // value itself.
-    if (operand->isVariadic()) {
+    if (operand->isVariableLength()) {
       auto repl = formatv(fmt, name);
       LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicOperand)\n");
       return std::string(repl);

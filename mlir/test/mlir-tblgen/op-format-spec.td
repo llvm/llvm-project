@@ -222,7 +222,7 @@ def OptionalInvalidF : TestFormat_Op<"optional_invalid_f", [{
 def OptionalInvalidG : TestFormat_Op<"optional_invalid_g", [{
   ($attr^) attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;
-// CHECK: error: only variadic operands can be used within an optional group
+// CHECK: error: only variable length operands can be used within an optional group
 def OptionalInvalidH : TestFormat_Op<"optional_invalid_h", [{
   ($arg^) attr-dict
 }]>, Arguments<(ins I64:$arg)>;
@@ -327,6 +327,17 @@ def ZCoverageInvalidF : TestFormat_Op<"variable_invalid_f", [{
 }]> {
   let successors = (successor AnySuccessor:$successor);
 }
+// CHECK: error: type of operand #0, named 'operand', is not buildable and a buildable type cannot be inferred
+// CHECK: note: suggest adding a type constraint to the operation or adding a 'type($operand)' directive to the custom assembly format
+def ZCoverageInvalidG : TestFormat_Op<"variable_invalid_g", [{
+  operands attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+// CHECK: error: type of result #0, named 'result', is not buildable and a buildable type cannot be inferred
+// CHECK: note: suggest adding a type constraint to the operation or adding a 'type($result)' directive to the custom assembly format
+def ZCoverageInvalidH : TestFormat_Op<"variable_invalid_h", [{
+  attr-dict
+}]>, Results<(outs Optional<I64>:$result)>;
+
 // CHECK-NOT: error
 def ZCoverageValidA : TestFormat_Op<"variable_valid_a", [{
   $operand type($operand) type($result) attr-dict
