@@ -1587,6 +1587,8 @@ class PredOpTrait<string descr, Pred pred> : OpTrait {
   Pred predicate = pred;
 }
 
+// Op defines an automatic allocation scope.
+def AutomaticAllocationScope : NativeOpTrait<"AutomaticAllocationScope">;
 // Op supports operand broadcast behavior.
 def ResultsBroadcastableShape :
   NativeOpTrait<"ResultsBroadcastableShape">;

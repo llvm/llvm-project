@@ -197,7 +197,7 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 // -----
 
 def SPV_FuncOp : SPV_Op<"func", [
-    DeclareOpInterfaceMethods<CallableOpInterface>,
+    AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
     FunctionLike, InModuleScope, IsolatedFromAbove, Symbol
   ]> {
   let summary = "Declare or define a function";
