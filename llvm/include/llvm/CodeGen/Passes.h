@@ -478,6 +478,10 @@ namespace llvm {
 
   /// Creates MIR Strip Debug pass. \see MachineStripDebug.cpp
   ModulePass *createStripDebugMachineModulePass();
+
+  /// The pass fixups statepoint machine instruction to replace usage of
+  /// caller saved registers with stack slots.
+  extern char &FixupStatepointCallerSavedID;
 } // End llvm namespace
 
 #endif
