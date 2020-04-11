@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # Test overall lit timeout (--max-time).
 #
 # RUN: %{lit} %{inputs}/max-time --max-time=5 2>&1  |  FileCheck %s
