@@ -30,8 +30,7 @@ std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
     if (C == '\t') {
       // Replace '\t' with up to TabSize spaces.
       unsigned NumSpaces = Opts.TabSize - (ColNum % Opts.TabSize);
-      for (unsigned I = 0; I < NumSpaces; ++I)
-        TabExpandedResult += ' ';
+      TabExpandedResult.append(NumSpaces, ' ');
       ColNum += NumSpaces;
     } else {
       TabExpandedResult += C;
