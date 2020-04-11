@@ -109,7 +109,6 @@ extern uint __llvm_cmpxchg_a3_x_x_wg_i32(__local uint *, uint, uint);
 extern ulong __llvm_cmpxchg_a3_x_x_wg_i64(__local ulong *, ulong, ulong);
 
 // AMDGPU intrinsics
-extern __attribute__((const)) uint __llvm_amdgcn_wavefrontsize(void) __asm("llvm.amdgcn.wavefrontsize");
 
 // llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 
