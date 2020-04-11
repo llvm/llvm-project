@@ -13,7 +13,7 @@ long count_memory_mappings() {
 
   FILE *proc_file = fopen(proc_file_name, "r");
   long line_count = 0;
-  char c;
+  int c;
   do {
     c = fgetc(proc_file);
     if (c == '\n') {
