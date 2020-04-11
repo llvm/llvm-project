@@ -87,9 +87,6 @@ namespace llvm {
 
 class DominatorTree;
 class Function;
-class Instruction;
-class MemoryAccess;
-class LLVMContext;
 class raw_ostream;
 
 enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
