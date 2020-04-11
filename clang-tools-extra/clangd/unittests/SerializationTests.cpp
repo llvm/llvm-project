@@ -104,9 +104,6 @@ TEST(SerializationTest, NoCrashOnEmptyYAML) {
 }
 
 TEST(SerializationTest, YAMLConversions) {
-  auto In = readIndexFile(YAML);
-  EXPECT_TRUE(bool(In)) << In.takeError();
-
   auto ParsedYAML = readIndexFile(YAML);
   ASSERT_TRUE(bool(ParsedYAML)) << ParsedYAML.takeError();
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
