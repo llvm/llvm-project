@@ -738,7 +738,7 @@ void PassInstrumentor::runAfterPassFailed(Pass *pass, Operation *op) {
 }
 
 /// See PassInstrumentation::runBeforeAnalysis for details.
-void PassInstrumentor::runBeforeAnalysis(StringRef name, AnalysisID *id,
+void PassInstrumentor::runBeforeAnalysis(StringRef name, TypeID id,
                                          Operation *op) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : impl->instrumentations)
@@ -746,7 +746,7 @@ void PassInstrumentor::runBeforeAnalysis(StringRef name, AnalysisID *id,
 }
 
 /// See PassInstrumentation::runAfterAnalysis for details.
-void PassInstrumentor::runAfterAnalysis(StringRef name, AnalysisID *id,
+void PassInstrumentor::runAfterAnalysis(StringRef name, TypeID id,
                                         Operation *op) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : llvm::reverse(impl->instrumentations))
@@ -759,5 +759,3 @@ void PassInstrumentor::addInstrumentation(
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   impl->instrumentations.emplace_back(std::move(pi));
 }
-
-constexpr AnalysisID mlir::detail::PreservedAnalyses::allAnalysesID;

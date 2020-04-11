@@ -1185,7 +1185,7 @@ public:
   /// Return true if this "op class" can match against the specified operation.
   static bool classof(Operation *op) {
     if (auto *abstractOp = op->getAbstractOperation())
-      return ClassID::getID<ConcreteType>() == abstractOp->classID;
+      return TypeID::get<ConcreteType>() == abstractOp->typeID;
     return op->getName().getStringRef() == ConcreteType::getOperationName();
   }
 
@@ -1278,15 +1278,15 @@ private:
     }
   };
 
-  /// Returns true if this operation contains the trait for the given classID.
-  static bool hasTrait(ClassID *traitID) {
-    return llvm::is_contained(llvm::makeArrayRef({ClassID::getID<Traits>()...}),
+  /// Returns true if this operation contains the trait for the given typeID.
+  static bool hasTrait(TypeID traitID) {
+    return llvm::is_contained(llvm::makeArrayRef({TypeID::get<Traits>()...}),
                               traitID);
   }
 
   /// Returns an opaque pointer to a concept instance of the interface with the
   /// given ID if one was registered to this operation.
-  static void *getRawInterface(ClassID *id) {
+  static void *getRawInterface(TypeID id) {
     return InterfaceLookup::template lookup<Traits<ConcreteType>...>(id);
   }
 
@@ -1300,7 +1300,7 @@ private:
     template <typename T>
     static typename std::enable_if<is_detected<has_get_interface_id, T>::value,
                                    void *>::type
-    lookup(ClassID *interfaceID) {
+    lookup(TypeID interfaceID) {
       return (T::getInterfaceID() == interfaceID) ? &T::instance() : nullptr;
     }
 
@@ -1308,12 +1308,12 @@ private:
     template <typename T>
     static typename std::enable_if<!is_detected<has_get_interface_id, T>::value,
                                    void *>::type
-    lookup(ClassID *) {
+    lookup(TypeID) {
       return nullptr;
     }
 
     template <typename T, typename T2, typename... Ts>
-    static void *lookup(ClassID *interfaceID) {
+    static void *lookup(TypeID interfaceID) {
       auto *concept = lookup<T>(interfaceID);
       return concept ? concept : lookup<T2, Ts...>(interfaceID);
     }
@@ -1359,14 +1359,14 @@ public:
   static bool classof(Operation *op) { return getInterfaceFor(op); }
 
   /// Define an accessor for the ID of this interface.
-  static ClassID *getInterfaceID() { return ClassID::getID<ConcreteType>(); }
+  static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
 
   /// This is a special trait that registers a given interface with an
   /// operation.
   template <typename ConcreteOp>
   struct Trait : public OpTrait::TraitBase<ConcreteOp, Trait> {
     /// Define an accessor for the ID of this interface.
-    static ClassID *getInterfaceID() { return ClassID::getID<ConcreteType>(); }
+    static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
 
     /// Provide an accessor to a static instance of the interface model for the
     /// concrete operation type.

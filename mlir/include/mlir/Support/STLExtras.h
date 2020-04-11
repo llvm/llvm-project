@@ -88,23 +88,6 @@ inline void interleaveComma(const Container &c, raw_ostream &os) {
   interleaveComma(c, os, [&](const T &a) { os << a; });
 }
 
-/// A special type used to provide an address for a given class that can act as
-/// a unique identifier during pass registration.
-/// Note: We specify an explicit alignment here to allow use with PointerIntPair
-/// and other utilities/data structures that require a known pointer alignment.
-struct alignas(8) ClassID {
-  template <typename T>
-  LLVM_EXTERNAL_VISIBILITY static ClassID *getID() {
-    static ClassID id;
-    return &id;
-  }
-  template <template <typename T> class Trait>
-  LLVM_EXTERNAL_VISIBILITY static ClassID *getID() {
-    static ClassID id;
-    return &id;
-  }
-};
-
 /// Utilities for detecting if a given trait holds for some set of arguments
 /// 'Args'. For example, the given trait could be used to detect if a given type
 /// has a copy assignment operator:

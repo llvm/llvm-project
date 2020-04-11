@@ -92,13 +92,13 @@ public:
   template <typename T, typename... Args>
   static T get(MLIRContext *ctx, unsigned kind, Args &&... args) {
     return ctx->getAttributeUniquer().get<typename T::ImplType>(
-        getInitFn(ctx, T::getClassID()), kind, std::forward<Args>(args)...);
+        getInitFn(ctx, T::getTypeID()), kind, std::forward<Args>(args)...);
   }
 
 private:
   /// Returns a functor used to initialize new attribute storage instances.
-  static std::function<void(AttributeStorage *)>
-  getInitFn(MLIRContext *ctx, const ClassID *const attrID);
+  static std::function<void(AttributeStorage *)> getInitFn(MLIRContext *ctx,
+                                                           TypeID attrID);
 };
 } // namespace detail
 

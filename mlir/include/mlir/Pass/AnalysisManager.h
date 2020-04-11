@@ -17,10 +17,6 @@
 #include "llvm/Support/TypeName.h"
 
 namespace mlir {
-/// A special type used by analyses to provide an address that identifies a
-/// particular analysis set or a concrete analysis type.
-using AnalysisID = ClassID;
-
 //===----------------------------------------------------------------------===//
 // Analysis Preservation and Concept Modeling
 //===----------------------------------------------------------------------===//
@@ -28,43 +24,43 @@ using AnalysisID = ClassID;
 namespace detail {
 /// A utility class to represent the analyses that are known to be preserved.
 class PreservedAnalyses {
+  /// A type used to represent all potential analyses.
+  struct AllAnalysesType;
+
 public:
   /// Mark all analyses as preserved.
-  void preserveAll() { preservedIDs.insert(&allAnalysesID); }
+  void preserveAll() { preservedIDs.insert(TypeID::get<AllAnalysesType>()); }
 
   /// Returns true if all analyses were marked preserved.
-  bool isAll() const { return preservedIDs.count(&allAnalysesID); }
+  bool isAll() const {
+    return preservedIDs.count(TypeID::get<AllAnalysesType>());
+  }
 
   /// Returns true if no analyses were marked preserved.
   bool isNone() const { return preservedIDs.empty(); }
 
   /// Preserve the given analyses.
   template <typename AnalysisT> void preserve() {
-    preserve(AnalysisID::getID<AnalysisT>());
+    preserve(TypeID::get<AnalysisT>());
   }
   template <typename AnalysisT, typename AnalysisT2, typename... OtherAnalysesT>
   void preserve() {
     preserve<AnalysisT>();
     preserve<AnalysisT2, OtherAnalysesT...>();
   }
-  void preserve(const AnalysisID *id) { preservedIDs.insert(id); }
+  void preserve(TypeID id) { preservedIDs.insert(id); }
 
   /// Returns if the given analysis has been marked as preserved. Note that this
   /// simply checks for the presence of a given analysis ID and should not be
   /// used as a general preservation checker.
   template <typename AnalysisT> bool isPreserved() const {
-    return isPreserved(AnalysisID::getID<AnalysisT>());
+    return isPreserved(TypeID::get<AnalysisT>());
   }
-  bool isPreserved(const AnalysisID *id) const {
-    return preservedIDs.count(id);
-  }
+  bool isPreserved(TypeID id) const { return preservedIDs.count(id); }
 
 private:
-  /// An identifier used to represent all potential analyses.
-  constexpr static AnalysisID allAnalysesID = {};
-
   /// The set of analyses that are known to be preserved.
-  SmallPtrSet<const void *, 2> preservedIDs;
+  SmallPtrSet<TypeID, 2> preservedIDs;
 };
 
 namespace analysis_impl {
@@ -118,8 +114,7 @@ template <typename AnalysisT> struct AnalysisModel : public AnalysisConcept {
 /// computation, caching, and invalidation of analyses takes place here.
 class AnalysisMap {
   /// A mapping between an analysis id and an existing analysis instance.
-  using ConceptMap =
-      DenseMap<const AnalysisID *, std::unique_ptr<AnalysisConcept>>;
+  using ConceptMap = DenseMap<TypeID, std::unique_ptr<AnalysisConcept>>;
 
   /// Utility to return the name of the given analysis class.
   template <typename AnalysisT> static StringRef getAnalysisName() {
@@ -134,7 +129,7 @@ public:
 
   /// Get an analysis for the current IR unit, computing it if necessary.
   template <typename AnalysisT> AnalysisT &getAnalysis(PassInstrumentor *pi) {
-    auto *id = AnalysisID::getID<AnalysisT>();
+    TypeID id = TypeID::get<AnalysisT>();
 
     typename ConceptMap::iterator it;
     bool wasInserted;
@@ -157,7 +152,7 @@ public:
   /// Get a cached analysis instance if one exists, otherwise return null.
   template <typename AnalysisT>
   Optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
-    auto res = analyses.find(AnalysisID::getID<AnalysisT>());
+    auto res = analyses.find(TypeID::get<AnalysisT>());
     if (res == analyses.end())
       return llvm::None;
     return {static_cast<AnalysisModel<AnalysisT> &>(*res->second).analysis};

@@ -173,10 +173,10 @@ struct PassTiming : public PassInstrumentation {
   void runAfterPassFailed(Pass *pass, Operation *op) override {
     runAfterPass(pass, op);
   }
-  void runBeforeAnalysis(StringRef name, AnalysisID *id, Operation *) override {
+  void runBeforeAnalysis(StringRef name, TypeID id, Operation *) override {
     startAnalysisTimer(name, id);
   }
-  void runAfterAnalysis(StringRef, AnalysisID *, Operation *) override;
+  void runAfterAnalysis(StringRef, TypeID, Operation *) override;
 
   /// Print and clear the timing results.
   void print();
@@ -185,7 +185,7 @@ struct PassTiming : public PassInstrumentation {
   void startPassTimer(Pass *pass);
 
   /// Start a new timer for the given analysis.
-  void startAnalysisTimer(StringRef name, AnalysisID *id);
+  void startAnalysisTimer(StringRef name, TypeID id);
 
   /// Pop the last active timer for the current thread.
   Timer *popLastActiveTimer() {
@@ -291,8 +291,8 @@ void PassTiming::startPassTimer(Pass *pass) {
 }
 
 /// Start a new timer for the given analysis.
-void PassTiming::startAnalysisTimer(StringRef name, AnalysisID *id) {
-  Timer *timer = getTimer(id, TimerKind::PassOrAnalysis,
+void PassTiming::startAnalysisTimer(StringRef name, TypeID id) {
+  Timer *timer = getTimer(id.getAsOpaquePointer(), TimerKind::PassOrAnalysis,
                           [name] { return "(A) " + name.str(); });
   timer->start();
 }
@@ -320,7 +320,7 @@ void PassTiming::runAfterPass(Pass *pass, Operation *) {
 }
 
 /// Stop a timer.
-void PassTiming::runAfterAnalysis(StringRef, AnalysisID *, Operation *) {
+void PassTiming::runAfterAnalysis(StringRef, TypeID, Operation *) {
   popLastActiveTimer()->stop();
 }
 
