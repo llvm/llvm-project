@@ -2790,7 +2790,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
-      visitPatchpoint(&I, EHPadBB);
+      visitPatchpoint(I, EHPadBB);
       break;
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(ImmutableStatepoint(&I), EHPadBB);
@@ -6609,7 +6609,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
-    visitPatchpoint(&I);
+    visitPatchpoint(I);
     return;
   case Intrinsic::experimental_gc_statepoint:
     LowerStatepoint(ImmutableStatepoint(&I));
@@ -8629,11 +8629,11 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 /// assumption made by the llvm.gcroot intrinsic). If the alloca's location were
 /// only available in a register, then the runtime would need to trap when
 /// execution reaches the StackMap in order to read the alloca's location.
-static void addStackMapLiveVars(ImmutableCallSite CS, unsigned StartIdx,
+static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
                                 const SDLoc &DL, SmallVectorImpl<SDValue> &Ops,
                                 SelectionDAGBuilder &Builder) {
-  for (unsigned i = StartIdx, e = CS.arg_size(); i != e; ++i) {
-    SDValue OpVal = Builder.getValue(CS.getArgument(i));
+  for (unsigned i = StartIdx, e = Call.arg_size(); i != e; ++i) {
+    SDValue OpVal = Builder.getValue(Call.getArgOperand(i));
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(OpVal)) {
       Ops.push_back(
         Builder.DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
@@ -8685,7 +8685,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
                   MVT::i32));
 
   // Push live variables for the stack map.
-  addStackMapLiveVars(&CI, 2, DL, Ops, *this);
+  addStackMapLiveVars(CI, 2, DL, Ops, *this);
 
   // We are not pushing any register mask info here on the operands list,
   // because the stackmap doesn't clobber anything.
@@ -8712,7 +8712,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
 }
 
 /// Lower llvm.experimental.patchpoint directly to its target opcode.
-void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
+void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
                                           const BasicBlock *EHPadBB) {
   // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,
   //                                                 i32 <numBytes>,
@@ -8721,11 +8721,11 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   //                                                 [Args...],
   //                                                 [live variables...])
 
-  CallingConv::ID CC = CS.getCallingConv();
+  CallingConv::ID CC = CB.getCallingConv();
   bool IsAnyRegCC = CC == CallingConv::AnyReg;
-  bool HasDef = !CS->getType()->isVoidTy();
+  bool HasDef = !CB.getType()->isVoidTy();
   SDLoc dl = getCurSDLoc();
-  SDValue Callee = getValue(CS->getOperand(PatchPointOpers::TargetPos));
+  SDValue Callee = getValue(CB.getArgOperand(PatchPointOpers::TargetPos));
 
   // Handle immediate and symbolic callees.
   if (auto* ConstCallee = dyn_cast<ConstantSDNode>(Callee))
@@ -8737,23 +8737,23 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
                                          SymbolicCallee->getValueType(0));
 
   // Get the real number of arguments participating in the call <numArgs>
-  SDValue NArgVal = getValue(CS.getArgument(PatchPointOpers::NArgPos));
+  SDValue NArgVal = getValue(CB.getArgOperand(PatchPointOpers::NArgPos));
   unsigned NumArgs = cast<ConstantSDNode>(NArgVal)->getZExtValue();
 
   // Skip the four meta args: <id>, <numNopBytes>, <target>, <numArgs>
   // Intrinsics include all meta-operands up to but not including CC.
   unsigned NumMetaOpers = PatchPointOpers::CCPos;
-  assert(CS.arg_size() >= NumMetaOpers + NumArgs &&
+  assert(CB.arg_size() >= NumMetaOpers + NumArgs &&
          "Not enough arguments provided to the patchpoint intrinsic");
 
   // For AnyRegCC the arguments are lowered later on manually.
   unsigned NumCallArgs = IsAnyRegCC ? 0 : NumArgs;
   Type *ReturnTy =
-    IsAnyRegCC ? Type::getVoidTy(*DAG.getContext()) : CS->getType();
+      IsAnyRegCC ? Type::getVoidTy(*DAG.getContext()) : CB.getType();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  populateCallLoweringInfo(CLI, cast<CallBase>(CS.getInstruction()),
-                           NumMetaOpers, NumCallArgs, Callee, ReturnTy, true);
+  populateCallLoweringInfo(CLI, &CB, NumMetaOpers, NumCallArgs, Callee,
+                           ReturnTy, true);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   SDNode *CallEnd = Result.second.getNode();
@@ -8771,10 +8771,10 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   SmallVector<SDValue, 8> Ops;
 
   // Add the <id> and <numBytes> constants.
-  SDValue IDVal = getValue(CS->getOperand(PatchPointOpers::IDPos));
+  SDValue IDVal = getValue(CB.getArgOperand(PatchPointOpers::IDPos));
   Ops.push_back(DAG.getTargetConstant(
                   cast<ConstantSDNode>(IDVal)->getZExtValue(), dl, MVT::i64));
-  SDValue NBytesVal = getValue(CS->getOperand(PatchPointOpers::NBytesPos));
+  SDValue NBytesVal = getValue(CB.getArgOperand(PatchPointOpers::NBytesPos));
   Ops.push_back(DAG.getTargetConstant(
                   cast<ConstantSDNode>(NBytesVal)->getZExtValue(), dl,
                   MVT::i32));
@@ -8796,14 +8796,14 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   // place these in any free register.
   if (IsAnyRegCC)
     for (unsigned i = NumMetaOpers, e = NumMetaOpers + NumArgs; i != e; ++i)
-      Ops.push_back(getValue(CS.getArgument(i)));
+      Ops.push_back(getValue(CB.getArgOperand(i)));
 
   // Push the arguments from the call instruction up to the register mask.
   SDNode::op_iterator e = HasGlue ? Call->op_end()-2 : Call->op_end()-1;
   Ops.append(Call->op_begin() + 2, e);
 
   // Push live variables for the stack map.
-  addStackMapLiveVars(CS, NumMetaOpers + NumArgs, dl, Ops, *this);
+  addStackMapLiveVars(CB, NumMetaOpers + NumArgs, dl, Ops, *this);
 
   // Push the register mask info.
   if (HasGlue)
@@ -8824,7 +8824,7 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
     // Create the return types based on the intrinsic definition
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SmallVector<EVT, 3> ValueVTs;
-    ComputeValueVTs(TLI, DAG.getDataLayout(), CS->getType(), ValueVTs);
+    ComputeValueVTs(TLI, DAG.getDataLayout(), CB.getType(), ValueVTs);
     assert(ValueVTs.size() == 1 && "Expected only one return value type.");
 
     // There is always a chain and a glue type at the end
@@ -8841,9 +8841,9 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   // Update the NodeMap.
   if (HasDef) {
     if (IsAnyRegCC)
-      setValue(CS.getInstruction(), SDValue(MN, 0));
+      setValue(&CB, SDValue(MN, 0));
     else
-      setValue(CS.getInstruction(), Result.first);
+      setValue(&CB, Result.first);
   }
 
   // Fixup the consumers of the intrinsic. The chain and glue may be used in the

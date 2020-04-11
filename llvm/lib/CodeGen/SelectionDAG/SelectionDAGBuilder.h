@@ -774,8 +774,7 @@ private:
   void visitVAEnd(const CallInst &I);
   void visitVACopy(const CallInst &I);
   void visitStackmap(const CallInst &I);
-  void visitPatchpoint(ImmutableCallSite CS,
-                       const BasicBlock *EHPadBB = nullptr);
+  void visitPatchpoint(const CallBase &CB, const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &Relocate);
