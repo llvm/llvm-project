@@ -245,7 +245,9 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
     AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
     AU.addRequired<MachinePostDominatorTree>();
+    AU.addPreserved<MachinePostDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -1062,6 +1064,19 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     SplitBB->splice(SplitBB->begin(), BB, SplitPoint, BB->end());
     SplitBB->transferSuccessorsAndUpdatePHIs(BB);
     BB->addSuccessor(SplitBB);
+
+    // Update dominator trees
+    using DomTreeT = DomTreeBase<MachineBasicBlock>;
+    SmallVector<DomTreeT::UpdateType, 16> DTUpdates;
+    for (MachineBasicBlock *Succ : SplitBB->successors()) {
+      DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+      DTUpdates.push_back({DomTreeT::Delete, BB, Succ});
+    }
+    DTUpdates.push_back({DomTreeT::Insert, BB, SplitBB});
+    if (MDT)
+      MDT->getBase().applyUpdates(DTUpdates);
+    if (PDT)
+      PDT->getBase().applyUpdates(DTUpdates);
   }
 
   // Convert last instruction in to a terminator.
