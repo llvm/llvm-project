@@ -2914,10 +2914,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
   // duplicated into is still small enough to be duplicated again.
   // No need to call markBlockSuccessors in this case, as the blocks being
   // duplicated from here on are already scheduled.
-  // Note that DuplicatedToLPred always implies Removed.
-  while (DuplicatedToLPred) {
-    assert(Removed && "Block must have been removed to be duplicated into its "
-           "layout predecessor.");
+  while (DuplicatedToLPred && Removed) {
     MachineBasicBlock *DupBB, *DupPred;
     // The removal callback causes Chain.end() to be updated when a block is
     // removed. On the first pass through the loop, the chain end should be the
@@ -2956,8 +2953,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
 ///                          chosen in the given order due to unnatural CFG
 ///                          only needed if \p BB is removed and
 ///                          \p PrevUnplacedBlockIt pointed to \p BB.
-/// \p DuplicatedToLPred - True if the block was duplicated into LPred. Will
-///                        only be true if the block was removed.
+/// \p DuplicatedToLPred - True if the block was duplicated into LPred.
 /// \return  - True if the block was duplicated into all preds and removed.
 bool MachineBlockPlacement::maybeTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *LPred,
