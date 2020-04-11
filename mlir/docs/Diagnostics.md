@@ -1,4 +1,4 @@
-# Introduction and Usage Guide to MLIR's Diagnostics Infrastructure
+# Diagnostic Infrastructure
 
 [TOC]
 
