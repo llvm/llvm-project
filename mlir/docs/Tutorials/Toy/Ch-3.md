@@ -187,7 +187,7 @@ def ReshapeReshapeOptPattern : Pat<(ReshapeOp(ReshapeOp $arg)),
 ```
 
 The automatically generated C++ code corresponding to each of the DRR patterns
-can be found under path/to/BUILD/projects/mlir/examples/toy/Ch3/ToyCombine.inc.
+can be found under `path/to/BUILD/tools/mlir/examples/toy/Ch3/ToyCombine.inc`.
 
 DRR also provides a method for adding argument constraints when the
 transformation is conditional on some properties of the arguments and results.
