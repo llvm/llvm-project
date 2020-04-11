@@ -9,6 +9,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
@@ -985,12 +986,7 @@ std::string Triple::normalize(StringRef Str) {
   }
 
   // Stick the corrected components back together to form the normalized string.
-  std::string Normalized;
-  for (unsigned i = 0, e = Components.size(); i != e; ++i) {
-    if (i) Normalized += '-';
-    Normalized += Components[i];
-  }
-  return Normalized;
+  return join(Components, "-");
 }
 
 StringRef Triple::getArchName() const {

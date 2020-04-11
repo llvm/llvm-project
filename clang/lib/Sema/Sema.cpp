@@ -2354,16 +2354,8 @@ std::string Sema::getOpenCLExtensionsFromTypeExtMap(FunctionType *FT) {
 
 template <typename T, typename MapT>
 std::string Sema::getOpenCLExtensionsFromExtMap(T *FDT, MapT &Map) {
-  std::string ExtensionNames = "";
   auto Loc = Map.find(FDT);
-
-  for (auto const& I : Loc->second) {
-    ExtensionNames += I;
-    ExtensionNames += " ";
-  }
-  ExtensionNames.pop_back();
-
-  return ExtensionNames;
+  return llvm::join(Loc->second, " ");
 }
 
 bool Sema::isOpenCLDisabledDecl(Decl *FD) {

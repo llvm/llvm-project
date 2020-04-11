@@ -429,12 +429,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
                             SrcMgr.getMemoryBuffer(BufferIndex)->getBuffer());
 
   // Build up the feature string from the target feature list.
-  std::string FS;
-  if (!Opts.Features.empty()) {
-    FS = Opts.Features[0];
-    for (unsigned i = 1, e = Opts.Features.size(); i != e; ++i)
-      FS += "," + Opts.Features[i];
-  }
+  std::string FS = llvm::join(Opts.Features, ",");
 
   std::unique_ptr<MCStreamer> Str;
 
