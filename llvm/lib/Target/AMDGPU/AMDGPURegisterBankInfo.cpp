@@ -2074,11 +2074,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
-  case AMDGPU::G_MUL: {
+  case AMDGPU::G_MUL:
+  case AMDGPU::G_SHL:
+  case AMDGPU::G_LSHR:
+  case AMDGPU::G_ASHR: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    const LLT S32 = LLT::scalar(32);
-    if (DstTy == S32)
+
+    // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
+    // Packed 16-bit operations need to be scalarized and promoted.
+    if (DstTy != LLT::scalar(16) && DstTy != LLT::vector(2, 16))
       break;
 
     const RegisterBank *DstBank =
@@ -2086,9 +2091,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
-    // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
-    // Packed 16-bit operations need to be scalarized and promoted.
-
+    const LLT S32 = LLT::scalar(32);
     MachineFunction *MF = MI.getParent()->getParent();
     MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
@@ -2113,6 +2116,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
       if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
         llvm_unreachable("widen scalar should have succeeded");
+
+      // FIXME: s16 shift amounts should be lgeal.
+      if (Opc == AMDGPU::G_SHL || Opc == AMDGPU::G_LSHR ||
+          Opc == AMDGPU::G_ASHR) {
+        if (Helper.widenScalar(MI, 1, S32) != LegalizerHelper::Legalized)
+          llvm_unreachable("widen scalar should have succeeded");
+      }
     }
 
     return;
