@@ -1066,9 +1066,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
           LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1, S32})
     .clampScalar(0, S16, S64)
+    .scalarize(1)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf(numElementsNotEven(0), scalarize(0))
-    .scalarize(1)
     .clampMaxNumElements(0, S32, 2)
     .clampMaxNumElements(0, LocalPtr, 2)
     .clampMaxNumElements(0, PrivatePtr, 2)
