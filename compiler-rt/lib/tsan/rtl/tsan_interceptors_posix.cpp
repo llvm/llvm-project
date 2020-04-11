@@ -891,13 +891,16 @@ void DestroyThreadState() {
   ThreadFinish(thr);
   ProcUnwire(proc, thr);
   ProcDestroy(proc);
+  DTLS_Destroy();
+  cur_thread_finalize();
+}
+
+void PlatformCleanUpThreadState(ThreadState *thr) {
   ThreadSignalContext *sctx = thr->signal_ctx;
   if (sctx) {
     thr->signal_ctx = 0;
     UnmapOrDie(sctx, sizeof(*sctx));
   }
-  DTLS_Destroy();
-  cur_thread_finalize();
 }
 }  // namespace __tsan
 
