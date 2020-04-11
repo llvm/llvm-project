@@ -649,6 +649,17 @@ public:
     case TargetOpcode::G_UNMERGE_VALUES:
       Changed = tryCombineMerges(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
+    case TargetOpcode::G_MERGE_VALUES:
+      // If any of the users of this merge are an unmerge, then add them to the
+      // artifact worklist in case there's folding that can be done looking up.
+      for (MachineInstr &U : MRI.use_instructions(MI.getOperand(0).getReg())) {
+        if (U.getOpcode() == TargetOpcode::G_UNMERGE_VALUES ||
+            U.getOpcode() == TargetOpcode::G_TRUNC) {
+          UpdatedDefs.push_back(MI.getOperand(0).getReg());
+          break;
+        }
+      }
+      break;
     case TargetOpcode::G_EXTRACT:
       Changed = tryCombineExtract(MI, DeadInsts, UpdatedDefs);
       break;
