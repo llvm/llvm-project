@@ -4520,9 +4520,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       // Converts a 32-bit register to a 64-bit, zero-extended version of
       // it. This is needed because x86-64 can do many things, but jmp %r32
       // ain't one of them.
-      const SDValue &Target = Node->getOperand(1);
-      assert(Target.getSimpleValueType() == llvm::MVT::i32);
-      SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, EVT(MVT::i64));
+      SDValue Target = Node->getOperand(1);
+      assert(Target.getValueType() == MVT::i32 && "Unexpected VT!");
+      SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, MVT::i64);
       SDValue Brind = CurDAG->getNode(ISD::BRIND, dl, MVT::Other,
                                       Node->getOperand(0), ZextTarget);
       ReplaceNode(Node, Brind.getNode());
