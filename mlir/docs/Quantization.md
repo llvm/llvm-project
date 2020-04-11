@@ -1,4 +1,4 @@
-# MLIR Quantization
+# Quantization
 
 This document outlines the design of the MLIR quantization system. While the
 term "quantization" is highly overloaded, in this case, it refers to a fairly
