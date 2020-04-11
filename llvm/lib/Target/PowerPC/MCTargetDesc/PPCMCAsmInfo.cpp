@@ -63,4 +63,5 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   ZeroDirective = "\t.space\t";
   ZeroDirectiveSupportsNonZeroValue = false;
   SymbolsHaveSMC = true;
+  UseIntegratedAssembler = false;
 }
