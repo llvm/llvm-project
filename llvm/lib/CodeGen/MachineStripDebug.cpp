@@ -111,6 +111,7 @@ struct StripDebugMachineModule : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
+    AU.setPreservesCFG();
   }
 
   static char ID; // Pass identification.
@@ -127,6 +128,6 @@ INITIALIZE_PASS_BEGIN(StripDebugMachineModule, DEBUG_TYPE,
 INITIALIZE_PASS_END(StripDebugMachineModule, DEBUG_TYPE,
                     "Machine Strip Debug Module", false, false)
 
-ModulePass *createStripDebugMachineModulePass(bool OnlyDebugified) {
+ModulePass *llvm::createStripDebugMachineModulePass(bool OnlyDebugified) {
   return new StripDebugMachineModule(OnlyDebugified);
 }
