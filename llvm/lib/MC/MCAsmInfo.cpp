@@ -64,7 +64,7 @@ MCAsmInfo::MCAsmInfo() {
   // - Generic_GCC toolchains enable the integrated assembler on a per
   //   architecture basis.
   //   - The target subclasses for AArch64, ARM, and X86 handle these cases
-  UseIntegratedAssembler = false;
+  UseIntegratedAssembler = true;
   PreserveAsmComments = true;
 }
 
