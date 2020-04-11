@@ -114,6 +114,12 @@ static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"),
                       cl::ZeroOrMore);
+static cl::opt<cl::boolOrDefault> DebugifyAndStripAll(
+    "debugify-and-strip-all-safe", cl::Hidden,
+    cl::desc(
+        "Debugify MIR before and Strip debug after "
+        "each pass except those known to be unsafe when debug info is present"),
+    cl::ZeroOrMore);
 enum RunOutliner { AlwaysOutline, NeverOutline, TargetDefault };
 // Enable or disable the MachineOutliner.
 static cl::opt<RunOutliner> EnableMachineOutliner(
@@ -605,10 +611,24 @@ void TargetPassConfig::addVerifyPass(const std::string &Banner) {
     PM->add(createMachineVerifierPass(Banner));
 }
 
-void TargetPassConfig::addMachinePrePasses() {}
+void TargetPassConfig::addDebugifyPass() {
+  PM->add(createDebugifyMachineModulePass());
+}
+
+void TargetPassConfig::addStripDebugPass() {
+  PM->add(createStripDebugMachineModulePass(/*OnlyDebugified=*/true));
+}
+
+void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
+  if (AllowDebugify && DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
+    addDebugifyPass();
+}
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner,
-                                            bool AllowPrint, bool AllowVerify) {
+                                            bool AllowPrint, bool AllowVerify,
+                                            bool AllowStrip) {
+  if (DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
+    addStripDebugPass();
   if (AllowPrint)
     addPrintPass(Banner);
   if (AllowVerify)
@@ -794,6 +814,19 @@ bool TargetPassConfig::addCoreISelPasses() {
     TM->setGlobalISel(true);
   }
 
+  // FIXME: Injecting into the DAGISel pipeline seems to cause issues with
+  //        analyses needing to be re-run. This can result in being unable to
+  //        schedule passes (particularly with 'Function Alias Analysis
+  //        Results'). It's not entirely clear why but AFAICT this seems to be
+  //        due to one FunctionPassManager not being able to use analyses from a
+  //        previous one. As we're injecting a ModulePass we break the usual
+  //        pass manager into two. GlobalISel with the fallback path disabled
+  //        and -run-pass seem to be unaffected. The majority of GlobalISel
+  //        testing uses -run-pass so this probably isn't too bad.
+  SaveAndRestore<bool> SavedDebugifyIsSafe(DebugifyIsSafe);
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    DebugifyIsSafe = false;
+
   // Add instruction selector passes.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore<bool> SavedAddingMachinePasses(AddingMachinePasses, true);
@@ -909,6 +942,11 @@ void TargetPassConfig::addMachinePasses() {
 
   // Run pre-ra passes.
   addPreRegAlloc();
+
+  // Debugifying the register allocator passes seems to provoke some
+  // non-determinism that affects CodeGen and there doesn't seem to be a point
+  // where it becomes safe again so stop debugifying here.
+  DebugifyIsSafe = false;
 
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
@@ -1124,6 +1162,7 @@ bool TargetPassConfig::addRegAssignmentOptimized() {
 
   // Finally rewrite virtual registers.
   addPass(&VirtRegRewriterID);
+
   // Perform stack slot coloring and post-ra machine LICM.
   //
   // FIXME: Re-enable coloring with register when it's capable of adding

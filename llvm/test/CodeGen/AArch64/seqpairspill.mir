@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=greedy,virtregrewriter | FileCheck %s
+# RUN: llc --debugify-and-strip-all-safe=0 -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=greedy,virtregrewriter | FileCheck %s
 # Make sure spills/reloads from xseqpairs and wseqpairs work correctly.
 ---
 # CHECK-LABEL: name: spill_reload_xseqpairs
