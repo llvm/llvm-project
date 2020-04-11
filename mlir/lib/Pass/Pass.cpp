@@ -59,11 +59,14 @@ void Pass::printAsTextualPipeline(raw_ostream &os) {
     });
     return;
   }
-  // Otherwise, print the pass argument followed by its options.
-  if (const PassInfo *info = lookupPassInfo())
-    os << info->getPassArgument();
+  // Otherwise, print the pass argument followed by its options. If the pass
+  // doesn't have an argument, print the name of the pass to give some indicator
+  // of what pass was run.
+  StringRef argument = getArgument();
+  if (!argument.empty())
+    os << argument;
   else
-    os << getName();
+    os << "unknown<" << getName() << ">";
   passOptions.print(os);
 }
 
