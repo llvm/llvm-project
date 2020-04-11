@@ -74,7 +74,10 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 
 LogicalResult OperationFolder::tryToFold(
     Operation *op, function_ref<void(Operation *)> processGeneratedConstants,
-    function_ref<void(Operation *)> preReplaceAction) {
+    function_ref<void(Operation *)> preReplaceAction, bool *inPlaceUpdate) {
+  if (inPlaceUpdate)
+    *inPlaceUpdate = false;
+
   // If this is a unique'd constant, return failure as we know that it has
   // already been folded.
   if (referencedDialects.count(op))
@@ -87,8 +90,11 @@ LogicalResult OperationFolder::tryToFold(
     return failure();
 
   // Check to see if the operation was just updated in place.
-  if (results.empty())
+  if (results.empty()) {
+    if (inPlaceUpdate)
+      *inPlaceUpdate = true;
     return success();
+  }
 
   // Constant folding succeeded. We will start replacing this op's uses and
   // erase this op. Invoke the callback provided by the caller to perform any

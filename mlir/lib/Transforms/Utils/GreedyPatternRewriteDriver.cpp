@@ -104,7 +104,8 @@ private:
   // be re-added to the worklist. This function should be called when an
   // operation is modified or removed, as it may trigger further
   // simplifications.
-  template <typename Operands> void addToWorklist(Operands &&operands) {
+  template <typename Operands>
+  void addToWorklist(Operands &&operands) {
     for (Value operand : operands) {
       // If the use count of this operand is now < 2, we re-add the defining
       // operation to the worklist.
@@ -133,7 +134,8 @@ private:
 };
 } // end anonymous namespace
 
-/// Perform the rewrites while folding and erasing any dead ops.
+/// Performs the rewrites while folding and erasing any dead ops. Returns true
+/// if the rewrite converges in `maxIterations`.
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
                                           int maxIterations) {
   // Add the given operation to the worklist.
@@ -183,9 +185,12 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
       };
 
       // Try to fold this op.
-      if (succeeded(folder.tryToFold(op, collectOps, preReplaceAction))) {
+      bool inPlaceUpdate;
+      if ((succeeded(folder.tryToFold(op, collectOps, preReplaceAction,
+                                      &inPlaceUpdate)))) {
         changed = true;
-        continue;
+        if (!inPlaceUpdate)
+          continue;
       }
 
       // Make sure that any new operations are inserted at this point.
