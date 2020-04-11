@@ -768,7 +768,7 @@ private:
   void visitStoreToSwiftError(const StoreInst &I);
   void visitFreeze(const FreezeInst &I);
 
-  void visitInlineAsm(ImmutableCallSite CS);
+  void visitInlineAsm(const CallBase &Call);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
@@ -799,7 +799,7 @@ private:
 
   void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
 
-  void emitInlineAsmError(ImmutableCallSite CS, const Twine &Message);
+  void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be

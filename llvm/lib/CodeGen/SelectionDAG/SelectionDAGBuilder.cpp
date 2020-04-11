@@ -2795,7 +2795,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   const Value *Callee(I.getCalledValue());
   const Function *Fn = dyn_cast<Function>(Callee);
   if (isa<InlineAsm>(Callee))
-    visitInlineAsm(&I);
+    visitInlineAsm(I);
   else if (Fn && Fn->isIntrinsic()) {
     switch (Fn->getIntrinsicID()) {
     default:
@@ -2876,7 +2876,7 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   assert(isa<InlineAsm>(I.getCalledValue()) &&
          "Only know how to handle inlineasm callbr");
-  visitInlineAsm(&I);
+  visitInlineAsm(I);
   CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
@@ -7527,7 +7527,7 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
 void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // Handle inline assembly differently.
   if (isa<InlineAsm>(I.getCalledValue())) {
-    visitInlineAsm(&I);
+    visitInlineAsm(I);
     return;
   }
 
@@ -8043,13 +8043,13 @@ class ExtraFlags {
   unsigned Flags = 0;
 
 public:
-  explicit ExtraFlags(ImmutableCallSite CS) {
-    const InlineAsm *IA = cast<InlineAsm>(CS.getCalledValue());
+  explicit ExtraFlags(const CallBase &Call) {
+    const InlineAsm *IA = cast<InlineAsm>(Call.getCalledValue());
     if (IA->hasSideEffects())
       Flags |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       Flags |= InlineAsm::Extra_IsAlignStack;
-    if (CS.isConvergent())
+    if (Call.isConvergent())
       Flags |= InlineAsm::Extra_IsConvergent;
     Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
   }
@@ -8076,20 +8076,21 @@ public:
 } // end anonymous namespace
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.
-void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
-  const InlineAsm *IA = cast<InlineAsm>(CS.getCalledValue());
+void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledValue());
 
   /// ConstraintOperands - Information about all of the constraints.
   SDISelAsmOperandInfoVector ConstraintOperands;
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints = TLI.ParseConstraints(
-      DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(), CS);
+      DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(),
+      ImmutableCallSite(&Call));
 
   // First Pass: Calculate HasSideEffects and ExtraFlags (AlignStack,
   // AsmDialect, MayLoad, MayStore).
   bool HasSideEffect = IA->hasSideEffects();
-  ExtraFlags ExtraInfo(CS);
+  ExtraFlags ExtraInfo(Call);
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
@@ -8101,17 +8102,16 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     // Compute the value type for each operand.
     if (OpInfo.Type == InlineAsm::isInput ||
         (OpInfo.Type == InlineAsm::isOutput && OpInfo.isIndirect)) {
-      OpInfo.CallOperandVal = const_cast<Value *>(CS.getArgument(ArgNo++));
+      OpInfo.CallOperandVal = Call.getArgOperand(ArgNo++);
 
       // Process the call argument. BasicBlocks are labels, currently appearing
       // only in asm's.
-      const Instruction *I = CS.getInstruction();
-      if (isa<CallBrInst>(I) &&
-          ArgNo - 1 >= (cast<CallBrInst>(I)->getNumArgOperands() -
-                        cast<CallBrInst>(I)->getNumIndirectDests() -
+      if (isa<CallBrInst>(Call) &&
+          ArgNo - 1 >= (cast<CallBrInst>(&Call)->getNumArgOperands() -
+                        cast<CallBrInst>(&Call)->getNumIndirectDests() -
                         NumMatchingOps) &&
           (NumMatchingOps == 0 ||
-           ArgNo - 1 < (cast<CallBrInst>(I)->getNumArgOperands() -
+           ArgNo - 1 < (cast<CallBrInst>(&Call)->getNumArgOperands() -
                         NumMatchingOps))) {
         const auto *BA = cast<BlockAddress>(OpInfo.CallOperandVal);
         EVT VT = TLI.getValueType(DAG.getDataLayout(), BA->getType(), true);
@@ -8129,14 +8129,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     } else if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
       // The return value of the call is this value.  As such, there is no
       // corresponding argument.
-      assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
-      if (StructType *STy = dyn_cast<StructType>(CS.getType())) {
+      assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
+      if (StructType *STy = dyn_cast<StructType>(Call.getType())) {
         OpInfo.ConstraintVT = TLI.getSimpleValueType(
             DAG.getDataLayout(), STy->getElementType(ResNo));
       } else {
         assert(ResNo == 0 && "Asm only has one result!");
         OpInfo.ConstraintVT =
-            TLI.getSimpleValueType(DAG.getDataLayout(), CS.getType());
+            TLI.getSimpleValueType(DAG.getDataLayout(), Call.getType());
       }
       ++ResNo;
     } else {
@@ -8159,9 +8159,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         OpInfo.CallOperand && !isa<ConstantSDNode>(OpInfo.CallOperand))
       // We've delayed emitting a diagnostic like the "n" constraint because
       // inlining could cause an integer showing up.
-      return emitInlineAsmError(
-          CS, "constraint '" + Twine(T.ConstraintCode) + "' expects an "
-                  "integer constant expression");
+      return emitInlineAsmError(Call, "constraint '" + Twine(T.ConstraintCode) +
+                                          "' expects an integer constant "
+                                          "expression");
 
     ExtraInfo.update(T);
   }
@@ -8171,7 +8171,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   // memory and is nonvolatile.
   SDValue Flag, Chain = (HasSideEffect) ? getRoot() : DAG.getRoot();
 
-  bool IsCallBr = isa<CallBrInst>(CS.getInstruction());
+  bool IsCallBr = isa<CallBrInst>(Call);
   if (IsCallBr) {
     // If this is a callbr we need to flush pending exports since inlineasm_br
     // is a terminator. We need to do this before nodes are glued to
@@ -8226,7 +8226,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
   // pass in the third operand as this (potentially null) inline asm MDNode.
-  const MDNode *SrcLoc = CS.getInstruction()->getMetadata("srcloc");
+  const MDNode *SrcLoc = Call.getMetadata("srcloc");
   AsmNodeOperands.push_back(DAG.getMDNode(SrcLoc));
 
   // Remember the HasSideEffect, AlignStack, AsmDialect, MayLoad and MayStore
@@ -8264,8 +8264,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         // C_Immediate/C_Other). Find a register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
           emitInlineAsmError(
-              CS, "couldn't allocate output register for constraint '" +
-                      Twine(OpInfo.ConstraintCode) + "'");
+              Call, "couldn't allocate output register for constraint '" +
+                        Twine(OpInfo.ConstraintCode) + "'");
           return;
         }
 
@@ -8293,9 +8293,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
           // Add (OpFlag&0xffff)>>3 registers to MatchedRegs.
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
-            emitInlineAsmError(CS, "inline asm not supported yet:"
-                                   " don't know how to handle tied "
-                                   "indirect register inputs");
+            emitInlineAsmError(Call, "inline asm not supported yet: "
+                                     "don't know how to handle tied "
+                                     "indirect register inputs");
             return;
           }
 
@@ -8309,8 +8309,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
             for (unsigned i = 0; i != NumRegs; ++i)
               Regs.push_back(RegInfo.createVirtualRegister(RC));
           } else {
-            emitInlineAsmError(CS, "inline asm error: This value type register "
-                                   "class is not natively supported!");
+            emitInlineAsmError(Call,
+                               "inline asm error: This value type register "
+                               "class is not natively supported!");
             return;
           }
 
@@ -8318,8 +8319,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
           SDLoc dl = getCurSDLoc();
           // Use the produced MatchedRegs object to
-          MatchedRegs.getCopyToRegs(InOperandVal, DAG, dl, Chain, &Flag,
-                                    CS.getInstruction());
+          MatchedRegs.getCopyToRegs(InOperandVal, DAG, dl, Chain, &Flag, &Call);
           MatchedRegs.AddInlineAsmOperands(InlineAsm::Kind_RegUse,
                                            true, OpInfo.getMatchedOperand(), dl,
                                            DAG, AsmNodeOperands);
@@ -8353,13 +8353,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         if (Ops.empty()) {
           if (OpInfo.ConstraintType == TargetLowering::C_Immediate)
             if (isa<ConstantSDNode>(InOperandVal)) {
-              emitInlineAsmError(CS, "value out of range for constraint '" +
-                                 Twine(OpInfo.ConstraintCode) + "'");
+              emitInlineAsmError(Call, "value out of range for constraint '" +
+                                           Twine(OpInfo.ConstraintCode) + "'");
               return;
             }
 
-          emitInlineAsmError(CS, "invalid operand for inline asm constraint '" +
-                                     Twine(OpInfo.ConstraintCode) + "'");
+          emitInlineAsmError(Call,
+                             "invalid operand for inline asm constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'");
           return;
         }
 
@@ -8400,23 +8401,24 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       // TODO: Support this.
       if (OpInfo.isIndirect) {
         emitInlineAsmError(
-            CS, "Don't know how to handle indirect register inputs yet "
-                "for constraint '" +
-                    Twine(OpInfo.ConstraintCode) + "'");
+            Call, "Don't know how to handle indirect register inputs yet "
+                  "for constraint '" +
+                      Twine(OpInfo.ConstraintCode) + "'");
         return;
       }
 
       // Copy the input into the appropriate registers.
       if (OpInfo.AssignedRegs.Regs.empty()) {
-        emitInlineAsmError(CS, "couldn't allocate input reg for constraint '" +
-                                   Twine(OpInfo.ConstraintCode) + "'");
+        emitInlineAsmError(Call,
+                           "couldn't allocate input reg for constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "'");
         return;
       }
 
       SDLoc dl = getCurSDLoc();
 
-      OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, dl,
-                                        Chain, &Flag, CS.getInstruction());
+      OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, dl, Chain, &Flag,
+                                        &Call);
 
       OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind_RegUse, false, 0,
                                                dl, DAG, AsmNodeOperands);
@@ -8448,12 +8450,12 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   SmallVector<SDValue, 1> ResultValues;
   SmallVector<SDValue, 8> OutChains;
 
-  llvm::Type *CSResultType = CS.getType();
+  llvm::Type *CallResultType = Call.getType();
   ArrayRef<Type *> ResultTypes;
-  if (StructType *StructResult = dyn_cast<StructType>(CSResultType))
+  if (StructType *StructResult = dyn_cast<StructType>(CallResultType))
     ResultTypes = StructResult->elements();
-  else if (!CSResultType->isVoidTy())
-    ResultTypes = makeArrayRef(CSResultType);
+  else if (!CallResultType->isVoidTy())
+    ResultTypes = makeArrayRef(CallResultType);
 
   auto CurResultType = ResultTypes.begin();
   auto handleRegAssign = [&](SDValue V) {
@@ -8497,8 +8499,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       switch (OpInfo.ConstraintType) {
       case TargetLowering::C_Register:
       case TargetLowering::C_RegisterClass:
-        Val = OpInfo.AssignedRegs.getCopyFromRegs(
-            DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
+        Val = OpInfo.AssignedRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
+                                                  Chain, &Flag, &Call);
         break;
       case TargetLowering::C_Immediate:
       case TargetLowering::C_Other:
@@ -8520,7 +8522,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         OutChains.push_back(Store);
       } else {
         // generate CopyFromRegs to associated registers.
-        assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
+        assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
         if (Val.getOpcode() == ISD::MERGE_VALUES) {
           for (const SDValue &V : Val->op_values())
             handleRegAssign(V);
@@ -8539,7 +8541,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
     SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
                             DAG.getVTList(ResultVTs), ResultValues);
-    setValue(CS.getInstruction(), V);
+    setValue(&Call, V);
   }
 
   // Collect store chains.
@@ -8551,15 +8553,15 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     DAG.setRoot(Chain);
 }
 
-void SelectionDAGBuilder::emitInlineAsmError(ImmutableCallSite CS,
+void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
                                              const Twine &Message) {
   LLVMContext &Ctx = *DAG.getContext();
-  Ctx.emitError(CS.getInstruction(), Message);
+  Ctx.emitError(&Call, Message);
 
   // Make sure we leave the DAG in a valid state
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SmallVector<EVT, 1> ValueVTs;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), CS->getType(), ValueVTs);
+  ComputeValueVTs(TLI, DAG.getDataLayout(), Call.getType(), ValueVTs);
 
   if (ValueVTs.empty())
     return;
@@ -8568,7 +8570,7 @@ void SelectionDAGBuilder::emitInlineAsmError(ImmutableCallSite CS,
   for (unsigned i = 0, e = ValueVTs.size(); i != e; ++i)
     Ops.push_back(DAG.getUNDEF(ValueVTs[i]));
 
-  setValue(CS.getInstruction(), DAG.getMergeValues(Ops, getCurSDLoc()));
+  setValue(&Call, DAG.getMergeValues(Ops, getCurSDLoc()));
 }
 
 void SelectionDAGBuilder::visitVAStart(const CallInst &I) {
