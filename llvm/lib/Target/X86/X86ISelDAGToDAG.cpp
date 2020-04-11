@@ -862,6 +862,21 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     }
 
     switch (N->getOpcode()) {
+    case ISD::VSELECT: {
+      // Replace VSELECT with non-mask conditions with with BLENDV.
+      if (N->getOperand(0).getValueType().getVectorElementType() == MVT::i1)
+        break;
+
+      assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
+      SDValue Blendv =
+          CurDAG->getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
+                          N->getOperand(0), N->getOperand(1), N->getOperand(2));
+      --I;
+      CurDAG->ReplaceAllUsesWith(N, Blendv.getNode());
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
     case ISD::FP_ROUND:
     case ISD::STRICT_FP_ROUND:
     case ISD::FP_TO_SINT:
@@ -4530,21 +4545,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     break;
-
-  case ISD::VSELECT: {
-    // Replace VSELECT with non-mask conditions with with BLENDV.
-    if (Node->getOperand(0).getValueType().getVectorElementType() == MVT::i1)
-      break;
-
-    assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
-    SDValue Blendv = CurDAG->getNode(
-        X86ISD::BLENDV, SDLoc(Node), Node->getValueType(0), Node->getOperand(0),
-        Node->getOperand(1), Node->getOperand(2));
-    ReplaceNode(Node, Blendv.getNode());
-    SelectCode(Blendv.getNode());
-    // We already called ReplaceUses.
-    return;
-  }
 
   case ISD::SRL:
     if (matchBitExtract(Node))
