@@ -30,7 +30,6 @@
 
 namespace llvm {
 
-class MachineBasicBlock;
 class MachineInstr;
 class TargetInstrInfo;
 
