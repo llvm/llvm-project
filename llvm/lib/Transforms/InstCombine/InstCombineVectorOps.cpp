@@ -1967,7 +1967,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
     unsigned ScaleFactor = XNumElts / VWidth;
     SmallVector<int, 16> ScaledMask;
-    scaleShuffleMask(ScaleFactor, Mask, ScaledMask);
+    narrowShuffleMaskElts(ScaleFactor, Mask, ScaledMask);
 
     // If the shuffled source vector simplifies, cast that value to this
     // shuffle's type.
