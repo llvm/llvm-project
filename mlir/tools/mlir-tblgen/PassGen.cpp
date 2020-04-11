@@ -38,8 +38,8 @@ const char *const passDeclBegin = R"(
 template <typename DerivedT>
 class {0}Base : public {1} {
 public:
-  {0}Base() : {1}(PassID::getID<DerivedT>()) {{}
-  {0}Base(const {0}Base &) : {1}(PassID::getID<DerivedT>()) {{}
+  {0}Base() : {1}(::mlir::TypeID::get<DerivedT>()) {{}
+  {0}Base(const {0}Base &) : {1}(::mlir::TypeID::get<DerivedT>()) {{}
 
   /// Returns the command-line argument attached to this pass.
   llvm::StringRef getArgument() const override { return "{2}"; }
@@ -49,7 +49,7 @@ public:
 
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const ::mlir::Pass *pass) {{
-    return pass->getPassID() == ::mlir::PassID::getID<DerivedT>();
+    return pass->getTypeID() == ::mlir::TypeID::get<DerivedT>();
   }
 
   /// A clone method to create a copy of this pass.

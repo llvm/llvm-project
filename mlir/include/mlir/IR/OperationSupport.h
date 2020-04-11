@@ -94,7 +94,7 @@ public:
   Dialect &dialect;
 
   /// The unique identifier of the derived Op class.
-  ClassID *classID;
+  TypeID typeID;
 
   /// Use the specified object to parse this ops custom assembly format.
   ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result);
@@ -149,7 +149,7 @@ public:
 
   /// Returns if the operation has a particular trait.
   template <template <typename T> class Trait> bool hasTrait() const {
-    return hasRawTrait(ClassID::getID<Trait>());
+    return hasRawTrait(TypeID::get<Trait>());
   }
 
   /// Look up the specified operation in the specified MLIRContext and return a
@@ -162,7 +162,7 @@ public:
   template <typename T> static AbstractOperation get(Dialect &dialect) {
     return AbstractOperation(
         T::getOperationName(), dialect, T::getOperationProperties(),
-        ClassID::getID<T>(), T::parseAssembly, T::printAssembly,
+        TypeID::get<T>(), T::parseAssembly, T::printAssembly,
         T::verifyInvariants, T::foldHook, T::getCanonicalizationPatterns,
         T::getRawInterface, T::hasTrait);
   }
@@ -170,7 +170,7 @@ public:
 private:
   AbstractOperation(
       StringRef name, Dialect &dialect, OperationProperties opProperties,
-      ClassID *classID,
+      TypeID typeID,
       ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result),
       void (&printAssembly)(Operation *op, OpAsmPrinter &p),
       LogicalResult (&verifyInvariants)(Operation *op),
@@ -178,9 +178,9 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results),
       void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
                                           MLIRContext *context),
-      void *(&getRawInterface)(ClassID *interfaceID),
-      bool (&hasTrait)(ClassID *traitID))
-      : name(name), dialect(dialect), classID(classID),
+      void *(&getRawInterface)(TypeID interfaceID),
+      bool (&hasTrait)(TypeID traitID))
+      : name(name), dialect(dialect), typeID(typeID),
         parseAssembly(parseAssembly), printAssembly(printAssembly),
         verifyInvariants(verifyInvariants), foldHook(foldHook),
         getCanonicalizationPatterns(getCanonicalizationPatterns),
@@ -193,11 +193,11 @@ private:
   /// Returns a raw instance of the concept for the given interface id if it is
   /// registered to this operation, nullptr otherwise. This should not be used
   /// directly.
-  void *(&getRawInterface)(ClassID *interfaceID);
+  void *(&getRawInterface)(TypeID interfaceID);
 
   /// This hook returns if the operation contains the trait corresponding
-  /// to the given ClassID.
-  bool (&hasRawTrait)(ClassID *traitID);
+  /// to the given TypeID.
+  bool (&hasRawTrait)(TypeID traitID);
 };
 
 //===----------------------------------------------------------------------===//

@@ -753,8 +753,8 @@ struct DominanceCounterInstrumentation : public PassInstrumentation {
   unsigned &count;
 
   DominanceCounterInstrumentation(unsigned &count) : count(count) {}
-  void runAfterAnalysis(llvm::StringRef, AnalysisID *id, Operation *) override {
-    if (id == AnalysisID::getID<DominanceInfo>())
+  void runAfterAnalysis(llvm::StringRef, TypeID id, Operation *) override {
+    if (id == TypeID::get<DominanceInfo>())
       ++count;
   }
 };
