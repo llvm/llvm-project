@@ -4678,7 +4678,7 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   MachineInstr *Or;
 
   if (Src0Ty == Src1Ty) {
-    auto And1 = MIRBuilder.buildAnd(Src1Ty, Src0, SignBitMask);
+    auto And1 = MIRBuilder.buildAnd(Src1Ty, Src1, SignBitMask);
     Or = MIRBuilder.buildOr(Dst, And0, And1);
   } else if (Src0Size > Src1Size) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0Ty, Src0Size - Src1Size);
