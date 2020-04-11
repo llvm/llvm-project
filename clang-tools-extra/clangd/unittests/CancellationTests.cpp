@@ -45,12 +45,13 @@ TEST(CancellationTest, TaskContextDiesHandleLives) {
 }
 
 struct NestedTasks {
+  enum { OuterReason = 1, InnerReason = 2 };
   std::pair<Context, Canceler> Outer, Inner;
   NestedTasks() {
-    Outer = cancelableTask();
+    Outer = cancelableTask(OuterReason);
     {
       WithContext WithOuter(Outer.first.clone());
-      Inner = cancelableTask();
+      Inner = cancelableTask(InnerReason);
     }
   }
 };
@@ -59,13 +60,13 @@ TEST(CancellationTest, Nested) {
   // Cancelling inner task works but leaves outer task unaffected.
   NestedTasks CancelInner;
   CancelInner.Inner.second();
-  EXPECT_TRUE(isCancelled(CancelInner.Inner.first));
+  EXPECT_EQ(NestedTasks::InnerReason, isCancelled(CancelInner.Inner.first));
   EXPECT_FALSE(isCancelled(CancelInner.Outer.first));
   // Cancellation of outer task is inherited by inner task.
   NestedTasks CancelOuter;
   CancelOuter.Outer.second();
-  EXPECT_TRUE(isCancelled(CancelOuter.Inner.first));
-  EXPECT_TRUE(isCancelled(CancelOuter.Outer.first));
+  EXPECT_EQ(NestedTasks::OuterReason, isCancelled(CancelOuter.Inner.first));
+  EXPECT_EQ(NestedTasks::OuterReason, isCancelled(CancelOuter.Outer.first));
 }
 
 TEST(CancellationTest, AsynCancellationTest) {
