@@ -4,6 +4,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK-P9,CHECK-ALL
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 --code-model=large -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-LARGE,CHECK-ALL
 
 @global_int = common dso_local local_unnamed_addr global i32 0, align 4
 
@@ -38,6 +41,8 @@ define dso_local signext i32 @AsmClobberX2WithTOC(i32 signext %a, i32 signext %b
 ; CHECK-ALL-LABEL: AsmClobberX2WithTOC:
 ; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep2@ha
 ; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep2@l
+; CHECK-LARGE:     ld r2, .Lfunc_toc2-.Lfunc_gep2(r12)
+; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S:         .localentry     AsmClobberX2WithTOC, .Lfunc_lep2-.Lfunc_gep2
 ; CHECK-S:         #APP
 ; CHECK-S-NEXT:    li r2, 0
@@ -155,6 +160,8 @@ define dso_local signext i32 @UsesX2AsTOC() local_unnamed_addr {
 ; CHECK-ALL-LABEL: UsesX2AsTOC:
 ; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep6@ha
 ; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep6@l
+; CHECK-LARGE:     ld r2, .Lfunc_toc6-.Lfunc_gep6(r12)
+; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S:       .localentry     UsesX2AsTOC, .Lfunc_lep6-.Lfunc_gep6
 ; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    addis r3, r2, global_int@toc@ha
@@ -168,6 +175,8 @@ entry:
 
 define dso_local double @UsesX2AsConstPoolTOC() local_unnamed_addr {
 ; CHECK-ALL-LABEL: UsesX2AsConstPoolTOC:
+; CHECK-LARGE:     ld r2, .Lfunc_toc7-.Lfunc_gep7(r12)
+; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S-NOT:       .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    plfd f1, .LCPI7_0@PCREL(0), 1
