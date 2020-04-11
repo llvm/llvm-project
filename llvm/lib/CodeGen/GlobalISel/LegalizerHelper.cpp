@@ -2607,7 +2607,7 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
   const Register DstReg = MI.getOperand(0).getReg();
   const unsigned Flags = MI.getFlags();
 
-  assert(NumOps <= 3 && "expected instrution with 1 result and 1-3 sources");
+  assert(NumOps <= 3 && "expected instruction with 1 result and 1-3 sources");
 
   SmallVector<Register, 8> ExtractedRegs[3];
   SmallVector<Register, 8> Parts;
