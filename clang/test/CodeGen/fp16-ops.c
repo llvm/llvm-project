@@ -11,6 +11,7 @@
 // RUN: %clang_cc1 -emit-llvm -o - -x renderscript %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
 typedef unsigned cond_t;
+typedef __fp16 float16_t;
 
 volatile cond_t test;
 volatile int i0;
@@ -540,4 +541,16 @@ void foo(void) {
   // NOTNATIVE: [[TRUNC:%.*]] = fptrunc float [[CONV]] to half
   // NOTNATIVE: store volatile half [[TRUNC]], half* @h0
   h0 = s0;
+}
+
+// CHECK-LABEL: define void @testTypeDef(
+// CHECK: %[[CONV:.*]] = fpext <4 x half> %{{.*}} to <4 x float>
+// CHECK: %[[CONV1:.*]] = fpext <4 x half> %{{.*}} to <4 x float>
+// CHECK: %[[ADD:.*]] = fadd <4 x float> %[[CONV]], %[[CONV1]]
+// CHECK: fptrunc <4 x float> %[[ADD]] to <4 x half>
+
+void testTypeDef() {
+  __fp16 t0 __attribute__((vector_size(8)));
+  float16_t t1 __attribute__((vector_size(8)));
+  t1 = t0 + t1;
 }
