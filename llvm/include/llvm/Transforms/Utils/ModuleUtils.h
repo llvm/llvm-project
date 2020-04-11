@@ -13,7 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility> // for std::pair
 
@@ -24,9 +24,7 @@ class Module;
 class Function;
 class FunctionCallee;
 class GlobalValue;
-class GlobalVariable;
 class Constant;
-class StringRef;
 class Value;
 class Type;
 
