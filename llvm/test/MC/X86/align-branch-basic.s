@@ -1,4 +1,4 @@
-  # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu --x86-align-branch-boundary=32 --x86-align-branch=call+jmp+indirect+ret+jcc %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=call+jmp+indirect+ret+jcc %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
   # These tests are checking the basic cases for each instructions, and a
   # bit of the alignment checking logic itself.  Fused instruction cases are

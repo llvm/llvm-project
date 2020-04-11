@@ -1,6 +1,6 @@
-  # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu --x86-align-branch-boundary=32 --x86-align-branch=call+indirect %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=64BIT,CHECK
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=call+indirect %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=64BIT,CHECK
 
-  # RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu --x86-align-branch-boundary=32 --x86-align-branch=call+indirect %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=32BIT,CHECK
+# RUN: llvm-mc -filetype=obj -triple i386 --x86-align-branch-boundary=32 --x86-align-branch=call+indirect %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=32BIT,CHECK
 
   # Exercise cases where the instruction to be aligned has a variant symbol
   # operand, and we can't add before it since linker may rewrite it.
