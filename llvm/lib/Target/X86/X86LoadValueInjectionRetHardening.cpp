@@ -99,6 +99,9 @@ bool X86LoadValueInjectionRetHardeningPass::runOnMachineFunction(
 
   bool Modified = false;
   for (auto &MBB : MF) {
+    if (MBB.empty())
+      continue;
+
     MachineInstr &MI = MBB.back();
     if (MI.getOpcode() != X86::RETQ)
       continue;
