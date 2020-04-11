@@ -26,7 +26,6 @@ namespace llvm {
 
 class CCState;
 class MVT;
-class TargetMachine;
 class TargetRegisterInfo;
 
 /// CCValAssign - Represent assignment of one arg/retval to a location.
