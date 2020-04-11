@@ -2675,8 +2675,11 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     if (C.hasValue() && C.getValue())
       return ChangeStatus::UNCHANGED;
 
+    // Replace the value with undef as it is dead but keep droppable uses around
+    // as they provide information we don't want to give up on just yet.
     UndefValue &UV = *UndefValue::get(V.getType());
-    bool AnyChange = A.changeValueAfterManifest(V, UV);
+    bool AnyChange =
+        A.changeValueAfterManifest(V, UV, /* ChangeDropppable */ false);
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -2703,8 +2706,10 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
       if (A.registerFunctionSignatureRewrite(
               Arg, /* ReplacementTypes */ {},
               Attributor::ArgumentReplacementInfo::CalleeRepairCBTy{},
-              Attributor::ArgumentReplacementInfo::ACSRepairCBTy{}))
+              Attributor::ArgumentReplacementInfo::ACSRepairCBTy{})) {
+        Arg.dropDroppableUses();
         return ChangeStatus::CHANGED;
+      }
     return Changed;
   }
 
