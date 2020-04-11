@@ -32,8 +32,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
 
-STATISTIC(NumFnDeleted,
-          "Number of function deleted");
+STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
 STATISTIC(NumFnWithoutExactDefinition,
@@ -136,7 +135,6 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
 
   llvm_unreachable("Expected enum or string attribute!");
 }
-
 
 Argument *IRPosition::getAssociatedArgument() const {
   if (getPositionKind() == IRP_ARGUMENT)
@@ -1589,13 +1587,16 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
   return Changed;
 }
 
-void Attributor::initializeInformationCache(Function &F) {
+void InformationCache::initializeInformationCache(const Function &CF,
+                                                  FunctionInfo &FI) {
+  // As we do not modify the function here we can remove the const
+  // withouth breaking implicit assumptions. At the end of the day, we could
+  // initialize the cache eagerly which would look the same to the users.
+  Function &F = const_cast<Function &>(CF);
 
   // Walk all instructions to find interesting instructions that might be
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
-  auto &ReadOrWriteInsts = InfoCache.FuncRWInstsMap[&F];
-  auto &InstOpcodeMap = InfoCache.FuncInstOpcodeMap[&F];
 
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
@@ -1617,11 +1618,11 @@ void Attributor::initializeInformationCache(Function &F) {
       // For `must-tail` calls we remember the caller and callee.
       if (IntrinsicInst *Assume = dyn_cast<IntrinsicInst>(&I)) {
         if (Assume->getIntrinsicID() == Intrinsic::assume)
-          fillMapFromAssume(*Assume, InfoCache.KnowledgeMap);
+          fillMapFromAssume(*Assume, KnowledgeMap);
       } else if (cast<CallInst>(I).isMustTailCall()) {
-        InfoCache.FunctionsWithMustTailCall.insert(&F);
-        InfoCache.FunctionsCalledViaMustTail.insert(
-            cast<CallInst>(I).getCalledFunction());
+        FI.ContainsMustTailCall = true;
+        if (const Function *Callee = cast<CallInst>(I).getCalledFunction())
+          getFunctionInfo(*Callee).CalledViaMustTail = true;
       }
       LLVM_FALLTHROUGH;
     case Instruction::CallBr:
@@ -1640,14 +1641,14 @@ void Attributor::initializeInformationCache(Function &F) {
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode)
-      InstOpcodeMap[I.getOpcode()].push_back(&I);
+      FI.OpcodeInstMap[I.getOpcode()].push_back(&I);
     if (I.mayReadOrWriteMemory())
-      ReadOrWriteInsts.push_back(&I);
+      FI.RWInsts.push_back(&I);
   }
 
   if (F.hasFnAttribute(Attribute::AlwaysInline) &&
       isInlineViable(F).isSuccess())
-    InfoCache.InlineableFunctions.insert(&F);
+    InlineableFunctions.insert(&F);
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
@@ -1674,11 +1675,13 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // In non-module runs we need to look at the call sites of a function to
   // determine if it is part of a must-tail call edge. This will influence what
   // attributes we can derive.
-  if (!isModulePass() && !InfoCache.FunctionsCalledViaMustTail.count(&F))
+  InformationCache::FunctionInfo &FI = InfoCache.getFunctionInfo(F);
+  if (!isModulePass() && !FI.CalledViaMustTail) {
     for (const Use &U : F.uses())
       if (ImmutableCallSite ICS = ImmutableCallSite(U.getUser()))
         if (ICS.isCallee(&U) && ICS.isMustTailCall())
-          InfoCache.FunctionsCalledViaMustTail.insert(&F);
+          FI.CalledViaMustTail = true;
+  }
 
   IRPosition FPos = IRPosition::function(F);
 
@@ -1949,13 +1952,6 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
   Attributor A(Functions, InfoCache, CGUpdater, DepRecInterval);
-
-  // Note: _Don't_ combine/fuse this loop with the one below because
-  // when A.identifyDefaultAbstractAttributes() is called for one
-  // function, it assumes that the information cach has been
-  // initialized for _all_ functions.
-  for (Function *F : Functions)
-    A.initializeInformationCache(*F);
 
   // Create shallow wrappers for all functions that are not IPO amendable
   if (AllowShallowWrappers)
