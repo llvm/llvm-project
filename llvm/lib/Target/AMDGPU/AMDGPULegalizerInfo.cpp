@@ -1082,12 +1082,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{S32, S32}, {S64, S32}});
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts()) {
-      Shifts.legalFor({{S16, S32}, {S16, S16}, {V2S16, V2S16}})
+      Shifts.legalFor({{S16, S16}, {V2S16, V2S16}})
             .clampMaxNumElements(0, S16, 2);
     } else
-      Shifts.legalFor({{S16, S32}, {S16, S16}});
+      Shifts.legalFor({{S16, S16}});
 
-    // TODO: Support 16-bit shift amounts
+    // TODO: Support 16-bit shift amounts for all types
+    Shifts.widenScalarIf(
+      [=](const LegalityQuery &Query) {
+        // Use 16-bit shift amounts for any 16-bit shift. Otherwise we want a
+        // 32-bit amount.
+        const LLT ValTy = Query.Types[0];
+        const LLT AmountTy = Query.Types[1];
+        return ValTy.getSizeInBits() <= 16 &&
+               AmountTy.getSizeInBits() < 16;
+      }, changeTo(1, S16));
+    Shifts.maxScalarIf(typeIs(0, S16), 1, S16);
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);

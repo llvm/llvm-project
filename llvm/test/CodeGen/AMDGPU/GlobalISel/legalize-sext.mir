@@ -609,11 +609,11 @@ body: |
     ; CHECK: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C1]](s16)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC1]], [[C1]](s16)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
     ; CHECK: [[COPY1:%[0-9]+]]:_(s16) = COPY [[LSHR2]](s16)
     ; CHECK: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[COPY1]], [[C1]](s16)
     ; CHECK: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C1]](s16)
-    ; CHECK: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[ASHR]], [[C2]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 7
+    ; CHECK: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[ASHR]], [[C2]](s16)
     ; CHECK: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; CHECK: [[COPY2:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
     ; CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[COPY2]], [[C3]]
