@@ -1,4 +1,4 @@
-# MLIR Operation Traits
+# Operation Traits
 
 [TOC]
 
