@@ -336,8 +336,8 @@ void X86InterleavedAccessGroup::interleave8bitStride4VF8(
 
   createUnpackShuffleMask(VT, MaskLowTemp1, true, false);
   createUnpackShuffleMask(VT, MaskHighTemp1, false, false);
-  scaleShuffleMask(2, MaskHighTemp1, MaskHighWord);
-  scaleShuffleMask(2, MaskLowTemp1, MaskLowWord);
+  narrowShuffleMaskElts(2, MaskHighTemp1, MaskHighWord);
+  narrowShuffleMaskElts(2, MaskLowTemp1, MaskLowWord);
   // IntrVec1Low = c0 m0 c1 m1 c2 m2 c3 m3 c4 m4 c5 m5 c6 m6 c7 m7
   // IntrVec2Low = y0 k0 y1 k1 y2 k2 y3 k3 y4 k4 y5 k5 y6 k6 y7 k7
   Value *IntrVec1Low =
@@ -384,8 +384,8 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
 
   createUnpackShuffleMask(HalfVT, MaskLowTemp, true, false);
   createUnpackShuffleMask(HalfVT, MaskHighTemp, false, false);
-  scaleShuffleMask(2, MaskLowTemp, LowHighMask[0]);
-  scaleShuffleMask(2, MaskHighTemp, LowHighMask[1]);
+  narrowShuffleMaskElts(2, MaskLowTemp, LowHighMask[0]);
+  narrowShuffleMaskElts(2, MaskHighTemp, LowHighMask[1]);
 
   // IntrVec1Low  = c0  m0  c1  m1 ... c7  m7  | c16 m16 c17 m17 ... c23 m23
   // IntrVec1High = c8  m8  c9  m9 ... c15 m15 | c24 m24 c25 m25 ... c31 m31

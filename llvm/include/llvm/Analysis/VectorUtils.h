@@ -328,19 +328,19 @@ const Value *getSplatValue(const Value *V);
 /// not limited by finding a scalar source value to a splatted vector.
 bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 
-/// Scale a shuffle or target shuffle mask, replacing each mask index with the
-/// scaled sequential indices for an equivalent mask of narrowed elements.
-/// Mask elements that are less than 0 (sentinel values) are repeated in the
-/// output mask.
+/// Replace each shuffle mask index with the scaled sequential indices for an
+/// equivalent mask of narrowed elements. Mask elements that are less than 0
+/// (sentinel values) are repeated in the output mask.
 ///
 /// Example with Scale = 4:
 ///   <4 x i32> <3, 2, 0, -1> -->
 ///   <16 x i8> <12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1>
 ///
-/// This is the reverse process of "canWidenShuffleElements", but can always
-/// succeed.
-void scaleShuffleMask(size_t Scale, ArrayRef<int> Mask,
-                      SmallVectorImpl<int> &ScaledMask);
+/// This is the reverse process of widening shuffle mask elements, but it always
+/// succeeds because the indexes can always be multiplied (scaled up) to map to
+/// narrower vector elements.
+void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
+                           SmallVectorImpl<int> &ScaledMask);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
