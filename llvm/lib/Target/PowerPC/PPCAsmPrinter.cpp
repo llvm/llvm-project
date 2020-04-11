@@ -1463,10 +1463,15 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
   const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
   const bool UsesX2OrR2 = !MF->getRegInfo().use_empty(PPC::X2) ||
                           !MF->getRegInfo().use_empty(PPC::R2);
+  const bool PCrelGEPRequired = Subtarget->isUsingPCRelativeCalls() &&
+                                UsesX2OrR2 && PPCFI->usesTOCBasePtr();
+  const bool NonPCrelGEPRequired = !Subtarget->isUsingPCRelativeCalls() &&
+                                   Subtarget->isELFv2ABI() && UsesX2OrR2;
+
   // Only do all that if the function uses R2 as the TOC pointer
   // in the first place. We don't need the global entry point if the
   // function uses R2 as an allocatable register.
-  if (Subtarget->isELFv2ABI() && UsesX2OrR2 && PPCFI->usesTOCBasePtr()) {
+  if (NonPCrelGEPRequired || PCrelGEPRequired) {
     // Note: The logic here must be synchronized with the code in the
     // branch-selection pass which sets the offset of the first block in the
     // function. This matters because it affects the alignment.
@@ -1521,7 +1526,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
 
     if (TS)
       TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym), LocalOffsetExp);
-  } else if (Subtarget->isELFv2ABI() && Subtarget->isUsingPCRelativeCalls()) {
+  } else if (Subtarget->isUsingPCRelativeCalls()) {
     // When generating the entry point for a function we have a few scenarios
     // based on whether or not that function uses R2 and whether or not that
     // function makes calls (or is a leaf function).
