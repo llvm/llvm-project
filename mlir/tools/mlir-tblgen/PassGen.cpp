@@ -42,10 +42,10 @@ public:
   {0}Base(const {0}Base &) : {1}(PassID::getID<DerivedT>()) {{}
 
   /// Returns the command-line argument attached to this pass.
-  static llvm::StringRef getPassArgument() { return "{2}"; }
+  llvm::StringRef getArgument() const override { return "{2}"; }
 
   /// Returns the derived pass name.
-  llvm::StringRef getName() override { return "{0}"; }
+  llvm::StringRef getName() const override { return "{0}"; }
 
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const ::mlir::Pass *pass) {{

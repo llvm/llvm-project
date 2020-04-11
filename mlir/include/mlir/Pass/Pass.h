@@ -55,7 +55,15 @@ public:
   const PassInfo *lookupPassInfo() const { return lookupPassInfo(getPassID()); }
 
   /// Returns the derived pass name.
-  virtual StringRef getName() = 0;
+  virtual StringRef getName() const = 0;
+
+  /// Returns the command line argument used when registering this pass. Return
+  /// an empty string if one does not exist.
+  virtual StringRef getArgument() const {
+    if (const PassInfo *passInfo = lookupPassInfo())
+      return passInfo->getPassArgument();
+    return "";
+  }
 
   /// Returns the name of the operation that this pass operates on, or None if
   /// this is a generic OperationPass.
@@ -332,12 +340,7 @@ protected:
   PassWrapper() : BaseT(PassID::getID<PassT>()) {}
 
   /// Returns the derived pass name.
-  StringRef getName() override {
-    StringRef name = llvm::getTypeName<PassT>();
-    if (!name.consume_front("mlir::"))
-      name.consume_front("(anonymous namespace)::");
-    return name;
-  }
+  StringRef getName() const override { return llvm::getTypeName<PassT>(); }
 
   /// A clone method to create a copy of this pass.
   std::unique_ptr<Pass> clonePass() const override {
