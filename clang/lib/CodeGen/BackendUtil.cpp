@@ -354,8 +354,24 @@ static void addMemTagOptimizationPasses(const PassManagerBuilder &Builder,
   PM.add(createStackSafetyGlobalInfoWrapperPass(/*SetMetadata=*/true));
 }
 
-static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple) {
-  return new TargetLibraryInfoImpl(TargetTriple);
+static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
+                                         const CodeGenOptions &CodeGenOpts) {
+  TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
+
+  switch (CodeGenOpts.getVecLib()) {
+  case CodeGenOptions::Accelerate:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate);
+    break;
+  case CodeGenOptions::MASSV:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV);
+    break;
+  case CodeGenOptions::SVML:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
+    break;
+  default:
+    break;
+  }
+  return TLII;
 }
 
 static void addSymbolRewriterPass(const CodeGenOptions &Opts,
@@ -548,7 +564,8 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   // are inserted before PMBuilder ones - they'd get the default-constructed
   // TLI with an unknown target otherwise.
   Triple TargetTriple(TheModule->getTargetTriple());
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(createTLII(TargetTriple));
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      createTLII(TargetTriple, CodeGenOpts));
 
   // If we reached here with a non-empty index file name, then the index file
   // was empty and we are not performing ThinLTO backend compilation (used in
@@ -790,7 +807,8 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
                                        raw_pwrite_stream *DwoOS) {
   // Add LibraryInfo.
   llvm::Triple TargetTriple(TheModule->getTargetTriple());
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(createTLII(TargetTriple));
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      createTLII(TargetTriple, CodeGenOpts));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   // Normal mode, emit a .s or .o file by running the code generator. Note,
@@ -1126,7 +1144,8 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // Register the target library analysis directly and give it a customized
   // preset TLI.
   Triple TargetTriple(TheModule->getTargetTriple());
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(createTLII(TargetTriple));
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      createTLII(TargetTriple, CodeGenOpts));
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Register all the basic analyses with the managers.

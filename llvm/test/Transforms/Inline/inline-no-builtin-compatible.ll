@@ -3,8 +3,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 
 ; Make sure we don't inline callees into a caller with a superset of the
-; no builtin attributes when -inline-caller-superset-tli=false.
-; RUN: opt < %s -inline-caller-superset-tli=false -mtriple=x86_64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s --check-prefix=NOSUPERSET
+; no builtin attributes when -inline-caller-superset-nobuiltin=false.
+; RUN: opt < %s -inline-caller-superset-nobuiltin=false -mtriple=x86_64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s --check-prefix=NOSUPERSET
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
