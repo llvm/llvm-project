@@ -2,9 +2,10 @@
 
 The main purpose of the declarative builders API is to provide an intuitive way
 of constructing MLIR programmatically. In the majority of cases, the IR we wish
-to construct exhibits structured control-flow. Declarative builders provide an
-API to make MLIR construction and manipulation very idiomatic, for the
-structured control-flow case, in C++.
+to construct exhibits structured control-flow. The Declarative builders in the
+`EDSC` library (Embedded Domain Specific Constructs) provide an API to make MLIR
+construction and manipulation very idiomatic, for the structured control-flow
+case, in C++.
 
 ## ScopedContext
 
