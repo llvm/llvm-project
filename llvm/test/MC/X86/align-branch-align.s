@@ -1,4 +1,4 @@
-  # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc+call %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=fused+jcc+call %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
   # Exercise some corner cases related to align directive.
 
