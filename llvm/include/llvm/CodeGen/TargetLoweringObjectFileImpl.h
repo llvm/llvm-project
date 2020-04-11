@@ -15,18 +15,17 @@
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
 #include "llvm/BinaryFormat/XCOFF.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 
 class GlobalValue;
 class MachineModuleInfo;
-class Mangler;
 class MCContext;
+class MCExpr;
 class MCSection;
 class MCSymbol;
+class Module;
 class TargetMachine;
 
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
