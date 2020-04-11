@@ -167,7 +167,7 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
   // During this lowering, we will also be lowering the MemRef types, that are
-  // currently being operated on, to a representation in LLVM. Do perform this
+  // currently being operated on, to a representation in LLVM. To perform this
   // conversion we use a TypeConverter as part of the lowering. This converter
   // details how one type maps to another. This is necessary now that we will be
   // doing more complicated lowerings, involving loop region arguments.
