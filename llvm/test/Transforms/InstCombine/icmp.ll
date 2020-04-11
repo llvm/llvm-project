@@ -3713,8 +3713,9 @@ define i1 @signbit_bitcast_fpext_ppc_fp128(float %x) {
 
 define i1 @signbit_bitcast_fptrunc_ppc_fp128(ppc_fp128 %x) {
 ; CHECK-LABEL: @signbit_bitcast_fptrunc_ppc_fp128(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 [[X:%.*]] to i128
-; CHECK-NEXT:    [[S4:%.*]] = icmp slt i128 [[TMP1]], 0
+; CHECK-NEXT:    [[S2:%.*]] = fptrunc ppc_fp128 [[X:%.*]] to float
+; CHECK-NEXT:    [[S3:%.*]] = bitcast float [[S2]] to i32
+; CHECK-NEXT:    [[S4:%.*]] = icmp slt i32 [[S3]], 0
 ; CHECK-NEXT:    ret i1 [[S4]]
 ;
   %s2 = fptrunc ppc_fp128 %x to float

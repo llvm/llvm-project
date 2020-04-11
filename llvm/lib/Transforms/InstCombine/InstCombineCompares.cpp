@@ -2768,23 +2768,28 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
     // The sign-bit is always the most significant bit in those types.
     const APInt *C;
     bool TrueIfSigned;
-    if (!BCSrcOp->getType()->isPPC_FP128Ty() && match(Op1, m_APInt(C)) &&
-        Bitcast->hasOneUse() && isSignBitCheck(Pred, *C, TrueIfSigned)) {
+    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
       if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
           match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
         // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
         Type *XType = X->getType();
-        Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
-        if (auto *XVTy = dyn_cast<VectorType>(XType))
-          NewType = VectorType::get(NewType, XVTy->getNumElements());
-        Value *NewBitcast = Builder.CreateBitCast(X, NewType);
-        if (TrueIfSigned)
-          return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
-                              ConstantInt::getNullValue(NewType));
-        else
-          return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
-                              ConstantInt::getAllOnesValue(NewType));
+
+        // We can't currently handle Power style floating point operations here.
+        if (!(XType->isPPC_FP128Ty() || BCSrcOp->getType()->isPPC_FP128Ty())) {
+
+          Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
+          if (auto *XVTy = dyn_cast<VectorType>(XType))
+            NewType = VectorType::get(NewType, XVTy->getNumElements());
+          Value *NewBitcast = Builder.CreateBitCast(X, NewType);
+          if (TrueIfSigned)
+            return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
+                                ConstantInt::getNullValue(NewType));
+          else
+            return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
+                                ConstantInt::getAllOnesValue(NewType));
+        }
       }
     }
   }
