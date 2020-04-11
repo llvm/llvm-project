@@ -7,8 +7,8 @@ add_libc_unittest(
   SRCS
     raise_test.cpp
   DEPENDS
-    raise
-    signal_h
+    libc.include.signal
+    libc.src.signal.raise
 )
 
 add_libc_unittest(
@@ -18,11 +18,11 @@ add_libc_unittest(
   SRCS
     sigaction_test.cpp
   DEPENDS
-    sigaction
-    raise
-    signal_h
-    errno_h
-    __errno_location
+    libc.src.signal.sigaction
+    libc.src.signal.raise
+    libc.include.signal
+    libc.include.errno
+    libc.src.errno.__errno_location
 )
 
 add_libc_unittest(
@@ -32,12 +32,12 @@ add_libc_unittest(
   SRCS
     sigprocmask_test.cpp
   DEPENDS
-    raise
-    sigprocmask
-    sigaddset
-    sigemptyset
-    signal_h
-    __errno_location
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
 )
 
 add_libc_unittest(
@@ -47,9 +47,9 @@ add_libc_unittest(
   SRCS
     sigaddset_test.cpp
   DEPENDS
-    sigaddset
-    signal_h
-    __errno_location
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.sigaddset
 )
 
 add_libc_unittest(
@@ -59,12 +59,12 @@ add_libc_unittest(
   SRCS
     signal_test.cpp
   DEPENDS
-    signal
-    signal_h
-    sigaction
-    raise
-    __errno_location
-    errno_h
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.signal
 )
 
 add_libc_unittest(
@@ -74,12 +74,12 @@ add_libc_unittest(
   SRCS
     sigfillset_test.cpp
   DEPENDS
-    sigfillset
-    sigprocmask
-    signal_h
-    raise
-    errno_h
-    __errno_location
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.sigfillset
+    libc.src.signal.sigprocmask
 )
 
 add_libc_unittest(
@@ -89,11 +89,11 @@ add_libc_unittest(
   SRCS
     sigdelset_test.cpp
   DEPENDS
-    sigdelset
-    sigfillset
-    sigprocmask
-    signal_h
-    raise
-    errno_h
-    __errno_location
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.sigdelset
+    libc.src.signal.sigfillset
+    libc.src.signal.sigprocmask
 )

@@ -23,9 +23,9 @@ include(CMakeParseArguments)
 include(LLVMLibCRules)
 include(LLVMLibCCheckCpuFeatures)
 
-add_subdirectory(src)
-add_subdirectory(config)
 add_subdirectory(include)
+add_subdirectory(config)
+add_subdirectory(src)
 add_subdirectory(utils)
 
 # The loader can potentially depend on the library components so add it

@@ -5,9 +5,9 @@ add_entrypoint_object(
   HDRS
     assert.h
   DEPENDS
-    abort
     # These two dependencies are temporary and should be replaced by fprintf
     # later.
-    sys_syscall_h
-    linux_syscall_h
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
+    libc.src.stdlib.abort
 )

@@ -7,12 +7,12 @@ add_libc_unittest(
   SRCS
     thrd_test.cpp
   DEPENDS
-    __errno_location
-    mmap
-    munmap
-    threads_h
-    thrd_create
-    thrd_join
+    libc.include.threads
+    libc.src.errno.__errno_location
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.mmap
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
 )
 
 add_libc_unittest(
@@ -22,13 +22,13 @@ add_libc_unittest(
   SRCS
     mtx_test.cpp
   DEPENDS
-    __errno_location
-    mmap
-    munmap
-    mtx_init
-    mtx_lock
-    mtx_unlock
-    thrd_create
-    thrd_join
-    threads_h
+    libc.include.threads
+    libc.src.errno.__errno_location
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
 )

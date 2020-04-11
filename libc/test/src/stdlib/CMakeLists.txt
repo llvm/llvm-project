@@ -7,8 +7,8 @@ add_libc_unittest(
   SRCS
     _Exit_test.cpp
   DEPENDS
-    stdlib_h
-    _Exit
+    libc.include.stdlib
+    libc.src.stdlib._Exit
 )
 
 add_libc_unittest(
@@ -18,9 +18,9 @@ add_libc_unittest(
   SRCS
     abort_test.cpp
   DEPENDS
-    stdlib_h
-    signal_h
-    abort
-    _Exit
-    raise
+    libc.include.stdlib
+    libc.include.signal
+    libc.src.stdlib.abort
+    libc.src.stdlib._Exit
+    libc.src.signal.raise
 )
