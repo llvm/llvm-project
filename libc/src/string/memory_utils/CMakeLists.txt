@@ -16,5 +16,5 @@ add_header_library(
     utils.h
     memcpy_utils.h
   DEPENDS
-    cacheline_size
+    .cacheline_size
 )

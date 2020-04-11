@@ -3,11 +3,11 @@ add_loader_test(
   SRC
     args_test.cpp
   DEPENDS
-    __assert_fail
-    _Exit
-    abort
-    crt1
-    raise
+    libc.loader.linux.crt1
+    libc.src.assert.__assert_fail
+    libc.src.signal.raise
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
   ARGS
     1 2 3
   ENV
@@ -20,7 +20,7 @@ add_loader_test(
   SRC
     main_without_envp.cpp
   DEPENDS
-    crt1
+    libc.loader.linux.crt1
 )
 
 add_loader_test(
@@ -28,5 +28,5 @@ add_loader_test(
   SRC
     main_without_args.cpp
   DEPENDS
-    crt1
+    libc.loader.linux.crt1
 )

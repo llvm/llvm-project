@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../_Exit.h
   DEPENDS
-    sys_syscall_h
-    linux_syscall_h
-    stdlib_h
+    libc.include.sys_syscall
+    libc.config.linux.linux_syscall_h
+    libc.include.stdlib
 )
