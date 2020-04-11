@@ -56,11 +56,12 @@ public:
   /// folded results, and returns success. `preReplaceAction` is invoked on `op`
   /// before it is replaced. 'processGeneratedConstants' is invoked for any new
   /// operations generated when folding. If the op was completely folded it is
-  /// erased.
+  /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
   LogicalResult
   tryToFold(Operation *op,
             function_ref<void(Operation *)> processGeneratedConstants = nullptr,
-            function_ref<void(Operation *)> preReplaceAction = nullptr);
+            function_ref<void(Operation *)> preReplaceAction = nullptr,
+            bool *inPlaceUpdate = nullptr);
 
   /// Notifies that the given constant `op` should be remove from this
   /// OperationFolder's internal bookkeeping.
