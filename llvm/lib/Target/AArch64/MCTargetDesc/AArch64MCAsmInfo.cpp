@@ -96,8 +96,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
-  UseIntegratedAssembler = true;
-
   HasIdentDirective = true;
 }
 

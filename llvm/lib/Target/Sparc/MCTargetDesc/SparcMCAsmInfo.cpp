@@ -42,8 +42,6 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple) {
 
   SunStyleELFSectionSwitchSyntax = true;
   UsesELFSectionDirectiveForBSS = true;
-
-  UseIntegratedAssembler = true;
 }
 
 const MCExpr*
