@@ -38,15 +38,15 @@ public:
 
 private:
   /// Registers a function that will set hooks in the registered dialects.
-  /// Registrations are deduplicated by dialect ClassID and only the first
+  /// Registrations are deduplicated by dialect TypeID and only the first
   /// registration will be used.
-  static void registerDialectHooksSetter(const ClassID *classId,
+  static void registerDialectHooksSetter(TypeID typeID,
                                          const DialectHooksSetter &function);
   template <typename ConcreteHooks>
   friend void registerDialectHooks(StringRef dialectName);
 };
 
-void registerDialectHooksSetter(const ClassID *classId,
+void registerDialectHooksSetter(TypeID typeID,
                                 const DialectHooksSetter &function);
 
 /// Utility to register dialect hooks. Client can register their dialect hooks
@@ -55,7 +55,7 @@ void registerDialectHooksSetter(const ClassID *classId,
 template <typename ConcreteHooks>
 void registerDialectHooks(StringRef dialectName) {
   DialectHooks::registerDialectHooksSetter(
-      ClassID::getID<ConcreteHooks>(), [dialectName](MLIRContext *ctx) {
+      TypeID::get<ConcreteHooks>(), [dialectName](MLIRContext *ctx) {
         Dialect *dialect = ctx->getRegisteredDialect(dialectName);
         if (!dialect) {
           llvm::errs() << "error: cannot register hooks for unknown dialect '"

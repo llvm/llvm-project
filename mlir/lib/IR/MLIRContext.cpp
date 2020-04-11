@@ -205,9 +205,9 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// This is a mapping from class identifier to Dialect for registered
-  /// attributes and types.
-  DenseMap<const ClassID *, Dialect *> registeredDialectSymbols;
+  /// This is a mapping from type id to Dialect for registered attributes and
+  /// types.
+  DenseMap<TypeID, Dialect *> registeredDialectSymbols;
 
   /// These are identifiers uniqued into this MLIRContext.
   llvm::StringMap<char, llvm::BumpPtrAllocator &> identifiers;
@@ -462,12 +462,12 @@ void Dialect::addOperation(AbstractOperation opInfo) {
 }
 
 /// Register a dialect-specific symbol(e.g. type) with the current context.
-void Dialect::addSymbol(const ClassID *const classID) {
+void Dialect::addSymbol(TypeID typeID) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
   llvm::sys::SmartScopedWriter<true> registryLock(impl.contextMutex);
-  if (!impl.registeredDialectSymbols.insert({classID, this}).second) {
+  if (!impl.registeredDialectSymbols.insert({typeID, this}).second) {
     llvm::errs() << "error: dialect symbol already registered.\n";
     abort();
   }
@@ -516,10 +516,9 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 // Type uniquing
 //===----------------------------------------------------------------------===//
 
-static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
-                                       const ClassID *const classID) {
+static Dialect &lookupDialectForSymbol(MLIRContext *ctx, TypeID typeID) {
   auto &impl = ctx->getImpl();
-  auto it = impl.registeredDialectSymbols.find(classID);
+  auto it = impl.registeredDialectSymbols.find(typeID);
   assert(it != impl.registeredDialectSymbols.end() &&
          "symbol is not registered.");
   return *it->second;
@@ -530,8 +529,7 @@ static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 /// Get the dialect that registered the type with the provided typeid.
-Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx,
-                                           const ClassID *const typeID) {
+Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx, TypeID typeID) {
   return lookupDialectForSymbol(ctx, typeID);
 }
 
@@ -625,7 +623,7 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
 
 /// Returns a functor used to initialize new attribute storage instances.
 std::function<void(AttributeStorage *)>
-AttributeUniquer::getInitFn(MLIRContext *ctx, const ClassID *const attrID) {
+AttributeUniquer::getInitFn(MLIRContext *ctx, TypeID attrID) {
   return [ctx, attrID](AttributeStorage *storage) {
     storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
 

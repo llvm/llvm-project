@@ -126,15 +126,15 @@ struct NameLocationStorage : public AttributeStorage {
 };
 
 struct OpaqueLocationStorage : public AttributeStorage {
-  OpaqueLocationStorage(uintptr_t underlyingLocation, ClassID *classId,
+  OpaqueLocationStorage(uintptr_t underlyingLocation, TypeID typeID,
                         Location fallbackLocation)
-      : underlyingLocation(underlyingLocation), classId(classId),
+      : underlyingLocation(underlyingLocation), typeID(typeID),
         fallbackLocation(fallbackLocation) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::tuple<uintptr_t, ClassID *, Location>;
+  using KeyTy = std::tuple<uintptr_t, TypeID, Location>;
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(underlyingLocation, classId, fallbackLocation);
+    return key == KeyTy(underlyingLocation, typeID, fallbackLocation);
   }
 
   /// Construct a new storage instance.
@@ -149,7 +149,7 @@ struct OpaqueLocationStorage : public AttributeStorage {
   uintptr_t underlyingLocation;
 
   /// A unique pointer for each type of underlyingLocation.
-  ClassID *classId;
+  TypeID typeID;
 
   /// An additional location that can be used if the external one is not
   /// suitable.

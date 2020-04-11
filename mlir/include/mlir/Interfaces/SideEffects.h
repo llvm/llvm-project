@@ -32,7 +32,7 @@ public:
     using BaseT = Base<DerivedEffect>;
 
     /// Return the unique identifier for the base effects class.
-    static ClassID *getEffectID() { return ClassID::getID<DerivedEffect>(); }
+    static TypeID getEffectID() { return TypeID::get<DerivedEffect>(); }
 
     /// 'classof' used to support llvm style cast functionality.
     static bool classof(const ::mlir::SideEffects::Effect *effect) {
@@ -46,11 +46,11 @@ public:
     using BaseEffect::get;
 
   protected:
-    Base() : BaseEffect(BaseT::getEffectID()){};
+    Base() : BaseEffect(BaseT::getEffectID()) {}
   };
 
   /// Return the unique identifier for the base effects class.
-  ClassID *getEffectID() const { return id; }
+  TypeID getEffectID() const { return id; }
 
   /// Returns a unique instance for the given effect class.
   template <typename DerivedEffect> static DerivedEffect *get() {
@@ -62,11 +62,11 @@ public:
   }
 
 protected:
-  Effect(ClassID *id) : id(id) {}
+  Effect(TypeID id) : id(id) {}
 
 private:
   /// The id of the derived effect class.
-  ClassID *id;
+  TypeID id;
 };
 
 //===----------------------------------------------------------------------===//
@@ -92,9 +92,7 @@ public:
     }
 
     /// Return the unique identifier for the base resource class.
-    static ClassID *getResourceID() {
-      return ClassID::getID<DerivedResource>();
-    }
+    static TypeID getResourceID() { return TypeID::get<DerivedResource>(); }
 
     /// 'classof' used to support llvm style cast functionality.
     static bool classof(const Resource *resource) {
@@ -106,17 +104,17 @@ public:
   };
 
   /// Return the unique identifier for the base resource class.
-  ClassID *getResourceID() const { return id; }
+  TypeID getResourceID() const { return id; }
 
   /// Return a string name of the resource.
   virtual StringRef getName() = 0;
 
 protected:
-  Resource(ClassID *id) : id(id) {}
+  Resource(TypeID id) : id(id) {}
 
 private:
   /// The id of the derived resource class.
-  ClassID *id;
+  TypeID id;
 };
 
 /// A conservative default resource kind.
