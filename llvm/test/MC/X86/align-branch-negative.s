@@ -1,4 +1,4 @@
-  # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu --x86-align-branch-boundary=32 --x86-align-branch=call+jmp+indirect+ret+jcc+fused %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=call+jmp+indirect+ret+jcc+fused %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
   # This file includes cases which are problematic to apply automatic padding
   # in the assembler.  These are the examples brought up in review and
