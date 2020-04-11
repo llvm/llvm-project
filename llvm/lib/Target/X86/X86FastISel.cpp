@@ -3159,7 +3159,7 @@ bool X86FastISel::fastLowerArguments() {
 
 static unsigned computeBytesPoppedByCalleeForSRet(const X86Subtarget *Subtarget,
                                                   CallingConv::ID CC,
-                                                  ImmutableCallSite *CS) {
+                                                  ImmutableCallSite CS) {
   if (Subtarget->is64Bit())
     return 0;
   if (Subtarget->getTargetTriple().isOSMSVCRT())
@@ -3169,8 +3169,8 @@ static unsigned computeBytesPoppedByCalleeForSRet(const X86Subtarget *Subtarget,
     return 0;
 
   if (CS)
-    if (CS->arg_empty() || !CS->paramHasAttr(0, Attribute::StructRet) ||
-        CS->paramHasAttr(0, Attribute::InReg) || Subtarget->isTargetMCU())
+    if (CS.arg_empty() || !CS.paramHasAttr(0, Attribute::StructRet) ||
+        CS.paramHasAttr(0, Attribute::InReg) || Subtarget->isTargetMCU())
       return 0;
 
   return 4;
@@ -3192,13 +3192,13 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
   const CallInst *CI =
-      CLI.CS ? dyn_cast<CallInst>(CLI.CS->getInstruction()) : nullptr;
+      CLI.CS ? dyn_cast<CallInst>(CLI.CS.getInstruction()) : nullptr;
   const Function *CalledFn = CI ? CI->getCalledFunction() : nullptr;
 
   // Call / invoke instructions with NoCfCheck attribute require special
   // handling.
   const auto *II =
-      CLI.CS ? dyn_cast<InvokeInst>(CLI.CS->getInstruction()) : nullptr;
+      CLI.CS ? dyn_cast<InvokeInst>(CLI.CS.getInstruction()) : nullptr;
   if ((CI && CI->doesNoCfCheck()) || (II && II->doesNoCfCheck()))
     return false;
 
@@ -3244,7 +3244,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     return false;
 
   // Don't know about inalloca yet.
-  if (CLI.CS && CLI.CS->hasInAllocaArgument())
+  if (CLI.CS && CLI.CS.hasInAllocaArgument())
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -3275,7 +3275,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     auto *TI = dyn_cast<TruncInst>(Val);
     unsigned ResultReg;
     if (TI && TI->getType()->isIntegerTy(1) && CLI.CS &&
-              (TI->getParent() == CLI.CS->getInstruction()->getParent()) &&
+              (TI->getParent() == CLI.CS.getInstruction()->getParent()) &&
               TI->hasOneUse()) {
       Value *PrevVal = TI->getOperand(0);
       ResultReg = getRegForValue(PrevVal);
