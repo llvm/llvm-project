@@ -246,7 +246,9 @@ public:
 // assertion.  Otherwise, it will try to do something reasonable, but in general
 // the details of what that is are undefined.
 //
-template <typename... Ts> inline auto formatv(const char *Fmt, Ts &&... Vals) {
+template <typename... Ts>
+inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
+    std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...))> {
   using ParamTuple = decltype(
       std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
   return formatv_object<ParamTuple>(
