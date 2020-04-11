@@ -298,7 +298,7 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
   SmallVector<int, 16> NewMask;
   assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
   unsigned ScaleFactor = DestNumElts / SrcNumElts;
-  scaleShuffleMask(ScaleFactor, Mask, NewMask);
+  narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   Value *Shuf = Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy),
                                             NewMask);
   I.replaceAllUsesWith(Shuf);

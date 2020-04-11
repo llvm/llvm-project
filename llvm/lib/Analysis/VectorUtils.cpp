@@ -398,8 +398,8 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   return false;
 }
 
-void llvm::scaleShuffleMask(size_t Scale, ArrayRef<int> Mask,
-                            SmallVectorImpl<int> &ScaledMask) {
+void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
+                                 SmallVectorImpl<int> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");
 
   // Fast-path: if no scaling, then it is just a copy.
@@ -409,9 +409,15 @@ void llvm::scaleShuffleMask(size_t Scale, ArrayRef<int> Mask,
   }
 
   ScaledMask.clear();
-  for (int MaskElt : Mask)
-    for (int ScaleElt = 0; ScaleElt != (int)Scale; ++ScaleElt)
-      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + ScaleElt);
+  for (int MaskElt : Mask) {
+    if (MaskElt >= 0) {
+      assert(((uint64_t)Scale * MaskElt + (Scale - 1)) <=
+                 std::numeric_limits<int32_t>::max() &&
+             "Overflowed 32-bits");
+    }
+    for (int SliceElt = 0; SliceElt != Scale; ++SliceElt)
+      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + SliceElt);
+  }
 }
 
 MapVector<Instruction *, uint64_t>
