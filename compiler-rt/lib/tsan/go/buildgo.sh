@@ -188,6 +188,10 @@ if [ "$DEPENDS_ON_LIBC" != "1" ]; then
 	fi
 fi
 
+if [ "`uname -a | grep NetBSD`" != "" ]; then
+  # Turn off ASLR in the test binary.
+  /usr/sbin/paxctl +a $DIR/test
+fi
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then
   $DIR/test
