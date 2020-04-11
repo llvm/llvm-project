@@ -45,7 +45,6 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
 
-private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
@@ -133,7 +132,6 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser : public VPValue {
-private:
   SmallVector<VPValue *, 2> Operands;
 
 protected:
@@ -198,7 +196,6 @@ class VPRegionBlock;
 /// VPlan and allows querying the numbering for printing, similar to the
 /// ModuleSlotTracker for IR values.
 class VPSlotTracker {
-private:
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 
