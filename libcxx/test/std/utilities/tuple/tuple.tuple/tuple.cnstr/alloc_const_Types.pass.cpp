@@ -45,7 +45,7 @@ int main(int, char**)
 {
     {
         // check that the literal '0' can implicitly initialize a stored pointer.
-        std::tuple<int*> t = {std::allocator_arg, std::allocator<int>{}, 0};
+        std::tuple<int*>{std::allocator_arg, std::allocator<int>{}, 0};
     }
     {
         std::tuple<int> t(std::allocator_arg, A1<int>(), 3);
