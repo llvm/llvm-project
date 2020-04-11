@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # Check the behavior of --max-failures option.
 #
 # RUN: not %{lit}                  -j 1 %{inputs}/max-failures >  %t.out 2>&1
