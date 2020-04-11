@@ -142,8 +142,9 @@ section goes as follows:
 This trait is carried by region holding operations that define a new scope for
 automatic allocation. Such allocations are automatically freed when control is
 transferred back from the regions of such operations. As an example, allocations
-performed by std.alloca are automatically freed when control leaves the region
-of its closest surrounding op that has the trait AutomaticAllocationScope.
+performed by [`std.alloca`](Dialects/Standard.md#stdalloca-allocaop) are
+automatically freed when control leaves the region of its closest surrounding op
+that has the trait AutomaticAllocationScope.
 
 ### Broadcastable
 
