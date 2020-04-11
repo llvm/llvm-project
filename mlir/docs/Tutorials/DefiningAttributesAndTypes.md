@@ -1,4 +1,4 @@
-# Quickstart tutorial to defining custom dialect attributes and types
+# Defining Dialect Attributes and Types
 
 This document is a quickstart to defining dialect specific extensions to the
 [attribute](LangRef.md#attributes) and [type system](LangRef.md#type-system).

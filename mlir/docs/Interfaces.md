@@ -1,4 +1,4 @@
-# Introduction to MLIR Interfaces
+# MLIR Interfaces
 
 MLIR is generic and very extensible; it allows for opaquely representing many
 different dialects that have their own operations, attributes, types, and so on.

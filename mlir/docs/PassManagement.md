@@ -1,4 +1,4 @@
-# Writing a Pass
+# Pass Infrastructure
 
 [TOC]
 

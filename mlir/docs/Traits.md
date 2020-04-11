@@ -1,4 +1,4 @@
-# Introduction to MLIR Operation Traits
+# MLIR Operation Traits
 
 [TOC]
 
