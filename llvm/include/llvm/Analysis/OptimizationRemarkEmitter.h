@@ -22,10 +22,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class DebugLoc;
-class Loop;
-class Pass;
-class Twine;
 class Value;
 
 /// The optimization diagnostic interface.
