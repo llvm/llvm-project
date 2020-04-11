@@ -86,7 +86,7 @@ public:
     const Value *Callee = nullptr;
     MCSymbol *Symbol = nullptr;
     ArgListTy Args;
-    ImmutableCallSite *CS = nullptr;
+    ImmutableCallSite CS;
     MachineInstr *Call = nullptr;
     Register ResultReg;
     unsigned NumResultRegs = 0;
@@ -103,7 +103,7 @@ public:
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 const Value *Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite &Call) {
+                                ImmutableCallSite Call) {
       RetTy = ResultTy;
       Callee = Target;
 
@@ -118,14 +118,14 @@ public:
       Args = std::move(ArgsList);
       NumFixedArgs = FuncTy->getNumParams();
 
-      CS = &Call;
+      CS = Call;
 
       return *this;
     }
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 MCSymbol *Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite &Call,
+                                ImmutableCallSite Call,
                                 unsigned FixedArgs = ~0U) {
       RetTy = ResultTy;
       Callee = Call.getCalledValue();
@@ -142,7 +142,7 @@ public:
       Args = std::move(ArgsList);
       NumFixedArgs = (FixedArgs == ~0U) ? FuncTy->getNumParams() : FixedArgs;
 
-      CS = &Call;
+      CS = Call;
 
       return *this;
     }

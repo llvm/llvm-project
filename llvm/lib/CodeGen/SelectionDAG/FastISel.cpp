@@ -1250,11 +1250,11 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   CLI.Call->setPhysRegsDeadExcept(CLI.InRegs, TRI);
 
   if (CLI.NumResultRegs && CLI.CS)
-    updateValueMap(CLI.CS->getInstruction(), CLI.ResultReg, CLI.NumResultRegs);
+    updateValueMap(CLI.CS.getInstruction(), CLI.ResultReg, CLI.NumResultRegs);
 
   // Set labels for heapallocsite call.
   if (CLI.CS)
-    if (MDNode *MD = CLI.CS->getInstruction()->getMetadata("heapallocsite"))
+    if (MDNode *MD = CLI.CS.getInstruction()->getMetadata("heapallocsite"))
       CLI.Call->setHeapAllocMarker(*MF, MD);
 
   return true;
