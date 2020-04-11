@@ -531,6 +531,15 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       return false;
     }
 
+    // Don't attempt to analyze GEPs if index scale is not a compile-time
+    // constant.
+    Type *SrcEleTy = GEPOp->getSourceElementType();
+    if (SrcEleTy->isVectorTy() && SrcEleTy->getVectorIsScalable()) {
+      Decomposed.Base = V;
+      Decomposed.HasCompileTimeConstantScale = false;
+      return false;
+    }
+
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
@@ -557,15 +566,16 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (CIdx->isZero())
           continue;
         Decomposed.OtherOffset +=
-          (DL.getTypeAllocSize(GTI.getIndexedType()) *
-            CIdx->getValue().sextOrSelf(MaxPointerSize))
-              .sextOrTrunc(MaxPointerSize);
+            (DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
+             CIdx->getValue().sextOrSelf(MaxPointerSize))
+                .sextOrTrunc(MaxPointerSize);
         continue;
       }
 
       GepHasConstantOffset = false;
 
-      APInt Scale(MaxPointerSize, DL.getTypeAllocSize(GTI.getIndexedType()));
+      APInt Scale(MaxPointerSize,
+                  DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
       unsigned ZExtBits = 0, SExtBits = 0;
 
       // If the integer type is smaller than the pointer size, it is implicitly
@@ -1158,7 +1168,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     // partially overlap. We also need to check that the loaded size matches
     // the element size, otherwise we could still have overlap.
     Type *LastElementTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
-    const uint64_t ElementSize = DL.getTypeStoreSize(LastElementTy);
+    const uint64_t ElementSize =
+        DL.getTypeStoreSize(LastElementTy).getFixedSize();
     if (V1Size != ElementSize || V2Size != ElementSize)
       return MayAlias;
 
@@ -1316,11 +1327,19 @@ AliasResult BasicAAResult::aliasGEP(
   unsigned MaxPointerSize = getMaxPointerSize(DL);
   DecompGEP1.StructOffset = DecompGEP1.OtherOffset = APInt(MaxPointerSize, 0);
   DecompGEP2.StructOffset = DecompGEP2.OtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP1.HasCompileTimeConstantScale =
+      DecompGEP2.HasCompileTimeConstantScale = true;
 
   bool GEP1MaxLookupReached =
     DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
   bool GEP2MaxLookupReached =
     DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
+
+  // Don't attempt to analyze the decomposed GEP if index scale is not a
+  // compile-time constant.
+  if (!DecompGEP1.HasCompileTimeConstantScale ||
+      !DecompGEP2.HasCompileTimeConstantScale)
+    return MayAlias;
 
   APInt GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
   APInt GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
