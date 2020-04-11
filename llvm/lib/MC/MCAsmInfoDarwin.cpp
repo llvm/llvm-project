@@ -91,7 +91,5 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   HasAltEntry = true;
 
   DwarfUsesRelocationsAcrossSections = false;
-
-  UseIntegratedAssembler = true;
   SetDirectiveSuppressesReloc = true;
 }
