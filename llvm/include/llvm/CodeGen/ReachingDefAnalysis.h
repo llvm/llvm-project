@@ -44,7 +44,7 @@ class ReachingDef {
 
 public:
   ReachingDef(std::nullptr_t) : Encoded(0) {}
-  ReachingDef(int Instr) : Encoded((Instr << 2) | 2) {}
+  ReachingDef(int Instr) : Encoded(((uintptr_t) Instr << 2) | 2) {}
   operator int() const { return ((int) Encoded) >> 2; }
 };
 

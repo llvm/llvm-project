@@ -18,6 +18,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -60,6 +61,10 @@ STATISTIC(NumSlotsAllocatedForStatepoints,
 STATISTIC(NumOfStatepoints, "Number of statepoint nodes encountered");
 STATISTIC(StatepointMaxSlotsRequired,
           "Maximum number of stack slots required for a singe statepoint");
+
+cl::opt<bool> UseRegistersForDeoptValues(
+    "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
+    cl::desc("Allow using registers for non pointer deopt args"));
 
 static void pushStackMapConstant(SmallVectorImpl<SDValue>& Ops,
                                  SelectionDAGBuilder &Builder, uint64_t Value) {
@@ -409,7 +414,8 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     // end up folding some of these into stack references, but they'll be
     // handled by the register allocator.  Note that we do not have the notion
     // of a late use so these values might be placed in registers which are
-    // clobbered by the call.  This is fine for live-in.
+    // clobbered by the call.  This is fine for live-in. For live-through
+    // fix-up pass should be executed to force spilling of such registers.
     Ops.push_back(Incoming);
   } else {
     // Otherwise, locate a spill slot and explicitly spill it so it
@@ -494,7 +500,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   };
 
   auto requireSpillSlot = [&](const Value *V) {
-    return !LiveInDeopt || isGCValue(V);
+    return !(LiveInDeopt || UseRegistersForDeoptValues) || isGCValue(V);
   };
 
   // Before we actually start lowering (and allocating spill slots for values),

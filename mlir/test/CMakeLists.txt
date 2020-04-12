@@ -35,12 +35,13 @@ set(MLIR_TEST_DEPENDS
   MLIRUnitTests
   mlir-cpu-runner
   mlir-edsc-builder-api-test
+  mlir-linalg-ods-gen
   mlir-opt
   mlir-sdbm-api-test
   mlir-tblgen
   mlir-translate
-  cblas
-  cblas_interface
+  mlir_test_cblas
+  mlir_test_cblas_interface
   mlir_runner_utils
   mlir_c_runner_utils
   )

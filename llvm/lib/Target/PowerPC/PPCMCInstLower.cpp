@@ -78,8 +78,10 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
       break;
   }
 
- if (MO.getTargetFlags() == PPCII::MO_PLT)
+  if (MO.getTargetFlags() == PPCII::MO_PLT)
     RefKind = MCSymbolRefExpr::VK_PLT;
+  else if (MO.getTargetFlags() == PPCII::MO_PCREL_FLAG)
+    RefKind = MCSymbolRefExpr::VK_PCREL;
 
   const MachineInstr *MI = MO.getParent();
 

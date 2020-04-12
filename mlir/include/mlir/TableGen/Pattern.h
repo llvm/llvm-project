@@ -77,6 +77,9 @@ public:
   // Returns true if this DAG leaf is specifying an enum attribute case.
   bool isEnumAttrCase() const;
 
+  // Returns true if this DAG leaf is specifying a string attribute.
+  bool isStringAttr() const;
+
   // Returns this DAG leaf as a constraint. Asserts if fails.
   Constraint getAsConstraint() const;
 
@@ -94,6 +97,10 @@ public:
   // Returns the native code call template inside this DAG leaf.
   // Precondition: isNativeCodeCall()
   StringRef getNativeCodeTemplate() const;
+
+  // Returns the string associated with the leaf.
+  // Precondition: isStringAttr()
+  std::string getStringAttr() const;
 
   void print(raw_ostream &os) const;
 

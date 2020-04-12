@@ -541,7 +541,7 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
 
         // Apply the canonicalization patterns to this region.
         auto *node = nodesToCanonicalize[index];
-        applyPatternsGreedily(*node->getCallableRegion(), canonPatterns);
+        applyPatternsAndFoldGreedily(*node->getCallableRegion(), canonPatterns);
 
         // Make sure to reset the order ID for the diagnostic handler, as this
         // thread may be used in a different context.

@@ -246,6 +246,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
   Value.data = nullptr;
   // Read the value for the form into value and follow and DW_FORM_indirect
   // instances we run into
+  Error Err = Error::success();
   do {
     Indirect = false;
     switch (Form) {
@@ -253,24 +254,25 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_ref_addr: {
       uint16_t Size =
           (Form == DW_FORM_addr) ? FP.AddrSize : FP.getRefAddrByteSize();
-      Value.uval = Data.getRelocatedValue(Size, OffsetPtr, &Value.SectionIndex);
+      Value.uval =
+          Data.getRelocatedValue(Size, OffsetPtr, &Value.SectionIndex, &Err);
       break;
     }
     case DW_FORM_exprloc:
     case DW_FORM_block:
-      Value.uval = Data.getULEB128(OffsetPtr);
+      Value.uval = Data.getULEB128(OffsetPtr, &Err);
       IsBlock = true;
       break;
     case DW_FORM_block1:
-      Value.uval = Data.getU8(OffsetPtr);
+      Value.uval = Data.getU8(OffsetPtr, &Err);
       IsBlock = true;
       break;
     case DW_FORM_block2:
-      Value.uval = Data.getU16(OffsetPtr);
+      Value.uval = Data.getU16(OffsetPtr, &Err);
       IsBlock = true;
       break;
     case DW_FORM_block4:
-      Value.uval = Data.getU32(OffsetPtr);
+      Value.uval = Data.getU32(OffsetPtr, &Err);
       IsBlock = true;
       break;
     case DW_FORM_data1:
@@ -278,28 +280,28 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_flag:
     case DW_FORM_strx1:
     case DW_FORM_addrx1:
-      Value.uval = Data.getU8(OffsetPtr);
+      Value.uval = Data.getU8(OffsetPtr, &Err);
       break;
     case DW_FORM_data2:
     case DW_FORM_ref2:
     case DW_FORM_strx2:
     case DW_FORM_addrx2:
-      Value.uval = Data.getU16(OffsetPtr);
+      Value.uval = Data.getU16(OffsetPtr, &Err);
       break;
     case DW_FORM_strx3:
-      Value.uval = Data.getU24(OffsetPtr);
+      Value.uval = Data.getU24(OffsetPtr, &Err);
       break;
     case DW_FORM_data4:
     case DW_FORM_ref4:
     case DW_FORM_ref_sup4:
     case DW_FORM_strx4:
     case DW_FORM_addrx4:
-      Value.uval = Data.getRelocatedValue(4, OffsetPtr);
+      Value.uval = Data.getRelocatedValue(4, OffsetPtr, nullptr, &Err);
       break;
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sup8:
-      Value.uval = Data.getRelocatedValue(8, OffsetPtr);
+      Value.uval = Data.getRelocatedValue(8, OffsetPtr, nullptr, &Err);
       break;
     case DW_FORM_data16:
       // Treat this like a 16-byte block.
@@ -307,19 +309,23 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
       IsBlock = true;
       break;
     case DW_FORM_sdata:
-      Value.sval = Data.getSLEB128(OffsetPtr);
+      Value.sval = Data.getSLEB128(OffsetPtr, &Err);
       break;
     case DW_FORM_udata:
     case DW_FORM_ref_udata:
     case DW_FORM_rnglistx:
     case DW_FORM_loclistx:
-      Value.uval = Data.getULEB128(OffsetPtr);
+    case DW_FORM_GNU_addr_index:
+    case DW_FORM_GNU_str_index:
+    case DW_FORM_addrx:
+    case DW_FORM_strx:
+      Value.uval = Data.getULEB128(OffsetPtr, &Err);
       break;
     case DW_FORM_string:
-      Value.cstr = Data.getCStr(OffsetPtr);
+      Value.cstr = Data.getCStr(OffsetPtr, &Err);
       break;
     case DW_FORM_indirect:
-      Form = static_cast<dwarf::Form>(Data.getULEB128(OffsetPtr));
+      Form = static_cast<dwarf::Form>(Data.getULEB128(OffsetPtr, &Err));
       Indirect = true;
       break;
     case DW_FORM_strp:
@@ -328,39 +334,27 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_GNU_strp_alt:
     case DW_FORM_line_strp:
     case DW_FORM_strp_sup: {
-      Value.uval =
-          Data.getRelocatedValue(FP.getDwarfOffsetByteSize(), OffsetPtr);
+      Value.uval = Data.getRelocatedValue(FP.getDwarfOffsetByteSize(),
+                                          OffsetPtr, nullptr, &Err);
       break;
     }
     case DW_FORM_flag_present:
       Value.uval = 1;
       break;
     case DW_FORM_ref_sig8:
-      Value.uval = Data.getU64(OffsetPtr);
-      break;
-    case DW_FORM_GNU_addr_index:
-    case DW_FORM_GNU_str_index:
-    case DW_FORM_addrx:
-    case DW_FORM_strx:
-      Value.uval = Data.getULEB128(OffsetPtr);
+      Value.uval = Data.getU64(OffsetPtr, &Err);
       break;
     default:
       // DWARFFormValue::skipValue() will have caught this and caused all
       // DWARF DIEs to fail to be parsed, so this code is not be reachable.
       llvm_unreachable("unsupported form");
     }
-  } while (Indirect);
+  } while (Indirect && !Err);
 
-  if (IsBlock) {
-    StringRef Str = Data.getData().substr(*OffsetPtr, Value.uval);
-    Value.data = nullptr;
-    if (!Str.empty()) {
-      Value.data = Str.bytes_begin();
-      *OffsetPtr += Value.uval;
-    }
-  }
+  if (IsBlock)
+    Value.data = Data.getBytes(OffsetPtr, Value.uval, &Err).bytes_begin();
 
-  return true;
+  return !errorToBool(std::move(Err));
 }
 
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,

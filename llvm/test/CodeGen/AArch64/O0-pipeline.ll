@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=arm64-- -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s
+; RUN: llc --debugify-and-strip-all-safe=0 -mtriple=arm64-- -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | \
+; RUN:     grep -v "Verify generated machine code" | FileCheck %s
 
 ; REQUIRES: asserts
 
@@ -56,6 +57,7 @@
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator
+; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization

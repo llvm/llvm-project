@@ -103,8 +103,6 @@ IntegerType::verifyConstructionInvariants(Location loc, unsigned width,
     return emitError(loc) << "integer bitwidth is limited to "
                           << IntegerType::kMaxWidth << " bits";
   }
-  if (width == 1 && signedness != IntegerType::Signless)
-    return emitOptionalError(loc, "cannot have signedness semantics for i1");
   return success();
 }
 

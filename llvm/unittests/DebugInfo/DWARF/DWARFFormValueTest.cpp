@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "gtest/gtest.h"
@@ -302,5 +303,40 @@ INSTANTIATE_TEST_CASE_P(
                   2, false),
         ParamType(/*Unknown=*/Form(0xff), 4, 4, DWARF32, SampleU32, 0,
                   false)), );
+
+using ErrorParams = std::tuple<Form, std::vector<uint8_t>>;
+struct ExtractValueErrorFixture : public testing::TestWithParam<ErrorParams> {
+  void SetUp() override { std::tie(Fm, InitialData) = GetParam(); }
+
+  Form Fm;
+  ArrayRef<uint8_t> InitialData;
+};
+
+TEST_P(ExtractValueErrorFixture, Test) {
+  SCOPED_TRACE(formatv("Fm = {0}, InitialData = {1}", Fm,
+                       make_range(InitialData.begin(), InitialData.end()))
+                   .str());
+
+  DWARFDataExtractor Data(InitialData, sys::IsLittleEndianHost, 4);
+  DWARFFormValue Form(Fm);
+  uint64_t Offset = 0;
+  EXPECT_FALSE(Form.extractValue(Data, &Offset, {0, 0, DWARF32}));
+}
+
+INSTANTIATE_TEST_CASE_P(
+    ExtractValueErrorParams, ExtractValueErrorFixture,
+    testing::Values(
+        ErrorParams{DW_FORM_ref_addr, {}}, ErrorParams{DW_FORM_block, {}},
+        ErrorParams{DW_FORM_block, {1}}, ErrorParams{DW_FORM_block, {2, 0}},
+        ErrorParams{DW_FORM_block1, {}}, ErrorParams{DW_FORM_block2, {}},
+        ErrorParams{DW_FORM_block4, {}}, ErrorParams{DW_FORM_data1, {}},
+        ErrorParams{DW_FORM_data2, {}}, ErrorParams{DW_FORM_strx3, {}},
+        ErrorParams{DW_FORM_data4, {}}, ErrorParams{DW_FORM_data8, {}},
+        ErrorParams{DW_FORM_data16, {}}, ErrorParams{DW_FORM_sdata, {}},
+        ErrorParams{DW_FORM_udata, {}}, ErrorParams{DW_FORM_string, {}},
+        ErrorParams{DW_FORM_indirect, {}},
+        ErrorParams{DW_FORM_indirect, {DW_FORM_data1}},
+        ErrorParams{DW_FORM_strp_sup, {}},
+        ErrorParams{DW_FORM_ref_sig8, {}}), );
 
 } // end anonymous namespace

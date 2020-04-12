@@ -111,6 +111,7 @@ public:
   IntegerAttr getI16IntegerAttr(int16_t value);
   IntegerAttr getI32IntegerAttr(int32_t value);
   IntegerAttr getI64IntegerAttr(int64_t value);
+  IntegerAttr getIndexAttr(int64_t value);
 
   /// Signed and unsigned integer attribute getters.
   IntegerAttr getSI32IntegerAttr(int32_t value);

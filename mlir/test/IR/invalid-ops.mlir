@@ -1158,3 +1158,11 @@ func @assume_alignment(%0: memref<4x4xf16>) {
   std.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }
+
+// -----
+
+"alloca_without_scoped_alloc_parent"() ( {
+  std.alloca() : memref<1xf32>
+  // expected-error@-1 {{requires an ancestor op with AutomaticAllocationScope trait}}
+  return
+}) : () -> ()

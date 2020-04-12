@@ -179,6 +179,24 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
+TYPED_TEST(BitVectorTest, Equality) {
+  TypeParam A;
+  TypeParam B;
+  EXPECT_TRUE(A == B);
+  A.resize(10);
+  EXPECT_FALSE(A == B);
+  B.resize(10);
+  EXPECT_TRUE(A == B);
+  A.set(5);
+  EXPECT_FALSE(A == B);
+  B.set(5);
+  EXPECT_TRUE(A == B);
+  A.resize(20);
+  EXPECT_FALSE(A == B);
+  B.resize(20);
+  EXPECT_TRUE(A == B);
+}
+
 TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
 

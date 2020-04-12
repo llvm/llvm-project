@@ -1233,15 +1233,6 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
-  if (!PrimaryInduction) {
-    reportVectorizationFailure(
-        "No primary induction, cannot fold tail by masking",
-        "Missing a primary induction variable in the loop, which is "
-        "needed in order to fold tail by masking as required.",
-        "NoPrimaryInduction", ORE, TheLoop);
-    return false;
-  }
-
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
   for (auto &Reduction : getReductionVars())

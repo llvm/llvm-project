@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v -debug-info %t.o 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -v -debug-info %t.o 2> %t.err | FileCheck %s
 # RUN: FileCheck %s --input-file %t.err --check-prefix=ERR
-# RUN: llvm-dwarfdump -lookup 10 %t.o 2> %t2.err
+# RUN: not llvm-dwarfdump -lookup 10 %t.o 2> %t2.err
 # RUN: FileCheck %s --input-file %t2.err --check-prefix=ERR
 
 # Test object to verify dwarfdump handles v5 range lists in 64-bit DWARF format.

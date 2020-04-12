@@ -329,6 +329,9 @@ struct VPTransformState {
   /// Values they correspond to.
   VPValue2ValueTy VPValue2Value;
 
+  /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
+  Value *CanonicalIV = nullptr;
+
   /// Hold the trip count of the scalar loop.
   Value *TripCount = nullptr;
 
@@ -610,6 +613,7 @@ public:
     VPPredInstPHISC,
     VPReplicateSC,
     VPWidenCallSC,
+    VPWidenCanonicalIVSC,
     VPWidenGEPSC,
     VPWidenIntOrFpInductionSC,
     VPWidenMemoryInstructionSC,
@@ -790,8 +794,13 @@ private:
   /// Hold the call to be widened.
   CallInst &Ingredient;
 
+  /// Hold VPValues for the arguments of the call.
+  VPUser User;
+
 public:
-  VPWidenCallRecipe(CallInst &I) : VPRecipeBase(VPWidenCallSC), Ingredient(I) {}
+  template <typename IterT>
+  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
+      : VPRecipeBase(VPWidenCallSC), Ingredient(I), User(CallArguments) {}
 
   ~VPWidenCallRecipe() override = default;
 
@@ -893,23 +902,38 @@ class VPBlendRecipe : public VPRecipeBase {
 private:
   PHINode *Phi;
 
-  /// The blend operation is a User of a mask, if not null.
-  std::unique_ptr<VPUser> User;
+  /// The blend operation is a User of the incoming values and of their
+  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
+  /// would be incoming with a full mask for which there is no VPValue.
+  VPUser User;
 
 public:
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Masks)
-      : VPRecipeBase(VPBlendSC), Phi(Phi) {
-    assert((Phi->getNumIncomingValues() == 1 ||
-            Phi->getNumIncomingValues() == Masks.size()) &&
-           "Expected the same number of incoming values and masks");
-    if (!Masks.empty())
-      User.reset(new VPUser(Masks));
+  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
+      : VPRecipeBase(VPBlendSC), Phi(Phi), User(Operands) {
+    assert(((Operands.size() == 1) ||
+            (Operands.size() > 2 && Operands.size() % 2 == 0)) &&
+           "Expected either a single incoming value or a greater than two and "
+           "even number of operands");
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPBlendSC;
   }
+
+  /// Return the number of incoming values, taking into account that a single
+  /// incoming value has no mask.
+  unsigned getNumIncomingValues() const {
+    return (User.getNumOperands() + 1) / 2;
+  }
+
+  /// Return incoming value number \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return User.getOperand(Idx * 2);
+  }
+
+  /// Return mask number \p Idx.
+  VPValue *getMask(unsigned Idx) const { return User.getOperand(Idx * 2 + 1); }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -1132,6 +1156,36 @@ public:
   }
 
   /// Generate the wide load/store.
+  void execute(VPTransformState &State) override;
+
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+};
+
+/// A Recipe for widening the canonical induction variable of the vector loop.
+class VPWidenCanonicalIVRecipe : public VPRecipeBase {
+private:
+  /// A VPValue representing the canonical vector IV.
+  VPValue Val;
+
+public:
+  VPWidenCanonicalIVRecipe() : VPRecipeBase(VPWidenCanonicalIVSC) {}
+  ~VPWidenCanonicalIVRecipe() override = default;
+
+  /// Return the VPValue representing the canonical vector induction variable of
+  /// the vector loop.
+  const VPValue *getVPValue() const { return &Val; }
+  VPValue *getVPValue() { return &Val; }
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *V) {
+    return V->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
+  }
+
+  /// Generate a canonical vector induction variable of the vector loop, with
+  /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
+  /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.

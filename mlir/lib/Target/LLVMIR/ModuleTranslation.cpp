@@ -14,6 +14,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "DebugTranslation.h"
+#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
@@ -306,6 +307,34 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 ModuleTranslation::~ModuleTranslation() {}
 
+/// Given an OpenMP MLIR operation, create the corresponding LLVM IR
+/// (including OpenMP runtime calls).
+LogicalResult
+ModuleTranslation::convertOmpOperation(Operation &opInst,
+                                       llvm::IRBuilder<> &builder) {
+  if (!ompBuilder) {
+    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+    ompBuilder->initialize();
+  }
+  return mlir::TypeSwitch<Operation *, LogicalResult>(&opInst)
+      .Case([&](omp::BarrierOp) {
+        ompBuilder->CreateBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
+        return success();
+      })
+      .Case([&](omp::TaskwaitOp) {
+        ompBuilder->CreateTaskwait(builder.saveIP());
+        return success();
+      })
+      .Case([&](omp::TaskyieldOp) {
+        ompBuilder->CreateTaskyield(builder.saveIP());
+        return success();
+      })
+      .Default([&](Operation *inst) {
+        return inst->emitError("unsupported OpenMP operation: ")
+               << inst->getName();
+      });
+}
+
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.  LLVM IR Builder does not have a generic interface so
 /// this has to be a long chain of `if`s calling different functions with a
@@ -334,7 +363,12 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
       return builder.CreateCall(functionMapping.lookup(attr.getValue()),
                                 operandsRef);
     } else {
-      return builder.CreateCall(operandsRef.front(), operandsRef.drop_front());
+      auto *calleePtrType =
+          cast<llvm::PointerType>(operandsRef.front()->getType());
+      auto *calleeType =
+          cast<llvm::FunctionType>(calleePtrType->getElementType());
+      return builder.CreateCall(calleeType, operandsRef.front(),
+                                operandsRef.drop_front());
     }
   };
 
@@ -353,14 +387,19 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
     auto operands = lookupValues(opInst.getOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
-    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee"))
+    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
       builder.CreateInvoke(functionMapping.lookup(attr.getValue()),
                            blockMapping[invOp.getSuccessor(0)],
                            blockMapping[invOp.getSuccessor(1)], operandsRef);
-    else
+    } else {
+      auto *calleePtrType =
+          cast<llvm::PointerType>(operandsRef.front()->getType());
+      auto *calleeType =
+          cast<llvm::FunctionType>(calleePtrType->getElementType());
       builder.CreateInvoke(
-          operandsRef.front(), blockMapping[invOp.getSuccessor(0)],
+          calleeType, operandsRef.front(), blockMapping[invOp.getSuccessor(0)],
           blockMapping[invOp.getSuccessor(1)], operandsRef.drop_front());
+    }
     return success();
   }
 
@@ -405,17 +444,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   }
 
   if (opInst.getDialect() == ompDialect) {
-    if (!ompBuilder) {
-      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-      ompBuilder->initialize();
-    }
-
-    if (isa<omp::BarrierOp>(opInst)) {
-      ompBuilder->CreateBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
-      return success();
-    }
-    return opInst.emitError("unsupported OpenMP operation: ")
-           << opInst.getName();
+    return convertOmpOperation(opInst, builder);
   }
 
   return opInst.emitError("unsupported or non-LLVM operation: ")

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-dwarfdump.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -29,10 +30,13 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 using namespace llvm;
-using namespace object;
+using namespace llvm::dwarfdump;
+using namespace llvm::object;
 
+namespace {
 /// Parser for options that take an optional offest argument.
 /// @{
 struct OffsetOption {
@@ -40,6 +44,7 @@ struct OffsetOption {
   bool HasValue = false;
   bool IsRequested = false;
 };
+} // namespace
 
 namespace llvm {
 namespace cl {
@@ -81,8 +86,8 @@ public:
   // An out-of-line virtual method to provide a 'home' for this class.
   void anchor() override {};
 };
-} // cl
-} // llvm
+} // namespace cl
+} // namespace llvm
 
 /// @}
 /// Command line options.
@@ -238,7 +243,7 @@ static void error(StringRef Prefix, std::error_code EC) {
   exit(1);
 }
 
-static DIDumpOptions getDumpOpts() {
+static DIDumpOptions getDumpOpts(DWARFContext& C) { 
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.ChildRecurseDepth = ChildRecurseDepth;
@@ -249,6 +254,7 @@ static DIDumpOptions getDumpOpts() {
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
+  DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify)
     return DumpOpts.noImplicitRecursion();
@@ -289,6 +295,7 @@ using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx,
 /// Print only DIEs that have a certain name.
 static bool filterByName(const StringSet<> &Names, DWARFDie Die,
                          StringRef NameRef, raw_ostream &OS) {
+  DIDumpOptions DumpOpts = getDumpOpts(Die.getDwarfUnit()->getContext());
   std::string Name =
       (IgnoreCase && !UseRegex) ? NameRef.lower() : NameRef.str();
   if (UseRegex) {
@@ -301,13 +308,13 @@ static bool filterByName(const StringSet<> &Names, DWARFDie Die,
         exit(1);
       }
       if (RE.match(Name)) {
-        Die.dump(OS, 0, getDumpOpts());
+        Die.dump(OS, 0, DumpOpts);
         return true;
       }
     }
   } else if (Names.count(Name)) {
     // Match full text.
-    Die.dump(OS, 0, getDumpOpts());
+    Die.dump(OS, 0, DumpOpts);
     return true;
   }
   return false;
@@ -380,8 +387,9 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
   llvm::sort(Dies);
   Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
 
+  DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   for (DWARFDie Die : Dies)
-    Die.dump(OS, 0, getDumpOpts());
+    Die.dump(OS, 0, DumpOpts);
 }
 
 /// Handle the --lookup option and dump the DIEs and line info for the given
@@ -397,7 +405,7 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
   if (!DIEsForAddr)
     return false;
 
-  DIDumpOptions DumpOpts = getDumpOpts();
+  DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   DumpOpts.ChildRecurseDepth = 0;
   DIEsForAddr.CompileUnit->dump(OS, DumpOpts);
   if (DIEsForAddr.FunctionDIE) {
@@ -414,12 +422,6 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   return true;
 }
-
-bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                               const Twine &Filename, raw_ostream &OS);
-
-bool collectObjectSectionSizes(ObjectFile &Obj, DWARFContext & /*DICtx*/,
-                               const Twine &Filename, raw_ostream &OS);
 
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                            const Twine &Filename, raw_ostream &OS) {
@@ -451,7 +453,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   }
 
   // Dump the complete DWARF structure.
-  DICtx.dump(OS, getDumpOpts(), DumpOffsets);
+  DICtx.dump(OS, getDumpOpts(DICtx), DumpOffsets);
   return true;
 }
 
@@ -462,7 +464,7 @@ static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   raw_ostream &stream = Quiet ? nulls() : OS;
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx.verify(stream, getDumpOpts());
+  bool Result = DICtx.verify(stream, getDumpOpts(DICtx));
   if (Result)
     stream << "No errors.\n";
   else
@@ -496,10 +498,15 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   bool Result = true;
+  auto RecoverableErrorHandler = [&](Error E) {
+    Result = false;
+    WithColor::defaultErrorHandler(std::move(E));
+  };
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
     if (filterArch(*Obj)) {
-      std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
-      Result = HandleObj(*Obj, *DICtx, Filename, OS);
+      std::unique_ptr<DWARFContext> DICtx =
+          DWARFContext::create(*Obj, nullptr, "", RecoverableErrorHandler);
+      Result &= HandleObj(*Obj, *DICtx, Filename, OS);
     }
   }
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
@@ -509,7 +516,8 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
         auto &Obj = **MachOOrErr;
         if (filterArch(Obj)) {
-          std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+          std::unique_ptr<DWARFContext> DICtx =
+              DWARFContext::create(Obj, nullptr, "", RecoverableErrorHandler);
           Result &= HandleObj(Obj, *DICtx, ObjName, OS);
         }
         continue;
@@ -637,22 +645,20 @@ int main(int argc, char **argv) {
     Objects.insert(Objects.end(), Objs.begin(), Objs.end());
   }
 
+  bool Success = true;
   if (Verify) {
-    // If we encountered errors during verify, exit with a non-zero exit status.
-    if (!all_of(Objects, [&](std::string Object) {
-          return handleFile(Object, verifyObjectFile, OutputFile.os());
-        }))
-      return 1;
+    for (auto Object : Objects)
+      Success &= handleFile(Object, verifyObjectFile, OutputFile.os());
   } else if (Statistics) {
     for (auto Object : Objects)
-      handleFile(Object, collectStatsForObjectFile, OutputFile.os());
+      Success &= handleFile(Object, collectStatsForObjectFile, OutputFile.os());
   } else if (ShowSectionSizes) {
     for (auto Object : Objects)
-      handleFile(Object, collectObjectSectionSizes, OutputFile.os());
+      Success &= handleFile(Object, collectObjectSectionSizes, OutputFile.os());
   } else {
     for (auto Object : Objects)
-      handleFile(Object, dumpObjectFile, OutputFile.os());
+      Success &= handleFile(Object, dumpObjectFile, OutputFile.os());
   }
 
-  return EXIT_SUCCESS;
+  return Success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

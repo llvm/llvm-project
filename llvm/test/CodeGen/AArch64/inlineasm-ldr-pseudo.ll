@@ -13,7 +13,7 @@ entry:
   ret i32 %0
 }
 ; CHECK-LABEL: <bar>:
-; CHECK:        40 00 00 58                                      ldr    x0, #8
+; CHECK:        40 00 00 58                                      ldr    x0, 0x10
 ; CHECK:        c0 03 5f d6                                      ret
 ; Make sure the constant pool entry comes after the return
 ; CHECK-LABEL:        <$d.1>:

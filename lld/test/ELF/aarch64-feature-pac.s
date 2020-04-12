@@ -14,7 +14,7 @@
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
 
 # NOPAC: 00000000000102b8 <func2>:
-# NOPAC-NEXT:    102b8: bl      #56 <func3@plt>
+# NOPAC-NEXT:    102b8: bl      0x102f0 <func3@plt>
 # NOPAC-NEXT:           ret
 # NOPAC: Disassembly of section .plt:
 # NOPAC: 00000000000102d0 <.plt>:
@@ -47,7 +47,7 @@
 
 ## PAC has no effect on PLT[0], for PLT[N].
 # PACSO: 0000000000010348 <func2>:
-# PACSO-NEXT:    10348:         bl      #56 <func3@plt>
+# PACSO-NEXT:    10348:         bl      0x10380 <func3@plt>
 # PACSO-NEXT:                   ret
 # PACSO: 0000000000010350 <func3>:
 # PACSO-NEXT:    10350:         ret
@@ -88,7 +88,7 @@
 
 # PACPLT: Disassembly of section .text:
 # PACPLT: 0000000000210370 <func1>:
-# PACPLT-NEXT:   210370:        bl      #48 <func2@plt>
+# PACPLT-NEXT:   210370:        bl      0x2103a0 <func2@plt>
 # PACPLT-NEXT:                  ret
 # PACPLT: 0000000000210378 <func3>:
 # PACPLT-NEXT:   210378:        ret

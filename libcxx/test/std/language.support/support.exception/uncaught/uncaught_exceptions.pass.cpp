@@ -13,8 +13,6 @@
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.8
-// XFAIL: with_system_cxx_lib=macosx10.7
 
 // However, std::uncaught_exceptions() gives the wrong answer in Mac OS 10.12
 // and 10.13, where it only gives 0 or 1. This was fixed later.

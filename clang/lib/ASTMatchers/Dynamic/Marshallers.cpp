@@ -75,11 +75,12 @@ llvm::Optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::CastKind>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
-#define CAST_OPERATION(Name) #Name,
+#define CAST_OPERATION(Name) "CK_" #Name,
 #include "clang/AST/OperationKinds.def"
   };
   if (Value.isString())
-    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed));
+    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
+                          "CK_");
   return llvm::None;
 }
 
@@ -93,5 +94,19 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "OMPC_");
+  return llvm::None;
+}
+
+llvm::Optional<std::string>
+clang::ast_matchers::dynamic::internal::ArgTypeTraits<
+    clang::UnaryExprOrTypeTrait>::getBestGuess(const VariantValue &Value) {
+  static constexpr llvm::StringRef Allowed[] = {
+      "UETT_SizeOf",           "UETT_AlignOf",
+      "UETT_VecStep",          "UETT_OpenMPRequiredSimdAlign",
+      "UETT_PreferredAlignOf",
+  };
+  if (Value.isString())
+    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
+                          "UETT_");
   return llvm::None;
 }

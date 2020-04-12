@@ -1,12 +1,12 @@
 set(LLVM_OPTIONAL_SOURCES
-  cblas.cpp
-  cblas_interface.cpp
+  mlir_test_cblas.cpp
+  mlir_test_cblas_interface.cpp
   )
 
-add_llvm_library(cblas SHARED cblas.cpp)
-target_compile_definitions(cblas PRIVATE cblas_EXPORTS)
+add_llvm_library(mlir_test_cblas SHARED mlir_test_cblas.cpp)
+target_compile_definitions(mlir_test_cblas PRIVATE mlir_test_cblas_EXPORTS)
 
-add_llvm_library(cblas_interface SHARED cblas_interface.cpp)
-target_link_libraries(cblas_interface PRIVATE cblas)
-target_compile_definitions(cblas_interface PRIVATE cblas_interface_EXPORTS)
+add_llvm_library(mlir_test_cblas_interface SHARED mlir_test_cblas_interface.cpp)
+target_link_libraries(mlir_test_cblas_interface PRIVATE mlir_test_cblas)
+target_compile_definitions(mlir_test_cblas_interface PRIVATE mlir_test_cblas_interface_EXPORTS)
 

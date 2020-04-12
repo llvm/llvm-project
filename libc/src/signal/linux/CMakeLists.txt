@@ -7,9 +7,9 @@ add_entrypoint_object(
     signal.h
     ../raise.h
   DEPENDS
-    sys_syscall_h
-    linux_syscall_h
-    signal_h
+    libc.config.linux.linux_syscall_h
+    libc.include.signal
+    libc.include.sys_syscall
 )
 
 add_object_library(
@@ -25,8 +25,8 @@ add_object_library(
     # asan creates asan.module_ctor which uses stack space, causing warnings.
     -fno-sanitize=address
   DEPENDS
-    linux_syscall_h
-    sys_syscall_h
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
 )
 
 add_entrypoint_object(
@@ -37,10 +37,10 @@ add_entrypoint_object(
     signal.h
     ../sigaction.h
   DEPENDS
-    __restore
-    sys_syscall_h
-    linux_syscall_h
-    signal_h
+    .__restore
+    libc.config.linux.linux_syscall_h
+    libc.include.signal
+    libc.include.sys_syscall
 )
 
 add_entrypoint_object(
@@ -51,10 +51,10 @@ add_entrypoint_object(
     signal.h
     ../sigprocmask.h
   DEPENDS
-    sys_syscall_h
-    linux_syscall_h
-    __errno_location
-    signal_h
+    libc.config.linux.linux_syscall_h
+    libc.include.signal
+    libc.include.sys_syscall
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -65,9 +65,9 @@ add_entrypoint_object(
     signal.h
     ../sigemptyset.h
   DEPENDS
-    __errno_location
-    errno_h
-    signal_h
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -78,9 +78,9 @@ add_entrypoint_object(
     signal.h
     ../sigaddset.h
   DEPENDS
-    __errno_location
-    errno_h
-    signal_h
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -91,8 +91,8 @@ add_entrypoint_object(
     signal.h
     ../signal.h
   DEPENDS
-    sigaction
-    signal_h
+    .sigaction
+    libc.include.signal
 )
 
 add_entrypoint_object(
@@ -103,9 +103,9 @@ add_entrypoint_object(
     signal.h
     ../sigfillset.h
   DEPENDS
-    __errno_location
-    errno_h
-    signal_h
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -116,7 +116,7 @@ add_entrypoint_object(
     signal.h
     ../sigdelset.h
   DEPENDS
-    __errno_location
-    errno_h
-    signal_h
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
 )

@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
@@ -789,23 +790,10 @@ public:
         Value extractedDest = extractOne(rewriter, loc, op.dest(), off);
         // 3. Reduce the problem to lowering a new InsertStridedSlice op with
         // smaller rank.
-        InsertStridedSliceOp insertStridedSliceOp =
-            rewriter.create<InsertStridedSliceOp>(
-                loc, extractedSource, extractedDest,
-                getI64SubArray(op.offsets(), /* dropFront=*/1),
-                getI64SubArray(op.strides(), /* dropFront=*/1));
-        // Call matchAndRewrite recursively from within the pattern. This
-        // circumvents the current limitation that a given pattern cannot
-        // be called multiple times by the PatternRewrite infrastructure (to
-        // avoid infinite recursion, but in this case, infinite recursion
-        // cannot happen because the rank is strictly decreasing).
-        // TODO(rriddle, nicolasvasilache) Implement something like a hook for
-        // a potential function that must decrease and allow the same pattern
-        // multiple times.
-        auto success = matchAndRewrite(insertStridedSliceOp, rewriter);
-        (void)success;
-        assert(succeeded(success) && "Unexpected failure");
-        extractedSource = insertStridedSliceOp;
+        extractedSource = rewriter.create<InsertStridedSliceOp>(
+            loc, extractedSource, extractedDest,
+            getI64SubArray(op.offsets(), /* dropFront=*/1),
+            getI64SubArray(op.strides(), /* dropFront=*/1));
       }
       // 4. Insert the extractedSource into the res vector.
       res = insertOne(rewriter, loc, extractedSource, res, off);
@@ -814,6 +802,9 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
+  /// This pattern creates recursive InsertStridedSliceOp, but the recursion is
+  /// bounded as the rank is strictly decreasing.
+  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 class VectorTypeCastOpConversion : public ConvertToLLVMPattern {
@@ -900,6 +891,129 @@ public:
     }
 
     rewriter.replaceOp(op, {desc});
+    return success();
+  }
+};
+
+template <typename ConcreteOp>
+void replaceTransferOp(ConversionPatternRewriter &rewriter,
+                       LLVMTypeConverter &typeConverter, Location loc,
+                       Operation *op, ArrayRef<Value> operands, Value dataPtr,
+                       Value mask);
+
+template <>
+void replaceTransferOp<TransferReadOp>(ConversionPatternRewriter &rewriter,
+                                       LLVMTypeConverter &typeConverter,
+                                       Location loc, Operation *op,
+                                       ArrayRef<Value> operands, Value dataPtr,
+                                       Value mask) {
+  auto xferOp = cast<TransferReadOp>(op);
+  auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
+  VectorType fillType = xferOp.getVectorType();
+  Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
+  fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
+
+  auto vecTy = toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
+  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+      op, vecTy, dataPtr, mask, ValueRange{fill},
+      rewriter.getI32IntegerAttr(1));
+}
+
+template <>
+void replaceTransferOp<TransferWriteOp>(ConversionPatternRewriter &rewriter,
+                                        LLVMTypeConverter &typeConverter,
+                                        Location loc, Operation *op,
+                                        ArrayRef<Value> operands, Value dataPtr,
+                                        Value mask) {
+  auto adaptor = TransferWriteOpOperandAdaptor(operands);
+  rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
+      op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(1));
+}
+
+static TransferReadOpOperandAdaptor
+getTransferOpAdapter(TransferReadOp xferOp, ArrayRef<Value> operands) {
+  return TransferReadOpOperandAdaptor(operands);
+}
+
+static TransferWriteOpOperandAdaptor
+getTransferOpAdapter(TransferWriteOp xferOp, ArrayRef<Value> operands) {
+  return TransferWriteOpOperandAdaptor(operands);
+}
+
+/// Conversion pattern that converts a 1-D vector transfer read/write op in a
+/// sequence of:
+/// 1. Bitcast to vector form.
+/// 2. Create an offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+/// 3. Create a mask where offsetVector is compared against memref upper bound.
+/// 4. Rewrite op as a masked read or write.
+template <typename ConcreteOp>
+class VectorTransferConversion : public ConvertToLLVMPattern {
+public:
+  explicit VectorTransferConversion(MLIRContext *context,
+                                    LLVMTypeConverter &typeConv)
+      : ConvertToLLVMPattern(ConcreteOp::getOperationName(), context,
+                             typeConv) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto xferOp = cast<ConcreteOp>(op);
+    auto adaptor = getTransferOpAdapter(xferOp, operands);
+    if (xferOp.getMemRefType().getRank() != 1)
+      return failure();
+    if (!xferOp.permutation_map().isIdentity())
+      return failure();
+
+    auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
+
+    Location loc = op->getLoc();
+    Type i64Type = rewriter.getIntegerType(64);
+    MemRefType memRefType = xferOp.getMemRefType();
+
+    // 1. Get the source/dst address as an LLVM vector pointer.
+    // TODO: support alignment when possible.
+    Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
+                               adaptor.indices(), rewriter, getModule());
+    auto vecTy =
+        toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
+    auto vectorDataPtr =
+        rewriter.create<LLVM::BitcastOp>(loc, vecTy.getPointerTo(), dataPtr);
+
+    // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+    unsigned vecWidth = vecTy.getVectorNumElements();
+    VectorType vectorCmpType = VectorType::get(vecWidth, i64Type);
+    SmallVector<int64_t, 8> indices;
+    indices.reserve(vecWidth);
+    for (unsigned i = 0; i < vecWidth; ++i)
+      indices.push_back(i);
+    Value linearIndices = rewriter.create<ConstantOp>(
+        loc, vectorCmpType,
+        DenseElementsAttr::get(vectorCmpType, ArrayRef<int64_t>(indices)));
+    linearIndices = rewriter.create<LLVM::DialectCastOp>(
+        loc, toLLVMTy(vectorCmpType), linearIndices);
+
+    // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+    Value offsetIndex = *(xferOp.indices().begin());
+    offsetIndex = rewriter.create<IndexCastOp>(
+        loc, vectorCmpType.getElementType(), offsetIndex);
+    Value base = rewriter.create<SplatOp>(loc, vectorCmpType, offsetIndex);
+    Value offsetVector = rewriter.create<AddIOp>(loc, base, linearIndices);
+
+    // 4. Let dim the memref dimension, compute the vector comparison mask:
+    //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
+    Value dim = rewriter.create<DimOp>(loc, xferOp.memref(), 0);
+    dim =
+        rewriter.create<IndexCastOp>(loc, vectorCmpType.getElementType(), dim);
+    dim = rewriter.create<SplatOp>(loc, vectorCmpType, dim);
+    Value mask =
+        rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, offsetVector, dim);
+    mask = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(mask.getType()),
+                                                mask);
+
+    // 5. Rewrite as a masked read / write.
+    replaceTransferOp<ConcreteOp>(rewriter, typeConverter, loc, op, operands,
+                                  vectorDataPtr, mask);
+
     return success();
   }
 };
@@ -1068,28 +1182,19 @@ public:
          off += stride, ++idx) {
       Value extracted = extractOne(rewriter, loc, op.vector(), off);
       if (op.offsets().getValue().size() > 1) {
-        StridedSliceOp stridedSliceOp = rewriter.create<StridedSliceOp>(
+        extracted = rewriter.create<StridedSliceOp>(
             loc, extracted, getI64SubArray(op.offsets(), /* dropFront=*/1),
             getI64SubArray(op.sizes(), /* dropFront=*/1),
             getI64SubArray(op.strides(), /* dropFront=*/1));
-        // Call matchAndRewrite recursively from within the pattern. This
-        // circumvents the current limitation that a given pattern cannot
-        // be called multiple times by the PatternRewrite infrastructure (to
-        // avoid infinite recursion, but in this case, infinite recursion
-        // cannot happen because the rank is strictly decreasing).
-        // TODO(rriddle, nicolasvasilache) Implement something like a hook for
-        // a potential function that must decrease and allow the same pattern
-        // multiple times.
-        auto success = matchAndRewrite(stridedSliceOp, rewriter);
-        (void)success;
-        assert(succeeded(success) && "Unexpected failure");
-        extracted = stridedSliceOp;
       }
       res = insertOne(rewriter, loc, extracted, res, idx);
     }
     rewriter.replaceOp(op, {res});
     return success();
   }
+  /// This pattern creates recursive StridedSliceOp, but the recursion is
+  /// bounded as the rank is strictly decreasing.
+  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 } // namespace
@@ -1098,16 +1203,25 @@ public:
 void mlir::populateVectorToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   MLIRContext *ctx = converter.getDialect()->getContext();
+  // clang-format off
   patterns.insert<VectorFMAOpNDRewritePattern,
                   VectorInsertStridedSliceOpDifferentRankRewritePattern,
                   VectorInsertStridedSliceOpSameRankRewritePattern,
                   VectorStridedSliceOpConversion>(ctx);
-  patterns.insert<VectorBroadcastOpConversion, VectorReductionOpConversion,
-                  VectorShuffleOpConversion, VectorExtractElementOpConversion,
-                  VectorExtractOpConversion, VectorFMAOp1DConversion,
-                  VectorInsertElementOpConversion, VectorInsertOpConversion,
-                  VectorTypeCastOpConversion, VectorPrintOpConversion>(
-      ctx, converter);
+  patterns
+      .insert<VectorBroadcastOpConversion,
+              VectorReductionOpConversion,
+              VectorShuffleOpConversion,
+              VectorExtractElementOpConversion,
+              VectorExtractOpConversion,
+              VectorFMAOp1DConversion,
+              VectorInsertElementOpConversion,
+              VectorInsertOpConversion,
+              VectorPrintOpConversion,
+              VectorTransferConversion<TransferReadOp>,
+              VectorTransferConversion<TransferWriteOp>,
+              VectorTypeCastOpConversion>(ctx, converter);
+  // clang-format on
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(
@@ -1130,7 +1244,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
     populateVectorContractLoweringPatterns(patterns, &getContext());
-    applyPatternsGreedily(getOperation(), patterns);
+    applyPatternsAndFoldGreedily(getOperation(), patterns);
   }
 
   // Convert to the LLVM IR dialect.

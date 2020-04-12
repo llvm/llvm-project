@@ -5,30 +5,31 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[REORDER_SHUFFLE]], <2 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[A1:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP0]], [[A2:%.*]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[TMP0]], [[A3:%.*]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[TMP0]], [[A4:%.*]]
+; CHECK-NEXT:    [[ADD8:%.*]] = add i32 [[TMP0]], [[A5:%.*]]
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP0]], [[A6:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARR]], align 4
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[TMP1]], [[A7:%.*]]
+; CHECK-NEXT:    [[ADD14:%.*]] = add i32 [[TMP1]], [[A8:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], [[ADD2]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[ADD2]]
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], [[ADD4]]
+; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 [[ADD4]]
+; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], [[ADD6]]
+; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 [[ADD6]]
+; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], [[ADD8]]
+; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 [[ADD8]]
+; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], [[ADD10]]
+; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 [[ADD10]]
+; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], [[ADD12]]
+; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 [[ADD12]]
+; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], [[ADD14]]
+; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 [[ADD14]]
+; CHECK-NEXT:    ret i32 [[COND44]]
 ;
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 1
@@ -63,32 +64,35 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[A1:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP1]], [[A2:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[REORDER_SHUFFLE]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 3, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[TMP2]], [[A3:%.*]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[TMP0]], [[A4:%.*]]
+; CHECK-NEXT:    [[ADD8:%.*]] = add i32 [[TMP0]], [[A5:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARR]], align 4
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP3]], [[A6:%.*]]
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[TMP1]], [[A7:%.*]]
+; CHECK-NEXT:    [[ADD14:%.*]] = add i32 [[TMP0]], [[A8:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], [[ADD2]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[ADD2]]
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], [[ADD4]]
+; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 [[ADD4]]
+; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], [[ADD6]]
+; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 [[ADD6]]
+; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], [[ADD8]]
+; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 [[ADD8]]
+; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], [[ADD10]]
+; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 [[ADD10]]
+; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], [[ADD12]]
+; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 [[ADD12]]
+; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], [[ADD14]]
+; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 [[ADD14]]
+; CHECK-NEXT:    ret i32 [[COND44]]
 ;
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 1
@@ -127,32 +131,35 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[A1:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP1]], [[A2:%.*]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[TMP0]], [[A3:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARR]], align 4
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[TMP2]], [[A4:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[REORDER_SHUFFLE]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 2, i32 3, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[ADD8:%.*]] = add i32 [[TMP3]], [[A5:%.*]]
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP2]], [[A6:%.*]]
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[TMP1]], [[A7:%.*]]
+; CHECK-NEXT:    [[ADD14:%.*]] = add i32 [[TMP3]], [[A8:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], [[ADD2]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[ADD2]]
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], [[ADD4]]
+; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 [[ADD4]]
+; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], [[ADD6]]
+; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 [[ADD6]]
+; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], [[ADD8]]
+; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 [[ADD8]]
+; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], [[ADD10]]
+; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 [[ADD10]]
+; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], [[ADD12]]
+; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 [[ADD12]]
+; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], [[ADD14]]
+; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 [[ADD14]]
+; CHECK-NEXT:    ret i32 [[COND44]]
 ;
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 3

@@ -8,11 +8,12 @@
 #ifndef LLVM_TOOLS_LLVM_OBJDUMP_LLVM_OBJDUMP_H
 #define LLVM_TOOLS_LLVM_OBJDUMP_LLVM_OBJDUMP_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Object/Archive.h"
 
 namespace llvm {
 class StringRef;
@@ -45,6 +46,8 @@ extern cl::opt<bool> SectionContents;
 extern cl::opt<bool> SymbolTable;
 extern cl::opt<std::string> TripleName;
 extern cl::opt<bool> UnwindInfo;
+
+extern StringSet<> FoundSectionSet;
 
 } // namespace objdump
 
@@ -118,32 +121,14 @@ Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
 Error getWasmRelocationValueString(const object::WasmObjectFile *Obj,
                                    const object::RelocationRef &RelRef,
                                    llvm::SmallVectorImpl<char> &Result);
-Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
-                                    const object::RelocationRef &RelRef,
-                                    llvm::SmallVectorImpl<char> &Result);
 
 uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
 
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
-void parseInputMachO(StringRef Filename);
-void parseInputMachO(object::MachOUniversalBinary *UB);
-void printMachOUnwindInfo(const object::MachOObjectFile *O);
-void printMachOExportsTrie(const object::MachOObjectFile *O);
-void printMachORebaseTable(object::MachOObjectFile *O);
-void printMachOBindTable(object::MachOObjectFile *O);
-void printMachOLazyBindTable(object::MachOObjectFile *O);
-void printMachOWeakBindTable(object::MachOObjectFile *O);
 void printELFFileHeader(const object::ObjectFile *O);
 void printELFDynamicSection(const object::ObjectFile *Obj);
 void printELFSymbolVersionInfo(const object::ObjectFile *Obj);
-void printMachOFileHeader(const object::ObjectFile *O);
-void printMachOLoadCommands(const object::ObjectFile *O);
 void printWasmFileHeader(const object::ObjectFile *O);
-void printExportsTrie(const object::ObjectFile *O);
-void printRebaseTable(object::ObjectFile *O);
-void printBindTable(object::ObjectFile *O);
-void printLazyBindTable(object::ObjectFile *O);
-void printWeakBindTable(object::ObjectFile *O);
 void printRawClangAST(const object::ObjectFile *O);
 void printRelocations(const object::ObjectFile *O);
 void printDynamicRelocations(const object::ObjectFile *O);

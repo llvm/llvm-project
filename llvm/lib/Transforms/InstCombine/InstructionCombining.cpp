@@ -1902,7 +1902,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // If the element type has zero size then any index over it is equivalent
     // to an index of zero, so replace it with zero if it is not zero already.
     Type *EltTy = GTI.getIndexedType();
-    if (EltTy->isSized() && DL.getTypeAllocSize(EltTy) == 0)
+    if (EltTy->isSized() && DL.getTypeAllocSize(EltTy).isZero())
       if (!isa<Constant>(*I) || !match(I->get(), m_Zero())) {
         *I = Constant::getNullValue(NewIndexType);
         MadeChange = true;

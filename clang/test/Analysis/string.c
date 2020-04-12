@@ -353,7 +353,7 @@ void strcpy_effects(char *x, char *y) {
 void strcpy_overflow(char *y) {
   char x[4];
   if (strlen(y) == 4)
-    strcpy(x, y); // expected-warning{{String copy function overflows destination buffer}}
+    strcpy(x, y); // expected-warning{{String copy function overflows the destination buffer}}
 }
 #endif
 
@@ -394,7 +394,7 @@ void stpcpy_effect(char *x, char *y) {
 void stpcpy_overflow(char *y) {
   char x[4];
   if (strlen(y) == 4)
-    stpcpy(x, y); // expected-warning{{String copy function overflows destination buffer}}
+    stpcpy(x, y); // expected-warning{{String copy function overflows the destination buffer}}
 }
 #endif
 
@@ -451,19 +451,19 @@ void strcat_effects(char *y) {
 void strcat_overflow_0(char *y) {
   char x[4] = "12";
   if (strlen(y) == 4)
-    strcat(x, y); // expected-warning{{String copy function overflows destination buffer}}
+    strcat(x, y); // expected-warning{{String concatenation function overflows the destination buffer}}
 }
 
 void strcat_overflow_1(char *y) {
   char x[4] = "12";
   if (strlen(y) == 3)
-    strcat(x, y); // expected-warning{{String copy function overflows destination buffer}}
+    strcat(x, y); // expected-warning{{String concatenation function overflows the destination buffer}}
 }
 
 void strcat_overflow_2(char *y) {
   char x[4] = "12";
   if (strlen(y) == 2)
-    strcat(x, y); // expected-warning{{String copy function overflows destination buffer}}
+    strcat(x, y); // expected-warning{{String concatenation function overflows the destination buffer}}
 }
 #endif
 
@@ -547,25 +547,28 @@ void strncpy_effects(char *x, char *y) {
 // of the C-string checker.
 void cstringchecker_bounds_nocrash() {
   char *p = malloc(2);
-  strncpy(p, "AAA", sizeof("AAA")); // expected-warning {{Size argument is greater than the length of the destination buffer}}
+  strncpy(p, "AAA", sizeof("AAA"));
+  // expected-warning@-1 {{String copy function overflows the destination buffer}}
   free(p);
 }
 
 void strncpy_overflow(char *y) {
   char x[4];
   if (strlen(y) == 4)
-    strncpy(x, y, 5); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+    strncpy(x, y, 5);
+    // expected-warning@-1 {{String copy function overflows the destination buffer}}
 #ifndef VARIANT
-  // expected-warning@-2{{size argument is too large; destination buffer has size 4, but size argument is 5}}
+    // expected-warning@-3 {{size argument is too large; destination buffer has size 4, but size argument is 5}}
 #endif
 }
 
 void strncpy_no_overflow(char *y) {
   char x[4];
   if (strlen(y) == 3)
-    strncpy(x, y, 5); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+    strncpy(x, y, 5);
+    // expected-warning@-1 {{String copy function overflows the destination buffer}}
 #ifndef VARIANT
-  // expected-warning@-2{{size argument is too large; destination buffer has size 4, but size argument is 5}}
+    // expected-warning@-3 {{size argument is too large; destination buffer has size 4, but size argument is 5}}
 #endif
 }
 
@@ -575,7 +578,8 @@ void strncpy_no_overflow2(char *y, int n) {
 
   char x[4];
   if (strlen(y) == 3)
-    strncpy(x, y, n); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+    strncpy(x, y, n);
+  // expected-warning@-1 {{String copy function overflows the destination buffer}}
 }
 #endif
 
@@ -658,25 +662,29 @@ void strncat_effects(char *y) {
 void strncat_overflow_0(char *y) {
   char x[4] = "12";
   if (strlen(y) == 4)
-    strncat(x, y, strlen(y)); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+    strncat(x, y, strlen(y));
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void strncat_overflow_1(char *y) {
   char x[4] = "12";
   if (strlen(y) == 3)
-    strncat(x, y, strlen(y)); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+    strncat(x, y, strlen(y));
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void strncat_overflow_2(char *y) {
   char x[4] = "12";
   if (strlen(y) == 2)
-    strncat(x, y, strlen(y)); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+    strncat(x, y, strlen(y));
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void strncat_overflow_3(char *y) {
   char x[4] = "12";
   if (strlen(y) == 4)
-    strncat(x, y, 2); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+    strncat(x, y, 2);
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 #endif
 
@@ -704,7 +712,8 @@ void strncat_symbolic_src_length(char *src) {
   clang_analyzer_eval(strlen(dst) >= 4); // expected-warning{{TRUE}}
 
   char dst2[8] = "1234";
-  strncat(dst2, src, 4); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+  strncat(dst2, src, 4);
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void strncat_unknown_src_length(char *src, int offset) {
@@ -713,7 +722,8 @@ void strncat_unknown_src_length(char *src, int offset) {
   clang_analyzer_eval(strlen(dst) >= 4); // expected-warning{{TRUE}}
 
   char dst2[8] = "1234";
-  strncat(dst2, &src[offset], 4); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
+  strncat(dst2, &src[offset], 4);
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 #endif
 
@@ -1496,7 +1506,7 @@ void explicit_bzero3_out_ofbound() {
   strcpy(privkey, "random");
   explicit_bzero(privkey, sizeof(newprivkey));
 #ifndef SUPPRESS_OUT_OF_BOUND
-  // expected-warning@-2 {{Memory clearance function accesses out-of-bound array element}}
+  // expected-warning@-2 {{Memory clearance function overflows the destination buffer}}
 #endif
   clang_analyzer_eval(privkey[0] == '\0');
 #ifdef SUPPRESS_OUT_OF_BOUND

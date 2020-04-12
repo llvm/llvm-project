@@ -16,7 +16,7 @@ low_target:
  bl high_target
  ret
 // CHECK: <low_target>:
-// CHECK-NEXT:       d8:       bl      #0x14 <__AArch64ADRPThunk_high_target>
+// CHECK-NEXT:       d8:       bl      0xec <__AArch64ADRPThunk_high_target>
 // CHECK-NEXT:                 ret
 
  .hidden low_target2
@@ -29,8 +29,8 @@ low_target2:
  bl .text_high+8
  ret
 // CHECK: <low_target2>:
-// CHECK-NEXT:       e0:       bl      #0x18 <__AArch64ADRPThunk_high_target2>
-// CHECK-NEXT:       e4:       bl      #0x20 <__AArch64ADRPThunk_>
+// CHECK-NEXT:       e0:       bl      0xf8 <__AArch64ADRPThunk_high_target2>
+// CHECK-NEXT:       e4:       bl      0x104 <__AArch64ADRPThunk_>
 // CHECK-NEXT:                 ret
 
 // Expect range extension thunks for .text_low
@@ -58,7 +58,7 @@ high_target:
  bl low_target
  ret
 // CHECK: <high_target>:
-// CHECK-NEXT: 10000000:       bl #0x50 <low_target@plt>
+// CHECK-NEXT: 10000000:       bl 0x10000050 <low_target@plt>
 // CHECK-NEXT:                 ret
 
  .hidden high_target2
@@ -69,7 +69,7 @@ high_target2:
  bl low_target2
  ret
 // CHECK: <high_target2>:
-// CHECK-NEXT: 10000008:       bl      #0x8 <__AArch64ADRPThunk_low_target2>
+// CHECK-NEXT: 10000008:       bl      0x10000010 <__AArch64ADRPThunk_low_target2>
 // CHECK-NEXT:                 ret
 
 // Expect Thunk for .text.high

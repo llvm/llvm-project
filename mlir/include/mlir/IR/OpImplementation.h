@@ -621,6 +621,9 @@ public:
   /// Parse a type.
   virtual ParseResult parseType(Type &result) = 0;
 
+  /// Parse an optional type.
+  virtual OptionalParseResult parseOptionalType(Type &result) = 0;
+
   /// Parse a type of a specific type.
   template <typename TypeT>
   ParseResult parseType(TypeT &result) {

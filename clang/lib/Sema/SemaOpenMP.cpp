@@ -671,6 +671,16 @@ public:
   }
   /// Check whether the implicit-behavior has been set in defaultmap
   bool checkDefaultmapCategory(OpenMPDefaultmapClauseKind VariableCategory) {
+    if (VariableCategory == OMPC_DEFAULTMAP_unknown)
+      return getTopOfStack()
+                     .DefaultmapMap[OMPC_DEFAULTMAP_aggregate]
+                     .ImplicitBehavior != OMPC_DEFAULTMAP_MODIFIER_unknown ||
+             getTopOfStack()
+                     .DefaultmapMap[OMPC_DEFAULTMAP_scalar]
+                     .ImplicitBehavior != OMPC_DEFAULTMAP_MODIFIER_unknown ||
+             getTopOfStack()
+                     .DefaultmapMap[OMPC_DEFAULTMAP_pointer]
+                     .ImplicitBehavior != OMPC_DEFAULTMAP_MODIFIER_unknown;
     return getTopOfStack().DefaultmapMap[VariableCategory].ImplicitBehavior !=
            OMPC_DEFAULTMAP_MODIFIER_unknown;
   }
@@ -2100,21 +2110,22 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
          isImplicitOrExplicitTaskingRegion(DSAStack->getCurrentDirective())) ||
         (VD && DSAStack->isForceVarCapturing()))
       return VD ? VD : Info.second;
-    DSAStackTy::DSAVarData DVarPrivate =
+    DSAStackTy::DSAVarData DVarTop =
         DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
-    if (DVarPrivate.CKind != OMPC_unknown && isOpenMPPrivate(DVarPrivate.CKind))
-      return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
+    if (DVarTop.CKind != OMPC_unknown && isOpenMPPrivate(DVarTop.CKind))
+      return VD ? VD : cast<VarDecl>(DVarTop.PrivateCopy->getDecl());
     // Threadprivate variables must not be captured.
-    if (isOpenMPThreadPrivate(DVarPrivate.CKind))
-      return nullptr;
-    // Global shared must not be captured.
-    if (VD && !VD->hasLocalStorage() && DVarPrivate.CKind == OMPC_shared)
+    if (isOpenMPThreadPrivate(DVarTop.CKind))
       return nullptr;
     // The variable is not private or it is the variable in the directive with
     // default(none) clause and not used in any clause.
-    DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
-                                   [](OpenMPDirectiveKind) { return true; },
-                                   DSAStack->isClauseParsingMode());
+    DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
+        D, isOpenMPPrivate, [](OpenMPDirectiveKind) { return true; },
+        DSAStack->isClauseParsingMode());
+    // Global shared must not be captured.
+    if (VD && !VD->hasLocalStorage() && DVarPrivate.CKind == OMPC_unknown &&
+        (DSAStack->getDefaultDSA() != DSA_none || DVarTop.CKind == OMPC_shared))
+      return nullptr;
     if (DVarPrivate.CKind != OMPC_unknown ||
         (VD && DSAStack->getDefaultDSA() == DSA_none))
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
@@ -17808,7 +17819,8 @@ OMPClause *Sema::ActOnOpenMPDefaultmapClause(
     }
   } else {
     bool isDefaultmapModifier = (M != OMPC_DEFAULTMAP_MODIFIER_unknown);
-    bool isDefaultmapKind = (Kind != OMPC_DEFAULTMAP_unknown);
+    bool isDefaultmapKind = (Kind != OMPC_DEFAULTMAP_unknown) ||
+                            (LangOpts.OpenMP >= 50 && KindLoc.isInvalid());
     if (!isDefaultmapKind || !isDefaultmapModifier) {
       std::string ModifierValue = "'alloc', 'from', 'to', 'tofrom', "
                                   "'firstprivate', 'none', 'default'";
@@ -17836,7 +17848,14 @@ OMPClause *Sema::ActOnOpenMPDefaultmapClause(
       return nullptr;
     }
   }
-  DSAStack->setDefaultDMAAttr(M, Kind, StartLoc);
+  if (Kind == OMPC_DEFAULTMAP_unknown) {
+    // Variable category is not specified - mark all categories.
+    DSAStack->setDefaultDMAAttr(M, OMPC_DEFAULTMAP_aggregate, StartLoc);
+    DSAStack->setDefaultDMAAttr(M, OMPC_DEFAULTMAP_scalar, StartLoc);
+    DSAStack->setDefaultDMAAttr(M, OMPC_DEFAULTMAP_pointer, StartLoc);
+  } else {
+    DSAStack->setDefaultDMAAttr(M, Kind, StartLoc);
+  }
 
   return new (Context)
       OMPDefaultmapClause(StartLoc, LParenLoc, MLoc, KindLoc, EndLoc, Kind, M);

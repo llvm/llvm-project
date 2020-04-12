@@ -334,24 +334,33 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
 // Submit data to device
 int32_t DeviceTy::data_submit(void *TgtPtrBegin, void *HstPtrBegin,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr) {
-
-  return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                          AsyncInfoPtr);
+  if (!AsyncInfoPtr || !RTL->data_submit_async || !RTL->synchronize)
+    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+  else
+    return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+                                  AsyncInfoPtr);
 }
 
 // Retrieve data from device
 int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
                                 int64_t Size, __tgt_async_info *AsyncInfoPtr) {
-  return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                            AsyncInfoPtr);
+  if (!AsyncInfoPtr || !RTL->data_retrieve_async || !RTL->synchronize)
+    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+  else
+    return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+                                    AsyncInfoPtr);
 }
 
 // Run region on device
 int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
                              ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                             __tgt_async_info *AsyncInfo) {
-  return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                         TgtVarsSize, AsyncInfo);
+                             __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->run_region || !RTL->synchronize)
+    return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
+                           TgtVarsSize);
+  else
+    return RTL->run_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                 TgtOffsets, TgtVarsSize, AsyncInfoPtr);
 }
 
 // Run team region on device.
@@ -359,10 +368,15 @@ int32_t DeviceTy::run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
                                   ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
                                   int32_t NumTeams, int32_t ThreadLimit,
                                   uint64_t LoopTripCount,
-                                  __tgt_async_info *AsyncInfo) {
-  return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                              TgtVarsSize, NumTeams, ThreadLimit, LoopTripCount,
-                              AsyncInfo);
+                                  __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->run_team_region_async || !RTL->synchronize)
+    return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
+                                LoopTripCount);
+  else
+    return RTL->run_team_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                      TgtOffsets, TgtVarsSize, NumTeams,
+                                      ThreadLimit, LoopTripCount, AsyncInfoPtr);
 }
 
 /// Check whether a device has an associated RTL and initialize it if it's not

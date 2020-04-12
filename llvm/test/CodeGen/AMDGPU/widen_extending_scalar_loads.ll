@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-codegenprepare < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-codegenprepare -amdgpu-codegenprepare-widen-constant-loads < %s | FileCheck -check-prefix=OPT %s
 
 declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 

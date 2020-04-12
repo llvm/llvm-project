@@ -10,7 +10,7 @@
 # BEFORE:        0:       fe 0f 1f f8     str     x30, [sp, #-16]!
 # BEFORE:        4:       00 00 00 90     adrp    x0, #0
 # BEFORE:        8:       00 08 00 91     add     x0, x0, #2
-# BEFORE:        c:       00 00 00 94     bl      #0
+# BEFORE:        c:       00 00 00 94     bl      0xc
 # BEFORE:       10:       00 01 40 39     ldrb    w0, [x8]
 # BEFORE:       14:       00 01 40 79     ldrh    w0, [x8]
 # BEFORE:       18:       00 01 40 b9     ldr     w0, [x8]
@@ -44,8 +44,8 @@
 # BEFORE:       88:       00 00 40 f9     ldr     x0, [x0]
 # BEFORE:       8c:       01 00 00 00     udf #1
 # BEFORE:       90:       20 1a 09 30     adr x0, #74565
-# BEFORE:       94:       01 00 00 54     b.ne    #0
-# BEFORE:       98:       00 00 00 36     tbz     w0, #0, #0
+# BEFORE:       94:       01 00 00 54     b.ne    0x94
+# BEFORE:       98:       00 00 00 36     tbz     w0, #0, 0x98
 # BEFORE:       9c:       01 00 00 00     udf #1
 
 # AFTER: Disassembly of section .text:
@@ -53,7 +53,7 @@
 # AFTER:  140001000:      fe 0f 1f f8     str     x30, [sp, #-16]!
 # AFTER:  140001004:      00 00 00 b0     adrp    x0, #4096
 # AFTER:  140001008:      00 18 00 91     add     x0, x0, #6
-# AFTER:  14000100c:      25 00 00 94     bl      #148
+# AFTER:  14000100c:      25 00 00 94     bl      0x1400010a0
 # AFTER:  140001010:      00 21 40 39     ldrb    w0, [x8, #8]
 # AFTER:  140001014:      00 11 40 79     ldrh    w0, [x8, #8]
 # AFTER:  140001018:      00 09 40 b9     ldr     w0, [x8, #8]
@@ -87,8 +87,8 @@
 # AFTER:  140001088:      00 c4 41 f9     ldr     x0, [x0, #904]
 # AFTER:  14000108c:      03 00 00 00     udf #3
 # AFTER:  140001090:      e0 95 09 30     adr     x0, #78525
-# AFTER:  140001094:      61 00 00 54     b.ne    #12
-# AFTER:  140001098:      40 00 00 36     tbz     w0, #0, #8
+# AFTER:  140001094:      61 00 00 54     b.ne    0x1400010a0
+# AFTER:  140001098:      40 00 00 36     tbz     w0, #0, 0x1400010a0
 # AFTER:  14000109c:      61 ff ff ff     <unknown>
 # AFTER:  1400010a0:      10 00 00 b0     adrp    x16, #4096
 # AFTER:  1400010a4:      10 2a 40 f9     ldr     x16, [x16, #80]

@@ -2078,17 +2078,16 @@ static void addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString("-x86-align-branch=" + AlignBranch));
   }
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_malign_branch_prefix_size_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mpad_max_prefix_size_EQ)) {
     StringRef Value = A->getValue();
     unsigned PrefixSize;
-    if (Value.getAsInteger(10, PrefixSize) || PrefixSize > 5) {
+    if (Value.getAsInteger(10, PrefixSize)) {
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << Value << A->getOption().getName();
     } else {
       CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back(Args.MakeArgString("-x86-align-branch-prefix-size=" +
-                                           Twine(PrefixSize)));
+      CmdArgs.push_back(
+          Args.MakeArgString("-x86-pad-max-prefix-size=" + Twine(PrefixSize)));
     }
   }
 }

@@ -16556,6 +16556,7 @@ by the intrinsic, this argument must be one of the following strings:
       "round.downward"
       "round.upward"
       "round.towardzero"
+      "round.tonearestaway"
 
 If this argument is "round.dynamic" optimization passes must assume that the
 rounding mode is unknown and may change at runtime.  No transformations that

@@ -410,7 +410,8 @@ public:
   void widenInstruction(Instruction &I);
 
   /// Widen a single call instruction within the innermost loop.
-  void widenCallInstruction(CallInst &I);
+  void widenCallInstruction(CallInst &I, VPUser &ArgOperands,
+                            VPTransformState &State);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop();
@@ -4359,12 +4360,10 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   } // end of switch.
 }
 
-void InnerLoopVectorizer::widenCallInstruction(CallInst &I) {
-  // Ignore dbg intrinsics.
-  // TODO: Debug intrinsics should be skipped/handled during VPlan construction
-  // rather than dropping them here.
-  if (isa<DbgInfoIntrinsic>(I))
-    return;
+void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
+                                               VPTransformState &State) {
+  assert(!isa<DbgInfoIntrinsic>(I) &&
+         "DbgInfoIntrinsic should have been dropped during VPlan construction");
   setDebugLocFromInst(Builder, &I);
 
   Module *M = I.getParent()->getParent()->getParent();
@@ -4388,12 +4387,14 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I) {
 
   for (unsigned Part = 0; Part < UF; ++Part) {
     SmallVector<Value *, 4> Args;
-    for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i) {
-      Value *Arg = CI->getArgOperand(i);
+    for (auto &I : enumerate(ArgOperands.operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
-      if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, i))
-        Arg = getOrCreateVectorValue(CI->getArgOperand(i), Part);
+      Value *Arg;
+      if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, I.index()))
+        Arg = State.get(I.value(), Part);
+      else
+        Arg = State.get(I.value(), {0, 0});
       Args.push_back(Arg);
     }
 
@@ -6584,6 +6585,7 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
                          &ILV,   CallbackILV};
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   State.TripCount = ILV.getOrCreateTripCount(nullptr);
+  State.CanonicalIV = ILV.Induction;
 
   //===------------------------------------------------===//
   //
@@ -6770,7 +6772,15 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
 
     // Introduce the early-exit compare IV <= BTC to form header block mask.
     // This is used instead of IV < TC because TC may wrap, unlike BTC.
-    VPValue *IV = Plan->getVPValue(Legal->getPrimaryInduction());
+    // Start by constructing the desired canonical IV.
+    VPValue *IV = nullptr;
+    if (Legal->getPrimaryInduction())
+      IV = Plan->getVPValue(Legal->getPrimaryInduction());
+    else {
+      auto IVRecipe = new VPWidenCanonicalIVRecipe();
+      Builder.getInsertBlock()->appendRecipe(IVRecipe);
+      IV = IVRecipe->getVPValue();
+    }
     VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
     BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
     return BlockMaskCache[BB] = BlockMask;
@@ -6874,21 +6884,22 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
 
-  SmallVector<VPValue *, 2> Masks;
+  SmallVector<VPValue *, 2> Operands;
   unsigned NumIncoming = Phi->getNumIncomingValues();
   for (unsigned In = 0; In < NumIncoming; In++) {
     VPValue *EdgeMask =
       createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent(), Plan);
     assert((EdgeMask || NumIncoming == 1) &&
            "Multiple predecessors with one having a full mask");
+    Operands.push_back(Plan->getOrAddVPValue(Phi->getIncomingValue(In)));
     if (EdgeMask)
-      Masks.push_back(EdgeMask);
+      Operands.push_back(EdgeMask);
   }
-  return new VPBlendRecipe(Phi, Masks);
+  return new VPBlendRecipe(Phi, Operands);
 }
 
-VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(Instruction *I,
-                                                   VFRange &Range) {
+VPWidenCallRecipe *
+VPRecipeBuilder::tryToWidenCall(Instruction *I, VFRange &Range, VPlan &Plan) {
 
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
@@ -6919,7 +6930,11 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(Instruction *I,
     return nullptr;
 
   // Success: widen this call.
-  return new VPWidenCallRecipe(*CI);
+  auto VPValues = map_range(CI->arg_operands(), [&Plan](Value *Op) {
+    return Plan.getOrAddVPValue(Op);
+  });
+
+  return new VPWidenCallRecipe(*CI, VPValues);
 }
 
 VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
@@ -7071,7 +7086,7 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
 
   // First, check for specific widening recipes that deal with calls, memory
   // operations, inductions and Phi nodes.
-  if ((Recipe = tryToWidenCall(Instr, Range)) ||
+  if ((Recipe = tryToWidenCall(Instr, Range, *Plan)) ||
       (Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
       (Recipe = tryToOptimizeInduction(Instr, Range)) ||
       (Recipe = tryToBlend(Instr, Plan)) ||
@@ -7125,12 +7140,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
       NeedDef.insert(Branch->getCondition());
   }
 
-  // If the tail is to be folded by masking, the primary induction variable
-  // needs to be represented in VPlan for it to model early-exit masking.
+  // If the tail is to be folded by masking, the primary induction variable, if
+  // exists needs to be represented in VPlan for it to model early-exit masking.
   // Also, both the Phi and the live-out instruction of each reduction are
   // required in order to introduce a select between them in VPlan.
   if (CM.foldTailByMasking()) {
-    NeedDef.insert(Legal->getPrimaryInduction());
+    if (Legal->getPrimaryInduction())
+      NeedDef.insert(Legal->getPrimaryInduction());
     for (auto &Reduction : Legal->getReductionVars()) {
       NeedDef.insert(Reduction.first);
       NeedDef.insert(Reduction.second.getLoopExitInstr());
@@ -7239,6 +7255,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     Builder.setInsertPoint(VPBB);
 
     // Introduce each ingredient into VPlan.
+    // TODO: Model and preserve debug instrinsics in VPlan.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       Instruction *Instr = &I;
 
@@ -7390,7 +7407,7 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
-  State.ILV->widenCallInstruction(Ingredient);
+  State.ILV->widenCallInstruction(Ingredient, User, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
@@ -7420,10 +7437,8 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
 
-  unsigned NumIncoming = Phi->getNumIncomingValues();
+  unsigned NumIncoming = getNumIncomingValues();
 
-  assert((User || NumIncoming == 1) &&
-         "Multiple predecessors with predecessors having a full mask");
   // Generate a sequence of selects of the form:
   // SELECT(Mask3, In3,
   //      SELECT(Mask2, In2,
@@ -7433,14 +7448,13 @@ void VPBlendRecipe::execute(VPTransformState &State) {
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       // We might have single edge PHIs (blocks) - use an identity
       // 'select' for the first PHI operand.
-      Value *In0 =
-          State.ILV->getOrCreateVectorValue(Phi->getIncomingValue(In), Part);
+      Value *In0 = State.get(getIncomingValue(In), Part);
       if (In == 0)
         Entry[Part] = In0; // Initialize with the first incoming value.
       else {
         // Select between the current value and the previous incoming edge
         // based on the incoming mask.
-        Value *Cond = State.get(User->getOperand(In), Part);
+        Value *Cond = State.get(getMask(In), Part);
         Entry[Part] =
             State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
       }
@@ -7566,9 +7580,8 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                               !PreferPredicateOverEpilog;
 
   // 2) Next, if disabling predication is requested on the command line, honour
-  // this and request a scalar epilogue. Also do this if we don't have a
-  // primary induction variable, which is required for predication.
-  if (PredicateOptDisabled || !LVL.getPrimaryInduction())
+  // this and request a scalar epilogue.
+  if (PredicateOptDisabled)
     return CM_ScalarEpilogueAllowed;
 
   // 3) and 4) look if enabling predication is requested on the command line,

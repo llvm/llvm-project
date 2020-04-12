@@ -77,17 +77,18 @@ enum CoverageFeature {
   CoverageBB = 1 << 1,
   CoverageEdge = 1 << 2,
   CoverageIndirCall = 1 << 3,
-  CoverageTraceBB = 1 << 4,  // Deprecated.
+  CoverageTraceBB = 1 << 4, // Deprecated.
   CoverageTraceCmp = 1 << 5,
   CoverageTraceDiv = 1 << 6,
   CoverageTraceGep = 1 << 7,
-  Coverage8bitCounters = 1 << 8,  // Deprecated.
+  Coverage8bitCounters = 1 << 8, // Deprecated.
   CoverageTracePC = 1 << 9,
   CoverageTracePCGuard = 1 << 10,
   CoverageNoPrune = 1 << 11,
   CoverageInline8bitCounters = 1 << 12,
   CoveragePCTable = 1 << 13,
   CoverageStackDepth = 1 << 14,
+  CoverageInlineBoolFlag = 1 << 15,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -147,6 +148,40 @@ static void addDefaultBlacklists(const Driver &D, SanitizerMask Kinds,
       // If cfi_blacklist.txt cannot be found in the resource dir, driver
       // should fail.
       D.Diag(clang::diag::err_drv_no_such_file) << Path;
+  }
+}
+
+/// Parse -f(no-)?sanitize-(coverage-)?(white|black)list argument's values,
+/// diagnosing any invalid file paths and validating special case list format.
+static void parseSpecialCaseListArg(const Driver &D,
+                                    const llvm::opt::ArgList &Args,
+                                    std::vector<std::string> &SCLFiles,
+                                    llvm::opt::OptSpecifier SCLOptionID,
+                                    llvm::opt::OptSpecifier NoSCLOptionID,
+                                    unsigned MalformedSCLErrorDiagID) {
+  for (const auto *Arg : Args) {
+    // Match -fsanitize-(coverage-)?(white|black)list.
+    if (Arg->getOption().matches(SCLOptionID)) {
+      Arg->claim();
+      std::string SCLPath = Arg->getValue();
+      if (D.getVFS().exists(SCLPath)) {
+        SCLFiles.push_back(SCLPath);
+      } else {
+        D.Diag(clang::diag::err_drv_no_such_file) << SCLPath;
+      }
+      // Match -fno-sanitize-blacklist.
+    } else if (Arg->getOption().matches(NoSCLOptionID)) {
+      Arg->claim();
+      SCLFiles.clear();
+    }
+  }
+  // Validate special case list format.
+  {
+    std::string BLError;
+    std::unique_ptr<llvm::SpecialCaseList> SCL(
+        llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
+    if (!SCL.get())
+      D.Diag(MalformedSCLErrorDiagID) << BLError;
   }
 }
 
@@ -560,37 +595,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Setup blacklist files.
   // Add default blacklist from resource directory.
   addDefaultBlacklists(D, Kinds, SystemBlacklistFiles);
-  // Parse -f(no-)sanitize-blacklist options.
-  for (const auto *Arg : Args) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_blacklist)) {
-      Arg->claim();
-      std::string BLPath = Arg->getValue();
-      if (D.getVFS().exists(BLPath)) {
-        UserBlacklistFiles.push_back(BLPath);
-      } else {
-        D.Diag(clang::diag::err_drv_no_such_file) << BLPath;
-      }
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_blacklist)) {
-      Arg->claim();
-      UserBlacklistFiles.clear();
-      SystemBlacklistFiles.clear();
-    }
-  }
-  // Validate blacklists format.
-  {
-    std::string BLError;
-    std::unique_ptr<llvm::SpecialCaseList> SCL(
-        llvm::SpecialCaseList::create(UserBlacklistFiles, D.getVFS(), BLError));
-    if (!SCL.get())
-      D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
-  }
-  {
-    std::string BLError;
-    std::unique_ptr<llvm::SpecialCaseList> SCL(llvm::SpecialCaseList::create(
-        SystemBlacklistFiles, D.getVFS(), BLError));
-    if (!SCL.get())
-      D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
-  }
+
+  // Parse -f(no-)?sanitize-blacklist options.
+  // This also validates special case lists format.
+  // Here, OptSpecifier() acts as a never-matching command-line argument.
+  // So, there is no way to append to system blacklist but it can be cleared.
+  parseSpecialCaseListArg(D, Args, SystemBlacklistFiles, OptSpecifier(),
+                          options::OPT_fno_sanitize_blacklist,
+                          clang::diag::err_drv_malformed_sanitizer_blacklist);
+  parseSpecialCaseListArg(D, Args, UserBlacklistFiles,
+                          options::OPT_fsanitize_blacklist,
+                          options::OPT_fno_sanitize_blacklist,
+                          clang::diag::err_drv_malformed_sanitizer_blacklist);
 
   // Parse -f[no-]sanitize-memory-track-origins[=level] options.
   if (AllAddedKinds & SanitizerKind::Memory) {
@@ -723,8 +739,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         << "-fsanitize-coverage=trace-pc-guard";
 
   int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
-  int InstrumentationTypes =
-      CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters;
+  int InstrumentationTypes = CoverageTracePC | CoverageTracePCGuard |
+                             CoverageInline8bitCounters |
+                             CoverageInlineBoolFlag;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes)) {
     D.Diag(clang::diag::warn_drv_deprecated_arg)
@@ -735,11 +752,27 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // trace-pc w/o func/bb/edge implies edge.
   if (!(CoverageFeatures & InsertionPointTypes)) {
     if (CoverageFeatures &
-        (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters))
+        (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters |
+         CoverageInlineBoolFlag))
       CoverageFeatures |= CoverageEdge;
 
     if (CoverageFeatures & CoverageStackDepth)
       CoverageFeatures |= CoverageFunc;
+  }
+
+  // Parse -fsanitize-coverage-(black|white)list options if coverage enabled.
+  // This also validates special case lists format.
+  // Here, OptSpecifier() acts as a never-matching command-line argument.
+  // So, there is no way to clear coverage lists but you can append to them.
+  if (CoverageFeatures) {
+    parseSpecialCaseListArg(
+        D, Args, CoverageWhitelistFiles,
+        options::OPT_fsanitize_coverage_whitelist, OptSpecifier(),
+        clang::diag::err_drv_malformed_sanitizer_coverage_whitelist);
+    parseSpecialCaseListArg(
+        D, Args, CoverageBlacklistFiles,
+        options::OPT_fsanitize_coverage_blacklist, OptSpecifier(),
+        clang::diag::err_drv_malformed_sanitizer_coverage_blacklist);
   }
 
   SharedRuntime =
@@ -868,6 +901,17 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
   return Res;
 }
 
+static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const char *SCLOptFlag,
+                                  const std::vector<std::string> &SCLFiles) {
+  for (const auto &SCLPath : SCLFiles) {
+    SmallString<64> SCLOpt(SCLOptFlag);
+    SCLOpt += SCLPath;
+    CmdArgs.push_back(Args.MakeArgString(SCLOpt));
+  }
+}
+
 static void addIncludeLinkerOption(const ToolChain &TC,
                                    const llvm::opt::ArgList &Args,
                                    llvm::opt::ArgStringList &CmdArgs,
@@ -907,25 +951,33 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // Do it even if Sanitizers.empty() since some forms of coverage don't require
   // sanitizers.
   std::pair<int, const char *> CoverageFlags[] = {
-    std::make_pair(CoverageFunc, "-fsanitize-coverage-type=1"),
-    std::make_pair(CoverageBB, "-fsanitize-coverage-type=2"),
-    std::make_pair(CoverageEdge, "-fsanitize-coverage-type=3"),
-    std::make_pair(CoverageIndirCall, "-fsanitize-coverage-indirect-calls"),
-    std::make_pair(CoverageTraceBB, "-fsanitize-coverage-trace-bb"),
-    std::make_pair(CoverageTraceCmp, "-fsanitize-coverage-trace-cmp"),
-    std::make_pair(CoverageTraceDiv, "-fsanitize-coverage-trace-div"),
-    std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
-    std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
-    std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
-    std::make_pair(CoverageTracePCGuard, "-fsanitize-coverage-trace-pc-guard"),
-    std::make_pair(CoverageInline8bitCounters, "-fsanitize-coverage-inline-8bit-counters"),
-    std::make_pair(CoveragePCTable, "-fsanitize-coverage-pc-table"),
-    std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune"),
-    std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth")};
+      std::make_pair(CoverageFunc, "-fsanitize-coverage-type=1"),
+      std::make_pair(CoverageBB, "-fsanitize-coverage-type=2"),
+      std::make_pair(CoverageEdge, "-fsanitize-coverage-type=3"),
+      std::make_pair(CoverageIndirCall, "-fsanitize-coverage-indirect-calls"),
+      std::make_pair(CoverageTraceBB, "-fsanitize-coverage-trace-bb"),
+      std::make_pair(CoverageTraceCmp, "-fsanitize-coverage-trace-cmp"),
+      std::make_pair(CoverageTraceDiv, "-fsanitize-coverage-trace-div"),
+      std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
+      std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
+      std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
+      std::make_pair(CoverageTracePCGuard,
+                     "-fsanitize-coverage-trace-pc-guard"),
+      std::make_pair(CoverageInline8bitCounters,
+                     "-fsanitize-coverage-inline-8bit-counters"),
+      std::make_pair(CoverageInlineBoolFlag,
+                     "-fsanitize-coverage-inline-bool-flag"),
+      std::make_pair(CoveragePCTable, "-fsanitize-coverage-pc-table"),
+      std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune"),
+      std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(F.second);
   }
+  addSpecialCaseListOpt(
+      Args, CmdArgs, "-fsanitize-coverage-whitelist=", CoverageWhitelistFiles);
+  addSpecialCaseListOpt(
+      Args, CmdArgs, "-fsanitize-coverage-blacklist=", CoverageBlacklistFiles);
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
     // Instruct the code generator to embed linker directives in the object file
@@ -961,16 +1013,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-trap=" + toString(TrapSanitizers)));
 
-  for (const auto &BLPath : UserBlacklistFiles) {
-    SmallString<64> BlacklistOpt("-fsanitize-blacklist=");
-    BlacklistOpt += BLPath;
-    CmdArgs.push_back(Args.MakeArgString(BlacklistOpt));
-  }
-  for (const auto &BLPath : SystemBlacklistFiles) {
-    SmallString<64> BlacklistOpt("-fsanitize-system-blacklist=");
-    BlacklistOpt += BLPath;
-    CmdArgs.push_back(Args.MakeArgString(BlacklistOpt));
-  }
+  addSpecialCaseListOpt(Args, CmdArgs,
+                        "-fsanitize-blacklist=", UserBlacklistFiles);
+  addSpecialCaseListOpt(Args, CmdArgs,
+                        "-fsanitize-system-blacklist=", SystemBlacklistFiles);
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
@@ -1105,22 +1151,23 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
     int F = llvm::StringSwitch<int>(Value)
-        .Case("func", CoverageFunc)
-        .Case("bb", CoverageBB)
-        .Case("edge", CoverageEdge)
-        .Case("indirect-calls", CoverageIndirCall)
-        .Case("trace-bb", CoverageTraceBB)
-        .Case("trace-cmp", CoverageTraceCmp)
-        .Case("trace-div", CoverageTraceDiv)
-        .Case("trace-gep", CoverageTraceGep)
-        .Case("8bit-counters", Coverage8bitCounters)
-        .Case("trace-pc", CoverageTracePC)
-        .Case("trace-pc-guard", CoverageTracePCGuard)
-        .Case("no-prune", CoverageNoPrune)
-        .Case("inline-8bit-counters", CoverageInline8bitCounters)
-        .Case("pc-table", CoveragePCTable)
-        .Case("stack-depth", CoverageStackDepth)
-        .Default(0);
+                .Case("func", CoverageFunc)
+                .Case("bb", CoverageBB)
+                .Case("edge", CoverageEdge)
+                .Case("indirect-calls", CoverageIndirCall)
+                .Case("trace-bb", CoverageTraceBB)
+                .Case("trace-cmp", CoverageTraceCmp)
+                .Case("trace-div", CoverageTraceDiv)
+                .Case("trace-gep", CoverageTraceGep)
+                .Case("8bit-counters", Coverage8bitCounters)
+                .Case("trace-pc", CoverageTracePC)
+                .Case("trace-pc-guard", CoverageTracePCGuard)
+                .Case("no-prune", CoverageNoPrune)
+                .Case("inline-8bit-counters", CoverageInline8bitCounters)
+                .Case("inline-bool-flag", CoverageInlineBoolFlag)
+                .Case("pc-table", CoveragePCTable)
+                .Case("stack-depth", CoverageStackDepth)
+                .Default(0);
     if (F == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Value;

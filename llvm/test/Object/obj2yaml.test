@@ -672,7 +672,6 @@ Symbols:
 # ELF-AVR-NEXT:     - Section: .data
 # ELF-AVR-NEXT:    VAddr: 0x0000000000800060
 # ELF-AVR-NEXT:    PAddr: 0x0000000000000004
-# ELF-AVR-NEXT:    Align: 0x0000000000000001
 # ELF-AVR-NEXT: Sections:
 # ELF-AVR-NEXT:   - Name:            .text
 # ELF-AVR-NEXT:     Type:            SHT_PROGBITS

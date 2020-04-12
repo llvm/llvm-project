@@ -10,9 +10,9 @@
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <foo>:
-# CHECK-NEXT:    210120:       b       #4
+# CHECK-NEXT:    210120:       b       0x210124
 # CHECK: <bar>:
-# CHECK-NEXT:    210124:       b       #-4
+# CHECK-NEXT:    210124:       b       0x210120
 
 !ELF
 FileHeader:

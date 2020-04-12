@@ -28,7 +28,7 @@ struct TestVectorToVectorConversion
     populateWithGenerated(context, &patterns);
     populateVectorToVectorCanonicalizationPatterns(patterns, context);
     populateVectorToVectorTransformationPatterns(patterns, context);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 
@@ -37,7 +37,7 @@ struct TestVectorSlicesConversion
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 
@@ -57,7 +57,7 @@ struct TestVectorContractionConversion
     VectorTransformsOptions options{
         /*lowerToLLVMMatrixIntrinsics=*/lowerToLLVMMatrixIntrinsics};
     populateVectorContractLoweringPatterns(patterns, &getContext(), options);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 

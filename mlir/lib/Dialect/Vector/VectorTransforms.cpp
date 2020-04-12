@@ -1125,43 +1125,34 @@ public:
 
     // TODO(ntv, ajcbik): implement benefits, cost models, separate this out in
     // a new pattern.
-    // TODO(ntv, fhahn): once row-major mode is available in LLVM's matrix
-    // intrinsics, use that.
     if (vectorTransformsOptions.lowerToLLVMMatrixIntrinsics &&
-        isColumnMajorMatmul(op.indexing_maps())) {
+        isRowMajorMatmul(op.indexing_maps())) {
       VectorType lhsType = op.getLhsType();
       VectorType rhsType = op.getRhsType();
       unsigned lhsRows = op.getLhsType().getShape()[0];
       unsigned lhsColumns = op.getLhsType().getShape()[1];
       unsigned rhsColumns = op.getRhsType().getShape()[1];
 
-      // In cases where matrices are degenerate, scalarization issues occur in
-      // the backend. Avoid all LLVM scalarization issues for now.
-      // For more details, see: https://bugs.llvm.org/show_bug.cgi?id=45227 and
-      // https://bugs.llvm.org/show_bug.cgi?id=45229
-      // TODO(ntv, fhahn): Relax once above bugs are fixed.
-      if (lhsRows != 1 && lhsColumns != 1 && rhsColumns != 1) {
-        Type flattenedLHSType =
-            VectorType::get(lhsType.getNumElements(), lhsType.getElementType());
-        Type flattenedRHSType =
-            VectorType::get(rhsType.getNumElements(), rhsType.getElementType());
-        auto lhs = rewriter.create<vector::ShapeCastOp>(
-            op.getLoc(), flattenedLHSType, op.lhs());
-        auto rhs = rewriter.create<vector::ShapeCastOp>(
-            op.getLoc(), flattenedRHSType, op.rhs());
+      Type flattenedLHSType =
+          VectorType::get(lhsType.getNumElements(), lhsType.getElementType());
+      Type flattenedRHSType =
+          VectorType::get(rhsType.getNumElements(), rhsType.getElementType());
+      auto lhs = rewriter.create<vector::ShapeCastOp>(
+          op.getLoc(), flattenedLHSType, op.lhs());
+      auto rhs = rewriter.create<vector::ShapeCastOp>(
+          op.getLoc(), flattenedRHSType, op.rhs());
 
-        Value mul = rewriter.create<vector::MatmulOp>(
-            op.getLoc(), lhs, rhs, lhsRows, lhsColumns, rhsColumns);
-        mul = rewriter.create<vector::ShapeCastOp>(op.getLoc(),
-                                                   op.acc().getType(), mul);
-        Type elementType = op.getLhsType().getElementType();
-        assert(elementType.isIntOrFloat());
-        if (elementType.isa<IntegerType>())
-          rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
-        else
-          rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
-        return success();
-      }
+      Value mul = rewriter.create<vector::MatmulOp>(
+          op.getLoc(), lhs, rhs, lhsRows, lhsColumns, rhsColumns);
+      mul = rewriter.create<vector::ShapeCastOp>(op.getLoc(),
+                                                 op.acc().getType(), mul);
+      Type elementType = op.getLhsType().getElementType();
+      assert(elementType.isIntOrFloat());
+      if (elementType.isa<IntegerType>())
+        rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
+      else
+        rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
+      return success();
     }
 
     // Find first batch dimension in LHS/RHS, and lower when found.

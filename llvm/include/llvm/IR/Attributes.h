@@ -855,8 +855,8 @@ public:
 
   // Iterators for target-dependent attributes.
   using td_type = std::pair<std::string, std::string>;
-  using td_iterator = std::map<std::string, std::string>::iterator;
-  using td_const_iterator = std::map<std::string, std::string>::const_iterator;
+  using td_iterator = decltype(TargetDepAttrs)::iterator;
+  using td_const_iterator = decltype(TargetDepAttrs)::const_iterator;
   using td_range = iterator_range<td_iterator>;
   using td_const_range = iterator_range<td_const_iterator>;
 

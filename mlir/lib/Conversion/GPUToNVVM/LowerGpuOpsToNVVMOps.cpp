@@ -268,7 +268,7 @@ public:
     // which need to be lowered further, which is not supported by a single
     // conversion pass.
     populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsGreedily(m, patterns);
+    applyPatternsAndFoldGreedily(m, patterns);
     patterns.clear();
 
     populateStdToLLVMConversionPatterns(converter, patterns);

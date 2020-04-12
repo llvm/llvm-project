@@ -524,7 +524,7 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
                                             const Twine &Name) {
   auto PtrsTy = cast<VectorType>(Ptrs->getType());
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  unsigned NumElts = PtrsTy->getVectorNumElements();
+  unsigned NumElts = PtrsTy->getNumElements();
   Type *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
 
   if (!Mask)
@@ -554,11 +554,11 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
                                              Align Alignment, Value *Mask) {
   auto PtrsTy = cast<VectorType>(Ptrs->getType());
   auto DataTy = cast<VectorType>(Data->getType());
-  unsigned NumElts = PtrsTy->getVectorNumElements();
+  unsigned NumElts = PtrsTy->getNumElements();
 
 #ifndef NDEBUG
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  assert(NumElts == DataTy->getVectorNumElements() &&
+  assert(NumElts == DataTy->getNumElements() &&
          PtrTy->getElementType() == DataTy->getElementType() &&
          "Incompatible pointer and data types");
 #endif
@@ -760,7 +760,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
 CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
     Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource,
     const Twine &Name, MDNode *FPMathTag,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   Value *RoundingV = getConstrainedFPRounding(Rounding);
   Value *ExceptV = getConstrainedFPExcept(Except);
@@ -794,7 +794,7 @@ Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
 CallInst *IRBuilderBase::CreateConstrainedFPCast(
     Intrinsic::ID ID, Value *V, Type *DestTy,
     Instruction *FMFSource, const Twine &Name, MDNode *FPMathTag,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
@@ -857,7 +857,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
 
 CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
-    Optional<fp::RoundingMode> Rounding,
+    Optional<RoundingMode> Rounding,
     Optional<fp::ExceptionBehavior> Except) {
   llvm::SmallVector<Value *, 6> UseArgs;
 

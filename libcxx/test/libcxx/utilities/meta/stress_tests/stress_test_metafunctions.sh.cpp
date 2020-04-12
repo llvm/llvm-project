@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This is a dummy feature that prevents this test from running by default.
-// REQUIRES: template-const-testing
+// REQUIRES: template-cost-testing
 
 // The table below compares the compile time and object size for each of the
 // variants listed in the RUN script.

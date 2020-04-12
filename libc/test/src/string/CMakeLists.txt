@@ -9,11 +9,11 @@ add_libc_unittest(
   SRCS
     strcat_test.cpp
   DEPENDS
-    strcat
-    strcpy
-    strlen
-# TODO (sivachandra): remove redundant deps.
-    memcpy
+    # TODO (sivachandra): remove redundant deps.
+    libc.src.string.memcpy
+    libc.src.string.strcat
+    libc.src.string.strcpy
+    libc.src.string.strlen
 )
 
 add_libc_unittest(
@@ -23,10 +23,10 @@ add_libc_unittest(
   SRCS
     strcpy_test.cpp
   DEPENDS
-    strcpy
-    strlen
-# TODO (sivachandra): remove redundant deps.
-    memcpy
+    # TODO (sivachandra): remove redundant deps.
+    libc.src.string.memcpy
+    libc.src.string.strcpy
+    libc.src.string.strlen
 )
 
 add_libc_unittest(
@@ -36,13 +36,13 @@ add_libc_unittest(
   SRCS
     strlen_test.cpp
   DEPENDS
-    strlen
+    libc.src.string.strlen
 )
 
 # Tests all implementations of memcpy that can run on the host.
 get_property(memcpy_implementations GLOBAL PROPERTY memcpy_implementations)
 foreach(memcpy_config_name IN LISTS memcpy_implementations)
-  get_target_property(require_cpu_features ${memcpy_config_name} REQUIRE_CPU_FEATURES)
+  get_target_property(require_cpu_features libc.src.string.${memcpy_config_name} REQUIRE_CPU_FEATURES)
   host_supports(can_run "${require_cpu_features}")
   if(can_run)
     add_libc_unittest(
@@ -52,7 +52,7 @@ foreach(memcpy_config_name IN LISTS memcpy_implementations)
       SRCS
         memcpy_test.cpp
       DEPENDS
-        ${memcpy_config_name}
+        libc.src.string.${memcpy_config_name}
     )
   else()
     message(STATUS "Skipping test for '${memcpy_config_name}' insufficient host cpu features")

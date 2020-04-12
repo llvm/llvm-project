@@ -1585,7 +1585,7 @@ private:
     // have proof that the input does not alias the current instance.
     // For example, operator=(basic_string) performs a 'self' check.
     template <bool __is_short>
-    void __assign_no_alias(const value_type* __s, size_type __n);
+    basic_string& __assign_no_alias(const value_type* __s, size_type __n);
 
     _LIBCPP_INLINE_VISIBILITY
     void __erase_to_end(size_type __pos);
@@ -2253,7 +2253,8 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
 
 template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
-void basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
+basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
     const value_type* __s, size_type __n) {
   size_type __cap = __is_short ? __min_cap : __get_long_cap();
   if (__n < __cap) {
@@ -2266,6 +2267,7 @@ void basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
     size_type __sz = __is_short ? __get_short_size() : __get_long_size();
     __grow_by_and_replace(__cap - 1, __n - __cap + 1, __sz, 0, __sz, __n, __s);
   }
+  return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2340,10 +2342,10 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str)
       if (!__str.__is_long()) {
         __r_.first().__r = __str.__r_.first().__r;
       } else {
-        __assign_no_alias<true>(__str.data(), __str.size());
+        return __assign_no_alias<true>(__str.data(), __str.size());
       }
     } else {
-      __assign_no_alias<false>(__str.data(), __str.size());
+      return __assign_no_alias<false>(__str.data(), __str.size());
     }
   }
   return *this;

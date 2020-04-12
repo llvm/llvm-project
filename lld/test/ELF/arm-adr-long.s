@@ -1,9 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: echo "SECTIONS { \
-// RUN:                 .text.0 0x10000000 : { *(.text.0) } \
-// RUN:                 .text.1 0x80000000 : { *(.text.1) } \
-// RUN:                 .text.2 0xf0000010 : { *(.text.2) } \
+// RUN:                 .text.0 0x10000000 : AT(0x10000000) { *(.text.0) } \
+// RUN:                 .text.1 0x80000000 : AT(0x80000000) { *(.text.1) } \
+// RUN:                 .text.2 0xf0000010 : AT(0xf0000010) { *(.text.2) } \
 // RUN:               } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-eabi %t | FileCheck %s

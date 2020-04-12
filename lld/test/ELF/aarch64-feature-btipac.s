@@ -16,7 +16,7 @@
 
 # BTIPACSO: Disassembly of section .text:
 # BTIPACSO: 0000000000010348 <func2>:
-# BTIPACSO-NEXT:    10348:              bl      #56 <func3@plt>
+# BTIPACSO-NEXT:    10348:              bl      0x10380 <func3@plt>
 # BTIPACSO-NEXT:                        ret
 # BTIPACSO: 0000000000010350 <func3>:
 # BTIPACSO-NEXT:    10350:              ret
@@ -52,7 +52,7 @@
 
 # BTIPACEX: Disassembly of section .text:
 # BTIPACEX: 0000000000210370 <func1>:
-# BTIPACEX-NEXT:   210370:              bl      #48 <func2@plt>
+# BTIPACEX-NEXT:   210370:              bl      0x2103a0 <func2@plt>
 # BTIPACEX-NEXT:                        ret
 # BTIPACEX-NEXT:                        ret
 # BTIPACEX: 000000000021037c <func3>:
@@ -85,7 +85,7 @@
 
 # EX: Disassembly of section .text:
 # EX: 00000000002102e0 <func1>:
-# EX-NEXT:   2102e0: bl      #48 <func2@plt>
+# EX-NEXT:   2102e0: bl      0x210310 <func2@plt>
 # EX-NEXT:           ret
 # EX-NEXT:           ret
 # EX: 00000000002102ec <func3>:
@@ -146,7 +146,7 @@ func1:
 
 # BTIPACEX2: Disassembly of section .text:
 # BTIPACEX2: 0000000000210370 <func1>:
-# BTIPACEX2-NEXT:   210370:              bl      #48 <func2@plt>
+# BTIPACEX2-NEXT:   210370:              bl      0x2103a0 <func2@plt>
 # BTIPACEX2-NEXT:                        ret
 # BTIPACEX2-NEXT:                        ret
 # BTIPACEX2: 000000000021037c <func3>:

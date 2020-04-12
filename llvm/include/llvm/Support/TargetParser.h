@@ -151,7 +151,10 @@ enum ArchFeatureKind : uint32_t {
 
   // Common features.
   FEATURE_FAST_FMA_F32 = 1 << 4,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 5
+  FEATURE_FAST_DENORMAL_F32 = 1 << 5,
+
+  // Wavefront 32 is available.
+  FEATURE_WAVE32 = 1 << 6
 };
 
 StringRef getArchNameAMDGCN(GPUKind AK);

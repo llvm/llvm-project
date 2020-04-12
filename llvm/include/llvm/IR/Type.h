@@ -223,7 +223,7 @@ public:
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
   /// True if this is an instance of VectorType.
-  bool isVectorTy() const { return getTypeID() == VectorTyID; }
+  inline bool isVectorTy() const;
 
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the

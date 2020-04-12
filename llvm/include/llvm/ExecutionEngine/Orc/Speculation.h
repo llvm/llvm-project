@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SPECULATION_H
 #define LLVM_EXECUTIONENGINE_ORC_SPECULATION_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"

@@ -428,6 +428,11 @@ namespace llvm {
     /// lower (IDX=1) half of v4f32 to v2f64.
     FP_EXTEND_HALF,
 
+    /// MAT_PCREL_ADDR = Materialize a PC Relative address. This can be done
+    /// either through an add like PADDI or through a PC Relative load like
+    /// PLD.
+    MAT_PCREL_ADDR,
+
     /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
@@ -729,6 +734,10 @@ namespace llvm {
     /// represented as an indexed [r+r] operation.
     bool SelectAddressRegRegOnly(SDValue N, SDValue &Base, SDValue &Index,
                                  SelectionDAG &DAG) const;
+
+    /// SelectAddressPCRel - Represent the specified address as pc relative to
+    /// be represented as [pc+imm]
+    bool SelectAddressPCRel(SDValue N, SDValue &Base) const;
 
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
