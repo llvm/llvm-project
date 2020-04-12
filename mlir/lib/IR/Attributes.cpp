@@ -87,7 +87,7 @@ bool BoolAttr::getValue() const { return getImpl()->value; }
 /// NamedAttributes.
 static int compareNamedAttributes(const NamedAttribute *lhs,
                                   const NamedAttribute *rhs) {
-  return lhs->first.strref().compare(rhs->first.strref());
+  return strcmp(lhs->first.data(), rhs->first.data());
 }
 
 DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
@@ -111,7 +111,7 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
            "DictionaryAttr element names must be unique");
 
     // Don't invoke a general sort for two element case.
-    if (value[0].first.strref() > value[1].first.strref()) {
+    if (compareNamedAttributes(&value[0], &value[1]) > 0) {
       storage.push_back(value[1]);
       storage.push_back(value[0]);
       value = storage;
@@ -121,7 +121,7 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
     // Check to see they are sorted already.
     bool isSorted = true;
     for (unsigned i = 0, e = value.size() - 1; i != e; ++i) {
-      if (value[i].first.strref() > value[i + 1].first.strref()) {
+      if (compareNamedAttributes(&value[i], &value[i + 1]) > 0) {
         isSorted = false;
         break;
       }
@@ -152,8 +152,13 @@ ArrayRef<NamedAttribute> DictionaryAttr::getValue() const {
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
   ArrayRef<NamedAttribute> values = getValue();
-  auto compare = [](NamedAttribute attr, StringRef name) {
-    return attr.first.strref() < name;
+  auto compare = [](NamedAttribute attr, StringRef name) -> bool {
+    // This is correct even when attr.first.data()[name.size()] is not a zero
+    // string terminator, because we only care about a less than comparison.
+    // This can't use memcmp, because it doesn't guarantee that it will stop
+    // reading both buffers if one is shorter than the other, even if there is
+    // a difference.
+    return strncmp(attr.first.data(), name.data(), name.size()) < 0;
   };
   auto it = llvm::lower_bound(values, name, compare);
   return it != values.end() && it->first.is(name) ? it->second : Attribute();
