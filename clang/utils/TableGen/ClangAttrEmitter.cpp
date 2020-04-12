@@ -481,6 +481,7 @@ namespace {
 
     void writeAccessors(raw_ostream &OS) const override {
       OS << "  bool is" << getUpperName() << "Dependent() const;\n";
+      OS << "  bool is" << getUpperName() << "ErrorDependent() const;\n";
 
       OS << "  unsigned get" << getUpperName() << "(ASTContext &Ctx) const;\n";
 
@@ -509,6 +510,15 @@ namespace {
       OS << "  else\n";
       OS << "    return " << getLowerName()
          << "Type->getType()->isDependentType();\n";
+      OS << "}\n";
+
+      OS << "bool " << getAttrName() << "Attr::is" << getUpperName()
+         << "ErrorDependent() const {\n";
+      OS << "  if (is" << getLowerName() << "Expr)\n";
+      OS << "    return " << getLowerName() << "Expr && " << getLowerName()
+         << "Expr->containsErrors();\n";
+      OS << "  return " << getLowerName()
+         << "Type->getType()->containsErrors();\n";
       OS << "}\n";
 
       // FIXME: Do not do the calculation here

@@ -396,8 +396,10 @@ unsigned Decl::getMaxAlignment() const {
   const AttrVec &V = getAttrs();
   ASTContext &Ctx = getASTContext();
   specific_attr_iterator<AlignedAttr> I(V.begin()), E(V.end());
-  for (; I != E; ++I)
-    Align = std::max(Align, I->getAlignment(Ctx));
+  for (; I != E; ++I) {
+    if (!I->isAlignmentErrorDependent())
+      Align = std::max(Align, I->getAlignment(Ctx));
+  }
   return Align;
 }
 
