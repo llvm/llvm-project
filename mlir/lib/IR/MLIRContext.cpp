@@ -624,16 +624,15 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
   return getImpl().attributeUniquer;
 }
 
-/// Returns a functor used to initialize new attribute storage instances.
-std::function<void(AttributeStorage *)>
-AttributeUniquer::getInitFn(MLIRContext *ctx, TypeID attrID) {
-  return [ctx, attrID](AttributeStorage *storage) {
-    storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
+/// Initialize the given attribute storage instance.
+void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
+                                                  MLIRContext *ctx,
+                                                  TypeID attrID) {
+  storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
 
-    // If the attribute did not provide a type, then default to NoneType.
-    if (!storage->getType())
-      storage->setType(NoneType::get(ctx));
-  };
+  // If the attribute did not provide a type, then default to NoneType.
+  if (!storage->getType())
+    storage->setType(NoneType::get(ctx));
 }
 
 BoolAttr BoolAttr::get(bool value, MLIRContext *context) {
