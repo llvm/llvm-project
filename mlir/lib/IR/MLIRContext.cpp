@@ -42,16 +42,68 @@ using namespace mlir::detail;
 using llvm::hash_combine;
 using llvm::hash_combine_range;
 
-static llvm::cl::opt<bool> clPrintOpOnDiagnostic(
-    "mlir-print-op-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
-                   "the operation as an attached note"),
-    llvm::cl::init(true));
+//===----------------------------------------------------------------------===//
+// MLIRContext CommandLine Options
+//===----------------------------------------------------------------------===//
 
-static llvm::cl::opt<bool> clPrintStackTraceOnDiagnostic(
-    "mlir-print-stacktrace-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
-                   "as an attached note"));
+namespace {
+/// This struct contains command line options that can be used to initialize
+/// various bits of an MLIRContext. This uses a struct wrapper to avoid the need
+/// for global command line options.
+struct MLIRContextOptions {
+  llvm::cl::opt<bool> printOpOnDiagnostic{
+      "mlir-print-op-on-diagnostic",
+      llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
+                     "the operation as an attached note"),
+      llvm::cl::init(true)};
+
+  llvm::cl::opt<bool> printStackTraceOnDiagnostic{
+      "mlir-print-stacktrace-on-diagnostic",
+      llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
+                     "as an attached note")};
+};
+} // end anonymous namespace
+
+static llvm::ManagedStatic<MLIRContextOptions> clOptions;
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the MLIRContext. These flags are used when constructing
+/// an MLIR context for initialization.
+void mlir::registerMLIRContextCLOptions() {
+  // Make sure that the options struct has been initialized.
+  *clOptions;
+}
+
+//===----------------------------------------------------------------------===//
+// Builtin Dialect
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A builtin dialect to define types/etc that are necessary for the validity of
+/// the IR.
+struct BuiltinDialect : public Dialect {
+  BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
+    addAttributes<AffineMapAttr, ArrayAttr, BoolAttr, DenseElementsAttr,
+                  DictionaryAttr, FloatAttr, SymbolRefAttr, IntegerAttr,
+                  IntegerSetAttr, OpaqueAttr, OpaqueElementsAttr,
+                  SparseElementsAttr, StringAttr, TypeAttr, UnitAttr>();
+    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
+                  UnknownLoc>();
+
+    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
+             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
+             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
+
+    // TODO: These operations should be moved to a different dialect when they
+    // have been fully decoupled from the core.
+    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
+  }
+};
+} // end anonymous namespace.
+
+//===----------------------------------------------------------------------===//
+// AffineMap and IntegerSet hashing
+//===----------------------------------------------------------------------===//
 
 /// A utility function to safely get or create a uniqued instance within the
 /// given set container.
@@ -81,27 +133,6 @@ static ValueT safeGetOrCreate(DenseSet<ValueT, DenseInfoT> &container,
 }
 
 namespace {
-/// A builtin dialect to define types/etc that are necessary for the validity of
-/// the IR.
-struct BuiltinDialect : public Dialect {
-  BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
-    addAttributes<AffineMapAttr, ArrayAttr, BoolAttr, DenseElementsAttr,
-                  DictionaryAttr, FloatAttr, SymbolRefAttr, IntegerAttr,
-                  IntegerSetAttr, OpaqueAttr, OpaqueElementsAttr,
-                  SparseElementsAttr, StringAttr, TypeAttr, UnitAttr>();
-    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                  UnknownLoc>();
-
-    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
-             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
-
-    // TODO: These operations should be moved to a different dialect when they
-    // have been fully decoupled from the core.
-    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
-  }
-};
-
 struct AffineMapKeyInfo : DenseMapInfo<AffineMap> {
   // Affine maps are uniqued based on their dim/symbol counts and affine
   // expressions.
@@ -155,6 +186,10 @@ struct IntegerSetKeyInfo : DenseMapInfo<IntegerSet> {
 };
 } // end anonymous namespace.
 
+//===----------------------------------------------------------------------===//
+// MLIRContextImpl
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 /// This is the implementation of the MLIRContext class, using the pImpl idiom.
 /// This class is completely private to this file, so everything is public.
@@ -184,10 +219,10 @@ public:
 
   /// If the operation should be attached to diagnostics printed via the
   /// Operation::emit methods.
-  bool printOpOnDiagnostic;
+  bool printOpOnDiagnostic = true;
 
   /// If the current stack trace should be attached when emitting diagnostics.
-  bool printStackTraceOnDiagnostic;
+  bool printStackTraceOnDiagnostic = false;
 
   //===--------------------------------------------------------------------===//
   // Other
@@ -253,10 +288,13 @@ public:
   UnknownLoc unknownLocAttr;
 
 public:
-  MLIRContextImpl()
-      : printOpOnDiagnostic(clPrintOpOnDiagnostic),
-        printStackTraceOnDiagnostic(clPrintStackTraceOnDiagnostic),
-        identifiers(identifierAllocator) {}
+  MLIRContextImpl() : identifiers(identifierAllocator) {
+    // Initialize values based on the command line flags if they were provided.
+    if (clOptions.isConstructed()) {
+      printOpOnDiagnostic = clOptions->printOpOnDiagnostic;
+      printStackTraceOnDiagnostic = clOptions->printStackTraceOnDiagnostic;
+    }
+  }
 };
 } // end namespace mlir
 
@@ -397,9 +435,7 @@ bool MLIRContext::shouldPrintOpOnDiagnostic() {
 /// Set the flag specifying if we should attach the operation to diagnostics
 /// emitted via Operation::emit.
 void MLIRContext::printOpOnDiagnostic(bool enable) {
-  // Let the command line option take priority.
-  if (!clPrintOpOnDiagnostic.getNumOccurrences())
-    impl->printOpOnDiagnostic = enable;
+  impl->printOpOnDiagnostic = enable;
 }
 
 /// Return true if we should attach the current stacktrace to diagnostics when
@@ -411,9 +447,7 @@ bool MLIRContext::shouldPrintStackTraceOnDiagnostic() {
 /// Set the flag specifying if we should attach the current stacktrace when
 /// emitting diagnostics.
 void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
-  // Let the command line option take priority.
-  if (!clPrintStackTraceOnDiagnostic.getNumOccurrences())
-    impl->printStackTraceOnDiagnostic = enable;
+  impl->printStackTraceOnDiagnostic = enable;
 }
 
 /// Return information about all registered operations.  This isn't very

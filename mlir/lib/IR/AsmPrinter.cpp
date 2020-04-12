@@ -63,50 +63,66 @@ OpAsmPrinter::~OpAsmPrinter() {}
 // OpPrintingFlags
 //===----------------------------------------------------------------------===//
 
-static llvm::cl::opt<int> printElementsAttrWithHexIfLarger(
-    "mlir-print-elementsattrs-with-hex-if-larger",
-    llvm::cl::desc(
-        "Print DenseElementsAttrs with a hex string that have "
-        "more elements than the given upper limit (use -1 to disable)"),
-    llvm::cl::init(100));
+namespace {
+/// This struct contains command line options that can be used to initialize
+/// various bits of the AsmPrinter. This uses a struct wrapper to avoid the need
+/// for global command line options.
+struct AsmPrinterOptions {
+  llvm::cl::opt<int64_t> printElementsAttrWithHexIfLarger{
+      "mlir-print-elementsattrs-with-hex-if-larger",
+      llvm::cl::desc(
+          "Print DenseElementsAttrs with a hex string that have "
+          "more elements than the given upper limit (use -1 to disable)")};
 
-static llvm::cl::opt<unsigned> elideElementsAttrIfLarger(
-    "mlir-elide-elementsattrs-if-larger",
-    llvm::cl::desc("Elide ElementsAttrs with \"...\" that have "
-                   "more elements than the given upper limit"));
+  llvm::cl::opt<unsigned> elideElementsAttrIfLarger{
+      "mlir-elide-elementsattrs-if-larger",
+      llvm::cl::desc("Elide ElementsAttrs with \"...\" that have "
+                     "more elements than the given upper limit")};
 
-static llvm::cl::opt<bool>
-    printDebugInfoOpt("mlir-print-debuginfo",
-                      llvm::cl::desc("Print debug info in MLIR output"),
-                      llvm::cl::init(false));
+  llvm::cl::opt<bool> printDebugInfoOpt{
+      "mlir-print-debuginfo", llvm::cl::init(false),
+      llvm::cl::desc("Print debug info in MLIR output")};
 
-static llvm::cl::opt<bool> printPrettyDebugInfoOpt(
-    "mlir-pretty-debuginfo",
-    llvm::cl::desc("Print pretty debug info in MLIR output"),
-    llvm::cl::init(false));
+  llvm::cl::opt<bool> printPrettyDebugInfoOpt{
+      "mlir-pretty-debuginfo", llvm::cl::init(false),
+      llvm::cl::desc("Print pretty debug info in MLIR output")};
 
-// Use the generic op output form in the operation printer even if the custom
-// form is defined.
-static llvm::cl::opt<bool>
-    printGenericOpFormOpt("mlir-print-op-generic",
-                          llvm::cl::desc("Print the generic op form"),
-                          llvm::cl::init(false), llvm::cl::Hidden);
+  // Use the generic op output form in the operation printer even if the custom
+  // form is defined.
+  llvm::cl::opt<bool> printGenericOpFormOpt{
+      "mlir-print-op-generic", llvm::cl::init(false),
+      llvm::cl::desc("Print the generic op form"), llvm::cl::Hidden};
 
-static llvm::cl::opt<bool> printLocalScopeOpt(
-    "mlir-print-local-scope",
-    llvm::cl::desc("Print assuming in local scope by default"),
-    llvm::cl::init(false), llvm::cl::Hidden);
+  llvm::cl::opt<bool> printLocalScopeOpt{
+      "mlir-print-local-scope", llvm::cl::init(false),
+      llvm::cl::desc("Print assuming in local scope by default"),
+      llvm::cl::Hidden};
+};
+} // end anonymous namespace
+
+static llvm::ManagedStatic<AsmPrinterOptions> clOptions;
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the AsmPrinter.
+void mlir::registerAsmPrinterCLOptions() {
+  // Make sure that the options struct has been initialized.
+  *clOptions;
+}
 
 /// Initialize the printing flags with default supplied by the cl::opts above.
 OpPrintingFlags::OpPrintingFlags()
-    : elementsAttrElementLimit(
-          elideElementsAttrIfLarger.getNumOccurrences()
-              ? Optional<int64_t>(elideElementsAttrIfLarger)
-              : Optional<int64_t>()),
-      printDebugInfoFlag(printDebugInfoOpt),
-      printDebugInfoPrettyFormFlag(printPrettyDebugInfoOpt),
-      printGenericOpFormFlag(printGenericOpFormOpt),
-      printLocalScope(printLocalScopeOpt) {}
+    : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
+      printGenericOpFormFlag(false), printLocalScope(false) {
+  // Initialize based upon command line options, if they are available.
+  if (!clOptions.isConstructed())
+    return;
+  if (clOptions->elideElementsAttrIfLarger.getNumOccurrences())
+    elementsAttrElementLimit = clOptions->elideElementsAttrIfLarger;
+  printDebugInfoFlag = clOptions->printDebugInfoOpt;
+  printDebugInfoPrettyFormFlag = clOptions->printPrettyDebugInfoOpt;
+  printGenericOpFormFlag = clOptions->printGenericOpFormOpt;
+  printLocalScope = clOptions->printLocalScopeOpt;
+}
 
 /// Enable the elision of large elements attributes, by printing a '...'
 /// instead of the element data, when the number of elements is greater than
@@ -168,6 +184,23 @@ bool OpPrintingFlags::shouldPrintGenericOpForm() const {
 
 /// Return if the printer should use local scope when dumping the IR.
 bool OpPrintingFlags::shouldUseLocalScope() const { return printLocalScope; }
+
+/// Returns true if an ElementsAttr with the given number of elements should be
+/// printed with hex.
+static bool shouldPrintElementsAttrWithHex(int64_t numElements) {
+  // Check to see if a command line option was provided for the limit.
+  if (clOptions.isConstructed()) {
+    if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences()) {
+      // -1 is used to disable hex printing.
+      if (clOptions->printElementsAttrWithHexIfLarger == -1)
+        return false;
+      return numElements > clOptions->printElementsAttrWithHexIfLarger;
+    }
+  }
+
+  // Otherwise, default to printing with hex if the number of elements is >100.
+  return numElements > 100;
+}
 
 //===----------------------------------------------------------------------===//
 // NewLineCounter
@@ -1451,8 +1484,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
   }
 
   // Check to see if we should format this attribute as a hex string.
-  if (allowHex && printElementsAttrWithHexIfLarger != -1 &&
-      numElements > printElementsAttrWithHexIfLarger) {
+  if (allowHex && shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
     os << '"' << "0x" << llvm::toHex(StringRef(rawData.data(), rawData.size()))
        << "\"";
