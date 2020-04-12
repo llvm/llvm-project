@@ -12,7 +12,7 @@ namespace VNCoercion {
 
 static bool isFirstClassAggregateOrScalableType(Type *Ty) {
   return Ty->isStructTy() || Ty->isArrayTy() ||
-         (Ty->isVectorTy() && Ty->getVectorIsScalable());
+         (Ty->isVectorTy() && cast<VectorType>(Ty)->isScalable());
 }
 
 /// Return true if coerceAvailableValueToLoadType will succeed.
