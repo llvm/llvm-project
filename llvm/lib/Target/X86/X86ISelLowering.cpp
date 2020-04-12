@@ -6956,9 +6956,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
 
   // Check if we're getting a shuffle mask with zero'd elements.
-  if (!AllowSentinelZero)
-    if (any_of(Mask, [](int M) { return M == SM_SentinelZero; }))
-      return false;
+  if (!AllowSentinelZero && isAnyZero(Mask))
+    return false;
 
   // If we have a fake unary shuffle, the shuffle mask is spread across two
   // inputs that are actually the same node. Re-map the mask to always point
@@ -12133,7 +12132,7 @@ static int matchShuffleAsElementRotate(SDValue &V1, SDValue &V2,
 static int matchShuffleAsByteRotate(MVT VT, SDValue &V1, SDValue &V2,
                                     ArrayRef<int> Mask) {
   // Don't accept any shuffles with zero elements.
-  if (any_of(Mask, [](int M) { return M == SM_SentinelZero; }))
+  if (isAnyZero(Mask))
     return -1;
 
   // PALIGNR works on 128-bit lanes.
@@ -33643,9 +33642,7 @@ static bool matchUnaryPermuteShuffle(MVT MaskVT, ArrayRef<int> Mask,
   unsigned InputSizeInBits = MaskVT.getSizeInBits();
   unsigned MaskScalarSizeInBits = InputSizeInBits / NumMaskElts;
   MVT MaskEltVT = MVT::getIntegerVT(MaskScalarSizeInBits);
-
-  bool ContainsZeros =
-      llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+  bool ContainsZeros = isAnyZero(Mask);
 
   // Handle VPERMI/VPERMILPD vXi64/vXi64 patterns.
   if (!ContainsZeros && MaskScalarSizeInBits == 64) {
@@ -33914,8 +33911,7 @@ static bool matchBinaryPermuteShuffle(
   // Attempt to combine to INSERTPS, but only if it has elements that need to
   // be set to zero.
   if (AllowFloatDomain && EltSizeInBits == 32 && Subtarget.hasSSE41() &&
-      MaskVT.is128BitVector() &&
-      llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; }) &&
+      MaskVT.is128BitVector() && isAnyZero(Mask) &&
       matchShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
     Shuffle = X86ISD::INSERTPS;
     ShuffleVT = MVT::v4f32;
