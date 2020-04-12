@@ -3946,8 +3946,8 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
-bool SITargetLowering::isFMADLegalForFAddFSub(const SelectionDAG &DAG,
-                                              const SDNode *N) const {
+bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
+                                   const SDNode *N) const {
   // TODO: Check future ftz flag
   // v_mad_f32/v_mac_f32 do not support denormals.
   EVT VT = N->getValueType(0);
