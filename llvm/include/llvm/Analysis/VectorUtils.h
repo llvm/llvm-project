@@ -342,6 +342,24 @@ bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                            SmallVectorImpl<int> &ScaledMask);
 
+/// Try to transform a shuffle mask by replacing elements with the scaled index
+/// for an equivalent mask of widened elements. If all mask elements that would
+/// map to a wider element of the new mask are the same negative number
+/// (sentinel value), that element of the new mask is the same value. If any
+/// element in a given slice is negative and some other element in that slice is
+/// not the same value, return false (partial matches with sentinel values are
+/// not allowed).
+///
+/// Example with Scale = 4:
+///   <16 x i8> <12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1> -->
+///   <4 x i32> <3, 2, 0, -1>
+///
+/// This is the reverse process of narrowing shuffle mask elements if it
+/// succeeds. This transform is not always possible because indexes may not
+/// divide evenly (scale down) to map to wider vector elements.
+bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
+                          SmallVectorImpl<int> &ScaledMask);
+
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
 ///
