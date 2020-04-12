@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -63,7 +64,8 @@ int main(int argc, char **argv) {
   llvm::cl::opt<const TranslateFunction *, false, TranslationParser>
       translationRequested("", llvm::cl::desc("Translation to perform"),
                            llvm::cl::Required);
-
+  registerAsmPrinterCLOptions();
+  registerMLIRContextCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR translation driver\n");
 
   std::string errorMessage;
