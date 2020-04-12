@@ -560,6 +560,21 @@ namespace llvm {
       return mod;
     }
 
+    /// Split a simple function which contains only a call and a return into two
+    /// such that the first calls the second and the second whoever was called
+    /// initially.
+    Function *splitSimpleFunction(Function &F) {
+      LLVMContext &Context = F.getContext();
+      Function *SF = Function::Create(F.getFunctionType(), F.getLinkage(),
+                                      F.getName() + "b", F.getParent());
+      F.setName(F.getName() + "a");
+      BasicBlock *Entry = BasicBlock::Create(Context, "entry", SF, nullptr);
+      CallInst &CI = cast<CallInst>(F.getEntryBlock().front());
+      CI.clone()->insertBefore(ReturnInst::Create(Context, Entry));
+      CI.setCalledFunction(SF);
+      return SF;
+    }
+
     struct CGModifierPass : public CGPass {
       unsigned NumSCCs = 0;
       unsigned NumFns = 0;
@@ -582,7 +597,8 @@ namespace llvm {
         Function *F = N->getFunction();
         Module *M = F->getParent();
         Function *Test1F = M->getFunction("test1");
-        Function *Test2F = M->getFunction("test2");
+        Function *Test2aF = M->getFunction("test2a");
+        Function *Test2bF = M->getFunction("test2b");
         Function *Test3F = M->getFunction("test3");
         auto InSCC = [&](Function *Fn) {
           return llvm::any_of(SCMM, [Fn](CallGraphNode *CGN) {
@@ -590,18 +606,19 @@ namespace llvm {
           });
         };
 
-        if (!Test1F || !Test2F || !Test3F || !InSCC(Test1F) || !InSCC(Test2F) ||
-            !InSCC(Test3F))
+        if (!Test1F || !Test2aF || !Test2bF || !Test3F || !InSCC(Test1F) ||
+            !InSCC(Test2aF) || !InSCC(Test2bF) || !InSCC(Test3F))
           return SetupWorked = false;
 
         CallInst *CI = dyn_cast<CallInst>(&Test1F->getEntryBlock().front());
-        if (!CI || CI->getCalledFunction() != Test2F)
+        if (!CI || CI->getCalledFunction() != Test2aF)
           return SetupWorked = false;
 
         CI->setCalledFunction(Test3F);
 
         CGU.initialize(const_cast<CallGraph &>(SCMM.getCallGraph()), SCMM);
-        CGU.removeFunction(*Test2F);
+        CGU.removeFunction(*Test2aF);
+        CGU.removeFunction(*Test2bF);
         CGU.reanalyzeFunction(*Test1F);
         return true;
       }
@@ -610,20 +627,24 @@ namespace llvm {
     };
 
     TEST(PassManager, CallGraphUpdater0) {
-      // SCC#1: test1->test2->test3->test1
+      // SCC#1: test1->test2a->test2b->test3->test1
       // SCC#2: test4
       // SCC#3: indirect call node
 
       LLVMContext Context;
       std::unique_ptr<Module> M(makeLLVMModule(Context));
       ASSERT_EQ(M->getFunctionList().size(), 4U);
+      Function *F = M->getFunction("test2");
+      Function *SF = splitSimpleFunction(*F);
+      CallInst::Create(F, "", &SF->getEntryBlock());
+      ASSERT_EQ(M->getFunctionList().size(), 5U);
       CGModifierPass *P = new CGModifierPass();
       legacy::PassManager Passes;
       Passes.add(P);
       Passes.run(*M);
       ASSERT_TRUE(P->SetupWorked);
       ASSERT_EQ(P->NumSCCs, 3U);
-      ASSERT_EQ(P->NumFns, 4U);
+      ASSERT_EQ(P->NumFns, 5U);
       ASSERT_EQ(M->getFunctionList().size(), 3U);
     }
   }
