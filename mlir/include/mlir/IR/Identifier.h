@@ -50,7 +50,12 @@ public:
   unsigned size() const { return ::strlen(pointer); }
 
   /// Return true if this identifier is the specified string.
-  bool is(StringRef string) const { return strref().equals(string); }
+  bool is(StringRef string) const {
+    // Note: this can't use memcmp, because memcmp doesn't guarantee that it
+    // will stop reading both buffers if one is shorter than the other.
+    return strncmp(pointer, string.data(), string.size()) == 0 &&
+           pointer[string.size()] == '\0';
+  }
 
   const char *begin() const { return pointer; }
   const char *end() const { return pointer + size(); }
