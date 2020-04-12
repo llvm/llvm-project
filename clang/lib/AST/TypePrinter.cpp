@@ -1329,7 +1329,12 @@ void TypePrinter::printTemplateSpecializationAfter(
 
 void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
                                                raw_ostream &OS) {
-  printTemplateSpecializationBefore(T->getInjectedTST(), OS);
+  if (Policy.PrintInjectedClassNameWithArguments)
+    return printTemplateSpecializationBefore(T->getInjectedTST(), OS);
+
+  IncludeStrongLifetimeRAII Strong(Policy);
+  T->getTemplateName().print(OS, Policy);
+  spaceBeforePlaceHolder(OS);
 }
 
 void TypePrinter::printInjectedClassNameAfter(const InjectedClassNameType *T,
