@@ -48,18 +48,18 @@ declare void @decl()
 
 ; TODO: label and metadata types
 define void @types() {
-  %1 = alloca half
-  %2 = alloca float
-  %3 = alloca double
-  %4 = alloca x86_fp80
-  %5 = alloca fp128
-  %6 = alloca ppc_fp128
-  %7 = alloca i7
-  %8 = alloca void (i1)*
-  %9 = alloca [3 x i22]
-  %10 = alloca i328 addrspace(5)*
-  %11 = alloca <5 x i23*>
-  %12 = alloca x86_mmx
+  %1 = alloca half, align 2
+  %2 = alloca float, align 4
+  %3 = alloca double, align 8
+  %4 = alloca x86_fp80, align 16
+  %5 = alloca fp128, align 16
+  %6 = alloca ppc_fp128, align 16
+  %7 = alloca i7, align 1
+  %8 = alloca void (i1)*, align 8
+  %9 = alloca [3 x i22], align 4
+  %10 = alloca i328 addrspace(5)*, align 8
+  %11 = alloca <5 x i23*>, align 64
+  %12 = alloca x86_mmx, align 8
   ret void
 }
 
@@ -203,7 +203,7 @@ declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_intrinsics() {
 entry:
   %sp = call i8* @llvm.stacksave()
-  %x = alloca i32
+  %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)

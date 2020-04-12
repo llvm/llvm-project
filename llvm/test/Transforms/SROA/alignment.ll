@@ -130,11 +130,14 @@ entry:
 }
 
 define void @test6() {
-; Test that we promote alignment when the underlying alloca switches to one
-; that innately provides it.
+; We should set the alignment on all load and store operations; make sure
+; we choose an appropriate alignment.
 ; CHECK-LABEL: @test6(
-; CHECK: alloca double
-; CHECK: alloca double
+; CHECK: alloca double{{$}}
+; CHECK: alloca double{{$}}
+; CHECK: store{{.*}}, align 8
+; CHECK: load{{.*}}, align 8
+; CHECK: store{{.*}}, align 8
 ; CHECK-NOT: align
 ; CHECK: ret void
 
