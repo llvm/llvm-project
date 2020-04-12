@@ -85,7 +85,7 @@ static StringRef TrySuggestX86(StringRef Name) {
 SIMDIntrinsicsCheck::SIMDIntrinsicsCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Std(Options.get("Std", "")),
-      Suggest(Options.get("Suggest", 0) != 0) {}
+      Suggest(Options.get("Suggest", false)) {}
 
 void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Std", "");

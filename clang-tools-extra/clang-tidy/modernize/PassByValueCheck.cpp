@@ -123,7 +123,7 @@ PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
                                             utils::IncludeSorter::getMapping(),
                                             utils::IncludeSorter::IS_LLVM)),
-      ValuesOnly(Options.get("ValuesOnly", 0) != 0) {}
+      ValuesOnly(Options.get("ValuesOnly", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeStyle,

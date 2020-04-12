@@ -499,7 +499,7 @@ static void insertNullTerminatorExpr(StringRef Name,
 NotNullTerminatedResultCheck::NotNullTerminatedResultCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WantToUseSafeFunctions(Options.get("WantToUseSafeFunctions", 1)) {}
+      WantToUseSafeFunctions(Options.get("WantToUseSafeFunctions", true)) {}
 
 void NotNullTerminatedResultCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

@@ -186,8 +186,8 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
 UseDefaultMemberInitCheck::UseDefaultMemberInitCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      UseAssignment(Options.get("UseAssignment", 0) != 0),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true) != 0) {}
+      UseAssignment(Options.get("UseAssignment", false)),
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseDefaultMemberInitCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
