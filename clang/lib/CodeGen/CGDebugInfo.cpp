@@ -1868,6 +1868,8 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
           CharUnits chars =
               CGM.getContext().toCharUnitsFromBits((int64_t)fieldOffset);
           V = CGM.getCXXABI().EmitMemberDataPointer(MPT, chars);
+        } else if (const auto *GD = dyn_cast<MSGuidDecl>(D)) {
+          V = CGM.GetAddrOfMSGuidDecl(GD).getPointer();
         }
         assert(V && "Failed to find template parameter pointer");
         V = V->stripPointerCasts();

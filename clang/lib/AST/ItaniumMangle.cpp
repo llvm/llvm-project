@@ -652,8 +652,12 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
   else if (const IndirectFieldDecl *IFD =
                dyn_cast<IndirectFieldDecl>(GD.getDecl()))
     mangleName(IFD->getAnonField());
+  else if (const FieldDecl *FD = dyn_cast<FieldDecl>(GD.getDecl()))
+    mangleName(FD);
+  else if (const MSGuidDecl *GuidD = dyn_cast<MSGuidDecl>(GD.getDecl()))
+    mangleName(GuidD);
   else
-    mangleName(cast<FieldDecl>(GD.getDecl()));
+    llvm_unreachable("unexpected kind of global decl");
 }
 
 void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
@@ -1284,6 +1288,16 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
         mangleSourceName(BD->getDeclName().getAsIdentifierInfo());
       Out << 'E';
       writeAbiTags(ND, AdditionalAbiTags);
+      break;
+    }
+
+    if (auto *GD = dyn_cast<MSGuidDecl>(ND)) {
+      // We follow MSVC in mangling GUID declarations as if they were variables
+      // with a particular reserved name. Continue the pretense here.
+      SmallString<sizeof("_GUID_12345678_1234_1234_1234_1234567890ab")> GUID;
+      llvm::raw_svector_ostream GUIDOS(GUID);
+      Context.mangleMSGuidDecl(GD, GUIDOS);
+      Out << GUID.size() << GUID;
       break;
     }
 

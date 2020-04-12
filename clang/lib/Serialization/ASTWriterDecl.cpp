@@ -95,6 +95,7 @@ namespace clang {
     void VisitCXXConversionDecl(CXXConversionDecl *D);
     void VisitFieldDecl(FieldDecl *D);
     void VisitMSPropertyDecl(MSPropertyDecl *D);
+    void VisitMSGuidDecl(MSGuidDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -951,6 +952,17 @@ void ASTDeclWriter::VisitMSPropertyDecl(MSPropertyDecl *D) {
   Record.AddIdentifierRef(D->getGetterId());
   Record.AddIdentifierRef(D->getSetterId());
   Code = serialization::DECL_MS_PROPERTY;
+}
+
+void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
+  VisitValueDecl(D);
+  MSGuidDecl::Parts Parts = D->getParts();
+  Record.push_back(Parts.Part1);
+  Record.push_back(Parts.Part2);
+  Record.push_back(Parts.Part3);
+  for (auto C : Parts.Part4And5)
+    Record.push_back(C);
+  Code = serialization::DECL_MS_GUID;
 }
 
 void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {

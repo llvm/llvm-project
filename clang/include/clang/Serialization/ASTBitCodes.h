@@ -1134,27 +1134,30 @@ namespace serialization {
       /// The internal '__builtin_ms_va_list' typedef.
       PREDEF_DECL_BUILTIN_MS_VA_LIST_ID = 11,
 
+      /// The predeclared '_GUID' struct.
+      PREDEF_DECL_BUILTIN_MS_GUID_ID = 12,
+
       /// The extern "C" context.
-      PREDEF_DECL_EXTERN_C_CONTEXT_ID = 12,
+      PREDEF_DECL_EXTERN_C_CONTEXT_ID = 13,
 
       /// The internal '__make_integer_seq' template.
-      PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 13,
+      PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 14,
 
       /// The internal '__NSConstantString' typedef.
-      PREDEF_DECL_CF_CONSTANT_STRING_ID = 14,
+      PREDEF_DECL_CF_CONSTANT_STRING_ID = 15,
 
       /// The internal '__NSConstantString' tag type.
-      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 15,
+      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 16,
 
       /// The internal '__type_pack_element' template.
-      PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 16,
+      PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
     };
 
     /// The number of declaration IDs that are predefined.
     ///
     /// For more information about predefined declarations, see the
     /// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
-    const unsigned int NUM_PREDEF_DECL_IDS = 17;
+    const unsigned int NUM_PREDEF_DECL_IDS = 18;
 
     /// Record of updates for a declaration that was modified after
     /// being deserialized. This can occur within DECLTYPES_BLOCK_ID.
@@ -1227,6 +1230,9 @@ namespace serialization {
 
       /// A MSPropertyDecl record.
       DECL_MS_PROPERTY,
+
+      /// A MSGuidDecl record.
+      DECL_MS_GUID,
 
       /// A VarDecl record.
       DECL_VAR,

@@ -2156,8 +2156,7 @@ void ASTStmtReader::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *E) {
 void ASTStmtReader::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   VisitExpr(E);
   E->setSourceRange(readSourceRange());
-  std::string UuidStr = readString();
-  E->setUuidStr(StringRef(UuidStr).copy(Record.getContext()));
+  E->Guid = readDeclAs<MSGuidDecl>();
   if (E->isTypeOperand())
     E->Operand = readTypeSourceInfo();
   else
