@@ -46,3 +46,9 @@ function(add_mlir_conversion_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
   add_mlir_library(${ARGV})
 endfunction(add_mlir_conversion_library)
+
+# Declare the library associated with a translation.
+function(add_mlir_translation_library name)
+  set_property(GLOBAL APPEND PROPERTY MLIR_TRANSLATION_LIBS ${name})
+  add_mlir_library(${ARGV})
+endfunction(add_mlir_translation_library)
