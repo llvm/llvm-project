@@ -232,7 +232,6 @@ accordingly, like so:
 
 .. code-block:: C
 
-  for (...) {
     c = ...;
     if (c) {
       for (...) {
