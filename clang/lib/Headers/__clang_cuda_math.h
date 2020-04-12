@@ -340,6 +340,16 @@ __DEVICE__ float y1f(float __a) { return __nv_y1f(__a); }
 __DEVICE__ double yn(int __a, double __b) { return __nv_yn(__a, __b); }
 __DEVICE__ float ynf(int __a, float __b) { return __nv_ynf(__a, __b); }
 
+// In C++ mode OpenMP takes the system versions of these because some math
+// headers provide the wrong return type. This cannot happen in C and we can and
+// want to use the specialized versions right away.
+#if defined(_OPENMP) && !defined(__cplusplus)
+__DEVICE__ int isinff(float __x) { return __nv_isinff(__x); }
+__DEVICE__ int isinf(double __x) { return __nv_isinfd(__x); }
+__DEVICE__ int isnanf(float __x) { return __nv_isnanf(__x); }
+__DEVICE__ int isnan(double __x) { return __nv_isnand(__x); }
+#endif
+
 #pragma pop_macro("__DEVICE__")
 #pragma pop_macro("__DEVICE_VOID__")
 #pragma pop_macro("__FAST_OR_SLOW")
