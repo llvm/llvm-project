@@ -26159,62 +26159,46 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(X86ISD::CMOV, dl, VT, Ops);
 }
 
-/// Break a 256-bit integer operation into two new 128-bit ones and then
+/// Break a binary integer operation into 2 half sized ops and then
 /// concatenate the result back.
-static SDValue split256IntArith(SDValue Op, SelectionDAG &DAG) {
+static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-
-  assert(VT.is256BitVector() && VT.isInteger() &&
-         "Unsupported value type for operation");
-
   unsigned NumElems = VT.getVectorNumElements();
+  unsigned SizeInBits = VT.getSizeInBits();
   SDLoc dl(Op);
 
-  // Extract the LHS vectors
+  // Extract the LHS Lo/Hi vectors
   SDValue LHS = Op.getOperand(0);
-  SDValue LHS1 = extract128BitVector(LHS, 0, DAG, dl);
-  SDValue LHS2 = extract128BitVector(LHS, NumElems / 2, DAG, dl);
+  SDValue LHS1 = extractSubVector(LHS, 0, DAG, dl, SizeInBits / 2);
+  SDValue LHS2 = extractSubVector(LHS, NumElems / 2, DAG, dl, SizeInBits / 2);
 
-  // Extract the RHS vectors
+  // Extract the RHS Lo/Hi vectors
   SDValue RHS = Op.getOperand(1);
-  SDValue RHS1 = extract128BitVector(RHS, 0, DAG, dl);
-  SDValue RHS2 = extract128BitVector(RHS, NumElems / 2, DAG, dl);
+  SDValue RHS1 = extractSubVector(RHS, 0, DAG, dl, SizeInBits / 2);
+  SDValue RHS2 = extractSubVector(RHS, NumElems / 2, DAG, dl, SizeInBits / 2);
 
-  MVT EltVT = VT.getVectorElementType();
-  MVT NewVT = MVT::getVectorVT(EltVT, NumElems/2);
-
+  MVT NewVT = MVT::getVectorVT(VT.getVectorElementType(), NumElems / 2);
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
                      DAG.getNode(Op.getOpcode(), dl, NewVT, LHS1, RHS1),
                      DAG.getNode(Op.getOpcode(), dl, NewVT, LHS2, RHS2));
 }
 
+/// Break a 256-bit integer operation into two new 128-bit ones and then
+/// concatenate the result back.
+static SDValue split256IntArith(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType().is256BitVector() &&
+         Op.getSimpleValueType().isInteger() &&
+         "Unsupported value type for operation");
+  return splitVectorIntBinary(Op, DAG);
+}
+
 /// Break a 512-bit integer operation into two new 256-bit ones and then
 /// concatenate the result back.
 static SDValue split512IntArith(SDValue Op, SelectionDAG &DAG) {
-  MVT VT = Op.getSimpleValueType();
-
-  assert(VT.is512BitVector() && VT.isInteger() &&
+  assert(Op.getSimpleValueType().is512BitVector() &&
+         Op.getSimpleValueType().isInteger() &&
          "Unsupported value type for operation");
-
-  unsigned NumElems = VT.getVectorNumElements();
-  SDLoc dl(Op);
-
-  // Extract the LHS vectors
-  SDValue LHS = Op.getOperand(0);
-  SDValue LHS1 = extract256BitVector(LHS, 0, DAG, dl);
-  SDValue LHS2 = extract256BitVector(LHS, NumElems / 2, DAG, dl);
-
-  // Extract the RHS vectors
-  SDValue RHS = Op.getOperand(1);
-  SDValue RHS1 = extract256BitVector(RHS, 0, DAG, dl);
-  SDValue RHS2 = extract256BitVector(RHS, NumElems / 2, DAG, dl);
-
-  MVT EltVT = VT.getVectorElementType();
-  MVT NewVT = MVT::getVectorVT(EltVT, NumElems/2);
-
-  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
-                     DAG.getNode(Op.getOpcode(), dl, NewVT, LHS1, RHS1),
-                     DAG.getNode(Op.getOpcode(), dl, NewVT, LHS2, RHS2));
+  return splitVectorIntBinary(Op, DAG);
 }
 
 static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
