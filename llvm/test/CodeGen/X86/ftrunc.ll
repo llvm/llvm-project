@@ -223,15 +223,14 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 define float @trunc_signed_f32_no_fast_math(float %x) {
 ; SSE-LABEL: trunc_signed_f32_no_fast_math:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvttss2si %xmm0, %eax
-; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_f32_no_fast_math:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcvttss2si %xmm0, %eax
-; AVX1-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm0
+; AVX1-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to float
@@ -241,9 +240,8 @@ define float @trunc_signed_f32_no_fast_math(float %x) {
 define float @trunc_signed_f32(float %x) #0 {
 ; SSE2-LABEL: trunc_signed_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cvttss2si %xmm0, %eax
-; SSE2-NEXT:    xorps %xmm0, %xmm0
-; SSE2-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed_f32:
