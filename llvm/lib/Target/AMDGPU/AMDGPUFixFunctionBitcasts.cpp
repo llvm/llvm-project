@@ -35,8 +35,9 @@ public:
     if (CS.getCalledFunction())
       return;
     auto Callee = dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-    if (Callee && isLegalToPromote(CS, Callee)) {
-      promoteCall(CS, Callee);
+    if (Callee &&
+        isLegalToPromote(*cast<CallBase>(CS.getInstruction()), Callee)) {
+      promoteCall(*cast<CallBase>(CS.getInstruction()), Callee);
       Modified = true;
     }
   }
