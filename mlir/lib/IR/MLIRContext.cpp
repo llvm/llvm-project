@@ -28,7 +28,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
@@ -210,7 +210,7 @@ public:
   DenseMap<TypeID, Dialect *> registeredDialectSymbols;
 
   /// These are identifiers uniqued into this MLIRContext.
-  llvm::StringMap<char, llvm::BumpPtrAllocator &> identifiers;
+  llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -511,7 +511,7 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
-  auto it = impl.identifiers.insert({str, char()}).first;
+  auto it = impl.identifiers.insert(str).first;
   return Identifier(it->getKeyData());
 }
 
