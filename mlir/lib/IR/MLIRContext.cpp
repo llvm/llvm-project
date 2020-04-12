@@ -493,10 +493,6 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
 
 /// Return an identifier for the specified string.
 Identifier Identifier::get(StringRef str, MLIRContext *context) {
-  assert(!str.empty() && "Cannot create an empty identifier");
-  assert(str.find('\0') == StringRef::npos &&
-         "Cannot create an identifier with a nul character");
-
   auto &impl = context->getImpl();
 
   { // Check for an existing identifier in read-only mode.
@@ -505,6 +501,13 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
     if (it != impl.identifiers.end())
       return Identifier(it->getKeyData());
   }
+
+  // Check invariants after seeing if we already have something in the
+  // identifier table - if we already had it in the table, then it already
+  // passed invariant checks.
+  assert(!str.empty() && "Cannot create an empty identifier");
+  assert(str.find('\0') == StringRef::npos &&
+         "Cannot create an identifier with a nul character");
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
