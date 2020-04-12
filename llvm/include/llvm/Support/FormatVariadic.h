@@ -143,7 +143,7 @@ template <typename Tuple> class formatv_object : public formatv_object_base {
     template <typename... Ts>
     std::array<detail::format_adapter *, std::tuple_size<Tuple>::value>
     operator()(Ts &... Items) {
-      return {&Items...};
+      return {{&Items...}};
     }
   };
 
