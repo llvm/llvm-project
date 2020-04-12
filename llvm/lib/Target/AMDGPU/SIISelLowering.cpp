@@ -11049,9 +11049,8 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
       // consider, so this assumes if any value is SGPR, the overall register
       // also needs to be SGPR.
       const SIRegisterInfo *SIRI = Subtarget->getRegisterInfo();
-      ImmutableCallSite CS(CI);
       TargetLowering::AsmOperandInfoVector TargetConstraints = ParseConstraints(
-          MF.getDataLayout(), Subtarget->getRegisterInfo(), CS);
+          MF.getDataLayout(), Subtarget->getRegisterInfo(), *CI);
       for (auto &TC : TargetConstraints) {
         if (TC.Type == InlineAsm::isOutput) {
           ComputeConstraintToUse(TC, SDValue());

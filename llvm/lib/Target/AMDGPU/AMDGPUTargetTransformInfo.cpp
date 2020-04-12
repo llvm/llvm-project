@@ -714,9 +714,8 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
 
   const DataLayout &DL = CI->getModule()->getDataLayout();
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
-  ImmutableCallSite CS(CI);
-  TargetLowering::AsmOperandInfoVector TargetConstraints
-    = TLI->ParseConstraints(DL, ST->getRegisterInfo(), CS);
+  TargetLowering::AsmOperandInfoVector TargetConstraints =
+      TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CI);
 
   const int TargetOutputIdx = Indices.empty() ? -1 : Indices[0];
 
