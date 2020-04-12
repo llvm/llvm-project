@@ -68,7 +68,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -886,7 +885,6 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
   Args.reserve(NumArgs);
 
   // Populate the argument list.
-  ImmutableCallSite CS(CI);
   for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs; ArgI != ArgE; ++ArgI) {
     Value *V = CI->getOperand(ArgI);
 
@@ -895,7 +893,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgI);
+    Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
 
@@ -1119,10 +1117,8 @@ bool FastISel::lowerCallTo(const CallInst *CI, const char *SymName,
 
 bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
                            unsigned NumArgs) {
-  ImmutableCallSite CS(CI);
-
-  FunctionType *FTy = CS.getFunctionType();
-  Type *RetTy = CS.getType();
+  FunctionType *FTy = CI->getFunctionType();
+  Type *RetTy = CI->getType();
 
   ArgListTy Args;
   Args.reserve(NumArgs);
@@ -1137,13 +1133,13 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgI);
+    Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
-  TLI.markLibCallAttributes(MF, CS.getCallingConv(), Args);
+  TLI.markLibCallAttributes(MF, CI->getCallingConv(), Args);
 
   CallLoweringInfo CLI;
-  CLI.setCallee(RetTy, FTy, Symbol, std::move(Args), CS, NumArgs);
+  CLI.setCallee(RetTy, FTy, Symbol, std::move(Args), CI, NumArgs);
 
   return lowerCallTo(CLI);
 }
@@ -1261,17 +1257,14 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
 }
 
 bool FastISel::lowerCall(const CallInst *CI) {
-  ImmutableCallSite CS(CI);
-
-  FunctionType *FuncTy = CS.getFunctionType();
-  Type *RetTy = CS.getType();
+  FunctionType *FuncTy = CI->getFunctionType();
+  Type *RetTy = CI->getType();
 
   ArgListTy Args;
   ArgListEntry Entry;
-  Args.reserve(CS.arg_size());
+  Args.reserve(CI->arg_size());
 
-  for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
-       i != e; ++i) {
+  for (auto i = CI->arg_begin(), e = CI->arg_end(); i != e; ++i) {
     Value *V = *i;
 
     // Skip empty types
@@ -1282,14 +1275,14 @@ bool FastISel::lowerCall(const CallInst *CI) {
     Entry.Ty = V->getType();
 
     // Skip the first return-type Attribute to get to params.
-    Entry.setAttributes(&CS, i - CS.arg_begin());
+    Entry.setAttributes(CI, i - CI->arg_begin());
     Args.push_back(Entry);
   }
 
   // Check if target-independent constraints permit a tail call here.
   // Target-dependent constraints are checked within fastLowerCall.
   bool IsTailCall = CI->isTailCall();
-  if (IsTailCall && !isInTailCallPosition(CS, TM))
+  if (IsTailCall && !isInTailCallPosition(CI, TM))
     IsTailCall = false;
   if (IsTailCall && MF->getFunction()
                             .getFnAttribute("disable-tail-calls")
@@ -1297,7 +1290,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     IsTailCall = false;
 
   CallLoweringInfo CLI;
-  CLI.setCallee(RetTy, FuncTy, CI->getCalledValue(), std::move(Args), CS)
+  CLI.setCallee(RetTy, FuncTy, CI->getCalledValue(), std::move(Args), CI)
       .setTailCall(IsTailCall);
 
   return lowerCallTo(CLI);
@@ -1643,9 +1636,9 @@ bool FastISel::selectInstruction(const Instruction *I) {
   }
 
   // FastISel does not handle any operand bundles except OB_funclet.
-  if (ImmutableCallSite CS = ImmutableCallSite(I))
-    for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i)
-      if (CS.getOperandBundleAt(i).getTagID() != LLVMContext::OB_funclet)
+  if (auto *Call = dyn_cast<CallBase>(I))
+    for (unsigned i = 0, e = Call->getNumOperandBundles(); i != e; ++i)
+      if (Call->getOperandBundleAt(i).getTagID() != LLVMContext::OB_funclet)
         return false;
 
   DbgLoc = I->getDebugLoc();
