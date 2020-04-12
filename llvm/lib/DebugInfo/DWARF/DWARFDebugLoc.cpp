@@ -156,7 +156,9 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
     return true;
   });
   if (E) {
-    DumpOpts.RecoverableErrorHandler(std::move(E));
+    OS << "\n";
+    OS.indent(Indent);
+    OS << "error: " << toString(std::move(E));
     return false;
   }
   return true;
