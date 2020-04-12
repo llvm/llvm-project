@@ -33842,6 +33842,25 @@ static bool matchBinaryPermuteShuffle(
   unsigned NumMaskElts = Mask.size();
   unsigned EltSizeInBits = MaskVT.getScalarSizeInBits();
 
+  // Attempt to match against VALIGND/VALIGNQ rotate.
+  if (AllowIntDomain && (EltSizeInBits == 64 || EltSizeInBits == 32) &&
+      ((MaskVT.is128BitVector() && Subtarget.hasVLX()) ||
+       (MaskVT.is256BitVector() && Subtarget.hasVLX()) ||
+       (MaskVT.is512BitVector() && Subtarget.hasAVX512()))) {
+    if (!isAnyZero(Mask)) {
+      int Rotation = matchShuffleAsElementRotate(V1, V2, Mask);
+      if (0 < Rotation) {
+        Shuffle = X86ISD::VALIGN;
+        if (EltSizeInBits == 64)
+          ShuffleVT = MVT::getVectorVT(MVT::i64, MaskVT.getSizeInBits() / 64);
+        else
+          ShuffleVT = MVT::getVectorVT(MVT::i32, MaskVT.getSizeInBits() / 32);
+        PermuteImm = Rotation;
+        return true;
+      }
+    }
+  }
+
   // Attempt to match against PALIGNR byte rotate.
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSSE3()) ||
                          (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
@@ -34035,10 +34054,14 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // is different from the root element size - this would prevent writemasks
   // from being reused.
   // TODO - this currently prevents all lane shuffles from occurring.
-  // TODO - check for writemasks usage instead of always preventing combining.
   // TODO - attempt to narrow Mask back to writemask size.
-  bool IsEVEXShuffle =
-      RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128);
+  bool IsMaskedShuffle = false;
+  if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
+    if (Root.hasOneUse() && Root->use_begin()->getOpcode() == ISD::VSELECT &&
+        Root->use_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
+      IsMaskedShuffle = true;
+    }
+  }
 
   // Attempt to match a subvector broadcast.
   // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
@@ -34079,7 +34102,59 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       return DAG.getBitcast(RootVT, Res);
     }
 
-    // TODO - handle AVX512 cases with X86ISD::SHUF128.
+    SmallVector<int, 4> Mask;
+    if (BaseMaskEltSizeInBits > 128) {
+      assert((BaseMaskEltSizeInBits % 128) == 0 && "Illegal mask size");
+      int MaskScale = BaseMaskEltSizeInBits / 128;
+      narrowShuffleMaskElts(MaskScale, BaseMask, Mask);
+    } else {
+      Mask.assign(BaseMask.begin(), BaseMask.end());
+    }
+
+    // Try to lower to vshuf64x2/vshuf32x4.
+    auto MatchSHUF128 = [](MVT ShuffleVT, const SDLoc &DL, ArrayRef<int> Mask,
+                           SDValue V1, SDValue V2, SelectionDAG &DAG) {
+      unsigned PermMask = 0;
+      // Insure elements came from the same Op.
+      SDValue Ops[2] = {DAG.getUNDEF(ShuffleVT), DAG.getUNDEF(ShuffleVT)};
+      for (int i = 0; i < 4; ++i) {
+        assert(Mask[i] >= -1 && "Illegal shuffle sentinel value");
+        if (Mask[i] < 0)
+          continue;
+
+        SDValue Op = Mask[i] >= 4 ? V2 : V1;
+        unsigned OpIndex = i / 2;
+        if (Ops[OpIndex].isUndef())
+          Ops[OpIndex] = Op;
+        else if (Ops[OpIndex] != Op)
+          return SDValue();
+
+        // Convert the 128-bit shuffle mask selection values into 128-bit
+        // selection bits defined by a vshuf64x2 instruction's immediate control
+        // byte.
+        PermMask |= (Mask[i] % 4) << (i * 2);
+      }
+
+      return DAG.getNode(X86ISD::SHUF128, DL, ShuffleVT,
+                         DAG.getBitcast(ShuffleVT, Ops[0]),
+                         DAG.getBitcast(ShuffleVT, Ops[1]),
+                         DAG.getTargetConstant(PermMask, DL, MVT::i8));
+    };
+
+    // FIXME: Is there a better way to do this? is256BitLaneRepeatedShuffleMask
+    // doesn't work because our mask is for 128 bits and we don't have an MVT
+    // to match that.
+    bool PreferPERMQ =
+        UnaryShuffle && isUndefOrInRange(Mask[0], 0, 2) &&
+        isUndefOrInRange(Mask[1], 0, 2) && isUndefOrInRange(Mask[2], 2, 4) &&
+        isUndefOrInRange(Mask[3], 2, 4) &&
+        (Mask[0] < 0 || Mask[2] < 0 || Mask[0] == (Mask[2] % 2)) &&
+        (Mask[1] < 0 || Mask[3] < 0 || Mask[1] == (Mask[3] % 2));
+
+    if (!isAnyZero(Mask) && !PreferPERMQ) {
+      if (SDValue V = MatchSHUF128(ShuffleVT, DL, Mask, V1, V2, DAG))
+        return DAG.getBitcast(RootVT, V);
+    }
   }
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
@@ -34119,8 +34194,11 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       return DAG.getBitcast(RootVT, Res);
     }
 
+    if (Depth == 0 && Root.getOpcode() == X86ISD::SHUF128)
+      return SDValue(); // Nothing to do!
+
     // TODO - handle AVX512VL cases with X86ISD::SHUF128.
-    if (!UnaryShuffle && !IsEVEXShuffle) {
+    if (!UnaryShuffle && !IsMaskedShuffle) {
       assert(llvm::all_of(BaseMask, [](int M) { return 0 <= M && M < 4; }) &&
              "Unexpected shuffle sentinel value");
       // Prefer blends to X86ISD::VPERM2X128.
@@ -34148,7 +34226,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     int MaskScale = BaseMaskEltSizeInBits / 64;
     narrowShuffleMaskElts(MaskScale, BaseMask, Mask);
   } else {
-    Mask = SmallVector<int, 64>(BaseMask.begin(), BaseMask.end());
+    Mask.assign(BaseMask.begin(), BaseMask.end());
   }
 
   unsigned NumMaskElts = Mask.size();
@@ -34199,8 +34277,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
     // Attempt to match against broadcast-from-vector.
     // Limit AVX1 to cases where we're loading+broadcasting a scalar element.
-    if ((Subtarget.hasAVX2() || (Subtarget.hasAVX() && 32 <= MaskEltSizeInBits))
-        && (!IsEVEXShuffle || NumRootElts == NumMaskElts)) {
+    if ((Subtarget.hasAVX2() ||
+         (Subtarget.hasAVX() && 32 <= MaskEltSizeInBits)) &&
+        (!IsMaskedShuffle || NumRootElts == NumMaskElts)) {
       SmallVector<int, 64> BroadcastMask(NumMaskElts, 0);
       if (isTargetShuffleEquivalent(Mask, BroadcastMask)) {
         if (V1.getValueType() == MaskVT &&
@@ -34226,7 +34305,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (matchUnaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, NewV1,
                           DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
                           ShuffleVT) &&
-        (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
+        (!IsMaskedShuffle ||
+         (NumRootElts == ShuffleVT.getVectorNumElements()))) {
       if (Depth == 0 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleSrcVT, NewV1);
@@ -34237,7 +34317,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (matchUnaryPermuteShuffle(MaskVT, Mask, Zeroable, AllowFloatDomain,
                                  AllowIntDomain, Subtarget, Shuffle, ShuffleVT,
                                  PermuteImm) &&
-        (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
+        (!IsMaskedShuffle ||
+         (NumRootElts == ShuffleVT.getVectorNumElements()))) {
       if (Depth == 0 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, V1);
@@ -34252,7 +34333,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (matchBinaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, NewV1,
                          NewV2, DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
                          ShuffleVT, UnaryShuffle) &&
-      (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
+      (!IsMaskedShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
     if (Depth == 0 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleSrcVT, NewV1);
@@ -34263,10 +34344,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   NewV1 = V1; // Save operands in case early exit happens.
   NewV2 = V2;
-  if (matchBinaryPermuteShuffle(
-          MaskVT, Mask, Zeroable, AllowFloatDomain, AllowIntDomain, NewV1,
-          NewV2, DL, DAG, Subtarget, Shuffle, ShuffleVT, PermuteImm) &&
-      (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
+  if (matchBinaryPermuteShuffle(MaskVT, Mask, Zeroable, AllowFloatDomain,
+                                AllowIntDomain, NewV1, NewV2, DL, DAG,
+                                Subtarget, Shuffle, ShuffleVT, PermuteImm) &&
+      (!IsMaskedShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
     if (Depth == 0 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleVT, NewV1);

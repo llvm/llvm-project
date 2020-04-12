@@ -120,29 +120,19 @@ define <2 x double> @slto2f64(<2 x i64> %a) {
 }
 
 define <2 x float> @sltof2f32(<2 x i64> %a) {
-; NOVLDQ-LABEL: sltof2f32:
-; NOVLDQ:       # %bb.0:
-; NOVLDQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NOVLDQ-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
-; NOVLDQ-NEXT:    vmovq %xmm0, %rax
-; NOVLDQ-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
-; NOVLDQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
-; NOVLDQ-NEXT:    retq
+; NODQ-LABEL: sltof2f32:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; NODQ-NEXT:    vmovq %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
+; NODQ-NEXT:    retq
 ;
 ; VLDQ-LABEL: sltof2f32:
 ; VLDQ:       # %bb.0:
 ; VLDQ-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; VLDQ-NEXT:    retq
-;
-; VLNODQ-LABEL: sltof2f32:
-; VLNODQ:       # %bb.0:
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
-; VLNODQ-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VLNODQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; VLNODQ-NEXT:    retq
 ;
 ; DQNOVL-LABEL: sltof2f32:
 ; DQNOVL:       # %bb.0:

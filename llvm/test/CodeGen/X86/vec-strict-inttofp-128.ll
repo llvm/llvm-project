@@ -1350,7 +1350,8 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ;
 ; AVX512VL-32-LABEL: uitofp_v2i64_v2f64:
 ; AVX512VL-32:       # %bb.0:
-; AVX512VL-32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm1
+; AVX512VL-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-32-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX512VL-32-NEXT:    vpor {{\.LCPI.*}}, %xmm1, %xmm1
 ; AVX512VL-32-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
@@ -1360,7 +1361,8 @@ define <2 x double> @uitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ;
 ; AVX512VL-64-LABEL: uitofp_v2i64_v2f64:
 ; AVX512VL-64:       # %bb.0:
-; AVX512VL-64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm1
+; AVX512VL-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-64-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX512VL-64-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512VL-64-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
