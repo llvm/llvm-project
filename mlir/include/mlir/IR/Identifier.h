@@ -96,9 +96,9 @@ inline bool operator!=(StringRef lhs, Identifier rhs) { return !rhs.is(lhs); }
 
 // Make identifiers hashable.
 inline llvm::hash_code hash_value(Identifier arg) {
-  return llvm::hash_value(arg.strref());
+  // Identifiers are uniqued, so we can just hash the pointer they contain.
+  return llvm::hash_value(static_cast<const void *>(arg.data()));
 }
-
 } // end namespace mlir
 
 namespace llvm {
@@ -113,11 +113,11 @@ struct DenseMapInfo<mlir::Identifier> {
     auto pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
     return mlir::Identifier::getFromOpaquePointer(pointer);
   }
-  static unsigned getHashValue(mlir::Identifier Val) {
-    return DenseMapInfo<const void *>::getHashValue(Val.data());
+  static unsigned getHashValue(mlir::Identifier val) {
+    return DenseMapInfo<const void *>::getHashValue(val.data());
   }
-  static bool isEqual(mlir::Identifier LHS, mlir::Identifier RHS) {
-    return LHS == RHS;
+  static bool isEqual(mlir::Identifier lhs, mlir::Identifier rhs) {
+    return lhs == rhs;
   }
 };
 
@@ -127,11 +127,11 @@ struct DenseMapInfo<mlir::Identifier> {
 template <>
 struct PointerLikeTypeTraits<mlir::Identifier> {
 public:
-  static inline void *getAsVoidPointer(mlir::Identifier I) {
-    return const_cast<void *>(I.getAsOpaquePointer());
+  static inline void *getAsVoidPointer(mlir::Identifier i) {
+    return const_cast<void *>(i.getAsOpaquePointer());
   }
-  static inline mlir::Identifier getFromVoidPointer(void *P) {
-    return mlir::Identifier::getFromOpaquePointer(P);
+  static inline mlir::Identifier getFromVoidPointer(void *p) {
+    return mlir::Identifier::getFromOpaquePointer(p);
   }
   static constexpr int NumLowBitsAvailable = 2;
 };
