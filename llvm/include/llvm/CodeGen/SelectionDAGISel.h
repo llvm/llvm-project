@@ -18,29 +18,21 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/Pass.h"
 #include <memory>
 
 namespace llvm {
 class AAResults;
-class FastISel;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;
-class MachineBasicBlock;
 class MachineFunction;
-class MachineInstr;
 class OptimizationRemarkEmitter;
 class TargetLowering;
 class TargetLibraryInfo;
 class FunctionLoweringInfo;
-class ScheduleHazardRecognizer;
 class SwiftErrorValueTracking;
 class GCFunctionInfo;
 class ScheduleDAGSDNodes;
-class LoadInst;
-class ProfileSummaryInfo;
-class BlockFrequencyInfo;
 
 /// SelectionDAGISel - This is the common base class used for SelectionDAG-based
 /// pattern-matching instruction selectors.
