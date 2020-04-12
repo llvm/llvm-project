@@ -1,4 +1,4 @@
-add_mlir_library(MLIRTargetLLVMIRModuleTranslation
+add_mlir_translation_library(MLIRTargetLLVMIRModuleTranslation
   LLVMIR/DebugTranslation.cpp
   LLVMIR/ModuleTranslation.cpp
 
@@ -18,7 +18,7 @@ target_link_libraries(MLIRTargetLLVMIRModuleTranslation
   MLIRTranslation
   )
 
-add_mlir_library(MLIRTargetAVX512
+add_mlir_translation_library(MLIRTargetAVX512
   LLVMIR/LLVMAVX512Intr.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -34,7 +34,7 @@ target_link_libraries(MLIRTargetAVX512
   MLIRTargetLLVMIRModuleTranslation
   )
 
-add_mlir_library(MLIRTargetLLVMIR
+add_mlir_translation_library(MLIRTargetLLVMIR
   LLVMIR/ConvertFromLLVMIR.cpp
   LLVMIR/ConvertToLLVMIR.cpp
 
@@ -46,7 +46,7 @@ target_link_libraries(MLIRTargetLLVMIR
   MLIRTargetLLVMIRModuleTranslation
   )
 
-add_mlir_library(MLIRTargetNVVMIR
+add_mlir_translation_library(MLIRTargetNVVMIR
   LLVMIR/ConvertToNVVMIR.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -63,7 +63,7 @@ target_link_libraries(MLIRTargetNVVMIR
   MLIRTargetLLVMIRModuleTranslation
   )
 
-add_mlir_library(MLIRTargetROCDLIR
+add_mlir_translation_library(MLIRTargetROCDLIR
   LLVMIR/ConvertToROCDLIR.cpp
 
   ADDITIONAL_HEADER_DIRS
