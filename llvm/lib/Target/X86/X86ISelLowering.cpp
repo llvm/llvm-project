@@ -19141,6 +19141,45 @@ static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
                      DAG.getIntPtrConstant(0, DL));
 }
 
+/// Given a scalar cast to FP with a cast to integer operand (almost an ftrunc),
+/// try to vectorize the cast ops. This will avoid an expensive round-trip
+/// between XMM and GPR.
+static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
+  // TODO: Allow FP_TO_UINT.
+  SDValue CastToInt = CastToFP.getOperand(0);
+  MVT VT = CastToFP.getSimpleValueType();
+  if (CastToInt.getOpcode() != ISD::FP_TO_SINT || VT.isVector())
+    return SDValue();
+
+  MVT IntVT = CastToInt.getSimpleValueType();
+  SDValue X = CastToInt.getOperand(0);
+  // TODO: Allow size-changing from source to dest (double -> i32 -> float)
+  if (X.getSimpleValueType() != VT ||
+      VT.getSizeInBits() != IntVT.getSizeInBits())
+    return SDValue();
+
+  // See if we have a 128-bit vector cast op for this type of cast.
+  unsigned NumEltsInXMM = 128 / VT.getScalarSizeInBits();
+  MVT Vec128VT = MVT::getVectorVT(VT, NumEltsInXMM);
+  MVT Int128VT = MVT::getVectorVT(IntVT, NumEltsInXMM);
+  if (!useVectorCast(CastToFP.getOpcode(), Int128VT, Vec128VT, Subtarget))
+    return SDValue();
+
+  // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
+  //
+  // We are not defining the high elements (for example, zero them) because
+  // that could nullify any performance advantage that we hoped to gain from
+  // this vector op hack. We do not expect any adverse effects (like denorm
+  // penalties) with cast ops.
+  SDLoc DL(CastToFP);
+  SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
+  SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, Vec128VT, X);
+  SDValue VCastToInt = DAG.getNode(ISD::FP_TO_SINT, DL, Int128VT, VecX);
+  SDValue VCastToFP = DAG.getNode(ISD::SINT_TO_FP, DL, Vec128VT, VCastToInt);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VCastToFP, ZeroIdx);
+}
+
 static SDValue lowerINT_TO_FP_vXi64(SDValue Op, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
   SDLoc DL(Op);
@@ -19242,6 +19281,9 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
     return Extract;
+
+  if (SDValue R = lowerFPToIntToFP(Op, DAG, Subtarget))
+    return R;
 
   if (SrcVT.isVector()) {
     if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
