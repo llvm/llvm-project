@@ -23,7 +23,7 @@ namespace performance {
 
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", 0)),
+      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", false)),
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 

@@ -28,8 +28,8 @@ const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
 } // namespace
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IgnoreImplicitConstructors(Options.get("IgnoreImplicitConstructors", 0)),
+    : ClangTidyCheck(Name, Context), IgnoreImplicitConstructors(Options.get(
+                                         "IgnoreImplicitConstructors", false)),
       ContainersWithPushBack(utils::options::parseStringList(Options.get(
           "ContainersWithPushBack", DefaultContainersWithPushBack))),
       SmartPointers(utils::options::parseStringList(
