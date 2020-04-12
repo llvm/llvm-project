@@ -252,6 +252,7 @@ bool InlineAsmLowering::lowerInlineAsm(
       TLI->ParseConstraints(DL, TRI, Call);
 
   ExtraFlags ExtraInfo(Call);
+  unsigned ArgNo = 0; // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0; // ResNo - The result number of the next output.
   for (auto &T : TargetConstraints) {
     ConstraintOperands.push_back(GISelAsmOperandInfo(T));
@@ -261,9 +262,32 @@ bool InlineAsmLowering::lowerInlineAsm(
     if (OpInfo.Type == InlineAsm::isInput ||
         (OpInfo.Type == InlineAsm::isOutput && OpInfo.isIndirect)) {
 
-      LLVM_DEBUG(dbgs() << "Input operands and indirect output operands are "
-                           "not supported yet\n");
-      return false;
+      OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo++));
+
+      if (const auto *BB = dyn_cast<BasicBlock>(OpInfo.CallOperandVal)) {
+        LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");
+        return false;
+      }
+
+      Type *OpTy = OpInfo.CallOperandVal->getType();
+
+      // If this is an indirect operand, the operand is a pointer to the
+      // accessed type.
+      if (OpInfo.isIndirect) {
+        PointerType *PtrTy = dyn_cast<PointerType>(OpTy);
+        if (!PtrTy)
+          report_fatal_error("Indirect operand for inline asm not a pointer!");
+        OpTy = PtrTy->getElementType();
+      }
+
+      // FIXME: Support aggregate input operands
+      if (!OpTy->isSingleValueType()) {
+        LLVM_DEBUG(
+            dbgs() << "Aggregate input operands are not supported yet\n");
+        return false;
+      }
+
+      OpInfo.ConstraintVT = TLI->getValueType(DL, OpTy, true).getSimpleVT();
 
     } else if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
       assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
@@ -363,8 +387,97 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       break;
-    case InlineAsm::isInput:
-      return false;
+    case InlineAsm::isInput: {
+      if (OpInfo.isMatchingInputConstraint()) {
+        LLVM_DEBUG(dbgs() << "Tied input operands not supported yet\n");
+        return false;
+      }
+
+      if (OpInfo.ConstraintType == TargetLowering::C_Other &&
+          OpInfo.isIndirect) {
+        LLVM_DEBUG(dbgs() << "Indirect input operands with unknown constraint "
+                             "not supported yet\n");
+        return false;
+      }
+
+      if (OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+          OpInfo.ConstraintType == TargetLowering::C_Other) {
+
+        std::vector<MachineOperand> Ops;
+        if (!lowerAsmOperandForConstraint(OpInfo.CallOperandVal,
+                                          OpInfo.ConstraintCode, Ops,
+                                          MIRBuilder)) {
+          LLVM_DEBUG(dbgs() << "Don't support constraint: "
+                            << OpInfo.ConstraintCode << " yet\n");
+          return false;
+        }
+
+        assert(Ops.size() > 0 &&
+               "Expected constraint to be lowered to at least one operand");
+
+        // Add information to the INLINEASM node to know about this input.
+        unsigned OpFlags =
+            InlineAsm::getFlagWord(InlineAsm::Kind_Imm, Ops.size());
+        Inst.addImm(OpFlags);
+        Inst.add(Ops);
+        break;
+      }
+
+      if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
+        assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
+
+        unsigned ConstraintID =
+            TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
+        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
+        OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
+        Inst.addImm(OpFlags);
+        ArrayRef<Register> SourceRegs =
+            GetOrCreateVRegs(*OpInfo.CallOperandVal);
+        assert(
+            SourceRegs.size() == 1 &&
+            "Expected the memory input to fit into a single virtual register");
+        Inst.addReg(SourceRegs[0]);
+        break;
+      }
+
+      assert((OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
+              OpInfo.ConstraintType == TargetLowering::C_Register) &&
+             "Unknown constraint type!");
+
+      if (OpInfo.isIndirect) {
+        LLVM_DEBUG(dbgs() << "Can't handle indirect register inputs yet "
+                             "for constraint '"
+                          << OpInfo.ConstraintCode << "'\n");
+        return false;
+      }
+
+      // Copy the input into the appropriate registers.
+      if (OpInfo.Regs.empty()) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Couldn't allocate input register for register constraint\n");
+        return false;
+      }
+
+      unsigned NumRegs = OpInfo.Regs.size();
+      ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
+      assert(NumRegs == SourceRegs.size() &&
+             "Expected the number of input registers to match the number of "
+             "source registers");
+
+      if (NumRegs > 1) {
+        LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
+                             "not supported yet\n");
+        return false;
+      }
+
+      unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, NumRegs);
+      Inst.addImm(Flag);
+      MIRBuilder.buildCopy(OpInfo.Regs[0], SourceRegs[0]);
+      Inst.addReg(OpInfo.Regs[0]);
+      break;
+    }
+
     case InlineAsm::isClobber: {
 
       unsigned NumRegs = OpInfo.Regs.size();
@@ -440,4 +553,28 @@ bool InlineAsmLowering::lowerInlineAsm(
   }
 
   return true;
+}
+
+bool InlineAsmLowering::lowerAsmOperandForConstraint(
+    Value *Val, StringRef Constraint, std::vector<MachineOperand> &Ops,
+    MachineIRBuilder &MIRBuilder) const {
+  if (Constraint.size() > 1)
+    return false;
+
+  char ConstraintLetter = Constraint[0];
+  switch (ConstraintLetter) {
+  default:
+    return false;
+  case 'i': // Simple Integer or Relocatable Constant
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
+      assert(CI->getBitWidth() <= 64 &&
+             "expected immediate to fit into 64-bits");
+      // Boolean constants should be zero-extended, others are sign-extended
+      bool IsBool = CI->getBitWidth() == 1;
+      int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
+      Ops.push_back(MachineOperand::CreateImm(ExtVal));
+      return true;
+    }
+    return false;
+  }
 }
