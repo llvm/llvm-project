@@ -86,7 +86,7 @@ public:
     const Value *Callee = nullptr;
     MCSymbol *Symbol = nullptr;
     ArgListTy Args;
-    ImmutableCallSite CS;
+    const CallBase *CB = nullptr;
     MachineInstr *Call = nullptr;
     Register ResultReg;
     unsigned NumResultRegs = 0;
@@ -103,14 +103,14 @@ public:
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 const Value *Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite Call) {
+                                const CallBase &Call) {
       RetTy = ResultTy;
       Callee = Target;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
-      IsReturnValueUsed = !Call.getInstruction()->use_empty();
+      IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
@@ -118,14 +118,14 @@ public:
       Args = std::move(ArgsList);
       NumFixedArgs = FuncTy->getNumParams();
 
-      CS = Call;
+      CB = &Call;
 
       return *this;
     }
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 MCSymbol *Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite Call,
+                                const CallBase &Call,
                                 unsigned FixedArgs = ~0U) {
       RetTy = ResultTy;
       Callee = Call.getCalledValue();
@@ -134,7 +134,7 @@ public:
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
-      IsReturnValueUsed = !Call.getInstruction()->use_empty();
+      IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
@@ -142,7 +142,7 @@ public:
       Args = std::move(ArgsList);
       NumFixedArgs = (FixedArgs == ~0U) ? FuncTy->getNumParams() : FixedArgs;
 
-      CS = Call;
+      CB = &Call;
 
       return *this;
     }
