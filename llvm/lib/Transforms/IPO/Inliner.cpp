@@ -38,7 +38,6 @@
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1113,20 +1112,19 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         InlineHistory.push_back({&Callee, InlineHistoryID});
 
         // FIXME(mtrofin): refactor IFI.InlinedCallSites to be CallBase-based
-        for (CallSite &CS : reverse(IFI.InlinedCallSites)) {
-          Function *NewCallee = CS.getCalledFunction();
+        for (CallBase *CS : reverse(IFI.InlinedCallSites)) {
+          Function *NewCallee = CS->getCalledFunction();
           if (!NewCallee) {
             // Try to promote an indirect (virtual) call without waiting for the
             // post-inline cleanup and the next DevirtSCCRepeatedPass iteration
             // because the next iteration may not happen and we may miss
             // inlining it.
-            if (tryPromoteCall(CS))
-              NewCallee = CS.getCalledFunction();
+            if (tryPromoteCall(*CS))
+              NewCallee = CS->getCalledFunction();
           }
           if (NewCallee)
             if (!NewCallee->isDeclaration())
-              Calls.push_back(
-                  {cast<CallBase>(CS.getInstruction()), NewHistoryID});
+              Calls.push_back({CS, NewHistoryID});
         }
       }
 
