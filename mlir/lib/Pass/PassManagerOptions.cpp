@@ -96,7 +96,7 @@ struct PassManagerOptions {
 };
 } // end anonymous namespace
 
-static llvm::ManagedStatic<Optional<PassManagerOptions>> options;
+static llvm::ManagedStatic<PassManagerOptions> options;
 
 /// Add an IR printing instrumentation if enabled by any 'print-ir' flags.
 void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
@@ -145,29 +145,31 @@ void PassManagerOptions::addTimingInstrumentation(PassManager &pm) {
 }
 
 void mlir::registerPassManagerCLOptions() {
-  // Reset the options instance if it hasn't been enabled yet.
-  if (!options->hasValue())
-    options->emplace();
+  // Make sure that the options struct has been constructed.
+  *options;
 }
 
 void mlir::applyPassManagerCLOptions(PassManager &pm) {
+  if (!options.isConstructed())
+    return;
+
   // Generate a reproducer on crash/failure.
-  if ((*options)->reproducerFile.getNumOccurrences())
-    pm.enableCrashReproducerGeneration((*options)->reproducerFile);
+  if (options->reproducerFile.getNumOccurrences())
+    pm.enableCrashReproducerGeneration(options->reproducerFile);
 
   // Disable multi-threading.
-  if ((*options)->disableThreads)
+  if (options->disableThreads)
     pm.disableMultithreading();
 
   // Enable statistics dumping.
-  if ((*options)->passStatistics)
-    pm.enableStatistics((*options)->passStatisticsDisplayMode);
+  if (options->passStatistics)
+    pm.enableStatistics(options->passStatisticsDisplayMode);
 
   // Add the IR printing instrumentation.
-  (*options)->addPrinterInstrumentation(pm);
+  options->addPrinterInstrumentation(pm);
 
   // Note: The pass timing instrumentation should be added last to avoid any
   // potential "ghost" timing from other instrumentations being unintentionally
   // included in the timing results.
-  (*options)->addTimingInstrumentation(pm);
+  options->addTimingInstrumentation(pm);
 }
