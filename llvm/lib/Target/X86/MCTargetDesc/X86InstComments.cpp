@@ -281,7 +281,8 @@ static void printMasking(raw_ostream &OS, const MCInst *MI,
     OS << " {z}";
 }
 
-static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
+static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
+                             const MCInstrInfo &MCII) {
   const char *Mul1Name = nullptr, *Mul2Name = nullptr, *AccName = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
@@ -613,8 +614,9 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
   if (!Mul2Name) Mul2Name = "mem";
   if (!AccName)  AccName = "mem";
 
-  OS << DestName << " = ";
-  // TODO: Print masking information?
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
 
   if (Negate)
     OS << '-';
@@ -641,7 +643,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
 
-  if (printFMAComments(MI, OS))
+  if (printFMAComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {
