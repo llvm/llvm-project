@@ -123,7 +123,7 @@ public:
   /// function is used for derived types that have complex storage or uniquing
   /// constraints.
   template <typename Storage, typename Arg, typename... Args>
-  Storage *get(std::function<void(Storage *)> initFn, unsigned kind, Arg &&arg,
+  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind, Arg &&arg,
                Args &&... args) {
     // Construct a value of the derived key type.
     auto derivedKey =
@@ -133,19 +133,17 @@ public:
     unsigned hashValue = getHash<Storage>(kind, derivedKey);
 
     // Generate an equality function for the derived storage.
-    std::function<bool(const BaseStorage *)> isEqual =
-        [&derivedKey](const BaseStorage *existing) {
-          return static_cast<const Storage &>(*existing) == derivedKey;
-        };
+    auto isEqual = [&derivedKey](const BaseStorage *existing) {
+      return static_cast<const Storage &>(*existing) == derivedKey;
+    };
 
     // Generate a constructor function for the derived storage.
-    std::function<BaseStorage *(StorageAllocator &)> ctorFn =
-        [&](StorageAllocator &allocator) {
-          auto *storage = Storage::construct(allocator, derivedKey);
-          if (initFn)
-            initFn(storage);
-          return storage;
-        };
+    auto ctorFn = [&](StorageAllocator &allocator) {
+      auto *storage = Storage::construct(allocator, derivedKey);
+      if (initFn)
+        initFn(storage);
+      return storage;
+    };
 
     // Get an instance for the derived storage.
     return static_cast<Storage *>(getImpl(kind, hashValue, isEqual, ctorFn));
@@ -156,7 +154,7 @@ public:
   /// function is used for derived types that use no additional storage or
   /// uniquing outside of the kind.
   template <typename Storage>
-  Storage *get(std::function<void(Storage *)> initFn, unsigned kind) {
+  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind) {
     auto ctorFn = [&](StorageAllocator &allocator) {
       auto *storage = new (allocator.allocate<Storage>()) Storage();
       if (initFn)
@@ -178,10 +176,9 @@ public:
     unsigned hashValue = getHash<Storage>(kind, derivedKey);
 
     // Generate an equality function for the derived storage.
-    std::function<bool(const BaseStorage *)> isEqual =
-        [&derivedKey](const BaseStorage *existing) {
-          return static_cast<const Storage &>(*existing) == derivedKey;
-        };
+    auto isEqual = [&derivedKey](const BaseStorage *existing) {
+      return static_cast<const Storage &>(*existing) == derivedKey;
+    };
 
     // Attempt to erase the storage instance.
     eraseImpl(kind, hashValue, isEqual, [](BaseStorage *storage) {
@@ -194,18 +191,18 @@ private:
   /// complex storage.
   BaseStorage *getImpl(unsigned kind, unsigned hashValue,
                        function_ref<bool(const BaseStorage *)> isEqual,
-                       std::function<BaseStorage *(StorageAllocator &)> ctorFn);
+                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for getting/creating an instance of a derived type with
   /// default storage.
   BaseStorage *getImpl(unsigned kind,
-                       std::function<BaseStorage *(StorageAllocator &)> ctorFn);
+                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for erasing an instance of a derived type with complex
   /// storage.
   void eraseImpl(unsigned kind, unsigned hashValue,
                  function_ref<bool(const BaseStorage *)> isEqual,
-                 std::function<void(BaseStorage *)> cleanupFn);
+                 function_ref<void(BaseStorage *)> cleanupFn);
 
   /// The internal implementation class.
   std::unique_ptr<detail::StorageUniquerImpl> impl;
