@@ -223,3 +223,17 @@ TEST_F(TestTypeSystemSwiftTypeRef, Pointer) {
     ASSERT_TRUE(p.IsPointerType(nullptr));
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Void) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))));
+    CompilerType v = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(v.IsVoidType());
+  }
+}
