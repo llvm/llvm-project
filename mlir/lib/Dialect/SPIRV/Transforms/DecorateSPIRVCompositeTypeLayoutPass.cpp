@@ -30,14 +30,11 @@ public:
 
   LogicalResult matchAndRewrite(spirv::GlobalVariableOp op,
                                 PatternRewriter &rewriter) const override {
-    spirv::StructType::LayoutInfo structSize = 0;
-    VulkanLayoutUtils::Size structAlignment = 1;
     SmallVector<NamedAttribute, 4> globalVarAttrs;
 
     auto ptrType = op.type().cast<spirv::PointerType>();
     auto structType = VulkanLayoutUtils::decorateType(
-        ptrType.getPointeeType().cast<spirv::StructType>(), structSize,
-        structAlignment);
+        ptrType.getPointeeType().cast<spirv::StructType>());
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 

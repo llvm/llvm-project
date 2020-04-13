@@ -50,10 +50,8 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   auto varPointeeType = varPtrType.getPointeeType().cast<spirv::StructType>();
 
   // Set the offset information.
-  VulkanLayoutUtils::Size size = 0, alignment = 0;
   varPointeeType =
-      VulkanLayoutUtils::decorateType(varPointeeType, size, alignment)
-          .cast<spirv::StructType>();
+      VulkanLayoutUtils::decorateType(varPointeeType).cast<spirv::StructType>();
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
