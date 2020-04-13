@@ -412,3 +412,58 @@ Rules of Thumb
 #. For each class in the hierarchy that has children, implement a
    ``classof`` that checks a range of the first child's ``Kind`` and the
    last child's ``Kind``.
+
+RTTI for Open Class Hierarchies
+===============================
+
+Sometimes it is not possible to know all types in a hierarchy ahead of time.
+For example, in the shapes hierarchy described above the authors may have
+wanted their code to work for user defined shapes too. To support use cases
+that require open hierarchies LLVM provides the ``RTTIRoot`` and
+``RTTIExtends`` utilities.
+
+The ``RTTIRoot`` class describes an interface for performing RTTI checks. The
+``RTTIExtends`` class template provides an implementation of this interface
+for classes derived from ``RTTIRoot``. ``RTTIExtends`` uses the "`Curiously
+Recurring Template Idiom`_", taking the class being defined as its first
+template argument and the parent class as the second argument. Any class that
+uses ``RTTIExtends`` must define a ``static char ID`` member, the address of
+which will be used to identify the type.
+
+This open-hierarchy RTTI support should only be used if your use case requries
+it. Otherwise the standard LLVM RTTI system should be preferred.
+
+.. _`Curiously Recurring Template Idiom`:
+https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
+
+E.g.
+
+.. code-block:: c++
+
+   class Shape : public RTTIExtends<Shape, RTTIRoot> {
+   public:
+     static char ID;
+     virtual double computeArea() = 0;
+   };
+
+   class Square : public RTTIExtends<Square, Shape> {
+     double SideLength;
+   public:
+     static char ID;
+
+     Square(double S) : SideLength(S) {}
+     double computeArea() override;
+   };
+
+   class Circle : public RTTIExtends<Circle, Shape> {
+     double Radius;
+   public:
+     static char ID;
+
+     Circle(double R) : Radius(R) {}
+     double computeArea() override;
+   };
+
+   char Shape::ID = 0;
+   char Square::ID = 0;
+   char Circle::ID = 0;
