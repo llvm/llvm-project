@@ -408,7 +408,7 @@ static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
   // If the attribute dictionary contains no 'names' attribute, infer it from
   // the SSA name (if specified).
   bool hadNames = llvm::any_of(result.attributes, [](NamedAttribute attr) {
-    return attr.first.is("names");
+    return attr.first == "names";
   });
 
   // If there was no name specified, check to see if there was a useful name

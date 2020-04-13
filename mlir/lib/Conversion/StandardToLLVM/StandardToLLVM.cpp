@@ -797,9 +797,8 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
                                  bool filterArgAttrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const auto &attr : attrs) {
-    if (attr.first.is(SymbolTable::getSymbolAttrName()) ||
-        attr.first.is(impl::getTypeAttrName()) ||
-        attr.first.is("std.varargs") ||
+    if (attr.first == SymbolTable::getSymbolAttrName() ||
+        attr.first == impl::getTypeAttrName() || attr.first == "std.varargs" ||
         (filterArgAttrs && impl::isArgAttrName(attr.first.strref())))
       continue;
     result.push_back(attr);

@@ -617,7 +617,7 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
     os << tabs << formatv("for (auto attr : {0}.getAttrs()) {{\n", opVar);
     os << tabs
        << formatv("  if (llvm::any_of({0}, [&](StringRef elided)", elidedAttrs);
-    os << " {return attr.first.is(elided);})) {\n";
+    os << " {return attr.first == elided;})) {\n";
     os << tabs << "    continue;\n";
     os << tabs << "  }\n";
     os << tabs

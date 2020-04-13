@@ -468,8 +468,8 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp.getAttrs()) {
-    if (!namedAttr.first.is(impl::getTypeAttrName()) &&
-        !namedAttr.first.is(SymbolTable::getSymbolAttrName()))
+    if (namedAttr.first != impl::getTypeAttrName() &&
+        namedAttr.first != SymbolTable::getSymbolAttrName())
       newFuncOp.setAttr(namedAttr.first, namedAttr.second);
   }
 
