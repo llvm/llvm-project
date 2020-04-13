@@ -1790,37 +1790,45 @@ static Optional<APFloat> buildHexadecimalFloatLiteral(Parser *p, FloatType type,
 /// Construct an APint from a parsed value, a known attribute type and
 /// sign.
 static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
-                                           uint64_t value) {
-  // We have the integer literal as an uint64_t in val, now convert it into an
-  // APInt and check that we don't overflow.
-  int width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
-  APInt apInt(width, value, isNegative);
-  if (apInt != value)
+                                           StringRef spelling) {
+  // Parse the integer value into an APInt that is big enough to hold the value.
+  APInt result;
+  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
+  if (spelling.getAsInteger(isHex ? 0 : 10, result))
     return llvm::None;
+
+  // Extend or truncate the bitwidth to the right size.
+  unsigned width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
+  if (width > result.getBitWidth()) {
+    result = result.zext(width);
+  } else if (width < result.getBitWidth()) {
+    // The parser can return an unnecessarily wide result with leading zeros.
+    // This isn't a problem, but truncating off bits is bad.
+    if (result.countLeadingZeros() < result.getBitWidth() - width)
+      return llvm::None;
+
+    result = result.trunc(width);
+  }
 
   if (isNegative) {
     // The value is negative, we have an overflow if the sign bit is not set
     // in the negated apInt.
-    apInt.negate();
-    if (!apInt.isSignBitSet())
+    result.negate();
+    if (!result.isSignBitSet())
       return llvm::None;
   } else if ((type.isSignedInteger() || type.isIndex()) &&
-             apInt.isSignBitSet()) {
+             result.isSignBitSet()) {
     // The value is a positive signed integer or index,
     // we have an overflow if the sign bit is set.
     return llvm::None;
   }
 
-  return apInt;
+  return result;
 }
 
 /// Parse a decimal or a hexadecimal literal, which can be either an integer
 /// or a float attribute.
 Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
-  auto val = getToken().getUInt64IntegerValue();
-  if (!val.hasValue())
-    return (emitError("integer constant out of range for attribute"), nullptr);
-
   // Remember if the literal is hexadecimal.
   StringRef spelling = getToken().getSpelling();
   auto loc = state.curToken.getLoc();
@@ -1848,6 +1856,10 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
       return nullptr;
     }
 
+    auto val = Token::getUInt64IntegerValue(spelling);
+    if (!val.hasValue())
+      return emitError("integer constant out of range for attribute"), nullptr;
+
     // Construct a float attribute bitwise equivalent to the integer literal.
     Optional<APFloat> apVal =
         buildHexadecimalFloatLiteral(this, floatType, *val);
@@ -1864,8 +1876,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return nullptr;
   }
 
-  Optional<APInt> apInt = buildAttributeAPInt(type, isNegative, *val);
-
+  Optional<APInt> apInt = buildAttributeAPInt(type, isNegative, spelling);
   if (!apInt)
     return emitError(loc, "integer constant out of range for attribute"),
            nullptr;
@@ -2085,12 +2096,8 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
     }
 
     // Create APInt values for each element with the correct bitwidth.
-    auto val = token.getUInt64IntegerValue();
-    if (!val.hasValue()) {
-      p.emitError(tokenLoc, "integer constant out of range for attribute");
-      return nullptr;
-    }
-    Optional<APInt> apInt = buildAttributeAPInt(eltTy, isNegative, *val);
+    Optional<APInt> apInt =
+        buildAttributeAPInt(eltTy, isNegative, token.getSpelling());
     if (!apInt)
       return (p.emitError(tokenLoc, "integer constant out of range for type"),
               nullptr);

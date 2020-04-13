@@ -1459,3 +1459,33 @@ func @large_bound() {
   } : () -> ()
   return
 }
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 79228162514264337593543950336 : ui96
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 79228162514264337593543950336 : i96
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 39614081257132168796771975168 : si96
+  } : () -> ()
+  return
+}
