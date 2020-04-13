@@ -423,7 +423,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       State.Stack.back().BreakBeforeParameter && Current.CanBreakBefore)
     return true;
 
-  if (State.Column <= NewLineColumn)
+  if (!State.Line->First->is(tok::kw_enum) && State.Column <= NewLineColumn)
     return false;
 
   if (Style.AlwaysBreakBeforeMultilineStrings &&
