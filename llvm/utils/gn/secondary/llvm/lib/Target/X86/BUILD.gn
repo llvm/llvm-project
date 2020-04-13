@@ -59,7 +59,6 @@ static_library("LLVMX86CodeGen") {
     ":X86GenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
@@ -142,6 +141,5 @@ group("X86") {
     "Disassembler",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
   ]
 }
