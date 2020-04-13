@@ -10,7 +10,6 @@
 #include "AffineMapDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/StringRef.h"

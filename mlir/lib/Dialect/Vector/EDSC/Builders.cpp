@@ -13,7 +13,6 @@
 #include "mlir/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Support/Functional.h"
 
 using namespace mlir;
 using namespace mlir::edsc;
@@ -27,7 +26,8 @@ Value mlir::edsc::ops::vector_contraction(
   return vector_contract(
       A.getValue(), B.getValue(), C.getValue(),
       IndexingExprs{A.getExprs(), B.getExprs(), C.getExprs()},
-      ArrayRef<StringRef>{functional::map(toString, iteratorTypes)});
+      ArrayRef<StringRef>{
+          llvm::to_vector<8>(llvm::map_range(iteratorTypes, toString))});
 }
 
 Value mlir::edsc::ops::vector_contraction_matmul(Value A, Value B, Value C) {
