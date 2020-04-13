@@ -15,7 +15,7 @@
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86MCTargetDesc.h"
-#include "Utils/X86ShuffleDecode.h"
+#include "X86ShuffleDecode.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
