@@ -86,14 +86,8 @@ spirv::InterfaceVarABIAttr
 spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
                               Optional<spirv::StorageClass> storageClass,
                               MLIRContext *context) {
-  Type i32Type = IntegerType::get(32, context);
-  auto scAttr =
-      storageClass
-          ? IntegerAttr::get(i32Type, static_cast<int64_t>(*storageClass))
-          : IntegerAttr();
-  return spirv::InterfaceVarABIAttr::get(
-      IntegerAttr::get(i32Type, descriptorSet),
-      IntegerAttr::get(i32Type, binding), scAttr, context);
+  return spirv::InterfaceVarABIAttr::get(descriptorSet, binding, storageClass,
+                                         context);
 }
 
 StringRef spirv::getEntryPointABIAttrName() { return "spv.entry_point_abi"; }

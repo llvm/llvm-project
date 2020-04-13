@@ -118,7 +118,7 @@ SPIRVDialect::SPIRVDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addTypes<ArrayType, ImageType, PointerType, RuntimeArrayType, StructType>();
 
-  addAttributes<TargetEnvAttr, VerCapExtAttr>();
+  addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
 
   // Add SPIR-V ops.
   addOperations<
@@ -649,6 +649,75 @@ static ParseResult parseKeywordList(
   return success();
 }
 
+/// Parses a spirv::InterfaceVarABIAttr.
+static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Builder &builder = parser.getBuilder();
+
+  if (parser.parseLParen())
+    return {};
+
+  IntegerAttr descriptorSetAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t descriptorSet = 0;
+    auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
+
+    if (!descriptorSetParseResult.hasValue() ||
+        failed(*descriptorSetParseResult)) {
+      parser.emitError(loc, "missing descriptor set");
+      return {};
+    }
+    descriptorSetAttr = builder.getI32IntegerAttr(descriptorSet);
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  IntegerAttr bindingAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t binding = 0;
+    auto bindingParseResult = parser.parseOptionalInteger(binding);
+
+    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
+      parser.emitError(loc, "missing binding");
+      return {};
+    }
+    bindingAttr = builder.getI32IntegerAttr(binding);
+  }
+
+  if (parser.parseRParen())
+    return {};
+
+  IntegerAttr storageClassAttr;
+  {
+    if (succeeded(parser.parseOptionalComma())) {
+      auto loc = parser.getCurrentLocation();
+      StringRef storageClass;
+      if (parser.parseKeyword(&storageClass))
+        return {};
+
+      if (auto storageClassSymbol =
+              spirv::symbolizeStorageClass(storageClass)) {
+        storageClassAttr = builder.getI32IntegerAttr(
+            static_cast<uint32_t>(*storageClassSymbol));
+      } else {
+        parser.emitError(loc, "unknown storage class: ") << storageClass;
+        return {};
+      }
+    }
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return spirv::InterfaceVarABIAttr::get(descriptorSetAttr, bindingAttr,
+                                         storageClassAttr);
+}
+
 static Attribute parseVerCapExtAttr(DialectAsmParser &parser) {
   if (parser.parseLess())
     return {};
@@ -771,6 +840,8 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
     return parseTargetEnvAttr(parser);
   if (attrKind == spirv::VerCapExtAttr::getKindName())
     return parseVerCapExtAttr(parser);
+  if (attrKind == spirv::InterfaceVarABIAttr::getKindName())
+    return parseInterfaceVarABIAttr(parser);
 
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V attribute kind: ")
       << attrKind;
@@ -801,12 +872,25 @@ static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
   printer << ", " << targetEnv.getResourceLimits() << ">";
 }
 
+static void print(spirv::InterfaceVarABIAttr interfaceVarABIAttr,
+                  DialectAsmPrinter &printer) {
+  printer << spirv::InterfaceVarABIAttr::getKindName() << "<("
+          << interfaceVarABIAttr.getDescriptorSet() << ", "
+          << interfaceVarABIAttr.getBinding() << ")";
+  auto storageClass = interfaceVarABIAttr.getStorageClass();
+  if (storageClass)
+    printer << ", " << spirv::stringifyStorageClass(*storageClass);
+  printer << ">";
+}
+
 void SPIRVDialect::printAttribute(Attribute attr,
                                   DialectAsmPrinter &printer) const {
   if (auto targetEnv = attr.dyn_cast<TargetEnvAttr>())
     print(targetEnv, printer);
   else if (auto vceAttr = attr.dyn_cast<VerCapExtAttr>())
     print(vceAttr, printer);
+  else if (auto interfaceVarABIAttr = attr.dyn_cast<InterfaceVarABIAttr>())
+    print(interfaceVarABIAttr, printer);
   else
     llvm_unreachable("unhandled SPIR-V attribute kind");
 }
@@ -866,11 +950,9 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
   auto varABIAttr = attr.dyn_cast<spirv::InterfaceVarABIAttr>();
   if (!varABIAttr)
     return emitError(loc, "'")
-           << symbol
-           << "' attribute must be a dictionary attribute containing two or "
-              "three 32-bit integer attributes: 'descriptor_set', 'binding', "
-              "and optional 'storage_class'";
-  if (varABIAttr.storage_class() && !valueType.isIntOrIndexOrFloat())
+           << symbol << "' must be a spirv::InterfaceVarABIAttr";
+
+  if (varABIAttr.getStorageClass() && !valueType.isIntOrIndexOrFloat())
     return emitError(loc, "'") << symbol
                                << "' attribute cannot specify storage class "
                                   "when attaching to a non-scalar value";
