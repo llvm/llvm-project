@@ -1506,18 +1506,12 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << CommentStream.str();
         Comments.clear();
 
-        // If disassembly has failed, continue with the next instruction, to
-        // avoid analysing invalid/incomplete instruction information.
-        if (!Disassembled) {
-          outs() << "\n";
-          Index += Size;
-          continue;
-        }
-
-        // Try to resolve the target of a call, tail call, etc. to a specific
-        // symbol.
-        if (MIA && (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||
-                    MIA->isConditionalBranch(Inst))) {
+        // If disassembly has failed, avoid analysing invalid/incomplete
+        // instruction information. Otherwise, try to resolve the target of a
+        // call, tail call, etc. to a specific symbol.
+        if (Disassembled && MIA &&
+            (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||
+             MIA->isConditionalBranch(Inst))) {
           uint64_t Target;
           if (MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target)) {
             // In a relocatable object, the target's section must reside in
@@ -1574,7 +1568,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
         // Hexagon does this in pretty printer
         if (Obj->getArch() != Triple::hexagon) {
-          // Print relocation for instruction.
+          // Print relocation for instruction and data.
           while (RelCur != RelEnd) {
             uint64_t Offset = RelCur->getOffset();
             // If this relocation is hidden, skip it.
@@ -1583,7 +1577,11 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
               continue;
             }
 
-            // Stop when RelCur's offset is past the current instruction.
+            // Stop when RelCur's offset is past the disassembled
+            // instruction/data. Note that it's possible the disassembled data
+            // is not the complete data: we might see the relocation printed in
+            // the middle of the data, but this matches the binutils objdump
+            // output.
             if (Offset >= Index + Size)
               break;
 
