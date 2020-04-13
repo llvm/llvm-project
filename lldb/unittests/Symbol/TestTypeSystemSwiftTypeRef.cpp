@@ -115,6 +115,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                                            b.Node(Node::Kind::Tuple)))))));
     CompilerType void_void = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(void_void.IsFunctionType(nullptr));
+    ASSERT_TRUE(void_void.IsFunctionPointerType());
     ASSERT_EQ(void_void.GetNumberOfFunctionArguments(), 0);
   }
   {
