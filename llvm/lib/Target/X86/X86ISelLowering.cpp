@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ISelLowering.h"
-#include "Utils/X86ShuffleDecode.h"
+#include "MCTargetDesc/X86ShuffleDecode.h"
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
 #include "X86InstrBuilder.h"
