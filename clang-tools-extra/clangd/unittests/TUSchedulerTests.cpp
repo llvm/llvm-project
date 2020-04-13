@@ -415,7 +415,9 @@ TEST_F(TUSchedulerTests, Invalidation) {
         EXPECT_FALSE(bool(AST));
         llvm::Error E = AST.takeError();
         EXPECT_TRUE(E.isA<CancelledError>());
-        consumeError(std::move(E));
+        handleAllErrors(std::move(E), [&](const CancelledError &E) {
+          EXPECT_EQ(E.Reason, static_cast<int>(ErrorCode::ContentModified));
+        });
       },
       TUScheduler::InvalidateOnUpdate);
   S.runWithAST(
