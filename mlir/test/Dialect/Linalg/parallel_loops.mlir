@@ -32,22 +32,32 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
 // -----
 
 #accesses = [
-  affine_map<(m, n) -> (m, n)>,
-  affine_map<(m, n) -> (m)>
+  affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>,
+  affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 ]
 #trait = {
   args_in = 1,
   args_out = 1,
-  iterator_types = ["parallel", "reduction"],
+  iterator_types = ["parallel", "parallel", "reduction", "parallel"],
   indexing_maps = #accesses
 }
 
-func @do_not_lower_reduce(%A: memref<2x4xf32>, %B: memref<2xf32>) {
+func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
   linalg.generic #trait %A, %B {
     ^bb0(%a: f32, %b: f32):
       linalg.yield %a: f32
-  } : memref<2x4xf32>, memref<2xf32>
+  } : memref<?x?x?x?xf32>, memref<?x?x?xf32>
   return
 }
-// CHECK-LABEL: @do_not_lower_reduce
-// CHECK: linalg.generic
+// CHECK-LABEL: @lower_outer_parallel
+//   CHECK-DAG: %[[C0:.*]] = constant 0
+//   CHECK-DAG: %[[C1:.*]] = constant 1
+//   CHECK-DAG: %[[D0:.*]] = dim %{{.*}}, 0
+//   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, 1
+//   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, 2
+//   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, 3
+//       CHECK: loop.parallel (%[[IV0:.*]], %[[IV1:.*]]) = (%[[C0]], %[[C0]]) to (%[[D0]], %[[D1]]) step (%[[C1]], %[[C1]])
+//       CHECK:   loop.for %[[IV2:.*]] = %[[C0]] to %[[D2]] step %[[C1]]
+//       CHECK:     loop.for %[[IV3:.*]] = %[[C0]] to %[[D3]] step %[[C1]]
+//       CHECK:       load %{{.*}}[%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
+//       CHECK:       store %{{.*}}, %{{.*}}[%[[IV0]], %[[IV1]], %[[IV3]]]
