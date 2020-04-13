@@ -827,7 +827,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
                         operands);
   for (auto attr : op.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
-                     [&](StringRef elided) { return attr.first.is(elided); })) {
+                     [&](StringRef elided) { return attr.first == elided; })) {
       continue;
     }
     if (failed(processDecoration(op.getLoc(), resultID, attr))) {
@@ -895,7 +895,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   // Encode decorations.
   for (auto attr : varOp.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
-                     [&](StringRef elided) { return attr.first.is(elided); })) {
+                     [&](StringRef elided) { return attr.first == elided; })) {
       continue;
     }
     if (failed(processDecoration(varOp.getLoc(), resultID, attr))) {

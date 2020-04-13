@@ -44,7 +44,7 @@ GPUDialect::GPUDialect(MLIRContext *context)
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
   if (!attr.second.isa<UnitAttr>() ||
-      !attr.first.is(getContainerModuleAttrName()))
+      attr.first != getContainerModuleAttrName())
     return success();
 
   auto module = dyn_cast<ModuleOp>(op);

@@ -161,7 +161,7 @@ Attribute DictionaryAttr::get(StringRef name) const {
     return strncmp(attr.first.data(), name.data(), name.size()) < 0;
   };
   auto it = llvm::lower_bound(values, name, compare);
-  return it != values.end() && it->first.is(name) ? it->second : Attribute();
+  return it != values.end() && it->first == name ? it->second : Attribute();
 }
 Attribute DictionaryAttr::get(Identifier name) const {
   for (auto elt : getValue())
