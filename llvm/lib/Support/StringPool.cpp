@@ -1,4 +1,4 @@
-//===-- StringPool.cpp - Interned string pool -----------------------------===//
+//===-- StringPool.cpp - Intern'd string pool -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,25 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/StringPool.h"
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
-
 using namespace llvm;
 
 StringPool::StringPool() {}
 
 StringPool::~StringPool() {
-  assert(InternTable.empty() && "PooledStringPtr leaked!");
+  assert(internTable.empty() && "PooledStringPtr leaked!");
 }
 
-PooledStringPtr StringPool::intern(StringRef Key) {
-  table_t::iterator I = InternTable.find(Key);
-  if (I != InternTable.end())
-    return PooledStringPtr(&*I);
+PooledStringPtr StringPool::intern(StringRef key) {
+  auto it = internTable.find(key);
+  if (it != internTable.end())
+    return PooledStringPtr(&*it);
 
-  entry_t *S = entry_t::Create(Key);
-  S->getValue().Pool = this;
-  InternTable.insert(S);
+  MallocAllocator allocator;
+  auto *entry = Entry::Create(key, allocator);
+  entry->getValue().pool = this;
+  internTable.insert(entry);
 
-  return PooledStringPtr(S);
+  return PooledStringPtr(entry);
 }

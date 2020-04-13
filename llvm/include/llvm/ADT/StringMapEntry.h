@@ -16,7 +16,6 @@
 #define LLVM_ADT_STRINGMAPENTRY_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AllocatorBase.h"
 
 namespace llvm {
 
@@ -113,17 +112,6 @@ public:
     return newItem;
   }
 
-  /// Create - Create a StringMapEntry with normal malloc/free.
-  template <typename... InitType>
-  static StringMapEntry *Create(StringRef key, InitType &&... initVal) {
-    MallocAllocator allocator;
-    return Create(key, allocator, std::forward<InitType>(initVal)...);
-  }
-
-  static StringMapEntry *Create(StringRef key) {
-    return Create(key, ValueTy());
-  }
-
   /// GetStringMapEntryFromKeyData - Given key data that is known to be embedded
   /// into a StringMapEntry, return the StringMapEntry itself.
   static StringMapEntry &GetStringMapEntryFromKeyData(const char *keyData) {
@@ -138,12 +126,6 @@ public:
     size_t AllocSize = sizeof(StringMapEntry) + this->getKeyLength() + 1;
     this->~StringMapEntry();
     allocator.Deallocate(static_cast<void *>(this), AllocSize);
-  }
-
-  /// Destroy this object, releasing memory back to the malloc allocator.
-  void Destroy() {
-    MallocAllocator allocator;
-    Destroy(allocator);
   }
 };
 
