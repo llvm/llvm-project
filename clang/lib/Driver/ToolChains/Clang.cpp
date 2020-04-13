@@ -2510,7 +2510,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
-                                       Action::OffloadKind DeviceOffloadKind) {
+                                       const JobAction &JA) {
   // Handle various floating point optimization flags, mapping them to the
   // appropriate LLVM code generation flags. This is complicated by several
   // "umbrella" flags, so we do this by stepping through the flags incrementally
@@ -2533,10 +2533,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // -ffp-exception-behavior options: strict, maytrap, ignore
   StringRef FPExceptionBehavior = "";
   const llvm::DenormalMode DefaultDenormalFPMath =
-      TC.getDefaultDenormalModeForType(Args, DeviceOffloadKind);
+      TC.getDefaultDenormalModeForType(Args, JA);
   const llvm::DenormalMode DefaultDenormalFP32Math =
-    TC.getDefaultDenormalModeForType(Args, DeviceOffloadKind,
-                                     &llvm::APFloat::IEEEsingle());
+      TC.getDefaultDenormalModeForType(Args, JA, &llvm::APFloat::IEEEsingle());
 
   llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
   llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
@@ -4295,7 +4294,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mdisable-tail-calls");
 
     RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
-                               CmdArgs, JA.getOffloadingDeviceKind());
+                               CmdArgs, JA);
 
     // Render ABI arguments
     switch (TC.getArch()) {
@@ -4618,8 +4617,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fsplit_stack))
     CmdArgs.push_back("-split-stacks");
 
-  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs,
-                             JA.getOffloadingDeviceKind());
+  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
   if (Arg *A = Args.getLastArg(options::OPT_mdouble_EQ)) {
     if (TC.getArch() == llvm::Triple::avr)
