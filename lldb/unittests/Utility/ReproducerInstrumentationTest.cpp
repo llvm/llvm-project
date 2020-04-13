@@ -50,12 +50,29 @@ public:
   TestingRegistry();
 };
 
-static llvm::Optional<Serializer> g_serializer;
 static llvm::Optional<TestingRegistry> g_registry;
+static llvm::Optional<Serializer> g_serializer;
 
-#define LLDB_GET_INSTRUMENTATION_DATA()                                        \
-  g_serializer ? InstrumentationData(*g_serializer, *g_registry)               \
-               : InstrumentationData()
+inline InstrumentationData GetTestInstrumentationData() {
+  if (g_serializer)
+    return InstrumentationData(*g_serializer, *g_registry);
+  return InstrumentationData();
+}
+
+class TestInstrumentationDataRAII {
+public:
+  TestInstrumentationDataRAII(llvm::raw_string_ostream &os) {
+    g_registry.emplace();
+    g_serializer.emplace(os);
+  }
+
+  ~TestInstrumentationDataRAII() {
+    g_registry.reset();
+    g_serializer.reset();
+  }
+};
+
+#define LLDB_GET_INSTRUMENTATION_DATA() GetTestInstrumentationData()
 
 enum class Class {
   Foo,
@@ -119,11 +136,6 @@ private:
 
 double InstrumentedFoo::g_e = 0;
 bool InstrumentedFoo::g_f = false;
-
-void ClearObjects() {
-  g_registry.reset();
-  g_serializer.reset();
-}
 
 struct Validator {
   enum Validation { valid, invalid };
@@ -520,10 +532,10 @@ TEST(SerializationRountripTest, SerializeDeserializeObjectReference) {
 TEST(RecordReplayTest, InstrumentedFoo) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    TestInstrumentationDataRAII data(os);
+
     int b = 200;
     float c = 300.3f;
     double e = 400.4;
@@ -538,8 +550,6 @@ TEST(RecordReplayTest, InstrumentedFoo) {
     foo.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
   Deserializer deserializer(os.str());
   registry.Replay(deserializer);
@@ -551,34 +561,34 @@ TEST(RecordReplayTest, InstrumentedFoo) {
 TEST(RecordReplayTest, InstrumentedFooSameThis) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
-  int b = 200;
-  float c = 300.3f;
-  double e = 400.4;
+  {
+    TestInstrumentationDataRAII data(os);
 
-  InstrumentedFoo *foo = new InstrumentedFoo(0);
-  foo->A(100);
-  foo->B(b);
-  foo->C(&c);
-  foo->D("bar");
-  InstrumentedFoo::E(e);
-  InstrumentedFoo::F();
-  foo->Validate();
-  foo->~InstrumentedFoo();
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
 
-  InstrumentedFoo *foo2 = new (foo) InstrumentedFoo(0);
-  foo2->A(100);
-  foo2->B(b);
-  foo2->C(&c);
-  foo2->D("bar");
-  InstrumentedFoo::E(e);
-  InstrumentedFoo::F();
-  foo2->Validate();
-  delete foo2;
+    InstrumentedFoo *foo = new InstrumentedFoo(0);
+    foo->A(100);
+    foo->B(b);
+    foo->C(&c);
+    foo->D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo->Validate();
+    foo->~InstrumentedFoo();
 
-  ClearObjects();
+    InstrumentedFoo *foo2 = new (foo) InstrumentedFoo(0);
+    foo2->A(100);
+    foo2->B(b);
+    foo2->C(&c);
+    foo2->D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo2->Validate();
+    delete foo2;
+  }
 
   TestingRegistry registry;
   Deserializer deserializer(os.str());
@@ -591,10 +601,10 @@ TEST(RecordReplayTest, InstrumentedFooSameThis) {
 TEST(RecordReplayTest, InstrumentedBar) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    TestInstrumentationDataRAII data(os);
+
     InstrumentedBar bar;
     InstrumentedFoo foo = bar.GetInstrumentedFoo();
 
@@ -615,8 +625,6 @@ TEST(RecordReplayTest, InstrumentedBar) {
     bar.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
   Deserializer deserializer(os.str());
   registry.Replay(deserializer);
@@ -633,10 +641,10 @@ TEST(RecordReplayTest, InstrumentedBar) {
 TEST(RecordReplayTest, InstrumentedBarRef) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    TestInstrumentationDataRAII data(os);
+
     InstrumentedBar bar;
     InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
 
@@ -657,8 +665,6 @@ TEST(RecordReplayTest, InstrumentedBarRef) {
     bar.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
   Deserializer deserializer(os.str());
   registry.Replay(deserializer);
@@ -671,10 +677,10 @@ TEST(RecordReplayTest, InstrumentedBarRef) {
 TEST(RecordReplayTest, InstrumentedBarPtr) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    TestInstrumentationDataRAII data(os);
+
     InstrumentedBar bar;
     InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
 
@@ -694,8 +700,6 @@ TEST(RecordReplayTest, InstrumentedBarPtr) {
     bar.SetInstrumentedFoo(&foo);
     bar.Validate();
   }
-
-  ClearObjects();
 
   TestingRegistry registry;
   Deserializer deserializer(os.str());
