@@ -51,9 +51,6 @@ public:
   /// Return the number of bytes in this string.
   unsigned size() const { return entry->getKeyLength(); }
 
-  /// Return true if this identifier is the specified string.
-  bool is(StringRef string) const { return strref() == string; }
-
   const char *begin() const { return data(); }
   const char *end() const { return entry->getKeyData() + size(); }
 
