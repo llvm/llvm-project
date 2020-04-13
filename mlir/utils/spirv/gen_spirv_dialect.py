@@ -548,7 +548,7 @@ def map_spec_operand_to_ods_argument(operand):
     if quantifier == '':
       arg_type = 'SPV_Type'
     elif quantifier == '?':
-      arg_type = 'SPV_Optional<SPV_Type>'
+      arg_type = 'Optional<SPV_Type>'
     else:
       arg_type = 'Variadic<SPV_Type>'
   elif kind == 'IdMemorySemantics' or kind == 'IdScope':

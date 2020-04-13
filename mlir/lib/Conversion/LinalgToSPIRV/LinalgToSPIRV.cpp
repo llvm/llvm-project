@@ -155,7 +155,7 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
     groupOperation = rewriter.create<spirv::spvOp>(                            \
         loc, originalInputType.getElementType(), spirv::Scope::Subgroup,       \
         spirv::GroupOperation::Reduce, inputElement,                           \
-        /*cluster_size=*/ArrayRef<Value>());                                   \
+        /*cluster_size=*/nullptr);                                             \
   } break
   switch (*binaryOpKind) {
     CREATE_GROUP_NON_UNIFORM_BIN_OP(IAdd, GroupNonUniformIAddOp);
