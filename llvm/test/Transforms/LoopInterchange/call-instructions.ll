@@ -27,7 +27,7 @@ declare void @bar(i64 %a) readnone
 ; CHECK-NEXT: Name:            CallInst
 ; CHECK-NEXT: Function:        interchange_01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT  - String:          Cannot interchange loops due to call instruction.
+; CHECK-NEXT: - String:          Cannot interchange loops due to call instruction.
 
 define void @interchange_01(i32 %k) {
 entry:
