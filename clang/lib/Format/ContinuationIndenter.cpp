@@ -642,8 +642,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !State.Stack.back().IsCSharpGenericTypeConstraint &&
       Previous.opensScope() && Previous.isNot(TT_ObjCMethodExpr) &&
-      (Current.isNot(TT_LineComment) || Previous.BlockKind == BK_BracedInit))
+      (Current.isNot(TT_LineComment) || Previous.BlockKind == BK_BracedInit)) {
     State.Stack.back().Indent = State.Column + Spaces;
+    State.Stack.back().IsAligned = true;
+  }
   if (State.Stack.back().AvoidBinPacking && startsNextParameter(Current, Style))
     State.Stack.back().NoLineBreak = true;
   if (startsSegmentOfBuilderTypeCall(Current) &&
@@ -858,6 +860,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     bool ContinuePPDirective =
         State.Line->InPPDirective && State.Line->Type != LT_ImportStatement;
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
+                                  State.Stack.back().IsAligned,
                                   ContinuePPDirective);
   }
 
