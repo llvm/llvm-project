@@ -190,6 +190,10 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
     return CudaVersion::CUDA_100;
   case 101:
     return CudaVersion::CUDA_101;
+  case 102:
+    return CudaVersion::CUDA_102;
+  case 110:
+    return CudaVersion::CUDA_110;
   default:
     return CudaVersion::UNKNOWN;
   }
