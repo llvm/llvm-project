@@ -112,11 +112,6 @@ class Configuration(object):
             return check_value(val, env_var)
         return check_value(conf_val, name)
 
-    def get_modules_enabled(self):
-        return self.get_lit_bool('enable_modules',
-                                default=False,
-                                env_var='LIBCXX_ENABLE_MODULES')
-
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
         if self.target_info.is_windows():
@@ -192,20 +187,12 @@ class Configuration(object):
         if te:
             self.lit_config.note("Using executor: %r" % exec_str)
             if self.lit_config.useValgrind:
-                # We have no way of knowing where in the chain the
-                # ValgrindExecutor is supposed to go. It is likely
-                # that the user wants it at the end, but we have no
-                # way of getting at that easily.
-                self.lit_config.fatal("Cannot infer how to create a Valgrind "
-                                      " executor.")
+                self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
         else:
             te = LocalExecutor()
-            if self.lit_config.useValgrind:
-                te = ValgrindExecutor(self.lit_config.valgrindArgs, te)
 
         te.target_info = self.target_info
         self.target_info.executor = te
-
         self.executor = te
 
     def configure_target_info(self):
@@ -993,7 +980,8 @@ class Configuration(object):
         if not self.target_info.is_darwin():
             modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        enable_modules = self.get_modules_enabled()
+        enable_modules = self.get_lit_bool('enable_modules', default=False,
+                                                             env_var='LIBCXX_ENABLE_MODULES')
         if enable_modules and not supports_modules:
             self.lit_config.fatal(
                 '-fmodules is enabled but not supported by the compiler')
