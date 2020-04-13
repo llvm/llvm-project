@@ -41,7 +41,7 @@ void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
 /// Returns the nesting depth of this operation, i.e., the number of loops
 /// surrounding this operation.
-unsigned getNestingDepth(Operation &op);
+unsigned getNestingDepth(Operation *op);
 
 /// Returns in 'sequentialLoops' all sequential loops in loop nest rooted
 /// at 'forOp'.
