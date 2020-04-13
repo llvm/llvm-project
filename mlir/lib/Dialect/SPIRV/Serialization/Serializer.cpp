@@ -239,8 +239,8 @@ private:
 
   bool isVoidType(Type type) const { return type.isa<NoneType>(); }
 
-  /// Returns true if the given type is a pointer type to a struct in Uniform or
-  /// StorageBuffer storage class.
+  /// Returns true if the given type is a pointer type to a struct in some
+  /// interface storage class.
   bool isInterfaceStructPtrType(Type type) const;
 
   /// Main dispatch method for serializing a type. The result <id> of the
@@ -900,12 +900,19 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 // Type
 //===----------------------------------------------------------------------===//
 
+// According to the SPIR-V spec "Validation Rules for Shader Capabilities":
+// "Composite objects in the StorageBuffer, PhysicalStorageBuffer, Uniform, and
+// PushConstant Storage Classes must be explicitly laid out."
 bool Serializer::isInterfaceStructPtrType(Type type) const {
   if (auto ptrType = type.dyn_cast<spirv::PointerType>()) {
-    auto storageClass = ptrType.getStorageClass();
-    if (storageClass == spirv::StorageClass::Uniform ||
-        storageClass == spirv::StorageClass::StorageBuffer) {
+    switch (ptrType.getStorageClass()) {
+    case spirv::StorageClass::PhysicalStorageBuffer:
+    case spirv::StorageClass::PushConstant:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::Uniform:
       return ptrType.getPointeeType().isa<spirv::StructType>();
+    default:
+      break;
     }
   }
   return false;
