@@ -617,6 +617,7 @@ public:
     VPWidenMemoryInstructionSC,
     VPWidenPHISC,
     VPWidenSC,
+    VPWidenSelectSC
   };
 
   VPRecipeBase(const unsigned char SC) : SubclassID(SC) {}
@@ -806,6 +807,38 @@ public:
   }
 
   /// Produce a widened version of the call instruction.
+  void execute(VPTransformState &State) override;
+
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+};
+
+/// A recipe for widening select instructions.
+class VPWidenSelectRecipe : public VPRecipeBase {
+private:
+  /// Hold the select to be widened.
+  SelectInst &Ingredient;
+
+  /// Is the condition of the select loop invariant?
+  bool InvariantCond;
+
+  /// Hold VPValues for the arguments of the call.
+  VPUser User;
+
+public:
+  VPWidenSelectRecipe(SelectInst &I, bool InvariantCond)
+      : VPRecipeBase(VPWidenSelectSC), Ingredient(I),
+        InvariantCond(InvariantCond) {}
+
+  ~VPWidenSelectRecipe() override = default;
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *V) {
+    return V->getVPRecipeID() == VPRecipeBase::VPWidenSelectSC;
+  }
+
+  /// Produce a widened version of the select instruction.
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.

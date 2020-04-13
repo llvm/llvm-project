@@ -1,7 +1,7 @@
 # REQUIRES: powerpc-registered-target
 
 # RUN: llvm-objdump -D %p/Inputs/xcoff-section-headers.o | \
-# RUN:   FileCheck --check-prefixes=CHECK,ONLY-D %s
+# RUN:   FileCheck %s
 
 # RUN: llvm-objdump -D -r %p/Inputs/xcoff-section-headers.o | \
 # RUN:   FileCheck --check-prefixes=CHECK,WITH-R %s
@@ -35,18 +35,24 @@ CHECK-NEXT: 		...
 CHECK:        Disassembly of section .data:
 CHECK:        00000080 <func>:
 CHECK-NEXT:       80: 00 00 00 94                  	<unknown>
+WITH-R-NEXT:                         00000080:  R_POS        func
 CHECK:        00000084 <a>:
 CHECK-NEXT:       84: 00 00 00 a4                  	<unknown>
+WITH-R-NEXT:                         00000084:  R_POS        a
 CHECK:        00000088 <b>:
 CHECK-NEXT:       88: 00 00 00 a0                  	<unknown>
+WITH-R-NEXT:                         00000088:  R_POS        b
 CHECK:        0000008c <c>:
 CHECK-NEXT:       8c: 00 00 00 08                  	<unknown>
+WITH-R-NEXT:                         0000008c:  R_TLS        c
 CHECK:        00000090 <d>:
-ONLY-D-NEXT:      90: 00 00 00 00                  	<unknown>
-WITH-R-NEXT:      ...
+CHECK-NEXT:       90: 00 00 00 00                  	<unknown>
+WITH-R-NEXT:                         00000090:  R_TLS        d
 CHECK:        00000094 <func>:
 CHECK-NEXT:       94: 00 00 00 00                  	<unknown>
+WITH-R-NEXT:                         00000094:  R_POS        .func
 CHECK-NEXT:       98: 00 00 00 80                  	<unknown>
+WITH-R-NEXT:                         00000098:  R_POS        TOC
 CHECK-NEXT:       9c: 00 00 00 00                  	<unknown>
 CHECK:        000000a0 <b>:
 CHECK-NEXT:       a0: 00 00 30 39                  	<unknown>

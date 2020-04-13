@@ -44,3 +44,13 @@ double second = 1, 2
 # CHECK-NEXT:double third = 0
 # CHECK-NEXT:       ^
 double third = 0
+
+# CHECK-NEXT:{{.*}}.s:[[#@LINE+3]]:8: error: expected identifier in '.macro' directive
+# CHECK-NEXT:.macro 23
+# CHECK-NEXT:       ^
+.macro 23
+
+# CHECK-NEXT:{{.*}}.s:[[#@LINE+3]]:10: error: expected identifier in '.macro' directive
+# CHECK-NEXT:.macro a 23
+# CHECK-NEXT:         ^
+.macro a 23

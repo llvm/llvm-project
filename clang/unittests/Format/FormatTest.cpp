@@ -1929,6 +1929,24 @@ TEST_F(FormatTest, FormatsEnum) {
                "  TWO\n"
                "};\n"
                "int i;");
+
+  FormatStyle EightIndent = getLLVMStyle();
+  EightIndent.IndentWidth = 8;
+  verifyFormat("enum {\n"
+               "        VOID,\n"
+               "        CHAR,\n"
+               "        SHORT,\n"
+               "        INT,\n"
+               "        LONG,\n"
+               "        SIGNED,\n"
+               "        UNSIGNED,\n"
+               "        BOOL,\n"
+               "        FLOAT,\n"
+               "        DOUBLE,\n"
+               "        COMPLEX\n"
+               "};",
+               EightIndent);
+
   // Not enums.
   verifyFormat("enum X f() {\n"
                "  a();\n"
@@ -10133,17 +10151,18 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    " \t \t    comment */",
                    Tab));
   EXPECT_EQ("{\n"
-            "  /*\n"
-            "   * Comment\n"
-            "   */\n"
-            "  int i;\n"
+            "        /*\n"
+            "         * Comment\n"
+            "         */\n"
+            "        int i;\n"
             "}",
             format("{\n"
                    "\t/*\n"
                    "\t * Comment\n"
                    "\t */\n"
                    "\t int i;\n"
-                   "}"));
+                   "}",
+                   Tab));
 
   Tab.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
   Tab.TabWidth = 8;
@@ -10314,14 +10333,244 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    "\t*/\n"
                    "}",
                    Tab));
+  EXPECT_EQ("/* some\n"
+            "   comment */",
+            format(" \t \t /* some\n"
+                   " \t \t    comment */",
+                   Tab));
+  EXPECT_EQ("int a; /* some\n"
+            "   comment */",
+            format(" \t \t int a; /* some\n"
+                   " \t \t    comment */",
+                   Tab));
+  EXPECT_EQ("int a; /* some\n"
+            "comment */",
+            format(" \t \t int\ta; /* some\n"
+                   " \t \t    comment */",
+                   Tab));
+  EXPECT_EQ("f(\"\t\t\"); /* some\n"
+            "    comment */",
+            format(" \t \t f(\"\t\t\"); /* some\n"
+                   " \t \t    comment */",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\t * Comment\n"
+            "\t */\n"
+            "\tint i;\n"
+            "}",
+            format("{\n"
+                   "\t/*\n"
+                   "\t * Comment\n"
+                   "\t */\n"
+                   "\t int i;\n"
+                   "}",
+                   Tab));
+  Tab.TabWidth = 2;
+  Tab.IndentWidth = 2;
+  EXPECT_EQ("{\n"
+            "\t/* aaaa\n"
+            "\t\t bbbb */\n"
+            "}",
+            format("{\n"
+                   "/* aaaa\n"
+                   "\t bbbb */\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\t\taaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "\t\tbbbbbbbbbbbbb\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "/*\n"
+                   "\taaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbb\n"
+                   "*/\n"
+                   "}",
+                   Tab));
+  Tab.AlignConsecutiveAssignments = true;
+  Tab.AlignConsecutiveDeclarations = true;
+  Tab.TabWidth = 4;
+  Tab.IndentWidth = 4;
+  verifyFormat("class Assign {\n"
+               "\tvoid f() {\n"
+               "\t\tint         x      = 123;\n"
+               "\t\tint         random = 4;\n"
+               "\t\tstd::string alphabet =\n"
+               "\t\t\t\"abcdefghijklmnopqrstuvwxyz\";\n"
+               "\t}\n"
+               "};",
+               Tab);
+
+  Tab.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Tab.TabWidth = 8;
+  Tab.IndentWidth = 8;
+  EXPECT_EQ("if (aaaaaaaa && // q\n"
+            "    bb)         // w\n"
+            "\t;",
+            format("if (aaaaaaaa &&// q\n"
+                   "bb)// w\n"
+                   ";",
+                   Tab));
+  EXPECT_EQ("if (aaa && bbb) // w\n"
+            "\t;",
+            format("if(aaa&&bbb)// w\n"
+                   ";",
+                   Tab));
+  verifyFormat("class X {\n"
+               "\tvoid f() {\n"
+               "\t\tsomeFunction(parameter1,\n"
+               "\t\t             parameter2);\n"
+               "\t}\n"
+               "};",
+               Tab);
+  verifyFormat("#define A                        \\\n"
+               "\tvoid f() {               \\\n"
+               "\t\tsomeFunction(    \\\n"
+               "\t\t    parameter1,  \\\n"
+               "\t\t    parameter2); \\\n"
+               "\t}",
+               Tab);
+  Tab.TabWidth = 4;
+  Tab.IndentWidth = 8;
+  verifyFormat("class TabWidth4Indent8 {\n"
+               "\t\tvoid f() {\n"
+               "\t\t\t\tsomeFunction(parameter1,\n"
+               "\t\t\t\t             parameter2);\n"
+               "\t\t}\n"
+               "};",
+               Tab);
+  Tab.TabWidth = 4;
+  Tab.IndentWidth = 4;
+  verifyFormat("class TabWidth4Indent4 {\n"
+               "\tvoid f() {\n"
+               "\t\tsomeFunction(parameter1,\n"
+               "\t\t             parameter2);\n"
+               "\t}\n"
+               "};",
+               Tab);
+  Tab.TabWidth = 8;
+  Tab.IndentWidth = 4;
+  verifyFormat("class TabWidth8Indent4 {\n"
+               "    void f() {\n"
+               "\tsomeFunction(parameter1,\n"
+               "\t             parameter2);\n"
+               "    }\n"
+               "};",
+               Tab);
+  Tab.TabWidth = 8;
+  Tab.IndentWidth = 8;
   EXPECT_EQ("/*\n"
-            "\t      a\t\tcomment\n"
-            "\t      in multiple lines\n"
+            "              a\t\tcomment\n"
+            "              in multiple lines\n"
             "       */",
             format("   /*\t \t \n"
                    " \t \t a\t\tcomment\t \t\n"
                    " \t \t in multiple lines\t\n"
                    " \t  */",
+                   Tab));
+  verifyFormat("{\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "\taaaaaaaaaaaaaaaaaaaaaaaaaaaa();\n"
+               "};",
+               Tab);
+  verifyFormat("enum AA {\n"
+               "\ta1, // Force multiple lines\n"
+               "\ta2,\n"
+               "\ta3\n"
+               "};",
+               Tab);
+  EXPECT_EQ("if (aaaaaaaa && // q\n"
+            "    bb)         // w\n"
+            "\t;",
+            format("if (aaaaaaaa &&// q\n"
+                   "bb)// w\n"
+                   ";",
+                   Tab));
+  verifyFormat("class X {\n"
+               "\tvoid f() {\n"
+               "\t\tsomeFunction(parameter1,\n"
+               "\t\t             parameter2);\n"
+               "\t}\n"
+               "};",
+               Tab);
+  verifyFormat("{\n"
+               "\tQ(\n"
+               "\t    {\n"
+               "\t\t    int a;\n"
+               "\t\t    someFunction(aaaaaaaa,\n"
+               "\t\t                 bbbbbbb);\n"
+               "\t    },\n"
+               "\t    p);\n"
+               "}",
+               Tab);
+  EXPECT_EQ("{\n"
+            "\t/* aaaa\n"
+            "\t   bbbb */\n"
+            "}",
+            format("{\n"
+                   "/* aaaa\n"
+                   "   bbbb */\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\t  aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "\t  bbbbbbbbbbbbb\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "/*\n"
+                   "  aaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbb\n"
+                   "*/\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t// aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "\t// bbbbbbbbbbbbb\n"
+            "}",
+            format("{\n"
+                   "\t// aaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbb\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\t  aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "\t  bbbbbbbbbbbbb\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "\t/*\n"
+                   "\t  aaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbb\n"
+                   "\t*/\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "\t/*\n"
+                   "\n"
+                   "\t*/\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            " asdf\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "\t/*\n"
+                   " asdf\n"
+                   "\t*/\n"
+                   "}",
                    Tab));
   EXPECT_EQ("/* some\n"
             "   comment */",
@@ -10344,17 +10593,41 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    " \t \t    comment */",
                    Tab));
   EXPECT_EQ("{\n"
-            "  /*\n"
-            "   * Comment\n"
-            "   */\n"
-            "  int i;\n"
+            "\t/*\n"
+            "\t * Comment\n"
+            "\t */\n"
+            "\tint i;\n"
             "}",
             format("{\n"
                    "\t/*\n"
                    "\t * Comment\n"
                    "\t */\n"
                    "\t int i;\n"
-                   "}"));
+                   "}",
+                   Tab));
+  Tab.TabWidth = 2;
+  Tab.IndentWidth = 2;
+  EXPECT_EQ("{\n"
+            "\t/* aaaa\n"
+            "\t   bbbb */\n"
+            "}",
+            format("{\n"
+                   "/* aaaa\n"
+                   "   bbbb */\n"
+                   "}",
+                   Tab));
+  EXPECT_EQ("{\n"
+            "\t/*\n"
+            "\t  aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "\t  bbbbbbbbbbbbb\n"
+            "\t*/\n"
+            "}",
+            format("{\n"
+                   "/*\n"
+                   "  aaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbb\n"
+                   "*/\n"
+                   "}",
+                   Tab));
   Tab.AlignConsecutiveAssignments = true;
   Tab.AlignConsecutiveDeclarations = true;
   Tab.TabWidth = 4;
@@ -10409,6 +10682,23 @@ TEST_F(FormatTest, ZeroTabWidth) {
                    Tab));
 
   Tab.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  Tab.UseTab = FormatStyle::UT_AlignWithSpaces;
   EXPECT_EQ("void a(){\n"
             "    // line starts with '\t'\n"
             "};",
@@ -12825,6 +13115,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("UseTab: Always", UseTab, FormatStyle::UT_Always);
   CHECK_PARSE("UseTab: ForContinuationAndIndentation", UseTab,
               FormatStyle::UT_ForContinuationAndIndentation);
+  CHECK_PARSE("UseTab: AlignWithSpaces", UseTab,
+              FormatStyle::UT_AlignWithSpaces);
   // For backward compatibility:
   CHECK_PARSE("UseTab: false", UseTab, FormatStyle::UT_Never);
   CHECK_PARSE("UseTab: true", UseTab, FormatStyle::UT_Always);

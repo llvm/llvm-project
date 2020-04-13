@@ -1837,9 +1837,11 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // check what will be known at the start of the inlined code.
     AddAlignmentAssumptions(CS, IFI);
 
+    AssumptionCache *AC =
+        IFI.GetAssumptionCache ? &(*IFI.GetAssumptionCache)(*Caller) : nullptr;
+
     /// Preserve all attributes on of the call and its parameters.
-    if (Instruction *Assume = buildAssumeFromInst(CS.getInstruction()))
-      Assume->insertBefore(CS.getInstruction());
+    salvageKnowledge(CS.getInstruction(), AC);
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs

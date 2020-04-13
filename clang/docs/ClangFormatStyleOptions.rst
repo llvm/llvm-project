@@ -2534,7 +2534,11 @@ the configuration (without a prefix: ``Auto``).
     Use tabs only for indentation.
 
   * ``UT_ForContinuationAndIndentation`` (in configuration: ``ForContinuationAndIndentation``)
-    Use tabs only for line continuation and indentation.
+    Fill all leading whitespace with tabs, and use spaces for alignment that
+    appears within a line (e.g. consecutive assignments and declarations).
+
+  * ``UT_AlignWithSpaces`` (in configuration: ``AlignWithSpaces``)
+    Use tabs for line continuation and indentation, and spaces for alignment.
 
   * ``UT_Always`` (in configuration: ``Always``)
     Use tabs whenever we need to fill whitespace that spans at least from

@@ -6,13 +6,13 @@
 // CHECK-LABEL: module attributes {test.simple}
 module attributes {test.simple} {
   // CHECK-NOT: func @dead_private_function
-  func @dead_private_function() attributes { sym_visibility = "nested" }
+  func @dead_private_function() attributes { sym_visibility = "private" }
 
   // CHECK-NOT: func @dead_nested_function
   func @dead_nested_function() attributes { sym_visibility = "nested" }
 
   // CHECK: func @live_private_function
-  func @live_private_function() attributes { sym_visibility = "nested" }
+  func @live_private_function() attributes { sym_visibility = "private" }
 
   // CHECK: func @live_nested_function
   func @live_nested_function() attributes { sym_visibility = "nested" }

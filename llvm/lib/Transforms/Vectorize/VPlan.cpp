@@ -718,6 +718,13 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     << Indent << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient) << "\\l\"";
 }
 
+void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << " +\n"
+    << Indent << "\"WIDEN-SELECT" << VPlanIngredient(&Ingredient)
+    << (InvariantCond ? " (condition is loop invariant)" : "") << "\\l\"";
+}
+
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << " +\n" << Indent << "\"WIDEN\\l\"";

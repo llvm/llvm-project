@@ -49,7 +49,7 @@ public:
   /// this replacement. It is needed for determining how \p Spaces is turned
   /// into tabs and spaces for some format styles.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
-                         unsigned StartOfTokenColumn,
+                         unsigned StartOfTokenColumn, bool isAligned = false,
                          bool InPPDirective = false);
 
   /// Adds information about an unchangeable token's whitespace.
@@ -109,7 +109,7 @@ public:
            SourceRange OriginalWhitespaceRange, int Spaces,
            unsigned StartOfTokenColumn, unsigned NewlinesBefore,
            StringRef PreviousLinePostfix, StringRef CurrentLinePrefix,
-           bool ContinuesPPDirective, bool IsInsideToken);
+           bool IsAligned, bool ContinuesPPDirective, bool IsInsideToken);
 
     // The kind of the token whose whitespace this change replaces, or in which
     // this change inserts whitespace.
@@ -125,6 +125,7 @@ public:
     unsigned NewlinesBefore;
     std::string PreviousLinePostfix;
     std::string CurrentLinePrefix;
+    bool IsAligned;
     bool ContinuesPPDirective;
 
     // The number of spaces in front of the token or broken part of the token.
@@ -204,7 +205,10 @@ private:
                                 unsigned PreviousEndOfTokenColumn,
                                 unsigned EscapedNewlineColumn);
   void appendIndentText(std::string &Text, unsigned IndentLevel,
-                        unsigned Spaces, unsigned WhitespaceStartColumn);
+                        unsigned Spaces, unsigned WhitespaceStartColumn,
+                        bool IsAligned);
+  unsigned appendTabIndent(std::string &Text, unsigned Spaces,
+                           unsigned Indentation);
 
   SmallVector<Change, 16> Changes;
   const SourceManager &SourceMgr;

@@ -155,10 +155,11 @@ shows the default absolute path, the second --basenames, and the third
 shows --relativenames.
 
 .. code-block:: console
+
   $ pwd
   /tmp
   $ clang -g foo/test.cpp -o test.elf
-  $ llvm-symbolizer --obj=test.elf 0x4004a0 
+  $ llvm-symbolizer --obj=test.elf 0x4004a0
   main
   /tmp/foo/test.cpp:15:0
   $ llvm-symbolizer --obj=test.elf 0x4004a0 --basenames
@@ -167,7 +168,7 @@ shows --relativenames.
   $ llvm-symbolizer --obj=test.elf 0x4004a0 --relativenames
   main
   foo/test.cpp:15:0
-   
+
 OPTIONS
 -------
 

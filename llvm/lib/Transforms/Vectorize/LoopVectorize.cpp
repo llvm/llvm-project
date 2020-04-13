@@ -413,6 +413,9 @@ public:
   void widenCallInstruction(CallInst &I, VPUser &ArgOperands,
                             VPTransformState &State);
 
+  /// Widen a single select instruction within the innermost loop.
+  void widenSelectInstruction(SelectInst &I, bool InvariantCond);
+
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop();
 
@@ -478,12 +481,13 @@ public:
   /// Construct the vector value of a scalarized value \p V one lane at a time.
   void packScalarIntoVectorValue(Value *V, const VPIteration &Instance);
 
-  /// Try to vectorize the interleaved access group that \p Instr belongs to
-  /// with the base address given in \p Addr, optionally masking the vector
-  /// operations if \p BlockInMask is non-null. Use \p State to translate given
-  /// VPValues to IR values in the vectorized loop.
-  void vectorizeInterleaveGroup(Instruction *Instr, VPTransformState &State,
-                                VPValue *Addr, VPValue *BlockInMask = nullptr);
+  /// Try to vectorize interleaved access group \p Group with the base address
+  /// given in \p Addr, optionally masking the vector operations if \p
+  /// BlockInMask is non-null. Use \p State to translate given VPValues to IR
+  /// values in the vectorized loop.
+  void vectorizeInterleaveGroup(const InterleaveGroup<Instruction> *Group,
+                                VPTransformState &State, VPValue *Addr,
+                                VPValue *BlockInMask = nullptr);
 
   /// Vectorize Load and Store instructions with the base address given in \p
   /// Addr, optionally masking the vector operations if \p BlockInMask is
@@ -2173,18 +2177,10 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 //   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
-void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
-                                                   VPTransformState &State,
-                                                   VPValue *Addr,
-                                                   VPValue *BlockInMask) {
-  const InterleaveGroup<Instruction> *Group =
-      Cost->getInterleavedAccessGroup(Instr);
-  assert(Group && "Fail to get an interleaved access group.");
-
-  // Skip if current instruction is not the insert position.
-  if (Instr != Group->getInsertPos())
-    return;
-
+void InnerLoopVectorizer::vectorizeInterleaveGroup(
+    const InterleaveGroup<Instruction> *Group, VPTransformState &State,
+    VPValue *Addr, VPValue *BlockInMask) {
+  Instruction *Instr = Group->getInsertPos();
   const DataLayout &DL = Instr->getModule()->getDataLayout();
 
   // Prepare for the vector type of the interleaved load/store.
@@ -2373,10 +2369,10 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
 
   LoopVectorizationCostModel::InstWidening Decision =
       Cost->getWideningDecision(Instr, VF);
-  assert(Decision != LoopVectorizationCostModel::CM_Unknown &&
-         "CM decision should be taken at this point");
-  if (Decision == LoopVectorizationCostModel::CM_Interleave)
-    return vectorizeInterleaveGroup(Instr, State, Addr, BlockInMask);
+  assert((Decision == LoopVectorizationCostModel::CM_Widen ||
+          Decision == LoopVectorizationCostModel::CM_Widen_Reverse ||
+          Decision == LoopVectorizationCostModel::CM_GatherScatter) &&
+         "CM decision is not to widen the memory instruction");
 
   Type *ScalarDataTy = getMemInstValueType(Instr);
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
@@ -4232,6 +4228,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   case Instruction::Br:
   case Instruction::PHI:
   case Instruction::GetElementPtr:
+  case Instruction::Select:
     llvm_unreachable("This instruction is handled by a different recipe.");
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -4272,35 +4269,6 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
 
     break;
   }
-  case Instruction::Select: {
-    // Widen selects.
-    // If the selector is loop invariant we can create a select
-    // instruction with a scalar condition. Otherwise, use vector-select.
-    auto *SE = PSE.getSE();
-    bool InvariantCond =
-        SE->isLoopInvariant(PSE.getSCEV(I.getOperand(0)), OrigLoop);
-    setDebugLocFromInst(Builder, &I);
-
-    // The condition can be loop invariant  but still defined inside the
-    // loop. This means that we can't just use the original 'cond' value.
-    // We have to take the 'vectorized' value and pick the first lane.
-    // Instcombine will make this a no-op.
-
-    auto *ScalarCond = getOrCreateScalarValue(I.getOperand(0), {0, 0});
-
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *Cond = getOrCreateVectorValue(I.getOperand(0), Part);
-      Value *Op0 = getOrCreateVectorValue(I.getOperand(1), Part);
-      Value *Op1 = getOrCreateVectorValue(I.getOperand(2), Part);
-      Value *Sel =
-          Builder.CreateSelect(InvariantCond ? ScalarCond : Cond, Op0, Op1);
-      VectorLoopValueMap.setVectorValue(&I, Part, Sel);
-      addMetadata(Sel, &I);
-    }
-
-    break;
-  }
-
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
@@ -4430,6 +4398,28 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
 
       VectorLoopValueMap.setVectorValue(&I, Part, V);
       addMetadata(V, &I);
+  }
+}
+
+void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
+                                                 bool InvariantCond) {
+  setDebugLocFromInst(Builder, &I);
+
+  // The condition can be loop invariant  but still defined inside the
+  // loop. This means that we can't just use the original 'cond' value.
+  // We have to take the 'vectorized' value and pick the first lane.
+  // Instcombine will make this a no-op.
+
+  auto *ScalarCond = getOrCreateScalarValue(I.getOperand(0), {0, 0});
+
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    Value *Cond = getOrCreateVectorValue(I.getOperand(0), Part);
+    Value *Op0 = getOrCreateVectorValue(I.getOperand(1), Part);
+    Value *Op1 = getOrCreateVectorValue(I.getOperand(2), Part);
+    Value *Sel =
+        Builder.CreateSelect(InvariantCond ? ScalarCond : Cond, Op0, Op1);
+    VectorLoopValueMap.setVectorValue(&I, Part, Sel);
+    addMetadata(Sel, &I);
   }
 }
 
@@ -6937,6 +6927,29 @@ VPRecipeBuilder::tryToWidenCall(Instruction *I, VFRange &Range, VPlan &Plan) {
   return new VPWidenCallRecipe(*CI, VPValues);
 }
 
+VPWidenSelectRecipe *VPRecipeBuilder::tryToWidenSelect(Instruction *I,
+                                                       VFRange &Range) {
+  auto *SI = dyn_cast<SelectInst>(I);
+  if (!SI)
+    return nullptr;
+
+  // SI should be widened, unless it is scalar after vectorization,
+  // scalarization is profitable or it is predicated.
+  auto willWiden = [this, SI](unsigned VF) -> bool {
+    return !CM.isScalarAfterVectorization(SI, VF) &&
+           !CM.isProfitableToScalarize(SI, VF) &&
+           !CM.isScalarWithPredication(SI, VF);
+  };
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
+    return nullptr;
+
+  auto *SE = PSE.getSE();
+  bool InvariantCond =
+      SE->isLoopInvariant(PSE.getSCEV(SI->getOperand(0)), OrigLoop);
+  // Success: widen this instruction.
+  return new VPWidenSelectRecipe(*SI, InvariantCond);
+}
+
 VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
@@ -7088,6 +7101,7 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
   // operations, inductions and Phi nodes.
   if ((Recipe = tryToWidenCall(Instr, Range, *Plan)) ||
       (Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
+      (Recipe = tryToWidenSelect(Instr, Range)) ||
       (Recipe = tryToOptimizeInduction(Instr, Range)) ||
       (Recipe = tryToBlend(Instr, Plan)) ||
       (isa<PHINode>(Instr) &&
@@ -7194,7 +7208,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
-  VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, Builder);
+  VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, PSE, Builder);
 
   // ---------------------------------------------------------------------------
   // Pre-construction: record ingredients whose recipes we'll need to further
@@ -7410,6 +7424,10 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.ILV->widenCallInstruction(Ingredient, User, State);
 }
 
+void VPWidenSelectRecipe::execute(VPTransformState &State) {
+  State.ILV->widenSelectInstruction(Ingredient, InvariantCond);
+}
+
 void VPWidenRecipe::execute(VPTransformState &State) {
   State.ILV->widenInstruction(Ingredient);
 }
@@ -7466,8 +7484,7 @@ void VPBlendRecipe::execute(VPTransformState &State) {
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Interleave group being replicated.");
-  State.ILV->vectorizeInterleaveGroup(IG->getInsertPos(), State, getAddr(),
-                                      getMask());
+  State.ILV->vectorizeInterleaveGroup(IG, State, getAddr(), getMask());
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
@@ -7620,7 +7637,7 @@ static bool processLoopInVPlanNativePath(
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
-  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM, IAI);
+  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM, IAI, PSE);
 
   // Get user vectorization factor.
   const unsigned UserVF = Hints.getWidth();
@@ -7779,7 +7796,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   CM.collectValuesToIgnore();
 
   // Use the planner for vectorization.
-  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM, IAI);
+  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM, IAI, PSE);
 
   // Get user vectorization factor.
   unsigned UserVF = Hints.getWidth();
