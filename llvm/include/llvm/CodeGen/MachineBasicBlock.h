@@ -46,35 +46,17 @@ class raw_ostream;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
-// This structure uniquely identifies a basic block section.
-// Possible values are
-//  {Type: Default, Number: (unsigned)} (These are regular section IDs)
-//  {Type: Exception, Number: 0}  (ExceptionSectionID)
-//  {Type: Cold, Number: 0}  (ColdSectionID)
-struct MBBSectionID {
-  enum SectionType {
-    Default = 0, // Regular section (these sections are distinguished by the
-                 // Number field).
-    Exception,   // Special section type for exception handling blocks
-    Cold,        // Special section type for cold blocks
-  } Type;
-  unsigned Number;
-
-  MBBSectionID(unsigned N) : Type(Default), Number(N) {}
-
-  // Special unique sections for cold and exception blocks.
-  const static MBBSectionID ColdSectionID;
-  const static MBBSectionID ExceptionSectionID;
-
-  bool operator==(const MBBSectionID &Other) const {
-    return Type == Other.Type && Number == Other.Number;
-  }
-
-  bool operator!=(const MBBSectionID &Other) const { return !(*this == Other); }
-
-private:
-  // This is only used to construct the special cold and exception sections.
-  MBBSectionID(SectionType T) : Type(T), Number(0) {}
+enum MachineBasicBlockSection : unsigned {
+  ///  This is also the order of sections in a function.  Basic blocks that are
+  ///  part of the original function section (entry block) come first, followed
+  ///  by exception handling basic blocks, cold basic blocks and finally basic
+  //   blocks that need unique sections.
+  MBBS_Entry,
+  MBBS_Exception,
+  MBBS_Cold,
+  MBBS_Unique,
+  ///  None implies no sections for any basic block, the default.
+  MBBS_None,
 };
 
 template <> struct ilist_traits<MachineInstr> {
@@ -161,14 +143,8 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
-  /// With basic block sections, this stores the Section ID of the basic block.
-  MBBSectionID SectionID{0};
-
-  // Indicate that this basic block begins a section.
-  bool IsBeginSection = false;
-
-  // Indicate that this basic block ends a section.
-  bool IsEndSection = false;
+  /// Stores the Section type of the basic block with basic block sections.
+  MachineBasicBlockSection SectionType = MBBS_None;
 
   /// Default target of the callbr of a basic block.
   bool InlineAsmBrDefaultTarget = false;
@@ -459,20 +435,16 @@ public:
   void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
 
   /// Returns true if this block begins any section.
-  bool isBeginSection() const { return IsBeginSection; }
+  bool isBeginSection() const;
 
   /// Returns true if this block ends any section.
-  bool isEndSection() const { return IsEndSection; }
+  bool isEndSection() const;
 
-  void setIsBeginSection(bool V = true) { IsBeginSection = V; }
+  /// Returns the type of section this basic block belongs to.
+  MachineBasicBlockSection getSectionType() const { return SectionType; }
 
-  void setIsEndSection(bool V = true) { IsEndSection = V; }
-
-  /// Returns the section ID of this basic block.
-  MBBSectionID getSectionID() const { return SectionID; }
-
-  /// Sets the section ID for this basic block.
-  void setSectionID(MBBSectionID V) { SectionID = V; }
+  /// Indicate that the basic block belongs to a Section Type.
+  void setSectionType(MachineBasicBlockSection V) { SectionType = V; }
 
   /// Returns true if this is the indirect dest of an INLINEASM_BR.
   bool isInlineAsmBrIndirectTarget(const MachineBasicBlock *Tgt) const {
@@ -513,9 +485,10 @@ public:
   void moveAfter(MachineBasicBlock *NewBefore);
 
   /// Returns true if this and MBB belong to the same section.
-  bool sameSection(const MachineBasicBlock *MBB) const {
-    return getSectionID() == MBB->getSectionID();
-  }
+  bool sameSection(const MachineBasicBlock *MBB) const;
+
+  /// Returns the basic block that ends the section which contains this one.
+  const MachineBasicBlock *getSectionEndMBB() const;
 
   /// Update the terminator instructions in block to account for changes to the
   /// layout. If the block previously used a fallthrough, it may now need a
@@ -902,6 +875,12 @@ public:
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
+
+  /// Sets the MCSymbol corresponding to the end of this basic block.
+  void setEndMCSymbol(MCSymbol *Sym) { EndMCSymbol = Sym; }
+
+  /// Returns the MCSymbol corresponding to the end of this basic block.
+  MCSymbol *getEndMCSymbol() const { return EndMCSymbol; }
 
   Optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;

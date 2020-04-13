@@ -62,9 +62,7 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
     MCContext &Ctx = MF->getContext();
     auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
 
-    // We emit a non-temporary symbol for every basic block if we have BBLabels
-    // or -- with basic block sections -- when a basic block begins a section.
-    bool BasicBlockSymbols = isBeginSection() || MF->hasBBLabels();
+    bool BasicBlockSymbols = MF->hasBBSections() || MF->hasBBLabels();
     auto Delimiter = BasicBlockSymbols ? "." : "_";
     assert(getNumber() >= 0 && "cannot get label for unreachable MBB");
 
@@ -548,6 +546,48 @@ void MachineBasicBlock::moveBefore(MachineBasicBlock *NewAfter) {
 
 void MachineBasicBlock::moveAfter(MachineBasicBlock *NewBefore) {
   getParent()->splice(++NewBefore->getIterator(), getIterator());
+}
+
+// Returns true if this basic block and the Other are in the same section.
+bool MachineBasicBlock::sameSection(const MachineBasicBlock *Other) const {
+  if (this == Other)
+    return true;
+
+  if (this->getSectionType() != Other->getSectionType())
+    return false;
+
+  // If either is in a unique section, return false.
+  if (this->getSectionType() == llvm::MachineBasicBlockSection::MBBS_Unique ||
+      Other->getSectionType() == llvm::MachineBasicBlockSection::MBBS_Unique)
+    return false;
+
+  return true;
+}
+
+const MachineBasicBlock *MachineBasicBlock::getSectionEndMBB() const {
+  if (this->isEndSection())
+    return this;
+  auto I = std::next(this->getIterator());
+  const MachineFunction *MF = getParent();
+  while (I != MF->end()) {
+    const MachineBasicBlock &MBB = *I;
+    if (MBB.isEndSection())
+      return &MBB;
+    I = std::next(I);
+  }
+  llvm_unreachable("No End Basic Block for this section.");
+}
+
+// Returns true if this block begins any section.
+bool MachineBasicBlock::isBeginSection() const {
+  return (SectionType == MBBS_Entry || SectionType == MBBS_Unique ||
+          getParent()->isSectionStartMBB(getNumber()));
+}
+
+// Returns true if this block begins any section.
+bool MachineBasicBlock::isEndSection() const {
+  return (SectionType == MBBS_Entry || SectionType == MBBS_Unique ||
+          getParent()->isSectionEndMBB(getNumber()));
 }
 
 void MachineBasicBlock::updateTerminator() {
@@ -1532,7 +1572,3 @@ MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
       "Liveness information is accurate");
   return LiveIns.begin();
 }
-
-const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
-const MBBSectionID
-    MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);

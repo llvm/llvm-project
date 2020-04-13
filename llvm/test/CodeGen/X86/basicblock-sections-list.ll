@@ -59,18 +59,18 @@ define i32 @_Z3zipb(i1 zeroext %0) #0 {
 
 ; LINUX-SECTIONS: .section        .text._Z3foob,"ax",@progbits
 ; LINUX-SECTIONS: _Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.a.BB._Z3foob,"ax",@progbits
+; LINUX-SECTIONS: .section        .text._Z3foob.a.BB._Z3foob,"ax",@progbits,unique,1
 ; LINUX-SECTIONS: a.BB._Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.aa.BB._Z3foob,"ax",@progbits
+; LINUX-SECTIONS: .section        .text._Z3foob.aa.BB._Z3foob,"ax",@progbits,unique,2
 ; LINUX-SECTIONS: aa.BB._Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.raa.BB._Z3foob,"ax",@progbits
+; LINUX-SECTIONS: .section        .text._Z3foob.raa.BB._Z3foob,"ax",@progbits,unique,3
 ; LINUX-SECTIONS: raa.BB._Z3foob:
 
 ; LINUX-SECTIONS: .section        .text._Z3zipb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.a.BB._Z3zipb,"ax",@progbits
+; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.a.BB._Z3zipb,"ax",@progbits,unique,1
 ; LINUX-SECTIONS-NOT: a.BB._Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.aa.BB._Z3zipb,"ax",@progbits
+; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.aa.BB._Z3zipb,"ax",@progbits,unique,2
 ; LINUX-SECTIONS-NOT: aa.BB._Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.raa.BB._Z3zipb,"ax",@progbits
+; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.raa.BB._Z3zipb,"ax",@progbits,unique,3
 ; LINUX-SECTIONS-NOT: raa.BB._Z3zipb:

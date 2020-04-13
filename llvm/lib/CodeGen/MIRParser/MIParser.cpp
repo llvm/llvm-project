@@ -495,7 +495,7 @@ public:
   bool parseOffset(int64_t &Offset);
   bool parseAlignment(unsigned &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
-  bool parseSectionID(Optional<MBBSectionID> &SID);
+  bool parseMBBS(MachineBasicBlockSection &T);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -620,24 +620,21 @@ bool MIParser::consumeIfPresent(MIToken::TokenKind TokenKind) {
   return true;
 }
 
-// Parse Machine Basic Block Section ID.
-bool MIParser::parseSectionID(Optional<MBBSectionID> &SID) {
+// Parse Machine Basic Block Section Type.
+bool MIParser::parseMBBS(MachineBasicBlockSection &T) {
   assert(Token.is(MIToken::kw_bbsections));
   lex();
-  if (Token.is(MIToken::IntegerLiteral)) {
-    unsigned Value = 0;
-    if (getUnsigned(Value))
-      return error("Unknown Section ID");
-    SID = MBBSectionID{Value};
-  } else {
-    const StringRef &S = Token.stringValue();
-    if (S == "Exception")
-      SID = MBBSectionID::ExceptionSectionID;
-    else if (S == "Cold")
-      SID = MBBSectionID::ColdSectionID;
-    else
-      return error("Unknown Section ID");
-  }
+  const StringRef &S = Token.stringValue();
+  if (S == "Entry")
+    T = MBBS_Entry;
+  else if (S == "Exception")
+    T = MBBS_Exception;
+  else if (S == "Cold")
+    T = MBBS_Cold;
+  else if (S == "Unique")
+    T = MBBS_Unique;
+  else
+    return error("Unknown Section Type");
   lex();
   return false;
 }
@@ -654,7 +651,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool HasAddressTaken = false;
   bool IsLandingPad = false;
   bool IsEHFuncletEntry = false;
-  Optional<MBBSectionID> SectionID;
+  MachineBasicBlockSection SectionType = MBBS_None;
   unsigned Alignment = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
@@ -684,7 +681,7 @@ bool MIParser::parseBasicBlockDefinition(
         lex();
         break;
       case MIToken::kw_bbsections:
-        if (parseSectionID(SectionID))
+        if (parseMBBS(SectionType))
           return true;
         break;
       default:
@@ -717,8 +714,8 @@ bool MIParser::parseBasicBlockDefinition(
     MBB->setHasAddressTaken();
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
-  if (SectionID.hasValue()) {
-    MBB->setSectionID(SectionID.getValue());
+  if (SectionType != MBBS_None) {
+    MBB->setSectionType(SectionType);
     MF.setBBSectionsType(BasicBlockSection::List);
   }
   return false;
