@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CallSite.h"
@@ -509,4 +510,67 @@ TEST(AssumeQueryAPI, getKnowledgeFromUseInAssume) {
   // Large bundles can lead to special cases. this is why this test is soo
   // large.
   RunRandTest(9876789, 100000, -0, 7, 100);
+}
+
+TEST(AssumeQueryAPI, AssumptionCache) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(
+      "declare void @llvm.assume(i1)\n"
+      "define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3, i1 %B) {\n"
+      "call void @llvm.assume(i1 true) [\"nonnull\"(i32* %P), \"align\"(i32* "
+      "%P2, i32 4), \"align\"(i32* %P, i32 8)]\n"
+      "call void @llvm.assume(i1 %B) [\"test\"(i32* %P1), "
+      "\"dereferenceable\"(i32* %P, i32 4)]\n"
+      "ret void\n}\n",
+      Err, C);
+  if (!Mod)
+    Err.print("AssumeQueryAPI", errs());
+  Function *F = Mod->getFunction("test");
+  BasicBlock::iterator First = F->begin()->begin();
+  BasicBlock::iterator Second = F->begin()->begin();
+  Second++;
+  AssumptionCacheTracker ACT;
+  AssumptionCache &AC = ACT.getAssumptionCache(*F);
+  auto AR = AC.assumptionsFor(F->getArg(3));
+  ASSERT_EQ(AR.size(), 0u);
+  AR = AC.assumptionsFor(F->getArg(1));
+  ASSERT_EQ(AR.size(), 1u);
+  ASSERT_EQ(AR[0].Index, 0u);
+  ASSERT_EQ(AR[0].Assume, &*Second);
+  AR = AC.assumptionsFor(F->getArg(2));
+  ASSERT_EQ(AR.size(), 1u);
+  ASSERT_EQ(AR[0].Index, 1u);
+  ASSERT_EQ(AR[0].Assume, &*First);
+  AR = AC.assumptionsFor(F->getArg(0));
+  ASSERT_EQ(AR.size(), 3u);
+  llvm::sort(AR,
+             [](const auto &L, const auto &R) { return L.Index < R.Index; });
+  ASSERT_EQ(AR[0].Assume, &*First);
+  ASSERT_EQ(AR[0].Index, 0u);
+  ASSERT_EQ(AR[1].Assume, &*Second);
+  ASSERT_EQ(AR[1].Index, 1u);
+  ASSERT_EQ(AR[2].Assume, &*First);
+  ASSERT_EQ(AR[2].Index, 2u);
+  AR = AC.assumptionsFor(F->getArg(4));
+  ASSERT_EQ(AR.size(), 1u);
+  ASSERT_EQ(AR[0].Assume, &*Second);
+  ASSERT_EQ(AR[0].Index, AssumptionCache::ExprResultIdx);
+  AC.unregisterAssumption(cast<CallInst>(&*Second));
+  AR = AC.assumptionsFor(F->getArg(1));
+  ASSERT_EQ(AR.size(), 0u);
+  AR = AC.assumptionsFor(F->getArg(0));
+  ASSERT_EQ(AR.size(), 3u);
+  llvm::sort(AR,
+             [](const auto &L, const auto &R) { return L.Index < R.Index; });
+  ASSERT_EQ(AR[0].Assume, &*First);
+  ASSERT_EQ(AR[0].Index, 0u);
+  ASSERT_EQ(AR[1].Assume, nullptr);
+  ASSERT_EQ(AR[1].Index, 1u);
+  ASSERT_EQ(AR[2].Assume, &*First);
+  ASSERT_EQ(AR[2].Index, 2u);
+  AR = AC.assumptionsFor(F->getArg(2));
+  ASSERT_EQ(AR.size(), 1u);
+  ASSERT_EQ(AR[0].Index, 1u);
+  ASSERT_EQ(AR[0].Assume, &*First);
 }
