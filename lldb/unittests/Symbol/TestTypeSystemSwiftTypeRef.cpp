@@ -177,3 +177,49 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Pointer) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::BuiltinTypeName,
+                                    swift::BUILTIN_TYPE_NAME_RAWPOINTER))));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(p.IsPointerType(nullptr));
+  }
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::BuiltinTypeName,
+                                    swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER))));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(p.IsPointerType(nullptr));
+  }
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::BuiltinTypeName,
+                                    swift::BUILTIN_TYPE_NAME_NATIVEOBJECT))));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(p.IsPointerType(nullptr));
+  }
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::BuiltinTypeName,
+                                    swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT))));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(p.IsPointerType(nullptr));
+  }
+}
