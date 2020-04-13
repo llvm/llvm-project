@@ -141,6 +141,40 @@ define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
   ret <64 x i8> %res0
 }
 
+define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: combine_permi2q_pshufb_as_permi2d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
+; CHECK-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = shufflevector <8 x i64> %a0, <8 x i64> %a1, <8 x i32> <i32 15, i32 0, i32 13, i32 2, i32 11, i32 4, i32 9, i32 6>
+  %res1 = bitcast <8 x i64> %res0 to <64 x i8>
+  %res2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %res1, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15>, <64 x i8> undef, i64 -1)
+  ret <64 x i8> %res2
+}
+define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
+; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
+; X86-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
+; X64-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; X64-NEXT:    kmovq %rdi, %k1
+; X64-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+  %res0 = shufflevector <8 x i64> %a0, <8 x i64> %a1, <8 x i32> <i32 15, i32 0, i32 13, i32 2, i32 11, i32 4, i32 9, i32 6>
+  %res1 = bitcast <8 x i64> %res0 to <64 x i8>
+  %res2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %res1, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15>, <64 x i8> zeroinitializer, i64 %m)
+  ret <64 x i8> %res2
+}
+
 define <32 x i16> @combine_permvar_as_pshuflw(<32 x i16> %a0) {
 ; CHECK-LABEL: combine_permvar_as_pshuflw:
 ; CHECK:       # %bb.0:
@@ -150,8 +184,8 @@ define <32 x i16> @combine_permvar_as_pshuflw(<32 x i16> %a0) {
   ret <32 x i16> %1
 }
 
-define <32 x i16> @combine_pshufb_as_pshufhw(<32 x i16> %a0) {
-; CHECK-LABEL: combine_pshufb_as_pshufhw:
+define <32 x i16> @combine_permvar_as_pshufhw(<32 x i16> %a0) {
+; CHECK-LABEL: combine_permvar_as_pshufhw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 = zmm0[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14,16,17,18,19,21,20,23,22,24,25,26,27,29,28,31,30]
 ; CHECK-NEXT:    ret{{[l|q]}}
