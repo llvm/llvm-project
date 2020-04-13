@@ -1184,7 +1184,8 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     Status module_creation_error;
     swift::ModuleDecl *module_decl =
-        ast_context->CreateModule(module_info, module_creation_error);
+        ast_context->CreateModule(module_info, module_creation_error,
+                                  /*importInfo*/ {});
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
