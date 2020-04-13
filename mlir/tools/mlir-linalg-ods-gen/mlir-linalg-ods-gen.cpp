@@ -1149,6 +1149,7 @@ LogicalResult TCParser::parseTensorDef(bool isOutput) {
   auto iterBoolPair = registeredTensors.try_emplace(
       tensorId, RegisteredTensor{tensorType, map, isOutput, AffineMap(),
                                  nextRegisteredTensorIndex++});
+  (void)iterBoolPair;
   assert(iterBoolPair.second && "Could not emplace tensor registration");
   LLVM_DEBUG(llvm::dbgs() << "Recorded: " << tensorId << " "
                           << "with typeString: " << tensorType << " "
