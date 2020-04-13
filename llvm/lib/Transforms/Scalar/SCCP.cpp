@@ -28,7 +28,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
@@ -370,10 +369,8 @@ private:
   // markConstant - Make a value be marked as "constant".  If the value
   // is not already a constant, add it to the instruction work list so that
   // the users of the instruction are updated later.
-  bool markConstant(ValueLatticeElement &IV, Value *V, Constant *C,
-                    bool MayIncludeUndef = false) {
-    if (!IV.markConstant(C, MayIncludeUndef))
-      return false;
+  bool markConstant(ValueLatticeElement &IV, Value *V, Constant *C) {
+    if (!IV.markConstant(C)) return false;
     LLVM_DEBUG(dbgs() << "markConstant: " << *C << ": " << *V << '\n');
     pushToWorkList(IV, V);
     return true;
@@ -957,28 +954,23 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
   if (V1State.isOverdefined() && V2State.isOverdefined())
     return (void)markOverdefined(&I);
 
-  // If either of the operands is a constant, try to fold it to a constant.
+  // Both operands are non-integer constants or constant expressions.
   // TODO: Use information from notconstant better.
-  if ((V1State.isConstant() || V2State.isConstant())) {
-    Value *V1 = isConstant(V1State) ? getConstant(V1State) : I.getOperand(0);
-    Value *V2 = isConstant(V2State) ? getConstant(V2State) : I.getOperand(1);
-    Value *R = SimplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
-    auto *C = dyn_cast_or_null<Constant>(R);
-    if (C) {
-      // X op Y -> undef.
-      if (isa<UndefValue>(C))
-        return;
-      // Conservatively assume that the result may be based on operands that may
-      // be undef.
-      return (void)markConstant(IV, &I, C, /*MayIncludeUndef=*/true);
-    }
+  if (isConstant(V1State) && isConstant(V2State)) {
+    Constant *C = ConstantExpr::get(I.getOpcode(), getConstant(V1State),
+                                    getConstant(V2State));
+    // X op Y -> undef.
+    if (isa<UndefValue>(C))
+      return;
+    return (void)markConstant(IV, &I, C);
   }
 
   // Only use ranges for binary operators on integers.
   if (!I.getType()->isIntegerTy())
     return markOverdefined(&I);
 
-  // Try to simplify to a constant range.
+  // Operands are either constant ranges, notconstant, overdefined or one of the
+  // operands is a constant.
   ConstantRange A = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
   ConstantRange B = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
   if (V1State.isConstantRange())
