@@ -541,10 +541,6 @@ bool TypeSystemSwiftTypeRef::IsVoidType(void *type) {
   VALIDATE_AND_RETURN(impl,
                       m_swift_ast_context->IsVoidType(ReconstructType(type)));
 }
-bool TypeSystemSwiftTypeRef::CanPassInRegisters(const CompilerType &type) {
-  return m_swift_ast_context->CanPassInRegisters(
-      {m_swift_ast_context, ReconstructType(type.GetOpaqueQualType())});
-}
 // Type Completion
 bool TypeSystemSwiftTypeRef::GetCompleteType(void *type) {
   return m_swift_ast_context->GetCompleteType(ReconstructType(type));

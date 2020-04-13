@@ -189,6 +189,12 @@ public:
   }
   bool IsPolymorphicClass(void *type) override { return false; }
   bool IsBeingDefined(void *type) override { return false; }
+  bool CanPassInRegisters(const CompilerType &type) override {
+    // FIXME: Implement this. There was an abort() here to figure out which
+    // tests where hitting this code. At least TestSwiftReturns and
+    // TestSwiftStepping were failing because of this Darwin.
+    return false;
+  }
   unsigned GetTypeQualifiers(void *type) override { return 0; }
   CompilerType GetTypeForDecl(void *opaque_decl) override {
     llvm_unreachable("GetTypeForDecl not implemented");
@@ -287,7 +293,6 @@ public:
   bool IsPointerType(void *type, CompilerType *pointee_type) override;
   bool IsScalarType(void *type) override;
   bool IsVoidType(void *type) override;
-  bool CanPassInRegisters(const CompilerType &type) override;
   // Type Completion
   bool GetCompleteType(void *type) override;
   // AST related queries
@@ -815,8 +820,6 @@ public:
   bool IsScalarType(void *type) override;
 
   bool IsVoidType(void *type) override;
-
-  bool CanPassInRegisters(const CompilerType &type) override;
 
   static bool IsGenericType(const CompilerType &compiler_type);
 

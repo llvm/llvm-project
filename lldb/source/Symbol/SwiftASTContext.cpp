@@ -5452,13 +5452,6 @@ bool SwiftASTContext::IsVoidType(void *type) {
   return type == GetASTContext()->TheEmptyTupleType.getPointer();
 }
 
-bool SwiftASTContext::CanPassInRegisters(const CompilerType &type) {
-  // FIXME: Implement this. There was an abort() here to figure out which tests
-  // where hitting this code. At least TestSwiftReturns and TestSwiftStepping
-  // were failing because of this Darwin.
-  return false;
-}
-
 bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   if (swift::Type swift_type = ::GetSwiftType(compiler_type))
     return swift_type->hasTypeParameter(); // is<swift::ArchetypeType>();
