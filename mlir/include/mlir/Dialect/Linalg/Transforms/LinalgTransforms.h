@@ -70,6 +70,13 @@ LogicalResult tileAndFuseLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
     ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
 
+using LinalgLoops = SmallVector<Operation *, 4>;
+
+/// Emits a loop nest of with the proper body for `op`.
+template <typename LoopTy, typename ConcreteOp>
+Optional<LinalgLoops> linalgLowerOpToLoops(PatternRewriter &rewriter,
+                                           Operation *op);
+
 /// Emits a loop nest of `loop.for` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult linalgOpToLoops(PatternRewriter &rewriter, Operation *op);
