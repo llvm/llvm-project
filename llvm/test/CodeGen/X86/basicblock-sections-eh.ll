@@ -80,5 +80,5 @@ declare void @__cxa_end_catch()
 
 ;LINUX-SECTIONS: .section	.text._Z3foob,"ax",@progbits
 ;LINUX-SECTIONS: _Z3foob:
-;LINUX-SECTIONS: .section	.text._Z3foob.eh,"ax",@progbits
+;LINUX-SECTIONS: .section       .text._Z3foob.laara.BB._Z3foob,"ax",@progbits
 ;LINUX-SECTIONS: l{{[a|r]*}}.BB._Z3foob:
