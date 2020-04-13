@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ShuffleDecodeConstantPool.h"
-#include "Utils/X86ShuffleDecode.h"
+#include "MCTargetDesc/X86ShuffleDecode.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
