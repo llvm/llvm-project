@@ -34075,8 +34075,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Don't combine if we are a AVX512/EVEX target and the mask element size
   // is different from the root element size - this would prevent writemasks
   // from being reused.
-  // TODO - this currently prevents all lane shuffles from occurring.
-  // TODO - attempt to narrow Mask back to writemask size.
   bool IsMaskedShuffle = false;
   if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
     if (Root.hasOneUse() && Root->use_begin()->getOpcode() == ISD::VSELECT &&
@@ -34249,6 +34247,17 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     narrowShuffleMaskElts(MaskScale, BaseMask, Mask);
   } else {
     Mask.assign(BaseMask.begin(), BaseMask.end());
+  }
+
+  // For masked shuffles, we're trying to match the root width for better
+  // writemask folding, attempt to scale the mask.
+  // TODO - variable shuffles might need this to be widened again.
+  if (IsMaskedShuffle && NumRootElts > Mask.size()) {
+    assert((NumRootElts % Mask.size()) == 0 && "Illegal mask size");
+    int MaskScale = NumRootElts / Mask.size();
+    SmallVector<int, 64> ScaledMask;
+    narrowShuffleMaskElts(MaskScale, Mask, ScaledMask);
+    Mask = std::move(ScaledMask);
   }
 
   unsigned NumMaskElts = Mask.size();
