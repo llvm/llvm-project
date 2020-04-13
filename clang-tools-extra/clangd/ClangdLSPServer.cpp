@@ -409,7 +409,8 @@ private:
   //  - cleans up the entry in RequestCancelers when it's no longer needed
   // If a client reuses an ID, the last wins and the first cannot be canceled.
   Context cancelableRequestContext(const llvm::json::Value &ID) {
-    auto Task = cancelableTask();
+    auto Task = cancelableTask(
+        /*Reason=*/static_cast<int>(ErrorCode::RequestCancelled));
     auto StrID = llvm::to_string(ID);  // JSON-serialize ID for map key.
     auto Cookie = NextRequestCookie++; // No lock, only called on main thread.
     {

@@ -50,6 +50,7 @@ enum class ErrorCode {
 
   // Defined by the protocol.
   RequestCancelled = -32800,
+  ContentModified = -32801,
 };
 // Models an LSP error as an llvm::Error.
 class LSPError : public llvm::ErrorInfo<LSPError> {

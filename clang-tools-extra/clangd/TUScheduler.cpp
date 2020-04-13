@@ -648,8 +648,8 @@ void ASTWorker::runWithAST(
     llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
     TUScheduler::ASTActionInvalidation Invalidation) {
   auto Task = [=, Action = std::move(Action)]() mutable {
-    if (isCancelled())
-      return Action(llvm::make_error<CancelledError>());
+    if (auto Reason = isCancelled())
+      return Action(llvm::make_error<CancelledError>(Reason));
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     if (!AST) {
       StoreDiags CompilerInvocationDiagConsumer;
@@ -955,7 +955,8 @@ void ASTWorker::startTask(llvm::StringRef Name,
     Canceler Invalidate = nullptr;
     if (Invalidation) {
       WithContext WC(std::move(Ctx));
-      std::tie(Ctx, Invalidate) = cancelableTask();
+      std::tie(Ctx, Invalidate) = cancelableTask(
+          /*Reason=*/static_cast<int>(ErrorCode::ContentModified));
     }
     Requests.push_back({std::move(Task), std::string(Name), steady_clock::now(),
                         std::move(Ctx), UpdateType, Invalidation,

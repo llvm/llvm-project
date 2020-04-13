@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "Cancellation.h"
 #include "Logger.h"
 #include "Protocol.h" // For LSPError
 #include "Shutdown.h"
@@ -22,7 +23,21 @@ llvm::json::Object encodeError(llvm::Error E) {
   // FIXME: encode cancellation errors using RequestCancelled or ContentModified
   // as appropriate.
   if (llvm::Error Unhandled = llvm::handleErrors(
-          std::move(E), [&](const LSPError &L) -> llvm::Error {
+          std::move(E),
+          [&](const CancelledError &C) -> llvm::Error {
+            switch (C.Reason) {
+            case static_cast<int>(ErrorCode::ContentModified):
+              Code = ErrorCode::ContentModified;
+              Message = "Request cancelled because the document was modified";
+              break;
+            default:
+              Code = ErrorCode::RequestCancelled;
+              Message = "Request cancelled";
+              break;
+            }
+            return llvm::Error::success();
+          },
+          [&](const LSPError &L) -> llvm::Error {
             Message = L.Message;
             Code = L.Code;
             return llvm::Error::success();
