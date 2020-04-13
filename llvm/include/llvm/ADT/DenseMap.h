@@ -119,9 +119,8 @@ public:
     }
 
     const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
-    if (is_trivially_copyable<KeyT>::value &&
-        is_trivially_copyable<ValueT>::value) {
-      // Use a simpler loop when these are trivial types.
+    if (std::is_trivially_destructible<ValueT>::value) {
+      // Use a simpler loop when values don't need destruction.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
     } else {
