@@ -40,11 +40,16 @@ using llvm::SetVector;
 const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
-LogicalResult mlir::linalg::tileLinalgOpAndSetMarker(
-    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
-    StringRef linalgMarker, ArrayRef<unsigned> permutation) {
+using TileFn = Optional<TiledLinalgOp>(OpBuilder &, LinalgOp, ArrayRef<int64_t>,
+                                       ArrayRef<unsigned>, OperationFolder *);
+
+static LogicalResult
+tileLinalgOpAndSetMarkerImpl(TileFn tileFn, PatternRewriter &rewriter,
+                             Operation *op, ArrayRef<int64_t> sizes,
+                             StringRef linalgMarker,
+                             ArrayRef<unsigned> permutation) {
   assert(permutation.empty() || permutation.size() == sizes.size());
-  auto tileRes = tileLinalgOperation(rewriter, op, sizes, permutation);
+  auto tileRes = tileFn(rewriter, op, sizes, permutation, /*folder=*/nullptr);
   if (!tileRes)
     return failure();
   tileRes->op.setAttr(LinalgTransforms::kLinalgTransformMarker,
@@ -52,10 +57,26 @@ LogicalResult mlir::linalg::tileLinalgOpAndSetMarker(
   return success();
 }
 
-LogicalResult mlir::linalg::tileAndFuseLinalgOpAndSetMarker(
+LogicalResult mlir::linalg::tileLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
-    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker) {
-  auto tileRes = tileLinalgOperation(rewriter, op, sizes);
+    StringRef linalgMarker, ArrayRef<unsigned> permutation) {
+  return tileLinalgOpAndSetMarkerImpl(tileLinalgOp, rewriter, op, sizes,
+                                      linalgMarker, permutation);
+}
+LogicalResult mlir::linalg::tileLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    StringRef linalgMarker, ArrayRef<unsigned> permutation) {
+  return tileLinalgOpAndSetMarkerImpl(tileLinalgOpToParallelLoops, rewriter, op,
+                                      sizes, linalgMarker, permutation);
+}
+
+static LogicalResult
+tileAndFuseLinalgOpAndSetMarkerImpl(TileFn tileFn, PatternRewriter &rewriter,
+                                    Operation *op, ArrayRef<int64_t> sizes,
+                                    ArrayRef<int64_t> operandIndicesToFuse,
+                                    StringRef linalgMarker) {
+  auto tileRes =
+      tileFn(rewriter, op, sizes, /*permutation=*/{}, /*folder=*/nullptr);
   if (!tileRes)
     return failure();
   tileRes->op.setAttr(LinalgTransforms::kLinalgTransformMarker,
@@ -87,6 +108,20 @@ LogicalResult mlir::linalg::tileAndFuseLinalgOpAndSetMarker(
   for (auto *originalProducer : originalProducers)
     rewriter.eraseOp(originalProducer);
   return success();
+}
+
+LogicalResult mlir::linalg::tileAndFuseLinalgOpAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker) {
+  return tileAndFuseLinalgOpAndSetMarkerImpl(
+      tileLinalgOp, rewriter, op, sizes, operandIndicesToFuse, linalgMarker);
+}
+LogicalResult mlir::linalg::tileAndFuseLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker) {
+  return tileAndFuseLinalgOpAndSetMarkerImpl(
+      tileLinalgOpToParallelLoops, rewriter, op, sizes, operandIndicesToFuse,
+      linalgMarker);
 }
 
 bool mlir::linalg::detail::isProducedByOpOfTypeImpl(
