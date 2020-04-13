@@ -919,7 +919,6 @@ class Configuration(object):
     def configure_sanitizer(self):
         san = self.get_lit_conf('use_sanitizer', '').strip()
         if san:
-            self.target_info.add_sanitizer_features(san, self.config.available_features)
             # Search for llvm-symbolizer along the compiler path first
             # and then along the PATH env variable.
             symbolizer_search_paths = os.environ.get('PATH', '')
