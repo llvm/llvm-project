@@ -146,16 +146,16 @@ define <8 x i64> @vec512_i64_signed_reg_reg(<8 x i64> %a1, <8 x i64> %a2) nounwi
 ; ALL-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; ALL-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
 ; ALL-NEXT:    vpsubq %zmm2, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm2
-; ALL-NEXT:    vpmuludq %zmm2, %zmm1, %zmm2
-; ALL-NEXT:    vpsrlq $32, %zmm1, %zmm4
-; ALL-NEXT:    vpmuludq %zmm3, %zmm4, %zmm4
-; ALL-NEXT:    vpaddq %zmm4, %zmm2, %zmm2
-; ALL-NEXT:    vpsllq $32, %zmm2, %zmm2
+; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm2
+; ALL-NEXT:    vpsrlq $33, %zmm1, %zmm1
 ; ALL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
-; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm4
+; ALL-NEXT:    vpmuludq %zmm4, %zmm2, %zmm4
+; ALL-NEXT:    vpaddq %zmm1, %zmm4, %zmm1
+; ALL-NEXT:    vpsllq $32, %zmm1, %zmm1
+; ALL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
 ; ALL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %t3 = icmp sgt <8 x i64> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
@@ -178,16 +178,16 @@ define <8 x i64> @vec512_i64_unsigned_reg_reg(<8 x i64> %a1, <8 x i64> %a2) noun
 ; ALL-NEXT:    vpminuq %zmm1, %zmm0, %zmm2
 ; ALL-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
 ; ALL-NEXT:    vpsubq %zmm2, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm2
-; ALL-NEXT:    vpmuludq %zmm2, %zmm1, %zmm2
-; ALL-NEXT:    vpsrlq $32, %zmm1, %zmm4
-; ALL-NEXT:    vpmuludq %zmm3, %zmm4, %zmm4
-; ALL-NEXT:    vpaddq %zmm4, %zmm2, %zmm2
-; ALL-NEXT:    vpsllq $32, %zmm2, %zmm2
+; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm2
+; ALL-NEXT:    vpsrlq $33, %zmm1, %zmm1
 ; ALL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
-; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm4
+; ALL-NEXT:    vpmuludq %zmm4, %zmm2, %zmm4
+; ALL-NEXT:    vpaddq %zmm1, %zmm4, %zmm1
+; ALL-NEXT:    vpsllq $32, %zmm1, %zmm1
+; ALL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
 ; ALL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %t3 = icmp ugt <8 x i64> %a1, %a2
   %t4 = select <8 x i1> %t3, <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
@@ -213,16 +213,16 @@ define <8 x i64> @vec512_i64_signed_mem_reg(<8 x i64>* %a1_addr, <8 x i64> %a2) 
 ; ALL-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
 ; ALL-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    vpsubq %zmm2, %zmm0, %zmm0
-; ALL-NEXT:    vpsrlq $1, %zmm0, %zmm0
-; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm2
-; ALL-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
-; ALL-NEXT:    vpsrlq $32, %zmm0, %zmm4
-; ALL-NEXT:    vpmuludq %zmm3, %zmm4, %zmm4
-; ALL-NEXT:    vpaddq %zmm4, %zmm2, %zmm2
-; ALL-NEXT:    vpsllq $32, %zmm2, %zmm2
+; ALL-NEXT:    vpsrlq $1, %zmm0, %zmm2
+; ALL-NEXT:    vpsrlq $33, %zmm0, %zmm0
 ; ALL-NEXT:    vpmuludq %zmm3, %zmm0, %zmm0
-; ALL-NEXT:    vpaddq %zmm1, %zmm2, %zmm1
+; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm4
+; ALL-NEXT:    vpmuludq %zmm4, %zmm2, %zmm4
+; ALL-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
+; ALL-NEXT:    vpsllq $32, %zmm0, %zmm0
+; ALL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
 ; ALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %a1 = load <8 x i64>, <8 x i64>* %a1_addr
   %t3 = icmp sgt <8 x i64> %a1, %a2 ; signed
@@ -247,16 +247,16 @@ define <8 x i64> @vec512_i64_signed_reg_mem(<8 x i64> %a1, <8 x i64>* %a2_addr) 
 ; ALL-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; ALL-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
 ; ALL-NEXT:    vpsubq %zmm2, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm2
-; ALL-NEXT:    vpmuludq %zmm2, %zmm1, %zmm2
-; ALL-NEXT:    vpsrlq $32, %zmm1, %zmm4
-; ALL-NEXT:    vpmuludq %zmm3, %zmm4, %zmm4
-; ALL-NEXT:    vpaddq %zmm4, %zmm2, %zmm2
-; ALL-NEXT:    vpsllq $32, %zmm2, %zmm2
+; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm2
+; ALL-NEXT:    vpsrlq $33, %zmm1, %zmm1
 ; ALL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
-; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm4
+; ALL-NEXT:    vpmuludq %zmm4, %zmm2, %zmm4
+; ALL-NEXT:    vpaddq %zmm1, %zmm4, %zmm1
+; ALL-NEXT:    vpsllq $32, %zmm1, %zmm1
+; ALL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
 ; ALL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %a2 = load <8 x i64>, <8 x i64>* %a2_addr
   %t3 = icmp sgt <8 x i64> %a1, %a2 ; signed
@@ -282,16 +282,16 @@ define <8 x i64> @vec512_i64_signed_mem_mem(<8 x i64>* %a1_addr, <8 x i64>* %a2_
 ; ALL-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
 ; ALL-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm1
 ; ALL-NEXT:    vpsubq %zmm2, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm1
-; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm2
-; ALL-NEXT:    vpmuludq %zmm2, %zmm1, %zmm2
-; ALL-NEXT:    vpsrlq $32, %zmm1, %zmm4
-; ALL-NEXT:    vpmuludq %zmm3, %zmm4, %zmm4
-; ALL-NEXT:    vpaddq %zmm4, %zmm2, %zmm2
-; ALL-NEXT:    vpsllq $32, %zmm2, %zmm2
+; ALL-NEXT:    vpsrlq $1, %zmm1, %zmm2
+; ALL-NEXT:    vpsrlq $33, %zmm1, %zmm1
 ; ALL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
-; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; ALL-NEXT:    vpsrlq $32, %zmm3, %zmm4
+; ALL-NEXT:    vpmuludq %zmm4, %zmm2, %zmm4
+; ALL-NEXT:    vpaddq %zmm1, %zmm4, %zmm1
+; ALL-NEXT:    vpsllq $32, %zmm1, %zmm1
+; ALL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
 ; ALL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %a1 = load <8 x i64>, <8 x i64>* %a1_addr
   %a2 = load <8 x i64>, <8 x i64>* %a2_addr
