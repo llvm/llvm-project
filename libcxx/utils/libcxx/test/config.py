@@ -629,22 +629,22 @@ class Configuration(object):
                 define += '=%s' % (feature_macros[m])
             self.cxx.modules_flags += [define]
         self.cxx.compile_flags += ['-Wno-macro-redefined']
-        # Transform each macro name into the feature name used in the tests.
+        # Transform the following macro names from __config_site into features
+        # that can be used in the tests.
         # Ex. _LIBCPP_HAS_NO_THREADS -> libcpp-has-no-threads
-        for m in feature_macros:
-            if m == '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS' or \
-               m == '_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT':
-                continue
-            if m == '_LIBCPP_ABI_VERSION':
-                self.config.available_features.add('libcpp-abi-version-v%s'
-                    % feature_macros[m])
-                continue
-            if m == '_LIBCPP_NO_VCRUNTIME':
-                self.config.available_features.add('libcpp-no-vcruntime')
-                continue
-            assert m.startswith('_LIBCPP_HAS_') or m.startswith('_LIBCPP_ABI_')
-            m = m.lower()[1:].replace('_', '-')
-            self.config.available_features.add(m)
+        translate = {
+            '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE',
+            '_LIBCPP_HAS_NO_MONOTONIC_CLOCK',
+            '_LIBCPP_HAS_NO_STDIN',
+            '_LIBCPP_HAS_NO_STDOUT',
+            '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS',
+            '_LIBCPP_HAS_NO_THREADS',
+            '_LIBCPP_HAS_THREAD_API_EXTERNAL',
+            '_LIBCPP_HAS_THREAD_API_PTHREAD',
+            '_LIBCPP_NO_VCRUNTIME'
+        }
+        for m in translate.intersection(feature_macros.keys()):
+            self.config.available_features.add(m.lower()[1:].replace('_', '-'))
         return feature_macros
 
 
