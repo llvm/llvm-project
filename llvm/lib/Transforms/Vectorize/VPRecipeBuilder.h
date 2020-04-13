@@ -35,6 +35,8 @@ class VPRecipeBuilder {
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
 
+  PredicatedScalarEvolution &PSE;
+
   VPBuilder &Builder;
 
   /// When we if-convert we need to create edge masks. We have to cache values
@@ -113,6 +115,8 @@ public:
   VPWidenCallRecipe *tryToWidenCall(Instruction *I, VFRange &Range,
                                     VPlan &Plan);
 
+  VPWidenSelectRecipe *tryToWidenSelect(Instruction *I, VFRange &Range);
+
   /// Check if \p I can be widened within the given VF \p Range. If \p I can be
   /// widened for \p Range.Start, build a new VPWidenRecipe and return it.
   /// Range.End may be decreased to ensure same decision from \p Range.Start to
@@ -127,8 +131,10 @@ public:
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM, VPBuilder &Builder)
-      : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
+                  LoopVectorizationCostModel &CM,
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+      : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
+        Builder(Builder) {}
 
   /// Check if a recipe can be create for \p I withing the given VF \p Range.
   /// If a recipe can be created, it adds it to \p VPBB.
