@@ -4363,7 +4363,7 @@ Sema::CheckObjCConversion(SourceRange castRange, QualType castType,
   // to 'NSString *', instead of falling through to report a "bridge cast"
   // diagnostic.
   if (castACTC == ACTC_retainable && exprACTC == ACTC_none &&
-      ConversionToObjCStringLiteralCheck(castType, castExpr, Diagnose))
+      CheckConversionToObjCLiteral(castType, castExpr, Diagnose))
     return ACR_error;
 
   // Do not issue "bridge cast" diagnostic when implicit casting
