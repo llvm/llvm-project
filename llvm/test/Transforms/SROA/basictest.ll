@@ -195,7 +195,7 @@ entry:
   %overlap.9.i64 = bitcast i8* %overlap.9.i8 to i64*
   store i8 1, i8* %overlap.1.i8, !tbaa !3
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr inbounds [16 x i8], [16 x i8]* %[[test3_a3]], i64 0, i64 0
-; CHECK-NEXT: store i8 1, i8* %[[gep]], !tbaa [[TAG_3:!.*]]
+; CHECK-NEXT: store i8 1, i8* %[[gep]], align 1, !tbaa [[TAG_3:!.*]]
   store i16 1, i16* %overlap.1.i16, !tbaa !5
 ; CHECK-NEXT: %[[bitcast:.*]] = bitcast [16 x i8]* %[[test3_a3]] to i16*
 ; CHECK-NEXT: store i16 1, i16* %[[bitcast]], {{.*}}, !tbaa [[TAG_5:!.*]]
@@ -256,7 +256,7 @@ entry:
   %overlap2.1.3.i32 = bitcast i8* %overlap2.1.3.i8 to i32*
   store i8 1,  i8*  %overlap2.1.0.i8, !tbaa !27
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr inbounds [7 x i8], [7 x i8]* %[[test3_a5]], i64 0, i64 0
-; CHECK-NEXT: store i8 1, i8* %[[gep]], !tbaa [[TAG_27:!.*]]
+; CHECK-NEXT: store i8 1, i8* %[[gep]], align 1, !tbaa [[TAG_27:!.*]]
   store i16 1, i16* %overlap2.1.0.i16, !tbaa !29
 ; CHECK-NEXT: %[[bitcast:.*]] = bitcast [7 x i8]* %[[test3_a5]] to i16*
 ; CHECK-NEXT: store i16 1, i16* %[[bitcast]], {{.*}}, !tbaa [[TAG_29:!.*]]
@@ -286,7 +286,7 @@ entry:
 ; CHECK-NEXT: store i32 1, i32* %[[bitcast]], {{.*}}, !tbaa [[TAG_39:!.*]]
   store i8 1,  i8*  %overlap2.2.1.i8, !tbaa !41
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr inbounds [7 x i8], [7 x i8]* %[[test3_a6]], i64 0, i64 1
-; CHECK-NEXT: store i8 1, i8* %[[gep]], !tbaa [[TAG_41:!.*]]
+; CHECK-NEXT: store i8 1, i8* %[[gep]], align 1, !tbaa [[TAG_41:!.*]]
   store i16 1, i16* %overlap2.2.1.i16, !tbaa !43
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr inbounds [7 x i8], [7 x i8]* %[[test3_a6]], i64 0, i64 1
 ; CHECK-NEXT: %[[bitcast:.*]] = bitcast i8* %[[gep]] to i16*
