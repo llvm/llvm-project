@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -222,9 +223,12 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
-void llvm::salvageKnowledge(Instruction *I) {
-  if (Instruction *Intr = buildAssumeFromInst(I))
+void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC) {
+  if (IntrinsicInst *Intr = buildAssumeFromInst(I)) {
     Intr->insertBefore(I);
+    if (AC)
+      AC->registerAssumption(Intr);
+  }
 }
 
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
