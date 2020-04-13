@@ -2188,7 +2188,7 @@ argument.
   __builtin_preserve_access_index(v->j);
 
 ``__builtin_unique_stable_name``
-------------------------
+--------------------------------
 
 ``__builtin_unique_stable_name()`` is a builtin that takes a type or expression and
 produces a string literal containing a unique name for the type (or type of the
