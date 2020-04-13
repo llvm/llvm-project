@@ -397,7 +397,7 @@ public:
   /// getPossiblyStalePreamble() can be null even after this function returns.
   void waitForFirstPreamble() const;
 
-  std::size_t getUsedBytes() const;
+  TUScheduler::FileStats stats() const;
   bool isASTCached() const;
 
 private:
@@ -478,6 +478,8 @@ private:
   // don't. When the old handle is destroyed, the old worker will stop reporting
   // any results to the user.
   bool CanPublishResults = true; /* GUARDED_BY(PublishMu) */
+  std::atomic<unsigned> ASTBuildCount = {0};
+  std::atomic<unsigned> PreambleBuildCount = {0};
 
   SynchronizedTUStatus Status;
   PreambleThread PreamblePeer;
@@ -661,11 +663,13 @@ void ASTWorker::runWithAST(
       // FIXME: We might need to build a patched ast once preamble thread starts
       // running async. Currently getPossiblyStalePreamble below will always
       // return a compatible preamble as ASTWorker::update blocks.
-      llvm::Optional<ParsedAST> NewAST =
-          Invocation ? buildAST(FileName, std::move(Invocation),
-                                CompilerInvocationDiagConsumer.take(),
-                                FileInputs, getPossiblyStalePreamble())
-                     : None;
+      llvm::Optional<ParsedAST> NewAST;
+      if (Invocation) {
+        NewAST = buildAST(FileName, std::move(Invocation),
+                          CompilerInvocationDiagConsumer.take(), FileInputs,
+                          getPossiblyStalePreamble());
+        ++ASTBuildCount;
+      }
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }
     // Make sure we put the AST back into the LRU cache.
@@ -732,6 +736,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     // running inside ASTWorker assumes internals won't change until it
     // finishes.
     if (Preamble != LatestPreamble) {
+      ++PreambleBuildCount;
       // Cached AST is no longer valid.
       IdleASTs.take(this);
       RanASTCallback = false;
@@ -802,6 +807,7 @@ void ASTWorker::generateDiagnostics(
     llvm::Optional<ParsedAST> NewAST = buildAST(
         FileName, std::move(Invocation), CIDiags, Inputs, LatestPreamble);
     auto RebuildDuration = DebouncePolicy::clock::now() - RebuildStartTime;
+    ++ASTBuildCount;
     // Try to record the AST-build time, to inform future update debouncing.
     // This is best-effort only: if the lock is held, don't bother.
     std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock);
@@ -897,13 +903,16 @@ tooling::CompileCommand ASTWorker::getCurrentCompileCommand() const {
   return FileInputs.CompileCommand;
 }
 
-std::size_t ASTWorker::getUsedBytes() const {
+TUScheduler::FileStats ASTWorker::stats() const {
+  TUScheduler::FileStats Result;
+  Result.ASTBuilds = ASTBuildCount;
+  Result.PreambleBuilds = PreambleBuildCount;
   // Note that we don't report the size of ASTs currently used for processing
   // the in-flight requests. We used this information for debugging purposes
   // only, so this should be fine.
-  std::size_t Result = IdleASTs.getUsedBytes(this);
+  Result.UsedBytes = IdleASTs.getUsedBytes(this);
   if (auto Preamble = getPossiblyStalePreamble())
-    Result += Preamble->Preamble.getSize();
+    Result.UsedBytes += Preamble->Preamble.getSize();
   return Result;
 }
 
@@ -1345,13 +1354,11 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
                           std::move(Task));
 }
 
-std::vector<std::pair<Path, std::size_t>>
-TUScheduler::getUsedBytesPerFile() const {
-  std::vector<std::pair<Path, std::size_t>> Result;
-  Result.reserve(Files.size());
-  for (auto &&PathAndFile : Files)
-    Result.push_back({std::string(PathAndFile.first()),
-                      PathAndFile.second->Worker->getUsedBytes()});
+llvm::StringMap<TUScheduler::FileStats> TUScheduler::fileStats() const {
+  llvm::StringMap<TUScheduler::FileStats> Result;
+  for (const auto &PathAndFile : Files)
+    Result.try_emplace(PathAndFile.first(),
+                       PathAndFile.second->Worker->stats());
   return Result;
 }
 
