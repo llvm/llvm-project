@@ -63,10 +63,16 @@ LogicalResult tileLinalgOpAndSetMarker(PatternRewriter &rewriter, Operation *op,
                                        ArrayRef<int64_t> sizes,
                                        StringRef linalgMarker,
                                        ArrayRef<unsigned> permutation);
+LogicalResult tileLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    StringRef linalgMarker, ArrayRef<unsigned> permutation);
 
 /// Tiles `op` by `sizes`, fuses the producers of `operandIndicesToFuse` and
 /// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
 LogicalResult tileAndFuseLinalgOpAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
+LogicalResult tileAndFuseLinalgOpToParallelLoopsAndSetMarker(
     PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
     ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
 
