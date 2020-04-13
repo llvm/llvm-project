@@ -1196,13 +1196,28 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   snprintf(expr_name_buf, sizeof(expr_name_buf), "__lldb_expr_%u",
            options.GetExpressionNumber());
 
+  // Gather the modules that need to be implicitly imported.
+  // The Swift stdlib needs to be imported before the SwiftLanguageRuntime can
+  // be used.
+  Status implicit_import_error;
+  llvm::SmallVector<swift::ModuleDecl *, 16> additional_imports;
+  if (!SwiftASTContext::GetImplicitImports(*swift_ast_context, sc, exe_scope,
+                                           stack_frame_wp, additional_imports,
+                                           implicit_import_error)) {
+    return make_error<ModuleImportError>(llvm::Twine("in implicit-import:\n") +
+                                         implicit_import_error.AsCString());
+  }
+
+  swift::ImplicitImportInfo importInfo;
+  importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
+  for (auto *module : additional_imports)
+    importInfo.AdditionalModules.emplace_back(module, /*exported*/ false);
+
   auto module_id = ast_context->getIdentifier(expr_name_buf);
-  auto &module = *swift::ModuleDecl::create(module_id, *ast_context);
-  const auto implicit_import_kind =
-      swift::SourceFile::ImplicitModuleImportKind::Stdlib;
+  auto &module = *swift::ModuleDecl::create(module_id, *ast_context,
+                                            importInfo);
 
   swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
-
   if (playground || repl) {
     source_file_kind = swift::SourceFileKind::Main;
   }
@@ -1210,20 +1225,10 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   // Create the source file. Note, we disable delayed parsing for the
   // swift expression parser.
   swift::SourceFile *source_file = new (*ast_context) swift::SourceFile(
-      module, source_file_kind, buffer_id, implicit_import_kind,
-      /*Keep tokens*/ false, /*KeepSyntaxTree*/ false,
+      module, source_file_kind, buffer_id, /*Keep tokens*/ false,
+      /*KeepSyntaxTree*/ false,
       swift::SourceFile::ParsingFlags::DisableDelayedBodies);
   module.addFile(*source_file);
-
-
-  // The Swift stdlib needs to be imported before the
-  // SwiftLanguageRuntime can be used.
-  Status auto_import_error;
-  if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc,
-                                          stack_frame_wp, source_file,
-                                          auto_import_error))
-    return make_error<ModuleImportError>(llvm::Twine("in auto-import:\n") +
-                                         auto_import_error.AsCString());
 
   // Swift Modules that rely on shared libraries (not frameworks)
   // don't record the link information in the swiftmodule file, so we
@@ -1331,16 +1336,16 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
 
-  // Do the auto-importing after Name Binding, that's when the Imports
-  // for the source file are figured out.
+  // Cache the source file's imports such that they're accessible to future
+  // expression evaluations.
   {
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     Status auto_import_error;
-    if (!SwiftASTContext::PerformUserImport(*swift_ast_context, sc, exe_scope,
-                                            stack_frame_wp, *source_file,
-                                            auto_import_error)) {
+    if (!SwiftASTContext::CacheUserImports(*swift_ast_context, sc, exe_scope,
+                                           stack_frame_wp, *source_file,
+                                           auto_import_error)) {
       return make_error<ModuleImportError>(llvm::Twine("in user-import:\n") +
                                            auto_import_error.AsCString());
     }
