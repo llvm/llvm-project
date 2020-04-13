@@ -51,34 +51,51 @@ func @spv_entry_point() attributes {
 // spv.interface_var_abi
 //===----------------------------------------------------------------------===//
 
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing two or three 32-bit integer attributes: 'descriptor_set', 'binding', and optional 'storage_class'}}
+// expected-error @+1 {{'spv.interface_var_abi' must be a spirv::InterfaceVarABIAttr}}
 func @interface_var(
   %arg0 : f32 {spv.interface_var_abi = 64}
 ) { return }
 
 // -----
 
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing two or three 32-bit integer attributes: 'descriptor_set', 'binding', and optional 'storage_class'}}
 func @interface_var(
-  %arg0 : f32 {spv.interface_var_abi = {binding = 0: i32}}
+// expected-error @+1 {{missing descriptor set}}
+  %arg0 : f32 {spv.interface_var_abi = #spv.interface_var_abi<()>}
 ) { return }
 
 // -----
 
-// CHECK: {spv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32}}
 func @interface_var(
-  %arg0 : f32 {spv.interface_var_abi = {binding = 0 : i32,
-                                        descriptor_set = 0 : i32,
-                                        storage_class = 12 : i32}}
+// expected-error @+1 {{missing binding}}
+  %arg0 : f32 {spv.interface_var_abi = #spv.interface_var_abi<(1,)>}
+) { return }
+
+// -----
+
+func @interface_var(
+// expected-error @+1 {{unknown storage class: }}
+  %arg0 : f32 {spv.interface_var_abi = #spv.interface_var_abi<(1,2), Foo>}
+) { return }
+
+// -----
+
+// CHECK: {spv.interface_var_abi = #spv.interface_var_abi<(0, 1), Uniform>}
+func @interface_var(
+    %arg0 : f32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 1), Uniform>}
+) { return }
+
+// -----
+
+// CHECK: {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
+func @interface_var(
+    %arg0 : f32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
 ) { return }
 
 // -----
 
 // expected-error @+1 {{'spv.interface_var_abi' attribute cannot specify storage class when attaching to a non-scalar value}}
 func @interface_var(
-  %arg0 : memref<4xf32> {spv.interface_var_abi = {binding = 0 : i32,
-                                                  descriptor_set = 0 : i32,
-                                                  storage_class = 12 : i32}}
+  %arg0 : memref<4xf32> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1), Uniform>}
 ) { return }
 
 // -----
