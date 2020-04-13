@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -771,7 +772,7 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
 
   Value *SplatVal = InsElt.getOperand(1);
   InsertElementInst *CurrIE = &InsElt;
-  SmallVector<bool, 16> ElementPresent(NumElements, false);
+  SmallBitVector ElementPresent(NumElements, false);
   InsertElementInst *FirstIE = nullptr;
 
   // Walk the chain backwards, keeping track of which indices we inserted into,
@@ -803,7 +804,7 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   // TODO: If the base vector is not undef, it might be better to create a splat
   //       and then a select-shuffle (blend) with the base vector.
   if (!isa<UndefValue>(FirstIE->getOperand(0)))
-    if (any_of(ElementPresent, [](bool Present) { return !Present; }))
+    if (!ElementPresent.all())
       return nullptr;
 
   // Create the insert + shuffle.
