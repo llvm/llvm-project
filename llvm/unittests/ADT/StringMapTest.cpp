@@ -225,7 +225,7 @@ TEST_F(StringMapTest, IterationTest) {
 // Test StringMapEntry::Create() method.
 TEST_F(StringMapTest, StringMapEntryTest) {
   MallocAllocator Allocator;
-  StringMap<uint32_t>::value_type* entry =
+  StringMap<uint32_t>::value_type *entry =
       StringMap<uint32_t>::value_type::Create(
           StringRef(testKeyFirst, testKeyLength), Allocator, 1u);
   EXPECT_STREQ(testKey, entry->first().data());
