@@ -265,3 +265,8 @@ exclude incorrect diagnostics on OpenMP for loops prior to OpenMP 5.
 To prevent this check to be applied (and to break) OpenMP for loops but still be
 applied to non-OpenMP for loops the usage of ``NOLINT`` (see
 :ref:`clang-tidy-nolint`) on the specific for loops is recommended.
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check provides suggested fixes. See the documentation above for the details.

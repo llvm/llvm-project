@@ -86,3 +86,8 @@ that accepts 2 arguments. With permissive parameter list, it instead generates
 which is correct.
   
 This check requires using C++14 or higher to run.
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check provides suggested fixes. See the documentation above for the details.
