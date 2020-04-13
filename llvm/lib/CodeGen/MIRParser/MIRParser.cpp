@@ -442,8 +442,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     MF.createBBLabels();
     MF.setBBSectionsType(BasicBlockSection::Labels);
   } else if (MF.hasBBSections()) {
-    MF.setSectionRange();
     MF.createBBLabels();
+    MF.assignBeginEndSections();
   }
   PFS.SM = &SM;
 

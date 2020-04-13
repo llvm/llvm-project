@@ -37,5 +37,5 @@ declare i32 @_Z3foov() #1
 ; LINUX-SECTIONS: .section	.text._Z3bazb.unlikely,"ax",@progbits
 ; LINUX-SECTIONS: r.BB._Z3bazb:
 ; LINUX-SECTIONS-NOT: .section        .text._Z3bazb.rr.BB._Z3bazb,"ax",@progbits,unique
-; LINUX-SECTIONS: rr.BB._Z3bazb:
+; LINUX-SECTIONS: .LBB0_2:
 ; LINUX-SECTIONS: .size   _Z3bazb, .Lfunc_end{{[0-9]}}-_Z3bazb

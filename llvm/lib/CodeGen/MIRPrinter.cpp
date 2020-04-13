@@ -643,24 +643,18 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "align " << MBB.getAlignment().value();
     HasAttributes = true;
   }
-  if (MBB.getSectionType() != MBBS_None) {
+  if (MBB.getSectionID() != MBBSectionID(0)) {
     OS << (HasAttributes ? ", " : " (");
     OS << "bbsections ";
-    switch (MBB.getSectionType()) {
-    case MBBS_Entry:
-      OS << "Entry";
-      break;
-    case MBBS_Exception:
+    switch (MBB.getSectionID().Type) {
+    case MBBSectionID::SectionType::Exception:
       OS << "Exception";
       break;
-    case MBBS_Cold:
+    case MBBSectionID::SectionType::Cold:
       OS << "Cold";
       break;
-    case MBBS_Unique:
-      OS << "Unique";
-      break;
     default:
-      llvm_unreachable("No such section type");
+      OS << MBB.getSectionID().Number;
     }
     HasAttributes = true;
   }
