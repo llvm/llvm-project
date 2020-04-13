@@ -126,6 +126,27 @@ TEST_F(LSPTest, Diagnostics) {
   EXPECT_THAT(Client.diagnostics("foo.cpp"), llvm::ValueIs(testing::IsEmpty()));
 }
 
+TEST_F(LSPTest, DiagnosticsHeaderSaved) {
+  auto &Client = start();
+  FS.Files["foo.h"] = "#define VAR original";
+  Client.didOpen("foo.cpp", R"cpp(
+    #include "foo.h"
+    int x = VAR;
+  )cpp");
+  EXPECT_THAT(Client.diagnostics("foo.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'original'"))));
+  // Now modify the header from within the "editor".
+  FS.Files["foo.h"] = "#define VAR changed";
+  Client.notify(
+      "textDocument/didSave",
+      llvm::json::Object{{"textDocument", Client.documentID("foo.h")}});
+  // Foo.cpp should be rebuilt with new diagnostics.
+  EXPECT_THAT(Client.diagnostics("foo.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'changed'"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

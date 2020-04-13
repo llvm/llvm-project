@@ -452,6 +452,11 @@ bool fromJSON(const llvm::json::Value &Params, DidCloseTextDocumentParams &R) {
   return O && O.map("textDocument", R.textDocument);
 }
 
+bool fromJSON(const llvm::json::Value &Params, DidSaveTextDocumentParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument);
+}
+
 bool fromJSON(const llvm::json::Value &Params, DidChangeTextDocumentParams &R) {
   llvm::json::ObjectMapper O(Params);
   if (!O)

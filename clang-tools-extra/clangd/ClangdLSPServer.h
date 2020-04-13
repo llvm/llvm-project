@@ -75,6 +75,7 @@ private:
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
+  void onDocumentDidSave(const DidSaveTextDocumentParams &);
   void onDocumentOnTypeFormatting(const DocumentOnTypeFormattingParams &,
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
@@ -131,10 +132,12 @@ private:
   /// produce '->' and '::', respectively.
   bool shouldRunCompletion(const CompletionParams &Params) const;
 
-  /// Forces a reparse of all currently opened files which were modified. As a
-  /// result, this method may be very expensive. This method is normally called
-  /// when the compilation database is changed.
-  void reparseOpenedFiles(const llvm::StringSet<> &ModifiedFiles);
+  /// Requests a reparse of currently opened files using their latest source.
+  /// This will typically only rebuild if something other than the source has
+  /// changed (e.g. the CDB yields different flags, or files included in the
+  /// preamble have been modified).
+  void reparseOpenFilesIfNeeded(
+      llvm::function_ref<bool(llvm::StringRef File)> Filter);
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Sends a "publishSemanticHighlighting" notification to the LSP client.
