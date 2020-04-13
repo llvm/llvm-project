@@ -240,7 +240,7 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
   );
 
   let results = (outs
-    SPV_Optional<SPV_Type>:$result
+    Optional<SPV_Type>:$result
   );
 
   let autogenSerialization = 0;

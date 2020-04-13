@@ -30,7 +30,7 @@ class SPV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
     SPV_ScopeAttr:$execution_scope,
     SPV_GroupOperationAttr:$group_operation,
     SPV_ScalarOrVectorOf<type>:$value,
-    SPV_Optional<SPV_Integer>:$cluster_size
+    Optional<SPV_Integer>:$cluster_size
   );
 
   let results = (outs
