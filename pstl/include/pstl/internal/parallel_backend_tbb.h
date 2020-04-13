@@ -447,7 +447,7 @@ class __merge_task : public tbb::task
         return _M_nsort > 0;
     }
 
-    struct move_value
+    struct __move_value
     {
         template <typename Iterator1, typename Iterator2>
         void
@@ -457,7 +457,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_value_construct
+    struct __move_value_construct
     {
         template <typename Iterator1, typename Iterator2>
         void
@@ -467,7 +467,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_range
+    struct __move_range
     {
         template <typename Iterator1, typename Iterator2>
         Iterator2
@@ -486,7 +486,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_range_construct
+    struct __move_range_construct
     {
         template <typename Iterator1, typename Iterator2>
         Iterator2
@@ -495,7 +495,7 @@ class __merge_task : public tbb::task
             if (__last1 - __first1 < __merge_cut_off)
             {
                 for (; __first1 != __last1; ++__first1, ++__first2)
-                    move_value_construct()(__first1, __first2);
+                    __move_value_construct()(__first1, __first2);
                 return __first2;
             }
 
@@ -503,7 +503,7 @@ class __merge_task : public tbb::task
             tbb::parallel_for(tbb::blocked_range<_SizeType>(0, __n, __merge_cut_off),
                               [__first1, __first2](const tbb::blocked_range<_SizeType>& __range) {
                                   for (auto i = __range.begin(); i != __range.end(); ++i)
-                                      move_value_construct()(__first1 + i, __first2 + i);
+                                      __move_value_construct()(__first1 + i, __first2 + i);
                               });
             return __first2 + __n;
         }
@@ -648,7 +648,7 @@ class __merge_task : public tbb::task
             const auto __ny = (_M_ye - _M_ys);
 
             _M_leaf_merge(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_x_beg + _M_zs,
-                          _M_comp, move_value(), move_value(), move_range(), move_range());
+                          _M_comp, __move_value(), __move_value(), __move_range(), __move_range());
 
             __cleanup_range()(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
             __cleanup_range()(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
