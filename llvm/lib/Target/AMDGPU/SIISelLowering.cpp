@@ -2464,7 +2464,7 @@ void SITargetLowering::passSpecialInputs(
     SDValue Chain) const {
   // If we don't have a call site, this was a call inserted by
   // legalization. These can never use special inputs.
-  if (!CLI.CS)
+  if (!CLI.CB)
     return;
 
   SelectionDAG &DAG = CLI.DAG;
@@ -2475,7 +2475,7 @@ void SITargetLowering::passSpecialInputs(
 
   const AMDGPUFunctionArgInfo *CalleeArgInfo
     = &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
-  if (const Function *CalleeFunc = CLI.CS.getCalledFunction()) {
+  if (const Function *CalleeFunc = CLI.CB->getCalledFunction()) {
     auto &ArgUsageInfo =
       DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
     CalleeArgInfo = &ArgUsageInfo.lookupFuncArgInfo(*CalleeFunc);
@@ -2726,10 +2726,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                               "unsupported call to variadic function ");
   }
 
-  if (!CLI.CS.getInstruction())
+  if (!CLI.CB)
     report_fatal_error("unsupported libcall legalization");
 
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI && !CLI.CS.getCalledFunction()) {
+  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
+      !CLI.CB->getCalledFunction()) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported indirect call to function ");
   }
@@ -2749,7 +2750,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
       Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
-    if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall()) {
+    if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
       report_fatal_error("failed to perform tail call elimination on a call "
                          "site marked musttail");
     }
