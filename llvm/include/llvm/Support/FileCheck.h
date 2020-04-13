@@ -31,6 +31,7 @@ struct FileCheckRequest {
   bool AllowEmptyInput = false;
   bool MatchFullLines = false;
   bool IgnoreCase = false;
+  bool IsDefaultCheckPrefix = false;
   bool EnableVarScope = false;
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;
