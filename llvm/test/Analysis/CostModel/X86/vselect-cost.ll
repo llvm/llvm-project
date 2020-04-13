@@ -146,8 +146,8 @@ define i32 @test_select() {
   ret i32 undef
 }
 
-; SSE41 added blend instructions with an immediate for <2 x double> and
-; <4 x float>. Integers of the same size should also use those instructions.
+; Immediate blend instructions for <2 x double> and <4 x float> added at SSE41.
+; Integers of the same size should also use those instructions.
 
 define <2 x i64> @test_2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: 'test_2i64'
@@ -234,8 +234,9 @@ define <16 x i8> @test_16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %sel
 }
 
-; AVX added blend instructions with an immediate for <4 x double> and
-; <8 x float>. Integers of the same size should also use those instructions.
+; Immediate blend instructions for <4 x double> and <8 x float> added at AVX.
+; Integers of the same size should also use those instructions.
+
 define <4 x i64> @test_4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-LABEL: 'test_4i64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sel = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i64> %a, <4 x i64> %b
@@ -304,7 +305,6 @@ define <8 x float> @test_8float(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %sel
 }
 
-; AVX2
 define <16 x i16> @test_16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-LABEL: 'test_16i16'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sel = select <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, <16 x i16> %a, <16 x i16> %b
