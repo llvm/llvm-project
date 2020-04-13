@@ -67,7 +67,7 @@ OPTIONS
 
  Specify an input file name along with a weight. The profile counts of the
  supplied ``filename`` will be scaled (multiplied) by the supplied
- ``weight``, where where ``weight`` is a decimal integer >= 1.
+ ``weight``, where ``weight`` is a decimal integer >= 1.
  Input files specified without using this option are assigned a default
  weight of 1. Examples are shown below.
 
