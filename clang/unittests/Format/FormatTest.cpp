@@ -1929,6 +1929,24 @@ TEST_F(FormatTest, FormatsEnum) {
                "  TWO\n"
                "};\n"
                "int i;");
+
+  FormatStyle EightIndent = getLLVMStyle();
+  EightIndent.IndentWidth = 8;
+  verifyFormat("enum {\n"
+               "        VOID,\n"
+               "        CHAR,\n"
+               "        SHORT,\n"
+               "        INT,\n"
+               "        LONG,\n"
+               "        SIGNED,\n"
+               "        UNSIGNED,\n"
+               "        BOOL,\n"
+               "        FLOAT,\n"
+               "        DOUBLE,\n"
+               "        COMPLEX\n"
+               "};",
+               EightIndent);
+
   // Not enums.
   verifyFormat("enum X f() {\n"
                "  a();\n"
