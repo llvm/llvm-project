@@ -18,7 +18,7 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  f18
+  f18 FileCheck count not module_files
 )
 
 if (LINK_WITH_FIR)
