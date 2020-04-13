@@ -333,7 +333,6 @@ class Configuration(object):
                 % self.cxx_stdlib_under_test)
         self.config.available_features.add(self.cxx_stdlib_under_test)
         if self.cxx_stdlib_under_test == 'libstdc++':
-            self.config.available_features.add('libstdc++')
             # Manually enable the experimental and filesystem tests for libstdc++
             # if the options aren't present.
             # FIXME this is a hack.
@@ -424,9 +423,6 @@ class Configuration(object):
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 
-        if self.target_info.is_darwin():
-            self.config.available_features.add('apple-darwin')
-
         # Insert the platform name into the available features as a lower case.
         self.config.available_features.add(target_platform)
 
@@ -444,7 +440,6 @@ class Configuration(object):
 
         if not self.get_lit_bool('enable_filesystem', default=True):
             self.config.available_features.add('c++filesystem-disabled')
-            self.config.available_features.add('dylib-has-no-filesystem')
 
 
         # Run a compile test for the -fsized-deallocation flag. This is needed
@@ -485,15 +480,6 @@ class Configuration(object):
                 # and regressions. Note: New failures should not be suppressed
                 # using this feature. (Also see llvm.org/PR32730)
                 self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
-
-        # Attempt to detect the glibc version by querying for __GLIBC__
-        # in 'features.h'.
-        macros = self.cxx.dumpMacros(flags=['-include', 'features.h'])
-        if isinstance(macros, dict) and '__GLIBC__' in macros:
-            maj_v, min_v = (macros['__GLIBC__'], macros['__GLIBC_MINOR__'])
-            self.config.available_features.add('glibc')
-            self.config.available_features.add('glibc-%s' % maj_v)
-            self.config.available_features.add('glibc-%s.%s' % (maj_v, min_v))
 
         libcxx_gdb = self.get_lit_conf('libcxx_gdb')
         if libcxx_gdb and 'NOTFOUND' not in libcxx_gdb:
@@ -727,7 +713,6 @@ class Configuration(object):
         if abi_version and abi_version != '1':
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_VERSION=' + abi_version]
         if abi_unstable:
-          self.config.available_features.add('libcpp-abi-unstable')
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
     def configure_link_flags(self):
@@ -1164,12 +1149,12 @@ class Configuration(object):
         # which is not relevant for non-shipped flavors of libc++.
         if self.use_system_cxx_lib:
             # Dylib support for shared_mutex was added in macosx10.12.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 12)):
+            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 12)):
                 self.config.available_features.add('dylib-has-no-shared_mutex')
                 self.lit_config.note("shared_mutex is not supported by the deployment target")
             # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
             # supported starting in macosx10.14.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
+            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 14)):
                 self.config.available_features.add('dylib-has-no-bad_optional_access')
                 self.lit_config.note("throwing bad_optional_access is not supported by the deployment target")
 
@@ -1179,8 +1164,8 @@ class Configuration(object):
                 self.config.available_features.add('dylib-has-no-bad_any_cast')
                 self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
             # Filesystem is support on Apple platforms starting with macosx10.15.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 15)):
-                self.config.available_features.add('dylib-has-no-filesystem')
+            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 15)):
+                self.config.available_features.add('c++filesystem-disabled')
                 self.lit_config.note("the deployment target does not support <filesystem>")
         else:
             self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
