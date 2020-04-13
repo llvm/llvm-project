@@ -3040,9 +3040,6 @@ def SPV_IntVec4 : SPV_Vec4<SPV_Integer>;
 def SPV_IOrUIVec4 : SPV_Vec4<SPV_SignlessOrUnsignedInt>;
 def SPV_Int32Vec4 : SPV_Vec4<AnyI32>;
 
-// TODO(antiagainst): Use a more appropriate way to model optional operands
-class SPV_Optional<Type type> : Variadic<type>;
-
 // TODO(ravishankarm): From 1.4, this should also include Composite type.
 def SPV_SelectType : AnyTypeOf<[SPV_Scalar, SPV_Vector, SPV_AnyPtr]>;
 

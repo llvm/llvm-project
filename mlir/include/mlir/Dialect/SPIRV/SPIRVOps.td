@@ -469,7 +469,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
 
   let arguments = (ins
     SPV_StorageClassAttr:$storage_class,
-    SPV_Optional<AnyType>:$initializer
+    Optional<AnyType>:$initializer
   );
 
   let results = (outs
