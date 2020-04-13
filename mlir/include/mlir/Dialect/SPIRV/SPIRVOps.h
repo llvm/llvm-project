@@ -39,9 +39,6 @@ class VerCapExtAttr;
 // `EnumClass`.
 // template <typename EnumClass> StringRef attributeName();
 //
-// Get the function that can be used to symbolize an enum value.
-// template <typename EnumClass>
-// Optional<EnumClass> (*)(StringRef) symbolizeEnum();
 #include "mlir/Dialect/SPIRV/SPIRVOpUtils.inc"
 
 } // end namespace spirv

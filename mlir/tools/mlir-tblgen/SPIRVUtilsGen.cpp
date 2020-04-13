@@ -1105,13 +1105,6 @@ static void emitEnumGetAttrNameFnDecl(raw_ostream &os) {
                 "attributeName();\n");
 }
 
-static void emitEnumGetSymbolizeFnDecl(raw_ostream &os) {
-  os << "template <typename EnumClass> using SymbolizeFnTy = "
-        "llvm::Optional<EnumClass> (*)(StringRef);\n";
-  os << "template <typename EnumClass> inline constexpr "
-        "SymbolizeFnTy<EnumClass> symbolizeEnum();\n";
-}
-
 static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
                                       raw_ostream &os) {
   auto enumName = enumAttr.getEnumClassName();
@@ -1124,17 +1117,6 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
   os << "}\n";
 }
 
-static void emitEnumGetSymbolizeFnDefn(const EnumAttr &enumAttr,
-                                       raw_ostream &os) {
-  auto enumName = enumAttr.getEnumClassName();
-  auto strToSymFnName = enumAttr.getStringToSymbolFnName();
-  os << formatv(
-      "template <> inline SymbolizeFnTy<{0}> symbolizeEnum<{0}>() {{\n",
-      enumName);
-  os << "  return " << strToSymFnName << ";\n";
-  os << "}\n";
-}
-
 static bool emitOpUtils(const RecordKeeper &recordKeeper, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Op Utilities", os);
 
@@ -1142,11 +1124,9 @@ static bool emitOpUtils(const RecordKeeper &recordKeeper, raw_ostream &os) {
   os << "#ifndef SPIRV_OP_UTILS_H_\n";
   os << "#define SPIRV_OP_UTILS_H_\n";
   emitEnumGetAttrNameFnDecl(os);
-  emitEnumGetSymbolizeFnDecl(os);
   for (const auto *def : defs) {
     EnumAttr enumAttr(*def);
     emitEnumGetAttrNameFnDefn(enumAttr, os);
-    emitEnumGetSymbolizeFnDefn(enumAttr, os);
   }
   os << "#endif // SPIRV_OP_UTILS_H\n";
   return false;
