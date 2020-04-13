@@ -1965,9 +1965,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b6a556c71184371a9567489c8477c2f7</string>
+   <key>issue_hash_content_of_line_in_context</key><string>a3c91a7a52619d81ebe032dcc49ebb93</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testAutoreleaseTakesEffectInDispatch</string>
   <key>issue_hash_function_offset</key><string>11</string>
