@@ -34,17 +34,15 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   constexpr bool NegativeNaN = true;
   constexpr uint64_t NaNPayload = 0xFFFFFFFFFFFFFFFFull;
   if (Ty->isIntOrIntVectorTy()) {
-    unsigned BitWidth = cast<llvm::IntegerType>(
-                            Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
-                            ->getBitWidth();
+    unsigned BitWidth =
+        cast<llvm::IntegerType>(Ty->getScalarType())->getBitWidth();
     if (BitWidth <= 64)
       return llvm::ConstantInt::get(Ty, IntValue);
     return llvm::ConstantInt::get(
         Ty, llvm::APInt::getSplat(BitWidth, llvm::APInt(64, IntValue)));
   }
   if (Ty->isPtrOrPtrVectorTy()) {
-    auto *PtrTy = cast<llvm::PointerType>(
-        Ty->isVectorTy() ? Ty->getVectorElementType() : Ty);
+    auto *PtrTy = cast<llvm::PointerType>(Ty->getScalarType());
     unsigned PtrWidth = CGM.getContext().getTargetInfo().getPointerWidth(
         PtrTy->getAddressSpace());
     if (PtrWidth > 64)
@@ -55,8 +53,7 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   }
   if (Ty->isFPOrFPVectorTy()) {
     unsigned BitWidth = llvm::APFloat::semanticsSizeInBits(
-        (Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
-            ->getFltSemantics());
+        Ty->getScalarType()->getFltSemantics());
     llvm::APInt Payload(64, NaNPayload);
     if (BitWidth >= 64)
       Payload = llvm::APInt::getSplat(BitWidth, Payload);
