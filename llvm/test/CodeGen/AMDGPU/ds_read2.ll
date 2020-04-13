@@ -293,7 +293,7 @@ define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out)
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b32
+; GCN-NOT: ds_read2_b32
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; GCN: s_endpgm
@@ -398,7 +398,7 @@ define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b64
+; GCN-NOT: ds_read2_b64
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:2056
 ; GCN: s_endpgm

@@ -14,7 +14,7 @@ msr CNTVCTSS_EL0, x23
 // CHECK: msr     CNTVFRQ_EL2, x3         // encoding: [0xe3,0xe0,0x1c,0xd5]
 // CHECK: msr     CNTPCTSS_EL0, x13       // encoding: [0xad,0xe0,0x1b,0xd5]
 // CHECK: msr     CNTVCTSS_EL0, x23       // encoding: [0xd7,0xe0,0x1b,0xd5]
-// NOECV :error: expected writable system register or pstate
+// NOECV: error: expected writable system register or pstate
 // NOECV: error: expected writable system register or pstate
 // NOECV: error: expected writable system register or pstate
 // NOECV: error: expected writable system register or pstate

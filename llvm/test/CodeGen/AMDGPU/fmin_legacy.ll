@@ -106,7 +106,7 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, fl
 
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
-; VI-SAFE v_cmp_le_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cmp_le_f32_e32 vcc, [[A]], [[B]]
 ; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]

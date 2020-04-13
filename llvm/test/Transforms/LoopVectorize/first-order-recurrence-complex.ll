@@ -214,7 +214,7 @@ define void @cannot_sink_reduction(i32 %x, i32* %ptr, i64 %tc) {
 ; CHECK:  br label %for
 
 ; CHECK-LABEL: for:                                              ; preds = %for, %preheader
-; CHECK  br i1 %exitcond, label %exit, label %for
+; CHECK:  br i1 %exitcond, label %exit, label %for
 
 ; CHECK-LABEL: exit:                                    ; preds = %for
 ; CHECK-NET:     ret void
