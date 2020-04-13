@@ -58,7 +58,7 @@ define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %a, <2 x do
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfmadd_sd:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 {%k1} = (xmm1 * xmm0) + mem
 ; CHECK-NEXT:    retq
   %c.val = load double, double* %c
   %cv0 = insertelement <2 x double> undef, double %c.val, i32 0

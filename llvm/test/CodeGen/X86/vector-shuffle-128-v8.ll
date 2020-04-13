@@ -2321,7 +2321,7 @@ define <8 x i16> @shuffle_v8i16_01100110(<8 x i16> %a) {
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_01100110:
 ; AVX512VL-SLOW:       # %bb.0:
 ; AVX512VL-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,1,1,0,4,5,6,7]
-; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX512VL-SLOW-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512VL-SLOW-NEXT:    retq
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_01100110:
@@ -2371,7 +2371,7 @@ define <8 x i16> @shuffle_v8i16_01u0u110(<8 x i16> %a) {
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_01u0u110:
 ; AVX512VL-SLOW:       # %bb.0:
 ; AVX512VL-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,1,1,0,4,5,6,7]
-; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX512VL-SLOW-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512VL-SLOW-NEXT:    retq
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_01u0u110:

@@ -42,6 +42,8 @@ public:
     // section will be parsable, but with odd offsets and
     // line numbers, etc.
     CodePointerSize = 8;
+
+    UseIntegratedAssembler = false;
   }
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {

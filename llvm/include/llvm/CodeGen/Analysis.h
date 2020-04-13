@@ -31,9 +31,6 @@ class MachineFunction;
 class TargetLoweringBase;
 class TargetLowering;
 class TargetMachine;
-class SDNode;
-class SDValue;
-class SelectionDAG;
 struct EVT;
 
 /// Compute the linearized index of a member in a nested

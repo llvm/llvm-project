@@ -19841,8 +19841,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
         ShuffleVectorSDNode *InnerSVN = cast<ShuffleVectorSDNode>(BC0);
         SmallVector<int, 8> InnerMask;
         SmallVector<int, 8> OuterMask;
-        scaleShuffleMask(InnerScale, InnerSVN->getMask(), InnerMask);
-        scaleShuffleMask(OuterScale, SVN->getMask(), OuterMask);
+        narrowShuffleMaskElts(InnerScale, InnerSVN->getMask(), InnerMask);
+        narrowShuffleMaskElts(OuterScale, SVN->getMask(), OuterMask);
 
         // Merge the shuffle masks.
         SmallVector<int, 8> NewMask;

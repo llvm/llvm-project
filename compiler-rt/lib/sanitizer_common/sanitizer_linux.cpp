@@ -2130,7 +2130,9 @@ void CheckASLR() {
   }
 
   if (UNLIKELY(paxflags & CTL_PROC_PAXFLAGS_ASLR)) {
-    Printf("This sanitizer is not compatible with enabled ASLR\n");
+    Printf("This sanitizer is not compatible with enabled ASLR.\n"
+           "To disable ASLR, please run \"paxctl +a %s\" and try again.\n",
+           GetArgv()[0]);
     Die();
   }
 #elif SANITIZER_PPC64V2

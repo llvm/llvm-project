@@ -1,4 +1,4 @@
-# MLIR Specification
+# MLIR Language Reference
 
 MLIR (Multi-Level IR) is a compiler intermediate representation with
 similarities to traditional three-address SSA representations (like

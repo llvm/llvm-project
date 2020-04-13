@@ -178,6 +178,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
     }
   }
 
+#ifndef NDEBUG
   // Checked that NewNodes are only used by other NewNodes.
   for (unsigned i = 0, e = NewNodes.size(); i != e; ++i) {
     SDNode *N = NewNodes[i];
@@ -185,6 +186,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
          UI != UE; ++UI)
       assert(UI->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
+#endif
 }
 
 /// This is the main entry point for the type legalizer. This does a top-down

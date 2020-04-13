@@ -23,6 +23,4 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
-
-  UseIntegratedAssembler = true;
 }

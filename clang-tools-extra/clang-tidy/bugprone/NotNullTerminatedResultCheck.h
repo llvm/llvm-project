@@ -36,7 +36,7 @@ private:
   // If non-zero it is specifying if the target environment is considered to
   // implement '_s' suffixed memory and string handler functions which are safer
   // than older version (e.g. 'memcpy_s()'). The default value is '1'.
-  const int WantToUseSafeFunctions;
+  const bool WantToUseSafeFunctions;
 
   bool UseSafeFunctions = false;
 

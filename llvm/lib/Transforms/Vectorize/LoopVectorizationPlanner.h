@@ -33,7 +33,6 @@ namespace llvm {
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
-private:
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 

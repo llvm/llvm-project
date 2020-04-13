@@ -1,4 +1,4 @@
-# Shape inference
+# Shape Inference
 
 Shape inference as discussed here is considered a specific instance of type
 inference for [ShapedType][ShapedType]. Type constraints are along (at least)

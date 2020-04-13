@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/StringSetTest.cpp - StringSet unit tests ----------===//
+//===- llvm/unittest/ADT/StringSetTest.cpp - StringSet unit tests ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,12 +33,13 @@ TEST_F(StringSetTest, InsertAndCountStringMapEntry) {
   // Test insert(StringMapEntry) and count(StringMapEntry)
   // which are required for set_difference(StringSet, StringSet).
   StringSet<> Set;
-  StringMapEntry<StringRef> *Element = StringMapEntry<StringRef>::Create("A");
+  StringMapEntry<StringRef> *Element =
+      StringMapEntry<StringRef>::Create("A", Set.getAllocator());
   Set.insert(*Element);
   size_t Count = Set.count(*Element);
   size_t Expected = 1;
   EXPECT_EQ(Expected, Count);
-  Element->Destroy();
+  Element->Destroy(Set.getAllocator());
 }
 
 TEST_F(StringSetTest, EmptyString) {

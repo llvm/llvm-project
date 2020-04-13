@@ -23,7 +23,6 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
   UsesELFSectionDirectiveForBSS = true;
-  UseIntegratedAssembler = true;
   SupportsDebugInformation = true;
 }
 

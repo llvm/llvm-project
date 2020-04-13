@@ -34,4 +34,5 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
   UsesELFSectionDirectiveForBSS  = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   UseLogicalShr = false;
+  UseIntegratedAssembler = false;
 }

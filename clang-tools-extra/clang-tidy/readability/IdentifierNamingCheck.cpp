@@ -139,8 +139,8 @@ private:
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : RenamerClangTidyCheck(Name, Context),
-      IgnoreFailedSplit(Options.get("IgnoreFailedSplit", 0)),
-      IgnoreMainLikeFunctions(Options.get("IgnoreMainLikeFunctions", 0)) {
+      IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)),
+      IgnoreMainLikeFunctions(Options.get("IgnoreMainLikeFunctions", false)) {
 
   for (auto const &Name : StyleNames) {
     auto CaseOptional = [&]() -> llvm::Optional<CaseType> {

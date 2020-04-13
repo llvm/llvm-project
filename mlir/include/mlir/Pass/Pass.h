@@ -37,25 +37,33 @@ struct PassExecutionState {
 } // namespace detail
 
 /// The abstract base pass class. This class contains information describing the
-/// derived pass object, e.g its kind and abstract PassInfo.
+/// derived pass object, e.g its kind and abstract TypeID.
 class Pass {
 public:
   virtual ~Pass() = default;
 
   /// Returns the unique identifier that corresponds to this pass.
-  const PassID *getPassID() const { return passID; }
+  TypeID getTypeID() const { return passID; }
 
   /// Returns the pass info for the specified pass class or null if unknown.
-  static const PassInfo *lookupPassInfo(const PassID *passID);
+  static const PassInfo *lookupPassInfo(TypeID passID);
   template <typename PassT> static const PassInfo *lookupPassInfo() {
-    return lookupPassInfo(PassID::getID<PassT>());
+    return lookupPassInfo(TypeID::get<PassT>());
   }
 
   /// Returns the pass info for this pass.
-  const PassInfo *lookupPassInfo() const { return lookupPassInfo(getPassID()); }
+  const PassInfo *lookupPassInfo() const { return lookupPassInfo(getTypeID()); }
 
   /// Returns the derived pass name.
-  virtual StringRef getName() = 0;
+  virtual StringRef getName() const = 0;
+
+  /// Returns the command line argument used when registering this pass. Return
+  /// an empty string if one does not exist.
+  virtual StringRef getArgument() const {
+    if (const PassInfo *passInfo = lookupPassInfo())
+      return passInfo->getPassArgument();
+    return "";
+  }
 
   /// Returns the name of the operation that this pass operates on, or None if
   /// this is a generic OperationPass.
@@ -122,7 +130,7 @@ public:
   MutableArrayRef<Statistic *> getStatistics() { return statistics; }
 
 protected:
-  explicit Pass(const PassID *passID, Optional<StringRef> opName = llvm::None)
+  explicit Pass(TypeID passID, Optional<StringRef> opName = llvm::None)
       : passID(passID), opName(opName) {}
   Pass(const Pass &other) : Pass(other.passID, other.opName) {}
 
@@ -175,7 +183,7 @@ protected:
   template <typename... AnalysesT> void markAnalysesPreserved() {
     getPassState().preservedAnalyses.preserve<AnalysesT...>();
   }
-  void markAnalysesPreserved(const AnalysisID *id) {
+  void markAnalysesPreserved(TypeID id) {
     getPassState().preservedAnalyses.preserve(id);
   }
 
@@ -226,7 +234,7 @@ private:
   virtual void anchor();
 
   /// Represents a unique identifier for the pass.
-  const PassID *passID;
+  TypeID passID;
 
   /// The name of the operation that this pass operates on, or None if this is a
   /// generic OperationPass.
@@ -266,7 +274,7 @@ private:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <typename OpT = void> class OperationPass : public Pass {
 protected:
-  OperationPass(const PassID *passID) : Pass(passID, OpT::getOperationName()) {}
+  OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
 
   /// Support isa/dyn_cast functionality.
   static bool classof(const Pass *pass) {
@@ -291,7 +299,7 @@ protected:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <> class OperationPass<void> : public Pass {
 protected:
-  OperationPass(const PassID *passID) : Pass(passID) {}
+  OperationPass(TypeID passID) : Pass(passID) {}
 };
 
 /// A model for providing function pass specific utilities.
@@ -325,19 +333,14 @@ template <typename PassT, typename BaseT> class PassWrapper : public BaseT {
 public:
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const Pass *pass) {
-    return pass->getPassID() == PassID::getID<PassT>();
+    return pass->getTypeID() == TypeID::get<PassT>();
   }
 
 protected:
-  PassWrapper() : BaseT(PassID::getID<PassT>()) {}
+  PassWrapper() : BaseT(TypeID::get<PassT>()) {}
 
   /// Returns the derived pass name.
-  StringRef getName() override {
-    StringRef name = llvm::getTypeName<PassT>();
-    if (!name.consume_front("mlir::"))
-      name.consume_front("(anonymous namespace)::");
-    return name;
-  }
+  StringRef getName() const override { return llvm::getTypeName<PassT>(); }
 
   /// A clone method to create a copy of this pass.
   std::unique_ptr<Pass> clonePass() const override {

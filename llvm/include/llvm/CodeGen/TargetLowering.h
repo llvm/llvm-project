@@ -4036,7 +4036,7 @@ public:
   /// string itself isn't empty, there was an error parsing.
   virtual AsmOperandInfoVector ParseConstraints(const DataLayout &DL,
                                                 const TargetRegisterInfo *TRI,
-                                                ImmutableCallSite CS) const;
+                                                const CallBase &Call) const;
 
   /// Examine constraint type and operand type and determine a weight value.
   /// The operand object must already have been set up with the operand type.

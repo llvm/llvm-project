@@ -5726,7 +5726,7 @@ define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x d
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovapd %xmm0, %xmm3
-; X64-NEXT:    vfmadd213sd {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X64-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
 ; X64-NEXT:    vmovapd %xmm0, %xmm4
 ; X64-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm1, %xmm4
 ; X64-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -5739,7 +5739,7 @@ define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x d
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm0, %xmm3
-; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
 ; X86-NEXT:    vmovapd %xmm0, %xmm4
 ; X86-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm1, %xmm4
 ; X86-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -5777,7 +5777,7 @@ define <4 x float> @test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovaps %xmm0, %xmm3
-; X64-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X64-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
 ; X64-NEXT:    vmovaps %xmm0, %xmm4
 ; X64-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm1, %xmm4
 ; X64-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -5790,7 +5790,7 @@ define <4 x float> @test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm0, %xmm3
-; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
 ; X86-NEXT:    vmovaps %xmm0, %xmm4
 ; X86-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm1, %xmm4
 ; X86-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -5828,7 +5828,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovapd %xmm0, %xmm3
-; X64-NEXT:    vfmadd213sd {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X64-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
 ; X64-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; X64-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; X64-NEXT:    retq
@@ -5838,7 +5838,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm0, %xmm3
-; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
 ; X86-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; X86-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; X86-NEXT:    retl
@@ -5870,7 +5870,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovaps %xmm0, %xmm3
-; X64-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X64-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
 ; X64-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; X64-NEXT:    vaddps %xmm0, %xmm3, %xmm0
 ; X64-NEXT:    retq
@@ -5880,7 +5880,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm0, %xmm3
-; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm1 * xmm3) + xmm2
+; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
 ; X86-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; X86-NEXT:    vaddps %xmm0, %xmm3, %xmm0
 ; X86-NEXT:    retl
@@ -5910,7 +5910,7 @@ define <4 x float> @test_int_x86_avx512_maskz_vfmadd_ss_load0(i8 zeroext %0, <4 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rsi), %xmm2
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm0 * xmm2) + xmm1
+; X64-NEXT:    vfmadd213ss {{.*#+}} xmm2 {%k1} {z} = (xmm0 * xmm2) + xmm1
 ; X64-NEXT:    vmovaps %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -5921,7 +5921,7 @@ define <4 x float> @test_int_x86_avx512_maskz_vfmadd_ss_load0(i8 zeroext %0, <4 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %xmm0
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
+; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 {%k1} {z} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    retl
   %5 = load <4 x float>, <4 x float>* %1, align 16
   %6 = extractelement <4 x float> %5, i64 0
@@ -5938,7 +5938,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovapd %xmm2, %xmm3
-; X64-NEXT:    vfmadd231sd {{.*#+}} xmm3 = (xmm0 * xmm1) + xmm3
+; X64-NEXT:    vfmadd231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
 ; X64-NEXT:    vmovapd %xmm2, %xmm4
 ; X64-NEXT:    vfmadd231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -5951,7 +5951,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x 
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
-; X86-NEXT:    vfmadd231sd {{.*#+}} xmm3 = (xmm0 * xmm1) + xmm3
+; X86-NEXT:    vfmadd231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
 ; X86-NEXT:    vmovapd %xmm2, %xmm4
 ; X86-NEXT:    vfmadd231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -5989,7 +5989,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x fl
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovaps %xmm2, %xmm3
-; X64-NEXT:    vfmadd231ss {{.*#+}} xmm3 = (xmm0 * xmm1) + xmm3
+; X64-NEXT:    vfmadd231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
 ; X64-NEXT:    vmovaps %xmm2, %xmm4
 ; X64-NEXT:    vfmadd231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6002,7 +6002,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x fl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
-; X86-NEXT:    vfmadd231ss {{.*#+}} xmm3 = (xmm0 * xmm1) + xmm3
+; X86-NEXT:    vfmadd231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
 ; X86-NEXT:    vmovaps %xmm2, %xmm4
 ; X86-NEXT:    vfmadd231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6216,7 +6216,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovapd %xmm2, %xmm3
-; X64-NEXT:    vfmsub231sd {{.*#+}} xmm3 = (xmm0 * xmm1) - xmm3
+; X64-NEXT:    vfmsub231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
 ; X64-NEXT:    vmovapd %xmm2, %xmm4
 ; X64-NEXT:    vfmsub231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -6229,7 +6229,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x 
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
-; X86-NEXT:    vfmsub231sd {{.*#+}} xmm3 = (xmm0 * xmm1) - xmm3
+; X86-NEXT:    vfmsub231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
 ; X86-NEXT:    vmovapd %xmm2, %xmm4
 ; X86-NEXT:    vfmsub231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -6273,7 +6273,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x fl
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovaps %xmm2, %xmm3
-; X64-NEXT:    vfmsub231ss {{.*#+}} xmm3 = (xmm0 * xmm1) - xmm3
+; X64-NEXT:    vfmsub231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
 ; X64-NEXT:    vmovaps %xmm2, %xmm4
 ; X64-NEXT:    vfmsub231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6286,7 +6286,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x fl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
-; X86-NEXT:    vfmsub231ss {{.*#+}} xmm3 = (xmm0 * xmm1) - xmm3
+; X86-NEXT:    vfmsub231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
 ; X86-NEXT:    vmovaps %xmm2, %xmm4
 ; X86-NEXT:    vfmsub231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6330,7 +6330,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovapd %xmm2, %xmm3
-; X64-NEXT:    vfnmsub231sd {{.*#+}} xmm3 = -(xmm0 * xmm1) - xmm3
+; X64-NEXT:    vfnmsub231sd {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
 ; X64-NEXT:    vmovapd %xmm2, %xmm4
 ; X64-NEXT:    vfnmsub231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -6343,7 +6343,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
-; X86-NEXT:    vfnmsub231sd {{.*#+}} xmm3 = -(xmm0 * xmm1) - xmm3
+; X86-NEXT:    vfnmsub231sd {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
 ; X86-NEXT:    vmovapd %xmm2, %xmm4
 ; X86-NEXT:    vfnmsub231sd {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddpd %xmm4, %xmm3, %xmm3
@@ -6390,7 +6390,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x f
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovaps %xmm2, %xmm3
-; X64-NEXT:    vfnmsub231ss {{.*#+}} xmm3 = -(xmm0 * xmm1) - xmm3
+; X64-NEXT:    vfnmsub231ss {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
 ; X64-NEXT:    vmovaps %xmm2, %xmm4
 ; X64-NEXT:    vfnmsub231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X64-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6403,7 +6403,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x f
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
-; X86-NEXT:    vfnmsub231ss {{.*#+}} xmm3 = -(xmm0 * xmm1) - xmm3
+; X86-NEXT:    vfnmsub231ss {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
 ; X86-NEXT:    vmovaps %xmm2, %xmm4
 ; X86-NEXT:    vfnmsub231ss {rz-sae}, %xmm1, %xmm0, %xmm4
 ; X86-NEXT:    vaddps %xmm4, %xmm3, %xmm3
@@ -6449,7 +6449,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; X64-LABEL: test_int_x86_avx512_mask3_vfmadd_ss_rm:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
-; X64-NEXT:    vfmadd231ss {{.*#+}} xmm1 = (xmm0 * mem) + xmm1
+; X64-NEXT:    vfmadd231ss {{.*#+}} xmm1 {%k1} = (xmm0 * mem) + xmm1
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -6458,7 +6458,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    kmovw %ecx, %k1
-; X86-NEXT:    vfmadd231ss {{.*#+}} xmm1 = (xmm0 * mem) + xmm1
+; X86-NEXT:    vfmadd231ss {{.*#+}} xmm1 {%k1} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
   %q = load float, float* %ptr_b
@@ -6478,7 +6478,7 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x f
 ; X64-LABEL: test_int_x86_avx512_mask_vfmadd_ss_rm:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
-; X64-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
+; X64-NEXT:    vfmadd132ss {{.*#+}} xmm0 {%k1} = (xmm0 * mem) + xmm1
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_vfmadd_ss_rm:
@@ -6486,7 +6486,7 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x f
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    kmovw %ecx, %k1
-; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
+; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 {%k1} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    retl
   %q = load float, float* %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0

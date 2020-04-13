@@ -919,7 +919,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
     if (StoreInst *SI = dyn_cast<StoreInst>(GV->user_back())) {
       // The global is initialized when the store to it occurs.
       new StoreInst(ConstantInt::getTrue(GV->getContext()), InitBool, false,
-                    None, SI->getOrdering(), SI->getSyncScopeID(), SI);
+                    Align(1), SI->getOrdering(), SI->getSyncScopeID(), SI);
       SI->eraseFromParent();
       continue;
     }
@@ -936,7 +936,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
       // Replace the cmp X, 0 with a use of the bool value.
       // Sink the load to where the compare was, if atomic rules allow us to.
       Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
-                               InitBool->getName() + ".val", false, None,
+                               InitBool->getName() + ".val", false, Align(1),
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->isUnordered() ? (Instruction *)ICI : LI);
       InitBoolUsed = true;
@@ -1743,7 +1743,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
           StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
-                                  LI->getName() + ".b", false, None,
+                                  LI->getName() + ".b", false, Align(1),
                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
@@ -1753,14 +1753,14 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         }
       }
       StoreInst *NSI =
-          new StoreInst(StoreVal, NewGV, false, None, SI->getOrdering(),
+          new StoreInst(StoreVal, NewGV, false, Align(1), SI->getOrdering(),
                         SI->getSyncScopeID(), SI);
       NSI->setDebugLoc(SI->getDebugLoc());
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
       LoadInst *NLI = new LoadInst(NewGV->getValueType(), NewGV,
-                                   LI->getName() + ".b", false, None,
+                                   LI->getName() + ".b", false, Align(1),
                                    LI->getOrdering(), LI->getSyncScopeID(), LI);
       Instruction *NSI;
       if (IsOneZero)
