@@ -569,8 +569,8 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(*opsA[i])) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(*opsB[j]))) {
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(opsA[i])) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(opsB[j]))) {
         LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n.");
         return failure();
       }
@@ -895,8 +895,8 @@ bool MemRefAccess::isStore() const { return isa<AffineStoreOp>(opInst); }
 
 /// Returns the nesting depth of this statement, i.e., the number of loops
 /// surrounding this statement.
-unsigned mlir::getNestingDepth(Operation &op) {
-  Operation *currOp = &op;
+unsigned mlir::getNestingDepth(Operation *op) {
+  Operation *currOp = op;
   unsigned depth = 0;
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
@@ -957,7 +957,7 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
     if (failed(
             region->compute(opInst,
-                            /*loopDepth=*/getNestingDepth(*block.begin())))) {
+                            /*loopDepth=*/getNestingDepth(&*block.begin())))) {
       return opInst->emitError("error obtaining memory region\n");
     }
 
@@ -1023,7 +1023,7 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
     return false;
 
   // Dep check depth would be number of enclosing loops + 1.
-  unsigned depth = getNestingDepth(*forOp.getOperation()) + 1;
+  unsigned depth = getNestingDepth(forOp) + 1;
 
   // Check dependences between all pairs of ops in 'loadAndStoreOpInsts'.
   for (auto *srcOpInst : loadAndStoreOpInsts) {

@@ -1911,7 +1911,7 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
 
   // Copies will be generated for this depth, i.e., symbolic in all loops
   // surrounding the this block range.
-  unsigned copyDepth = getNestingDepth(*begin);
+  unsigned copyDepth = getNestingDepth(&*begin);
 
   LLVM_DEBUG(llvm::dbgs() << "Generating copies at depth " << copyDepth
                           << "\n");
