@@ -139,9 +139,12 @@ def print_discovered(tests, show_suites, show_tests):
             print('  %s - %d tests' % (suite.name, test_count))
             print('    Source Root: %s' % suite.source_root)
             print('    Exec Root  : %s' % suite.exec_root)
-            if suite.config.available_features:
-                features = ' '.join(sorted(suite.config.available_features))
-                print('    Available Features : %s' % features)
+            features = ' '.join(sorted(suite.config.available_features))
+            print('    Available Features: %s' % features)
+            substitutions = sorted(suite.config.substitutions)
+            substitutions = ('%s => %s' % (x, y) for (x, y) in substitutions)
+            substitutions = '\n'.ljust(30).join(substitutions)
+            print('    Available Substitutions: %s' % substitutions)
 
     if show_tests:
         print('-- Available Tests --')
