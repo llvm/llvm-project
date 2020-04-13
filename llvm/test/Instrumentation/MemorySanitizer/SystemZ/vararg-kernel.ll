@@ -122,4 +122,4 @@ attributes #1 = { sanitize_memory }
 ; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK store {{.*}} 72, {{.*}} %va_arg_overflow_size
+; CHECK: store {{.*}} 72, {{.*}} %va_arg_overflow_size
