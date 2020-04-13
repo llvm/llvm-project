@@ -1,4 +1,4 @@
-// RUN: llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
+// RUN: mkdir -p %t0 && cd %t0 && llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
 // RUN: llvm-dwarfdump -all %t | FileCheck %s
 
 .globl _bar
