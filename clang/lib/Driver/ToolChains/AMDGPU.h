@@ -214,8 +214,7 @@ public:
   static bool getDefaultDenormsAreZeroForTarget(llvm::AMDGPU::GPUKind GPUKind);
 
   llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs,
-      Action::OffloadKind DeviceOffloadKind,
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const override;
 };
 

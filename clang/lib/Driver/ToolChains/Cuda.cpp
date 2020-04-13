@@ -721,9 +721,9 @@ void CudaToolChain::addClangTargetOptions(
 }
 
 llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
-    const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
+    const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
     const llvm::fltSemantics *FPType) const {
-  if (DeviceOffloadKind == Action::OFK_Cuda) {
+  if (JA.getOffloadingDeviceKind() == Action::OFK_Cuda) {
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
         DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
                            options::OPT_fno_cuda_flush_denormals_to_zero,
@@ -731,7 +731,7 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
       return llvm::DenormalMode::getPreserveSign();
   }
 
-  assert(DeviceOffloadKind != Action::OFK_Host);
+  assert(JA.getOffloadingDeviceKind() != Action::OFK_Host);
   return llvm::DenormalMode::getIEEE();
 }
 
