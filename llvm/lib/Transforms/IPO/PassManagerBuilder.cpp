@@ -164,9 +164,9 @@ PassManagerBuilder::PassManagerBuilder() {
     LibraryInfo = nullptr;
     Inliner = nullptr;
     DisableUnrollLoops = false;
-    SLPVectorize = RunSLPVectorization;
-    LoopVectorize = EnableLoopVectorization;
-    LoopsInterleaved = EnableLoopInterleaving;
+    SLPVectorize = false;
+    LoopVectorize = true;
+    LoopsInterleaved = true;
     RerollLoops = RunLoopRerolling;
     NewGVN = RunNewGVN;
     LicmMssaOptCap = SetLicmMssaOptCap;
