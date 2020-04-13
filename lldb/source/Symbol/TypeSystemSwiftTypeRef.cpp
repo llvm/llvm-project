@@ -514,7 +514,9 @@ TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
                                 ReconstructType(type), index));
 }
 bool TypeSystemSwiftTypeRef::IsFunctionPointerType(void *type) {
-  return m_swift_ast_context->IsFunctionPointerType(ReconstructType(type));
+  auto impl = [&]() -> bool { return IsFunctionType(type, nullptr); };
+  VALIDATE_AND_RETURN(
+      impl, m_swift_ast_context->IsFunctionPointerType(ReconstructType(type)));
 }
 bool TypeSystemSwiftTypeRef::IsIntegerType(void *type, bool &is_signed) {
   return m_swift_ast_context->IsIntegerType(ReconstructType(type), is_signed);
