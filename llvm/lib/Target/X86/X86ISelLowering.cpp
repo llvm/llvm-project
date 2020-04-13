@@ -41084,26 +41084,37 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   if (ShiftVal >= NumBitsPerElt) {
     if (LogicalShift)
       return DAG.getConstant(0, SDLoc(N), VT);
-    else
-      ShiftVal = NumBitsPerElt - 1;
+    ShiftVal = NumBitsPerElt - 1;
   }
 
-  // Shift N0 by zero -> N0.
+  // (shift X, 0) -> X
   if (!ShiftVal)
     return N0;
 
-  // Shift zero -> zero.
+  // (shift 0, C) -> 0
   if (ISD::isBuildVectorAllZeros(N0.getNode()))
+    // N0 is all zeros or undef. We guarantee that the bits shifted into the
+    // result are all zeros, not undef.
     return DAG.getConstant(0, SDLoc(N), VT);
 
-  // Fold (VSRAI (VSRAI X, C1), C2) --> (VSRAI X, (C1 + C2)) with (C1 + C2)
-  // clamped to (NumBitsPerElt - 1).
-  if (Opcode == X86ISD::VSRAI && N0.getOpcode() == X86ISD::VSRAI) {
+  // (VSRAI -1, C) -> -1
+  if (!LogicalShift && ISD::isBuildVectorAllOnes(N0.getNode()))
+    // N0 is all ones or undef. We guarantee that the bits shifted into the
+    // result are all ones, not undef.
+    return DAG.getConstant(-1, SDLoc(N), VT);
+
+  // (shift (shift X, C2), C1) -> (shift X, (C1 + C2))
+  if (Opcode == N0.getOpcode()) {
     unsigned ShiftVal2 = cast<ConstantSDNode>(N0.getOperand(1))->getZExtValue();
     unsigned NewShiftVal = ShiftVal + ShiftVal2;
-    if (NewShiftVal >= NumBitsPerElt)
+    if (NewShiftVal >= NumBitsPerElt) {
+      // Out of range logical bit shifts are guaranteed to be zero.
+      // Out of range arithmetic bit shifts splat the sign bit.
+      if (LogicalShift)
+        return DAG.getConstant(0, SDLoc(N), VT);
       NewShiftVal = NumBitsPerElt - 1;
-    return DAG.getNode(X86ISD::VSRAI, SDLoc(N), VT, N0.getOperand(0),
+    }
+    return DAG.getNode(Opcode, SDLoc(N), VT, N0.getOperand(0),
                        DAG.getTargetConstant(NewShiftVal, SDLoc(N), MVT::i8));
   }
 
