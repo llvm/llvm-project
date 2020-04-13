@@ -4382,9 +4382,9 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
   while (getLexer().isNot(AsmToken::EndOfStatement)) {
 
     if (!Parameters.empty() && Parameters.back().Vararg)
-      return Error(Lexer.getLoc(),
-                   "Vararg parameter '" + Parameters.back().Name +
-                   "' should be last one in the list of parameters.");
+      return Error(Lexer.getLoc(), "vararg parameter '" +
+                                       Parameters.back().Name +
+                                       "' should be the last parameter");
 
     MCAsmMacroParameter Parameter;
     if (parseIdentifier(Parameter.Name))
