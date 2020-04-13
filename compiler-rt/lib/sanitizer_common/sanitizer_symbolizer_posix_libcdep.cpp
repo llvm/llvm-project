@@ -151,6 +151,16 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   GetArgV(path_, argv);
   pid_t pid;
 
+  // Report how symbolizer is being launched for debugging purposes.
+  if (Verbosity() >= 3) {
+    // Only use `Report` for first line so subsequent prints don't get prefixed
+    // with current PID.
+    Report("Launching Symbolizer process: ");
+    for (unsigned index = 0; index < kArgVMax && argv[index]; ++index)
+      Printf("%s ", argv[index]);
+    Printf("\n");
+  }
+
   if (use_posix_spawn_) {
 #if SANITIZER_MAC
     fd_t fd = internal_spawn(argv, const_cast<const char **>(GetEnvP()), &pid);
