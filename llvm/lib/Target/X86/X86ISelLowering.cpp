@@ -3383,10 +3383,10 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
 
 #ifndef NDEBUG
 static bool isSortedByValueNo(ArrayRef<CCValAssign> ArgLocs) {
-  return std::is_sorted(ArgLocs.begin(), ArgLocs.end(),
-                        [](const CCValAssign &A, const CCValAssign &B) -> bool {
-                          return A.getValNo() < B.getValNo();
-                        });
+  return llvm::is_sorted(
+      ArgLocs, [](const CCValAssign &A, const CCValAssign &B) -> bool {
+        return A.getValNo() < B.getValNo();
+      });
 }
 #endif
 

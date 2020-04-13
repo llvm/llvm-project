@@ -3619,8 +3619,7 @@ public:
     if (Kind == k_RegisterList && Regs.back().second == ARM::APSR)
       Kind = k_RegisterListWithAPSR;
 
-    assert(std::is_sorted(Regs.begin(), Regs.end()) &&
-           "Register list must be sorted by encoding");
+    assert(llvm::is_sorted(Regs) && "Register list must be sorted by encoding");
 
     auto Op = std::make_unique<ARMOperand>(Kind);
     for (const auto &P : Regs)

@@ -552,7 +552,7 @@ bool CFLAndersAAResult::FunctionInfo::mayAlias(
       return std::less<const Value *>()(LHS.Val, RHS.Val);
     };
 #ifdef EXPENSIVE_CHECKS
-    assert(std::is_sorted(Itr->second.begin(), Itr->second.end(), Comparator));
+    assert(llvm::is_sorted(Itr->second, Comparator));
 #endif
     auto RangePair = std::equal_range(Itr->second.begin(), Itr->second.end(),
                                       OffsetValue{RHS, 0}, Comparator);

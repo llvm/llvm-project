@@ -5352,7 +5352,7 @@ findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
 
 #ifndef NDEBUG
   if (!MapProvenSorted) {
-    assert(std::is_sorted(std::begin(IntrinsicMap), std::end(IntrinsicMap)));
+    assert(llvm::is_sorted(IntrinsicMap));
     MapProvenSorted = true;
   }
 #endif

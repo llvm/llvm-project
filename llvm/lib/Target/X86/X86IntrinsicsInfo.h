@@ -1155,10 +1155,8 @@ static const IntrinsicData* getIntrinsicWithoutChain(unsigned IntNo) {
 }
 
 static void verifyIntrinsicTables() {
-  assert(std::is_sorted(std::begin(IntrinsicsWithoutChain),
-                        std::end(IntrinsicsWithoutChain)) &&
-         std::is_sorted(std::begin(IntrinsicsWithChain),
-                        std::end(IntrinsicsWithChain)) &&
+  assert(llvm::is_sorted(IntrinsicsWithoutChain) &&
+         llvm::is_sorted(IntrinsicsWithChain) &&
          "Intrinsic data tables should be sorted by Intrinsic ID");
   assert((std::adjacent_find(std::begin(IntrinsicsWithoutChain),
                              std::end(IntrinsicsWithoutChain)) ==

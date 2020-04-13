@@ -643,14 +643,13 @@ public:
 #ifndef NDEBUG
     for (auto &pair : Result.Files) {
       auto &mappings = pair.second.Mappings;
-      assert(std::is_sorted(
-          mappings.begin(), mappings.end(),
-          [](const TokenBuffer::Mapping &M1, const TokenBuffer::Mapping &M2) {
-            return M1.BeginSpelled < M2.BeginSpelled &&
-                   M1.EndSpelled < M2.EndSpelled &&
-                   M1.BeginExpanded < M2.BeginExpanded &&
-                   M1.EndExpanded < M2.EndExpanded;
-          }));
+      assert(llvm::is_sorted(mappings, [](const TokenBuffer::Mapping &M1,
+                                          const TokenBuffer::Mapping &M2) {
+        return M1.BeginSpelled < M2.BeginSpelled &&
+               M1.EndSpelled < M2.EndSpelled &&
+               M1.BeginExpanded < M2.BeginExpanded &&
+               M1.EndExpanded < M2.EndExpanded;
+      }));
     }
 #endif
 
