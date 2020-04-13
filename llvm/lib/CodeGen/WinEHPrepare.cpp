@@ -942,12 +942,12 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 
     for (BasicBlock *BB : BlocksInFunclet) {
       for (Instruction &I : *BB) {
-        CallSite CS(&I);
-        if (!CS)
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
           continue;
 
         Value *FuncletBundleOperand = nullptr;
-        if (auto BU = CS.getOperandBundle(LLVMContext::OB_funclet))
+        if (auto BU = CB->getOperandBundle(LLVMContext::OB_funclet))
           FuncletBundleOperand = BU->Inputs.front();
 
         if (FuncletBundleOperand == FuncletPad)
@@ -955,13 +955,13 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 
         // Skip call sites which are nounwind intrinsics or inline asm.
         auto *CalledFn =
-            dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-        if (CalledFn && ((CalledFn->isIntrinsic() && CS.doesNotThrow()) ||
-                         CS.isInlineAsm()))
+            dyn_cast<Function>(CB->getCalledValue()->stripPointerCasts());
+        if (CalledFn && ((CalledFn->isIntrinsic() && CB->doesNotThrow()) ||
+                         CB->isInlineAsm()))
           continue;
 
         // This call site was not part of this funclet, remove it.
-        if (CS.isInvoke()) {
+        if (isa<InvokeInst>(CB)) {
           // Remove the unwind edge if it was an invoke.
           removeUnwindEdge(BB);
           // Get a pointer to the new call.
