@@ -311,7 +311,7 @@ static Optional<ValTy> parseAndVerify(SPIRVDialect const &dialect,
     return llvm::None;
   }
 
-  auto val = spirv::symbolizeEnum<ValTy>()(enumSpec);
+  auto val = spirv::symbolizeEnum<ValTy>(enumSpec);
   if (!val)
     parser.emitError(enumLoc, "unknown attribute: '") << enumSpec << "'";
   return val;
