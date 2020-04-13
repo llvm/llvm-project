@@ -676,10 +676,19 @@ namespace {
 template <>
 LogicalResult Serializer::processTypeDecoration<spirv::ArrayType>(
     Location loc, spirv::ArrayType type, uint32_t resultID) {
-  if (type.hasLayout()) {
+  if (unsigned stride = type.getArrayStride()) {
     // OpDecorate %arrayTypeSSA ArrayStride strideLiteral
-    return emitDecoration(resultID, spirv::Decoration::ArrayStride,
-                          {static_cast<uint32_t>(type.getArrayStride())});
+    return emitDecoration(resultID, spirv::Decoration::ArrayStride, {stride});
+  }
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processTypeDecoration<spirv::RuntimeArrayType>(
+    Location Loc, spirv::RuntimeArrayType type, uint32_t resultID) {
+  if (unsigned stride = type.getArrayStride()) {
+    // OpDecorate %arrayTypeSSA ArrayStride strideLiteral
+    return emitDecoration(resultID, spirv::Decoration::ArrayStride, {stride});
   }
   return success();
 }
@@ -1011,9 +1020,9 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
                            elementTypeID))) {
       return failure();
     }
-    operands.push_back(elementTypeID);
     typeEnum = spirv::Opcode::OpTypeRuntimeArray;
-    return success();
+    operands.push_back(elementTypeID);
+    return processTypeDecoration(loc, runtimeArrayType, resultID);
   }
 
   if (auto structType = type.dyn_cast<spirv::StructType>()) {

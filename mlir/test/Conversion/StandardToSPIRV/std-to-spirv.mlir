@@ -312,17 +312,17 @@ func @constant() {
   %3 = constant dense<[2, 3]> : vector<2xi32>
   // CHECK: spv.constant 1 : i32
   %4 = constant 1 : index
-  // CHECK: spv.constant dense<1> : tensor<6xi32> : !spv.array<6 x i32 [4]>
+  // CHECK: spv.constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %5 = constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32 [4]>
+  // CHECK: spv.constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
   %6 = constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32 [4]>
+  // CHECK: spv.constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
   %7 = constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32 [4]>
+  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %8 = constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32 [4]>
+  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %9 =  constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32 [4]>
+  // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
   %10 =  constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
@@ -335,7 +335,7 @@ func @constant_16bit() {
   %1 = constant 5.0 : f16
   // CHECK: spv.constant dense<[2, 3]> : vector<2xi16>
   %2 = constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16 [2]>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
   %3 = constant dense<4.0> : tensor<5xf16>
   return
 }
@@ -348,7 +348,7 @@ func @constant_64bit() {
   %1 = constant 5.0 : f64
   // CHECK: spv.constant dense<[2, 3]> : vector<2xi64>
   %2 = constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64 [8]>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
   %3 = constant dense<4.0> : tensor<5xf64>
   return
 }
@@ -373,9 +373,9 @@ func @constant_16bit() {
   %1 = constant 5.0 : f16
   // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
   %2 = constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32 [4]>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
   %3 = constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32 [4]>
+  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
   %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
@@ -388,9 +388,9 @@ func @constant_64bit() {
   %1 = constant 5.0 : f64
   // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
   %2 = constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32 [4]>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
   %3 = constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32 [4]>
+  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
   %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
@@ -572,8 +572,8 @@ func @select(%arg0 : i32, %arg1 : i32) {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @load_store_zero_rank_float
-// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>,
-// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>)
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32, stride=4> [0]>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32, stride=4> [0]>, StorageBuffer>)
 func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
   //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][
@@ -591,8 +591,8 @@ func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
 }
 
 // CHECK-LABEL: @load_store_zero_rank_int
-// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32 [4]> [0]>, StorageBuffer>,
-// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32 [4]> [0]>, StorageBuffer>)
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32, stride=4> [0]>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32, stride=4> [0]>, StorageBuffer>)
 func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][

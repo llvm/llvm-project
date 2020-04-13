@@ -12,8 +12,8 @@ func @scalar_array_type(!spv.array<16xf32>, !spv.array<8 x i32>) -> ()
 // CHECK: func @vector_array_type(!spv.array<32 x vector<4xf32>>)
 func @vector_array_type(!spv.array< 32 x vector<4xf32> >) -> ()
 
-// CHECK: func @array_type_stride(!spv.array<4 x !spv.array<4 x f32 [4]> [128]>)
-func @array_type_stride(!spv.array< 4 x !spv.array<4 x f32 [4]> [128]>) -> ()
+// CHECK: func @array_type_stride(!spv.array<4 x !spv.array<4 x f32, stride=4>, stride=128>)
+func @array_type_stride(!spv.array< 4 x !spv.array<4 x f32, stride=4>, stride = 128>) -> ()
 
 // -----
 
@@ -78,7 +78,7 @@ func @llvm_type(!spv.array<4x!llvm.i32>) -> ()
 // -----
 
 // expected-error @+1 {{ArrayStride must be greater than zero}}
-func @array_type_zero_stride(!spv.array<4xi32 [0]>) -> ()
+func @array_type_zero_stride(!spv.array<4xi32, stride=0>) -> ()
 
 // -----
 
@@ -132,6 +132,9 @@ func @scalar_runtime_array_type(!spv.rtarray<f32>, !spv.rtarray<i32>) -> ()
 // CHECK: func @vector_runtime_array_type(!spv.rtarray<vector<4xf32>>)
 func @vector_runtime_array_type(!spv.rtarray< vector<4xf32> >) -> ()
 
+// CHECK: func @runtime_array_type_stride(!spv.rtarray<f32, stride=4>)
+func @runtime_array_type_stride(!spv.rtarray<f32, stride=4>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected '<'}}
@@ -146,6 +149,11 @@ func @missing_element_type(!spv.rtarray<>) -> ()
 
 // expected-error @+1 {{expected non-function type}}
 func @redundant_count(!spv.rtarray<4xf32>) -> ()
+
+// -----
+
+// expected-error @+1 {{ArrayStride must be greater than zero}}
+func @runtime_array_type_zero_stride(!spv.rtarray<i32, stride=0>) -> ()
 
 // -----
 

@@ -149,7 +149,7 @@ Optional<Type> parseAndVerify<Type>(SPIRVDialect const &dialect,
                                     DialectAsmParser &parser);
 
 template <>
-Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
+Optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                             DialectAsmParser &parser);
 
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
@@ -196,13 +196,39 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   return type;
 }
 
+/// Parses an optional `, stride = N` assembly segment. If no parsing failure
+/// occurs, writes `N` to `stride` if existing and writes 0 to `stride` if
+/// missing.
+static LogicalResult parseOptionalArrayStride(const SPIRVDialect &dialect,
+                                              DialectAsmParser &parser,
+                                              unsigned &stride) {
+  if (failed(parser.parseOptionalComma())) {
+    stride = 0;
+    return success();
+  }
+
+  if (parser.parseKeyword("stride") || parser.parseEqual())
+    return failure();
+
+  llvm::SMLoc strideLoc = parser.getCurrentLocation();
+  Optional<unsigned> optStride = parseAndVerify<unsigned>(dialect, parser);
+  if (!optStride)
+    return failure();
+
+  if (!(stride = optStride.getValue())) {
+    parser.emitError(strideLoc, "ArrayStride must be greater than zero");
+    return failure();
+  }
+  return success();
+}
+
 // element-type ::= integer-type
 //                | floating-point-type
 //                | vector-type
 //                | spirv-type
 //
-// array-type ::= `!spv.array<` integer-literal `x` element-type
-//                (`[` integer-literal `]`)? `>`
+// array-type ::= `!spv.array` `<` integer-literal `x` element-type
+//                (`,` `stride` `=` integer-literal)? `>`
 static Type parseArrayType(SPIRVDialect const &dialect,
                            DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -230,25 +256,13 @@ static Type parseArrayType(SPIRVDialect const &dialect,
   if (!elementType)
     return Type();
 
-  ArrayType::LayoutInfo layoutInfo = 0;
-  if (succeeded(parser.parseOptionalLSquare())) {
-    llvm::SMLoc layoutLoc = parser.getCurrentLocation();
-    auto layout = parseAndVerify<ArrayType::LayoutInfo>(dialect, parser);
-    if (!layout)
-      return Type();
-
-    if (!(layoutInfo = layout.getValue())) {
-      parser.emitError(layoutLoc, "ArrayStride must be greater than zero");
-      return Type();
-    }
-
-    if (parser.parseRSquare())
-      return Type();
-  }
+  unsigned stride = 0;
+  if (failed(parseOptionalArrayStride(dialect, parser, stride)))
+    return Type();
 
   if (parser.parseGreater())
     return Type();
-  return ArrayType::get(elementType, count, layoutInfo);
+  return ArrayType::get(elementType, count, stride);
 }
 
 // TODO(ravishankarm) : Reorder methods to be utilities first and parse*Type
@@ -285,7 +299,8 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   return PointerType::get(pointeeType, *storageClass);
 }
 
-// runtime-array-type ::= `!spv.rtarray<` element-type `>`
+// runtime-array-type ::= `!spv.rtarray` `<` element-type
+//                        (`,` `stride` `=` integer-literal)? `>`
 static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
                                   DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -295,9 +310,13 @@ static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
   if (!elementType)
     return Type();
 
+  unsigned stride = 0;
+  if (failed(parseOptionalArrayStride(dialect, parser, stride)))
+    return Type();
+
   if (parser.parseGreater())
     return Type();
-  return RuntimeArrayType::get(elementType);
+  return RuntimeArrayType::get(elementType, stride);
 }
 
 // Specialize this function to parse each of the parameters that define an
@@ -337,9 +356,9 @@ static Optional<IntTy> parseAndVerifyInteger(SPIRVDialect const &dialect,
 }
 
 template <>
-Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
+Optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                             DialectAsmParser &parser) {
-  return parseAndVerifyInteger<uint64_t>(dialect, parser);
+  return parseAndVerifyInteger<unsigned>(dialect, parser);
 }
 
 namespace {
@@ -526,14 +545,16 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
 
 static void print(ArrayType type, DialectAsmPrinter &os) {
   os << "array<" << type.getNumElements() << " x " << type.getElementType();
-  if (type.hasLayout()) {
-    os << " [" << type.getArrayStride() << "]";
-  }
+  if (unsigned stride = type.getArrayStride())
+    os << ", stride=" << stride;
   os << ">";
 }
 
 static void print(RuntimeArrayType type, DialectAsmPrinter &os) {
-  os << "rtarray<" << type.getElementType() << ">";
+  os << "rtarray<" << type.getElementType();
+  if (unsigned stride = type.getArrayStride())
+    os << ", stride=" << stride;
+  os << ">";
 }
 
 static void print(PointerType type, DialectAsmPrinter &os) {

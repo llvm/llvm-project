@@ -1203,7 +1203,8 @@ Deserializer::processRuntimeArrayType(ArrayRef<uint32_t> operands) {
                      "OpTypeRuntimeArray references undefined <id> ")
            << operands[1];
   }
-  typeMap[operands[0]] = spirv::RuntimeArrayType::get(memberType);
+  typeMap[operands[0]] = spirv::RuntimeArrayType::get(
+      memberType, typeDecorations.lookup(operands[0]));
   return success();
 }
 

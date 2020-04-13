@@ -287,13 +287,15 @@ element-type ::= integer-type
                | vector-type
                | spirv-type
 
-array-type ::= `!spv.array<` integer-literal `x` element-type `>`
+array-type ::= `!spv.array` `<` integer-literal `x` element-type
+               (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
 !spv.array<4 x i32>
+!spv.array<4 x i32, stride = 4>
 !spv.array<16 x vector<4 x f32>>
 ```
 
@@ -351,13 +353,14 @@ For example,
 This corresponds to SPIR-V [runtime array type][RuntimeArrayType]. Its syntax is
 
 ```
-runtime-array-type ::= `!spv.rtarray<` element-type `>`
+runtime-array-type ::= `!spv.rtarray` `<` element-type (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
 !spv.rtarray<i32>
+!spv.rtarray<i32, stride=4>
 !spv.rtarray<vector<4 x f32>>
 ```
 
