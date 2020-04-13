@@ -863,7 +863,8 @@ void BreakableLineCommentSection::reflow(unsigned LineIndex,
     // tokens by the empty string.
     Whitespaces.replaceWhitespace(
         *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-        /*StartOfTokenColumn=*/StartColumn, /*InPPDirective=*/false);
+        /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
+        /*InPPDirective=*/false);
   } else if (LineIndex > 0) {
     // In case we're reflowing after the '\' in:
     //
@@ -931,6 +932,7 @@ void BreakableLineCommentSection::adaptStartOfLine(
                                   /*Newlines=*/1,
                                   /*Spaces=*/LineColumn,
                                   /*StartOfTokenColumn=*/LineColumn,
+                                  /*IsAligned=*/true,
                                   /*InPPDirective=*/false);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
