@@ -1492,6 +1492,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
   SmallVector<AffineExpr, 4> fastBufExprs;
   SmallVector<Value, 4> fastBufMapOperands;
   AffineForOp copyNestRoot;
+  SmallVector<AffineApplyOp, 4> mayBeDeadApplys;
   for (unsigned d = 0; d < rank; ++d) {
     auto forOp = createCanonicalizedAffineForOp(b, loc, lbOperands, lbMaps[d],
                                                 ubOperands, ubMaps[d]);
@@ -1510,6 +1511,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
                            b.getAffineDimExpr(2 * d));
     fastBufMapOperands.push_back(offset);
     fastBufMapOperands.push_back(forOp.getInductionVar());
+    mayBeDeadApplys.push_back(offset);
 
     // Subscript for the slow memref being copied.
     memIndices.push_back(forOp.getInductionVar());
@@ -1519,6 +1521,11 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
   fullyComposeAffineMapAndOperands(&fastBufMap, &fastBufMapOperands);
   fastBufMap = simplifyAffineMap(fastBufMap);
   canonicalizeMapAndOperands(&fastBufMap, &fastBufMapOperands);
+
+  // Drop any dead affine.applys.
+  for (auto applyOp : mayBeDeadApplys)
+    if (applyOp.use_empty())
+      applyOp.erase();
 
   if (!isCopyOut) {
     // Copy in.
@@ -2191,7 +2198,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
   // larger (and resp. smaller) than any other lower (or upper bound).
   SmallVector<int64_t, 8> fullTileLb, fullTileUb;
   for (auto loop : loops) {
-    (void) loop;
+    (void)loop;
     // TODO: Non-unit stride is not an issue to generalize to.
     assert(loop.getStep() == 1 && "point loop step expected to be one");
     // Mark everything symbols for the purpose of finding a constant diff pair.
