@@ -25,6 +25,32 @@ namespace mlir {
 
 namespace spirv {
 namespace detail {
+
+struct InterfaceVarABIAttributeStorage : public AttributeStorage {
+  using KeyTy = std::tuple<Attribute, Attribute, Attribute>;
+
+  InterfaceVarABIAttributeStorage(Attribute descriptorSet, Attribute binding,
+                                  Attribute storageClass)
+      : descriptorSet(descriptorSet), binding(binding),
+        storageClass(storageClass) {}
+
+  bool operator==(const KeyTy &key) const {
+    return std::get<0>(key) == descriptorSet && std::get<1>(key) == binding &&
+           std::get<2>(key) == storageClass;
+  }
+
+  static InterfaceVarABIAttributeStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<InterfaceVarABIAttributeStorage>())
+        InterfaceVarABIAttributeStorage(std::get<0>(key), std::get<1>(key),
+                                        std::get<2>(key));
+  }
+
+  Attribute descriptorSet;
+  Attribute binding;
+  Attribute storageClass;
+};
+
 struct VerCapExtAttributeStorage : public AttributeStorage {
   using KeyTy = std::tuple<Attribute, Attribute, Attribute>;
 
@@ -71,6 +97,74 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 } // namespace detail
 } // namespace spirv
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// InterfaceVarABIAttr
+//===----------------------------------------------------------------------===//
+
+spirv::InterfaceVarABIAttr
+spirv::InterfaceVarABIAttr::get(uint32_t descriptorSet, uint32_t binding,
+                                Optional<spirv::StorageClass> storageClass,
+                                MLIRContext *context) {
+  Builder b(context);
+  auto descriptorSetAttr = b.getI32IntegerAttr(descriptorSet);
+  auto bindingAttr = b.getI32IntegerAttr(binding);
+  auto storageClassAttr =
+      storageClass ? b.getI32IntegerAttr(static_cast<uint32_t>(*storageClass))
+                   : IntegerAttr();
+  return get(descriptorSetAttr, bindingAttr, storageClassAttr);
+}
+
+spirv::InterfaceVarABIAttr
+spirv::InterfaceVarABIAttr::get(IntegerAttr descriptorSet, IntegerAttr binding,
+                                IntegerAttr storageClass) {
+  assert(descriptorSet && binding);
+  MLIRContext *context = descriptorSet.getContext();
+  return Base::get(context, spirv::AttrKind::InterfaceVarABI, descriptorSet,
+                   binding, storageClass);
+}
+
+StringRef spirv::InterfaceVarABIAttr::getKindName() {
+  return "interface_var_abi";
+}
+
+uint32_t spirv::InterfaceVarABIAttr::getBinding() {
+  return getImpl()->binding.cast<IntegerAttr>().getInt();
+}
+
+uint32_t spirv::InterfaceVarABIAttr::getDescriptorSet() {
+  return getImpl()->descriptorSet.cast<IntegerAttr>().getInt();
+}
+
+Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
+  if (getImpl()->storageClass)
+    return static_cast<spirv::StorageClass>(
+        getImpl()->storageClass.cast<IntegerAttr>().getValue().getZExtValue());
+  return llvm::None;
+}
+
+LogicalResult spirv::InterfaceVarABIAttr::verifyConstructionInvariants(
+    Location loc, IntegerAttr descriptorSet, IntegerAttr binding,
+    IntegerAttr storageClass) {
+  if (!descriptorSet.getType().isSignlessInteger(32))
+    return emitError(loc, "expected 32-bit integer for descriptor set");
+
+  if (!binding.getType().isSignlessInteger(32))
+    return emitError(loc, "expected 32-bit integer for binding");
+
+  if (storageClass) {
+    if (auto storageClassAttr = storageClass.cast<IntegerAttr>()) {
+      auto storageClassValue =
+          spirv::symbolizeStorageClass(storageClassAttr.getInt());
+      if (!storageClassValue)
+        return emitError(loc, "unknown storage class");
+    } else {
+      return emitError(loc, "expected valid storage class");
+    }
+  }
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // VerCapExtAttr

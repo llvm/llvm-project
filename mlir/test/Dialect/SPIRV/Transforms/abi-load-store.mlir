@@ -27,30 +27,19 @@ spv.module Logical GLSL450 {
   // CHECK: spv.func [[FN:@.*]]()
   spv.func @load_store_kernel(
     %arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-    {spv.interface_var_abi = {binding = 0 : i32,
-                              descriptor_set = 0 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 0)>},
     %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-    {spv.interface_var_abi = {binding = 1 : i32,
-                              descriptor_set = 0 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>},
     %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-    {spv.interface_var_abi = {binding = 2 : i32,
-                              descriptor_set = 0 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 2)>},
     %arg3: i32
-    {spv.interface_var_abi = {binding = 3 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 3), StorageBuffer>},
     %arg4: i32
-    {spv.interface_var_abi = {binding = 4 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 4), StorageBuffer>},
     %arg5: i32
-    {spv.interface_var_abi = {binding = 5 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 5), StorageBuffer>},
     %arg6: i32
-    {spv.interface_var_abi = {binding = 6 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}}) "None"
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
   attributes  {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ADDRESSARG6:%.*]] = spv._address_of [[VAR6]]
     // CHECK: [[CONST6:%.*]] = spv.constant 0 : i32
