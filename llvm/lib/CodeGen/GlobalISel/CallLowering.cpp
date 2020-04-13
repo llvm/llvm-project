@@ -29,7 +29,7 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
-bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
+bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
@@ -41,39 +41,39 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
   unsigned i = 0;
-  unsigned NumFixedArgs = CS.getFunctionType()->getNumParams();
-  for (auto &Arg : CS.args()) {
+  unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
+  for (auto &Arg : CB.args()) {
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
-    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
+    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     Info.OrigArgs.push_back(OrigArg);
     ++i;
   }
 
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
-  const Value *CalleeV = CS.getCalledValue()->stripPointerCasts();
+  const Value *CalleeV = CB.getCalledValue()->stripPointerCasts();
   if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  Info.OrigRet = ArgInfo{ResRegs, CS.getType(), ISD::ArgFlagsTy{}};
+  Info.OrigRet = ArgInfo{ResRegs, CB.getType(), ISD::ArgFlagsTy{}};
   if (!Info.OrigRet.Ty->isVoidTy())
-    setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CS);
+    setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
   MachineFunction &MF = MIRBuilder.getMF();
-  Info.KnownCallees =
-      CS.getInstruction()->getMetadata(LLVMContext::MD_callees);
-  Info.CallConv = CS.getCallingConv();
+  Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
+  Info.CallConv = CB.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
-  Info.IsMustTailCall = CS.isMustTailCall();
-  Info.IsTailCall = CS.isTailCall() &&
-                    isInTailCallPosition(CS, MF.getTarget()) &&
-                    (MF.getFunction()
-                       .getFnAttribute("disable-tail-calls")
-                       .getValueAsString() != "true");
-  Info.IsVarArg = CS.getFunctionType()->isVarArg();
+  Info.IsMustTailCall = CB.isMustTailCall();
+  Info.IsTailCall =
+      CB.isTailCall() &&
+      isInTailCallPosition(ImmutableCallSite(&CB), MF.getTarget()) &&
+      (MF.getFunction()
+           .getFnAttribute("disable-tail-calls")
+           .getValueAsString() != "true");
+  Info.IsVarArg = CB.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
 
@@ -126,9 +126,9 @@ CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const Function &FuncInfo) const;
 
 template void
-CallLowering::setArgFlags<CallInst>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
-                                    const CallInst &FuncInfo) const;
+                                    const CallBase &FuncInfo) const;
 
 Register CallLowering::packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
                                 MachineIRBuilder &MIRBuilder) const {
