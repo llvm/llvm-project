@@ -3054,7 +3054,7 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
     // Don't pass vXi128 vectors in their native type, the backend can't
     // legalize them.
     if (passInt128VectorsInMem() &&
-        IRType->getVectorElementType()->isIntegerTy(128)) {
+        cast<llvm::VectorType>(IRType)->getElementType()->isIntegerTy(128)) {
       // Use a vXi64 vector.
       uint64_t Size = getContext().getTypeSize(Ty);
       return llvm::VectorType::get(llvm::Type::getInt64Ty(getVMContext()),
