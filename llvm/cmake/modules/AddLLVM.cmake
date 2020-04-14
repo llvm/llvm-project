@@ -1399,7 +1399,7 @@ endmacro()
 function(make_paths_relative out_pathlist basedir pathlist)
   # Passing ARG_PATH_VALUES as-is to execute_process() makes cmake strip
   # empty list entries. So escape the ;s in the list and do the splitting
-  # outselves. cmake has no relpath function, so use Python for that.
+  # ourselves. cmake has no relpath function, so use Python for that.
   string(REPLACE ";" "\\;" pathlist_escaped "${pathlist}")
   execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "\n
 import os, sys\n
@@ -1411,7 +1411,7 @@ def relpath(p):\n
     if not p: return ''\n
     if os.path.splitdrive(p)[0] != os.path.splitdrive(base)[0]: return p\n
     if haslink(p) or haslink(base): return p\n
-    return os.path.relpath(p, base).replace(os.sep, '/')\n
+    return os.path.relpath(p, base)\n
 sys.stdout.write(';'.join(relpath(p) for p in sys.argv[2].split(';')))"
     ${basedir}
     ${pathlist_escaped}
@@ -1430,11 +1430,10 @@ string(CONCAT LLVM_LIT_PATH_FUNCTION
   # important that this restores the on-disk case of the prefix.
   "# Allow generated file to be relocatable.\n"
   "def path(p):\n"
-  "  if not p: return ''\n"
-  "  p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
-  "  p = os.path.normpath(p).replace(os.sep, '/')\n"
-  "  if os.name == 'nt' and os.path.isabs(p): return p[0].upper() + p[1:]\n"
-  "  return p\n"
+  "    if not p: return ''\n"
+  "    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
+  "    if os.name == 'nt' and os.path.isabs(p): return p[0].upper() + p[1:]\n"
+  "    return p\n"
   )
 
 # This function provides an automatic way to 'configure'-like generate a file
