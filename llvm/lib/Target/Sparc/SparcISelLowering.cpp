@@ -692,9 +692,9 @@ SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 }
 
 static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
-                                ImmutableCallSite CS) {
-  if (CS)
-    return CS.hasFnAttr(Attribute::ReturnsTwice);
+                                const CallBase *Call) {
+  if (Call)
+    return Call->hasFnAttr(Attribute::ReturnsTwice);
 
   const Function *CalleeFn = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -936,7 +936,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
-  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CS);
+  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
@@ -1243,7 +1243,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
-  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CS);
+  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
   unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_Sparc_WPLT30 : 0;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, TF);
@@ -1292,7 +1292,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.
-  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CS)
+  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_Sparc64);

@@ -3838,11 +3838,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
       CallConv == CallingConv::Tail;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
-  const auto *CI = dyn_cast_or_null<CallInst>(CLI.CS.getInstruction());
+  const auto *CI = dyn_cast_or_null<CallInst>(CLI.CB);
   const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
   bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
                  (Fn && Fn->hasFnAttribute("no_caller_saved_registers"));
-  const auto *II = dyn_cast_or_null<InvokeInst>(CLI.CS.getInstruction());
+  const auto *II = dyn_cast_or_null<InvokeInst>(CLI.CB);
   bool HasNoCfCheck =
       (CI && CI->doesNoCfCheck()) || (II && II->doesNoCfCheck());
   const Module *M = MF.getMMI().getModule();
@@ -3865,7 +3865,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-  bool IsMustTail = CLI.CS && CLI.CS.isMustTailCall();
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (IsMustTail) {
     // Force this to be a tail call.  The verifier rules are enough to ensure
     // that we can lower this successfully without moving the return address
@@ -4261,7 +4261,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // is thrown, the runtime will not restore CSRs.
   // FIXME: Model this more precisely so that we can register allocate across
   // the normal edge and spill and fill across the exceptional edge.
-  if (!Is64Bit && CLI.CS && CLI.CS.isInvoke()) {
+  if (!Is64Bit && CLI.CB && isa<InvokeInst>(CLI.CB)) {
     const Function &CallerFn = MF.getFunction();
     EHPersonality Pers =
         CallerFn.hasPersonalityFn()
@@ -4323,8 +4323,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
   // Save heapallocsite metadata.
-  if (CLI.CS)
-    if (MDNode *HeapAlloc = CLI.CS->getMetadata("heapallocsite"))
+  if (CLI.CB)
+    if (MDNode *HeapAlloc = CLI.CB->getMetadata("heapallocsite"))
       DAG.addHeapAllocSite(Chain.getNode(), HeapAlloc);
 
   // Create the CALLSEQ_END node.
