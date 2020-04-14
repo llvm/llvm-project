@@ -10,6 +10,8 @@ VERS1.0 {
     __tgt_rtl_data_submit_async;
     __tgt_rtl_data_retrieve;
     __tgt_rtl_data_retrieve_async;
+    __tgt_rtl_data_transfer;
+    __tgt_rtl_data_transfer_async;
     __tgt_rtl_data_delete;
     __tgt_rtl_run_target_team_region;
     __tgt_rtl_run_target_team_region_async;

@@ -168,13 +168,17 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     rc = SrcDev.data_retrieve(dstAddr, srcAddr, length, nullptr);
   } else {
     DP("copy from device to device\n");
-    void *buffer = malloc(length);
     DeviceTy& SrcDev = Devices[src_device];
     DeviceTy& DstDev = Devices[dst_device];
-    rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
-    if (rc == OFFLOAD_SUCCESS)
-      rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);
-    free(buffer);
+    if (SrcDev.RTL->RTLName != DstDev.RTL->RTLName) {
+      void *buffer = malloc(length);
+      rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
+      if (rc == OFFLOAD_SUCCESS)
+        rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);
+      free(buffer);
+    } else {
+      SrcDev.data_transfer(dstAddr, srcAddr, length, nullptr);
+    }
   }
 
   DP("omp_target_memcpy returns %d\n", rc);

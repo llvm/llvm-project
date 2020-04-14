@@ -92,9 +92,9 @@ void RTLsTy::LoadRTLs() {
     R.LibraryHandler = dynlib_handle;
     R.isUsed = false;
 
-#ifdef OMPTARGET_DEBUG
+
     R.RTLName = Name;
-#endif
+
 
     if (!(*((void **)&R.is_valid_binary) =
               dlsym(dynlib_handle, "__tgt_rtl_is_valid_binary")))
@@ -134,6 +134,10 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_data_submit_async");
     *((void **)&R.data_retrieve_async) =
         dlsym(dynlib_handle, "__tgt_rtl_data_retrieve_async");
+    *((void **)&R.data_transfer) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_transfer");
+    *((void **)&R.data_transfer_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_transfer_async");
     *((void **)&R.run_region_async) =
         dlsym(dynlib_handle, "__tgt_rtl_run_target_region_async");
     *((void **)&R.run_team_region_async) =

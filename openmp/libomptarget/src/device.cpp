@@ -351,6 +351,16 @@ int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
                                     AsyncInfoPtr);
 }
 
+// Transfer data between device from same vendor
+int32_t DeviceTy::data_transfer(void *DstPtrBegin, void *SrcPtrBegin,
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->data_retrieve_async || !RTL->synchronize)
+    return RTL->data_transfer(RTLDeviceID, DstPtrBegin, SrcPtrBegin, Size);
+  else
+    return RTL->data_transfer_async(RTLDeviceID, DstPtrBegin, SrcPtrBegin, Size,
+                                    AsyncInfoPtr);
+}
+
 // Run region on device
 int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
                              ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,

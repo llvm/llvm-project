@@ -736,6 +736,29 @@ public:
     return OFFLOAD_SUCCESS;
   }
 
+  int dataTransfer(const int DeviceId, void *DstPtr, const void *SrcPtr,
+                   const int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
+    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
+
+    Err = cuMemcpyDtoDAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when copying data from device to device. Pointers: dst = " DPxMOD
+         ", src = " DPxMOD ", size = %" PRId64 "\n",
+         DPxPTR(DstPtr), DPxPTR(SrcPtr), Size);
+      CUDA_ERR_STRING(Err);
+      return OFFLOAD_FAIL;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+
   int dataDelete(const int DeviceId, void *TgtPtr) const {
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
     if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
@@ -962,6 +985,29 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
   assert(async_info_ptr && "async_info_ptr is nullptr");
 
   return DeviceRTL.dataRetrieve(device_id, hst_ptr, tgt_ptr, size,
+                                async_info_ptr);
+}
+
+int32_t __tgt_rtl_data_transfer(int32_t device_id, void *dst_ptr, void *src_ptr,
+                                int64_t size) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_data_transfer_async(device_id, hst_ptr, tgt_ptr,
+                                                   size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return __tgt_rtl_synchronize(device_id, &async_info);
+}
+
+int32_t __tgt_rtl_data_transfer_async(int32_t device_id, void *dst_ptr,
+                                      void *src_ptr, int64_t size,
+                                      __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+
+  return DeviceRTL.dataTransfer(device_id, dst_ptr, src_ptr, size,
                                 async_info_ptr);
 }
 

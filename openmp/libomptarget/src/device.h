@@ -180,6 +180,8 @@ struct DeviceTy {
                       __tgt_async_info *AsyncInfoPtr);
   int32_t data_retrieve(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                         __tgt_async_info *AsyncInfoPtr);
+  int32_t data_transfer(void *DstPtrBegin, void *SrcPtrBegin, int64_t Size,
+                        __tgt_async_info *AsyncInfoPtr);
 
   int32_t run_region(void *TgtEntryPtr, void **TgtVarsPtr,
                      ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
