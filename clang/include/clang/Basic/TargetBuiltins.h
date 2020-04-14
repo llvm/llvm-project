@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include "clang/Basic/Builtins.h"
+#include "llvm/Support/MathExtras.h"
 #undef PPC
 
 namespace clang {
@@ -163,6 +164,9 @@ namespace clang {
   /// Flags to identify the types for overloaded SVE builtins.
   class SVETypeFlags {
     uint64_t Flags;
+    unsigned EltTypeShift;
+    unsigned MemEltTypeShift;
+    unsigned MergeTypeShift;
 
   public:
 #define LLVM_GET_SVE_TYPEFLAGS
@@ -181,15 +185,27 @@ namespace clang {
 #undef LLVM_GET_SVE_MEMELTTYPES
     };
 
-    SVETypeFlags(uint64_t F) : Flags(F) {}
-    SVETypeFlags(EltType ET, bool IsUnsigned) : Flags(ET) {}
+    enum MergeType {
+#define LLVM_GET_SVE_MERGETYPES
+#include "clang/Basic/arm_sve_typeflags.inc"
+#undef LLVM_GET_SVE_MERGETYPES
+    };
+    SVETypeFlags(uint64_t F) : Flags(F) {
+      EltTypeShift = llvm::countTrailingZeros(EltTypeMask);
+      MemEltTypeShift = llvm::countTrailingZeros(MemEltTypeMask);
+      MergeTypeShift = llvm::countTrailingZeros(MergeTypeMask);
+    }
 
     EltType getEltType() const {
-      return (EltType)((Flags & EltTypeMask) - FirstEltType);
+      return (EltType)((Flags & EltTypeMask) >> EltTypeShift);
     }
 
     MemEltType getMemEltType() const {
-      return (MemEltType)((Flags & MemEltTypeMask) - FirstMemEltType);
+      return (MemEltType)((Flags & MemEltTypeMask) >> MemEltTypeShift);
+    }
+
+    MergeType getMergeType() const {
+      return (MergeType)((Flags & MergeTypeMask) >> MergeTypeShift);
     }
 
     bool isLoad() const { return Flags & IsLoad; }

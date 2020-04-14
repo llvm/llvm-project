@@ -84,15 +84,16 @@
 // Y: const pointer to uint32_t
 // Z: const pointer to uint64_t
 
-class MergeType<int val> {
+class MergeType<int val, string suffix=""> {
   int Value = val;
+  string Suffix = suffix;
 }
 def MergeNone    : MergeType<0>;
-def MergeAny     : MergeType<1>;
-def MergeOp1     : MergeType<2>;
-def MergeZero    : MergeType<3>;
-def MergeAnyExp  : MergeType<4>; // Use merged builtin with explicit
-def MergeZeroExp : MergeType<5>; // generation of its inactive argument.
+def MergeAny     : MergeType<1, "_x">;
+def MergeOp1     : MergeType<2, "_m">;
+def MergeZero    : MergeType<3, "_z">;
+def MergeAnyExp  : MergeType<4, "_x">; // Use merged builtin with explicit
+def MergeZeroExp : MergeType<5, "_z">; // generation of its inactive argument.
 
 class EltType<int val> {
   int Value = val;
@@ -134,13 +135,17 @@ def FirstMemEltType           : FlagType<0x00000010>;
 //      :                                     :
 //      :                                     :
 def MemEltTypeMask            : FlagType<0x00000070>;
-def IsLoad                    : FlagType<0x00000080>;
-def IsStore                   : FlagType<0x00000100>;
-def IsGatherLoad              : FlagType<0x00000200>;
-def IsScatterStore            : FlagType<0x00000400>;
-def IsStructLoad              : FlagType<0x00000800>;
-def IsStructStore             : FlagType<0x00001000>;
-def IsZExtReturn              : FlagType<0x00002000>; // Return value is sign-extend by default
+def FirstMergeTypeMask        : FlagType<0x00000080>;
+//      :                                     :
+//      :                                     :
+def MergeTypeMask             : FlagType<0x00000380>;
+def IsLoad                    : FlagType<0x00002000>;
+def IsStore                   : FlagType<0x00004000>;
+def IsGatherLoad              : FlagType<0x00008000>;
+def IsScatterStore            : FlagType<0x00010000>;
+def IsStructLoad              : FlagType<0x00020000>;
+def IsStructStore             : FlagType<0x00040000>;
+def IsZExtReturn              : FlagType<0x00080000>; // Return value is sign-extend by default
 
 // Every intrinsic subclasses Inst.
 class Inst<string n, string p, string t, MergeType mt, string i,
@@ -150,6 +155,7 @@ class Inst<string n, string p, string t, MergeType mt, string i,
   string Types = t;
   string ArchGuard = "";
   int Merge = mt.Value;
+  string MergeSuffix = mt.Suffix;
   string LLVMIntrinsic = i;
   list<FlagType> Flags = ft;
   int MemEltType = met.Value;
