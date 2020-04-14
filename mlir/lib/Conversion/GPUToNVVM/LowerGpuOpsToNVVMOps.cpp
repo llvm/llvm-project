@@ -138,9 +138,9 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
     // not specific to function modeling.
     SmallVector<NamedAttribute, 4> attributes;
     for (const auto &attr : gpuFuncOp.getAttrs()) {
-      if (attr.first.is(SymbolTable::getSymbolAttrName()) ||
-          attr.first.is(impl::getTypeAttrName()) ||
-          attr.first.is(gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName()))
+      if (attr.first == SymbolTable::getSymbolAttrName() ||
+          attr.first == impl::getTypeAttrName() ||
+          attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
         continue;
       attributes.push_back(attr);
     }

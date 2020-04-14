@@ -236,10 +236,10 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
     // ShufMask = { 2, undef, undef, undef }
     uint64_t SplatIndex = ConvertToShuffle == Ext0 ? C0 : C1;
     uint64_t CheapExtIndex = ConvertToShuffle == Ext0 ? C1 : C0;
-    Type *VecTy = V0->getType();
+    auto *VecTy = cast<VectorType>(V0->getType());
     Type *I32Ty = IntegerType::getInt32Ty(I.getContext());
     UndefValue *Undef = UndefValue::get(I32Ty);
-    SmallVector<Constant *, 32> ShufMask(VecTy->getVectorNumElements(), Undef);
+    SmallVector<Constant *, 32> ShufMask(VecTy->getNumElements(), Undef);
     ShufMask[CheapExtIndex] = ConstantInt::get(I32Ty, SplatIndex);
     IRBuilder<> Builder(ConvertToShuffle);
 
@@ -272,15 +272,14 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
                                                     m_Mask(Mask))))))
     return false;
 
-  Type *DestTy = I.getType();
-  Type *SrcTy = V->getType();
-  if (!DestTy->isVectorTy() || I.getOperand(0)->getType() != SrcTy)
+  auto *DestTy = dyn_cast<VectorType>(I.getType());
+  auto *SrcTy = cast<VectorType>(V->getType());
+  if (!DestTy || I.getOperand(0)->getType() != SrcTy)
     return false;
 
   // TODO: Handle bitcast from narrow element type to wide element type.
-  assert(SrcTy->isVectorTy() && "Shuffle of non-vector type?");
-  unsigned DestNumElts = DestTy->getVectorNumElements();
-  unsigned SrcNumElts = SrcTy->getVectorNumElements();
+  unsigned DestNumElts = DestTy->getNumElements();
+  unsigned SrcNumElts = SrcTy->getNumElements();
   if (SrcNumElts > DestNumElts)
     return false;
 

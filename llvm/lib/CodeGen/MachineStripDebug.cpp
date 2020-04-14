@@ -16,6 +16,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/Debugify.h"
 
 #define DEBUG_TYPE "mir-strip-debug"
 
@@ -73,33 +74,7 @@ struct StripDebugMachineModule : public ModulePass {
       }
     }
 
-    Changed |= StripDebugInfo(M);
-
-    NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
-    if (NMD) {
-      NMD->eraseFromParent();
-      Changed |= true;
-    }
-
-    NMD = M.getModuleFlagsMetadata();
-    if (NMD) {
-      // There must be an easier way to remove an operand from a NamedMDNode.
-      SmallVector<MDNode *, 4> Flags;
-      for (MDNode *Flag : NMD->operands())
-        Flags.push_back(Flag);
-      NMD->clearOperands();
-      for (MDNode *Flag : Flags) {
-        MDString *Key = dyn_cast_or_null<MDString>(Flag->getOperand(1));
-        if (Key->getString() == "Debug Info Version") {
-          Changed |= true;
-          continue;
-        }
-        NMD->addOperand(Flag);
-      }
-      // If we left it empty we might as well remove it.
-      if (NMD->getNumOperands() == 0)
-        NMD->eraseFromParent();
-    }
+    Changed |= stripDebugifyMetadata(M);
 
     return Changed;
   }

@@ -2152,7 +2152,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall)
     ++NumTailCalls;
-  else if (CLI.CS && CLI.CS.isMustTailCall())
+  else if (CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 

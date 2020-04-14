@@ -69,6 +69,7 @@ static_library("Support") {
     "ELFAttributes.cpp",
     "Error.cpp",
     "ErrorHandling.cpp",
+    "ExtensibleRTTI.cpp",
     "FileCheck.cpp",
     "FileCollector.cpp",
     "FileOutputBuffer.cpp",

@@ -18,7 +18,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
@@ -67,8 +66,10 @@ SmallVector<int64_t, 4> mlir::delinearize(ArrayRef<int64_t> sliceStrides,
 
 SmallVector<int64_t, 4> mlir::computeElementOffsetsFromVectorSliceOffsets(
     ArrayRef<int64_t> sizes, ArrayRef<int64_t> vectorOffsets) {
-  return functional::zipMap([](int64_t v1, int64_t v2) { return v1 * v2; },
-                            vectorOffsets, sizes);
+  SmallVector<int64_t, 4> result;
+  for (auto it : llvm::zip(vectorOffsets, sizes))
+    result.push_back(std::get<0>(it) * std::get<1>(it));
+  return result;
 }
 
 SmallVector<int64_t, 4>
@@ -88,23 +89,19 @@ Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
   }
 
   // Starting from the end, compute the integer divisors.
-  // Set the boolean `divides` if integral division is not possible.
   std::vector<int64_t> result;
   result.reserve(superShape.size());
-  bool divides = true;
-  auto divide = [&divides, &result](int superSize, int subSize) {
+  int64_t superSize = 0, subSize = 0;
+  for (auto it :
+       llvm::zip(llvm::reverse(superShape), llvm::reverse(subShape))) {
+    std::tie(superSize, subSize) = it;
     assert(superSize > 0 && "superSize must be > 0");
     assert(subSize > 0 && "subSize must be > 0");
-    divides &= (superSize % subSize == 0);
-    result.push_back(superSize / subSize);
-  };
-  functional::zipApply(
-      divide, SmallVector<int64_t, 8>{superShape.rbegin(), superShape.rend()},
-      SmallVector<int64_t, 8>{subShape.rbegin(), subShape.rend()});
 
-  // If integral division does not occur, return and let the caller decide.
-  if (!divides) {
-    return None;
+    // If integral division does not occur, return and let the caller decide.
+    if (superSize % subSize != 0)
+      return None;
+    result.push_back(superSize / subSize);
   }
 
   // At this point we computed the ratio (in reverse) for the common
@@ -157,8 +154,6 @@ static AffineMap makePermutationMap(
     return AffineMap();
   MLIRContext *context =
       enclosingLoopToVectorDim.begin()->getFirst()->getContext();
-  using functional::makePtrDynCaster;
-  using functional::map;
   SmallVector<AffineExpr, 4> perm(enclosingLoopToVectorDim.size(),
                                   getAffineConstantExpr(0, context));
 

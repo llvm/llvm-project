@@ -636,8 +636,7 @@ public:
   /// environment for the given \p FPType if given. Otherwise, the default
   /// assumed mode for any floating point type.
   virtual llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs,
-      Action::OffloadKind DeviceOffloadKind,
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const {
     return llvm::DenormalMode::getIEEE();
   }

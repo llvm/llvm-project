@@ -38,7 +38,7 @@ return:
 
 ; CHECK:      polly.stmt.body.Stmt_body_Write0.partial:
 ; CHECK-NEXT:   %polly.access.A = getelementptr double, double* %A, i64 0
-; CHECK-NEXT:   store double 4.200000e+01, double* %polly.access.A, !alias.scope !0, !noalias !2
+; CHECK-NEXT:   store double 4.200000e+01, double* %polly.access.A, align 8, !alias.scope !0, !noalias !2
 ; CHECK-NEXT:   br label %polly.stmt.body.cont
 
 ; CHECK:      polly.stmt.body.cont:

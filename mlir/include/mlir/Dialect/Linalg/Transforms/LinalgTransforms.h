@@ -63,12 +63,25 @@ LogicalResult tileLinalgOpAndSetMarker(PatternRewriter &rewriter, Operation *op,
                                        ArrayRef<int64_t> sizes,
                                        StringRef linalgMarker,
                                        ArrayRef<unsigned> permutation);
+LogicalResult tileLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    StringRef linalgMarker, ArrayRef<unsigned> permutation);
 
 /// Tiles `op` by `sizes`, fuses the producers of `operandIndicesToFuse` and
 /// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
 LogicalResult tileAndFuseLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
     ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
+LogicalResult tileAndFuseLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
+
+using LinalgLoops = SmallVector<Operation *, 4>;
+
+/// Emits a loop nest of with the proper body for `op`.
+template <typename LoopTy, typename ConcreteOp>
+Optional<LinalgLoops> linalgLowerOpToLoops(PatternRewriter &rewriter,
+                                           Operation *op);
 
 /// Emits a loop nest of `loop.for` with the proper body for `op`.
 template <typename ConcreteOp>

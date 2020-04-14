@@ -1203,7 +1203,8 @@ Deserializer::processRuntimeArrayType(ArrayRef<uint32_t> operands) {
                      "OpTypeRuntimeArray references undefined <id> ")
            << operands[1];
   }
-  typeMap[operands[0]] = spirv::RuntimeArrayType::get(memberType);
+  typeMap[operands[0]] = spirv::RuntimeArrayType::get(
+      memberType, typeDecorations.lookup(operands[0]));
   return success();
 }
 
@@ -2290,6 +2291,10 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
+  // Use null type to mean no result type.
+  if (isVoidType(resultType))
+    resultType = nullptr;
+
   auto resultID = operands[1];
   auto functionID = operands[2];
 
@@ -2305,18 +2310,12 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
     arguments.push_back(value);
   }
 
-  SmallVector<Type, 1> resultTypes;
-  if (!isVoidType(resultType)) {
-    resultTypes.push_back(resultType);
-  }
-
   auto opFunctionCall = opBuilder.create<spirv::FunctionCallOp>(
-      unknownLoc, resultTypes, opBuilder.getSymbolRefAttr(functionName),
+      unknownLoc, resultType, opBuilder.getSymbolRefAttr(functionName),
       arguments);
 
-  if (!resultTypes.empty()) {
+  if (resultType)
     valueMap[resultID] = opFunctionCall.getResult(0);
-  }
   return success();
 }
 

@@ -38,7 +38,6 @@ class DefaultTargetInfo(object):
     def add_cxx_link_flags(self, flags): pass
     def configure_env(self, env): pass
     def allow_cxxabi_link(self): return True
-    def add_sanitizer_features(self, sanitizer_type, features): pass
     def use_lit_shell_default(self): return False
 
     def add_path(self, dest_env, new_path):
@@ -281,7 +280,7 @@ class LinuxRemoteTI(LinuxLocalTI):
     def __init__(self, full_config):
         super(LinuxRemoteTI, self).__init__(full_config)
         self.__cached_locales = None
-    
+
     def _test_locale(self, loc):
         if self.__cached_locales is None:
             self.full_config.lit_config.note('asking the remote host for supported locales...')

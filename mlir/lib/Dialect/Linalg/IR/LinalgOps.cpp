@@ -21,7 +21,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 
@@ -500,8 +499,8 @@ computeReshapeCollapsedType(MemRefType type,
 /// TODO(rridle,ntv) this should be evolved into a generic
 /// `getRangeOfType<AffineMap>(ArrayAttr attrs)` that does not copy.
 static SmallVector<AffineMap, 4> getAffineMaps(ArrayAttr attrs) {
-  return functional::map(
-      [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }, attrs);
+  return llvm::to_vector<8>(llvm::map_range(
+      attrs, [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
 }
 
 template <typename AffineExprTy>

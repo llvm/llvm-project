@@ -287,13 +287,15 @@ element-type ::= integer-type
                | vector-type
                | spirv-type
 
-array-type ::= `!spv.array<` integer-literal `x` element-type `>`
+array-type ::= `!spv.array` `<` integer-literal `x` element-type
+               (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
 !spv.array<4 x i32>
+!spv.array<4 x i32, stride = 4>
 !spv.array<16 x vector<4 x f32>>
 ```
 
@@ -351,13 +353,14 @@ For example,
 This corresponds to SPIR-V [runtime array type][RuntimeArrayType]. Its syntax is
 
 ```
-runtime-array-type ::= `!spv.rtarray<` element-type `>`
+runtime-array-type ::= `!spv.rtarray` `<` element-type (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
 !spv.rtarray<i32>
+!spv.rtarray<i32, stride=4>
 !spv.rtarray<vector<4 x f32>>
 ```
 
@@ -880,14 +883,30 @@ interfaces:
 *   `spv.entry_point_abi` is a struct attribute that should be attached to the
     entry function. It contains:
     *   `local_size` for specifying the local work group size for the dispatch.
-*   `spv.interface_var_abi` is a struct attribute that should be attached to
-    each operand and result of the entry function. It contains:
-    *   `descriptor_set` for specifying the descriptor set number for the
-        corresponding resource variable.
-    *   `binding` for specifying the binding number for the corresponding
-        resource variable.
-    *   `storage_class` for specifying the storage class for the corresponding
-        resource variable.
+*   `spv.interface_var_abi` is attribute that should be attached to each operand
+    and result of the entry function. It should be of `#spv.interface_var_abi`
+    attribute kind, which is defined as:
+
+```
+spv-storage-class     ::= `StorageBuffer` | ...
+spv-descriptor-set    ::= integer-literal
+spv-binding           ::= integer-literal
+spv-interface-var-abi ::= `#` `spv.interface_var_abi` `<(` spv-descriptor-set
+                          `,` spv-binding `)` (`,` spv-storage-class)? `>`
+```
+
+For example,
+
+```
+#spv.interface_var_abi<(0, 0), StorageBuffer>
+#spv.interface_var_abi<(0, 1)>
+```
+
+The attribute has a few fields:
+
+*   Descriptor set number for the corresponding resource variable.
+*   Binding number for the corresponding resource variable.
+*   Storage class for the corresponding resource variable.
 
 The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] for
 consuming these attributes and create SPIR-V module complying with the

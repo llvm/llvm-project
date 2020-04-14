@@ -37,7 +37,7 @@ Optional<unsigned> Token::getUnsignedIntegerValue() const {
 
 /// For an integer token, return its value as a uint64_t.  If it doesn't fit,
 /// return None.
-Optional<uint64_t> Token::getUInt64IntegerValue() const {
+Optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
 
   uint64_t result = 0;

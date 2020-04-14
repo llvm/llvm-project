@@ -769,14 +769,31 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
     const TargetMachine &TM) const {
+  assert(MBB.isBeginSection() && "Basic block does not start a section!");
   SmallString<128> Name;
   Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
              ->getSectionName();
-  if (TM.getUniqueBBSectionNames()) {
-    Name += ".";
-    Name += MBB.getSymbol()->getName();
+  unsigned UniqueID = MCContext::GenericSectionID;
+
+  switch (MBB.getSectionID().Type) {
+    // Append suffixes to represent special cold and exception sections.
+  case MBBSectionID::SectionType::Exception:
+    Name += ".eh";
+    break;
+  case MBBSectionID::SectionType::Cold:
+    Name += ".unlikely";
+    break;
+  // For regular sections, either use a unique name, or a unique ID for the
+  // section.
+  default:
+    if (TM.getUniqueBBSectionNames()) {
+      Name += ".";
+      Name += MBB.getSymbol()->getName();
+    } else
+      UniqueID = NextUniqueID++;
+    break;
   }
-  unsigned UniqueID = NextUniqueID++;
+
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
   std::string GroupName = "";
   if (F.hasComdat()) {
@@ -786,33 +803,6 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
                                     0 /* Entry Size */, GroupName, UniqueID,
                                     nullptr);
-}
-
-MCSection *TargetLoweringObjectFileELF::getNamedSectionForMachineBasicBlock(
-    const Function &F, const MachineBasicBlock &MBB, const TargetMachine &TM,
-    const char *Suffix) const {
-  SmallString<128> Name;
-  Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
-             ->getSectionName();
-
-  // If unique section names is off, explicity add the function name to the
-  // section name to make sure named sections for functions are unique
-  // across the module.
-  if (!TM.getUniqueSectionNames()) {
-    Name += ".";
-    Name += MBB.getParent()->getName();
-  }
-
-  Name += Suffix;
-
-  unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
-  std::string GroupName = "";
-  if (F.hasComdat()) {
-    Flags |= ELF::SHF_GROUP;
-    GroupName = F.getComdat()->getName().str();
-  }
-  return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
-                                    0 /* Entry Size */, GroupName);
 }
 
 static MCSectionELF *getStaticStructorSection(MCContext &Ctx, bool UseInitArray,

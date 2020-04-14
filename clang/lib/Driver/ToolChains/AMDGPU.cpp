@@ -273,18 +273,22 @@ bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
 }
 
 llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
-    const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
+    const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
     const llvm::fltSemantics *FPType) const {
   // Denormals should always be enabled for f16 and f64.
   if (!FPType || FPType != &llvm::APFloat::IEEEsingle())
     return llvm::DenormalMode::getIEEE();
 
-  if (DeviceOffloadKind == Action::OFK_Cuda) {
+  if (JA.getOffloadingDeviceKind() == Action::OFK_HIP ||
+      JA.getOffloadingDeviceKind() == Action::OFK_Cuda) {
+    auto Kind = llvm::AMDGPU::parseArchAMDGCN(JA.getOffloadingArch());
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
         DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
                            options::OPT_fno_cuda_flush_denormals_to_zero,
-                           false))
+                           getDefaultDenormsAreZeroForTarget(Kind)))
       return llvm::DenormalMode::getPreserveSign();
+
+    return llvm::DenormalMode::getIEEE();
   }
 
   const StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
@@ -294,7 +298,9 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
              getDefaultDenormsAreZeroForTarget(Kind);
-  // Outputs are flushed to zero, preserving sign
+
+  // Outputs are flushed to zero (FTZ), preserving sign. Denormal inputs are
+  // also implicit treated as zero (DAZ).
   return DAZ ? llvm::DenormalMode::getPreserveSign() :
                llvm::DenormalMode::getIEEE();
 }

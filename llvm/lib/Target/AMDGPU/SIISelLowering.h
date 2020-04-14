@@ -358,8 +358,7 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
-  bool isFMADLegalForFAddFSub(const SelectionDAG &DAG,
-                              const SDNode *N) const override;
+  bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;

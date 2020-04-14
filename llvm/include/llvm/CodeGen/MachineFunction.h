@@ -346,11 +346,6 @@ class MachineFunction {
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
-  /// With Basic Block Sections, this stores the bb ranges of cold and
-  /// exception sections.
-  std::pair<int, int> ColdSectionRange = {-1, -1};
-  std::pair<int, int> ExceptionSectionRange = {-1, -1};
-
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -508,21 +503,12 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
-  void setSectionRange();
-
-  /// Returns true if this basic block number starts a cold or exception
-  /// section.
-  bool isSectionStartMBB(int N) const {
-    return (N == ColdSectionRange.first || N == ExceptionSectionRange.first);
-  }
-
-  /// Returns true if this basic block ends a cold or exception section.
-  bool isSectionEndMBB(int N) const {
-    return (N == ColdSectionRange.second || N == ExceptionSectionRange.second);
-  }
-
   /// Creates basic block Labels for this function.
   void createBBLabels();
+
+  /// Assign IsBeginSection IsEndSection fields for basic blocks in this
+  /// function.
+  void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
   const LLVMTargetMachine &getTarget() const { return Target; }

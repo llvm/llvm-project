@@ -533,7 +533,7 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
     llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
     auto it = impl.identifiers.find(str);
     if (it != impl.identifiers.end())
-      return Identifier(it->getKeyData());
+      return Identifier(&*it);
   }
 
   // Check invariants after seeing if we already have something in the
@@ -546,7 +546,7 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
   auto it = impl.identifiers.insert(str).first;
-  return Identifier(it->getKeyData());
+  return Identifier(&*it);
 }
 
 //===----------------------------------------------------------------------===//

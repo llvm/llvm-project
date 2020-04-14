@@ -165,6 +165,60 @@ static void applyUCharToFloat(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+// FIXME: Should be able to have 2 separate matchdatas rather than custom struct
+// boilerplate.
+struct CvtF32UByteMatchInfo {
+  Register CvtVal;
+  unsigned ShiftOffset;
+};
+
+static bool matchCvtF32UByteN(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineFunction &MF,
+                              CvtF32UByteMatchInfo &MatchInfo) {
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  // Look through G_ZEXT.
+  mi_match(SrcReg, MRI, m_GZExt(m_Reg(SrcReg)));
+
+  Register Src0;
+  int64_t ShiftAmt;
+  bool IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
+  if (IsShr || mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)))) {
+    const unsigned Offset = MI.getOpcode() - AMDGPU::G_AMDGPU_CVT_F32_UBYTE0;
+
+    unsigned ShiftOffset = 8 * Offset;
+    if (IsShr)
+      ShiftOffset += ShiftAmt;
+    else
+      ShiftOffset -= ShiftAmt;
+
+    MatchInfo.CvtVal = Src0;
+    MatchInfo.ShiftOffset = ShiftOffset;
+    return ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0;
+  }
+
+  // TODO: Simplify demanded bits.
+  return false;
+}
+
+static void applyCvtF32UByteN(MachineInstr &MI,
+                              const CvtF32UByteMatchInfo &MatchInfo) {
+  MachineIRBuilder B(MI);
+  unsigned NewOpc = AMDGPU::G_AMDGPU_CVT_F32_UBYTE0 + MatchInfo.ShiftOffset / 8;
+
+  const LLT S32 = LLT::scalar(32);
+  Register CvtSrc = MatchInfo.CvtVal;
+  LLT SrcTy = B.getMRI()->getType(MatchInfo.CvtVal);
+  if (SrcTy != S32) {
+    assert(SrcTy.isScalar() && SrcTy.getSizeInBits() >= 8);
+    CvtSrc = B.buildAnyExt(S32, CvtSrc).getReg(0);
+  }
+
+  assert(MI.getOpcode() != NewOpc);
+  B.buildInstr(NewOpc, {MI.getOperand(0)}, {CvtSrc}, MI.getFlags());
+  MI.eraseFromParent();
+}
+
 #define AMDGPUPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AMDGPUGenPostLegalizeGICombiner.inc"
 #undef AMDGPUPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS

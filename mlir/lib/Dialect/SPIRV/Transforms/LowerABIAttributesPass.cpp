@@ -41,25 +41,24 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // it must already be a !spv.ptr<!spv.struct<...>>.
   auto varType = funcOp.getType().getInput(argIndex);
   if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
-    auto storageClass =
-        static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
+    auto storageClass = abiInfo.getStorageClass();
+    if (!storageClass)
+      return nullptr;
     varType =
-        spirv::PointerType::get(spirv::StructType::get(varType), storageClass);
+        spirv::PointerType::get(spirv::StructType::get(varType), *storageClass);
   }
   auto varPtrType = varType.cast<spirv::PointerType>();
   auto varPointeeType = varPtrType.getPointeeType().cast<spirv::StructType>();
 
   // Set the offset information.
-  VulkanLayoutUtils::Size size = 0, alignment = 0;
   varPointeeType =
-      VulkanLayoutUtils::decorateType(varPointeeType, size, alignment)
-          .cast<spirv::StructType>();
+      VulkanLayoutUtils::decorateType(varPointeeType).cast<spirv::StructType>();
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
   return builder.create<spirv::GlobalVariableOp>(
-      funcOp.getLoc(), varType, varName, abiInfo.descriptor_set().getInt(),
-      abiInfo.binding().getInt());
+      funcOp.getLoc(), varType, varName, abiInfo.getDescriptorSet(),
+      abiInfo.getBinding());
 }
 
 /// Gets the global variables that need to be specified as interface variable

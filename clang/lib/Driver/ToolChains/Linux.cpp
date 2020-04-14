@@ -988,10 +988,10 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 
-llvm::DenormalMode Linux::getDefaultDenormalModeForType(
-  const llvm::opt::ArgList &DriverArgs,
-  Action::OffloadKind DeviceOffloadKind,
-  const llvm::fltSemantics *FPType) const {
+llvm::DenormalMode
+Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
+                                     const JobAction &JA,
+                                     const llvm::fltSemantics *FPType) const {
   switch (getTriple().getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {

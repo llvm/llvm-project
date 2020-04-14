@@ -1492,7 +1492,7 @@ public:
                 srcStoreOp = nullptr;
                 break;
               }
-              unsigned loopDepth = getNestingDepth(*storeOp);
+              unsigned loopDepth = getNestingDepth(storeOp);
               if (loopDepth > maxLoopDepth) {
                 maxLoopDepth = loopDepth;
                 srcStoreOp = storeOp;

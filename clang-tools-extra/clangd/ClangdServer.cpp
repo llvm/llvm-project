@@ -214,8 +214,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
                this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
-    if (isCancelled())
-      return CB(llvm::make_error<CancelledError>());
+    if (auto Reason = isCancelled())
+      return CB(llvm::make_error<CancelledError>(Reason));
 
     llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
     if (!IP->Preamble) {

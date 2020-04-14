@@ -26,6 +26,16 @@ def uchar_to_float : GICombineRule<
          [{ return matchUCharToFloat(*${itofp}, MRI, *MF, Helper); }]),
   (apply [{ applyUCharToFloat(*${itofp}); }])>;
 
+def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
+
+def cvt_f32_ubyteN : GICombineRule<
+  (defs root:$cvt_f32_ubyteN, cvt_f32_ubyteN_matchdata:$matchinfo),
+  (match (wip_match_opcode G_AMDGPU_CVT_F32_UBYTE0,
+                           G_AMDGPU_CVT_F32_UBYTE1,
+                           G_AMDGPU_CVT_F32_UBYTE2,
+                           G_AMDGPU_CVT_F32_UBYTE3):$cvt_f32_ubyteN,
+         [{ return matchCvtF32UByteN(*${cvt_f32_ubyteN}, MRI, *MF, ${matchinfo}); }]),
+  (apply [{ applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
@@ -49,6 +59,6 @@ def all_combines_minus_extload : GICombineGroup<[trivial_combines,
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines_minus_extload, gfx6gfx7_combines,
-   uchar_to_float]> {
+   uchar_to_float, cvt_f32_ubyteN]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
 }
