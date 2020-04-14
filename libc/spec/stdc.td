@@ -18,6 +18,10 @@ def StdC : StandardSpec<"stdc"> {
 
   NamedType SigHandlerT = NamedType<"__sighandler_t">;
 
+  NamedType FILE = NamedType<"FILE">;
+  PtrType FILEPtr = PtrType<FILE>;
+  RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
+
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
       [
@@ -190,16 +194,17 @@ def StdC : StandardSpec<"stdc"> {
       [], // Macros
       [ // Types
           SizeTType,
+          FILE,
       ],
       [], // Enumerations
       [
           FunctionSpec<
-              "snprintf",
-              RetValSpec<IntType>,
-              [ArgSpec<CharPtr>,
-               ArgSpec<SizeTType>,
-               ArgSpec<ConstCharRestrictedPtr>,
-               ArgSpec<VarArgType>]
+              "fwrite",
+              RetValSpec<SizeTType>,
+              [ArgSpec<ConstVoidRestrictedPtr>,
+              ArgSpec<SizeTType>,
+              ArgSpec<SizeTType>,
+              ArgSpec<FILERestrictedPtr>]
           >,
       ]
   >;
