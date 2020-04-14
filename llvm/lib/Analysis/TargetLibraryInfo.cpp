@@ -69,11 +69,10 @@ static bool hasBcmp(const Triple &TT) {
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringLiteral> StandardNames) {
   // Verify that the StandardNames array is in alphabetical order.
-  assert(std::is_sorted(StandardNames.begin(), StandardNames.end(),
-                        [](StringRef LHS, StringRef RHS) {
-                          return LHS < RHS;
-                        }) &&
-         "TargetLibraryInfoImpl function names must be sorted");
+  assert(
+      llvm::is_sorted(StandardNames,
+                      [](StringRef LHS, StringRef RHS) { return LHS < RHS; }) &&
+      "TargetLibraryInfoImpl function names must be sorted");
 
   // Set IO unlocked variants as unavailable
   // Set them as available per system below

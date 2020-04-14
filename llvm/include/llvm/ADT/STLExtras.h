@@ -1257,6 +1257,18 @@ bool is_contained(R &&Range, const E &Element) {
   return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
 }
 
+/// Wrapper function around std::is_sorted to check if elements in a range \p R
+/// are sorted with respect to a comparator \p C.
+template <typename R, typename Compare> bool is_sorted(R &&Range, Compare C) {
+  return std::is_sorted(adl_begin(Range), adl_end(Range), C);
+}
+
+/// Wrapper function around std::is_sorted to check if elements in a range \p R
+/// are sorted in non-descending order.
+template <typename R> bool is_sorted(R &&Range) {
+  return std::is_sorted(adl_begin(Range), adl_end(Range));
+}
+
 /// Wrapper function around std::count to count the number of times an element
 /// \p Element occurs in the given range \p Range.
 template <typename R, typename E> auto count(R &&Range, const E &Element) {

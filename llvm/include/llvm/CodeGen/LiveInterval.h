@@ -617,7 +617,7 @@ namespace llvm {
     /// subranges). Returns true if found at least one index.
     template <typename Range, typename OutputIt>
     bool findIndexesLiveAt(Range &&R, OutputIt O) const {
-      assert(std::is_sorted(R.begin(), R.end()));
+      assert(llvm::is_sorted(R));
       auto Idx = R.begin(), EndIdx = R.end();
       auto Seg = segments.begin(), EndSeg = segments.end();
       bool Found = false;
