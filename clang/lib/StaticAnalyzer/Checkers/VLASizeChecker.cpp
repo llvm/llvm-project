@@ -34,6 +34,9 @@ class VLASizeChecker : public Checker< check::PreStmt<DeclStmt> > {
   mutable std::unique_ptr<BugType> BT;
   enum VLASize_Kind { VLA_Garbage, VLA_Zero, VLA_Tainted, VLA_Negative };
 
+  ProgramStateRef checkVLASize(CheckerContext &C, ProgramStateRef State,
+                               const Expr *SizeE) const;
+
   void reportBug(VLASize_Kind Kind, const Expr *SizeE, ProgramStateRef State,
                  CheckerContext &C,
                  std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
@@ -42,6 +45,65 @@ public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
 };
 } // end anonymous namespace
+
+ProgramStateRef VLASizeChecker::checkVLASize(CheckerContext &C,
+                                             ProgramStateRef State,
+                                             const Expr *SizeE) const {
+  SVal SizeV = C.getSVal(SizeE);
+
+  if (SizeV.isUndef()) {
+    reportBug(VLA_Garbage, SizeE, State, C);
+    return nullptr;
+  }
+
+  // See if the size value is known. It can't be undefined because we would have
+  // warned about that already.
+  if (SizeV.isUnknown())
+    return nullptr;
+
+  // Check if the size is tainted.
+  if (isTainted(State, SizeV)) {
+    reportBug(VLA_Tainted, SizeE, nullptr, C,
+              std::make_unique<TaintBugVisitor>(SizeV));
+    return nullptr;
+  }
+
+  // Check if the size is zero.
+  DefinedSVal SizeD = SizeV.castAs<DefinedSVal>();
+
+  ProgramStateRef StateNotZero, StateZero;
+  std::tie(StateNotZero, StateZero) = State->assume(SizeD);
+
+  if (StateZero && !StateNotZero) {
+    reportBug(VLA_Zero, SizeE, StateZero, C);
+    return nullptr;
+  }
+
+  // From this point on, assume that the size is not zero.
+  State = StateNotZero;
+
+  // Check if the size is negative.
+  SValBuilder &SVB = C.getSValBuilder();
+
+  QualType SizeTy = SizeE->getType();
+  DefinedOrUnknownSVal Zero = SVB.makeZeroVal(SizeTy);
+
+  SVal LessThanZeroVal = SVB.evalBinOp(State, BO_LT, SizeD, Zero, SizeTy);
+  if (Optional<DefinedSVal> LessThanZeroDVal =
+          LessThanZeroVal.getAs<DefinedSVal>()) {
+    ConstraintManager &CM = C.getConstraintManager();
+    ProgramStateRef StatePos, StateNeg;
+
+    std::tie(StateNeg, StatePos) = CM.assumeDual(State, *LessThanZeroDVal);
+    if (StateNeg && !StatePos) {
+      reportBug(VLA_Negative, SizeE, State, C); // FIXME: StateNeg ?
+      return nullptr;
+    }
+    State = StatePos;
+  }
+
+  return State;
+}
 
 void VLASizeChecker::reportBug(
     VLASize_Kind Kind, const Expr *SizeE, ProgramStateRef State,
@@ -89,98 +151,72 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     return;
 
   ASTContext &Ctx = C.getASTContext();
+  SValBuilder &SVB = C.getSValBuilder();
+  ProgramStateRef State = C.getState();
+
   const VariableArrayType *VLA = Ctx.getAsVariableArrayType(VD->getType());
   if (!VLA)
     return;
 
-  // FIXME: Handle multi-dimensional VLAs.
-  const Expr *SE = VLA->getSizeExpr();
-  ProgramStateRef state = C.getState();
-  SVal sizeV = C.getSVal(SE);
-
-  if (sizeV.isUndef()) {
-    reportBug(VLA_Garbage, SE, state, C);
-    return;
-  }
-
-  // See if the size value is known. It can't be undefined because we would have
-  // warned about that already.
-  if (sizeV.isUnknown())
-    return;
-
-  // Check if the size is tainted.
-  if (isTainted(state, sizeV)) {
-    reportBug(VLA_Tainted, SE, nullptr, C,
-              std::make_unique<TaintBugVisitor>(sizeV));
-    return;
-  }
-
-  // Check if the size is zero.
-  DefinedSVal sizeD = sizeV.castAs<DefinedSVal>();
-
-  ProgramStateRef stateNotZero, stateZero;
-  std::tie(stateNotZero, stateZero) = state->assume(sizeD);
-
-  if (stateZero && !stateNotZero) {
-    reportBug(VLA_Zero, SE, stateZero, C);
-    return;
-  }
-
-  // From this point on, assume that the size is not zero.
-  state = stateNotZero;
+  llvm::SmallVector<const Expr *, 2> VLASizes;
+  const VariableArrayType *VLALast = nullptr;
+  // Walk over the VLAs for every dimension until a non-VLA is found.
+  // Collect the sizes in VLASizes, put the most inner VLA to `VLALast`.
+  // In "vla[x][2][y][3]" this will be the array for index "y".
+  // There is a VariableArrayType for every dimension (here "x", "2", "y")
+  // until a non-vla is found.
+  while (VLA) {
+    const Expr *SizeE = VLA->getSizeExpr();
+    State = checkVLASize(C, State, SizeE);
+    if (!State)
+      return;
+    VLASizes.push_back(SizeE);
+    VLALast = VLA;
+    VLA = Ctx.getAsVariableArrayType(VLA->getElementType());
+  };
+  assert(VLALast &&
+         "Array should have at least one variably-modified dimension.");
 
   // VLASizeChecker is responsible for defining the extent of the array being
   // declared. We do this by multiplying the array length by the element size,
   // then matching that with the array region's extent symbol.
 
-  // Check if the size is negative.
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  CanQualType SizeTy = Ctx.getSizeType();
+  // Get the element size.
+  CharUnits EleSize = Ctx.getTypeSizeInChars(VLALast->getElementType());
+  NonLoc ArraySize =
+      SVB.makeIntVal(EleSize.getQuantity(), SizeTy).castAs<NonLoc>();
 
-  QualType Ty = SE->getType();
-  DefinedOrUnknownSVal Zero = svalBuilder.makeZeroVal(Ty);
-
-  SVal LessThanZeroVal = svalBuilder.evalBinOp(state, BO_LT, sizeD, Zero, Ty);
-  if (Optional<DefinedSVal> LessThanZeroDVal =
-        LessThanZeroVal.getAs<DefinedSVal>()) {
-    ConstraintManager &CM = C.getConstraintManager();
-    ProgramStateRef StatePos, StateNeg;
-
-    std::tie(StateNeg, StatePos) = CM.assumeDual(state, *LessThanZeroDVal);
-    if (StateNeg && !StatePos) {
-      reportBug(VLA_Negative, SE, state, C);
+  for (const Expr *SizeE : VLASizes) {
+    auto SizeD = C.getSVal(SizeE).castAs<DefinedSVal>();
+    // Convert the array length to size_t.
+    NonLoc IndexLength =
+        SVB.evalCast(SizeD, SizeTy, SizeE->getType()).castAs<NonLoc>();
+    // Multiply the array length by the element size.
+    SVal Mul = SVB.evalBinOpNN(State, BO_Mul, ArraySize, IndexLength, SizeTy);
+    if (auto MulNonLoc = Mul.getAs<NonLoc>()) {
+      ArraySize = *MulNonLoc;
+    } else {
+      // Extent could not be determined.
+      // The state was probably still updated by the validation checks.
+      C.addTransition(State);
       return;
     }
-    state = StatePos;
   }
-
-  // Convert the array length to size_t.
-  QualType SizeTy = Ctx.getSizeType();
-  NonLoc ArrayLength =
-      svalBuilder.evalCast(sizeD, SizeTy, SE->getType()).castAs<NonLoc>();
-
-  // Get the element size.
-  CharUnits EleSize = Ctx.getTypeSizeInChars(VLA->getElementType());
-  SVal EleSizeVal = svalBuilder.makeIntVal(EleSize.getQuantity(), SizeTy);
-
-  // Multiply the array length by the element size.
-  SVal ArraySizeVal = svalBuilder.evalBinOpNN(
-      state, BO_Mul, ArrayLength, EleSizeVal.castAs<NonLoc>(), SizeTy);
 
   // Finally, assume that the array's size matches the given size.
   const LocationContext *LC = C.getLocationContext();
   DefinedOrUnknownSVal DynSize =
-      getDynamicSize(state, state->getRegion(VD, LC), svalBuilder);
+      getDynamicSize(State, State->getRegion(VD, LC), SVB);
 
-  DefinedOrUnknownSVal ArraySize = ArraySizeVal.castAs<DefinedOrUnknownSVal>();
-  DefinedOrUnknownSVal sizeIsKnown =
-      svalBuilder.evalEQ(state, DynSize, ArraySize);
-  state = state->assume(sizeIsKnown, true);
+  DefinedOrUnknownSVal SizeIsKnown = SVB.evalEQ(State, DynSize, ArraySize);
+  State = State->assume(SizeIsKnown, true);
 
   // Assume should not fail at this point.
-  assert(state);
+  assert(State);
 
   // Remember our assumptions!
-  C.addTransition(state);
+  C.addTransition(State);
 }
 
 void ento::registerVLASizeChecker(CheckerManager &mgr) {
