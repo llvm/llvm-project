@@ -9919,6 +9919,8 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
 
   SDValue Src = N->getOperand(0);
   SDValue Shift = N->getOperand(0);
+
+  // TODO: Extend type shouldn't matter (assuming legal types).
   if (Shift.getOpcode() == ISD::ZERO_EXTEND)
     Shift = Shift.getOperand(0);
 
