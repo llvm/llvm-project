@@ -124,6 +124,15 @@ const char *SBReproducer::Capture(const char *path) {
   return nullptr;
 }
 
+const char *SBReproducer::PassiveReplay(const char *path) {
+  static std::string error;
+  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+  return nullptr;
+}
+
 const char *SBReproducer::Replay(const char *path) {
   return SBReproducer::Replay(path, false);
 }
