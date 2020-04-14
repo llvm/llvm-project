@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_CODEGEN_CRITICALANTIDEPBREAKER_H
 #define LLVM_LIB_CODEGEN_CRITICALANTIDEPBREAKER_H
 
-#include "AntiDepBreaker.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/AntiDepBreaker.h"
 #include "llvm/Support/Compiler.h"
 #include <map>
 #include <vector>
