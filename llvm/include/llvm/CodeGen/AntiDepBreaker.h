@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <utility>
@@ -26,9 +27,11 @@
 
 namespace llvm {
 
+class RegisterClassInfo;
+
 /// This class works in conjunction with the post-RA scheduler to rename
 /// registers to break register anti-dependencies (WAR hazards).
-class LLVM_LIBRARY_VISIBILITY AntiDepBreaker {
+class AntiDepBreaker {
 public:
   using DbgValueVector =
       std::vector<std::pair<MachineInstr *, MachineInstr *>>;
@@ -81,6 +84,13 @@ public:
     }
   }
 };
+
+AntiDepBreaker *createAggressiveAntiDepBreaker(
+    MachineFunction &MFi, const RegisterClassInfo &RCI,
+    TargetSubtargetInfo::RegClassVector &CriticalPathRCs);
+
+AntiDepBreaker *createCriticalAntiDepBreaker(MachineFunction &MFi,
+                                             const RegisterClassInfo &RCI);
 
 } // end namespace llvm
 
