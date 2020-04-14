@@ -25,6 +25,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
@@ -127,6 +128,7 @@ static bool DCEInstruction(Instruction *I,
       return false;
 
     salvageDebugInfo(*I);
+    salvageKnowledge(I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
