@@ -94,13 +94,12 @@ define <5 x i16> @splat_bitcast_operand_change_type(<8 x i8> %x) {
   ret <5 x i16> %s2
 }
 
-; TODO: Could allow fold for cast to narrow element.
+; Shuffle-of-bitcast-splat --> splat-bitcast
 
 define <4 x i16> @splat_bitcast_operand_wider_src_elt(<2 x i32> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_wider_src_elt(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[S1]] to <4 x i16>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i16> [[BC]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <2 x i32> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[S2]]
 ;
   %s1 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -109,12 +108,14 @@ define <4 x i16> @splat_bitcast_operand_wider_src_elt(<2 x i32> %x) {
   ret <4 x i16> %s2
 }
 
+; Shuffle-of-bitcast-splat --> splat-bitcast
+
 define <4 x i16> @splat_bitcast_operand_wider_src_elt_uses(<2 x i32> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_wider_src_elt_uses(
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    call void @use(<4 x i16> [[BC]])
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i16> [[BC]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <2 x i32> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[S2]]
 ;
   %s1 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -128,9 +129,7 @@ define <4 x i16> @splat_bitcast_operand_wider_src_elt_uses(<2 x i32> %x) {
 
 define <16 x i8> @shuf_bitcast_operand_wider_src(<4 x i32> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand_wider_src(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[S1]] to <16 x i8>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <4 x i32> [[X:%.*]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[S2]]
 ;
   %s1 = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -138,6 +137,8 @@ define <16 x i8> @shuf_bitcast_operand_wider_src(<4 x i32> %x) {
   %s2 = shufflevector <16 x i8> %bc, <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i8> %s2
 }
+
+; Negative test - the 2nd mask can't be widened
 
 define <16 x i8> @shuf_bitcast_operand_cannot_widen(<4 x i32> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand_cannot_widen(
@@ -151,6 +152,8 @@ define <16 x i8> @shuf_bitcast_operand_cannot_widen(<4 x i32> %x) {
   %s2 = shufflevector <16 x i8> %bc, <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 12, i32 13, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i8> %s2
 }
+
+; Negative test - the 2nd mask can't be widened
 
 define <16 x i8> @shuf_bitcast_operand_cannot_widen_undef(<4 x i32> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand_cannot_widen_undef(
