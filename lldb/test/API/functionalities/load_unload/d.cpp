@@ -5,8 +5,6 @@ int d_init()
 
 int d_global = d_init();
 
-int
-d_function ()
-{ // Find this line number within d_dunction().
-    return 700;
+int LLDB_DYLIB_EXPORT d_function() {
+  return 700; // Find this line number within d_dunction().
 }
