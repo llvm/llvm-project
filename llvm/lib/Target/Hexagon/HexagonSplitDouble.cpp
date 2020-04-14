@@ -504,7 +504,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
 
   // Get the registers on which the loop controlling compare instruction
   // depends.
-  unsigned CmpR1 = 0, CmpR2 = 0;
+  Register CmpR1, CmpR2;
   const MachineInstr *CmpI = MRI->getVRegDef(PR);
   while (CmpI->getOpcode() == Hexagon::C2_not)
     CmpI = MRI->getVRegDef(CmpI->getOperand(1).getReg());

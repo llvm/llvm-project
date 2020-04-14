@@ -58,7 +58,7 @@ log_inline (uint64_t ix, double_t *tail)
   logctail = T[i].logctail;
 
   /* Note: 1/c is j/N or j/N/2 where j is an integer in [N,2N) and
-     |z/c - 1| < 1/N, so r = z/c - 1 is exactly representible.  */
+     |z/c - 1| < 1/N, so r = z/c - 1 is exactly representable.  */
 #if HAVE_FAST_FMA
   r = fma (z, invc, -1.0);
 #else
@@ -348,7 +348,7 @@ pow (double x, double y)
       if (topx == 0)
 	{
 	  /* Normalize subnormal x so exponent becomes negative.  */
-	  /* Without the barrier some versions of clang evalutate the mul
+	  /* Without the barrier some versions of clang evaluate the mul
 	     unconditionally causing spurious overflow exceptions.  */
 	  ix = asuint64 (opt_barrier_double (x) * 0x1p52);
 	  ix &= 0x7fffffffffffffff;

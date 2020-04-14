@@ -3,31 +3,34 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @fn2(i32* %P) {
+define void @fn2(i32* %P, i1 %C) {
 ; CHECK-LABEL: define {{[^@]+}}@fn2
-; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]])
+; CHECK-SAME: (i32* nocapture nofree [[P:%.*]], i1 %C)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 %C, label %if.end, label %exit
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
+; CHECK-NEXT:    [[E_2:%.*]] = phi i32* [ %P, %entry ], [ null, %for.cond1 ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK-NEXT:    br label %for.cond1
 ;
 entry:
   br label %if.end
 
-for.cond1:                                        ; preds = %if.end, %for.end
-  br i1 undef, label %if.end, label %if.end
+for.cond1:                                        ; preds = %if.end
+  br i1 %C, label %if.end, label %exit
 
-if.end:                                           ; preds = %lbl, %for.cond1
-  %e.2 = phi i32* [ undef, %entry ], [ null, %for.cond1 ], [ null, %for.cond1 ]
+if.end:                                           ; preds = %entry, %for.cond1
+  %e.2 = phi i32* [ %P, %entry ], [ null, %for.cond1 ]
   %0 = load i32, i32* %e.2, align 4
   %call = call i32 @fn1(i32 %0)
   store i32 %call, i32* %P
   br label %for.cond1
+exit:
+  ret void
 }
 
 define internal i32 @fn1(i32 %p1) {
@@ -44,31 +47,34 @@ entry:
   ret i32 %cond
 }
 
-define void @fn_no_null_opt(i32* %P) #0 {
+define void @fn_no_null_opt(i32* %P, i1 %C) "null-pointer-is-valid"="true" {
 ; CHECK-LABEL: define {{[^@]+}}@fn_no_null_opt
-; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]])
+; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i1 %C)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 %C, label %if.end, label %exit
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
+; CHECK-NEXT:    [[E_2:%.*]] = phi i32* [ undef, %entry ], [ null, %for.cond1 ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK-NEXT:    br label %for.cond1
 ;
 entry:
   br label %if.end
 
-for.cond1:                                        ; preds = %if.end, %for.end
-  br i1 undef, label %if.end, label %if.end
+for.cond1:                                        ; preds = %if.end
+  br i1 %C, label %if.end, label %exit
 
-if.end:                                           ; preds = %lbl, %for.cond1
-  %e.2 = phi i32* [ undef, %entry ], [ null, %for.cond1 ], [ null, %for.cond1 ]
+if.end:                                           ; preds = %entry, %for.cond1
+  %e.2 = phi i32* [ undef, %entry ], [ null, %for.cond1 ]
   %0 = load i32, i32* %e.2, align 4
   %call = call i32 @fn0(i32 %0)
   store i32 %call, i32* %P
   br label %for.cond1
+exit:
+  ret void
 }
 
 define internal i32 @fn0(i32 %p1) {
@@ -84,5 +90,3 @@ entry:
   %cond = select i1 %tobool, i32 %p1, i32 %p1
   ret i32 %cond
 }
-
-attributes #0 = { "null-pointer-is-valid"="true" }

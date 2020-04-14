@@ -82,7 +82,7 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 /// 'def' and all its uses have the same shift factor.
 // TODO(mlir-team): extend this to check for memory-based dependence
 // violation when we have the support.
-bool isInstwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
+bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 } // end namespace mlir
 
 #endif // MLIR_ANALYSIS_LOOP_ANALYSIS_H

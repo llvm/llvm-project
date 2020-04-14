@@ -16,7 +16,7 @@ entry:
 
 define i32 @test(i32* %X) {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32* nocapture nofree readonly [[X:%.*]])
+; CHECK-SAME: (i32* nocapture nofree readonly align 4 [[X:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0

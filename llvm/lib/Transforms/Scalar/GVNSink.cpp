@@ -360,12 +360,8 @@ public:
     setOpcode(I->getOpcode());
     setType(I->getType());
 
-    if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I)) {
-      ArrayRef<int> OrigMask = SVI->getShuffleMask();
-      int *Mask = A.Allocate<int>(OrigMask.size());
-      llvm::copy(OrigMask, Mask);
-      ShuffleMask = ArrayRef<int>(Mask, OrigMask.size());
-    }
+    if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I))
+      ShuffleMask = SVI->getShuffleMask().copy(A);
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());

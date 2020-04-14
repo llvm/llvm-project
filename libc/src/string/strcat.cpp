@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcat.h"
+#include "src/string/strcpy.h"
+#include "src/string/strlen.h"
 
 #include "src/__support/common.h"
-#include "src/string/strcpy.h"
 
 namespace __llvm_libc {
 
 char *LLVM_LIBC_ENTRYPOINT(strcat)(char *dest, const char *src) {
-  // We do not yet have an implementaion of strlen in so we will use strlen
-  // from another libc.
-  __llvm_libc::strcpy(dest + ::strlen(dest), src);
+  __llvm_libc::strcpy(dest + __llvm_libc::strlen(dest), src);
   return dest;
 }
 

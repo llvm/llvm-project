@@ -762,7 +762,7 @@ static const char* __itt_fsplit(const char* s, const char* sep, const char** out
 
 /* This function return value of env variable that placed into static buffer.
  * !!! The same static buffer is used for subsequent calls. !!!
- * This was done to aviod dynamic allocation for few calls.
+ * This was done to avoid dynamic allocation for few calls.
  * Actually we need this function only four times.
  */
 static const char* __itt_get_env_var(const char* name)
@@ -1012,7 +1012,7 @@ static void __itt_reinit_all_pointers(void)
 static void __itt_nullify_all_pointers(void)
 {
     int i;
-    /* Nulify all pointers except domain_create, string_handle_create  and counter_create */
+    /* Nullify all pointers except domain_create, string_handle_create  and counter_create */
     for (i = 0; _N_(_ittapi_global).api_list_ptr[i].name != NULL; i++)
         *_N_(_ittapi_global).api_list_ptr[i].func_ptr = _N_(_ittapi_global).api_list_ptr[i].null_func;
 }

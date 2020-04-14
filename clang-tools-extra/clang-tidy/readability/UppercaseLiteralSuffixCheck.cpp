@@ -193,7 +193,7 @@ void UppercaseLiteralSuffixCheck::storeOptions(
 }
 
 void UppercaseLiteralSuffixCheck::registerMatchers(MatchFinder *Finder) {
-  // Sadly, we can't check whether the literal has sufix or not.
+  // Sadly, we can't check whether the literal has suffix or not.
   // E.g. i32 suffix still results in 'BuiltinType::Kind::Int'.
   // And such an info is not stored in the *Literal itself.
   Finder->addMatcher(

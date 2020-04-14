@@ -25,7 +25,7 @@
 #  - Fails if stack is executable. Should only be readable and writable. Not executable.
 #  - Program dependencies: perl, readelf
 #  - Available for Unix dynamic library builds. Not available otherwise.
-# (4) test-instr (Intel(R) MIC Architecutre only)
+# (4) test-instr (Intel(R) MIC Architecture only)
 #  - Tests Intel(R) MIC Architecture libraries for valid instruction set
 #  - Fails if finds invalid instruction for Intel(R) MIC Architecture (wasn't compiled with correct flags)
 #  - Program dependencies: perl, objdump

@@ -47,9 +47,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   unsigned UniqueID;
   bool HasRangeLists = false;
 
-  /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
-  /// the need to search for it in applyStmtList.
-  DIE::value_iterator StmtListValue;
+  /// The start of the unit line section, this is also
+  /// reused in appyStmtList.
+  MCSymbol *LineTableStartSym;
 
   /// Skeleton unit associated with this unit.
   DwarfCompileUnit *Skeleton = nullptr;
@@ -122,6 +122,9 @@ public:
 
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
   void applyStmtList(DIE &D);
+
+  /// Get line table start symbol for this unit.
+  MCSymbol *getLineTableStartSym() const { return LineTableStartSym; }
 
   /// A pair of GlobalVariable and DIExpression.
   struct GlobalExpr {

@@ -206,8 +206,8 @@ public:
   INLINE void InitTeamDescr();
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
-    // If this is invoked by the master thread of the master warp then intialize
-    // it with a smaller slot.
+    // If this is invoked by the master thread of the master warp then
+    // initialize it with a smaller slot.
     if (IsMasterThread) {
       // Do not initialize this slot again if it has already been initalized.
       if (master_rootS[0].DataEnd == &master_rootS[0].Data[0] + DS_Slot_Size)

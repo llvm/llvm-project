@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -121,15 +122,15 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
     return false;
 
   BPI.SignReturnAddr =
-      llvm::StringSwitch<CodeGenOptions::SignReturnAddressScope>(PBP.Scope)
-          .Case("non-leaf", CodeGenOptions::SignReturnAddressScope::NonLeaf)
-          .Case("all", CodeGenOptions::SignReturnAddressScope::All)
-          .Default(CodeGenOptions::SignReturnAddressScope::None);
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
 
   if (PBP.Key == "a_key")
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::AKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
   else
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::BKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   return true;
@@ -281,6 +282,27 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if ((FPU & NeonMode) && HasFP16FML)
     Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
+
+  if (Opts.hasSignReturnAddress()) {
+    // Bitmask:
+    // 0: Protection using the A key
+    // 1: Protection using the B key
+    // 2: Protection including leaf functions
+    unsigned Value = 0;
+
+    if (Opts.isSignReturnAddressWithAKey())
+      Value |= (1 << 0);
+    else
+      Value |= (1 << 1);
+
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= (1 << 2);
+
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
+  }
+
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
   switch (ArchKind) {
   default:

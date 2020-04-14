@@ -766,6 +766,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
   SmallSet<const MachineInstr *, 4> Visited;
+  SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);
   while (!worklist.empty()) {
@@ -810,6 +811,11 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   if (AllAGPRUses && numVGPRUses && !TRI->hasAGPRs(RC0)) {
     LLVM_DEBUG(dbgs() << "Moving PHI to AGPR: " << MI);
     MRI->setRegClass(PHIRes, TRI->getEquivalentAGPRClass(RC0));
+    for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
+      MachineInstr *DefMI = MRI->getVRegDef(MI.getOperand(I).getReg());
+      if (DefMI && DefMI->isPHI())
+        PHIOperands.insert(DefMI);
+    }
   }
 
   bool hasVGPRInput = false;
@@ -845,4 +851,8 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     TII->legalizeOperands(MI, MDT);
   }
 
+  // Propagate register class back to PHI operands which are PHI themselves.
+  while (!PHIOperands.empty()) {
+    processPHINode(*PHIOperands.pop_back_val());
+  }
 }

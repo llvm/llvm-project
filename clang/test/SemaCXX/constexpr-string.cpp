@@ -47,7 +47,7 @@ extern "C" {
   extern wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n);
 }
 
-# 45 "SemaCXX/constexpr-string.cpp" 2
+# 51 "SemaCXX/constexpr-string.cpp" 2
 namespace Strlen {
   constexpr int n = __builtin_strlen("hello"); // ok
   static_assert(n == 5);
@@ -107,6 +107,20 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 6) == -1);
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 5) == 0);
 
+  static_assert(__builtin_memcmp(u8"abaa", u8"abba", 3) == -1);
+  static_assert(__builtin_memcmp(u8"abaa", u8"abba", 2) == 0);
+  static_assert(__builtin_memcmp(u8"a\203", u8"a", 2) == 1);
+  static_assert(__builtin_memcmp(u8"a\203", u8"a\003", 2) == 1);
+  static_assert(__builtin_memcmp(0, 0, 0) == 0);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0banana", 100) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 100) == -1); // FIXME: Should we reject this?
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 7) == -1);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 6) == -1);
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0canada", 5) == 0);
+
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB4", 4) == 0);
+  static_assert(__builtin_memcmp(u8"\u1234", "\xE1\x88\xB3", 4) == 1);
+
   static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
   static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
   static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
@@ -121,13 +135,13 @@ namespace StrcmpEtc {
   extern struct Incomplete incomplete;
   static_assert(__builtin_memcmp(&incomplete, "", 0u) == 0);
   static_assert(__builtin_memcmp("", &incomplete, 0u) == 0);
-  static_assert(__builtin_memcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
-  static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
+  static_assert(__builtin_memcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{not supported}}
 
   static_assert(__builtin_bcmp(&incomplete, "", 0u) == 0);
   static_assert(__builtin_bcmp("", &incomplete, 0u) == 0);
-  static_assert(__builtin_bcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
-  static_assert(__builtin_bcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
+  static_assert(__builtin_bcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{not supported}}
 
   constexpr unsigned char ku00fe00[] = {0x00, 0xfe, 0x00};
   constexpr unsigned char ku00feff[] = {0x00, 0xfe, 0xff};
@@ -155,11 +169,11 @@ namespace StrcmpEtc {
 
   struct Bool3Tuple { bool bb[3]; };
   constexpr Bool3Tuple kb000100 = {{false, true, false}};
-  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 1) == 0);
-  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 2) == 1);
+  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 2) == 1); // expected-error {{constant}} expected-note {{not supported}}
 
-  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 1) == 0);
-  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 2) != 0);
+  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 2) != 0); // expected-error {{constant}} expected-note {{not supported}}
 
   constexpr long ksl[] = {0, -1};
   constexpr unsigned int kui[] = {0, 0u - 1};
@@ -173,25 +187,25 @@ namespace StrcmpEtc {
       return nullptr;
     }
   }
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) - 1) == 0);
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) + 0) == 0);
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) + 1) == 0);
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) - 1) == 0);
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 0) == 0);
-  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
-  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) - 1) == 0);
-  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0);
-  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), sizeof(long) + 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 1) == 42); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{constant}} expected-note {{not supported}}
 
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) - 1) == 0);
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 0) == 0);
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 1) == 0);
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) - 1) == 0);
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 0) == 0);
-  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
-  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) - 1) == 0);
-  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0);
-  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 1) == 42); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) - 1) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{constant}} expected-note {{not supported}}
 
   constexpr int a = strcmp("hello", "world"); // expected-error {{constant expression}} expected-note {{non-constexpr function 'strcmp' cannot be used in a constant expression}}
   constexpr int b = strncmp("hello", "world", 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'strncmp' cannot be used in a constant expression}}
@@ -373,6 +387,20 @@ namespace StrchrEtc {
   static_assert(__builtin_memchr(nullptr, 'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
   static_assert(__builtin_memchr(nullptr, 'x', 0) == nullptr); // FIXME: Should we reject this?
 
+  constexpr const char8_t *kU8Str = u8"abca\xff\0d";
+  constexpr char8_t kU8Foo[] = {u8'f', u8'o', u8'o'};
+  static_assert(__builtin_memchr(kU8Str, u8'a', 0) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'a', 1) == kU8Str);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 5) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 6) == kU8Str + 5);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff', 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' + 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' - 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 3) == nullptr);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 4) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 0) == nullptr); // FIXME: Should we reject this?
+
   extern struct Incomplete incomplete;
   static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);
   static_assert(__builtin_memchr(&incomplete, 0, 1u) == nullptr); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
@@ -385,14 +413,14 @@ namespace StrchrEtc {
   enum class E : unsigned char {};
   struct EPair { E e, f; };
   constexpr EPair ee{E{240}};
-  static_assert(__builtin_memchr(&ee.e, 240, 1) == &ee.e);
+  static_assert(__builtin_memchr(&ee.e, 240, 1) == &ee.e); // expected-error {{constant}} expected-note {{not supported}}
 
   constexpr bool kBool[] = {false, true, false};
   constexpr const bool *const kBoolPastTheEndPtr = kBool + 3;
-  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, 1, 99) == kBool + 1);
-  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBool + 1, 0, 99) == kBoolPastTheEndPtr - 1);
-  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, -1, 3) == nullptr);
-  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr, 0, 1) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, 1, 99) == kBool + 1); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBool + 1, 0, 99) == kBoolPastTheEndPtr - 1); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, -1, 3) == nullptr); // expected-error {{constant}} expected-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr, 0, 1) == nullptr); // expected-error {{constant}} expected-note {{not supported}}
 
   static_assert(__builtin_char_memchr(kStr, 'a', 0) == nullptr);
   static_assert(__builtin_char_memchr(kStr, 'a', 1) == kStr);

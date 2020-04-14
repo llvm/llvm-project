@@ -90,7 +90,7 @@ static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
   // VE has 32 bit offset field, so no need to expand a target instruction.
   // Directly encode it.
   MI.getOperand(FIOperandNum).ChangeToRegister(FramePtr, false);
-  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum + 2).ChangeToImmediate(Offset);
 }
 
 void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -108,7 +108,7 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset;
   Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
 
-  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+  Offset += MI.getOperand(FIOperandNum + 2).getImm();
 
   replaceFI(MF, II, MI, dl, FIOperandNum, Offset, FrameReg);
 }

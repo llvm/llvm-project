@@ -8,10 +8,12 @@
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PD %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # RUN: ld.lld -T %t.script -pie %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PI %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # SEC: There are no relocations in this file.
 
@@ -85,3 +87,9 @@ nop
 high:
 bl .text_low+8
 bl .text_low+8    # Need a thunk
+
+# NM:      t __LongThunk_high
+# NM-NEXT: t __LongThunk_
+# NM-NEXT: t __LongThunk_
+# NM-NEXT: T _start
+# NM-NEXT: T high

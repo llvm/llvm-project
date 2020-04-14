@@ -49,7 +49,7 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
   if (E->getBeginLoc().isMacroID())
     return;
 
-  // Don't emit a warning for the last statement in the surrounding compund
+  // Don't emit a warning for the last statement in the surrounding compound
   // statement.
   const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("compound");
   if (E == CS->body_back())

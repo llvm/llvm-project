@@ -1606,7 +1606,6 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
           : getObjFileLowering().SectionForGlobal(
                 GV, GVKind = getObjFileLowering().getKindForGlobal(GV, TM),
                 TM));
-  GVSym->setContainingCsect(Csect);
 
   // External global variables are already handled.
   if (GV->isDeclaration())
@@ -1649,7 +1648,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
   // Emit function descriptor.
   OutStreamer->SwitchSection(
-      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getContainingCsect());
+      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getRepresentedCsect());
   // Emit function entry point address.
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
@@ -1691,7 +1690,6 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry.
     MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
         getObjFileLowering().getSectionForTOCEntry(I.first));
-    cast<MCSymbolXCOFF>(I.second)->setContainingCsect(TCEntry);
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);

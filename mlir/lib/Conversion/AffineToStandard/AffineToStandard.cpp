@@ -578,6 +578,10 @@ void mlir::populateAffineToStdConversionPatterns(
 
 namespace {
 class LowerAffinePass : public FunctionPass<LowerAffinePass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertAffineToStandard
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateAffineToStdConversionPatterns(patterns, &getContext());
@@ -594,7 +598,3 @@ class LowerAffinePass : public FunctionPass<LowerAffinePass> {
 std::unique_ptr<OpPassBase<FuncOp>> mlir::createLowerAffinePass() {
   return std::make_unique<LowerAffinePass>();
 }
-
-static PassRegistration<LowerAffinePass>
-    pass("lower-affine",
-         "Lower affine dialect operations to loop/standard dialect ones");

@@ -1,5 +1,5 @@
 // struct ABC is expensive to copy and should be
-// passed as a const referece.
+// passed as a const reference.
 struct ABC {
   ABC(const ABC&);
   int get(int) const;

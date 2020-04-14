@@ -12,9 +12,7 @@
 #ifndef MLIR_TRANSLATION_H
 #define MLIR_TRANSLATION_H
 
-#include "llvm/ADT/StringMap.h"
-
-#include <memory>
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class MemoryBuffer;
@@ -82,13 +80,13 @@ struct TranslateRegistration {
 };
 /// \}
 
-/// Get a read-only reference to the translator registry.
-const llvm::StringMap<TranslateSourceMgrToMLIRFunction> &
-getTranslationToMLIRRegistry();
-const llvm::StringMap<TranslateFromMLIRFunction> &
-getTranslationFromMLIRRegistry();
-const llvm::StringMap<TranslateFunction> &getTranslationRegistry();
+/// A command line parser for translation functions.
+struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
+  TranslationParser(llvm::cl::Option &opt);
 
+  void printOptionInfo(const llvm::cl::Option &o,
+                       size_t globalWidth) const override;
+};
 } // namespace mlir
 
 #endif // MLIR_TRANSLATION_H

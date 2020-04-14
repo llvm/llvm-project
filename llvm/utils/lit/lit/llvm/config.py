@@ -87,6 +87,7 @@ class LLVMConfig(object):
 
         if target_triple:
             if re.match(r'^x86_64.*-apple', target_triple):
+                features.add('x86_64-apple')
                 host_cxx = getattr(config, 'host_cxx', None)
                 if 'address' in sanitizers and self.get_clang_has_lsan(host_cxx, target_triple):
                     self.with_environment(

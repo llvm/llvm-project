@@ -100,10 +100,10 @@ TEST_F(BasicTest, isSplat) {
 
 TEST_F(BasicTest, scaleShuffleMask) {
   SmallVector<int, 16> ScaledMask;
-  scaleShuffleMask<int>(1, {3,2,0,-2}, ScaledMask);
-  EXPECT_EQ(makeArrayRef<int>(ScaledMask), makeArrayRef<int>({3,2,0,-2}));
-  scaleShuffleMask<int>(4, {3,2,0,-1}, ScaledMask);
-  EXPECT_EQ(makeArrayRef<int>(ScaledMask), makeArrayRef<int>({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+  scaleShuffleMask(1, {3,2,0,-2}, ScaledMask);
+  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({3,2,0,-2}));
+  scaleShuffleMask(4, {3,2,0,-1}, ScaledMask);
+  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
 }
 
 TEST_F(BasicTest, getSplatIndex) {

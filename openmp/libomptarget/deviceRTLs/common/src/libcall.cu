@@ -90,7 +90,7 @@ EXTERN int omp_in_parallel(void) {
 EXTERN int omp_in_final(void) {
   // treat all tasks as final... Specs may expect runtime to keep
   // track more precisely if a task was actively set by users... This
-  // is not explicitely specified; will treat as if runtime can
+  // is not explicitly specified; will treat as if runtime can
   // actively decide to put a non-final task into a final one.
   int rc = 1;
   PRINT(LD_IO, "call omp_in_final() returns %d\n", rc);

@@ -882,7 +882,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           R"cpp(
         template <typename T>
         class [[Foo]] {};
-        // FIXME: explicit template specilizations are not supported due the
+        // FIXME: explicit template specializations are not supported due the
         // clangd index limitations.
         template <>
         class Foo<double> {};

@@ -18,6 +18,7 @@ static_library("Analysis") {
     "AliasAnalysisSummary.cpp",
     "AliasSetTracker.cpp",
     "Analysis.cpp",
+    "AssumeBundleQueries.cpp",
     "AssumptionCache.cpp",
     "BasicAliasAnalysis.cpp",
     "BlockFrequencyInfo.cpp",

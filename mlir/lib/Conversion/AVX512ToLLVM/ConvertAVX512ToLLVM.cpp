@@ -164,6 +164,10 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
 
 namespace {
 struct ConvertAVX512ToLLVMPass : public ModulePass<ConvertAVX512ToLLVMPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertAVX512ToLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace
@@ -191,7 +195,3 @@ void ConvertAVX512ToLLVMPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertAVX512ToLLVMPass() {
   return std::make_unique<ConvertAVX512ToLLVMPass>();
 }
-
-static PassRegistration<ConvertAVX512ToLLVMPass> pass(
-    "convert-avx512-to-llvm",
-    "Convert the operations from the avx512 dialect into the LLVM dialect");

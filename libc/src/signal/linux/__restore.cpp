@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file is implemented seperately from sigaction.cpp so that we can
+// This file is implemented separately from sigaction.cpp so that we can
 // strongly control the options this file is compiled with. __restore_rt cannot
 // make any stack allocations so we must ensure this.
 

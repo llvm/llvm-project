@@ -1226,17 +1226,17 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
 
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
-      unsigned FrameAlign = Arg.Alignment;
+      MaybeAlign FrameAlign = Arg.Alignment;
       if (!FrameAlign)
-        FrameAlign = TLI.getByValTypeAlignment(ElementTy, DL);
+        FrameAlign = Align(TLI.getByValTypeAlignment(ElementTy, DL));
       Flags.setByValSize(FrameSize);
-      Flags.setByValAlign(Align(FrameAlign));
+      Flags.setByValAlign(*FrameAlign);
     }
     if (Arg.IsNest)
       Flags.setNest();
     if (NeedsRegBlock)
       Flags.setInConsecutiveRegs();
-    Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
+    Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 
     CLI.OutVals.push_back(Arg.Val);
     CLI.OutFlags.push_back(Flags);

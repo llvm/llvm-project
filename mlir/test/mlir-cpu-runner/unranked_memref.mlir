@@ -55,5 +55,5 @@ func @main() -> () {
     return
 }
 
-func @print_memref_i8(memref<*xi8>)
-func @print_memref_f32(memref<*xf32>)
+func @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
+func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }

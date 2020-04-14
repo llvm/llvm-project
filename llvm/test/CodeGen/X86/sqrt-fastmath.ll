@@ -59,6 +59,20 @@ define float @finite_f32_no_estimate(float %f) #0 {
 define float @finite_f32_estimate_ieee(float %f) #1 {
 ; SSE-LABEL: finite_f32_estimate_ieee:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: finite_f32_estimate_ieee:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %call = tail call float @__sqrtf_finite(float %f) #2
+  ret float %call
+}
+
+define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
+; SSE-LABEL: finite_f32_estimate_ieee_ninf:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
@@ -72,7 +86,7 @@ define float @finite_f32_estimate_ieee(float %f) #1 {
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: finite_f32_estimate_ieee:
+; AVX1-LABEL: finite_f32_estimate_ieee_ninf:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -85,7 +99,7 @@ define float @finite_f32_estimate_ieee(float %f) #1 {
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: finite_f32_estimate_ieee:
+; AVX512-LABEL: finite_f32_estimate_ieee_ninf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -99,12 +113,26 @@ define float @finite_f32_estimate_ieee(float %f) #1 {
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call float @__sqrtf_finite(float %f) #2
+  %call = tail call ninf float @__sqrtf_finite(float %f) #2
   ret float %call
 }
 
 define float @finite_f32_estimate_daz(float %f) #4 {
 ; SSE-LABEL: finite_f32_estimate_daz:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: finite_f32_estimate_daz:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %call = tail call float @__sqrtf_finite(float %f) #2
+  ret float %call
+}
+
+define float @finite_f32_estimate_daz_ninf(float %f) #4 {
+; SSE-LABEL: finite_f32_estimate_daz_ninf:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
@@ -119,7 +147,7 @@ define float @finite_f32_estimate_daz(float %f) #4 {
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: finite_f32_estimate_daz:
+; AVX1-LABEL: finite_f32_estimate_daz_ninf:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -132,7 +160,7 @@ define float @finite_f32_estimate_daz(float %f) #4 {
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: finite_f32_estimate_daz:
+; AVX512-LABEL: finite_f32_estimate_daz_ninf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -144,7 +172,7 @@ define float @finite_f32_estimate_daz(float %f) #4 {
 ; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call float @__sqrtf_finite(float %f) #2
+  %call = tail call ninf float @__sqrtf_finite(float %f) #2
   ret float %call
 }
 
@@ -175,6 +203,20 @@ define x86_fp80 @finite_f80_estimate_but_no(x86_fp80 %ld) #1 {
 define float @sqrtf_check_denorms(float %x) #3 {
 ; SSE-LABEL: sqrtf_check_denorms:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtf_check_denorms:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %call = tail call float @__sqrtf_finite(float %x) #2
+  ret float %call
+}
+
+define float @sqrtf_check_denorms_ninf(float %x) #3 {
+; SSE-LABEL: sqrtf_check_denorms_ninf:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
@@ -188,7 +230,7 @@ define float @sqrtf_check_denorms(float %x) #3 {
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: sqrtf_check_denorms:
+; AVX1-LABEL: sqrtf_check_denorms_ninf:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -201,7 +243,7 @@ define float @sqrtf_check_denorms(float %x) #3 {
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: sqrtf_check_denorms:
+; AVX512-LABEL: sqrtf_check_denorms_ninf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -215,12 +257,26 @@ define float @sqrtf_check_denorms(float %x) #3 {
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call float @__sqrtf_finite(float %x) #2
+  %call = tail call ninf float @__sqrtf_finite(float %x) #2
   ret float %call
 }
 
 define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
 ; SSE-LABEL: sqrt_v4f32_check_denorms:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrt_v4f32_check_denorms:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtps %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %call = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
+  ret <4 x float> %call
+}
+
+define <4 x float> @sqrt_v4f32_check_denorms_ninf(<4 x float> %x) #3 {
+; SSE-LABEL: sqrt_v4f32_check_denorms_ninf:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm1
@@ -237,7 +293,7 @@ define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: sqrt_v4f32_check_denorms:
+; AVX1-LABEL: sqrt_v4f32_check_denorms_ninf:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm2
@@ -251,7 +307,7 @@ define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
 ; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: sqrt_v4f32_check_denorms:
+; AVX512-LABEL: sqrt_v4f32_check_denorms_ninf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm2
@@ -266,7 +322,7 @@ define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
+  %call = tail call ninf <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
   ret <4 x float> %call
 }
 

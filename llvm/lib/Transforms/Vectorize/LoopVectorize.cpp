@@ -6884,14 +6884,13 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   return new VPBlendRecipe(Phi, Masks);
 }
 
-bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
-                                 VFRange &Range) {
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
 
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
 
   if (IsPredicated)
-    return false;
+    return nullptr;
 
   auto IsVectorizableOpcode = [](unsigned Opcode) {
     switch (Opcode) {
@@ -6940,13 +6939,13 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   };
 
   if (!IsVectorizableOpcode(I->getOpcode()))
-    return false;
+    return nullptr;
 
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
     if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
                ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect))
-      return false;
+      return nullptr;
   }
 
   auto willWiden = [&](unsigned VF) -> bool {
@@ -6975,13 +6974,10 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   };
 
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
-    return false;
+    return nullptr;
 
   // Success: widen this instruction.
-  VPWidenRecipe *WidenRecipe = new VPWidenRecipe(*I);
-  setRecipe(I, WidenRecipe);
-  VPBB->appendRecipe(WidenRecipe);
-  return true;
+  return new VPWidenRecipe(*I);
 }
 
 VPBasicBlock *VPRecipeBuilder::handleReplication(
@@ -7085,8 +7081,11 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
 
   // Check if Instr is to be widened by a general VPWidenRecipe, after
   // having first checked for specific widening recipes.
-  if (tryToWiden(Instr, VPBB, Range))
+  if ((Recipe = tryToWiden(Instr, Range))) {
+    setRecipe(Instr, Recipe);
+    VPBB->appendRecipe(Recipe);
     return true;
+  }
 
   return false;
 }

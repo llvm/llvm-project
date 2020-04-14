@@ -115,7 +115,7 @@ void FoldInitTypeCheck::doCheck(const BuiltinType &IterValueType,
 }
 
 void FoldInitTypeCheck::check(const MatchFinder::MatchResult &Result) {
-  // Given the iterator and init value type retreived by the matchers,
+  // Given the iterator and init value type retrieved by the matchers,
   // we check that the ::value_type of the iterator is compatible with
   // the init value type.
   const auto *InitType = Result.Nodes.getNodeAs<BuiltinType>("InitType");

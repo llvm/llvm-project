@@ -147,6 +147,9 @@ protected:
 
   // Armv8.6-A Extensions
   bool HasBF16 = false;
+  bool HasAMVS = false;
+  bool HasFineGrainedTraps = false;
+  bool HasEnhancedCounterVirtualization = false;
 
   // Arm SVE2 extensions
   bool HasSVE2AES = false;
@@ -364,7 +367,12 @@ public:
   }
   unsigned getCacheLineSize() const override { return CacheLineSize; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
-  unsigned getMinPrefetchStride() const override { return MinPrefetchStride; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return MinPrefetchStride;
+  }
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
@@ -409,6 +417,10 @@ public:
 
   // Armv8.6-A Extensions
   bool hasBF16() const { return HasBF16; }
+  bool hasFineGrainedTraps() const { return HasFineGrainedTraps; }
+  bool hasEnhancedCounterVirtualization() const {
+    return HasEnhancedCounterVirtualization;
+  }
 
   bool isLittleEndian() const { return IsLittle; }
 
@@ -446,6 +458,7 @@ public:
   bool hasDIT() const { return HasDIT; }
   bool hasTRACEV8_4() const { return HasTRACEV8_4; }
   bool hasAM() const { return HasAM; }
+  bool hasAMVS() const { return HasAMVS; }
   bool hasSEL2() const { return HasSEL2; }
   bool hasPMU() const { return HasPMU; }
   bool hasTLB_RMI() const { return HasTLB_RMI; }

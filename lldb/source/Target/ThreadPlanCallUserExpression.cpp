@@ -101,8 +101,7 @@ StopInfoSP ThreadPlanCallUserExpression::GetRealStopInfo() {
 
   if (stop_info_sp) {
     lldb::addr_t addr = GetStopAddress();
-    DynamicCheckerFunctions *checkers =
-        m_thread.GetProcess()->GetDynamicCheckers();
+    DynamicCheckerFunctions *checkers = m_process.GetDynamicCheckers();
     StreamString s;
 
     if (checkers && checkers->DoCheckersExplainStop(addr, s))

@@ -1736,7 +1736,7 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
 
 void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I,
-                                     unsigned DestReg, unsigned SubIdx,
+                                     Register DestReg, unsigned SubIdx,
                                      const MachineInstr &Orig,
                                      const TargetRegisterInfo &TRI) const {
   unsigned Opcode = Orig.getOpcode();
@@ -2719,8 +2719,8 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 /// in SrcReg and SrcReg2 if having two register operands, and the value it
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
-bool ARMBaseInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                                      unsigned &SrcReg2, int &CmpMask,
+bool ARMBaseInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                      Register &SrcReg2, int &CmpMask,
                                       int &CmpValue) const {
   switch (MI.getOpcode()) {
   default: break;
@@ -2756,7 +2756,7 @@ bool ARMBaseInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
 /// operates on the given source register and applies the same mask
 /// as a 'tst' instruction. Provide a limited look-through for copies.
 /// When successful, MI will hold the found instruction.
-static bool isSuitableForMask(MachineInstr *&MI, unsigned SrcReg,
+static bool isSuitableForMask(MachineInstr *&MI, Register SrcReg,
                               int CmpMask, bool CommonUse) {
   switch (MI->getOpcode()) {
     case ARM::ANDri:
@@ -2791,7 +2791,7 @@ inline static ARMCC::CondCodes getCmpToAddCondition(ARMCC::CondCodes CC) {
 /// CMPrr(r0, r1) can be made redundant by ADDr[ri](r0, r1, X).
 /// This function can be extended later on.
 inline static bool isRedundantFlagInstr(const MachineInstr *CmpI,
-                                        unsigned SrcReg, unsigned SrcReg2,
+                                        Register SrcReg, Register SrcReg2,
                                         int ImmValue, const MachineInstr *OI,
                                         bool &IsThumb1) {
   if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
@@ -2927,7 +2927,7 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
 /// operands are swapped: SUBrr(r1,r2) and CMPrr(r2,r1), by updating the
 /// condition code of instructions which use the flags.
 bool ARMBaseInstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int CmpMask,
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int CmpMask,
     int CmpValue, const MachineRegisterInfo *MRI) const {
   // Get the unique definition of SrcReg.
   MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
@@ -3214,7 +3214,7 @@ bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
     return true;
   MachineBasicBlock::const_iterator Next = &MI;
   ++Next;
-  unsigned SrcReg, SrcReg2;
+  Register SrcReg, SrcReg2;
   int CmpMask, CmpValue;
   bool IsThumb1;
   if (Next != MI.getParent()->end() &&
@@ -3225,7 +3225,7 @@ bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
 }
 
 bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                     unsigned Reg,
+                                     Register Reg,
                                      MachineRegisterInfo *MRI) const {
   // Fold large immediates into add, sub, or, xor.
   unsigned DefOpc = DefMI.getOpcode();

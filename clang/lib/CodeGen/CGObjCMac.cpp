@@ -1107,11 +1107,6 @@ public:
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
-  /// GetOrEmitProtocol - Get the protocol object for the given
-  /// declaration, emitting it if necessary. The return value has type
-  /// ProtocolPtrTy.
-  virtual llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD)=0;
-
   /// GetOrEmitProtocolRef - Get a forward reference to the protocol
   /// object for the given declaration, emitting it if needed. These
   /// forward references will be filled in with empty bodies if no
@@ -3639,7 +3634,7 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
   // Check for a forward reference.
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name, true);
   if (GV) {
-    assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+    assert(GV->getValueType() == ObjCTypes.ClassTy &&
            "Forward metaclass reference has incorrect type.");
     values.finishAndSetAsInitializer(GV);
     GV->setSection(Section);
@@ -3702,7 +3697,7 @@ llvm::Constant *CGObjCMac::EmitMetaClass(const ObjCImplementationDecl *ID,
   // Check for a forward reference.
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name, true);
   if (GV) {
-    assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+    assert(GV->getValueType() == ObjCTypes.ClassTy &&
            "Forward metaclass reference has incorrect type.");
     values.finishAndSetAsInitializer(GV);
   } else {
@@ -3733,7 +3728,7 @@ llvm::Constant *CGObjCMac::EmitMetaClassRef(const ObjCInterfaceDecl *ID) {
                                   llvm::GlobalValue::PrivateLinkage, nullptr,
                                   Name);
 
-  assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+  assert(GV->getValueType() == ObjCTypes.ClassTy &&
          "Forward metaclass reference has incorrect type.");
   return GV;
 }
@@ -3747,7 +3742,7 @@ llvm::Value *CGObjCMac::EmitSuperClassRef(const ObjCInterfaceDecl *ID) {
                                   llvm::GlobalValue::PrivateLinkage, nullptr,
                                   Name);
 
-  assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+  assert(GV->getValueType() == ObjCTypes.ClassTy &&
          "Forward class metadata reference has incorrect type.");
   return GV;
 }

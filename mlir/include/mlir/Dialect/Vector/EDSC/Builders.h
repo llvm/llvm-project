@@ -44,7 +44,7 @@ Value vector_contraction(StructuredIndexed A, StructuredIndexed B,
 /// Prerequisites:
 /// A, B and C capture values of proper vector types. For instance
 /// `A: vector<4x8xf32>`, `B: vector<8x16f32>` and `C: vector<4x16xf32>`.
-Value vector_matmul(Value A, Value B, Value C);
+Value vector_contraction_matmul(Value A, Value B, Value C);
 
 } // namespace ops
 } // namespace edsc

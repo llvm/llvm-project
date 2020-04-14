@@ -11,15 +11,13 @@ define void @func() {
 ; CHECK-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
 ; CHECK-NEXT:    lea %s0, function@got_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, function@got_hi(%s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
-; CHECK-NEXT:    ld %s0, (,%s0)
+; CHECK-NEXT:    lea.sl %s0, function@got_hi(, %s0)
+; CHECK-NEXT:    ld %s0, (%s0, %s15)
 ; CHECK-NEXT:    lea %s1, ptr@got_lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s1, ptr@got_hi(%s1)
-; CHECK-NEXT:    adds.l %s1, %s15, %s1
-; CHECK-NEXT:    ld %s1, (,%s1)
-; CHECK-NEXT:    st %s0, (,%s1)
+; CHECK-NEXT:    lea.sl %s1, ptr@got_hi(, %s1)
+; CHECK-NEXT:    ld %s1, (%s1, %s15)
+; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    or %s12, 0, %s0
 ; CHECK-NEXT:    bsic %lr, (,%s12)
 ; CHECK-NEXT:    or %s11, 0, %s9

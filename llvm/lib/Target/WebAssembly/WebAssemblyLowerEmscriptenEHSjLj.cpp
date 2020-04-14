@@ -344,6 +344,21 @@ static std::string getSignature(FunctionType *FTy) {
   return Sig;
 }
 
+static void markAsImported(Function *F) {
+  // Tell the linker that this function is expected to be imported from the
+  // 'env' module.
+  if (!F->hasFnAttribute("wasm-import-module")) {
+    llvm::AttrBuilder B;
+    B.addAttribute("wasm-import-module", "env");
+    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  }
+  if (!F->hasFnAttribute("wasm-import-name")) {
+    llvm::AttrBuilder B;
+    B.addAttribute("wasm-import-name", F->getName());
+    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  }
+}
+
 // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
 // This is because a landingpad instruction contains two more arguments, a
 // personality function and a cleanup bit, and __cxa_find_matching_catch_N
@@ -360,6 +375,7 @@ WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
   Function *F = Function::Create(
       FTy, GlobalValue::ExternalLinkage,
       "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
+  markAsImported(F);
   FindMatchingCatches[NumClauses] = F;
   return F;
 }
@@ -469,6 +485,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallOrInvoke *CI) {
                                         CalleeFTy->isVarArg());
   Function *F =
       Function::Create(FTy, GlobalValue::ExternalLinkage, "__invoke_" + Sig, M);
+  markAsImported(F);
   InvokeWrappers[Sig] = F;
   return F;
 }

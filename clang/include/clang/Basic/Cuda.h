@@ -117,6 +117,7 @@ enum class CudaFeature {
   CUDA_USES_FATBIN_REGISTER_END,
 };
 
+CudaVersion ToCudaVersion(llvm::VersionTuple);
 bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
 bool CudaFeatureEnabled(CudaVersion, CudaFeature);
 

@@ -256,7 +256,7 @@ def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
 ///   OptionalAttr<I64ArrayAttr>:$strides
 ///   OptionalAttr<I64ArrayAttr>:$dilations
 ///   OptionalAttr<I64ElementsAttr>:$padding
-/// `stirdes` denotes the step of each window along the dimension.
+/// `strides` denotes the step of each window along the dimension.
 class PoolingBase_Op<string mnemonic, list<OpTrait> props>
   : LinalgStructured_Op<mnemonic, props> {
   let description = [{

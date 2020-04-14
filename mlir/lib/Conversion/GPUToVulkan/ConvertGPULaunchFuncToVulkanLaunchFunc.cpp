@@ -40,6 +40,10 @@ namespace {
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
     : public ModulePass<ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuLaunchFuncToVulkanLaunchFunc
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 
 private:
@@ -56,7 +60,7 @@ private:
     // TODO(denis0x0D): Handle other types.
     if (auto memRefType = type.dyn_cast_or_null<MemRefType>())
       return memRefType.hasRank() &&
-             (memRefType.getRank() == 1 || memRefType.getRank() == 2);
+             (memRefType.getRank() >= 1 && memRefType.getRank() <= 3);
     return false;
   }
 
@@ -169,7 +173,3 @@ std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass() {
   return std::make_unique<ConvertGpuLaunchFuncToVulkanLaunchFunc>();
 }
-
-static PassRegistration<ConvertGpuLaunchFuncToVulkanLaunchFunc>
-    pass("convert-gpu-launch-to-vulkan-launch",
-         "Convert gpu.launch_func to vulkanLaunch external call");

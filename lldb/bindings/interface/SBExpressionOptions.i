@@ -126,6 +126,14 @@ public:
     bool
     GetAutoApplyFixIts();
 
+    %feature("docstring", "Sets how often LLDB should retry applying fix-its to an expression.") SetRetriesWithFixIts;
+    void
+    SetRetriesWithFixIts(uint64_t retries);
+
+    %feature("docstring", "Gets how often LLDB will retry applying fix-its to an expression.") GetRetriesWithFixIts;
+    uint64_t
+    GetRetriesWithFixIts();
+
     bool
     GetTopLevel();
 

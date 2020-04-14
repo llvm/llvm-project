@@ -246,7 +246,7 @@ public:
     return impl->analyses.getCachedAnalysis<AnalysisT>();
   }
 
-  /// Query for a analysis of a child operation, constructing it if necessary.
+  /// Query for an analysis of a child operation, constructing it if necessary.
   template <typename AnalysisT> AnalysisT &getChildAnalysis(Operation *op) {
     return slice(op).template getAnalysis<AnalysisT>();
   }

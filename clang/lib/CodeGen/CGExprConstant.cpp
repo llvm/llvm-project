@@ -589,19 +589,21 @@ bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
 bool ConstStructBuilder::AppendBitField(
     const FieldDecl *Field, uint64_t FieldOffset, llvm::ConstantInt *CI,
     bool AllowOverwrite) {
-  uint64_t FieldSize = Field->getBitWidthValue(CGM.getContext());
+  const CGRecordLayout &RL =
+      CGM.getTypes().getCGRecordLayout(Field->getParent());
+  const CGBitFieldInfo &Info = RL.getBitFieldInfo(Field);
   llvm::APInt FieldValue = CI->getValue();
 
   // Promote the size of FieldValue if necessary
   // FIXME: This should never occur, but currently it can because initializer
   // constants are cast to bool, and because clang is not enforcing bitfield
   // width limits.
-  if (FieldSize > FieldValue.getBitWidth())
-    FieldValue = FieldValue.zext(FieldSize);
+  if (Info.Size > FieldValue.getBitWidth())
+    FieldValue = FieldValue.zext(Info.Size);
 
   // Truncate the size of FieldValue to the bit field size.
-  if (FieldSize < FieldValue.getBitWidth())
-    FieldValue = FieldValue.trunc(FieldSize);
+  if (Info.Size < FieldValue.getBitWidth())
+    FieldValue = FieldValue.trunc(Info.Size);
 
   return Builder.addBits(FieldValue,
                          CGM.getContext().toBits(StartOffset) + FieldOffset,

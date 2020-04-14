@@ -149,45 +149,19 @@ set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-
                                                Note that this is not related to the version of libc++'s ABI itself!")
 
 # ABI Library options ---------------------------------------------------------
-set(LIBCXX_CXX_ABI "default" CACHE STRING
-    "Specify C++ ABI library to use.")
+set(LIBCXX_CXX_ABI "default" CACHE STRING "Specify C++ ABI library to use.")
 set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
-# FIXME: This is a temporary hack to get the buildbots working while D63883 is in flight.
-# Without this all the bots fail while building libc++
-if (DEFINED ENV{USER})
-  if (("$ENV{USER}" STREQUAL "buildbot") OR (("$ENV{USER}" STREQUAL "llvmbb") OR ("$ENV{USER}" STREQUAL "buildslave")))
-    if (LIBCXX_CXX_ABI STREQUAL "libcxxabi" AND NOT DEFINED LIBCXX_CXX_ABI_INCLUDE_PATHS)
-      message(WARNING "OVERRIDING BUILDBOT CONFIG")
-      set(LIBCXX_CXX_ABI "default" CACHE STRING "FIXME" FORCE)
-    endif()
-  endif()
-endif()
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
-  find_path(
-    LIBCXX_LIBCXXABI_INCLUDES_INTERNAL cxxabi.h
-    PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi/include
-          ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
-          ${LLVM_MAIN_SRC_DIR}/../libcxxabi/include
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH
-  )
   if (LIBCXX_TARGETING_MSVC)
     # FIXME: Figure out how to configure the ABI library on Windows.
     set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
-  elseif ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
-          IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
-    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
-    set(LIBCXX_CXX_ABI_INTREE 1)
-  elseif (APPLE)
-    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-    set(LIBCXX_CXX_ABI_SYSTEM 1)
   elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxrt")
-    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
+  elseif (NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI)
+    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
   else()
     set(LIBCXX_CXX_ABI_LIBNAME "default")
   endif()
@@ -233,7 +207,6 @@ option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
-option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit libc++." ${LLVM_BUILD_32_BITS})
@@ -704,6 +677,9 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
       append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
+            USE_SANITIZER STREQUAL "Undefined;Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
     else()

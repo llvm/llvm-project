@@ -11,26 +11,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define nonnull i32* @get_global() {
 ; GENDYN-LABEL: get_global:
-; GENDYN:       # %bb.0: # %entry
-; GENDYN-NEXT:    st %s9, (,%s11)
-; GENDYN-NEXT:    st %s10, 8(,%s11)
-; GENDYN-NEXT:    st %s15, 24(,%s11)
-; GENDYN-NEXT:    st %s16, 32(,%s11)
-; GENDYN-NEXT:    or %s9, 0, %s11
-; GENDYN-NEXT:    lea %s13, -240
-; GENDYN-NEXT:    and %s13, %s13, (32)0
-; GENDYN-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYN-NEXT:    brge.l %s11, %s8, .LBB0_2
-; GENDYN-NEXT:  # %bb.1: # %entry
-; GENDYN-NEXT:    ld %s61, 24(,%s14)
-; GENDYN-NEXT:    or %s62, 0, %s0
-; GENDYN-NEXT:    lea %s63, 315
-; GENDYN-NEXT:    shm.l %s63, (%s61)
-; GENDYN-NEXT:    shm.l %s8, 8(%s61)
-; GENDYN-NEXT:    shm.l %s11, 16(%s61)
-; GENDYN-NEXT:    monc
-; GENDYN-NEXT:    or %s0, 0, %s62
-; GENDYN-NEXT:  .LBB0_2: # %entry
+; GENDYN:       .LBB{{[0-9]+}}_2:
 ; GENDYN-NEXT:    lea %s0, x@tls_gd_lo(-24)
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
 ; GENDYN-NEXT:    sic %s10
@@ -40,33 +21,9 @@ define nonnull i32* @get_global() {
 ; GENDYN-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
 ; GENDYN-NEXT:    or %s11, 0, %s9
-; GENDYN-NEXT:    ld %s16, 32(,%s11)
-; GENDYN-NEXT:    ld %s15, 24(,%s11)
-; GENDYN-NEXT:    ld %s10, 8(,%s11)
-; GENDYN-NEXT:    ld %s9, (,%s11)
-; GENDYN-NEXT:    b.l (,%lr)
 ;
 ; GENDYNPIC-LABEL: get_global:
-; GENDYNPIC:       # %bb.0: # %entry
-; GENDYNPIC-NEXT:    st %s9, (,%s11)
-; GENDYNPIC-NEXT:    st %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    st %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    st %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    or %s9, 0, %s11
-; GENDYNPIC-NEXT:    lea %s13, -240
-; GENDYNPIC-NEXT:    and %s13, %s13, (32)0
-; GENDYNPIC-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYNPIC-NEXT:    brge.l %s11, %s8, .LBB0_2
-; GENDYNPIC-NEXT:  # %bb.1: # %entry
-; GENDYNPIC-NEXT:    ld %s61, 24(,%s14)
-; GENDYNPIC-NEXT:    or %s62, 0, %s0
-; GENDYNPIC-NEXT:    lea %s63, 315
-; GENDYNPIC-NEXT:    shm.l %s63, (%s61)
-; GENDYNPIC-NEXT:    shm.l %s8, 8(%s61)
-; GENDYNPIC-NEXT:    shm.l %s11, 16(%s61)
-; GENDYNPIC-NEXT:    monc
-; GENDYNPIC-NEXT:    or %s0, 0, %s62
-; GENDYNPIC-NEXT:  .LBB0_2: # %entry
+; GENDYNPIC:       .LBB{{[0-9]+}}_2:
 ; GENDYNPIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; GENDYNPIC-NEXT:    and %s15, %s15, (32)0
 ; GENDYNPIC-NEXT:    sic %s16
@@ -80,11 +37,6 @@ define nonnull i32* @get_global() {
 ; GENDYNPIC-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
-; GENDYNPIC-NEXT:    ld %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    ld %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    ld %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    ld %s9, (,%s11)
-; GENDYNPIC-NEXT:    b.l (,%lr)
 ; LOCAL-LABEL: get_global:
 ; LOCAL:       .LBB{{[0-9]+}}_2:
 ; LOCAL-NEXT:  lea %s34, x@tpoff_lo
@@ -99,26 +51,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define nonnull i32* @get_local() {
 ; GENDYN-LABEL: get_local:
-; GENDYN:       # %bb.0: # %entry
-; GENDYN-NEXT:    st %s9, (,%s11)
-; GENDYN-NEXT:    st %s10, 8(,%s11)
-; GENDYN-NEXT:    st %s15, 24(,%s11)
-; GENDYN-NEXT:    st %s16, 32(,%s11)
-; GENDYN-NEXT:    or %s9, 0, %s11
-; GENDYN-NEXT:    lea %s13, -240
-; GENDYN-NEXT:    and %s13, %s13, (32)0
-; GENDYN-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYN-NEXT:    brge.l %s11, %s8, .LBB1_2
-; GENDYN-NEXT:  # %bb.1: # %entry
-; GENDYN-NEXT:    ld %s61, 24(,%s14)
-; GENDYN-NEXT:    or %s62, 0, %s0
-; GENDYN-NEXT:    lea %s63, 315
-; GENDYN-NEXT:    shm.l %s63, (%s61)
-; GENDYN-NEXT:    shm.l %s8, 8(%s61)
-; GENDYN-NEXT:    shm.l %s11, 16(%s61)
-; GENDYN-NEXT:    monc
-; GENDYN-NEXT:    or %s0, 0, %s62
-; GENDYN-NEXT:  .LBB1_2: # %entry
+; GENDYN:       .LBB{{[0-9]+}}_2:
 ; GENDYN-NEXT:    lea %s0, y@tls_gd_lo(-24)
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
 ; GENDYN-NEXT:    sic %s10
@@ -128,33 +61,9 @@ define nonnull i32* @get_local() {
 ; GENDYN-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
 ; GENDYN-NEXT:    or %s11, 0, %s9
-; GENDYN-NEXT:    ld %s16, 32(,%s11)
-; GENDYN-NEXT:    ld %s15, 24(,%s11)
-; GENDYN-NEXT:    ld %s10, 8(,%s11)
-; GENDYN-NEXT:    ld %s9, (,%s11)
-; GENDYN-NEXT:    b.l (,%lr)
 ;
 ; GENDYNPIC-LABEL: get_local:
-; GENDYNPIC:       # %bb.0: # %entry
-; GENDYNPIC-NEXT:    st %s9, (,%s11)
-; GENDYNPIC-NEXT:    st %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    st %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    st %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    or %s9, 0, %s11
-; GENDYNPIC-NEXT:    lea %s13, -240
-; GENDYNPIC-NEXT:    and %s13, %s13, (32)0
-; GENDYNPIC-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYNPIC-NEXT:    brge.l %s11, %s8, .LBB1_2
-; GENDYNPIC-NEXT:  # %bb.1: # %entry
-; GENDYNPIC-NEXT:    ld %s61, 24(,%s14)
-; GENDYNPIC-NEXT:    or %s62, 0, %s0
-; GENDYNPIC-NEXT:    lea %s63, 315
-; GENDYNPIC-NEXT:    shm.l %s63, (%s61)
-; GENDYNPIC-NEXT:    shm.l %s8, 8(%s61)
-; GENDYNPIC-NEXT:    shm.l %s11, 16(%s61)
-; GENDYNPIC-NEXT:    monc
-; GENDYNPIC-NEXT:    or %s0, 0, %s62
-; GENDYNPIC-NEXT:  .LBB1_2: # %entry
+; GENDYNPIC:       .LBB{{[0-9]+}}_2:
 ; GENDYNPIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; GENDYNPIC-NEXT:    and %s15, %s15, (32)0
 ; GENDYNPIC-NEXT:    sic %s16
@@ -168,11 +77,6 @@ define nonnull i32* @get_local() {
 ; GENDYNPIC-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
-; GENDYNPIC-NEXT:    ld %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    ld %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    ld %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    ld %s9, (,%s11)
-; GENDYNPIC-NEXT:    b.l (,%lr)
 ; LOCAL-LABEL: get_local:
 ; LOCAL:       .LBB{{[0-9]+}}_2:
 ; LOCAL-NEXT:  lea %s34, y@tpoff_lo
@@ -187,27 +91,8 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @set_global(i32 %v) {
 ; GENDYN-LABEL: set_global:
-; GENDYN:       # %bb.0: # %entry
-; GENDYN-NEXT:    st %s9, (,%s11)
-; GENDYN-NEXT:    st %s10, 8(,%s11)
-; GENDYN-NEXT:    st %s15, 24(,%s11)
-; GENDYN-NEXT:    st %s16, 32(,%s11)
-; GENDYN-NEXT:    or %s9, 0, %s11
-; GENDYN-NEXT:    lea %s13, -240
-; GENDYN-NEXT:    and %s13, %s13, (32)0
-; GENDYN-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYN-NEXT:    brge.l %s11, %s8, .LBB2_2
-; GENDYN-NEXT:  # %bb.1: # %entry
-; GENDYN-NEXT:    ld %s61, 24(,%s14)
-; GENDYN-NEXT:    or %s62, 0, %s0
-; GENDYN-NEXT:    lea %s63, 315
-; GENDYN-NEXT:    shm.l %s63, (%s61)
-; GENDYN-NEXT:    shm.l %s8, 8(%s61)
-; GENDYN-NEXT:    shm.l %s11, 16(%s61)
-; GENDYN-NEXT:    monc
-; GENDYN-NEXT:    or %s0, 0, %s62
-; GENDYN-NEXT:  .LBB2_2: # %entry
-; GENDYN-NEXT:    st %s18, 48(,%s9) # 8-byte Folded Spill
+; GENDYN:       .LBB{{[0-9]+}}_2:
+; GENDYN-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; GENDYN-NEXT:    or %s18, 0, %s0
 ; GENDYN-NEXT:    lea %s0, x@tls_gd_lo(-24)
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
@@ -217,37 +102,13 @@ define void @set_global(i32 %v) {
 ; GENDYN-NEXT:    and %s12, %s12, (32)0
 ; GENDYN-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
-; GENDYN-NEXT:    stl %s18, (,%s0)
-; GENDYN-NEXT:    ld %s18, 48(,%s9) # 8-byte Folded Reload
+; GENDYN-NEXT:    stl %s18, (, %s0)
+; GENDYN-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; GENDYN-NEXT:    or %s11, 0, %s9
-; GENDYN-NEXT:    ld %s16, 32(,%s11)
-; GENDYN-NEXT:    ld %s15, 24(,%s11)
-; GENDYN-NEXT:    ld %s10, 8(,%s11)
-; GENDYN-NEXT:    ld %s9, (,%s11)
-; GENDYN-NEXT:    b.l (,%lr)
 ;
 ; GENDYNPIC-LABEL: set_global:
-; GENDYNPIC:       # %bb.0: # %entry
-; GENDYNPIC-NEXT:    st %s9, (,%s11)
-; GENDYNPIC-NEXT:    st %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    st %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    st %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    or %s9, 0, %s11
-; GENDYNPIC-NEXT:    lea %s13, -240
-; GENDYNPIC-NEXT:    and %s13, %s13, (32)0
-; GENDYNPIC-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYNPIC-NEXT:    brge.l %s11, %s8, .LBB2_2
-; GENDYNPIC-NEXT:  # %bb.1: # %entry
-; GENDYNPIC-NEXT:    ld %s61, 24(,%s14)
-; GENDYNPIC-NEXT:    or %s62, 0, %s0
-; GENDYNPIC-NEXT:    lea %s63, 315
-; GENDYNPIC-NEXT:    shm.l %s63, (%s61)
-; GENDYNPIC-NEXT:    shm.l %s8, 8(%s61)
-; GENDYNPIC-NEXT:    shm.l %s11, 16(%s61)
-; GENDYNPIC-NEXT:    monc
-; GENDYNPIC-NEXT:    or %s0, 0, %s62
-; GENDYNPIC-NEXT:  .LBB2_2: # %entry
-; GENDYNPIC-NEXT:    st %s18, 48(,%s9) # 8-byte Folded Spill
+; GENDYNPIC:       .LBB{{[0-9]+}}_2:
+; GENDYNPIC-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; GENDYNPIC-NEXT:    or %s18, 0, %s0
 ; GENDYNPIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; GENDYNPIC-NEXT:    and %s15, %s15, (32)0
@@ -261,21 +122,16 @@ define void @set_global(i32 %v) {
 ; GENDYNPIC-NEXT:    and %s12, %s12, (32)0
 ; GENDYNPIC-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
-; GENDYNPIC-NEXT:    stl %s18, (,%s0)
-; GENDYNPIC-NEXT:    ld %s18, 48(,%s9) # 8-byte Folded Reload
+; GENDYNPIC-NEXT:    stl %s18, (, %s0)
+; GENDYNPIC-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
-; GENDYNPIC-NEXT:    ld %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    ld %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    ld %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    ld %s9, (,%s11)
-; GENDYNPIC-NEXT:    b.l (,%lr)
 ; LOCAL-LABEL: set_global:
 ; LOCAL:       .LBB{{[0-9]+}}_2:
 ; LOCAL-NEXT:  lea %s34, x@tpoff_lo
 ; LOCAL-NEXT:  and %s34, %s34, (32)0
 ; LOCAL-NEXT:  lea.sl %s34, x@tpoff_hi(%s34)
 ; LOCAL-NEXT:  adds.l %s34, %s14, %s34
-; LOCAL-NEXT:  stl %s0, (,%s34)
+; LOCAL-NEXT:  stl %s0, (, %s34)
 ; LOCAL-NEXT:  or %s11, 0, %s9
 entry:
   store i32 %v, i32* @x, align 4
@@ -285,27 +141,8 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @set_local(i32 %v) {
 ; GENDYN-LABEL: set_local:
-; GENDYN:       # %bb.0: # %entry
-; GENDYN-NEXT:    st %s9, (,%s11)
-; GENDYN-NEXT:    st %s10, 8(,%s11)
-; GENDYN-NEXT:    st %s15, 24(,%s11)
-; GENDYN-NEXT:    st %s16, 32(,%s11)
-; GENDYN-NEXT:    or %s9, 0, %s11
-; GENDYN-NEXT:    lea %s13, -240
-; GENDYN-NEXT:    and %s13, %s13, (32)0
-; GENDYN-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYN-NEXT:    brge.l %s11, %s8, .LBB3_2
-; GENDYN-NEXT:  # %bb.1: # %entry
-; GENDYN-NEXT:    ld %s61, 24(,%s14)
-; GENDYN-NEXT:    or %s62, 0, %s0
-; GENDYN-NEXT:    lea %s63, 315
-; GENDYN-NEXT:    shm.l %s63, (%s61)
-; GENDYN-NEXT:    shm.l %s8, 8(%s61)
-; GENDYN-NEXT:    shm.l %s11, 16(%s61)
-; GENDYN-NEXT:    monc
-; GENDYN-NEXT:    or %s0, 0, %s62
-; GENDYN-NEXT:  .LBB3_2: # %entry
-; GENDYN-NEXT:    st %s18, 48(,%s9) # 8-byte Folded Spill
+; GENDYN:       .LBB{{[0-9]+}}_2:
+; GENDYN-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; GENDYN-NEXT:    or %s18, 0, %s0
 ; GENDYN-NEXT:    lea %s0, y@tls_gd_lo(-24)
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
@@ -315,37 +152,13 @@ define void @set_local(i32 %v) {
 ; GENDYN-NEXT:    and %s12, %s12, (32)0
 ; GENDYN-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
-; GENDYN-NEXT:    stl %s18, (,%s0)
-; GENDYN-NEXT:    ld %s18, 48(,%s9) # 8-byte Folded Reload
+; GENDYN-NEXT:    stl %s18, (, %s0)
+; GENDYN-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; GENDYN-NEXT:    or %s11, 0, %s9
-; GENDYN-NEXT:    ld %s16, 32(,%s11)
-; GENDYN-NEXT:    ld %s15, 24(,%s11)
-; GENDYN-NEXT:    ld %s10, 8(,%s11)
-; GENDYN-NEXT:    ld %s9, (,%s11)
-; GENDYN-NEXT:    b.l (,%lr)
 ;
 ; GENDYNPIC-LABEL: set_local:
-; GENDYNPIC:       # %bb.0: # %entry
-; GENDYNPIC-NEXT:    st %s9, (,%s11)
-; GENDYNPIC-NEXT:    st %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    st %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    st %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    or %s9, 0, %s11
-; GENDYNPIC-NEXT:    lea %s13, -240
-; GENDYNPIC-NEXT:    and %s13, %s13, (32)0
-; GENDYNPIC-NEXT:    lea.sl %s11, -1(%s11, %s13)
-; GENDYNPIC-NEXT:    brge.l %s11, %s8, .LBB3_2
-; GENDYNPIC-NEXT:  # %bb.1: # %entry
-; GENDYNPIC-NEXT:    ld %s61, 24(,%s14)
-; GENDYNPIC-NEXT:    or %s62, 0, %s0
-; GENDYNPIC-NEXT:    lea %s63, 315
-; GENDYNPIC-NEXT:    shm.l %s63, (%s61)
-; GENDYNPIC-NEXT:    shm.l %s8, 8(%s61)
-; GENDYNPIC-NEXT:    shm.l %s11, 16(%s61)
-; GENDYNPIC-NEXT:    monc
-; GENDYNPIC-NEXT:    or %s0, 0, %s62
-; GENDYNPIC-NEXT:  .LBB3_2: # %entry
-; GENDYNPIC-NEXT:    st %s18, 48(,%s9) # 8-byte Folded Spill
+; GENDYNPIC:       .LBB{{[0-9]+}}_2:
+; GENDYNPIC-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; GENDYNPIC-NEXT:    or %s18, 0, %s0
 ; GENDYNPIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; GENDYNPIC-NEXT:    and %s15, %s15, (32)0
@@ -359,21 +172,16 @@ define void @set_local(i32 %v) {
 ; GENDYNPIC-NEXT:    and %s12, %s12, (32)0
 ; GENDYNPIC-NEXT:    lea.sl %s12, __tls_get_addr@plt_hi(%s10, %s12)
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
-; GENDYNPIC-NEXT:    stl %s18, (,%s0)
-; GENDYNPIC-NEXT:    ld %s18, 48(,%s9) # 8-byte Folded Reload
+; GENDYNPIC-NEXT:    stl %s18, (, %s0)
+; GENDYNPIC-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
-; GENDYNPIC-NEXT:    ld %s16, 32(,%s11)
-; GENDYNPIC-NEXT:    ld %s15, 24(,%s11)
-; GENDYNPIC-NEXT:    ld %s10, 8(,%s11)
-; GENDYNPIC-NEXT:    ld %s9, (,%s11)
-; GENDYNPIC-NEXT:    b.l (,%lr)
 ; LOCAL-LABEL: set_local:
 ; LOCAL:       .LBB{{[0-9]+}}_2:
 ; LOCAL-NEXT:  lea %s34, y@tpoff_lo
 ; LOCAL-NEXT:  and %s34, %s34, (32)0
 ; LOCAL-NEXT:  lea.sl %s34, y@tpoff_hi(%s34)
 ; LOCAL-NEXT:  adds.l %s34, %s14, %s34
-; LOCAL-NEXT:  stl %s0, (,%s34)
+; LOCAL-NEXT:  stl %s0, (, %s34)
 ; LOCAL-NEXT:  or %s11, 0, %s9
 entry:
   store i32 %v, i32* @y, align 4

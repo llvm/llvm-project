@@ -953,7 +953,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
                                            true));
 #endif
           if (conn_up->IsConnected()) {
-            output_comm.SetConnection(conn_up.release());
+            output_comm.SetConnection(std::move(conn_up));
             output_comm.SetReadThreadBytesReceivedCallback(
                 ReadThreadBytesReceived, &result->GetOutputStream());
             output_comm.StartReadThread();

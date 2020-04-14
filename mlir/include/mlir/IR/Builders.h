@@ -188,11 +188,21 @@ public:
     setInsertionPoint(op);
   }
 
-  explicit OpBuilder(Block *block) : OpBuilder(block, block->end()) {}
-
   OpBuilder(Block *block, Block::iterator insertPoint)
       : OpBuilder(block->getParent()) {
     setInsertionPoint(block, insertPoint);
+  }
+
+  /// Create a builder and set the insertion point to before the first operation
+  /// in the block but still inside th block.
+  static OpBuilder atBlockBegin(Block *block) {
+    return OpBuilder(block, block->begin());
+  }
+
+  /// Create a builder and set the insertion point to after the last operation
+  /// in the block but still inside the block.
+  static OpBuilder atBlockEnd(Block *block) {
+    return OpBuilder(block, block->end());
   }
 
   /// This class represents a saved insertion point.
@@ -288,13 +298,15 @@ public:
   /// Insert the given operation at the current insertion point and return it.
   virtual Operation *insert(Operation *op);
 
-  /// Add new block and set the insertion point to the end of it. The block is
-  /// inserted at the provided insertion point of 'parent'.
-  Block *createBlock(Region *parent, Region::iterator insertPt = {});
+  /// Add new block with 'argTypes' arguments and set the insertion point to the
+  /// end of it. The block is inserted at the provided insertion point of
+  /// 'parent'.
+  virtual Block *createBlock(Region *parent, Region::iterator insertPt = {},
+                             TypeRange argTypes = llvm::None);
 
-  /// Add new block and set the insertion point to the end of it. The block is
-  /// placed before 'insertBefore'.
-  Block *createBlock(Block *insertBefore);
+  /// Add new block with 'argTypes' arguments and set the insertion point to the
+  /// end of it. The block is placed before 'insertBefore'.
+  Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None);
 
   /// Returns the current block of the builder.
   Block *getBlock() const { return block; }

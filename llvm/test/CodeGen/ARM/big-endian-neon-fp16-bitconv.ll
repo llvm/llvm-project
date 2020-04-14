@@ -98,7 +98,7 @@ entry:
 define void @conv_v4i16_to_v4f16( <4 x i16> %a, <4 x half>* %store ) {
 ; CHECK-LABEL: conv_v4i16_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i64 d16, #0xffffffff0000
+; CHECK-NEXT:    vmov.i64 d16, #0xffff00000000ffff
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vrev64.16 d18, d0
 ; CHECK-NEXT:    vrev64.16 d17, d17

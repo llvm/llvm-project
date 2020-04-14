@@ -263,7 +263,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // Sort sections by the profile data provided by -callgraph-profile-file
 //
 // This first builds a call graph based on the profile data then merges sections
-// according to the C³ huristic. All clusters are then sorted by a density
+// according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
 DenseMap<const InputSectionBase *, int> computeCallGraphProfileOrder() {
   return CallGraphSort().run();

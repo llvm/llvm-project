@@ -136,7 +136,7 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
     AllSymbols.insert(Sym);
   auto Index = MemIndex::build(std::move(AllSymbols).build(), {}, {});
 
-  // Test for swtich from .h header to .cc source
+  // Test for switch from .h header to .cc source
   struct {
     llvm::StringRef HeaderCode;
     llvm::Optional<std::string> ExpectedSource;

@@ -58,6 +58,8 @@ LogicalResult generateLocationsFromIR(StringRef fileName, StringRef tag,
 std::unique_ptr<Pass> createLocationSnapshotPass(OpPrintingFlags flags,
                                                  StringRef fileName = "",
                                                  StringRef tag = "");
+/// Overload utilizing pass options for initialization.
+std::unique_ptr<Pass> createLocationSnapshotPass();
 
 } // end namespace mlir
 

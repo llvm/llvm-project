@@ -325,6 +325,15 @@ AffineMap mlir::simplifyAffineMap(AffineMap map) {
   return AffineMap::get(map.getNumDims(), map.getNumSymbols(), exprs);
 }
 
+AffineMap mlir::removeDuplicateExprs(AffineMap map) {
+  auto results = map.getResults();
+  SmallVector<AffineExpr, 4> uniqueExprs(results.begin(), results.end());
+  uniqueExprs.erase(std::unique(uniqueExprs.begin(), uniqueExprs.end()),
+                    uniqueExprs.end());
+  return AffineMap::get(map.getNumDims(), map.getNumSymbols(), uniqueExprs,
+                        map.getContext());
+}
+
 AffineMap mlir::inversePermutation(AffineMap map) {
   if (map.isEmpty())
     return map;

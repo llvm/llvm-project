@@ -46,7 +46,7 @@ __strrchr_aarch64_sve:
 	b	0b
 
 	/* First fault failed: only some of the vector is valid.
-	   Perform the comparisions only on the valid bytes.  */
+	   Perform the comparisons only on the valid bytes.  */
 1:	cmpeq	p3.b, p0/z, z0.b, 0	/* search for 0 */
 	b.any	2f
 

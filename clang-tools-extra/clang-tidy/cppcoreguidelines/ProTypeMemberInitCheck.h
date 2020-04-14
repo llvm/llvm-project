@@ -69,7 +69,7 @@ private:
   bool IgnoreArrays;
 
   // Whether fix-its for initialization of fundamental type use assignment
-  // instead of brace initalization. Only effective in C++11 mode. Default is
+  // instead of brace initialization. Only effective in C++11 mode. Default is
   // false.
   bool UseAssignment;
 };

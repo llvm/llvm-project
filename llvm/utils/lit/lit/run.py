@@ -14,6 +14,12 @@ class NopSemaphore(object):
     def release(self): pass
 
 
+class MaxFailuresError(Exception):
+    pass
+class TimeoutError(Exception):
+    pass
+
+
 class Run(object):
     """A concrete, configured testing run."""
 
@@ -45,8 +51,7 @@ class Run(object):
         computed. Tests which were not actually executed (for any reason) will
         be given an UNRESOLVED result.
         """
-        self.failure_count = 0
-        self.hit_max_failures = False
+        self.failures = 0
 
         # Larger timeouts (one year, positive infinity) don't work on Windows.
         one_week = 7 * 24 * 60 * 60  # days * hours * minutes * seconds
@@ -68,53 +73,36 @@ class Run(object):
 
         self._increase_process_limit()
 
-        # Start a process pool. Copy over the data shared between all test runs.
-        # FIXME: Find a way to capture the worker process stderr. If the user
-        # interrupts the workers before we make it into our task callback, they
-        # will each raise a KeyboardInterrupt exception and print to stderr at
-        # the same time.
         pool = multiprocessing.Pool(self.workers, lit.worker.initialize,
                                     (self.lit_config, semaphores))
 
-        self._install_win32_signal_handler(pool)
-
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
-                             callback=lambda t, i=idx: self._process_completed(t, i))
-            for idx, test in enumerate(self.tests)]
+                             callback=self.progress_callback)
+            for test in self.tests]
         pool.close()
 
-        for ar in async_results:
-            timeout = deadline - time.time()
+        try:
+            self._wait_for(async_results, deadline)
+        except:
+            pool.terminate()
+            raise
+        finally:
+            pool.join()
+
+    def _wait_for(self, async_results, deadline):
+        timeout = deadline - time.time()
+        for idx, ar in enumerate(async_results):
             try:
-                ar.get(timeout)
+                test = ar.get(timeout)
             except multiprocessing.TimeoutError:
-                # TODO(yln): print timeout error
-                pool.terminate()
-                break
-            if self.hit_max_failures:
-                pool.terminate()
-                break
-        pool.join()
-
-    # TODO(yln): as the comment says.. this is racing with the main thread waiting
-    # for results
-    def _process_completed(self, test, idx):
-        # Don't add any more test results after we've hit the maximum failure
-        # count.  Otherwise we're racing with the main thread, which is going
-        # to terminate the process pool soon.
-        if self.hit_max_failures:
-            return
-
-        self.tests[idx] = test
-
-        # Use test.isFailure() for correct XFAIL and XPASS handling
-        if test.isFailure():
-            self.failure_count += 1
-            if self.failure_count == self.max_failures:
-                self.hit_max_failures = True
-
-        self.progress_callback(test)
+                raise TimeoutError()
+            else:
+                self.tests[idx] = test
+                if test.isFailure():
+                    self.failures += 1
+                    if self.failures == self.max_failures:
+                        raise MaxFailuresError()
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these
@@ -140,13 +128,3 @@ class Run(object):
             # Warn, unless this is Windows, in which case this is expected.
             if os.name != 'nt':
                 self.lit_config.warning('Failed to raise process limit: %s' % ex)
-
-    def _install_win32_signal_handler(self, pool):
-        if lit.util.win32api is not None:
-            def console_ctrl_handler(type):
-                print('\nCtrl-C detected, terminating.')
-                pool.terminate()
-                pool.join()
-                lit.util.abort_now()
-                return True
-            lit.util.win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)

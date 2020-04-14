@@ -160,8 +160,11 @@ void mlir::loop::naivelyFuseParallelOps(Region &region) {
 }
 
 namespace {
-
 struct ParallelLoopFusion : public OperationPass<ParallelLoopFusion> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LoopParallelLoopFusion
+#include "mlir/Dialect/LoopOps/Passes.h.inc"
+
   void runOnOperation() override {
     for (Region &region : getOperation()->getRegions())
       naivelyFuseParallelOps(region);
@@ -173,6 +176,3 @@ struct ParallelLoopFusion : public OperationPass<ParallelLoopFusion> {
 std::unique_ptr<Pass> mlir::createParallelLoopFusionPass() {
   return std::make_unique<ParallelLoopFusion>();
 }
-
-static PassRegistration<ParallelLoopFusion>
-    pass("parallel-loop-fusion", "Fuse adjacent parallel loops.");

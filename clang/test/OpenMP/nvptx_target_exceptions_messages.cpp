@@ -1,5 +1,10 @@
-// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc -fexceptions -fcxx-exceptions
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fexceptions -fcxx-exceptions -ferror-limit 100
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown \
+// RUN:   -verify=host -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc \
+// RUN:   %s -o %t-ppc-host.bc -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown \
+// RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s \
+// RUN:   -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - \
+// RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
 
 #ifndef HEADER
 #define HEADER
@@ -80,5 +85,18 @@ int (*B)() = &foobar2;
 
 int foobar1() { throw 1; }
 int foobar2() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+
+
+int foobar3();
+int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any declare target region}}
+                       // host-warning@-1 {{declaration is not declared in any declare target region}}
+#pragma omp declare target
+int (*D)() = C; // expected-note {{used here}}
+                // host-note@-1 {{used here}}
+#pragma omp end declare target
+int foobar3() { throw 1; }
+
+// Check no infinite recursion in deferred diagnostic emitter.
+long E = (long)&E;
 
 #endif // HEADER

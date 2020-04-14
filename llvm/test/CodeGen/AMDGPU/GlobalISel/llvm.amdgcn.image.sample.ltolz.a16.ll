@@ -6,20 +6,17 @@ define amdgpu_ps <4 x float> @sample_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX9-LABEL: sample_l_1d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b32 s0, s2
-; GFX9-NEXT:    s_mov_b32 s2, s4
-; GFX9-NEXT:    s_mov_b32 s4, s6
-; GFX9-NEXT:    s_mov_b32 s6, s8
-; GFX9-NEXT:    s_mov_b32 s8, s10
-; GFX9-NEXT:    s_mov_b32 s10, s12
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX9-NEXT:    s_mov_b32 s1, s3
+; GFX9-NEXT:    s_mov_b32 s2, s4
 ; GFX9-NEXT:    s_mov_b32 s3, s5
+; GFX9-NEXT:    s_mov_b32 s4, s6
 ; GFX9-NEXT:    s_mov_b32 s5, s7
+; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    s_mov_b32 s8, s10
 ; GFX9-NEXT:    s_mov_b32 s9, s11
+; GFX9-NEXT:    s_mov_b32 s10, s12
 ; GFX9-NEXT:    s_mov_b32 s11, s13
-; GFX9-NEXT:    v_and_or_b32 v0, v0, v1, s12
 ; GFX9-NEXT:    image_sample_lz v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -27,19 +24,17 @@ define amdgpu_ps <4 x float> @sample_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10-LABEL: sample_l_1d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s4, s6
-; GFX10-NEXT:    s_mov_b32 s6, s8
-; GFX10-NEXT:    s_mov_b32 s8, s10
-; GFX10-NEXT:    s_mov_b32 s10, s12
-; GFX10-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
 ; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
 ; GFX10-NEXT:    s_mov_b32 s11, s13
-; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xffff, s12
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_sample_lz v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)

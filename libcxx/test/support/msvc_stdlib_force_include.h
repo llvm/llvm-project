@@ -101,7 +101,8 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #else // ^^^ clang / MSVC vvv
 #define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
     __pragma(warning(push)) \
-    __pragma(warning(disable : 4996))
+    __pragma(warning(disable : 4996)) \
+    __pragma(warning(disable : 5215))
 #define _LIBCPP_SUPPRESS_DEPRECATED_POP \
     __pragma(warning(pop))
 #endif // __clang__

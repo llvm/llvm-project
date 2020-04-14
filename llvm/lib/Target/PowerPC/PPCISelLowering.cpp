@@ -2417,8 +2417,7 @@ static void fixupFuncForFI(SelectionDAG &DAG, int FrameIdx, EVT VT) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  unsigned Align = MFI.getObjectAlignment(FrameIdx);
-  if (Align >= 4)
+  if (MFI.getObjectAlign(FrameIdx) >= Align(4))
     return;
 
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
@@ -2750,7 +2749,7 @@ SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
-      MachinePointerInfo::getGOT(DAG.getMachineFunction()), 0,
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()), None,
       MachineMemOperand::MOLoad);
 }
 
@@ -5136,14 +5135,14 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
         MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(
             Context.getOrCreateSymbol(Twine(".") + Twine(FuncName)));
 
-        if (IsDeclaration && !S->hasContainingCsect()) {
+        if (IsDeclaration && !S->hasRepresentedCsectSet()) {
           // On AIX, an undefined symbol needs to be associated with a
           // MCSectionXCOFF to get the correct storage mapping class.
           // In this case, XCOFF::XMC_PR.
           MCSectionXCOFF *Sec = Context.getXCOFFSection(
               S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
               SectionKind::getMetadata());
-          S->setContainingCsect(Sec);
+          S->setRepresentedCsect(Sec);
         }
 
         MVT PtrVT =

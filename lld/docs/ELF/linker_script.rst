@@ -51,3 +51,27 @@ sh_addralign of an *OutputSection* *S* is the maximum of
 
 When an *OutputSection* *S* has both ``address`` and ``ALIGN(section_align)``,
 GNU ld will set sh_addralign to ``ALIGN(section_align)``.
+
+Output section LMA
+------------------
+
+A load address (LMA) can be specified by ``AT(lma)`` or ``AT>lma_region``.
+
+- ``AT(lma)`` specifies the exact load address. If the linker script does not
+  have a PHDRS command, then a new loadable segment will be generated.
+- ``AT>lma_region`` specifies the LMA region. The lack of ``AT>lma_region``
+  means the default region is used. Note, GNU ld propagates the previous LMA
+  memory region when ``address`` is not specified. The LMA is set to the
+  current location of the memory region aligned to the section alignment.
+  If the linker script does not have a PHDRS command, then if
+  ``lma_region`` is different from the ``lma_region`` for
+  the previous OutputSection a new loadable segment will be generated.
+
+The two keywords cannot be specified at the same time.
+
+If neither ``AT(lma)`` nor ``AT>lma_region`` is specified:
+
+- If the previous section is also in the default LMA region, the difference
+  between the LMA and the VMA is computed to be the same as the previous
+  difference.
+- Otherwise, the LMA is set to the VMA.

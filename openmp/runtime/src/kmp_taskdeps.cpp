@@ -35,7 +35,7 @@ static std::atomic<kmp_int32> kmp_node_id_seed = ATOMIC_VAR_INIT(0);
 
 static void __kmp_init_node(kmp_depnode_t *node) {
   node->dn.successors = NULL;
-  node->dn.task = NULL; // will point to the rigth task
+  node->dn.task = NULL; // will point to the right task
   // once dependences have been processed
   for (int i = 0; i < MAX_MTX_DEPS; ++i)
     node->dn.mtx_locks[i] = NULL;
@@ -473,8 +473,8 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   npredecessors++;
 
   // Update predecessors and obtain current value to check if there are still
-  // any outstandig dependences (some tasks may have finished while we processed
-  // the dependences)
+  // any outstanding dependences (some tasks may have finished while we
+  // processed the dependences)
   npredecessors =
       node->dn.npredecessors.fetch_add(npredecessors) + npredecessors;
 
@@ -498,7 +498,7 @@ task''
 @param noalias_dep_list List of depend items with no aliasing
 
 @return Returns either TASK_CURRENT_NOT_QUEUED if the current task was not
-suspendend and queued, or TASK_CURRENT_QUEUED if it was suspended and queued
+suspended and queued, or TASK_CURRENT_QUEUED if it was suspended and queued
 
 Schedule a non-thread-switchable task with dependences for execution
 */

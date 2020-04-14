@@ -324,7 +324,7 @@ WrongMessageCatalog          "Incompatible message catalog \"%1$s\": Version \"%
 StgIgnored                   "%1$s: ignored because %2$s has been defined"
                                  # %1, -- name of ignored variable, %2 -- name of variable with higher priority.
 OBSOLETE                     "%1$s: overrides %3$s specified before"
-                                 # %1, %2 -- name and value of the overriding variable, %3 -- name of overriden variable.
+                                 # %1, %2 -- name and value of the overriding variable, %3 -- name of overridden variable.
 AffTilesNoHWLOC              "%1$s: Tiles are only supported if KMP_TOPOLOGY_METHOD=hwloc, using granularity=package instead"
 AffTilesNoTiles              "%1$s: Tiles requested but were not detected on this HW, using granularity=package instead"
 TopologyExtraTile            "%1$s: %2$d packages x %3$d tiles/pkg x %4$d cores/tile x %5$d threads/core (%6$d total cores)"

@@ -386,13 +386,6 @@ TEST_F(FormatTestJS, ReservedWordsParenthesized) {
                "return (x);\n");
 }
 
-TEST_F(FormatTestJS, CppKeywords) {
-  // Make sure we don't mess stuff up because of C++ keywords.
-  verifyFormat("return operator && (aa);");
-  // .. or QT ones.
-  verifyFormat("slots: Slot[];");
-}
-
 TEST_F(FormatTestJS, ES6DestructuringAssignment) {
   verifyFormat("var [a, b, c] = [1, 2, 3];");
   verifyFormat("const [a, b, c] = [1, 2, 3];");
@@ -2364,6 +2357,61 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
       getGoogleJSStyleWithColumns(20));
   verifyFormat("let x = namespace!;\n");
   verifyFormat("return !!x;\n");
+}
+
+TEST_F(FormatTestJS, CppKeywords) {
+  // Make sure we don't mess stuff up because of C++ keywords.
+  verifyFormat("return operator && (aa);");
+  // .. or QT ones.
+  verifyFormat("const slots: Slot[];");
+  // use the "!" assertion operator to validate that clang-format understands
+  // these C++ keywords aren't keywords in JS/TS.
+  verifyFormat("auto!;");
+  verifyFormat("char!;");
+  verifyFormat("concept!;");
+  verifyFormat("double!;");
+  verifyFormat("extern!;");
+  verifyFormat("float!;");
+  verifyFormat("inline!;");
+  verifyFormat("int!;");
+  verifyFormat("long!;");
+  verifyFormat("register!;");
+  verifyFormat("restrict!;");
+  verifyFormat("sizeof!;");
+  verifyFormat("struct!;");
+  verifyFormat("typedef!;");
+  verifyFormat("union!;");
+  verifyFormat("unsigned!;");
+  verifyFormat("volatile!;");
+  verifyFormat("_Alignas!;");
+  verifyFormat("_Alignof!;");
+  verifyFormat("_Atomic!;");
+  verifyFormat("_Bool!;");
+  verifyFormat("_Complex!;");
+  verifyFormat("_Generic!;");
+  verifyFormat("_Imaginary!;");
+  verifyFormat("_Noreturn!;");
+  verifyFormat("_Static_assert!;");
+  verifyFormat("_Thread_local!;");
+  verifyFormat("__func__!;");
+  verifyFormat("__objc_yes!;");
+  verifyFormat("__objc_no!;");
+  verifyFormat("asm!;");
+  verifyFormat("bool!;");
+  verifyFormat("const_cast!;");
+  verifyFormat("dynamic_cast!;");
+  verifyFormat("explicit!;");
+  verifyFormat("friend!;");
+  verifyFormat("mutable!;");
+  verifyFormat("operator!;");
+  verifyFormat("reinterpret_cast!;");
+  verifyFormat("static_cast!;");
+  verifyFormat("template!;");
+  verifyFormat("typename!;");
+  verifyFormat("typeid!;");
+  verifyFormat("using!;");
+  verifyFormat("virtual!;");
+  verifyFormat("wchar_t!;");
 }
 
 TEST_F(FormatTestJS, NullPropagatingOperator) {

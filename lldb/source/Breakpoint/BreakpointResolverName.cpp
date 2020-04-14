@@ -332,63 +332,64 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
 
   // Remove any duplicates between the function list and the symbol list
   SymbolContext sc;
-  if (func_list.GetSize()) {
-    for (uint32_t i = 0; i < func_list.GetSize(); i++) {
-      if (func_list.GetContextAtIndex(i, sc)) {
-        bool is_reexported = false;
+  if (!func_list.GetSize())
+    return Searcher::eCallbackReturnContinue;
 
-        if (sc.block && sc.block->GetInlinedFunctionInfo()) {
-          if (!sc.block->GetStartAddress(break_addr))
-            break_addr.Clear();
-        } else if (sc.function) {
-          break_addr = sc.function->GetAddressRange().GetBaseAddress();
-          if (m_skip_prologue && break_addr.IsValid()) {
-            const uint32_t prologue_byte_size =
-                sc.function->GetPrologueByteSize();
-            if (prologue_byte_size)
-              break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
-          }
-        } else if (sc.symbol) {
-          if (sc.symbol->GetType() == eSymbolTypeReExported) {
-            const Symbol *actual_symbol =
-                sc.symbol->ResolveReExportedSymbol(breakpoint.GetTarget());
-            if (actual_symbol) {
-              is_reexported = true;
-              break_addr = actual_symbol->GetAddress();
-            }
-          } else {
-            break_addr = sc.symbol->GetAddress();
-          }
+  for (uint32_t i = 0; i < func_list.GetSize(); i++) {
+    if (!func_list.GetContextAtIndex(i, sc))
+      continue;
 
-          if (m_skip_prologue && break_addr.IsValid()) {
-            const uint32_t prologue_byte_size =
-                sc.symbol->GetPrologueByteSize();
-            if (prologue_byte_size)
-              break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
-            else {
-              const Architecture *arch =
-                  breakpoint.GetTarget().GetArchitecturePlugin();
-              if (arch)
-                arch->AdjustBreakpointAddress(*sc.symbol, break_addr);
-            }
-          }
+    bool is_reexported = false;
+
+    if (sc.block && sc.block->GetInlinedFunctionInfo()) {
+      if (!sc.block->GetStartAddress(break_addr))
+        break_addr.Clear();
+    } else if (sc.function) {
+      break_addr = sc.function->GetAddressRange().GetBaseAddress();
+      if (m_skip_prologue && break_addr.IsValid()) {
+        const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
+        if (prologue_byte_size)
+          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+      }
+    } else if (sc.symbol) {
+      if (sc.symbol->GetType() == eSymbolTypeReExported) {
+        const Symbol *actual_symbol =
+            sc.symbol->ResolveReExportedSymbol(breakpoint.GetTarget());
+        if (actual_symbol) {
+          is_reexported = true;
+          break_addr = actual_symbol->GetAddress();
         }
+      } else {
+        break_addr = sc.symbol->GetAddress();
+      }
 
-        if (break_addr.IsValid()) {
-          if (filter.AddressPasses(break_addr)) {
-            bool new_location;
-            BreakpointLocationSP bp_loc_sp(
-                AddLocation(break_addr, &new_location));
-            bp_loc_sp->SetIsReExported(is_reexported);
-            if (bp_loc_sp && new_location && !breakpoint.IsInternal()) {
-              if (log) {
-                StreamString s;
-                bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-                LLDB_LOGF(log, "Added location: %s\n", s.GetData());
-              }
-            }
-          }
+      if (m_skip_prologue && break_addr.IsValid()) {
+        const uint32_t prologue_byte_size = sc.symbol->GetPrologueByteSize();
+        if (prologue_byte_size)
+          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+        else {
+          const Architecture *arch =
+              breakpoint.GetTarget().GetArchitecturePlugin();
+          if (arch)
+            arch->AdjustBreakpointAddress(*sc.symbol, break_addr);
         }
+      }
+    }
+
+    if (!break_addr.IsValid())
+      continue;
+
+    if (!filter.AddressPasses(break_addr))
+      continue;
+
+    bool new_location;
+    BreakpointLocationSP bp_loc_sp(AddLocation(break_addr, &new_location));
+    bp_loc_sp->SetIsReExported(is_reexported);
+    if (bp_loc_sp && new_location && !breakpoint.IsInternal()) {
+      if (log) {
+        StreamString s;
+        bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
+        LLDB_LOGF(log, "Added location: %s\n", s.GetData());
       }
     }
   }

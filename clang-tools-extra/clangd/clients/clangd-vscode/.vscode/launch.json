@@ -1,4 +1,4 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
+// A launch configuration that compiles extension and opens it inside a new window.
 {
     "version": "0.1.0",
     "configurations": [

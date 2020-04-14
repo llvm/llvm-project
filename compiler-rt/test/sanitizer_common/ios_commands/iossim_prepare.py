@@ -9,8 +9,9 @@ device_id = os.environ.get('SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER')
 if not device_id:
     raise EnvironmentError('Specify SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER to select which simulator to use.')
 
-boot_cmd = ['xcrun', 'simctl', 'bootstatus', device_id, '-b']
-subprocess.check_call(boot_cmd)
+DEVNULL = open(os.devnull, 'w')
+subprocess.call(['xcrun', 'simctl', 'shutdown', device_id], stderr=DEVNULL)
+subprocess.check_call(['xcrun', 'simctl', 'boot', device_id])
 # TODO(rdar58118442): we start the simulator here, but we never tear it down
 
 

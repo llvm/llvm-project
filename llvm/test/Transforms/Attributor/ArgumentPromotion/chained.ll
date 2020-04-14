@@ -8,7 +8,7 @@ define internal i32 @test(i32** %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = load i32*, i32** @G2, align 8
-; CHECK-NEXT:    [[Z:%.*]] = load i32, i32* [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = load i32, i32* [[Y]], align 4
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
 entry:

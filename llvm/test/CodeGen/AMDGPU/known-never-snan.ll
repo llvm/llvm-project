@@ -667,7 +667,7 @@ declare float @llvm.amdgcn.rsq.f32(float) #1
 declare float @llvm.amdgcn.fract.f32(float) #1
 declare float @llvm.amdgcn.cubeid(float, float, float) #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }
 
 !0 = !{float 2.500000e+00}

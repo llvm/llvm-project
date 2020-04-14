@@ -30,7 +30,7 @@ indices, and optionally two additional arguments corresponding to the stride (in
 terms of number of elements) and the number of elements to transfer per stride.
 The tag location is used by a dma_wait operation to check for completion. The
 indices of the source memref, destination memref, and the tag memref have the
-same restrictions as any load/store operation in a affine context (whenever DMA
+same restrictions as any load/store operation in an affine context (whenever DMA
 operations appear in an affine context). See
 [restrictions on dimensions and symbols](Affine.md#restrictions-on-dimensions-and-symbols)
 in affine contexts. This allows powerful static analysis and transformations in

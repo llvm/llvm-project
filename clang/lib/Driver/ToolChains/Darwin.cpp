@@ -430,6 +430,75 @@ static bool isObjCRuntimeLinked(const ArgList &Args) {
   return Args.hasArg(options::OPT_fobjc_link_runtime);
 }
 
+static bool checkRemarksOptions(const Driver &D, const ArgList &Args,
+                                const llvm::Triple &Triple) {
+  // When enabling remarks, we need to error if:
+  // * The remark file is specified but we're targeting multiple architectures,
+  // which means more than one remark file is being generated.
+  bool hasMultipleInvocations =
+      Args.getAllArgValues(options::OPT_arch).size() > 1;
+  bool hasExplicitOutputFile =
+      Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (hasMultipleInvocations && hasExplicitOutputFile) {
+    D.Diag(diag::err_drv_invalid_output_with_multiple_archs)
+        << "-foptimization-record-file";
+    return false;
+  }
+  return true;
+}
+
+static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                 const llvm::Triple &Triple,
+                                 const InputInfo &Output, const JobAction &JA) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-lto-pass-remarks-output");
+  CmdArgs.push_back("-mllvm");
+
+  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (A) {
+    CmdArgs.push_back(A->getValue());
+  } else {
+    assert(Output.isFilename() && "Unexpected ld output.");
+    SmallString<128> F;
+    F = Output.getFilename();
+    F += ".opt.";
+    F += Format;
+
+    CmdArgs.push_back(Args.MakeArgString(F));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+    CmdArgs.push_back("-mllvm");
+    std::string Passes =
+        std::string("-lto-pass-remarks-filter=") + A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(Passes));
+  }
+
+  if (!Format.empty()) {
+    CmdArgs.push_back("-mllvm");
+    Twine FormatArg = Twine("-lto-pass-remarks-format=") + Format;
+    CmdArgs.push_back(Args.MakeArgString(FormatArg));
+  }
+
+  if (getLastProfileUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-lto-pass-remarks-with-hotness");
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Opt =
+          std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Opt));
+    }
+  }
+}
+
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -464,55 +533,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
 
-  // For LTO, pass the name of the optimization record file and other
-  // opt-remarks flags.
-  if (Args.hasFlag(options::OPT_fsave_optimization_record,
-                   options::OPT_fsave_optimization_record_EQ,
-                   options::OPT_fno_save_optimization_record, false)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-lto-pass-remarks-output");
-    CmdArgs.push_back("-mllvm");
-
-    SmallString<128> F;
-    F = Output.getFilename();
-    F += ".opt.";
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
-      F += A->getValue();
-    else
-      F += "yaml";
-
-    CmdArgs.push_back(Args.MakeArgString(F));
-
-    if (getLastProfileUseArg(Args)) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-lto-pass-remarks-with-hotness");
-
-      if (const Arg *A =
-              Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
-        CmdArgs.push_back("-mllvm");
-        std::string Opt =
-            std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
-        CmdArgs.push_back(Args.MakeArgString(Opt));
-      }
-    }
-
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
-      CmdArgs.push_back("-mllvm");
-      std::string Passes =
-          std::string("-lto-pass-remarks-filter=") + A->getValue();
-      CmdArgs.push_back(Args.MakeArgString(Passes));
-    }
-
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
-      CmdArgs.push_back("-mllvm");
-      std::string Format =
-          std::string("-lto-pass-remarks-format=") + A->getValue();
-      CmdArgs.push_back(Args.MakeArgString(Format));
-    }
-  }
+  if (checkRemarksOptions(getToolChain().getDriver(), Args,
+                          getToolChain().getTriple()))
+    renderRemarksOptions(Args, CmdArgs, getToolChain().getTriple(), Output, JA);
 
   // Propagate the -moutline flag to the linker in LTO.
   if (Arg *A =

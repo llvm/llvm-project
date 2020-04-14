@@ -27,9 +27,7 @@ class TargetConfiguration;
 std::unique_ptr<OpPassBase<ModuleOp>>
 createInferQuantizedTypesPass(SolverContext &solverContext,
                               const TargetConfiguration &config);
-
-/// Registers the InferQuantizedTypes pass with the global registry.
-void registerInferQuantizedTypesPass();
+std::unique_ptr<OpPassBase<ModuleOp>> createInferQuantizedTypesPass();
 
 /// Creates a pass which removes any instrumentation and hint ops which have
 /// no effect on final runtime.

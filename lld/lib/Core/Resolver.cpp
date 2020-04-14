@@ -298,7 +298,7 @@ void Resolver::updateReferences() {
   for (const OwningAtomPtr<Atom> &atom : _atoms) {
     if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom.get())) {
       for (const Reference *ref : *defAtom) {
-        // A reference of type kindAssociate should't be updated.
+        // A reference of type kindAssociate shouldn't be updated.
         // Instead, an atom having such reference will be removed
         // if the target atom is coalesced away, so that they will
         // go away as a group.

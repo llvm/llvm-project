@@ -7119,7 +7119,7 @@ AST_MATCHER(OMPDefaultClause, isSharedKind) {
 /// ``isAllowedToContainClauseKind("OMPC_default").``
 AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
               OpenMPClauseKind, CKind) {
-  return isAllowedClauseForDirective(
+  return llvm::omp::isAllowedClauseForDirective(
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }

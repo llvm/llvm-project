@@ -2180,7 +2180,12 @@ enum CXCursorKind {
    */
   CXCursor_OMPArrayShapingExpr = 150,
 
-  CXCursor_LastExpr = CXCursor_OMPArrayShapingExpr,
+  /**
+   * OpenMP 5.0 [2.1.6 Iterators]
+   */
+  CXCursor_OMPIteratorExpr = 151,
+
+  CXCursor_LastExpr = CXCursor_OMPIteratorExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,

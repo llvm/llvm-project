@@ -617,6 +617,29 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   //     feeding the assume is trivially true, thus causing the removal of
   //     the assume).
 
+  if (Inv->getParent() == CxtI->getParent()) {
+    // If Inv and CtxI are in the same block, check if the assume (Inv) is first
+    // in the BB.
+    if (Inv->comesBefore(CxtI))
+      return true;
+
+    // Don't let an assume affect itself - this would cause the problems
+    // `isEphemeralValueOf` is trying to prevent, and it would also make
+    // the loop below go out of bounds.
+    if (Inv == CxtI)
+      return false;
+
+    // The context comes first, but they're both in the same block.
+    // Make sure there is nothing in between that might interrupt
+    // the control flow, not even CxtI itself.
+    for (BasicBlock::const_iterator I(CxtI), IE(Inv); I != IE; ++I)
+      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
+        return false;
+
+    return !isEphemeralValueOf(Inv, CxtI);
+  }
+
+  // Inv and CxtI are in different blocks.
   if (DT) {
     if (DT->dominates(Inv, CxtI))
       return true;
@@ -625,37 +648,7 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
     return true;
   }
 
-  // With or without a DT, the only remaining case we will check is if the
-  // instructions are in the same BB.  Give up if that is not the case.
-  if (Inv->getParent() != CxtI->getParent())
-    return false;
-
-  // If we have a dom tree, then we now know that the assume doesn't dominate
-  // the other instruction.  If we don't have a dom tree then we can check if
-  // the assume is first in the BB.
-  if (!DT) {
-    // Search forward from the assume until we reach the context (or the end
-    // of the block); the common case is that the assume will come first.
-    for (auto I = std::next(BasicBlock::const_iterator(Inv)),
-         IE = Inv->getParent()->end(); I != IE; ++I)
-      if (&*I == CxtI)
-        return true;
-  }
-
-  // Don't let an assume affect itself - this would cause the problems
-  // `isEphemeralValueOf` is trying to prevent, and it would also make
-  // the loop below go out of bounds.
-  if (Inv == CxtI)
-    return false;
-
-  // The context comes first, but they're both in the same block.
-  // Make sure there is nothing in between that might interrupt
-  // the control flow, not even CxtI itself.
-  for (BasicBlock::const_iterator I(CxtI), IE(Inv); I != IE; ++I)
-    if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-      return false;
-
-  return !isEphemeralValueOf(Inv, CxtI);
+  return false;
 }
 
 static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
@@ -5131,6 +5124,21 @@ static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
+/// If the input value is the result of a 'not' op, constant integer, or vector
+/// splat of a constant integer, return the bitwise-not source value.
+/// TODO: This could be extended to handle non-splat vector integer constants.
+static Value *getNotValue(Value *V) {
+  Value *NotV;
+  if (match(V, m_Not(m_Value(NotV))))
+    return NotV;
+
+  const APInt *C;
+  if (match(V, m_APInt(C)))
+    return ConstantInt::get(V->getType(), ~(*C));
+
+  return nullptr;
+}
+
 /// Match non-obvious integer minimum and maximum sequences.
 static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
@@ -5166,6 +5174,17 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
       match(TrueVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
     return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
+  // Look through 'not' ops to find disguised signed min/max.
+  // (X >s Y) ? ~X : ~Y ==> (~X <s ~Y) ? ~X : ~Y ==> SMIN(~X, ~Y)
+  // (X <s Y) ? ~X : ~Y ==> (~X >s ~Y) ? ~X : ~Y ==> SMAX(~X, ~Y)
+  if (CmpLHS == getNotValue(TrueVal) && CmpRHS == getNotValue(FalseVal))
+    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
+
+  // (X >s Y) ? ~Y : ~X ==> (~X <s ~Y) ? ~Y : ~X ==> SMAX(~Y, ~X)
+  // (X <s Y) ? ~Y : ~X ==> (~X >s ~Y) ? ~Y : ~X ==> SMIN(~Y, ~X)
+  if (CmpLHS == getNotValue(FalseVal) && CmpRHS == getNotValue(TrueVal))
+    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
+
   const APInt *C1;
   if (!match(CmpRHS, m_APInt(C1)))
     return {SPF_UNKNOWN, SPNB_NA, false};
@@ -5188,19 +5207,6 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
         C2->isMinSignedValue())
       return {CmpLHS == FalseVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
   }
-
-  // Look through 'not' ops to find disguised signed min/max.
-  // (X >s C) ? ~X : ~C ==> (~X <s ~C) ? ~X : ~C ==> SMIN(~X, ~C)
-  // (X <s C) ? ~X : ~C ==> (~X >s ~C) ? ~X : ~C ==> SMAX(~X, ~C)
-  if (match(TrueVal, m_Not(m_Specific(CmpLHS))) &&
-      match(FalseVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
-
-  // (X >s C) ? ~C : ~X ==> (~X <s ~C) ? ~C : ~X ==> SMAX(~C, ~X)
-  // (X <s C) ? ~C : ~X ==> (~X >s ~C) ? ~C : ~X ==> SMIN(~C, ~X)
-  if (match(FalseVal, m_Not(m_Specific(CmpLHS))) &&
-      match(TrueVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
   return {SPF_UNKNOWN, SPNB_NA, false};
 }

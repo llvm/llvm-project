@@ -69,7 +69,7 @@ void ThreadPlanStepInRange::SetupAvoidNoDebug(
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   bool avoid_nodebug = true;
-
+  Thread &thread = GetThread();
   switch (step_in_avoids_code_without_debug_info) {
   case eLazyBoolYes:
     avoid_nodebug = true;
@@ -78,7 +78,7 @@ void ThreadPlanStepInRange::SetupAvoidNoDebug(
     avoid_nodebug = false;
     break;
   case eLazyBoolCalculate:
-    avoid_nodebug = m_thread.GetStepInAvoidsNoDebug();
+    avoid_nodebug = thread.GetStepInAvoidsNoDebug();
     break;
   }
   if (avoid_nodebug)
@@ -94,7 +94,7 @@ void ThreadPlanStepInRange::SetupAvoidNoDebug(
     avoid_nodebug = false;
     break;
   case eLazyBoolCalculate:
-    avoid_nodebug = m_thread.GetStepOutAvoidsNoDebug();
+    avoid_nodebug = thread.GetStepOutAvoidsNoDebug();
     break;
   }
   if (avoid_nodebug)
@@ -145,9 +145,8 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
   if (log) {
     StreamString s;
-    DumpAddress(
-        s.AsRawOstream(), m_thread.GetRegisterContext()->GetPC(),
-        m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
+    DumpAddress(s.AsRawOstream(), GetThread().GetRegisterContext()->GetPC(),
+                GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepInRange reached %s.", s.GetData());
   }
 
@@ -180,6 +179,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
     FrameComparison frame_order = CompareCurrentFrameToStartFrame();
 
+    Thread &thread = GetThread();
     if (frame_order == eFrameCompareOlder ||
         frame_order == eFrameCompareSameParent) {
       // If we're in an older frame then we should stop.
@@ -189,7 +189,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       // I'm going to make the assumption that you wouldn't RETURN to a
       // trampoline.  So if we are in a trampoline we think the frame is older
       // because the trampoline confused the backtracer.
-      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+      m_sub_plan_sp = thread.QueueThreadPlanForStepThrough(
           m_stack_id, false, stop_others, m_status);
       if (!m_sub_plan_sp) {
         // Otherwise check the ShouldStopHere for step out:
@@ -233,7 +233,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     // We may have set the plan up above in the FrameIsOlder section:
 
     if (!m_sub_plan_sp)
-      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+      m_sub_plan_sp = thread.QueueThreadPlanForStepThrough(
           m_stack_id, false, stop_others, m_status);
 
     if (log) {
@@ -254,10 +254,10 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
     if (!m_sub_plan_sp && frame_order == eFrameCompareYounger &&
         m_step_past_prologue) {
-      lldb::StackFrameSP curr_frame = m_thread.GetStackFrameAtIndex(0);
+      lldb::StackFrameSP curr_frame = thread.GetStackFrameAtIndex(0);
       if (curr_frame) {
         size_t bytes_to_skip = 0;
-        lldb::addr_t curr_addr = m_thread.GetRegisterContext()->GetPC();
+        lldb::addr_t curr_addr = thread.GetRegisterContext()->GetPC();
         Address func_start_address;
 
         SymbolContext sc = curr_frame->GetSymbolContext(eSymbolContextFunction |
@@ -265,25 +265,20 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
         if (sc.function) {
           func_start_address = sc.function->GetAddressRange().GetBaseAddress();
-          if (curr_addr ==
-              func_start_address.GetLoadAddress(
-                  m_thread.CalculateTarget().get()))
+          if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
             bytes_to_skip = sc.function->GetPrologueByteSize();
         } else if (sc.symbol) {
           func_start_address = sc.symbol->GetAddress();
-          if (curr_addr ==
-              func_start_address.GetLoadAddress(
-                  m_thread.CalculateTarget().get()))
+          if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
             bytes_to_skip = sc.symbol->GetPrologueByteSize();
         }
 
         if (bytes_to_skip == 0 && sc.symbol) {
-          TargetSP target = m_thread.CalculateTarget();
-          const Architecture *arch = target->GetArchitecturePlugin();
+          const Architecture *arch = GetTarget().GetArchitecturePlugin();
           if (arch) {
             Address curr_sec_addr;
-            target->GetSectionLoadList().ResolveLoadAddress(curr_addr,
-                                                            curr_sec_addr);
+            GetTarget().GetSectionLoadList().ResolveLoadAddress(curr_addr,
+                                                                curr_sec_addr);
             bytes_to_skip = arch->GetBytesToSkip(*sc.symbol, curr_sec_addr);
           }
         }
@@ -293,7 +288,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
           log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP);
           LLDB_LOGF(log, "Pushing past prologue ");
 
-          m_sub_plan_sp = m_thread.QueueThreadPlanForRunToAddress(
+          m_sub_plan_sp = thread.QueueThreadPlanForRunToAddress(
               false, func_start_address, true, m_status);
         }
       }
@@ -486,15 +481,16 @@ bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
                                          bool current_plan) {
   m_virtual_step = false;
   if (resume_state == eStateStepping && current_plan) {
+    Thread &thread = GetThread();
     // See if we are about to step over a virtual inlined call.
-    bool step_without_resume = m_thread.DecrementCurrentInlinedDepth();
+    bool step_without_resume = thread.DecrementCurrentInlinedDepth();
     if (step_without_resume) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
       LLDB_LOGF(log,
                 "ThreadPlanStepInRange::DoWillResume: returning false, "
                 "inline_depth: %d",
-                m_thread.GetCurrentInlinedDepth());
-      SetStopInfo(StopInfo::CreateStopReasonToTrace(m_thread));
+                thread.GetCurrentInlinedDepth());
+      SetStopInfo(StopInfo::CreateStopReasonToTrace(thread));
 
       // FIXME: Maybe it would be better to create a InlineStep stop reason, but
       // then

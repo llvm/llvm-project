@@ -2625,6 +2625,10 @@ Use Intel MCU ABI
 
 Generate branches with extended addressability, usually via indirect jumps.
 
+.. option:: -mlvi-cfi, -mno-lvi-cfi
+
+Enable only control-flow mitigations for Load Value Injection (LVI)
+
 .. option:: -mmacosx-version-min=<arg>, -mmacos-version-min=<arg>
 
 Set Mac OS X deployment target
@@ -3144,6 +3148,8 @@ X86
 .. option:: -mrtm, -mno-rtm
 
 .. option:: -msahf, -mno-sahf
+
+.. option:: -mserialize, -mno-serialize
 
 .. option:: -msgx, -mno-sgx
 

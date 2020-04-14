@@ -22,7 +22,7 @@ add_object_library(
     -Wframe-larger-than=0
     -Werror
     -Wno-attributes
-    # asan creates asan.module_ctor which uses stack space, causing warinngs.
+    # asan creates asan.module_ctor which uses stack space, causing warnings.
     -fno-sanitize=address
   DEPENDS
     linux_syscall_h
@@ -92,5 +92,31 @@ add_entrypoint_object(
     ../signal.h
   DEPENDS
     sigaction
+    signal_h
+)
+
+add_entrypoint_object(
+  sigfillset
+  SRCS
+    sigfillset.cpp
+  HDRS
+    signal.h
+    ../sigfillset.h
+  DEPENDS
+    __errno_location
+    errno_h
+    signal_h
+)
+
+add_entrypoint_object(
+  sigdelset
+  SRCS
+    sigdelset.cpp
+  HDRS
+    signal.h
+    ../sigdelset.h
+  DEPENDS
+    __errno_location
+    errno_h
     signal_h
 )

@@ -1254,21 +1254,14 @@ TEST(Support, ReplacePathPrefix) {
   path::replace_path_prefix(Path, OldPrefix, EmptyPrefix);
   EXPECT_EQ(Path, "/foo");
   Path = Path2;
-  path::replace_path_prefix(Path, OldPrefix, EmptyPrefix, path::Style::native,
-                            true);
+  path::replace_path_prefix(Path, OldPrefixSep, EmptyPrefix);
   EXPECT_EQ(Path, "foo");
   Path = Path3;
-  path::replace_path_prefix(Path, OldPrefix, NewPrefix, path::Style::native,
-                            false);
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix);
   EXPECT_EQ(Path, "/newnew/foo");
   Path = Path3;
-  path::replace_path_prefix(Path, OldPrefix, NewPrefix, path::Style::native,
-                            true);
-  EXPECT_EQ(Path, "/oldnew/foo");
-  Path = Path3;
-  path::replace_path_prefix(Path, OldPrefixSep, NewPrefix, path::Style::native,
-                            true);
-  EXPECT_EQ(Path, "/oldnew/foo");
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix2);
+  EXPECT_EQ(Path, "/longernewnew/foo");
   Path = Path1;
   path::replace_path_prefix(Path, EmptyPrefix, NewPrefix);
   EXPECT_EQ(Path, "/new/foo");
@@ -1279,13 +1272,8 @@ TEST(Support, ReplacePathPrefix) {
   path::replace_path_prefix(Path, OldPrefix, NewPrefix);
   EXPECT_EQ(Path, "/new/");
   Path = OldPrefix;
-  path::replace_path_prefix(Path, OldPrefixSep, NewPrefix, path::Style::native,
-                            false);
+  path::replace_path_prefix(Path, OldPrefixSep, NewPrefix);
   EXPECT_EQ(Path, "/old");
-  Path = OldPrefix;
-  path::replace_path_prefix(Path, OldPrefixSep, NewPrefix, path::Style::native,
-                            true);
-  EXPECT_EQ(Path, "/new");
 }
 
 TEST_F(FileSystemTest, OpenFileForRead) {

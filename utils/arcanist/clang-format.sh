@@ -41,7 +41,7 @@ trap 'cleanup' INT HUP QUIT TERM EXIT
 if git rev-parse --git-dir >/dev/null; then
   arc_base_commit=$(arc which --show-base)
   # An alternative is to use git-clang-format.
-  git diff -U0 --no-color "${arc_base_commit}"| clang-format-diff -style LLVM -i -p1
+  git diff -U0 --no-color "${arc_base_commit}"| clang-format-diff -style file -i -p1
 else
   svn diff --diff-cmd=diff -x -U0 "${src_file}" | clang-format-diff -style LLVM -i
 fi

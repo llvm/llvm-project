@@ -3708,12 +3708,11 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
   // Detect when "or" is used to add an offset to a stack object.
   if (auto *FN = dyn_cast<FrameIndexSDNode>(N->getOperand(0))) {
     MachineFrameInfo &MFI = MF->getFrameInfo();
-    unsigned A = MFI.getObjectAlignment(FN->getIndex());
-    assert(isPowerOf2_32(A) && "Unexpected alignment");
+    Align A = MFI.getObjectAlign(FN->getIndex());
     int32_t Off = C->getSExtValue();
     // If the alleged offset fits in the zero bits guaranteed by
     // the alignment, then this or is really an add.
-    return (Off >= 0) && (((A - 1) & Off) == unsigned(Off));
+    return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
   return false;
 }

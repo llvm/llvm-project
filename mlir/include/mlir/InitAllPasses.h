@@ -22,8 +22,11 @@
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
+#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/FxpMathOps/Passes.h"
 #include "mlir/Dialect/GPU/Passes.h"
@@ -35,6 +38,8 @@
 #include "mlir/Quantizer/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/ViewOpGraph.h"
+#include "mlir/Transforms/ViewRegionGraph.h"
 
 #include <cstdlib>
 
@@ -48,94 +53,47 @@ namespace mlir {
 // individual passes.
 // The global registry is interesting to interact with the command-line tools.
 inline void registerAllPasses() {
-  // At the moment we still rely on global initializers for registering passes,
-  // but we may not do it in the future.
-  // We must reference the passes in such a way that compilers will not
-  // delete it all as dead code, even with whole program optimization,
-  // yet is effectively a NO-OP. As the compiler isn't smart enough
-  // to know that getenv() never returns -1, this will do the job.
-  if (std::getenv("bar") != (char *)-1)
-    return;
-
   // Init general passes
-  createCanonicalizerPass();
-  createCSEPass();
-  createSuperVectorizePass({});
-  createLoopUnrollPass();
-  createLoopUnrollAndJamPass();
-  createSimplifyAffineStructuresPass();
-  createLoopFusionPass();
-  createLoopInvariantCodeMotionPass();
-  createAffineLoopInvariantCodeMotionPass();
-  createPipelineDataTransferPass();
-  createLowerAffinePass();
-  createLoopTilingPass(0);
-  createLoopCoalescingPass();
-  createAffineDataCopyGenerationPass(0, 0);
-  createMemRefDataFlowOptPass();
-  createStripDebugInfoPass();
-  createPrintOpStatsPass();
-  createInlinerPass();
-  createSymbolDCEPass();
-  createLocationSnapshotPass({});
+#define GEN_PASS_REGISTRATION
+#include "mlir/Transforms/Passes.h.inc"
 
-  // AVX512
-  createConvertAVX512ToLLVMPass();
+  // Conversion passes
+#define GEN_PASS_REGISTRATION
+#include "mlir/Conversion/Passes.h.inc"
 
-  // GPUtoRODCLPass
-  createLowerGpuOpsToROCDLOpsPass();
+  // Affine
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Affine/Passes.h.inc"
 
-  // FxpOpsDialect passes
-  fxpmath::createLowerUniformRealMathPass();
-  fxpmath::createLowerUniformCastsPass();
+  // FxpMath
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/FxpMathOps/Passes.h.inc"
 
   // GPU
-  createGpuKernelOutliningPass();
-  createSimpleLoopsToGPUPass(0, 0);
-  createLoopToGPUPass({}, {});
-
-  // CUDA
-  createConvertGpuLaunchFuncToCudaCallsPass();
-  createLowerGpuOpsToNVVMOpsPass();
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/GPU/Passes.h.inc"
 
   // Linalg
-  createLinalgFusionPass();
-  createLinalgTilingPass();
-  createLinalgTilingToParallelLoopsPass();
-  createLinalgPromotionPass(0);
-  createConvertLinalgToLoopsPass();
-  createConvertLinalgToParallelLoopsPass();
-  createConvertLinalgToAffineLoopsPass();
-  createConvertLinalgToLLVMPass();
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Linalg/Passes.h.inc"
 
   // LLVM
-  LLVM::createLegalizeForExportPass();
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 
-  // LoopOps
-  createParallelLoopCollapsingPass();
-  createParallelLoopFusionPass();
-  createParallelLoopSpecializationPass();
-  createParallelLoopTilingPass();
+  // Loop
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/LoopOps/Passes.h.inc"
 
-  // QuantOps
-  quant::createConvertSimulatedQuantPass();
-  quant::createConvertConstPass();
-  quantizer::createAddDefaultStatsPass();
-  quantizer::createRemoveInstrumentationPass();
-  quantizer::registerInferQuantizedTypesPass();
+  // Quant
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Quant/Passes.h.inc"
+#define GEN_PASS_REGISTRATION
+#include "mlir/Quantizer/Transforms/Passes.h.inc"
 
   // SPIR-V
-  spirv::createDecorateSPIRVCompositeTypeLayoutPass();
-  spirv::createLowerABIAttributesPass();
-  spirv::createUpdateVersionCapabilityExtensionPass();
-  createConvertGPUToSPIRVPass();
-  createConvertStandardToSPIRVPass();
-  createLegalizeStdOpsForSPIRVLoweringPass();
-  createLinalgToSPIRVPass();
-
-  // Vulkan
-  createConvertGpuLaunchFuncToVulkanLaunchFuncPass();
-  createConvertVulkanLaunchFuncToVulkanCallsPass();
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/SPIRV/Passes.h.inc"
 }
 
 } // namespace mlir

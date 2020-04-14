@@ -1501,42 +1501,59 @@ public:
   }
 
   void visitUsedDecl(SourceLocation Loc, Decl *D) {
-    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-      FunctionDecl *Caller = UseStack.empty() ? nullptr : UseStack.back();
-      auto IsKnownEmitted = S.getEmissionStatus(FD, /*Final=*/true) ==
-                            Sema::FunctionEmissionStatus::Emitted;
-      if (!Caller)
-        ShouldEmit = IsKnownEmitted;
-      if ((!ShouldEmit && !S.getLangOpts().OpenMP && !Caller) ||
-          S.shouldIgnoreInHostDeviceCheck(FD) || Visited.count(D))
-        return;
-      // Finalize analysis of OpenMP-specific constructs.
-      if (Caller && S.LangOpts.OpenMP && UseStack.size() == 1)
-        S.finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
-      if (Caller)
-        S.DeviceKnownEmittedFns[FD] = {Caller, Loc};
-      if (ShouldEmit || InOMPDeviceContext)
-        S.emitDeferredDiags(FD, Caller);
-      Visited.insert(D);
-      UseStack.push_back(FD);
-      if (auto *S = FD->getBody()) {
-        this->Visit(S);
-      }
-      UseStack.pop_back();
-      Visited.erase(D);
-    } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-      if (auto *Init = VD->getInit()) {
-        auto DevTy = OMPDeclareTargetDeclAttr::getDeviceType(VD);
-        bool IsDev = DevTy && (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost ||
-                               *DevTy == OMPDeclareTargetDeclAttr::DT_Any);
-        if (IsDev)
-          ++InOMPDeviceContext;
-        this->Visit(Init);
-        if (IsDev)
-          --InOMPDeviceContext;
-      }
-    } else
+    if (isa<VarDecl>(D))
+      return;
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      checkFunc(Loc, FD);
+    else
       Inherited::visitUsedDecl(Loc, D);
+  }
+
+  void checkVar(VarDecl *VD) {
+    assert(VD->isFileVarDecl() &&
+           "Should only check file-scope variables");
+    if (auto *Init = VD->getInit()) {
+      auto DevTy = OMPDeclareTargetDeclAttr::getDeviceType(VD);
+      bool IsDev = DevTy && (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost ||
+                             *DevTy == OMPDeclareTargetDeclAttr::DT_Any);
+      if (IsDev)
+        ++InOMPDeviceContext;
+      this->Visit(Init);
+      if (IsDev)
+        --InOMPDeviceContext;
+    }
+  }
+
+  void checkFunc(SourceLocation Loc, FunctionDecl *FD) {
+    FunctionDecl *Caller = UseStack.empty() ? nullptr : UseStack.back();
+    auto IsKnownEmitted = S.getEmissionStatus(FD, /*Final=*/true) ==
+                          Sema::FunctionEmissionStatus::Emitted;
+    if (!Caller)
+      ShouldEmit = IsKnownEmitted;
+    if ((!ShouldEmit && !S.getLangOpts().OpenMP && !Caller) ||
+        S.shouldIgnoreInHostDeviceCheck(FD) || Visited.count(FD))
+      return;
+    // Finalize analysis of OpenMP-specific constructs.
+    if (Caller && S.LangOpts.OpenMP && UseStack.size() == 1)
+      S.finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
+    if (Caller)
+      S.DeviceKnownEmittedFns[FD] = {Caller, Loc};
+    if (ShouldEmit || InOMPDeviceContext)
+      S.emitDeferredDiags(FD, Caller);
+    Visited.insert(FD);
+    UseStack.push_back(FD);
+    if (auto *S = FD->getBody()) {
+      this->Visit(S);
+    }
+    UseStack.pop_back();
+    Visited.erase(FD);
+  }
+
+  void checkRecordedDecl(Decl *D) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      checkFunc(SourceLocation(), FD);
+    else
+      checkVar(cast<VarDecl>(D));
   }
 };
 } // namespace
@@ -1552,7 +1569,7 @@ void Sema::emitDeferredDiags() {
 
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto D : DeclsToCheckForDeferredDiags)
-    DDE.visitUsedDecl(SourceLocation(), D);
+    DDE.checkRecordedDecl(D);
 }
 
 // In CUDA, there are some constructs which may appear in semantically-valid

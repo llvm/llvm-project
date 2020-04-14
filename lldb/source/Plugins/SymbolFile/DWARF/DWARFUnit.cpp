@@ -263,7 +263,8 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   lldb::offset_t baseOffset = 0;
 
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
-    if (const auto *contribution = entry->getOffset(llvm::DW_SECT_STR_OFFSETS))
+    if (const auto *contribution =
+            entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
       baseOffset = contribution->Offset;
     else
       return;
@@ -479,7 +480,7 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   const DWARFDataExtractor &data =
       GetVersion() >= 5 ? Ctx.getOrLoadLocListsData() : Ctx.getOrLoadLocData();
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
-    if (const auto *contribution = entry->getOffset(llvm::DW_SECT_LOC))
+    if (const auto *contribution = entry->getContribution(llvm::DW_SECT_EXT_LOC))
       return DWARFDataExtractor(data, contribution->Offset,
                                 contribution->Length);
     return DWARFDataExtractor();
@@ -815,12 +816,13 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           llvm::inconvertibleErrorCode(),
           "Package unit with a non-zero abbreviation offset");
     }
-    auto *unit_contrib = header.m_index_entry->getOffset();
+    auto *unit_contrib = header.m_index_entry->getContribution();
     if (!unit_contrib || unit_contrib->Length != header.m_length + 4) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Inconsistent DWARF package unit index");
     }
-    auto *abbr_entry = header.m_index_entry->getOffset(llvm::DW_SECT_ABBREV);
+    auto *abbr_entry =
+        header.m_index_entry->getContribution(llvm::DW_SECT_ABBREV);
     if (!abbr_entry) {
       return llvm::createStringError(
           llvm::inconvertibleErrorCode(),

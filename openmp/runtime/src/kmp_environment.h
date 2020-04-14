@@ -1,5 +1,5 @@
 /*
- * kmp_environment.h -- Handle environment varoiables OS-independently.
+ * kmp_environment.h -- Handle environment variables OS-independently.
  */
 
 //===----------------------------------------------------------------------===//

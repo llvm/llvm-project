@@ -945,7 +945,8 @@ static Thunk *addThunkPPC32(const InputSection &isec, const Relocation &rel,
 }
 
 static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
-  assert(type == R_PPC64_REL24 && "unexpected relocation type for thunk");
+  assert((type == R_PPC64_REL14 || type == R_PPC64_REL24) &&
+         "unexpected relocation type for thunk");
   if (s.isInPlt())
     return make<PPC64PltCallStub>(s);
 

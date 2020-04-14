@@ -402,7 +402,6 @@ define ppc_fp128 @test_powi_ppc_fp128(ppc_fp128 %first, i32 %second) nounwind {
 ; PC64-NEXT:    ld 0, 16(1)
 ; PC64-NEXT:    mtlr 0
 ; PC64-NEXT:    blr
-; PC64LE9     :    clrldi 5, 5, 32
 entry:
   %powi = call ppc_fp128 @llvm.experimental.constrained.powi.ppcf128(
                     ppc_fp128 %first,

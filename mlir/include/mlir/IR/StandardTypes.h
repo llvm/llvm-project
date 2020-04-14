@@ -128,7 +128,7 @@ public:
   /// Return the signedness semantics of this integer type.
   SignednessSemantics getSignedness() const;
 
-  /// Return true if this is a singless integer type.
+  /// Return true if this is a signless integer type.
   bool isSignless() const { return getSignedness() == Signless; }
   /// Return true if this is a signed integer type.
   bool isSigned() const { return getSignedness() == Signed; }

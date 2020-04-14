@@ -1,6 +1,9 @@
 add_subdirectory(Dynamic)
 
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+)
 
 add_clang_library(clangASTMatchers
   ASTMatchFinder.cpp

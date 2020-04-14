@@ -352,7 +352,7 @@ bool DWARFVerifier::handleDebugInfo() {
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
   DObj.forEachTypesSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S, DW_SECT_TYPES);
+    NumErrors += verifyUnitSection(S, DW_SECT_EXT_TYPES);
   });
   return NumErrors == 0;
 }

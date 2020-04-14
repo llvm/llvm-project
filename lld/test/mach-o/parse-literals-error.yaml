@@ -1,7 +1,7 @@
 # RUN: not ld64.lld -arch x86_64 -r -print_atoms %s -o %t 2> %t.err
 # RUN: FileCheck %s < %t.err
 #
-# Test for error if literal section is not correct size mulitple.
+# Test for error if literal section is not correct size multiple.
 #
 
 --- !mach-o

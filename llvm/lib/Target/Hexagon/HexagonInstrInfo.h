@@ -269,8 +269,8 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &Mask, int &Value) const override;
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &Mask, int &Value) const override;
 
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via

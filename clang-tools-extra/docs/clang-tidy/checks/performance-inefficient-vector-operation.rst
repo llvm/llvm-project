@@ -29,7 +29,7 @@ statement body:
   for (int i = 0; i < n; ++i) {
     p.add_xxx(n);
     // This will trigger the warning since the add_xxx may cause multiple memory
-    // relloacations. This can be avoid by inserting a
+    // reallocations. This can be avoid by inserting a
     // 'p.mutable_xxx().Reserve(n)' statement before the for statement.
   }
 

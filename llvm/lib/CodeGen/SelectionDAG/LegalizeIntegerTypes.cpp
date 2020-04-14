@@ -278,8 +278,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
     return Res.getValue(1);
   }
 
-  SDValue Op2 = GetPromotedInteger(N->getOperand(2));
+  // Op2 is used for the comparison and thus must be extended according to the
+  // target's atomic operations. Op3 is merely stored and so can be left alone.
+  SDValue Op2 = N->getOperand(2);
   SDValue Op3 = GetPromotedInteger(N->getOperand(3));
+  switch (TLI.getExtendForAtomicCmpSwapArg()) {
+  case ISD::SIGN_EXTEND:
+    Op2 = SExtPromotedInteger(Op2);
+    break;
+  case ISD::ZERO_EXTEND:
+    Op2 = ZExtPromotedInteger(Op2);
+    break;
+  case ISD::ANY_EXTEND:
+    Op2 = GetPromotedInteger(Op2);
+    break;
+  default:
+    llvm_unreachable("Invalid atomic op extension");
+  }
+
   SDVTList VTs =
       DAG.getVTList(Op2.getValueType(), N->getValueType(1), MVT::Other);
   SDValue Res = DAG.getAtomicCmpSwap(

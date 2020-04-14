@@ -1273,15 +1273,6 @@ def : Builtin<"get_default_queue", [Queue]>;
 // TODO: ndrange functions
 
 
-// OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
-let MinVersion = CL20 in {
-  let Extension = FuncExtKhrSubgroups in {
-    def get_sub_group_size : Builtin<"get_sub_group_size", [UInt]>;
-    def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [UInt]>;
-    def get_num_sub_groups : Builtin<"get_num_sub_groups", [UInt]>;
-  }
-}
-
 //--------------------------------------------------------------------
 // End of the builtin functions defined in the OpenCL C specification.
 // Builtin functions defined in the OpenCL C Extension are below.
@@ -1452,6 +1443,41 @@ let Extension = FuncExtKhrGlMsaaSharing in {
     }
     foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
       def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
+    }
+  }
+}
+
+//--------------------------------------------------------------------
+// OpenCL Extension v2.0 s28 - Subgroups
+// --- Table 28.2.1 ---
+let Extension = FuncExtKhrSubgroups in {
+  foreach name = ["get_sub_group_size", "get_max_sub_group_size",
+                  "get_num_sub_groups", "get_sub_group_id",
+                  "get_sub_group_local_id"] in {
+    def : Builtin<name, [UInt]>;
+  }
+  let MinVersion = CL20 in {
+    foreach name = ["get_enqueued_num_sub_groups"] in {
+      def : Builtin<name, [UInt]>;
+    }
+  }
+}
+
+// --- Table 28.2.2 ---
+// TODO: sub_group_barrier
+
+// --- Table 28.2.4 ---
+let Extension = FuncExtKhrSubgroups in {
+  foreach name = ["sub_group_all", "sub_group_any"] in {
+    def : Builtin<name, [Int, Int], Attr.Convergent>;
+  }
+  foreach name = ["sub_group_broadcast"] in {
+    def : Builtin<name, [IntLongFloatGenType1, IntLongFloatGenType1, UInt], Attr.Convergent>;
+  }
+  foreach name = ["sub_group_reduce_", "sub_group_scan_exclusive_",
+                  "sub_group_scan_inclusive_"] in {
+    foreach op = ["add", "min", "max"] in {
+      def : Builtin<name # op, [IntLongFloatGenType1, IntLongFloatGenType1], Attr.Convergent>;
     }
   }
 }

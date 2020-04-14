@@ -209,8 +209,7 @@ a:
         or        $12,$s0,$sp
         or        $2, 4                # CHECK: ori $2, $2, 4           # encoding: [0x34,0x42,0x00,0x04]
         pause                          # CHECK: pause # encoding:  [0x00,0x00,0x01,0x40]
-                                       # CHECK-NEXT:  # <MCInst #{{[0-9]+}} PAUSE
-                                       # CHECK-NOT    # <MCInst #{{[0-9}+}} PAUSE_MM
+                                       # CHECK-NEXT:  # <MCInst #{{[0-9]+}} PAUSE>
         pref      1, 8($5)             # CHECK: pref 1, 8($5)           # encoding: [0xcc,0xa1,0x00,0x08]
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.

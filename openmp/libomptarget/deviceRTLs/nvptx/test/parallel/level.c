@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
         check4Inc += (omp_get_ancestor_thread_num(1) - id);
         // Expected to return the number of threads in the active parallel region.
         check4Inc += 3 * omp_get_team_size(1);
-        // Exptected to return 0 and 1.
+        // Expected to return 0 and 1.
         check4Inc += omp_get_ancestor_thread_num(2) + 3 * omp_get_team_size(2);
         // Expected to return -1, see above.
         check4Inc += omp_get_ancestor_thread_num(3) + omp_get_team_size(3);

@@ -6,6 +6,7 @@
 // RUN:       } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
+// RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 // Check that we have the out of branch range calculation right. The immediate
 // field is signed so we have a slightly higher negative displacement.
@@ -50,3 +51,17 @@ high_target:
 // CHECK-NEXT: <high_target>:
 // CHECK-NEXT:  8002000:       bl      #-0x8000000 <_start>
 // CHECK-NEXT:                 ret
+
+/// Local symbols copied from %t.o
+// NM:      t $x.0
+// NM-NEXT: t $x.1
+/// Local thunk symbols.
+// NM-NEXT: t __AArch64AbsLongThunk_high_target
+// NM-NEXT: t $x
+// NM-NEXT: t $d
+// NM-NEXT: t __AArch64AbsLongThunk_{{$}}
+// NM-NEXT: t $x
+// NM-NEXT: t $d
+/// Global symbols.
+// NM-NEXT: T _start
+// NM-NEXT: T high_target

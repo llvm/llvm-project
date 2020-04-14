@@ -307,7 +307,7 @@ private:
   /// SourceLocation pointing within the definition of another macro.
   bool getMacroAndArgLocations(SourceLocation Loc, SourceLocation &ArgLoc,
                                SourceLocation &MacroLoc) {
-    assert(Loc.isMacroID() && "Only reasonble to call this on macros");
+    assert(Loc.isMacroID() && "Only reasonable to call this on macros");
 
     ArgLoc = Loc;
 

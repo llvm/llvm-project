@@ -34,15 +34,18 @@ public:
                         raw_ostream &);
   static const char *getRegisterName(unsigned RegNo);
 
-  void printOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
+  void printOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);
-  void printMemASXOperand(const MCInst *MI, int opNum,
+  void printMemASXOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &OS,
                           const char *Modifier = nullptr);
-  void printMemASOperand(const MCInst *MI, int opNum,
+  void printMemASOperandASX(const MCInst *MI, int OpNum,
+                            const MCSubtargetInfo &STI, raw_ostream &OS,
+                            const char *Modifier = nullptr);
+  void printMemASOperand(const MCInst *MI, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &OS,
                          const char *Modifier = nullptr);
-  void printCCOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
+  void printCCOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                       raw_ostream &OS);
 };
 } // namespace llvm

@@ -135,6 +135,8 @@ public:
 
   bool GetEnableAutoApplyFixIts() const;
 
+  uint64_t GetNumberOfRetriesWithFixits() const;
+
   bool GetEnableNotifyAboutFixIts() const;
 
   bool GetEnableSaveObjects() const;
@@ -204,6 +206,10 @@ public:
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
+  
+  bool GetOSPluginReportsAllThreads() const;
+
+  void SetOSPluginReportsAllThreads(bool does_report);
 
   void SetRequireHardwareBreakpoints(bool b);
 
@@ -212,6 +218,7 @@ public:
   bool GetAutoInstallMainExecutable() const;
 
   void UpdateLaunchInfoFromProperties();
+
 
 private:
   // Callbacks for m_launch_info.
@@ -380,6 +387,12 @@ public:
 
   bool GetAutoApplyFixIts() const { return m_auto_apply_fixits; }
 
+  void SetRetriesWithFixIts(uint64_t number_of_retries) {
+    m_retries_with_fixits = number_of_retries;
+  }
+
+  uint64_t GetRetriesWithFixIts() const { return m_retries_with_fixits; }
+
   bool IsForUtilityExpr() const { return m_running_utility_expression; }
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
@@ -401,6 +414,7 @@ private:
   bool m_ansi_color_errors = false;
   bool m_result_is_internal = false;
   bool m_auto_apply_fixits = true;
+  uint64_t m_retries_with_fixits = 1;
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;

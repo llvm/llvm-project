@@ -708,7 +708,7 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     // microMIPS variants of these relocations use slightly different
     // expressions: AHL + GP - P + 3 for %lo() and AHL + GP - P - 1 for %hi()
-    // to correctly handle less-sugnificant bit of the microMIPS symbol.
+    // to correctly handle less-significant bit of the microMIPS symbol.
     uint64_t v = in.mipsGot->getGp(file) + a - p;
     if (type == R_MIPS_LO16 || type == R_MICROMIPS_LO16)
       v += 4;

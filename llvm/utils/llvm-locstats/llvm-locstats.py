@@ -121,14 +121,16 @@ class LocationStats:
     ax = fig.add_subplot(111)
     init_plot(plt)
 
+    comparison_keys = list(coverage_buckets())
     ax.bar(buckets, self.variables_coverage_map.values(), align='edge',
-           tick_label=self.variables_coverage_map.keys(), width=0.4,
+           width=0.4,
            label='variables of {}'.format(self.file_name))
     ax.bar(buckets_to_compare,
            locstats_to_compare.variables_coverage_map.values(),
            color='r', align='edge', width=-0.4,
-           tick_label=locstats_to_compare.variables_coverage_map.keys(),
            label='variables of {}'.format(locstats_to_compare.file_name))
+    ax.set_xticks(range(len(comparison_keys)))
+    ax.set_xticklabels(comparison_keys)
 
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     plt.text(0.02, 0.88,

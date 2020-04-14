@@ -187,7 +187,7 @@ static std::vector<StringRef> tokenizeExpr(StringRef s) {
       break;
     }
 
-    // Get a token before the opreator.
+    // Get a token before the operator.
     if (e != 0)
       ret.push_back(s.substr(0, e));
 

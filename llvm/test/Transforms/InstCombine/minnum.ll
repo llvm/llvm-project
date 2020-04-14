@@ -393,3 +393,60 @@ define double @unary_neg_neg_extra_use_x_and_y(double %x, double %y) {
   ret double %r
 }
 
+define float @reduce_precision(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision(
+; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MINNUM]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_fmf(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision_fmf(
+; CHECK-NEXT:    [[MINNUM:%.*]] = call nnan float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[MINNUM]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %minnum = call nnan double @llvm.minnum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_multi_use_0(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision_multi_use_0(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
+; CHECK-NEXT:    store double [[X_EXT]], double* undef, align 8
+; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double [[Y_EXT]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  store double %x.ext, double* undef
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_multi_use_1(float %x, float %y) {
+; CHECK-LABEL: @reduce_precision_multi_use_1(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
+; CHECK-NEXT:    store double [[Y_EXT]], double* undef, align 8
+; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double [[Y_EXT]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  store double %y.ext, double* undef
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}

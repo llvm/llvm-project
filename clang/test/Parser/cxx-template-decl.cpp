@@ -279,3 +279,10 @@ namespace NoCrashOnEmptyNestedNameSpecifier {
             typename T = typename ABC<FnT>::template arg_t<0>> // expected-error {{no template named 'ABC'}}
   void foo(FnT) {}
 }
+
+namespace PR45239 {
+  // Ensure we don't crash here. We used to deallocate the TemplateIdAnnotation
+  // before we'd parsed it.
+  template<int> int b;
+  template<int> auto f() -> b<0>; // expected-error +{{}}
+}

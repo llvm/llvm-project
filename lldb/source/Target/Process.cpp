@@ -60,6 +60,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
@@ -477,7 +478,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_extended_thread_list(this),
+      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
       m_notifications(), m_image_tokens(), m_listener_sp(listener_sp),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
@@ -600,6 +601,7 @@ void Process::Finalize() {
   m_system_runtime_up.reset();
   m_dyld_up.reset();
   m_jit_loaders_up.reset();
+  m_thread_plans.Clear();
   m_thread_list_real.Destroy();
   m_thread_list.Destroy();
   m_extended_thread_list.Destroy();
@@ -1182,9 +1184,12 @@ void Process::UpdateThreadListIfNeeded() {
   const uint32_t stop_id = GetStopID();
   if (m_thread_list.GetSize(false) == 0 ||
       stop_id != m_thread_list.GetStopID()) {
+    bool clear_unused_threads = true;
     const StateType state = GetPrivateState();
     if (StateIsStoppedState(state, true)) {
       std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
+      m_thread_list.SetStopID(stop_id);
+
       // m_thread_list does have its own mutex, but we need to hold onto the
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
@@ -1205,6 +1210,10 @@ void Process::UpdateThreadListIfNeeded() {
           size_t num_old_threads = old_thread_list.GetSize(false);
           for (size_t i = 0; i < num_old_threads; ++i)
             old_thread_list.GetThreadAtIndex(i, false)->ClearBackingThread();
+          // See if the OS plugin reports all threads.  If it does, then
+          // it is safe to clear unseen thread's plans here.  Otherwise we 
+          // should preserve them in case they show up again:
+          clear_unused_threads = GetTarget().GetOSPluginReportsAllThreads();
 
           // Turn off dynamic types to ensure we don't run any expressions.
           // Objective-C can run an expression to determine if a SBValue is a
@@ -1231,7 +1240,7 @@ void Process::UpdateThreadListIfNeeded() {
             target.SetPreferDynamicValue(saved_prefer_dynamic);
         } else {
           // No OS plug-in, the new thread list is the same as the real thread
-          // list
+          // list.
           new_thread_list = real_thread_list;
         }
 
@@ -1248,8 +1257,40 @@ void Process::UpdateThreadListIfNeeded() {
           m_queue_list_stop_id = GetLastNaturalStopID();
         }
       }
+      // Now update the plan stack map.
+      // If we do have an OS plugin, any absent real threads in the
+      // m_thread_list have already been removed from the ThreadPlanStackMap.
+      // So any remaining threads are OS Plugin threads, and those we want to
+      // preserve in case they show up again.
+      m_thread_plans.Update(m_thread_list, clear_unused_threads);
     }
   }
+}
+
+ThreadPlanStack *Process::FindThreadPlans(lldb::tid_t tid) {
+  return m_thread_plans.Find(tid);
+}
+
+bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
+  return m_thread_plans.PrunePlansForTID(tid);
+}
+
+void Process::PruneThreadPlans() {
+  m_thread_plans.Update(GetThreadList(), true, false);
+}
+
+bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
+                                    lldb::DescriptionLevel desc_level,
+                                    bool internal, bool condense_trivial,
+                                    bool skip_unreported_plans) {
+  return m_thread_plans.DumpPlansForTID(
+      strm, tid, desc_level, internal, condense_trivial, skip_unreported_plans);
+}
+void Process::DumpThreadPlans(Stream &strm, lldb::DescriptionLevel desc_level,
+                              bool internal, bool condense_trivial,
+                              bool skip_unreported_plans) {
+  m_thread_plans.DumpPlans(strm, desc_level, internal, condense_trivial,
+                           skip_unreported_plans);
 }
 
 void Process::UpdateQueueListIfNeeded() {
@@ -3231,6 +3272,10 @@ Status Process::Detach(bool keep_stopped) {
 }
 
 Status Process::Destroy(bool force_kill) {
+  // If we've already called Process::Finalize then there's nothing useful to
+  // be done here.  Finalize has actually called Destroy already.
+  if (m_finalize_called)
+    return {};
 
   // Tell ourselves we are in the process of destroying the process, so that we
   // don't do any unnecessary work that might hinder the destruction.  Remember
@@ -4428,23 +4473,18 @@ protected:
 
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(fd, true));
+  if (m_stdio_communication.IsConnected()) {
+    m_stdio_communication.SetReadThreadBytesReceivedCallback(
+        STDIOReadThreadBytesReceived, this);
+    m_stdio_communication.StartReadThread();
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_up(
-      new ConnectionFileDescriptor(fd, true));
+    // Now read thread is set up, set up input reader.
 
-  if (conn_up) {
-    m_stdio_communication.SetConnection(conn_up.release());
-    if (m_stdio_communication.IsConnected()) {
-      m_stdio_communication.SetReadThreadBytesReceivedCallback(
-          STDIOReadThreadBytesReceived, this);
-      m_stdio_communication.StartReadThread();
-
-      // Now read thread is set up, set up input reader.
-
-      if (!m_process_input_reader)
-        m_process_input_reader =
-            std::make_shared<IOHandlerProcessSTDIO>(this, fd);
-    }
+    if (!m_process_input_reader)
+      m_process_input_reader =
+          std::make_shared<IOHandlerProcessSTDIO>(this, fd);
   }
 }
 

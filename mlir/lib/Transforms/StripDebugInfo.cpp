@@ -15,6 +15,10 @@ using namespace mlir;
 
 namespace {
 struct StripDebugInfo : public OperationPass<StripDebugInfo> {
+/// Include the generated pass utilities.
+#define GEN_PASS_StripDebugInfo
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override;
 };
 } // end anonymous namespace
@@ -29,6 +33,3 @@ void StripDebugInfo::runOnOperation() {
 std::unique_ptr<Pass> mlir::createStripDebugInfoPass() {
   return std::make_unique<StripDebugInfo>();
 }
-
-static PassRegistration<StripDebugInfo>
-    pass("strip-debuginfo", "Strip debug info from all operations");

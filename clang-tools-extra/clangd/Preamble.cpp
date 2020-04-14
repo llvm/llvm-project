@@ -114,7 +114,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
          "(previous was version {2})",
          FileName, Inputs.Version, OldPreamble->Version);
   else
-    vlog("Building first preamble for {0} verson {1}", FileName,
+    vlog("Building first preamble for {0} version {1}", FileName,
          Inputs.Version);
 
   trace::Span Tracer("BuildPreamble");
@@ -131,6 +131,10 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
   // We don't want to write comment locations into PCH. They are racy and slow
   // to read back. We rely on dynamic index for the comments instead.
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
+
+  // Recovery expression currently only works for C++.
+  if (CI.getLangOpts()->CPlusPlus)
+    CI.getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
 
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
   if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {

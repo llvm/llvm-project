@@ -63,5 +63,5 @@ The following real-world examples will be preserved by the check:
     ...
   };
 
-After applying modifications as suggested by the check, runnnig the check again
+After applying modifications as suggested by the check, running the check again
 might find more opportunities to mark member functions ``const``.

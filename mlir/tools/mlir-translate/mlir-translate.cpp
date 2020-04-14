@@ -17,7 +17,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/ToolUtilities.h"
-#include "mlir/Support/TranslateClParser.h"
+#include "mlir/Translation.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
                            raw_ostream &os) {
     MLIRContext context;
     context.allowUnregisteredDialects();
+    context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), llvm::SMLoc());
 

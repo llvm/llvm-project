@@ -501,6 +501,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     launch_info.SetArguments(args, first_arg_is_executable);
   }
 
+  launch_info.GetEnvironment() = Host::GetEnvironment();
+
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);
   llvm::SmallString<64> output_file_path;

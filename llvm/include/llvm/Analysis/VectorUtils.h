@@ -339,22 +339,8 @@ bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 ///
 /// This is the reverse process of "canWidenShuffleElements", but can always
 /// succeed.
-template <typename T>
-void scaleShuffleMask(size_t Scale, ArrayRef<T> Mask,
-                      SmallVectorImpl<T> &ScaledMask) {
-  assert(Scale > 0 && "Unexpected scaling factor");
-
-  // Fast-path: if no scaling, then it is just a copy.
-  if (Scale == 1) {
-    ScaledMask.assign(Mask.begin(), Mask.end());
-    return;
-  }
-
-  ScaledMask.clear();
-  for (int MaskElt : Mask)
-    for (int ScaleElt = 0; ScaleElt != (int)Scale; ++ScaleElt)
-      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + ScaleElt);
-}
+void scaleShuffleMask(size_t Scale, ArrayRef<int> Mask,
+                      SmallVectorImpl<int> &ScaledMask);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.

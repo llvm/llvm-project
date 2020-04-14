@@ -276,7 +276,7 @@ CodeCompleteResult codeComplete(PathRef FileName,
 /// Get signature help at a specified \p Pos in \p FileName.
 SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
-                            const PreambleData *Preamble, StringRef Contents,
+                            const PreambleData &Preamble, StringRef Contents,
                             Position Pos,
                             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                             const SymbolIndex *Index);

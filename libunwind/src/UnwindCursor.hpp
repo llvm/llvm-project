@@ -1848,6 +1848,12 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   pc &= (pint_t)~0x1;
 #endif
 
+  // Exit early if at the top of the stack.
+  if (pc == 0) {
+    _unwindInfoMissing = true;
+    return;
+  }
+
   // If the last line of a function is a "throw" the compiler sometimes
   // emits no instructions after the call to __cxa_throw.  This means
   // the return address is actually the start of the next function.

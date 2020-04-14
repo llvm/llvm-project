@@ -40,9 +40,9 @@ TEST(AttributeHeaderParser, UnrecognizedFormatVersion) {
   testParseError(bytes, "unrecognized format-version: 0x1");
 }
 
-TEST(AttributeHeaderParser, InvalidSubsectionLength) {
+TEST(AttributeHeaderParser, InvalidSectionLength) {
   static const uint8_t bytes[] = {'A', 3, 0, 0, 0};
-  testParseError(bytes, "invalid subsection length 3 at offset 0x1");
+  testParseError(bytes, "invalid section length 3 at offset 0x1");
 }
 
 TEST(AttributeHeaderParser, UnrecognizedVendorName) {

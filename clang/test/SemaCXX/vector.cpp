@@ -335,7 +335,7 @@ const int &reference_to_vec_element = vi4(1).x;
 typedef bool bad __attribute__((__vector_size__(16)));  // expected-error {{invalid vector element type 'bool'}}
 
 namespace Templates {
-template <typename Elt, unsigned Size>
+template <typename Elt, unsigned long long Size>
 struct TemplateVectorType {
   typedef Elt __attribute__((__vector_size__(Size))) type; // #1
 };
@@ -343,7 +343,7 @@ struct TemplateVectorType {
 template <int N, typename T>
 struct PR15730 {
   typedef T __attribute__((vector_size(N * sizeof(T)))) type;
-  typedef T __attribute__((vector_size(8192))) type2; // #2
+  typedef T __attribute__((vector_size(0x1000000000))) type2; // #2
   typedef T __attribute__((vector_size(3))) type3; // #3
 };
 
@@ -352,19 +352,20 @@ void Init() {
   const TemplateVectorType<int, 32>::type Works2 = {};
   // expected-error@#1 {{invalid vector element type 'bool'}}
   // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<bool, 32>' requested here}}
-  const TemplateVectorType<bool, 32>::type NoBool;
+  const TemplateVectorType<bool, 32>::type NoBool = {};
   // expected-error@#1 {{invalid vector element type 'int __attribute__((ext_vector_type(4)))' (vector of 4 'int' values)}}
   // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<int __attribute__((ext_vector_type(4))), 32>' requested here}}
-  const TemplateVectorType<vi4, 32>::type NoComplex;
+  const TemplateVectorType<vi4, 32>::type NoComplex = {};
   // expected-error@#1 {{vector size not an integral multiple of component size}}
   // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<int, 33>' requested here}}
-  const TemplateVectorType<int, 33>::type BadSize;
+  const TemplateVectorType<int, 33>::type BadSize = {};
+  const TemplateVectorType<int, 3200>::type Large = {};
   // expected-error@#1 {{vector size too large}}
-  // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<int, 8192>' requested here}}
-  const TemplateVectorType<int, 8192>::type TooLarge;
+  // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<int, 68719476736>' requested here}}
+  const TemplateVectorType<int, 0x1000000000>::type TooLarge = {};
   // expected-error@#1 {{zero vector size}}
   // expected-note@+1 {{in instantiation of template class 'Templates::TemplateVectorType<int, 0>' requested here}}
-  const TemplateVectorType<int, 0>::type Zero;
+  const TemplateVectorType<int, 0>::type Zero = {};
 
   // expected-error@#2 {{vector size too large}}
   // expected-error@#3 {{vector size not an integral multiple of component size}}

@@ -4184,7 +4184,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef ArgStr =
           Args.hasArg(options::OPT_interface_stub_version_EQ)
               ? Args.getLastArgValue(options::OPT_interface_stub_version_EQ)
-              : "experimental-ifs-v1";
+              : "experimental-ifs-v2";
       CmdArgs.push_back("-emit-interface-stubs");
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr.str()));
@@ -4644,9 +4644,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Decide whether to use verbose asm. Verbose assembly is the default on
   // toolchains which have the integrated assembler on by default.
   bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
-  if (Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
-                   IsIntegratedAssemblerDefault))
-    CmdArgs.push_back("-masm-verbose");
+  if (!Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
+                    IsIntegratedAssemblerDefault))
+    CmdArgs.push_back("-fno-verbose-asm");
 
   if (!TC.useIntegratedAs())
     CmdArgs.push_back("-no-integrated-as");

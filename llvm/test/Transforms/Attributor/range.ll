@@ -8,8 +8,8 @@
 
 define i32 @test0(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test0
-; CHECK-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P]], !range !0
+; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P]], align 4, !range !0
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = load i32, i32* %p, !range !0
@@ -19,33 +19,25 @@ define i32 @test0(i32* %p) {
 define i32 @test0-range-check(i32* %p) {
 ;
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
-; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
+; OLD_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    ret i32 [[A]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-range-check
-; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
+; NEW_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
-; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_OLD_PM-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@test0-range-check
-; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_NEW_PM-NEXT:    ret i32 [[A]]
 ;
-; MODULE-LABEL: define {{[^@]+}}@test0-range-check
-; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
-; MODULE-NEXT:    ret i32 [[A]]
-; CGSCC-LABEL: define {{[^@]+}}@test0-range-check
-; CGSCC-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
-; CGSCC-NEXT:    ret i32 [[A]]
   %a = tail call i32 @test0(i32* %p)
   ret i32 %a
 }
@@ -64,8 +56,8 @@ define void @use3(i1, i1, i1) {
 ; TEST0 icmp test
 define void @test0-icmp-check(i32* %p){
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-icmp-check
-; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
+; OLD_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; OLD_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; OLD_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -111,8 +103,8 @@ define void @test0-icmp-check(i32* %p){
 ; OLD_PM-NEXT:    ret void
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-icmp-check
-; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
+; NEW_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; NEW_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; NEW_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -158,8 +150,8 @@ define void @test0-icmp-check(i32* %p){
 ; NEW_PM-NEXT:    ret void
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@test0-icmp-check
-; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_OLD_PM-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; CGSCC_OLD_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; CGSCC_OLD_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
@@ -225,8 +217,8 @@ define void @test0-icmp-check(i32* %p){
 ; CGSCC_OLD_PM-NEXT:    ret void
 ;
 ; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@test0-icmp-check
-; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_NEW_PM-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; CGSCC_NEW_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; CGSCC_NEW_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
@@ -291,118 +283,6 @@ define void @test0-icmp-check(i32* %p){
 ; CGSCC_NEW_PM-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 [[CMP_LTE_6]])
 ; CGSCC_NEW_PM-NEXT:    ret void
 ;
-; MODULE-LABEL: define {{[^@]+}}@test0-icmp-check
-; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
-; MODULE-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
-; MODULE-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
-; MODULE-NEXT:    [[CMP_EQ_5:%.*]] = icmp eq i32 [[RET]], 0
-; MODULE-NEXT:    tail call void @use3(i1 false, i1 [[CMP_EQ_2]], i1 [[CMP_EQ_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_EQ_4]], i1 [[CMP_EQ_5]], i1 false)
-; MODULE-NEXT:    [[CMP_NE_2:%.*]] = icmp ne i32 [[RET]], 9
-; MODULE-NEXT:    [[CMP_NE_3:%.*]] = icmp ne i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_NE_4:%.*]] = icmp ne i32 [[RET]], 1
-; MODULE-NEXT:    [[CMP_NE_5:%.*]] = icmp ne i32 [[RET]], 0
-; MODULE-NEXT:    tail call void @use3(i1 true, i1 [[CMP_NE_2]], i1 [[CMP_NE_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_NE_4]], i1 [[CMP_NE_5]], i1 true)
-; MODULE-NEXT:    [[CMP_UGT_3:%.*]] = icmp ugt i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_UGT_4:%.*]] = icmp ugt i32 [[RET]], 1
-; MODULE-NEXT:    [[CMP_UGT_5:%.*]] = icmp ugt i32 [[RET]], 0
-; MODULE-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_UGT_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_UGT_4]], i1 [[CMP_UGT_5]], i1 false)
-; MODULE-NEXT:    [[CMP_UGE_2:%.*]] = icmp uge i32 [[RET]], 9
-; MODULE-NEXT:    [[CMP_UGE_3:%.*]] = icmp uge i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_UGE_4:%.*]] = icmp uge i32 [[RET]], 1
-; MODULE-NEXT:    tail call void @use3(i1 false, i1 [[CMP_UGE_2]], i1 [[CMP_UGE_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_UGE_4]], i1 true, i1 false)
-; MODULE-NEXT:    [[CMP_SGT_3:%.*]] = icmp sgt i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_SGT_4:%.*]] = icmp sgt i32 [[RET]], 1
-; MODULE-NEXT:    [[CMP_SGT_5:%.*]] = icmp sgt i32 [[RET]], 0
-; MODULE-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_SGT_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_SGT_4]], i1 [[CMP_SGT_5]], i1 true)
-; MODULE-NEXT:    [[CMP_GTE_2:%.*]] = icmp sge i32 [[RET]], 9
-; MODULE-NEXT:    [[CMP_GTE_3:%.*]] = icmp sge i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_GTE_4:%.*]] = icmp sge i32 [[RET]], 1
-; MODULE-NEXT:    tail call void @use3(i1 false, i1 [[CMP_GTE_2]], i1 [[CMP_GTE_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_GTE_4]], i1 true, i1 true)
-; MODULE-NEXT:    [[CMP_SLT_2:%.*]] = icmp slt i32 [[RET]], 9
-; MODULE-NEXT:    [[CMP_SLT_3:%.*]] = icmp slt i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_SLT_4:%.*]] = icmp slt i32 [[RET]], 1
-; MODULE-NEXT:    tail call void @use3(i1 true, i1 [[CMP_SLT_2]], i1 [[CMP_SLT_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_SLT_4]], i1 false, i1 false)
-; MODULE-NEXT:    [[CMP_LTE_3:%.*]] = icmp sle i32 [[RET]], 8
-; MODULE-NEXT:    [[CMP_LTE_4:%.*]] = icmp sle i32 [[RET]], 1
-; MODULE-NEXT:    [[CMP_LTE_5:%.*]] = icmp sle i32 [[RET]], 0
-; MODULE-NEXT:    tail call void @use3(i1 true, i1 true, i1 [[CMP_LTE_3]])
-; MODULE-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 false)
-; MODULE-NEXT:    ret void
-; CGSCC-LABEL: define {{[^@]+}}@test0-icmp-check
-; CGSCC-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
-; CGSCC-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_EQ_5:%.*]] = icmp eq i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_EQ_6:%.*]] = icmp eq i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_EQ_1]], i1 [[CMP_EQ_2]], i1 [[CMP_EQ_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_EQ_4]], i1 [[CMP_EQ_5]], i1 [[CMP_EQ_6]])
-; CGSCC-NEXT:    [[CMP_NE_1:%.*]] = icmp ne i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_NE_2:%.*]] = icmp ne i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_NE_3:%.*]] = icmp ne i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_NE_4:%.*]] = icmp ne i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_NE_5:%.*]] = icmp ne i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_NE_6:%.*]] = icmp ne i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_NE_1]], i1 [[CMP_NE_2]], i1 [[CMP_NE_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_NE_4]], i1 [[CMP_NE_5]], i1 [[CMP_NE_6]])
-; CGSCC-NEXT:    [[CMP_UGT_1:%.*]] = icmp ugt i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_UGT_2:%.*]] = icmp ugt i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_UGT_3:%.*]] = icmp ugt i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_UGT_4:%.*]] = icmp ugt i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_UGT_5:%.*]] = icmp ugt i32 [[RET]], 0
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_UGT_1]], i1 [[CMP_UGT_2]], i1 [[CMP_UGT_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_UGT_4]], i1 [[CMP_UGT_5]], i1 false)
-; CGSCC-NEXT:    [[CMP_UGE_1:%.*]] = icmp uge i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_UGE_2:%.*]] = icmp uge i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_UGE_3:%.*]] = icmp uge i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_UGE_4:%.*]] = icmp uge i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_UGE_6:%.*]] = icmp uge i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_UGE_1]], i1 [[CMP_UGE_2]], i1 [[CMP_UGE_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_UGE_4]], i1 true, i1 [[CMP_UGE_6]])
-; CGSCC-NEXT:    [[CMP_SGT_1:%.*]] = icmp sgt i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_SGT_2:%.*]] = icmp sgt i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_SGT_3:%.*]] = icmp sgt i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_SGT_4:%.*]] = icmp sgt i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_SGT_5:%.*]] = icmp sgt i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_SGT_6:%.*]] = icmp sgt i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_SGT_1]], i1 [[CMP_SGT_2]], i1 [[CMP_SGT_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_SGT_4]], i1 [[CMP_SGT_5]], i1 [[CMP_SGT_6]])
-; CGSCC-NEXT:    [[CMP_GTE_1:%.*]] = icmp sge i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_GTE_2:%.*]] = icmp sge i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_GTE_3:%.*]] = icmp sge i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_GTE_4:%.*]] = icmp sge i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_GTE_5:%.*]] = icmp sge i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_GTE_6:%.*]] = icmp sge i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_GTE_1]], i1 [[CMP_GTE_2]], i1 [[CMP_GTE_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_GTE_4]], i1 [[CMP_GTE_5]], i1 [[CMP_GTE_6]])
-; CGSCC-NEXT:    [[CMP_SLT_1:%.*]] = icmp slt i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_SLT_2:%.*]] = icmp slt i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_SLT_3:%.*]] = icmp slt i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_SLT_4:%.*]] = icmp slt i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_SLT_5:%.*]] = icmp slt i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_SLT_6:%.*]] = icmp slt i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_SLT_1]], i1 [[CMP_SLT_2]], i1 [[CMP_SLT_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_SLT_4]], i1 [[CMP_SLT_5]], i1 [[CMP_SLT_6]])
-; CGSCC-NEXT:    [[CMP_LTE_1:%.*]] = icmp sle i32 [[RET]], 10
-; CGSCC-NEXT:    [[CMP_LTE_2:%.*]] = icmp sle i32 [[RET]], 9
-; CGSCC-NEXT:    [[CMP_LTE_3:%.*]] = icmp sle i32 [[RET]], 8
-; CGSCC-NEXT:    [[CMP_LTE_4:%.*]] = icmp sle i32 [[RET]], 1
-; CGSCC-NEXT:    [[CMP_LTE_5:%.*]] = icmp sle i32 [[RET]], 0
-; CGSCC-NEXT:    [[CMP_LTE_6:%.*]] = icmp sle i32 [[RET]], -1
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_LTE_1]], i1 [[CMP_LTE_2]], i1 [[CMP_LTE_3]])
-; CGSCC-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 [[CMP_LTE_6]])
-; CGSCC-NEXT:    ret void
   ; ret = [0, 10)
   %ret = tail call i32 @test0(i32 *%p)
 
@@ -490,8 +370,8 @@ define void @test0-icmp-check(i32* %p){
 }
 define i32 @test1(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test1
-; CHECK-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CHECK-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], !range !1
+; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CHECK-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], align 4, !range !1
 ; CHECK-NEXT:    [[ADD_10_THEN_20_110:%.*]] = add i32 [[LOAD_10_100]], 10
 ; CHECK-NEXT:    [[MUL_10_THEN_200_1091:%.*]] = mul i32 [[ADD_10_THEN_20_110]], 10
 ; CHECK-NEXT:    ret i32 [[MUL_10_THEN_200_1091]]
@@ -504,39 +384,29 @@ define i32 @test1(i32* %p) {
 
 define i1 @test1-check(i32* %p) {
 ; OLD_PM-LABEL: define {{[^@]+}}@test1-check
-; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
+; OLD_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !2
 ; OLD_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; OLD_PM-NEXT:    ret i1 [[CMP]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test1-check
-; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
+; NEW_PM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #{{[0-9]+}}, !range !2
 ; NEW_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; NEW_PM-NEXT:    ret i1 [[CMP]]
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@test1-check
-; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_OLD_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_OLD_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; CGSCC_OLD_PM-NEXT:    ret i1 [[CMP]]
 ;
 ; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@test1-check
-; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC_NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
+; CGSCC_NEW_PM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC_NEW_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; CGSCC_NEW_PM-NEXT:    ret i1 [[CMP]]
 ;
-; MODULE-LABEL: define {{[^@]+}}@test1-check
-; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
-; MODULE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
-; MODULE-NEXT:    ret i1 [[CMP]]
-; CGSCC-LABEL: define {{[^@]+}}@test1-check
-; CGSCC-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
-; CGSCC-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]])
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
-; CGSCC-NEXT:    ret i1 [[CMP]]
   %res = tail call i32 @test1(i32* %p)
   %cmp = icmp eq i32 %res, 500
   ret i1 %cmp
@@ -621,29 +491,6 @@ define i32 @test2_check(i32* %p) {
 ; CGSCC_NEW_PM-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 2, [[IF_THEN]] ], [ 3, [[IF_END]] ]
 ; CGSCC_NEW_PM-NEXT:    ret i32 [[RETVAL_0]]
 ;
-; MODULE-LABEL: define {{[^@]+}}@test2_check
-; MODULE-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; MODULE-NEXT:  entry:
-; MODULE-NEXT:    br label [[IF_THEN:%.*]]
-; MODULE:       if.then:
-; MODULE-NEXT:    br label [[RETURN:%.*]]
-; MODULE:       if.end:
-; MODULE-NEXT:    unreachable
-; MODULE:       return:
-; MODULE-NEXT:    ret i32 2
-; CGSCC-LABEL: define {{[^@]+}}@test2_check
-; CGSCC-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test2(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P]])
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 5
-; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CGSCC:       if.then:
-; CGSCC-NEXT:    br label [[RETURN:%.*]]
-; CGSCC:       if.end:
-; CGSCC-NEXT:    br label [[RETURN]]
-; CGSCC:       return:
-; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 2, [[IF_THEN]] ], [ 3, [[IF_END]] ]
-; CGSCC-NEXT:    ret i32 [[RETVAL_0]]
 entry:
   %call = tail call i32 @test2(i32* %p)
   %cmp = icmp slt i32 %call, 5
@@ -1276,13 +1123,11 @@ define i32 @ret1or2(i1 %c) {
 define i1 @callee_range_1(i1 %c1, i1 %c2, i1 %c3) {
 ; OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
-; OLD_PM-NEXT:    [[F:%.*]] = and i1 true, true
-; OLD_PM-NEXT:    ret i1 [[F]]
+; OLD_PM-NEXT:    ret i1 true
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
-; NEW_PM-NEXT:    [[F:%.*]] = and i1 true, true
-; NEW_PM-NEXT:    ret i1 [[F]]
+; NEW_PM-NEXT:    ret i1 true
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
 ; CGSCC_OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
@@ -1364,6 +1209,76 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
   %i2 = icmp sge i32 %a, 2
   %f = and i1 %i1, %i2
   ret i1 %f
+}
+
+
+define i32 @ret100() {
+; CHECK-LABEL: define {{[^@]+}}@ret100()
+; CHECK-NEXT:    ret i32 100
+;
+  ret i32 100
+}
+
+define i1 @ctx_adjustment(i32 %V) {
+; OLD_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; OLD_PM-SAME: (i32 [[V:%.*]])
+; OLD_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; OLD_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; OLD_PM:       if.true:
+; OLD_PM-NEXT:    br label [[END:%.*]]
+; OLD_PM:       if.false:
+; OLD_PM-NEXT:    br label [[END]]
+; OLD_PM:       end:
+; OLD_PM-NEXT:    [[PHI:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 100, [[IF_FALSE]] ]
+; OLD_PM-NEXT:    [[C2:%.*]] = icmp sge i32 [[PHI]], 100
+; OLD_PM-NEXT:    ret i1 [[C2]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; NEW_PM-SAME: (i32 [[V:%.*]])
+; NEW_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; NEW_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; NEW_PM:       if.true:
+; NEW_PM-NEXT:    br label [[END:%.*]]
+; NEW_PM:       if.false:
+; NEW_PM-NEXT:    br label [[END]]
+; NEW_PM:       end:
+; NEW_PM-NEXT:    ret i1 true
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; CGSCC_OLD_PM-SAME: (i32 [[V:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; CGSCC_OLD_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CGSCC_OLD_PM:       if.true:
+; CGSCC_OLD_PM-NEXT:    br label [[END:%.*]]
+; CGSCC_OLD_PM:       if.false:
+; CGSCC_OLD_PM-NEXT:    br label [[END]]
+; CGSCC_OLD_PM:       end:
+; CGSCC_OLD_PM-NEXT:    [[PHI:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 100, [[IF_FALSE]] ]
+; CGSCC_OLD_PM-NEXT:    [[C2:%.*]] = icmp sge i32 [[PHI]], 100
+; CGSCC_OLD_PM-NEXT:    ret i1 [[C2]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@ctx_adjustment
+; CGSCC_NEW_PM-SAME: (i32 [[V:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[C1:%.*]] = icmp sge i32 [[V]], 100
+; CGSCC_NEW_PM-NEXT:    br i1 [[C1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CGSCC_NEW_PM:       if.true:
+; CGSCC_NEW_PM-NEXT:    br label [[END:%.*]]
+; CGSCC_NEW_PM:       if.false:
+; CGSCC_NEW_PM-NEXT:    br label [[END]]
+; CGSCC_NEW_PM:       end:
+; CGSCC_NEW_PM-NEXT:    ret i1 true
+;
+  %c1 = icmp sge i32 %V, 100
+  br i1 %c1, label %if.true, label %if.false
+if.true:
+  br label %end
+if.false:
+  %call = call i32 @ret100()
+  br label %end
+end:
+  %phi = phi i32 [ %V, %if.true ], [ %call, %if.false ]
+  %c2 = icmp sge i32 %phi, 100
+  ret i1 %c2
 }
 
 

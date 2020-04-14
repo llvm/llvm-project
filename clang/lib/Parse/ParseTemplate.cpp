@@ -1618,6 +1618,9 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   if (!LPT.D)
      return;
 
+  // Destroy TemplateIdAnnotations when we're done, if possible.
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
+
   // Get the FunctionDecl.
   FunctionDecl *FunD = LPT.D->getAsFunction();
   // Track template parameter depth.

@@ -127,7 +127,7 @@ private:
   void createSeparateLocalVarsForOpArgs(DagNode node,
                                         ChildNodeIndexNameMap &childNodeNames);
 
-  // Emits the concrete arguments used to call a op's builder.
+  // Emits the concrete arguments used to call an op's builder.
   void supplyValuesForOpArgs(DagNode node,
                              const ChildNodeIndexNameMap &childNodeNames);
 

@@ -18,7 +18,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   LocalMemoryObjects(),
   ExplicitKernArgSize(0),
   LDSSize(0),
-  Mode(MF.getFunction(), MF.getSubtarget<GCNSubtarget>()),
+  Mode(MF.getFunction()),
   IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
   NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),
   MemoryBound(false),

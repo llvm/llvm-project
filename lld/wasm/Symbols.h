@@ -415,7 +415,7 @@ public:
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction which which case we need to be able to preserve the
-  // signture.
+  // signature.
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
   const WasmSignature *signature = nullptr;

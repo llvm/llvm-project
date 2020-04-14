@@ -325,19 +325,19 @@ void X86InterleavedAccessGroup::interleave8bitStride4VF8(
 
   MVT VT = MVT::v8i16;
   TransposedMatrix.resize(2);
-  SmallVector<uint32_t, 16> MaskLow;
-  SmallVector<uint32_t, 32> MaskLowTemp1, MaskLowWord;
-  SmallVector<uint32_t, 32> MaskHighTemp1, MaskHighWord;
+  SmallVector<int, 16> MaskLow;
+  SmallVector<int, 32> MaskLowTemp1, MaskLowWord;
+  SmallVector<int, 32> MaskHighTemp1, MaskHighWord;
 
   for (unsigned i = 0; i < 8; ++i) {
     MaskLow.push_back(i);
     MaskLow.push_back(i + 8);
   }
 
-  createUnpackShuffleMask<uint32_t>(VT, MaskLowTemp1, true, false);
-  createUnpackShuffleMask<uint32_t>(VT, MaskHighTemp1, false, false);
-  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, MaskHighWord);
-  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, MaskLowWord);
+  createUnpackShuffleMask(VT, MaskLowTemp1, true, false);
+  createUnpackShuffleMask(VT, MaskHighTemp1, false, false);
+  scaleShuffleMask(2, MaskHighTemp1, MaskHighWord);
+  scaleShuffleMask(2, MaskLowTemp1, MaskLowWord);
   // IntrVec1Low = c0 m0 c1 m1 c2 m2 c3 m3 c4 m4 c5 m5 c6 m6 c7 m7
   // IntrVec2Low = y0 k0 y1 k1 y2 k2 y3 k3 y4 k4 y5 k5 y6 k6 y7 k7
   Value *IntrVec1Low =
@@ -367,25 +367,25 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   MVT HalfVT = scaleVectorType(VT);
 
   TransposedMatrix.resize(4);
-  SmallVector<uint32_t, 32> MaskHigh;
-  SmallVector<uint32_t, 32> MaskLow;
-  SmallVector<uint32_t, 32> LowHighMask[2];
-  SmallVector<uint32_t, 32> MaskHighTemp;
-  SmallVector<uint32_t, 32> MaskLowTemp;
+  SmallVector<int, 32> MaskHigh;
+  SmallVector<int, 32> MaskLow;
+  SmallVector<int, 32> LowHighMask[2];
+  SmallVector<int, 32> MaskHighTemp;
+  SmallVector<int, 32> MaskLowTemp;
 
   // MaskHighTemp and MaskLowTemp built in the vpunpckhbw and vpunpcklbw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(VT, MaskLow, true, false);
-  createUnpackShuffleMask<uint32_t>(VT, MaskHigh, false, false);
+  createUnpackShuffleMask(VT, MaskLow, true, false);
+  createUnpackShuffleMask(VT, MaskHigh, false, false);
 
   // MaskHighTemp1 and MaskLowTemp1 built in the vpunpckhdw and vpunpckldw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp, true, false);
-  createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp, false, false);
-  scaleShuffleMask<uint32_t>(2, MaskLowTemp, LowHighMask[0]);
-  scaleShuffleMask<uint32_t>(2, MaskHighTemp, LowHighMask[1]);
+  createUnpackShuffleMask(HalfVT, MaskLowTemp, true, false);
+  createUnpackShuffleMask(HalfVT, MaskHighTemp, false, false);
+  scaleShuffleMask(2, MaskLowTemp, LowHighMask[0]);
+  scaleShuffleMask(2, MaskHighTemp, LowHighMask[1]);
 
   // IntrVec1Low  = c0  m0  c1  m1 ... c7  m7  | c16 m16 c17 m17 ... c23 m23
   // IntrVec1High = c8  m8  c9  m9 ... c15 m15 | c24 m24 c25 m25 ... c31 m31

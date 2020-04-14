@@ -5,22 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLOOPS_H_
 #define MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLOOPS_H_
 
-#include "mlir/Transforms/DialectConversion.h"
-
 namespace mlir {
 class MLIRContext;
-class ModuleOp;
-template <typename T> class OpPassBase;
+class OwningRewritePatternList;
 
 /// Collect a set of patterns to convert from the Vector dialect to loops + std.
 void populateVectorToAffineLoopsConversionPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns);
-
-/// Create a pass to convert vector operations to affine loops + std dialect.
-OpPassBase<ModuleOp> *createLowerVectorToLoopsPass();
 
 } // namespace mlir
 

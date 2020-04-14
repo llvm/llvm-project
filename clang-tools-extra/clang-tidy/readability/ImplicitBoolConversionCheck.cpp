@@ -285,7 +285,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               hasParent(stmt(anyOf(ifStmt(), whileStmt()), has(declStmt())))),
           // Exclude cases common to implicit cast to and from bool.
           unless(exceptionCases), unless(has(boolXor)),
-          // Retrive also parent statement, to check if we need additional
+          // Retrieve also parent statement, to check if we need additional
           // parens in replacement.
           anyOf(hasParent(stmt().bind("parentStmt")), anything()),
           unless(isInTemplateInstantiation()),

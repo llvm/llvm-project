@@ -74,6 +74,10 @@ ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
 int findFirstVPTPredOperandIdx(const MachineInstr &MI);
 ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI,
                                       unsigned &PredReg);
+inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
+  unsigned PredReg;
+  return getVPTInstrPredicate(MI, PredReg);
 }
+} // namespace llvm
 
 #endif

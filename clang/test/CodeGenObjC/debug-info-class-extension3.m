@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -masm-verbose -S -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -S -debug-info-kind=limited %s -o - | FileCheck %s
 
 // CHECK-NOT: AT_APPLE_objc_complete_type
 

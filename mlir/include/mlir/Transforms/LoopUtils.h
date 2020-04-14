@@ -72,20 +72,11 @@ LogicalResult promoteIfSingleIteration(AffineForOp forOp);
 /// their body into the containing Block.
 void promoteSingleIterationLoops(FuncOp f);
 
-/// Computes the cleanup loop lower bound of the loop being unrolled with
-/// the specified unroll factor; this bound will also be upper bound of the main
-/// part of the unrolled loop. Computes the bound as an AffineMap with its
-/// operands or a null map when the trip count can't be expressed as an affine
-/// expression.
-void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
-                              AffineMap *map, SmallVectorImpl<Value> *operands,
-                              OpBuilder &builder);
-
-/// Skew the operations in the body of an affine.for operation with the
-/// specified operation-wise shifts. The shifts are with respect to the
-/// original execution order, and are multiplied by the loop 'step' before being
-/// applied. If `unrollPrologueEpilogue` is set, fully unroll the prologue and
-/// epilogue loops when possible.
+/// Skew the operations in an affine.for's body with the specified
+/// operation-wise shifts. The shifts are with respect to the original execution
+/// order, and are multiplied by the loop 'step' before being applied. If
+/// `unrollPrologueEpilogue` is set, fully unroll the prologue and epilogue
+/// loops when possible.
 LLVM_NODISCARD
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
@@ -232,8 +223,8 @@ void coalesceLoops(MutableArrayRef<loop::ForOp> loops);
 /// Take the ParallelLoop and for each set of dimension indices, combine them
 /// into a single dimension. combinedDimensions must contain each index into
 /// loops exactly once.
-void collapsePLoops(loop::ParallelOp loops,
-                    ArrayRef<std::vector<unsigned>> combinedDimensions);
+void collapseParallelLoops(loop::ParallelOp loops,
+                           ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 /// Maps `forOp` for execution on a parallel grid of virtual `processorIds` of
 /// size given by `numProcessors`. This is achieved by embedding the SSA values
@@ -274,8 +265,8 @@ void gatherLoops(FuncOp func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 /// Creates an AffineForOp while ensuring that the lower and upper bounds are
-/// canonicalized, i.e., unused and duplicate operands are removed, and any
-/// constant operands propagated/folded in.
+/// canonicalized, i.e., unused and duplicate operands are removed, any constant
+/// operands propagated/folded in, and duplicate bound maps dropped.
 AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
                                            ValueRange lbOperands,
                                            AffineMap lbMap,

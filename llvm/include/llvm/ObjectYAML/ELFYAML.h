@@ -282,6 +282,11 @@ struct HashSection : Section {
   Optional<std::vector<uint32_t>> Bucket;
   Optional<std::vector<uint32_t>> Chain;
 
+  // The following members are used to override section fields.
+  // This is useful for creating invalid objects.
+  Optional<llvm::yaml::Hex64> NBucket;
+  Optional<llvm::yaml::Hex64> NChain;
+
   HashSection() : Section(ChunkKind::Hash) {}
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Hash; }

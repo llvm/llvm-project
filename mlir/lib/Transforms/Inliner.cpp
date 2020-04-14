@@ -590,6 +590,10 @@ static void inlineSCC(Inliner &inliner, CGUseList &useList,
 
 namespace {
 struct InlinerPass : public OperationPass<InlinerPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_Inliner
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override {
     CallGraph &cg = getAnalysis<CallGraph>();
     auto *context = &getContext();
@@ -622,5 +626,3 @@ struct InlinerPass : public OperationPass<InlinerPass> {
 std::unique_ptr<Pass> mlir::createInlinerPass() {
   return std::make_unique<InlinerPass>();
 }
-
-static PassRegistration<InlinerPass> pass("inline", "Inline function calls");

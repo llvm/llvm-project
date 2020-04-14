@@ -225,5 +225,5 @@ declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #1
 declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>) #1
 declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>) #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }

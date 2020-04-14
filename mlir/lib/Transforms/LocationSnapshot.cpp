@@ -123,8 +123,11 @@ LogicalResult mlir::generateLocationsFromIR(StringRef fileName, StringRef tag,
 }
 
 namespace {
-class LocationSnapshotPass : public OperationPass<LocationSnapshotPass> {
-public:
+struct LocationSnapshotPass : public OperationPass<LocationSnapshotPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_LocationSnapshot
+#include "mlir/Transforms/Passes.h.inc"
+
   LocationSnapshotPass() = default;
   LocationSnapshotPass(const LocationSnapshotPass &) {}
   LocationSnapshotPass(OpPrintingFlags flags, StringRef fileName, StringRef tag)
@@ -139,14 +142,6 @@ public:
       return signalPassFailure();
   }
 
-  Option<std::string> fileName{
-      *this, "filename",
-      llvm::cl::desc("The filename to print the generated IR.")};
-  Option<std::string> tag{
-      *this, "tag",
-      llvm::cl::desc("A tag to use when fusing the new locations with the "
-                     "original. If unset, the locations are replaced.")};
-
   /// The printing flags to use when creating the snapshot.
   OpPrintingFlags flags;
 };
@@ -157,6 +152,6 @@ std::unique_ptr<Pass> mlir::createLocationSnapshotPass(OpPrintingFlags flags,
                                                        StringRef tag) {
   return std::make_unique<LocationSnapshotPass>(flags, fileName, tag);
 }
-
-static PassRegistration<LocationSnapshotPass>
-    reg("snapshot-op-locations", "generate new locations from the current IR");
+std::unique_ptr<Pass> mlir::createLocationSnapshotPass() {
+  return std::make_unique<LocationSnapshotPass>();
+}

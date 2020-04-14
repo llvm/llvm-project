@@ -34,6 +34,10 @@ namespace {
 class LowerGpuOpsToROCDLOpsPass
     : public OperationPass<LowerGpuOpsToROCDLOpsPass, gpu::GPUModuleOp> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuOpsToROCDLOps
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
@@ -84,6 +88,3 @@ mlir::createLowerGpuOpsToROCDLOpsPass() {
   return std::make_unique<LowerGpuOpsToROCDLOpsPass>();
 }
 
-static PassRegistration<LowerGpuOpsToROCDLOpsPass>
-    pass("convert-gpu-to-rocdl",
-         "Generate ROCDL operations for gpu operations");

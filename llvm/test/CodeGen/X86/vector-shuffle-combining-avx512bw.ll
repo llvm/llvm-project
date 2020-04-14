@@ -159,6 +159,36 @@ define <32 x i16> @combine_pshufb_as_pshufhw(<32 x i16> %a0) {
   ret <32 x i16> %1
 }
 
+define <32 x i16> @combine_vpermi2var_as_packssdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
+; CHECK-LABEL: combine_vpermi2var_as_packssdw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrad $25, %zmm0, %zmm0
+; CHECK-NEXT:    vpsrad $25, %zmm1, %zmm1
+; CHECK-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = ashr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = ashr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <16 x i32> %1 to <32 x i16>
+  %4 = bitcast <16 x i32> %2 to <32 x i16>
+  %5 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %3, <32 x i16> <i16 0, i16 2, i16 4, i16 6, i16 32, i16 34, i16 36, i16 38, i16 8, i16 10, i16 12, i16 14, i16 40, i16 42, i16 44, i16 46, i16 16, i16 18, i16 20, i16 22, i16 48, i16 50, i16 52, i16 54, i16 24, i16 26, i16 28, i16 30, i16 56, i16 58, i16 60, i16 62>, <32 x i16> %4, i32 -1)
+  ret <32 x i16> %5
+}
+
+define <32 x i16> @combine_vpermi2var_as_packusdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
+; CHECK-LABEL: combine_vpermi2var_as_packusdw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $25, %zmm0, %zmm0
+; CHECK-NEXT:    vpsrld $25, %zmm1, %zmm1
+; CHECK-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = lshr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = lshr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <16 x i32> %1 to <32 x i16>
+  %4 = bitcast <16 x i32> %2 to <32 x i16>
+  %5 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %3, <32 x i16> <i16 0, i16 2, i16 4, i16 6, i16 32, i16 34, i16 36, i16 38, i16 8, i16 10, i16 12, i16 14, i16 40, i16 42, i16 44, i16 46, i16 16, i16 18, i16 20, i16 22, i16 48, i16 50, i16 52, i16 54, i16 24, i16 26, i16 28, i16 30, i16 56, i16 58, i16 60, i16 62>, <32 x i16> %4, i32 -1)
+  ret <32 x i16> %5
+}
+
 define <64 x i8> @combine_pshufb_as_packsswb(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 ; CHECK-LABEL: combine_pshufb_as_packsswb:
 ; CHECK:       # %bb.0:

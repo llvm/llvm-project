@@ -220,7 +220,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
           .bind("sizeof-sizeof-expr"),
       this);
 
-  // Detect sizeof in pointer aritmetic like: N * sizeof(S) == P1 - P2 or
+  // Detect sizeof in pointer arithmetic like: N * sizeof(S) == P1 - P2 or
   // (P1 - P2) / sizeof(S) where P1 and P2 are pointers to type S.
   const auto PtrDiffExpr = binaryOperator(
       hasOperatorName("-"),

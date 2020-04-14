@@ -66,6 +66,10 @@ Utility for dumping Clang-style logged diagnostics.\
     for file_diags in diags:
         file = file_diags.get('main-file')
 
+        # Diagnostics from modules don't have a main-file listed.
+        if not file:
+            file = '<module-includes>'
+
         # Ignore diagnostics for 'conftest.c', which is the file autoconf uses
         # for its tests (which frequently will have warnings).
         if os.path.basename(file) == 'conftest.c':

@@ -74,7 +74,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
   const Expr *Alloc = Result.Nodes.getNodeAs<CallExpr>("Alloc");
   if (!Alloc)
     Alloc = Result.Nodes.getNodeAs<CXXNewExpr>("Alloc");
-  assert(Alloc && "Matched node bound by 'Alloc' shoud be either 'CallExpr'"
+  assert(Alloc && "Matched node bound by 'Alloc' should be either 'CallExpr'"
          " or 'CXXNewExpr'");
 
   const auto *StrLen = Result.Nodes.getNodeAs<CallExpr>("StrLen");

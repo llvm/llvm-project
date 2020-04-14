@@ -13,15 +13,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "llvm/Support/CommandLine.h"
 #include <numeric>
 
 using namespace mlir;
-
-static llvm::cl::opt<bool> printOpOnDiagnostic(
-    "mlir-print-op-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
-                   "the operation as an attached note"));
 
 OpAsmParser::~OpAsmParser() {}
 
@@ -252,7 +246,7 @@ void Operation::setOperands(ValueRange operands) {
 /// any diagnostic handlers that may be listening.
 InFlightDiagnostic Operation::emitError(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitError(getLoc(), message);
-  if (printOpOnDiagnostic) {
+  if (getContext()->shouldPrintOpOnDiagnostic()) {
     // Print out the operation explicitly here so that we can print the generic
     // form.
     // TODO(riverriddle) It would be nice if we could instead provide the
@@ -272,7 +266,7 @@ InFlightDiagnostic Operation::emitError(const Twine &message) {
 /// handlers that may be listening.
 InFlightDiagnostic Operation::emitWarning(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitWarning(getLoc(), message);
-  if (printOpOnDiagnostic)
+  if (getContext()->shouldPrintOpOnDiagnostic())
     diag.attachNote(getLoc()) << "see current operation: " << *this;
   return diag;
 }
@@ -281,7 +275,7 @@ InFlightDiagnostic Operation::emitWarning(const Twine &message) {
 /// handlers that may be listening.
 InFlightDiagnostic Operation::emitRemark(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitRemark(getLoc(), message);
-  if (printOpOnDiagnostic)
+  if (getContext()->shouldPrintOpOnDiagnostic())
     diag.attachNote(getLoc()) << "see current operation: " << *this;
   return diag;
 }
@@ -413,24 +407,24 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
   return reinterpret_cast<Block *>(reinterpret_cast<char *>(Anchor) - Offset);
 }
 
-/// This is a trait method invoked when a operation is added to a block.  We
+/// This is a trait method invoked when an operation is added to a block.  We
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
-  assert(!op->getBlock() && "already in a operation block!");
+  assert(!op->getBlock() && "already in an operation block!");
   op->block = getContainingBlock();
 
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
 }
 
-/// This is a trait method invoked when a operation is removed from a block.
+/// This is a trait method invoked when an operation is removed from a block.
 /// We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::removeNodeFromList(Operation *op) {
-  assert(op->block && "not already in a operation block!");
+  assert(op->block && "not already in an operation block!");
   op->block = nullptr;
 }
 
-/// This is a trait method invoked when a operation is moved from one block
+/// This is a trait method invoked when an operation is moved from one block
 /// to another.  We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::transferNodesFromList(
     ilist_traits<Operation> &otherList, op_iterator first, op_iterator last) {
@@ -712,6 +706,32 @@ LogicalResult OpTrait::impl::verifySameTypeOperands(Operation *op) {
   for (auto opType : llvm::drop_begin(op->getOperandTypes(), 1))
     if (opType != type)
       return op->emitOpError() << "requires all operands to have the same type";
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifyZeroRegion(Operation *op) {
+  if (op->getNumRegions() != 0)
+    return op->emitOpError() << "requires zero regions";
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifyOneRegion(Operation *op) {
+  if (op->getNumRegions() != 1)
+    return op->emitOpError() << "requires one region";
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifyNRegions(Operation *op,
+                                            unsigned numRegions) {
+  if (op->getNumRegions() != numRegions)
+    return op->emitOpError() << "expected " << numRegions << " regions";
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifyAtLeastNRegions(Operation *op,
+                                                   unsigned numRegions) {
+  if (op->getNumRegions() < numRegions)
+    return op->emitOpError() << "expected " << numRegions << " or more regions";
   return success();
 }
 

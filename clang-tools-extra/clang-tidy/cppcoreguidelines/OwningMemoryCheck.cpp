@@ -215,7 +215,7 @@ bool OwningMemoryCheck::handleLegacyConsumers(const BoundNodes &Nodes) {
   // Result of matching for legacy consumer-functions like `::free()`.
   const auto *LegacyConsumer = Nodes.getNodeAs<CallExpr>("legacy_consumer");
 
-  // FIXME: `freopen` should be handled seperately because it takes the filename
+  // FIXME: `freopen` should be handled separately because it takes the filename
   // as a pointer, which should not be an owner. The argument that is an owner
   // is known and the false positive coming from the filename can be avoided.
   if (LegacyConsumer) {

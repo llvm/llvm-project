@@ -89,7 +89,7 @@ declare float @barney() #2
 declare void @eggs(float) #2
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { convergent nounwind "target-cpu"="gfx900" "target-features"="+fp32-denormals" }
+attributes #0 = { convergent nounwind "target-cpu"="gfx900" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }
 

@@ -466,7 +466,7 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
   const MachineFunction &MF = *Before->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned NeedSize = TRI->getSpillSize(RC);
-  unsigned NeedAlign = TRI->getSpillAlignment(RC);
+  Align NeedAlign = TRI->getSpillAlign(RC);
 
   unsigned SI = Scavenged.size(), Diff = std::numeric_limits<unsigned>::max();
   int FIB = MFI.getObjectIndexBegin(), FIE = MFI.getObjectIndexEnd();
@@ -478,7 +478,7 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
     if (FI < FIB || FI >= FIE)
       continue;
     unsigned S = MFI.getObjectSize(FI);
-    unsigned A = MFI.getObjectAlignment(FI);
+    Align A = MFI.getObjectAlign(FI);
     if (NeedSize > S || NeedAlign > A)
       continue;
     // Avoid wasting slots with large size and/or large alignment. Pick one
@@ -487,7 +487,7 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
     // larger register is reserved before a slot for a smaller one. When
     // trying to spill a smaller register, the large slot would be found
     // first, thus making it impossible to spill the larger register later.
-    unsigned D = (S-NeedSize) + (A-NeedAlign);
+    unsigned D = (S - NeedSize) + (A.value() - NeedAlign.value());
     if (D < Diff) {
       SI = I;
       Diff = D;

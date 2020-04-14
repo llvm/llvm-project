@@ -59,15 +59,15 @@ test:
 # thunks.
 # CHECK-LABEL: test
 # CHECK:  10010014:       bl 0x12010010
-# CHECK:  10010024:       b  .+33554428
+# CHECK:  10010024:       b  0x12010020
 
 # NEGOFFSET-LABEL: test
 # NEGOFFSET:  10010014:       bl 0xe010014
-# NEGOFFSET:  10010024:       b  .+33554432
+# NEGOFFSET:  10010024:       b  0xe010024
 
 # THUNK-LABEL: <test>:
 # THUNK: 10010014:       bl 0x10010028
-# THUNK: 10010024:       b .+20
+# THUNK: 10010024:       b 0x10010038
 
 # .branch_lt[0]
 # THUNK-LABEL: <__long_branch_callee>:

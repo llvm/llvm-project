@@ -60,8 +60,12 @@ public:
   unsigned getRegisterBitWidth(bool Vector) const;
 
   unsigned getCacheLineSize() const override { return 256; }
-  unsigned getPrefetchDistance() const override { return 2000; }
-  unsigned getMinPrefetchStride() const override { return 2048; }
+  unsigned getPrefetchDistance() const override { return 4500; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override;
+  bool enableWritePrefetching() const override { return true; }
 
   bool hasDivRemOp(Type *DataType, bool IsSigned);
   bool prefersVectorizedAddressing() { return false; }

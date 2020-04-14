@@ -4,7 +4,7 @@ namespace __llvm_libc {
 
 static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
                          size_t count) {
-  // FIXME: Add MSVC suppport with
+  // FIXME: Add MSVC support with
   // #include <intrin.h>
   // __movsb(reinterpret_cast<unsigned char *>(dst),
   //         reinterpret_cast<const unsigned char *>(src), count);

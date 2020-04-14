@@ -277,10 +277,10 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 ;
 ; SSE41-LABEL: trunc_v8i32_v8i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm2, %xmm1
-; SSE41-NEXT:    pshufb %xmm2, %xmm0
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
+; SSE41-NEXT:    packusdw %xmm1, %xmm0
 ; SSE41-NEXT:    psllw $15, %xmm0
 ; SSE41-NEXT:    packsswb %xmm0, %xmm0
 ; SSE41-NEXT:    pmovmskb %xmm0, %eax

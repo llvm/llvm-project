@@ -487,7 +487,7 @@ public:
 
   uint32_t getLineTableOffset() const {
     if (auto IndexEntry = Header.getIndexEntry())
-      if (const auto *Contrib = IndexEntry->getOffset(DW_SECT_LINE))
+      if (const auto *Contrib = IndexEntry->getContribution(DW_SECT_LINE))
         return Contrib->Offset;
     return 0;
   }

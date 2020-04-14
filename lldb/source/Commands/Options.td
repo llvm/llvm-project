@@ -969,6 +969,11 @@ let Command = "thread plan list" in {
     Desc<"Display more information about the thread plans">;
   def thread_plan_list_internal : Option<"internal", "i">, Group<1>,
     Desc<"Display internal as well as user thread plans">;
+  def thread_plan_list_thread_id : Option<"thread-id", "t">, Group<1>,
+    Arg<"ThreadID">, Desc<"List the thread plans for this TID, can be "
+    "specified more than once.">;
+  def thread_plan_list_unreported : Option<"unreported", "u">, Group<1>,
+    Desc<"Display thread plans for unreported threads">;
 }
 
 let Command = "type summary add" in {

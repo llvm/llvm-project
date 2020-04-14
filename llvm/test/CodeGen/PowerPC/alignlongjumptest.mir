@@ -71,12 +71,12 @@ body:             |
 
 # Check for the long branch.
 # CHECK-LE:         08 00 82 4{{[01]}}   b{{[tf]}}  2, 0xc
-# CHECK-LE-NEXT:    fc 7f 00 48   b .+32764
+# CHECK-LE-NEXT:    fc 7f 00 48   b 0x8004
 # CHECK-LE-DAG:     paddi 3, 3, 13, 0
 # CHECK-LE-DAG:     paddi 3, 3, 21, 0
 # CHECK-LE:         blr
 # CHECK-BE:         4{{[01]}} 82 00 08   b{{[tf]}}  2, 0xc
-# CHECK-BE-NEXT:    48 00 7f fc   b .+32764
+# CHECK-BE-NEXT:    48 00 7f fc   b 0x8004
 # CHECK-BE-DAG:     paddi 3, 3, 13, 0
 # CHECK-BE-DAG:     paddi 3, 3, 21, 0
 # CHECK-BE:         blr

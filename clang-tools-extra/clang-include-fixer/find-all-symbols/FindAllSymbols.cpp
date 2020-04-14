@@ -128,7 +128,7 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
   auto HasNSOrTUCtxMatcher =
       hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl()));
 
-  // We need seperate rules for C record types and C++ record types since some
+  // We need separate rules for C record types and C++ record types since some
   // template related matchers are inapplicable on C record declarations.
   //
   // Matchers specific to C++ code.

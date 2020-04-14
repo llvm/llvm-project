@@ -1422,6 +1422,12 @@ def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
   Dependencies<[DebugContainerModeling, IteratorModeling]>,
   Documentation<NotDocumented>;
 
+def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
+  HelpText<"Add test functions to the summary map, so testing of individual "
+           "summary constituents becomes possible.">,
+  Dependencies<[StdCLibraryFunctionsChecker]>,
+  Documentation<NotDocumented>;
+
 } // end "debug"
 
 

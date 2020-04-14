@@ -3021,7 +3021,7 @@ kmp_lock_flags_t (*__kmp_indirect_get_flags[KMP_NUM_I_LOCKS])(
 static kmp_indirect_lock_t *__kmp_indirect_lock_pool[KMP_NUM_I_LOCKS] = {0};
 
 // User lock allocator for dynamically dispatched indirect locks. Every entry of
-// the indirect lock table holds the address and type of the allocated indrect
+// the indirect lock table holds the address and type of the allocated indirect
 // lock (kmp_indirect_lock_t), and the size of the table doubles when it is
 // full. A destroyed indirect lock object is returned to the reusable pool of
 // locks, unique to each lock type.

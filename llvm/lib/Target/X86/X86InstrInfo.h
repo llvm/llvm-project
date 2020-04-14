@@ -180,8 +180,8 @@ public:
   /// true, then it's expected the pre-extension value is available as a subreg
   /// of the result register. This also returns the sub-register index in
   /// SubIdx.
-  bool isCoalescableExtInstr(const MachineInstr &MI, unsigned &SrcReg,
-                             unsigned &DstReg, unsigned &SubIdx) const override;
+  bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
+                             Register &DstReg, unsigned &SubIdx) const override;
 
   /// Returns true if the instruction has no behavior (specified or otherwise)
   /// that is based on the value of any of its register operands
@@ -237,7 +237,7 @@ public:
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AAResults *AA) const override;
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     unsigned DestReg, unsigned SubIdx,
+                     Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
 
@@ -336,12 +336,12 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       unsigned, unsigned, unsigned, int &, int &,
+                       Register, Register, Register, int &, int &,
                        int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    const DebugLoc &DL, unsigned DstReg,
-                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
-                    unsigned FalseReg) const override;
+                    const DebugLoc &DL, Register DstReg,
+                    ArrayRef<MachineOperand> Cond, Register TrueReg,
+                    Register FalseReg) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
@@ -500,15 +500,15 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &CmpMask,
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
 
   /// optimizeCompareInstr - Check if there exists an earlier instruction that
   /// operates on the same source operands and sets flags in the same way as
   /// Compare; remove Compare if possible.
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int CmpMask, int CmpValue,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   /// optimizeLoadInstr - Try to remove the load by folding it to a register

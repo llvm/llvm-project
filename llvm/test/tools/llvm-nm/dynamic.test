@@ -1,0 +1,62 @@
+## This is a test for --dynamic/-D option.
+
+## Test llvm-nm dumping ELF file with valid .dynsym section.
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-nm --dynamic %t1.o | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix DYNSYM
+# RUN: llvm-nm -D %t1.o | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix DYNSYM
+
+#       DYNSYM:                 U globalsym
+#  DYNSYM-NEXT:                 U localsym1
+#  DYNSYM-NEXT:0000000000000000 n localsym2
+# DYNSYM-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: section
+    Type: SHT_PROGBITS
+DynamicSymbols:
+  - Name:    localsym1
+    Type:    STT_OBJECT
+  - Name:    localsym2
+    Section: section
+  - Name:    globalsym
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+
+## Test llvm-nm dumping ELF file without a .dynsym section.
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-nm --dynamic %t2.o 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t2.o --check-prefix NO-SYMS
+
+#       NO-SYMS:[[FILE]]: no symbols
+# NO-SYMS-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+## Test llvm-nm dumping ELF file with an empty .dynsym section.
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-nm --dynamic %t3.o 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t3.o --check-prefix NO-SYMS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0

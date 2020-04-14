@@ -333,7 +333,7 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
     const auto *V = cast<VarDecl>(Dec);
     const Expr *ExprInit = V->getInit();
 
-    // Skip expressions with cleanups from the intializer expression.
+    // Skip expressions with cleanups from the initializer expression.
     if (const auto *E = dyn_cast<ExprWithCleanups>(ExprInit))
       ExprInit = E->getSubExpr();
 

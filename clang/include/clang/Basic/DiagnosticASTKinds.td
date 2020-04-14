@@ -244,6 +244,12 @@ def note_constexpr_unsupported_unsized_array : Note<
 def note_constexpr_unsized_array_indexed : Note<
   "indexing of array without known bound is not allowed "
   "in a constant expression">;
+def note_constexpr_memcmp_unsupported : Note<
+  "constant evaluation of %0 between arrays of types %1 and %2 "
+  "is not supported; only arrays of narrow character types can be compared">;
+def note_constexpr_memchr_unsupported : Note<
+  "constant evaluation of %0 on array of type %1 "
+  "is not supported; only arrays of narrow character types can be searched">;
 def note_constexpr_memcpy_null : Note<
   "%select{source|destination}2 of "
   "'%select{%select{memcpy|wmemcpy}1|%select{memmove|wmemmove}1}0' "

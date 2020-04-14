@@ -2030,6 +2030,11 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
           SectionType == MachO::S_GB_ZEROFILL);
 }
 
+bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
+  return SectionName.startswith("__debug") ||
+         SectionName.startswith("__zdebug") || SectionName == "__gdb_index";
+}
+
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
   return Sec.getRawDataRefImpl().d.a;
 }

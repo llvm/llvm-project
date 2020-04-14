@@ -296,8 +296,8 @@ static bool IsNOLINTFound(StringRef NolintDirectiveText, StringRef Line,
   return true;
 }
 
-llvm::Optional<StringRef> getBuffer(const SourceManager &SM, FileID File,
-                                    bool AllowIO) {
+static llvm::Optional<StringRef> getBuffer(const SourceManager &SM, FileID File,
+                                           bool AllowIO) {
   // This is similar to the implementation of SourceManager::getBufferData(),
   // but uses ContentCache::getRawBuffer() rather than getBuffer() if
   // AllowIO=false, to avoid triggering file I/O if the file contents aren't

@@ -1309,11 +1309,14 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU) {
   if (MU->getSymbols().empty()) {
     // Empty MUs are allowable but pathological, so issue a warning.
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "Warning: Discarding empty MU " << MU->getName() << "\n";
+      dbgs() << "Warning: Discarding empty MU " << MU->getName() << " for "
+             << getName() << "\n";
     });
     return Error::success();
   } else
-    DEBUG_WITH_TYPE("orc", dbgs() << "Defining MU " << MU->getName() << ":\n");
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "Defining MU " << MU->getName() << " for " << getName() << "\n";
+    });
 
   return ES.runSessionLocked([&, this]() -> Error {
     if (auto Err = defineImpl(*MU))
@@ -1340,11 +1343,14 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU) {
   if (MU->getSymbols().empty()) {
     // Empty MUs are allowable but pathological, so issue a warning.
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "Warning: Discarding empty MU " << MU->getName() << "\n";
+      dbgs() << "Warning: Discarding empty MU " << MU->getName() << getName()
+             << "\n";
     });
     return Error::success();
   } else
-    DEBUG_WITH_TYPE("orc", dbgs() << "Defining MU " << MU->getName() << ":\n");
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "Defining MU " << MU->getName() << " for " << getName() << "\n";
+    });
 
   return ES.runSessionLocked([&, this]() -> Error {
     if (auto Err = defineImpl(*MU))

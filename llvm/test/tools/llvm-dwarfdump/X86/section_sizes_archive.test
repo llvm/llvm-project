@@ -1,0 +1,66 @@
+## Check how llvm-dwarfdump calculates section sizes
+## with --show-section-sizes on an archive.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: yaml2obj --docnum=1 %s -o %t/1.o
+# RUN: yaml2obj --docnum=2 %s -o %t/2.o
+
+# RUN: rm -f %t.a
+# RUN: llvm-ar rc %t.a %t/1.o %t/2.o
+
+# RUN: llvm-dwarfdump --show-section-sizes %t.a \
+# RUN:    | FileCheck %s -DARCHIVE=%t.a --match-full-lines --strict-whitespace
+
+#      CHECK:----------------------------------------------------
+# CHECK-NEXT:file: [[ARCHIVE]](1.o)
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:SECTION      SIZE (b)
+# CHECK-NEXT:-----------  --------
+# CHECK-NEXT:.debug_info        17 (3.17%)
+# CHECK-NEXT:.debug_line        19 (3.54%)
+# CHECK-EMPTY:
+# CHECK-NEXT: Total Size: 36  (6.72%)
+# CHECK-NEXT: Total File Size: 536
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:file: [[ARCHIVE]](2.o)
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:SECTION      SIZE (b)
+# CHECK-NEXT:-----------  --------
+# CHECK-NEXT:.debug_loc          1 (0.20%)
+# CHECK-NEXT:.debug_line        13 (2.54%)
+# CHECK-EMPTY:
+# CHECK-NEXT: Total Size: 14  (2.73%)
+# CHECK-NEXT: Total File Size: 512
+# CHECK-NEXT:----------------------------------------------------
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name:    .text1
+  Type:    SHT_PROGBITS
+- Name: .debug_info
+  Type: SHT_PROGBITS
+  Size: 17
+- Name: .debug_line
+  Type: SHT_PROGBITS
+  Size: 19
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name:    .text2
+  Type:    SHT_PROGBITS
+- Name: .debug_loc
+  Type: SHT_PROGBITS
+  Size: 1
+- Name: .debug_line
+  Type: SHT_PROGBITS
+  Size: 13

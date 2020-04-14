@@ -1530,7 +1530,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
 /// alignment, not its logarithm.
 unsigned TargetLoweringBase::getByValTypeAlignment(Type *Ty,
                                                    const DataLayout &DL) const {
-  return DL.getABITypeAlignment(Ty);
+  return DL.getABITypeAlign(Ty).value();
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
@@ -1542,7 +1542,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   // For example, the ABI alignment may change based on software platform while
   // this function should only be affected by hardware implementation.
   Type *Ty = VT.getTypeForEVT(Context);
-  if (Alignment >= DL.getABITypeAlignment(Ty)) {
+  if (Alignment >= DL.getABITypeAlign(Ty).value()) {
     // Assume that an access that meets the ABI-specified alignment is fast.
     if (Fast != nullptr)
       *Fast = true;

@@ -522,11 +522,8 @@ of the callee. The '# transition args' field indicates how many operands
 are to be interpreted as 'transition parameters'.
 
 The 'deopt parameters' arguments contain an arbitrary list of Values
-which is meaningful to the runtime.  The runtime may read any of these
-values, but is assumed not to modify them.  If the garbage collector
-might need to modify one of these values, it must also be listed in
-the 'gc pointer' argument list.  The '# deopt args' field indicates
-how many operands are to be interpreted as 'deopt parameters'.
+which is meaningful to the runtime.  The '# deopt args' field
+indicates how many operands are to be interpreted as 'deopt parameters'.
 
 The 'gc parameters' arguments contain every pointer to a garbage
 collector object which potentially needs to be updated by the garbage

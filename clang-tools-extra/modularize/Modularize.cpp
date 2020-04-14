@@ -184,7 +184,7 @@
 //      headerlist.txt
 //
 // Note that if the headers in the header list have partial paths, sub-modules
-// will be created for the subdirectires involved, assuming that the
+// will be created for the subdirectories involved, assuming that the
 // subdirectories contain headers to be grouped into a module, but still with
 // individual modules for the headers in the subdirectory.
 //

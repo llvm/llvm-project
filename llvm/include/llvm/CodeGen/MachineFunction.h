@@ -818,7 +818,6 @@ public:
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
-  /// FIXME: Remove once transition to Align is over.
   LLVM_ATTRIBUTE_DEPRECATED(
       inline MachineMemOperand *getMachineMemOperand(
           MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,

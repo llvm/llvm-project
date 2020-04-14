@@ -243,7 +243,7 @@ struct PassTiming : public PassInstrumentation {
 
 void PassTiming::runBeforePipeline(const OperationName &name,
                                    const PipelineParentInfo &parentInfo) {
-  // We don't actually want to time the piplelines, they gather their total
+  // We don't actually want to time the pipelines, they gather their total
   // from their held passes.
   getTimer(name.getAsOpaquePointer(), TimerKind::Pipeline,
            [&] { return ("'" + name.getStringRef() + "' Pipeline").str(); });

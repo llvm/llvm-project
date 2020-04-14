@@ -426,8 +426,9 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
+      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+        continue;
+      dies.push_back(die);
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
@@ -437,18 +438,20 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
+      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+        continue;
+      dies.push_back(die);
     }
-    offsets.clear();
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
     DIEArray offsets;
     m_set.function_methods.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
+      DWARFDIE die = dwarf.GetDIE(die_ref);
+      if (!die)
+        continue;
+      dies.push_back(die);
     }
   }
 
@@ -457,8 +460,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     DIEArray offsets;
     m_set.function_selectors.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
+      DWARFDIE die = dwarf.GetDIE(die_ref);
+      if (!die)
+        continue;
+      dies.push_back(die);
     }
   }
 }

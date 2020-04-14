@@ -162,8 +162,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   // cleaner.
   launchOpBody.cloneInto(&outlinedFuncBody, map);
 
-  // Branch from enty of the gpu.func operation to the block that is cloned from
-  // the entry block of the gpu.launch operation.
+  // Branch from entry of the gpu.func operation to the block that is cloned
+  // from the entry block of the gpu.launch operation.
   Block &launchOpEntry = launchOpBody.front();
   Block *clonedLaunchOpEntry = map.lookup(&launchOpEntry);
   builder.setInsertionPointToEnd(&entryBlock);
@@ -205,7 +205,6 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
 }
 
 namespace {
-
 /// Pass that moves the kernel of each LaunchOp into its separate nested module.
 ///
 /// This pass moves the kernel code of each LaunchOp into a function created
@@ -217,6 +216,10 @@ namespace {
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass : public ModulePass<GpuKernelOutliningPass> {
 public:
+/// Include the generated pass utilities.
+#define GEN_PASS_GpuKernelOutlining
+#include "mlir/Dialect/GPU/Passes.h.inc"
+
   void runOnModule() override {
     SymbolTable symbolTable(getModule());
     bool modified = false;
@@ -300,7 +303,3 @@ private:
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createGpuKernelOutliningPass() {
   return std::make_unique<GpuKernelOutliningPass>();
 }
-
-static PassRegistration<GpuKernelOutliningPass>
-    pass("gpu-kernel-outlining",
-         "Outline gpu.launch bodies to kernel functions.");

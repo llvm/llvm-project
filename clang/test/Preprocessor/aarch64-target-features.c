@@ -39,6 +39,8 @@
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
 // CHECK-NOT: __ARM_FEATURE_SVE
 // CHECK-NOT: __ARM_FEATURE_DOTPROD
+// CHECK-NOT: __ARM_FEATURE_PAC_DEFAULT
+// CHECK-NOT: __ARM_FEATURE_BTI_DEFAULT
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
@@ -334,3 +336,33 @@
 // ================== Check Memory Tagging Extensions (MTE).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a+memtag -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-MEMTAG %s
 // CHECK-MEMTAG: __ARM_FEATURE_MEMORY_TAGGING 1
+
+// ================== Check Pointer Authentication Extension (PAuth).
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
+// CHECK-PAUTH-OFF-NOT:  __ARM_FEATURE_PAC_DEFAULT
+// CHECK-PAUTH:          #define __ARM_FEATURE_PAC_DEFAULT 1
+// CHECK-PAUTH-BKEY:     #define __ARM_FEATURE_PAC_DEFAULT 2
+// CHECK-PAUTH-ALL:      #define __ARM_FEATURE_PAC_DEFAULT 5
+// CHECK-PAUTH-BKEY-ALL: #define __ARM_FEATURE_PAC_DEFAULT 6
+
+// ================== Check Branch Target Identification (BTI).
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// CHECK-BTI-OFF-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1

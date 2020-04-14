@@ -33,6 +33,12 @@ def FeatureFastFMAF32 : SubtargetFeature<"fast-fmaf",
   "Assuming f32 fma is at least as fast as mul + add"
 >;
 
+def FeatureFastDenormalF32 : SubtargetFeature<"fast-denormal-f32",
+  "FastDenormalF32",
+  "true",
+  "Enabling denormals does not cause f32 instructions to run at f64 rates"
+>;
+
 def FeatureMIMG_R128 : SubtargetFeature<"mimg-r128",
   "MIMG_R128",
   "true",
@@ -494,30 +500,6 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-// Denormal handling for fp64 and fp16 is controlled by the same
-// config register when fp16 supported.
-// TODO: Do we need a separate f16 setting when not legal?
-def FeatureFP64FP16Denormals : SubtargetFeature<"fp64-fp16-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable double and half precision denormal handling",
-  [FeatureFP64]
->;
-
-def FeatureFP64Denormals : SubtargetFeature<"fp64-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable double and half precision denormal handling",
-  [FeatureFP64, FeatureFP64FP16Denormals]
->;
-
-def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
-  "FP64FP16Denormals",
-  "true",
-  "Enable half precision denormal handling",
-  [FeatureFP64FP16Denormals]
->;
-
 def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",
   "FPExceptions",
   "true",
@@ -663,7 +645,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC,
-   FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts
+   FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts, FeatureFastDenormalF32
   ]
 >;
 
@@ -678,8 +660,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
-   FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16
-  ]
+   FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
+   FeatureFastDenormalF32]
 >;
 
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
@@ -696,7 +678,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
-   FeatureGFX10A16
+   FeatureGFX10A16, FeatureFastDenormalF32
   ]
 >;
 

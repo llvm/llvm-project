@@ -17,3 +17,23 @@ llvm.func @no_nested_struct() -> !llvm<"[2 x [2 x [2 x {i32}]]]"> {
 
 // expected-error @+1 {{unsupported constant value}}
 llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm<"[2 x double]">
+
+// -----
+
+// expected-error @+1 {{LLVM attribute 'noinline' does not expect a value}}
+llvm.func @passthrough_unexpected_value() attributes {passthrough = [["noinline", "42"]]}
+
+// -----
+
+// expected-error @+1 {{LLVM attribute 'alignstack' expects a value}}
+llvm.func @passthrough_expected_value() attributes {passthrough = ["alignstack"]}
+
+// -----
+
+// expected-error @+1 {{expected 'passthrough' to contain string or array attributes}}
+llvm.func @passthrough_wrong_type() attributes {passthrough = [42]}
+
+// -----
+
+// expected-error @+1 {{expected arrays within 'passthrough' to contain two strings}}
+llvm.func @passthrough_wrong_type() attributes {passthrough = [[42, 42]]}

@@ -595,7 +595,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = ConvertTypeForMem(ETy);
     if (PointeeType->isVoidTy())
       PointeeType = llvm::Type::getInt8Ty(getLLVMContext());
-    unsigned AS = Context.getTargetAddressSpace(ETy);
+
+    unsigned AS = PointeeType->isFunctionTy()
+                      ? getDataLayout().getProgramAddressSpace()
+                      : Context.getTargetAddressSpace(ETy);
+
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }

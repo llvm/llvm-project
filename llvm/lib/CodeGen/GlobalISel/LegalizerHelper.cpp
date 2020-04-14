@@ -634,6 +634,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   MIRBuilder.setInstr(MI);
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
 
   switch (MI.getOpcode()) {
   default:
@@ -731,6 +732,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
                                                               unsigned TypeIdx,
                                                               LLT NarrowTy) {
   MIRBuilder.setInstr(MI);
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
 
   uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   uint64_t NarrowSize = NarrowTy.getSizeInBits();
@@ -1596,6 +1598,7 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   MIRBuilder.setInstr(MI);
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
 
   switch (MI.getOpcode()) {
   default:
@@ -2188,6 +2191,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
   MIRBuilder.setInstr(MI);
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
 
   switch(MI.getOpcode()) {
   default:
@@ -3223,6 +3227,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
   switch (MI.getOpcode()) {
   case G_IMPLICIT_DEF:
     return fewerElementsVectorImplicitDef(MI, TypeIdx, NarrowTy);
@@ -4886,7 +4891,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register AllocSize = MI.getOperand(1).getReg();
-  unsigned Align = MI.getOperand(2).getImm();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
   const auto &MF = *MI.getMF();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -4902,8 +4907,8 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
   // have to generate an extra instruction to negate the alloc and then use
   // G_PTR_ADD to add the negative offset.
   auto Alloc = MIRBuilder.buildSub(IntPtrTy, SPTmp, AllocSize);
-  if (Align) {
-    APInt AlignMask(IntPtrTy.getSizeInBits(), Align, true);
+  if (Alignment > Align(1)) {
+    APInt AlignMask(IntPtrTy.getSizeInBits(), Alignment.value(), true);
     AlignMask.negate();
     auto AlignCst = MIRBuilder.buildConstant(IntPtrTy, AlignMask);
     Alloc = MIRBuilder.buildAnd(IntPtrTy, Alloc, AlignCst);

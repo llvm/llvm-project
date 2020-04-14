@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopPass.h"

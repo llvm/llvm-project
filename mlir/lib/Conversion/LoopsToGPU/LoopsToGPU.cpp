@@ -742,7 +742,7 @@ static LogicalResult processParallelLoop(
 /// the hardware id might iterate over additional indices. The transformation
 /// caters for this by predicating the created sequence of instructions on
 /// the actual loop bound. This only works if an static upper bound for the
-/// dynamic loop bound can be defived, currently via analyzing `affine.min`
+/// dynamic loop bound can be derived, currently via analyzing `affine.min`
 /// operations.
 LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,

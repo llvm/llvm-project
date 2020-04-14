@@ -21,11 +21,12 @@ define void @test(<16 x i8> %w, i32* %o1, float* %o2) {
   ret void
 }
 
+; Shuffle-of-bitcast-splat --> splat-bitcast
+
 define <4 x i16> @splat_bitcast_operand(<8 x i8> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i8> [[X:%.*]], <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i8> [[S1]] to <4 x i16>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i16> [[BC]], <4 x i16> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i8> [[X:%.*]], <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <8 x i8> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[S2]]
 ;
   %s1 = shufflevector <8 x i8> %x, <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -34,12 +35,14 @@ define <4 x i16> @splat_bitcast_operand(<8 x i8> %x) {
   ret <4 x i16> %s2
 }
 
+; Shuffle-of-bitcast-splat --> splat-bitcast
+
 define <4 x i16> @splat_bitcast_operand_uses(<8 x i8> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_uses(
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i8> [[X:%.*]], <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i8> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    call void @use(<4 x i16> [[BC]])
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i16> [[BC]], <4 x i16> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <8 x i8> [[S1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[S2]]
 ;
   %s1 = shufflevector <8 x i8> %x, <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -49,11 +52,12 @@ define <4 x i16> @splat_bitcast_operand_uses(<8 x i8> %x) {
   ret <4 x i16> %s2
 }
 
+; Shuffle-of-bitcast-splat --> splat-bitcast
+
 define <4 x i32> @splat_bitcast_operand_same_size_src_elt(<4 x float> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_same_size_src_elt(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 undef>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x float> [[S1]] to <4 x i32>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[BC]], <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <4 x float> [[S1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[S2]]
 ;
   %s1 = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
@@ -66,9 +70,7 @@ define <4 x i32> @splat_bitcast_operand_same_size_src_elt(<4 x float> %x) {
 
 define <4 x i32> @shuf_bitcast_operand(<16 x i8> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <16 x i8> [[S1]] to <4 x i32>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[BC]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[S2:%.*]] = bitcast <16 x i8> [[X:%.*]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[S2]]
 ;
   %s1 = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
@@ -76,6 +78,8 @@ define <4 x i32> @shuf_bitcast_operand(<16 x i8> %x) {
   %s2 = shufflevector <4 x i32> %bc, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i32> %s2
 }
+
+; TODO: Could allow fold for length-changing shuffles.
 
 define <5 x i16> @splat_bitcast_operand_change_type(<8 x i8> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_change_type(
@@ -89,6 +93,8 @@ define <5 x i16> @splat_bitcast_operand_change_type(<8 x i8> %x) {
   %s2 = shufflevector <4 x i16> %bc, <4 x i16> undef, <5 x i32> <i32 0, i32 2, i32 1, i32 0, i32 3>
   ret <5 x i16> %s2
 }
+
+; TODO: Could allow fold for cast to narrow element.
 
 define <4 x i16> @splat_bitcast_operand_wider_src_elt(<2 x i32> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_wider_src_elt(

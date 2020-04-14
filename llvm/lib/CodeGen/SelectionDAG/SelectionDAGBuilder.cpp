@@ -4713,10 +4713,10 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     // This is target intrinsic that touches memory
     AAMDNodes AAInfo;
     I.getAAMetadata(AAInfo);
-    Result = DAG.getMemIntrinsicNode(
-        Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT,
-        MachinePointerInfo(Info.ptrVal, Info.offset),
-        Info.align ? Info.align->value() : 0, Info.flags, Info.size, AAInfo);
+    Result =
+        DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT,
+                                MachinePointerInfo(Info.ptrVal, Info.offset),
+                                Info.align, Info.flags, Info.size, AAInfo);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -6529,12 +6529,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Ops[2] = getValue(I.getArgOperand(1));
     Ops[3] = getValue(I.getArgOperand(2));
     Ops[4] = getValue(I.getArgOperand(3));
-    SDValue Result = DAG.getMemIntrinsicNode(ISD::PREFETCH, sdl,
-                                             DAG.getVTList(MVT::Other), Ops,
-                                             EVT::getIntegerVT(*Context, 8),
-                                             MachinePointerInfo(I.getArgOperand(0)),
-                                             0, /* align */
-                                             Flags);
+    SDValue Result = DAG.getMemIntrinsicNode(
+        ISD::PREFETCH, sdl, DAG.getVTList(MVT::Other), Ops,
+        EVT::getIntegerVT(*Context, 8), MachinePointerInfo(I.getArgOperand(0)),
+        /* align */ None, Flags);
 
     // Chain the prefetch in parallell with any pending loads, to stay out of
     // the way of later optimizations.
@@ -7335,10 +7333,10 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   SDValue Src = getValue(I.getArgOperand(1));
   SDValue Size = getValue(I.getArgOperand(2));
 
-  unsigned DstAlign = DAG.InferPtrAlignment(Dst);
-  unsigned SrcAlign = DAG.InferPtrAlignment(Src);
+  Align DstAlign = DAG.InferPtrAlign(Dst).valueOrOne();
+  Align SrcAlign = DAG.InferPtrAlign(Src).valueOrOne();
   // DAG::getMemcpy needs Alignment to be defined.
-  Align Alignment = assumeAligned(std::min(DstAlign, SrcAlign));
+  Align Alignment = std::min(DstAlign, SrcAlign);
 
   bool isVol = false;
   SDLoc sdl = getCurSDLoc();
@@ -8981,9 +8979,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // assert(!CS.hasInAllocaArgument() &&
     //        "sret demotion is incompatible with inalloca");
     uint64_t TySize = DL.getTypeAllocSize(CLI.RetTy);
-    unsigned Align = DL.getPrefTypeAlignment(CLI.RetTy);
+    Align Alignment = DL.getPrefTypeAlign(CLI.RetTy);
     MachineFunction &MF = CLI.DAG.getMachineFunction();
-    DemoteStackIdx = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
+    DemoteStackIdx =
+        MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
     Type *StackSlotPtrType = PointerType::get(CLI.RetTy,
                                               DL.getAllocaAddrSpace());
 
@@ -9001,7 +9000,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.IsSwiftSelf = false;
     Entry.IsSwiftError = false;
     Entry.IsCFGuardTarget = false;
-    Entry.Alignment = Align;
+    Entry.Alignment = Alignment;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
@@ -9135,12 +9134,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setByValSize(FrameSize);
 
         // info is not there but there are cases it cannot get right.
-        unsigned FrameAlign;
-        if (Args[i].Alignment)
-          FrameAlign = Args[i].Alignment;
+        Align FrameAlign;
+        if (auto MA = Args[i].Alignment)
+          FrameAlign = *MA;
         else
-          FrameAlign = getByValTypeAlignment(ElementTy, DL);
-        Flags.setByValAlign(Align(FrameAlign));
+          FrameAlign = Align(getByValTypeAlignment(ElementTy, DL));
+        Flags.setByValAlign(FrameAlign);
       }
       if (Args[i].IsNest)
         Flags.setNest();
@@ -9494,16 +9493,13 @@ static void tryToElideArgumentCopy(
                   "object size\n");
     return;
   }
-  unsigned RequiredAlignment = AI->getAlignment();
-  if (!RequiredAlignment) {
-    RequiredAlignment = FuncInfo.MF->getDataLayout().getABITypeAlignment(
-        AI->getAllocatedType());
-  }
-  if (MFI.getObjectAlignment(FixedIndex) < RequiredAlignment) {
+  Align RequiredAlignment = AI->getAlign().getValueOr(
+      FuncInfo.MF->getDataLayout().getABITypeAlign(AI->getAllocatedType()));
+  if (MFI.getObjectAlign(FixedIndex) < RequiredAlignment) {
     LLVM_DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
                          "greater than stack argument alignment ("
-                      << RequiredAlignment << " vs "
-                      << MFI.getObjectAlignment(FixedIndex) << ")\n");
+                      << RequiredAlignment.value() << " vs "
+                      << MFI.getObjectAlign(FixedIndex).value() << ")\n");
     return;
   }
 

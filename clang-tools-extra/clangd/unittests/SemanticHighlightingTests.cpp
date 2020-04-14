@@ -14,14 +14,19 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include <algorithm>
 
 namespace clang {
 namespace clangd {
 namespace {
+
+using testing::IsEmpty;
+using testing::SizeIs;
 
 MATCHER_P(LineNumber, L, "") { return arg.Line == L; }
 MATCHER(EmptyHighlightings, "") { return arg.Tokens.empty(); }
@@ -720,25 +725,29 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   ASSERT_EQ(Counter.Count, 1);
 }
 
+// Ranges are highlighted as variables, unless highlighted as $Function etc.
+std::vector<HighlightingToken> tokens(llvm::StringRef MarkedText) {
+  Annotations A(MarkedText);
+  std::vector<HighlightingToken> Results;
+  for (const Range& R : A.ranges())
+    Results.push_back({HighlightingKind::Variable, R});
+  for (unsigned I = 0; I < static_cast<unsigned>(HighlightingKind::LastKind); ++I) {
+    HighlightingKind Kind = static_cast<HighlightingKind>(I);
+    for (const Range& R : A.ranges(llvm::to_string(Kind)))
+      Results.push_back({Kind, R});
+  }
+  llvm::sort(Results);
+  return Results;
+}
+
 TEST(SemanticHighlighting, toSemanticTokens) {
-  auto CreatePosition = [](int Line, int Character) -> Position {
-    Position Pos;
-    Pos.line = Line;
-    Pos.character = Character;
-    return Pos;
-  };
+  auto Results = toSemanticTokens(tokens(R"(
+ [[blah]]
 
-  std::vector<HighlightingToken> Tokens = {
-      {HighlightingKind::Variable,
-       Range{CreatePosition(1, 1), CreatePosition(1, 5)}},
-      {HighlightingKind::Function,
-       Range{CreatePosition(3, 4), CreatePosition(3, 7)}},
-      {HighlightingKind::Variable,
-       Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
-  };
+    $Function[[big]] [[bang]]
+  )"));
 
-  std::vector<SemanticToken> Results = toSemanticTokens(Tokens);
-  EXPECT_EQ(Tokens.size(), Results.size());
+  ASSERT_THAT(Results, SizeIs(3));
   EXPECT_EQ(Results[0].tokenType, unsigned(HighlightingKind::Variable));
   EXPECT_EQ(Results[0].deltaLine, 1u);
   EXPECT_EQ(Results[0].deltaStart, 1u);
@@ -753,6 +762,38 @@ TEST(SemanticHighlighting, toSemanticTokens) {
   EXPECT_EQ(Results[2].deltaLine, 0u);
   EXPECT_EQ(Results[2].deltaStart, 4u);
   EXPECT_EQ(Results[2].length, 4u);
+}
+
+TEST(SemanticHighlighting, diffSemanticTokens) {
+  auto Before = toSemanticTokens(tokens(R"(
+    [[foo]] [[bar]] [[baz]]
+    [[one]] [[two]] [[three]]
+  )"));
+  EXPECT_THAT(diffTokens(Before, Before), IsEmpty());
+
+  auto After = toSemanticTokens(tokens(R"(
+    [[foo]] [[hello]] [[world]] [[baz]]
+    [[one]] [[two]] [[three]]
+  )"));
+
+  // Replace [bar, baz] with [hello, world, baz]
+  auto Diff = diffTokens(Before, After);
+  ASSERT_THAT(Diff, SizeIs(1));
+  EXPECT_EQ(1u, Diff.front().startToken);
+  EXPECT_EQ(2u, Diff.front().deleteTokens);
+  ASSERT_THAT(Diff.front().tokens, SizeIs(3));
+  // hello
+  EXPECT_EQ(0u, Diff.front().tokens[0].deltaLine);
+  EXPECT_EQ(4u, Diff.front().tokens[0].deltaStart);
+  EXPECT_EQ(5u, Diff.front().tokens[0].length);
+  // world
+  EXPECT_EQ(0u, Diff.front().tokens[1].deltaLine);
+  EXPECT_EQ(6u, Diff.front().tokens[1].deltaStart);
+  EXPECT_EQ(5u, Diff.front().tokens[1].length);
+  // baz
+  EXPECT_EQ(0u, Diff.front().tokens[2].deltaLine);
+  EXPECT_EQ(6u, Diff.front().tokens[2].deltaStart);
+  EXPECT_EQ(3u, Diff.front().tokens[2].length);
 }
 
 TEST(SemanticHighlighting, toTheiaSemanticHighlightingInformation) {

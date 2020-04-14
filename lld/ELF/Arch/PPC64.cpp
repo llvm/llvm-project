@@ -137,7 +137,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 
 // When accessing a symbol defined in another translation unit, compilers
 // reserve a .toc entry, allocate a local label and generate toc-indirect
-// instuctions:
+// instructions:
 //
 //   addis 3, 2, .LC0@toc@ha  # R_PPC64_TOC16_HA
 //   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a .toc entry

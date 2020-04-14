@@ -73,9 +73,9 @@ define i32* @get_strong_preemptable_global() {
 define i32* @get_weak_preemptable_global() {
   ret i32* @weak_preemptable_global
 }
-; CHECK ;ADD_LABEL_BACK;  movq weak_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC ;ADD_LABEL_BACK; movq weak_preemptable_global@GOTPCREL, %rax
-; CHECK32 ;ADD_LABEL_BACK; movl weak_preemptable_global@GOT(%eax), %eax
+; CHECK: movq weak_preemptable_global@GOTPCREL(%rip), %rax
+; STATIC: movl $weak_preemptable_global, %eax
+; CHECK32: movl weak_preemptable_global@GOT(%eax), %eax
 
 @external_preemptable_global = external dso_preemptable global i32
 define i32* @get_external_preemptable_global() {
@@ -174,7 +174,7 @@ define void()* @get_strong_local_function() {
   ret void()* @strong_local_function
 }
 ; COMMON:     {{^}}strong_local_function:
-; COMMON-NEXT .Lstrong_local_function:
+; COMMON-NEXT: .Lstrong_local_function$local:
 ; CHECK: leaq .Lstrong_local_function$local(%rip), %rax
 ; STATIC: movl $.Lstrong_local_function$local, %eax
 ; CHECK32: leal .Lstrong_local_function$local@GOTOFF(%eax), %eax
@@ -227,7 +227,7 @@ define void()* @get_external_preemptable_function() {
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
 
 ; COMMON:     {{^}}strong_local_global:
-; COMMON-NEXT .Lstrong_local_global:
+; COMMON-NEXT: .Lstrong_local_global$local:
 
 ; COMMON:      .globl strong_default_alias
 ; COMMON-NEXT: .set strong_default_alias, aliasee

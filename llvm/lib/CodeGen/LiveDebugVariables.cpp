@@ -154,9 +154,8 @@ class LDVImpl;
 /// holds part of a user variable. The part is identified by a byte offset.
 ///
 /// UserValues are grouped into equivalence classes for easier searching. Two
-/// user values are related if they refer to the same variable, or if they are
-/// held by the same virtual register. The equivalence class is the transitive
-/// closure of that relation.
+/// user values are related if they are held by the same virtual register. The
+/// equivalence class is the transitive closure of that relation.
 class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
@@ -206,24 +205,6 @@ public:
 
   /// Return the next UserValue in the equivalence class.
   UserValue *getNext() const { return next; }
-
-  /// Does this UserValue match the parameters?
-  bool matches(const DILocalVariable *Var,
-             Optional<DIExpression::FragmentInfo> OtherFragment,
-             const DILocation *IA) const {
-    // FIXME: Handle partially overlapping fragments.
-    // A DBG_VALUE with a fragment which overlaps a previous DBG_VALUE fragment
-    // for the same variable terminates the interval opened by the first.
-    // getUserValue() uses matches() to filter DBG_VALUEs into interval maps to
-    // represent these intervals.
-    // Given two _partially_ overlapping fragments matches() will always return
-    // false. The DBG_VALUEs will be filtered into separate interval maps and
-    // therefore we do not faithfully represent the original intervals.
-    // See D70121#1849741 for a more detailed explanation and further
-    // discussion.
-    return Var == Variable && OtherFragment == Fragment &&
-           dl->getInlinedAt() == IA;
-  }
 
   /// Merge equivalence classes.
   static UserValue *merge(UserValue *L1, UserValue *L2) {
@@ -429,8 +410,8 @@ class LDVImpl {
   using VRMap = DenseMap<unsigned, UserValue *>;
   VRMap virtRegToEqClass;
 
-  /// Map user variable to eq class leader.
-  using UVMap = DenseMap<const DILocalVariable *, UserValue *>;
+  /// Map to find existing UserValue instances.
+  using UVMap = DenseMap<DebugVariable, UserValue *>;
   UVMap userVarMap;
 
   /// Find or create a UserValue.
@@ -600,19 +581,15 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
 UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
                                  Optional<DIExpression::FragmentInfo> Fragment,
                                  const DebugLoc &DL) {
-  UserValue *&Leader = userVarMap[Var];
-  if (Leader) {
-    UserValue *UV = Leader->getLeader();
-    Leader = UV;
-    for (; UV; UV = UV->getNext())
-      if (UV->matches(Var, Fragment, DL->getInlinedAt()))
-        return UV;
+  // FIXME: Handle partially overlapping fragments. See
+  // https://reviews.llvm.org/D70121#1849741.
+  DebugVariable ID(Var, Fragment, DL->getInlinedAt());
+  UserValue *&UV = userVarMap[ID];
+  if (!UV) {
+    userValues.push_back(
+        std::make_unique<UserValue>(Var, Fragment, DL, allocator));
+    UV = userValues.back().get();
   }
-
-  userValues.push_back(
-      std::make_unique<UserValue>(Var, Fragment, DL, allocator));
-  UserValue *UV = userValues.back().get();
-  Leader = UserValue::merge(Leader, UV);
   return UV;
 }
 

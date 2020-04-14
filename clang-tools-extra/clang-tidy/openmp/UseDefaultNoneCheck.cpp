@@ -24,7 +24,7 @@ namespace openmp {
 void UseDefaultNoneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       ompExecutableDirective(
-          allOf(isAllowedToContainClauseKind(OMPC_default),
+          allOf(isAllowedToContainClauseKind(llvm::omp::OMPC_default),
                 anyOf(unless(hasAnyClause(ompDefaultClause())),
                       hasAnyClause(ompDefaultClause(unless(isNoneKind()))
                                        .bind("clause")))))

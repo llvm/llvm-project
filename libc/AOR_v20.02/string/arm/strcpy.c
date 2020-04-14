@@ -120,7 +120,7 @@ __strcpy_arm (char* dst, const char* src)
        "bne	5b\n\t"
        "BX LR\n"
 
-       /* src and dst do not have a common word-alignement.  Fall back to
+       /* src and dst do not have a common word-alignment.  Fall back to
 	  byte copying.  */
   "4:\n\t"
        "ldrb	r2, [r1], #1\n\t"

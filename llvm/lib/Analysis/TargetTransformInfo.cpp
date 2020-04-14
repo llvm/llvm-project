@@ -153,21 +153,6 @@ int TargetTransformInfo::getOperationCost(unsigned Opcode, Type *Ty,
   return Cost;
 }
 
-int TargetTransformInfo::getCallCost(FunctionType *FTy, int NumArgs,
-                                     const User *U) const {
-  int Cost = TTIImpl->getCallCost(FTy, NumArgs, U);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
-int TargetTransformInfo::getCallCost(const Function *F,
-                                     ArrayRef<const Value *> Arguments,
-                                     const User *U) const {
-  int Cost = TTIImpl->getCallCost(F, Arguments, U);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
 unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
   return TTIImpl->getInliningThresholdMultiplier();
 }
@@ -534,12 +519,20 @@ unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }
 
-unsigned TargetTransformInfo::getMinPrefetchStride() const {
-  return TTIImpl->getMinPrefetchStride();
+unsigned TargetTransformInfo::getMinPrefetchStride(unsigned NumMemAccesses,
+                                                  unsigned NumStridedMemAccesses,
+                                                   unsigned NumPrefetches,
+                                                   bool HasCall) const {
+  return TTIImpl->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
+                                       NumPrefetches, HasCall);
 }
 
 unsigned TargetTransformInfo::getMaxPrefetchIterationsAhead() const {
   return TTIImpl->getMaxPrefetchIterationsAhead();
+}
+
+bool TargetTransformInfo::enableWritePrefetching() const {
+  return TTIImpl->enableWritePrefetching();
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {

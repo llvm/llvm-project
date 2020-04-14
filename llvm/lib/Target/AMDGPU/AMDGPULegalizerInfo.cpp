@@ -3722,27 +3722,32 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     const ConstantFP *ConstantLod;
     const int LodIdx = AddrIdx + NumVAddrs - 1;
 
-    // FIXME: This isn't the cleanest way to handle this, but it's the easiest
-    // option the current infrastructure gives. We really should be changing the
-    // base intrinsic opcode, but the current searchable tables only gives us
-    // the final MI opcode. Eliminate the register here, and track with an
-    // immediate 0 so the final selection will know to do the opcode change.
     if (mi_match(MI.getOperand(LodIdx).getReg(), *MRI, m_GFCst(ConstantLod))) {
       if (ConstantLod->isZero() || ConstantLod->isNegative()) {
-        MI.getOperand(LodIdx).ChangeToImmediate(0);
+        // Set new opcode to _lz variant of _l, and change the intrinsic ID.
+        ImageDimIntr = AMDGPU::getImageDimInstrinsicByBaseOpcode(
+          LZMappingInfo->LZ, ImageDimIntr->Dim);
+
+        // The starting indexes should remain in the same place.
+        --NumVAddrs;
         --CorrectedNumVAddrs;
+
+        MI.getOperand(MI.getNumExplicitDefs()).setIntrinsicID(
+          static_cast<Intrinsic::ID>(ImageDimIntr->Intr));
+        MI.RemoveOperand(LodIdx);
       }
     }
   }
 
   // Optimize _mip away, when 'lod' is zero
-  if (const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
-        AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
+  if (AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
     int64_t ConstantLod;
     const int LodIdx = AddrIdx + NumVAddrs - 1;
 
     if (mi_match(MI.getOperand(LodIdx).getReg(), *MRI, m_ICst(ConstantLod))) {
       if (ConstantLod == 0) {
+        // TODO: Change intrinsic opcode and remove operand instead or replacing
+        // it with 0, as the _L to _LZ handling is done above.
         MI.getOperand(LodIdx).ChangeToImmediate(0);
         --CorrectedNumVAddrs;
       }

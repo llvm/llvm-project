@@ -149,7 +149,7 @@ void findExplicitReferences(const ASTContext &AST,
 /// For templates, will prefer to return a template instantiation whenever
 /// possible. However, can also return a template pattern if the specialization
 /// cannot be picked, e.g. in dependent code or when there is no corresponding
-/// Decl for a template instantitation, e.g. for templated using decls:
+/// Decl for a template instantiation, e.g. for templated using decls:
 ///    template <class T> using Ptr = T*;
 ///    Ptr<int> x;
 ///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.

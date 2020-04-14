@@ -20,7 +20,7 @@ reading a ``.h.def`` file, the header generation tool does two things:
 
 1. Copy the lines not containing commands as is into the output ``.h`` file.
 2. Replace the line on which a command occurs with some other text as directed
-   by the command. The replacment text can span multiple lines.
+   by the command. The replacement text can span multiple lines.
 
 Command syntax
 ~~~~~~~~~~~~~~
@@ -59,7 +59,7 @@ Available Commands
 ------------------
 
 Sub-sections below describe the commands currently available. Under each command
-is the discription of the arugments to the command, and the action taken by the
+is the description of the arguments to the command, and the action taken by the
 header generation tool when processing a command.
 
 ``include_file``

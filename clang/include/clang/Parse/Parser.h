@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
-#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Availability.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -24,6 +23,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -49,6 +49,10 @@ namespace clang {
   class OMPClause;
   class ObjCTypeParamList;
   class ObjCTypeParameter;
+  struct OMPTraitProperty;
+  struct OMPTraitSelector;
+  struct OMPTraitSet;
+  class OMPTraitInfo;
 
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
@@ -271,6 +275,22 @@ class Parser : public CodeCompletionHandler {
   /// Gathers and cleans up TemplateIdAnnotations when parsing of a
   /// top-level declaration is finished.
   SmallVector<TemplateIdAnnotation *, 16> TemplateIds;
+
+  void MaybeDestroyTemplateIds() {
+    if (!TemplateIds.empty() &&
+        (Tok.is(tok::eof) || !PP.mightHavePendingAnnotationTokens()))
+      DestroyTemplateIds();
+  }
+  void DestroyTemplateIds();
+
+  /// RAII object to destroy TemplateIdAnnotations where possible, from a
+  /// likely-good position during parsing.
+  struct DestroyTemplateIdAnnotationsRAIIObj {
+    Parser &Self;
+
+    DestroyTemplateIdAnnotationsRAIIObj(Parser &Self) : Self(Self) {}
+    ~DestroyTemplateIdAnnotationsRAIIObj() { Self.MaybeDestroyTemplateIds(); }
+  };
 
   /// Identifiers which have been declared within a tentative parse.
   SmallVector<IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
@@ -1462,7 +1482,6 @@ private:
   void ParseLateTemplatedFuncDef(LateParsedTemplate &LPT);
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
-  static void LateTemplateParserCleanupCallback(void *P);
 
   Sema::ParsingClassState
   PushParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface);
@@ -2936,32 +2955,32 @@ private:
 
   /// Parse a property kind into \p TIProperty for the selector set \p Set and
   /// selector \p Selector.
-  void parseOMPTraitPropertyKind(OMPTraitInfo::OMPTraitProperty &TIProperty,
+  void parseOMPTraitPropertyKind(OMPTraitProperty &TIProperty,
                                  llvm::omp::TraitSet Set,
                                  llvm::omp::TraitSelector Selector,
                                  llvm::StringMap<SourceLocation> &Seen);
 
   /// Parse a selector kind into \p TISelector for the selector set \p Set.
-  void parseOMPTraitSelectorKind(OMPTraitInfo::OMPTraitSelector &TISelector,
+  void parseOMPTraitSelectorKind(OMPTraitSelector &TISelector,
                                  llvm::omp::TraitSet Set,
                                  llvm::StringMap<SourceLocation> &Seen);
 
   /// Parse a selector set kind into \p TISet.
-  void parseOMPTraitSetKind(OMPTraitInfo::OMPTraitSet &TISet,
+  void parseOMPTraitSetKind(OMPTraitSet &TISet,
                             llvm::StringMap<SourceLocation> &Seen);
 
   /// Parses an OpenMP context property.
-  void parseOMPContextProperty(OMPTraitInfo::OMPTraitSelector &TISelector,
+  void parseOMPContextProperty(OMPTraitSelector &TISelector,
                                llvm::omp::TraitSet Set,
                                llvm::StringMap<SourceLocation> &Seen);
 
   /// Parses an OpenMP context selector.
-  void parseOMPContextSelector(OMPTraitInfo::OMPTraitSelector &TISelector,
+  void parseOMPContextSelector(OMPTraitSelector &TISelector,
                                llvm::omp::TraitSet Set,
                                llvm::StringMap<SourceLocation> &SeenSelectors);
 
   /// Parses an OpenMP context selector set.
-  void parseOMPContextSelectorSet(OMPTraitInfo::OMPTraitSet &TISet,
+  void parseOMPContextSelectorSet(OMPTraitSet &TISet,
                                   llvm::StringMap<SourceLocation> &SeenSets);
 
   /// Parses OpenMP context selectors.
@@ -3086,6 +3105,11 @@ private:
   OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
                                       OpenMPClauseKind Kind, bool ParseOnly);
 
+  /// Parses and creates OpenMP 5.0 iterators expression:
+  /// <iterators> = 'iterator' '(' { [ <iterator-type> ] identifier =
+  /// <range-specification> }+ ')'
+  ExprResult ParseOpenMPIteratorsExpr();
+
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP
   /// constructs.
@@ -3095,16 +3119,16 @@ public:
 
   /// Data used for parsing list of variables in OpenMP clauses.
   struct OpenMPVarListDataTy {
-    Expr *TailExpr = nullptr;
+    Expr *DepModOrTailExpr = nullptr;
     SourceLocation ColonLoc;
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
     int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
                             ///< lastprivate clause.
-    SmallVector<OpenMPMapModifierKind, OMPMapClause::NumberOfModifiers>
+    SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
     MapTypeModifiers;
-    SmallVector<SourceLocation, OMPMapClause::NumberOfModifiers>
+    SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
     MapTypeModifiersLoc;
     bool IsMapTypeImplicit = false;
     SourceLocation ExtraModifierLoc;

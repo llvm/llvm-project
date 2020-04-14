@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-std-to-llvm='emit-c-wrappers=1' %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
 
 // This tests the default memref calling convention and the emission of C
 // wrappers. We don't need to separate runs because the wrapper-emission
@@ -72,6 +73,7 @@ func @caller() {
 }
 
 // CHECK-LABEL: @callee
+// EMIT_C_ATTRIBUTE-LABEL: @callee
 func @callee(%arg0: memref<?xf32>, %arg1: index) {
   %0 = load %arg0[%arg1] : memref<?xf32>
   return
@@ -93,3 +95,17 @@ func @callee(%arg0: memref<?xf32>, %arg1: index) {
   // Forward the descriptor components to the call.
   // CHECK: llvm.call @callee(%[[ALLOC]], %[[ALIGN]], %[[OFFSET]], %[[SIZE]], %[[STRIDE]], %{{.*}}) : (!llvm<"float*">, !llvm<"float*">, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64) -> ()
 
+//   EMIT_C_ATTRIBUTE-NOT: @mlir_ciface_callee
+
+// CHECK-LABEL: @other_callee
+// EMIT_C_ATTRIBUTE-LABEL: @other_callee
+func @other_callee(%arg0: memref<?xf32>, %arg1: index) attributes { llvm.emit_c_interface } {
+  %0 = load %arg0[%arg1] : memref<?xf32>
+  return
+}
+
+// CHECK: @_mlir_ciface_other_callee
+// CHECK:   llvm.call @other_callee
+
+// EMIT_C_ATTRIBUTE: @_mlir_ciface_other_callee
+// EMIT_C_ATTRIBUTE:   llvm.call @other_callee

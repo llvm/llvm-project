@@ -10,9 +10,12 @@
  .global _start
  .thumb_func
 _start:
- ldr r0, target1
- ldr r1, target2
-
+/// ldr r0, target1
+ .inst.n 0x48ff
+ .reloc 0, R_ARM_THM_PC8, target1
+/// ldr r1, target2
+ .inst.n 0x49ff
+ .reloc 2, R_ARM_THM_PC8, target2
  .section .text.02, "ax", %progbits
  .balign 4
  .global target1

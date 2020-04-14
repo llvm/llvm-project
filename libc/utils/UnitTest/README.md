@@ -16,7 +16,7 @@ mixup/conflict problems.
 LLVM libc's unit test framework is much less featureful as compared to gtest.
 But, what is available strives to be exactly like gtest.
 
-## Will it be made as featurful as gtest in future?
+## Will it be made as featureful as gtest in future?
 
 It is not clear if LLVM libc needs/will need every feature of gtest. We only
 intend to extend it on an _as needed_ basis. Hence, it might never be as

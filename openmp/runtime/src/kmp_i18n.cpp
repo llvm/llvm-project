@@ -639,7 +639,7 @@ kmp_msg_t __kmp_msg_format(unsigned id_arg, ...) {
   // numbers, for example:  "%2$s %1$s".
   __kmp_str_buf_vprint(&buffer, __kmp_i18n_catgets(id), args);
 #elif KMP_OS_WINDOWS
-  // On Winodws, printf() family functions does not recognize GNU style
+  // On Windows, printf() family functions does not recognize GNU style
   // parameter numbers, so we have to use FormatMessage() instead. It recognizes
   // parameter numbers, e. g.:  "%2!s! "%1!s!".
   {

@@ -1,44 +1,21 @@
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class ExprCharTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
-        self.main_source = "main.cpp"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                          '// Break here', self.main_source_spec)
-        frame = thread.GetFrameAtIndex(0)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
 
-        value = frame.EvaluateExpression("foo(c)")
-        self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertEqual(value.GetValueAsSigned(0), 1)
-
-        value = frame.EvaluateExpression("foo(sc)")
-        self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertEqual(value.GetValueAsSigned(0), 2)
-
-        value = frame.EvaluateExpression("foo(uc)")
-        self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertEqual(value.GetValueAsSigned(0), 3)
+        self.expect_expr("foo(c)", result_value="1")
+        self.expect_expr("foo(sc)", result_value="2")
+        self.expect_expr("foo(uc)", result_value="3")
 
     def test_default_char(self):
         self.do_test()

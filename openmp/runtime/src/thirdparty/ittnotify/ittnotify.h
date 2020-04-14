@@ -2303,7 +2303,7 @@ ITT_STUBV(ITTAPI, void, marker, (const __itt_domain *domain, __itt_id id, __itt_
  * name of the metadata), and a value (the actual data). The encoding of
  * the value depends on the type of the metadata.
  *
- * The type of metadata is specified by an enumerated type __itt_metdata_type.
+ * The type of metadata is specified by an enumerated type __itt_metadata_type.
  * @{
  */
 
@@ -3196,7 +3196,7 @@ ITT_STUBV(ITTAPI, void, relation_add_ex,            (const __itt_domain *domain,
 #define __itt_relation_add_ex(d,x,y,z,a,b)          ITTNOTIFY_VOID_D5(relation_add_ex,d,x,y,z,a,b)
 #define __itt_relation_add_ex_ptr                   ITTNOTIFY_NAME(relation_add_ex)
 #else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_relation_add_to_current_ex(domain,clock_domain,timestame,relation,tail)
+#define __itt_relation_add_to_current_ex(domain,clock_domain,timestamp,relation,tail)
 #define __itt_relation_add_to_current_ex_ptr 0
 #define __itt_relation_add_ex(domain,clock_domain,timestamp,head,relation,tail)
 #define __itt_relation_add_ex_ptr 0

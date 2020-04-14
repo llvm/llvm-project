@@ -285,6 +285,7 @@ protected:
   bool isSectionVirtual(DataRefImpl Sec) const override;
   bool isBerkeleyText(DataRefImpl Sec) const override;
   bool isBerkeleyData(DataRefImpl Sec) const override;
+  bool isDebugSection(StringRef SectionName) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
   std::vector<SectionRef> dynamic_relocation_sections() const override;
@@ -814,6 +815,12 @@ bool ELFObjectFile<ELFT>::isBerkeleyData(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
+bool ELFObjectFile<ELFT>::isDebugSection(StringRef SectionName) const {
+  return SectionName.startswith(".debug") ||
+         SectionName.startswith(".zdebug") || SectionName == ".gdb_index";
+}
+
+template <class ELFT>
 relocation_iterator
 ELFObjectFile<ELFT>::section_rel_begin(DataRefImpl Sec) const {
   DataRefImpl RelData;
@@ -1020,8 +1027,12 @@ basic_symbol_iterator ELFObjectFile<ELFT>::symbol_end() const {
 
 template <class ELFT>
 elf_symbol_iterator ELFObjectFile<ELFT>::dynamic_symbol_begin() const {
-  DataRefImpl Sym = toDRI(DotDynSymSec, 0);
-  return symbol_iterator(SymbolRef(Sym, this));
+  if (!DotDynSymSec || DotDynSymSec->sh_size < sizeof(Elf_Sym))
+    // Ignore errors here where the dynsym is empty or sh_size less than the
+    // size of one symbol. These should be handled elsewhere.
+    return symbol_iterator(SymbolRef(toDRI(DotDynSymSec, 0), this));
+  // Skip 0-index NULL symbol.
+  return symbol_iterator(SymbolRef(toDRI(DotDynSymSec, 1), this));
 }
 
 template <class ELFT>

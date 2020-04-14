@@ -63,6 +63,10 @@ namespace {
 class GpuLaunchFuncToCudaCallsPass
     : public ModulePass<GpuLaunchFuncToCudaCallsPass> {
 private:
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuLaunchFuncToCudaCalls
+#include "mlir/Conversion/Passes.h.inc"
+
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
   llvm::LLVMContext &getLLVMContext() {
@@ -465,7 +469,3 @@ std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToCudaCallsPass() {
   return std::make_unique<GpuLaunchFuncToCudaCallsPass>();
 }
-
-static PassRegistration<GpuLaunchFuncToCudaCallsPass>
-    pass("launch-func-to-cuda",
-         "Convert all launch_func ops to CUDA runtime calls");

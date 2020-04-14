@@ -207,7 +207,7 @@ float SymbolQualitySignals::evaluate() const {
   // question of whether 0 references means a bad symbol or missing data.
   if (References >= 10) {
     // Use a sigmoid style boosting function, which flats out nicely for large
-    // numbers (e.g. 2.58 for 1M refererences).
+    // numbers (e.g. 2.58 for 1M references).
     // The following boosting function is equivalent to:
     //   m = 0.06
     //   f = 12.0

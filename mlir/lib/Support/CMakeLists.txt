@@ -4,7 +4,6 @@ set(LLVM_OPTIONAL_SOURCES
   MlirOptMain.cpp
   StorageUniquer.cpp
   ToolUtilities.cpp
-  TranslateClParser.cpp
 )
 
 add_mlir_library(MLIRSupport
@@ -33,19 +32,6 @@ target_link_libraries(MLIROptLib
   LLVMSupport
   MLIRSupport
   )
-
-add_mlir_library(MLIRTranslateClParser
-  TranslateClParser.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
-  )
-target_link_libraries(MLIRTranslateClParser
-  PUBLIC
-  LLVMSupport
-  MLIRIR
-  MLIRTranslation
-  MLIRParser)
 
 add_llvm_library(MLIRJitRunner
   JitRunner.cpp

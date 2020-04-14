@@ -467,3 +467,17 @@ void bar(MyMutableDictionary<NSString *, NSString *> *stringsByString,
 - (void)mapUsingBlock2:(id)block { // expected-warning{{conflicting parameter types in implementation}}
 }
 @end
+
+// --------------------------------------------------------------------------
+// Use a type parameter as a type argument.
+// --------------------------------------------------------------------------
+// Type bounds in a category/extension are omitted. rdar://problem/54329242
+@interface ParameterizedContainer<T : id<NSCopying>>
+- (ParameterizedContainer<T> *)inInterface;
+@end
+@interface ParameterizedContainer<T> (Cat)
+- (ParameterizedContainer<T> *)inCategory;
+@end
+@interface ParameterizedContainer<U> ()
+- (ParameterizedContainer<U> *)inExtension;
+@end

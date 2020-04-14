@@ -21,6 +21,7 @@
 #include "llvm/Object/ELF.h"
 
 namespace lld {
+// Returns a string representation for a symbol for diagnostics.
 std::string toString(const elf::Symbol &);
 
 // There are two different ways to convert an Archive::Symbol to a string:

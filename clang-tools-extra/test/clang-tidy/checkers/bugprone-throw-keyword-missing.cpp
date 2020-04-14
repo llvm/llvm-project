@@ -98,7 +98,7 @@ void funcCallWithTempExcTest() {
   f(5, RegularException());
 }
 
-// Global variable initilization test.
+// Global variable initialization test.
 RegularException exc = RegularException();
 RegularException *excptr = new RegularException();
 

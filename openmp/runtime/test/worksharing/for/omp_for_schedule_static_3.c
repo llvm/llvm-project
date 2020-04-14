@@ -150,7 +150,7 @@ int test_omp_for_schedule_static_3()
    * same logical assignment of chunks to threads. We use the nowait
    * clause to increase the probability to get an error. */
 
-  /* First we allocate some more memmory */
+  /* First we allocate some more memory */
   free (tids);
   tids = (int *) malloc (sizeof (int) * LOOPCOUNT);
   tids2 = (int *) malloc (sizeof (int) * LOOPCOUNT);

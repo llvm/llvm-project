@@ -224,7 +224,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   trace::Span Tracer("FindOccurrenceeWithinFile");
   // If the cursor is at the underlying CXXRecordDecl of the
   // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
-  // get the primary template maunally.
+  // get the primary template manually.
   // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
   // overriddens, primary template and all explicit specializations.
   // FIXME: Get rid of the remaining tooling APIs.
@@ -411,7 +411,7 @@ bool impliesSimpleEdit(const Position &LHS, const Position &RHS) {
 //     *subset* of lexed occurrences (we allow a single name refers to more
 //     than one symbol)
 //   - all indexed occurrences must be mapped, and Result must be distinct and
-//     preseve order (only support detecting simple edits to ensure a
+//     preserve order (only support detecting simple edits to ensure a
 //     robust mapping)
 //   - each indexed -> lexed occurrences mapping correspondence may change the
 //     *line* or *column*, but not both (increases chance of a robust mapping)

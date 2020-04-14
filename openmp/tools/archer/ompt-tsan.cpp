@@ -258,7 +258,7 @@ template <typename T, int N> struct DataPool {
       T data;
     };
     // We alloc without initialize the memory. We cannot call constructors.
-    // Therfore use malloc!
+    // Therefore use malloc!
     pooldata *datas = (pooldata *)malloc(sizeof(pooldata) * N);
     memory.push_back(datas);
     for (int i = 0; i < N; i++) {

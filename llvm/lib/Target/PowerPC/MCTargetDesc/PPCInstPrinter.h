@@ -65,10 +65,7 @@ public:
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printImmZeroOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
-                          raw_ostream &O, bool RelativeForm = false);
-  void printBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-    printBranchOperand(MI, 0, OpNo, O, true);
-  }
+                          raw_ostream &O);
   void printAbsBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printTLSCall(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 

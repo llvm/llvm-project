@@ -31,7 +31,18 @@ static std::string demangle(StringRef symName) {
   return std::string(symName);
 }
 
-std::string toString(const elf::Symbol &b) { return demangle(b.getName()); }
+std::string toString(const elf::Symbol &sym) {
+  StringRef name = sym.getName();
+  std::string ret = demangle(name);
+
+  // If sym has a non-default version, its name may have been truncated at '@'
+  // by Symbol::parseSymbolVersion(). Add the trailing part. This check is safe
+  // because every symbol name ends with '\0'.
+  if (name.data()[name.size()] == '@')
+    ret += name.data() + name.size();
+  return ret;
+}
+
 std::string toELFString(const Archive::Symbol &b) {
   return demangle(b.getName());
 }

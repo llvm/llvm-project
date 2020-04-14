@@ -160,7 +160,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
     *Errors = std::move(Diags);
   auto Result = tooling::applyAllReplacements(Code, Fixes);
   if (!Result) {
-    // FIXME: propogate the error.
+    // FIXME: propagate the error.
     llvm::consumeError(Result.takeError());
     return "";
   }

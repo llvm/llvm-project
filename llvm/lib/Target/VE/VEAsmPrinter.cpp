@@ -96,8 +96,11 @@ static void emitBSIC(MCStreamer &OutStreamer, MCOperand &R1, MCOperand &R2,
 static void emitLEAzzi(MCStreamer &OutStreamer, MCOperand &Imm, MCOperand &RD,
                        const MCSubtargetInfo &STI) {
   MCInst LEAInst;
-  LEAInst.setOpcode(VE::LEAzzi);
+  LEAInst.setOpcode(VE::LEAzii);
   LEAInst.addOperand(RD);
+  MCOperand CZero = MCOperand::createImm(0);
+  LEAInst.addOperand(CZero);
+  LEAInst.addOperand(CZero);
   LEAInst.addOperand(Imm);
   OutStreamer.emitInstruction(LEAInst, STI);
 }
@@ -105,8 +108,11 @@ static void emitLEAzzi(MCStreamer &OutStreamer, MCOperand &Imm, MCOperand &RD,
 static void emitLEASLzzi(MCStreamer &OutStreamer, MCOperand &Imm, MCOperand &RD,
                          const MCSubtargetInfo &STI) {
   MCInst LEASLInst;
-  LEASLInst.setOpcode(VE::LEASLzzi);
+  LEASLInst.setOpcode(VE::LEASLzii);
   LEASLInst.addOperand(RD);
+  MCOperand CZero = MCOperand::createImm(0);
+  LEASLInst.addOperand(CZero);
+  LEASLInst.addOperand(CZero);
   LEASLInst.addOperand(Imm);
   OutStreamer.emitInstruction(LEASLInst, STI);
 }
@@ -116,6 +122,8 @@ static void emitLEAzii(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
   MCInst LEAInst;
   LEAInst.setOpcode(VE::LEAzii);
   LEAInst.addOperand(RD);
+  MCOperand CZero = MCOperand::createImm(0);
+  LEAInst.addOperand(CZero);
   LEAInst.addOperand(RS1);
   LEAInst.addOperand(Imm);
   OutStreamer.emitInstruction(LEAInst, STI);
@@ -126,9 +134,9 @@ static void emitLEASLrri(MCStreamer &OutStreamer, MCOperand &RS1,
                          const MCSubtargetInfo &STI) {
   MCInst LEASLInst;
   LEASLInst.setOpcode(VE::LEASLrri);
+  LEASLInst.addOperand(RD);
   LEASLInst.addOperand(RS1);
   LEASLInst.addOperand(RS2);
-  LEASLInst.addOperand(RD);
   LEASLInst.addOperand(Imm);
   OutStreamer.emitInstruction(LEASLInst, STI);
 }

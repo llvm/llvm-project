@@ -34,7 +34,7 @@ SECTIONS {
 # RUN: ld.lld -o %t5 --script %t.script %t.o
 # RUN: llvm-objdump --section-headers %t5 | FileCheck %s --check-prefix=ZERO
 
-## Test we fail gracefuly when alignment value is not a power of 2 (#1).
+## Test we fail gracefully when alignment value is not a power of 2 (#1).
 # RUN: echo "SECTIONS { . = 0x123; . = ALIGN(0x123, 3); .aaa : { *(.aaa) } }" > %t.script
 # RUN: not ld.lld -o /dev/null --script %t.script %t.o 2>&1 | FileCheck -check-prefix=ERR %s
 

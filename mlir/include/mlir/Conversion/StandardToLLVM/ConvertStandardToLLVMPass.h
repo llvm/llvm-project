@@ -54,7 +54,7 @@ void populateStdToLLVMBarePtrConversionPatterns(
     bool useAlloca = false);
 
 /// Value to pass as bitwidth for the index type when the converter is expected
-/// to derive the bitwith from the LLVM data layout.
+/// to derive the bitwidth from the LLVM data layout.
 static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.

@@ -196,7 +196,7 @@ struct FloatAttributeStorage final
   size_t numObjects;
 };
 
-/// An attribute representing a integral value.
+/// An attribute representing an integral value.
 struct IntegerAttributeStorage final
     : public AttributeStorage,
       public llvm::TrailingObjects<IntegerAttributeStorage, uint64_t> {

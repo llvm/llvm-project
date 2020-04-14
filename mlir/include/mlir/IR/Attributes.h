@@ -601,13 +601,13 @@ public:
   int64_t getNumElements() const;
 
   /// Generates a new ElementsAttr by mapping each int value to a new
-  /// underlying APInt. The new values can represent either a integer or float.
+  /// underlying APInt. The new values can represent either an integer or float.
   /// This ElementsAttr should contain integers.
   ElementsAttr mapValues(Type newElementType,
                          function_ref<APInt(const APInt &)> mapping) const;
 
   /// Generates a new ElementsAttr by mapping each float value to a new
-  /// underlying APInt. The new values can represent either a integer or float.
+  /// underlying APInt. The new values can represent either an integer or float.
   /// This ElementsAttr should contain floats.
   ElementsAttr mapValues(Type newElementType,
                          function_ref<APInt(const APFloat &)> mapping) const;
@@ -950,13 +950,13 @@ public:
   DenseElementsAttr reshape(ShapedType newType);
 
   /// Generates a new DenseElementsAttr by mapping each int value to a new
-  /// underlying APInt. The new values can represent either a integer or float.
+  /// underlying APInt. The new values can represent either an integer or float.
   /// This underlying type must be an DenseIntElementsAttr.
   DenseElementsAttr mapValues(Type newElementType,
                               function_ref<APInt(const APInt &)> mapping) const;
 
   /// Generates a new DenseElementsAttr by mapping each float value to a new
-  /// underlying APInt. the new values can represent either a integer or float.
+  /// underlying APInt. the new values can represent either an integer or float.
   /// This underlying type must be an DenseFPElementsAttr.
   DenseElementsAttr
   mapValues(Type newElementType,

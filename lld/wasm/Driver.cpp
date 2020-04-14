@@ -784,7 +784,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     if (entrySym && entrySym->isDefined())
       entrySym->forceExport = true;
     else
-      error("entry symbol not defined (pass --no-entry to supress): " +
+      error("entry symbol not defined (pass --no-entry to suppress): " +
             config->entry);
   }
 

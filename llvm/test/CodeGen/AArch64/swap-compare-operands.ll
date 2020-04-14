@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64 | FileCheck %s
 
 define i1 @testSwapCmpWithLSL64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithLSL64_1:
+; CHECK-LABEL: testSwapCmpWithLSL64_1:
 ; CHECK:      cmp     x1, x0, lsl #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -11,7 +11,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSL64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithLSL64_63:
+; CHECK-LABEL: testSwapCmpWithLSL64_63:
 ; CHECK:      cmp     x1, x0, lsl #63
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -21,7 +21,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSL32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithLSL32_1:
+; CHECK-LABEL: testSwapCmpWithLSL32_1:
 ; CHECK:      cmp     w1, w0, lsl #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -31,7 +31,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSL32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithLSL32_31:
+; CHECK-LABEL: testSwapCmpWithLSL32_31:
 ; CHECK:      cmp     w1, w0, lsl #31
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -41,7 +41,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSR64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithLSR64_1:
+; CHECK-LABEL: testSwapCmpWithLSR64_1:
 ; CHECK:      cmp     x1, x0, lsr #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -51,7 +51,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSR64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithLSR64_63:
+; CHECK-LABEL: testSwapCmpWithLSR64_63:
 ; CHECK:      cmp     x1, x0, lsr #63
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -61,7 +61,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSR32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithLSR32_1:
+; CHECK-LABEL: testSwapCmpWithLSR32_1:
 ; CHECK:      cmp     w1, w0, lsr #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -71,7 +71,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithLSR32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithLSR32_31:
+; CHECK-LABEL: testSwapCmpWithLSR32_31:
 ; CHECK:      cmp     w1, w0, lsr #31
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -81,7 +81,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithASR64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithASR64_1:
+; CHECK-LABEL: testSwapCmpWithASR64_1:
 ; CHECK:      cmp     x1, x0, asr #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -91,7 +91,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithASR64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithASR64_63:
+; CHECK-LABEL: testSwapCmpWithASR64_63:
 ; CHECK:      cmp     x1, x0, asr #63
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -101,7 +101,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithASR32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithASR32_1:
+; CHECK-LABEL: testSwapCmpWithASR32_1:
 ; CHECK:      cmp     w1, w0, asr #1
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -111,7 +111,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithASR32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithASR32_31:
+; CHECK-LABEL: testSwapCmpWithASR32_31:
 ; CHECK:      cmp     w1, w0, asr #31
 ; CHECK-NEXT: cset    w0, gt
 entry:
@@ -121,7 +121,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedZeroExtend32_64(i32 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend32_64
+; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend32_64
 ; CHECK:      cmp    x1, w0, uxtw #2
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -132,7 +132,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedZeroExtend16_64(i16 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend16_64
+; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend16_64
 ; CHECK:      cmp    x1, w0, uxth #2
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -143,7 +143,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedZeroExtend8_64(i8 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend8_64
 ; CHECK:      cmp    x1, w0, uxtb #4
 ; CHECK-NEXT: cset    w0, lo
 entry:
@@ -154,7 +154,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedZeroExtend16_32(i16 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend16_32
 ; CHECK:      cmp    w1, w0, uxth #3
 ; CHECK-NEXT: cset    w0, lo
 entry:
@@ -165,7 +165,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedZeroExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend8_32
 ; CHECK:      cmp    w1, w0, uxtb #4
 ; CHECK-NEXT: cset    w0, lo
 entry:
@@ -176,7 +176,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithTooLargeShiftedZeroExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithTooLargeShiftedZeroExtend8_64
+; CHECK-LABEL: testSwapCmpWithTooLargeShiftedZeroExtend8_32
 ; CHECK:      and    [[REG:w[0-9]+]], w0, #0xff
 ; CHECK:      cmp    w1, [[REG]], lsl #5
 ; CHECK-NEXT: cset   w0, lo
@@ -188,7 +188,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithZeroExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithZeroExtend8_64
+; CHECK-LABEL: testSwapCmpWithZeroExtend8_32
 ; CHECK:      cmp    w1, w0, uxtb
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -198,7 +198,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedSignExtend32_64(i32 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend32_64
+; CHECK-LABEL: testSwapCmpWithShiftedSignExtend32_64
 ; CHECK:      cmp    x1, w0, sxtw #2
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -209,7 +209,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedSignExtend16_64(i16 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedZeroExtend16_64
+; CHECK-LABEL: testSwapCmpWithShiftedSignExtend16_64
 ; CHECK:      cmp    x1, w0, sxth #2
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -220,7 +220,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedSignExtend8_64(i8 %a, i64 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedSignExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedSignExtend8_64
 ; CHECK:      cmp    x1, w0, sxtb #4
 ; CHECK-NEXT: cset    w0, lo
 entry:
@@ -231,7 +231,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedSignExtend16_32(i16 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedSignExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedSignExtend16_32
 ; CHECK:      cmp    w1, w0, sxth #3
 ; CHECK-NEXT: cset    w0, lo
 entry:
@@ -242,7 +242,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithShiftedSignExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithShiftedSignExtend8_64
+; CHECK-LABEL: testSwapCmpWithShiftedSignExtend8_32
 ; CHECK:      cmp    w1, w0, sxtb #4
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -253,7 +253,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithTooLargeShiftedSignExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithTooLargeShiftedSignExtend8_64
+; CHECK-LABEL: testSwapCmpWithTooLargeShiftedSignExtend8_32
 ; CHECK:      sxtb   [[REG:w[0-9]+]], w0
 ; CHECK-NEXT: cmp    w1, [[REG]], lsl #5
 ; CHECK-NEXT: cset   w0, lo
@@ -265,7 +265,7 @@ entry:
 }
 
 define i1 @testSwapCmpWithSignExtend8_32(i8 %a, i32 %b) {
-; CHECK-LABEL testSwapCmpWithSignExtend8_64
+; CHECK-LABEL: testSwapCmpWithSignExtend8_32
 ; CHECK:      cmp    w1, w0, sxtb
 ; CHECK-NEXT: cset   w0, lo
 entry:
@@ -275,7 +275,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithLSL64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSL64_1:
+; CHECK-LABEL: testSwapCmnWithLSL64_1:
 ; CHECK:      cmn    x1, x0, lsl #1
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -287,7 +287,7 @@ entry:
 
 ; Note: testing with a 62 bits shift as 63 has another optimization kicking in.
 define i1 @testSwapCmnWithLSL64_62(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSL64_62:
+; CHECK-LABEL: testSwapCmnWithLSL64_62:
 ; CHECK:      cmn    x1, x0, lsl #62
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -302,7 +302,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithLSL64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSL64_63:
+; CHECK-LABEL: testSwapCmnWithLSL64_63:
 ; CHECK:      cmp    x1, x0, lsl #63
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -313,7 +313,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithLSL32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSL32_1:
+; CHECK-LABEL: testSwapCmnWithLSL32_1:
 ; CHECK:      cmn    w1, w0, lsl #1
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -325,7 +325,7 @@ entry:
 
 ; Note: testing with a 30 bits shift as 30 has another optimization kicking in.
 define i1 @testSwapCmnWithLSL32_30(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSL32_30:
+; CHECK-LABEL: testSwapCmnWithLSL32_30:
 ; CHECK:      cmn    w1, w0, lsl #30
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -340,7 +340,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithLSL32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSL32_31:
+; CHECK-LABEL: testSwapCmnWithLSL32_31:
 ; CHECK:      cmp    w1, w0, lsl #31
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -351,7 +351,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithLSR64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSR64_1:
+; CHECK-LABEL: testSwapCmnWithLSR64_1:
 ; CHECK:      cmn    x1, x0, lsr #1
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -363,7 +363,7 @@ entry:
 
 ; Note: testing with a 62 bits shift as 63 has another optimization kicking in.
 define i1 @testSwapCmnWithLSR64_62(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSR64_62:
+; CHECK-LABEL: testSwapCmnWithLSR64_62:
 ; CHECK:      cmn    x1, x0, lsr #62
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -378,7 +378,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithLSR64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithLSR64_63:
+; CHECK-LABEL: testSwapCmnWithLSR64_63:
 ; CHECK:      cmp    x1, x0, asr #63
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -389,7 +389,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithLSR32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSR32_1:
+; CHECK-LABEL: testSwapCmnWithLSR32_1:
 ; CHECK:      cmn    w1, w0, lsr #1
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -401,7 +401,7 @@ entry:
 
 ; Note: testing with a 30 bits shift as 31 has another optimization kicking in.
 define i1 @testSwapCmnWithLSR32_30(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSR32_30:
+; CHECK-LABEL: testSwapCmnWithLSR32_30:
 ; CHECK:      cmn    w1, w0, lsr #30
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -416,7 +416,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithLSR32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithLSR32_31:
+; CHECK-LABEL: testSwapCmnWithLSR32_31:
 ; CHECK:      cmp    w1, w0, asr #31
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -427,7 +427,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithASR64_1(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithASR64_1:
+; CHECK-LABEL: testSwapCmnWithASR64_1:
 ; CHECK:      cmn    x1, x0, asr #3
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -439,7 +439,7 @@ entry:
 
 ; Note: testing with a 62 bits shift as 63 has another optimization kicking in.
 define i1 @testSwapCmnWithASR64_62(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithASR64_62:
+; CHECK-LABEL: testSwapCmnWithASR64_62:
 ; CHECK:      cmn    x1, x0, asr #62
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -454,7 +454,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithASR64_63(i64 %a, i64 %b) {
-; CHECK-LABEL testSwapCmnWithASR64_63:
+; CHECK-LABEL: testSwapCmnWithASR64_63:
 ; CHECK:      cmp    x1, x0, lsr #63
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -465,7 +465,7 @@ entry:
 }
 
 define i1 @testSwapCmnWithASR32_1(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithASR32_1:
+; CHECK-LABEL: testSwapCmnWithASR32_1:
 ; CHECK:      cmn    w1, w0, asr #1
 ; CHECK-NEXT: cset   w0, eq
 entry:
@@ -477,7 +477,7 @@ entry:
 
 ; Note: testing with a 30 bits shift as 31 has another optimization kicking in.
 define i1 @testSwapCmnWithASR32_30(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithASR32_30:
+; CHECK-LABEL: testSwapCmnWithASR32_30:
 ; CHECK:      cmn    w1, w0, asr #30
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -492,7 +492,7 @@ entry:
 ; so that this test can be adapted should the optimization be done with the
 ; operand swap.
 define i1 @testSwapCmnWithASR32_31(i32 %a, i32 %b) {
-; CHECK-LABEL testSwapCmnWithASR32_31:
+; CHECK-LABEL: testSwapCmnWithASR32_31:
 ; CHECK:      cmp    w1, w0, lsr #31
 ; CHECK-NEXT: cset   w0, ne
 entry:
@@ -503,7 +503,7 @@ entry:
 }
 
 define i64 @testSwapCmpToCmnWithZeroExtend(i32 %a32, i16 %a16, i8 %a8, i64 %b64, i32 %b32) {
-; CHECK-LABEL testSwapCmpToCmnWithZeroExtend:
+; CHECK-LABEL: testSwapCmpToCmnWithZeroExtend:
 t0:
   %conv0 = zext i32 %a32 to i64
   %shl0 = shl i64 %conv0, 1
@@ -567,7 +567,7 @@ end:
   ret i64 1
 }
 define i64 @testSwapCmpToCmnWithSignExtend(i32 %a32, i16 %a16, i8 %a8, i64 %b64, i32 %b32) {
-; CHECK-LABEL testSwapCmpToCmnWithSignExtend:
+; CHECK-LABEL: testSwapCmpToCmnWithSignExtend:
 t0:
   %conv0 = sext i32 %a32 to i64
   %shl0 = shl i64 %conv0, 1

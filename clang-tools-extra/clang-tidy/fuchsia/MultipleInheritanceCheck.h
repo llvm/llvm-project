@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace fuchsia {
 
-/// Mulitple implementation inheritance is discouraged.
+/// Multiple implementation inheritance is discouraged.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-multiple-inheritance.html

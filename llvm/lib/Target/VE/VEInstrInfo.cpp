@@ -303,10 +303,13 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 /// any side effects other than loading from the stack slot.
 unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  if (MI.getOpcode() == VE::LDSri || MI.getOpcode() == VE::LDLri ||
-      MI.getOpcode() == VE::LDUri) {
+  if (MI.getOpcode() == VE::LDrii ||    // I64
+      MI.getOpcode() == VE::LDLSXrii || // I32
+      MI.getOpcode() == VE::LDUrii      // F32
+  ) {
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
-        MI.getOperand(2).getImm() == 0) {
+        MI.getOperand(2).getImm() == 0 && MI.getOperand(3).isImm() &&
+        MI.getOperand(3).getImm() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
       return MI.getOperand(0).getReg();
     }
@@ -321,12 +324,15 @@ unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// any side effects other than storing to the stack slot.
 unsigned VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
-  if (MI.getOpcode() == VE::STSri || MI.getOpcode() == VE::STLri ||
-      MI.getOpcode() == VE::STUri) {
+  if (MI.getOpcode() == VE::STrii ||  // I64
+      MI.getOpcode() == VE::STLrii || // I32
+      MI.getOpcode() == VE::STUrii    // F32
+  ) {
     if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-        MI.getOperand(1).getImm() == 0) {
+        MI.getOperand(1).getImm() == 0 && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0) {
       FrameIndex = MI.getOperand(0).getIndex();
-      return MI.getOperand(2).getReg();
+      return MI.getOperand(3).getReg();
     }
   }
   return 0;
@@ -349,20 +355,23 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
   if (RC == &VE::I64RegClass) {
-    BuildMI(MBB, I, DL, get(VE::STSri))
+    BuildMI(MBB, I, DL, get(VE::STrii))
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addReg(SrcReg, getKillRegState(isKill))
         .addMemOperand(MMO);
   } else if (RC == &VE::I32RegClass) {
-    BuildMI(MBB, I, DL, get(VE::STLri))
+    BuildMI(MBB, I, DL, get(VE::STLrii))
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addReg(SrcReg, getKillRegState(isKill))
         .addMemOperand(MMO);
   } else if (RC == &VE::F32RegClass) {
-    BuildMI(MBB, I, DL, get(VE::STUri))
+    BuildMI(MBB, I, DL, get(VE::STUrii))
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addReg(SrcReg, getKillRegState(isKill))
         .addMemOperand(MMO);
@@ -386,18 +395,21 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
 
   if (RC == &VE::I64RegClass) {
-    BuildMI(MBB, I, DL, get(VE::LDSri), DestReg)
+    BuildMI(MBB, I, DL, get(VE::LDrii), DestReg)
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addMemOperand(MMO);
   } else if (RC == &VE::I32RegClass) {
-    BuildMI(MBB, I, DL, get(VE::LDLri), DestReg)
+    BuildMI(MBB, I, DL, get(VE::LDLSXrii), DestReg)
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addMemOperand(MMO);
   } else if (RC == &VE::F32RegClass) {
-    BuildMI(MBB, I, DL, get(VE::LDUri), DestReg)
+    BuildMI(MBB, I, DL, get(VE::LDUrii), DestReg)
         .addFrameIndex(FI)
+        .addImm(0)
         .addImm(0)
         .addMemOperand(MMO);
   } else
@@ -487,13 +499,16 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   // Update machine-CFG edges
   BB->addSuccessor(sinkMBB);
 
-  BuildMI(BB, dl, TII.get(VE::LDSri), VE::SX61)
+  BuildMI(BB, dl, TII.get(VE::LDrii), VE::SX61)
       .addReg(VE::SX14)
+      .addImm(0)
       .addImm(0x18);
   BuildMI(BB, dl, TII.get(VE::ORri), VE::SX62)
       .addReg(VE::SX0)
       .addImm(0);
-  BuildMI(BB, dl, TII.get(VE::LEAzzi), VE::SX63)
+  BuildMI(BB, dl, TII.get(VE::LEAzii), VE::SX63)
+      .addImm(0)
+      .addImm(0)
       .addImm(0x13b);
   BuildMI(BB, dl, TII.get(VE::SHMri))
       .addReg(VE::SX61)

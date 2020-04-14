@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vpclmulqdq -emit-llvm -o - | FileCheck %s --check-prefix AVX
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vpclmulqdq -target-feature +avx512f -emit-llvm -o - | FileCheck %s --check-prefixes AVX,AVX512
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vpclmulqdq -emit-llvm -o - | FileCheck %s --check-prefix AVX
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vpclmulqdq -target-feature +avx512f -emit-llvm -o - | FileCheck %s --check-prefixes AVX,AVX512
 
 #include <immintrin.h>
 

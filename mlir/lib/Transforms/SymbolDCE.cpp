@@ -18,6 +18,10 @@ using namespace mlir;
 
 namespace {
 struct SymbolDCE : public OperationPass<SymbolDCE> {
+/// Include the generated pass utilities.
+#define GEN_PASS_SymbolDCE
+#include "mlir/Transforms/Passes.h.inc"
+
   void runOnOperation() override;
 
   /// Compute the liveness of the symbols within the given symbol table.
@@ -156,5 +160,3 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
 std::unique_ptr<Pass> mlir::createSymbolDCEPass() {
   return std::make_unique<SymbolDCE>();
 }
-
-static PassRegistration<SymbolDCE> pass("symbol-dce", "Eliminate dead symbols");

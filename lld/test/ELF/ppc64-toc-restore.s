@@ -52,7 +52,7 @@ _diff_object:
 noretbranch:
   b bar_local
 // CHECK-LABEL: <noretbranch>:
-// CHECK:       100102e0:        b .+67108832
+// CHECK-NEXT:  100102e0:        b 0x100102c0
 // CHECK-EMPTY:
 
 // This should come last to check the end-of-buffer condition.

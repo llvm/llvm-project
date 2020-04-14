@@ -35,6 +35,16 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "SHLIBDIR"
+  "LLVM_LIT_TOOLS_DIR"
+  "CLANG_BINARY_DIR"
+  "CLANG_SOURCE_DIR"
+  "CLANG_TOOLS_DIR"
   )
 
 configure_lit_site_cfg(
@@ -42,6 +52,13 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "CLANG_BINARY_DIR"
+  "SHLIBDIR"
   )
 
 option(CLANG_TEST_USE_VG "Run Clang tests under Valgrind" OFF)

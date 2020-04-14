@@ -31,7 +31,7 @@ define i16 @func3(i16 %p) {
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    ldz %s0, %s0
-; CHECK-NEXT:    lea %s0, -16(%s0)
+; CHECK-NEXT:    adds.w.sx %s0, -16, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i16 @llvm.ctlz.i16(i16 %p, i1 true)
   ret i16 %r
@@ -45,7 +45,7 @@ define i8 @func4(i8 %p) {
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    ldz %s0, %s0
-; CHECK-NEXT:    lea %s0, -24(%s0)
+; CHECK-NEXT:    adds.w.sx %s0, -24, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i8 @llvm.ctlz.i8(i8 %p, i1 true)
   ret i8 %r

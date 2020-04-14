@@ -208,6 +208,11 @@ static cl::opt<bool>
     Statistics("statistics",
                cl::desc("Emit JSON-formatted debug info quality metrics."),
                cat(DwarfDumpCategory));
+static cl::opt<bool>
+    ShowSectionSizes("show-section-sizes",
+                     cl::desc("Show the sizes of all debug sections, "
+                              "expressed in bytes."),
+                     cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
@@ -411,6 +416,9 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 }
 
 bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                               const Twine &Filename, raw_ostream &OS);
+
+bool collectObjectSectionSizes(ObjectFile &Obj, DWARFContext & /*DICtx*/,
                                const Twine &Filename, raw_ostream &OS);
 
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
@@ -635,12 +643,16 @@ int main(int argc, char **argv) {
           return handleFile(Object, verifyObjectFile, OutputFile.os());
         }))
       return 1;
-  } else if (Statistics)
+  } else if (Statistics) {
     for (auto Object : Objects)
       handleFile(Object, collectStatsForObjectFile, OutputFile.os());
-  else
+  } else if (ShowSectionSizes) {
+    for (auto Object : Objects)
+      handleFile(Object, collectObjectSectionSizes, OutputFile.os());
+  } else {
     for (auto Object : Objects)
       handleFile(Object, dumpObjectFile, OutputFile.os());
+  }
 
   return EXIT_SUCCESS;
 }

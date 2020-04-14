@@ -439,6 +439,8 @@ class MVE_ScalarShiftDoubleReg<string iname, dag iops, string asm,
 
   let Inst{19-17} = RdaLo{3-1};
   let Inst{11-9} = RdaHi{3-1};
+
+  let hasSideEffects = 0;
 }
 
 class MVE_ScalarShiftDRegImm<string iname, bits<2> op5_4, bit op16,
@@ -756,6 +758,7 @@ class MVE_VMINMAXNMV<string iname, string suffix, bit sz,
   let horizontalReduction = 1;
 
   let Predicates = [HasMVEFloat];
+  let hasSideEffects = 0;
 }
 
 multiclass MVE_VMINMAXNMV_p<string iname, bit notAbs, bit isMin,
@@ -1065,6 +1068,8 @@ class MVE_VMLALDAVBase<string iname, string suffix, dag iops, string cstr,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = bit_0;
   let horizontalReduction = 1;
+
+  let hasSideEffects = 0;
 }
 
 multiclass MVE_VMLALDAVBase_A<string iname, string x, string suffix,
@@ -1610,6 +1615,8 @@ class MVE_VMOV_lane<string suffix, bit U, dag indexop,
   let Inst{11-8} = 0b1011;
   let Inst{7} = Qd{3};
   let Inst{4-0} = 0b10000;
+
+  let hasSideEffects = 0;
 }
 
 class MVE_VMOV_lane_32<MVE_VMOV_lane_direction dir>
@@ -2551,22 +2558,23 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i8),
             (MVE_VMOVLs16bh (MVE_VMOVLs8bh MQPR:$src))>;
 
-  def : Pat<(sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))),
-                        v8i8), (MVE_VMOVLs8th MQPR:$src)>;
-  def : Pat<(sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
-                        v4i16), (MVE_VMOVLs16th MQPR:$src)>;
-  def : Pat<(ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))),
-                        (i32 0xAFF)), (MVE_VMOVLu8th MQPR:$src)>;
-  def : Pat<(and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
-                 (v4i32 (ARMvmovImm (i32 0xCFF)))),
-                 (MVE_VMOVLu16th MQPR:$src)>;
+  def : Pat<(sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))), v8i8),
+            (MVE_VMOVLs8th MQPR:$src)>;
+  def : Pat<(sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))), v4i16),
+            (MVE_VMOVLs16th MQPR:$src)>;
 
-  // zext_inreg 16 -> 32
-  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
-            (MVE_VMOVLu16bh MQPR:$src)>;
   // zext_inreg 8 -> 16
   def : Pat<(ARMvbicImm (v8i16 MQPR:$src), (i32 0xAFF)),
             (MVE_VMOVLu8bh MQPR:$src)>;
+  // zext_inreg 16 -> 32
+  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16bh MQPR:$src)>;
+  // Same zext_inreg with vrevs, picking the top half
+  def : Pat<(ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src)))), (i32 0xAFF)),
+            (MVE_VMOVLu8th MQPR:$src)>;
+  def : Pat<(and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src)))),
+                 (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16th MQPR:$src)>;
 }
 
 
@@ -4436,6 +4444,50 @@ defm MVE_VMULLBp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
 defm MVE_VMULLTp16 : MVE_VMULL_m<MVE_v8p16, int_arm_mve_vmull_poly,
                                  int_arm_mve_mull_poly_predicated, 0b1>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v2i64 (ARMvmulls (v4i32 MQPR:$src1), (v4i32 MQPR:$src2))),
+            (MVE_VMULLBs32 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(v2i64 (ARMvmulls (v4i32 (ARMvrev64 (v4i32 MQPR:$src1))),
+                              (v4i32 (ARMvrev64 (v4i32 MQPR:$src2))))),
+            (MVE_VMULLTs32 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (sext_inreg (v4i32 MQPR:$src1), v4i16),
+                 (sext_inreg (v4i32 MQPR:$src2), v4i16)),
+            (MVE_VMULLBs16 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src1)))), v4i16),
+                 (sext_inreg (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src2)))), v4i16)),
+            (MVE_VMULLTs16 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (sext_inreg (v8i16 MQPR:$src1), v8i8),
+                 (sext_inreg (v8i16 MQPR:$src2), v8i8)),
+            (MVE_VMULLBs8 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src1)))), v8i8),
+                 (sext_inreg (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src2)))), v8i8)),
+            (MVE_VMULLTs8 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(v2i64 (ARMvmullu (v4i32 MQPR:$src1), (v4i32 MQPR:$src2))),
+            (MVE_VMULLBu32 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(v2i64 (ARMvmullu (v4i32 (ARMvrev64 (v4i32 MQPR:$src1))),
+                              (v4i32 (ARMvrev64 (v4i32 MQPR:$src2))))),
+            (MVE_VMULLTu32 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (and (v4i32 MQPR:$src1), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+                 (and (v4i32 MQPR:$src2), (v4i32 (ARMvmovImm (i32 0xCFF))))),
+            (MVE_VMULLBu16 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src1)))),
+                      (v4i32 (ARMvmovImm (i32 0xCFF)))),
+                 (and (v4i32 (ARMVectorRegCast (ARMvrev32 (v8i16 MQPR:$src2)))),
+                      (v4i32 (ARMvmovImm (i32 0xCFF))))),
+            (MVE_VMULLTu16 MQPR:$src1, MQPR:$src2)>;
+
+  def : Pat<(mul (ARMvbicImm (v8i16 MQPR:$src1), (i32 0xAFF)),
+                 (ARMvbicImm (v8i16 MQPR:$src2), (i32 0xAFF))),
+            (MVE_VMULLBu8 MQPR:$src1, MQPR:$src2)>;
+  def : Pat<(mul (ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src1)))), (i32 0xAFF)),
+                 (ARMvbicImm (v8i16 (ARMVectorRegCast (ARMvrev16 (v16i8 MQPR:$src2)))), (i32 0xAFF))),
+            (MVE_VMULLTu8 MQPR:$src1, MQPR:$src2)>;
+}
+
 class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
                  list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
@@ -5227,6 +5279,7 @@ class MVE_VFMAMLA_qr<string iname, string suffix,
   let Inst{8} = 0b0;
   let Inst{5} = 0b0;
   let validForTailPredication = 1;
+  let hasSideEffects = 0;
 }
 
 multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
@@ -5375,6 +5428,7 @@ class MVE_VxDUP<string iname, string suffix, bits<2> size, bit bit_12,
   let Inst{6-1} = 0b110111;
   let Inst{0} = imm{0};
   let validForTailPredication = 1;
+  let hasSideEffects = 0;
 }
 
 def MVE_VIDUPu8  : MVE_VxDUP<"vidup", "u8",  0b00, 0b0>;
@@ -5410,6 +5464,7 @@ class MVE_VxWDUP<string iname, string suffix, bits<2> size, bit bit_12,
   let Inst{3-1} = Rm{3-1};
   let Inst{0} = imm{0};
   let validForTailPredication = 1;
+  let hasSideEffects = 0;
 }
 
 def MVE_VIWDUPu8  : MVE_VxWDUP<"viwdup", "u8",  0b00, 0b0>;
@@ -5478,6 +5533,8 @@ class MVE_VMOV_64bit<dag oops, dag iops, bit to_qreg, string ops, string cstr>
   let Inst{12-5} = 0b01111000;
   let Inst{4} = idx2;
   let Inst{3-0} = Rt{3-0};
+
+  let hasSideEffects = 0;
 }
 
 // The assembly syntax for these instructions mentions the vector

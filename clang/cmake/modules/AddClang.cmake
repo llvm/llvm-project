@@ -17,7 +17,7 @@ function(clang_tablegen)
     message(FATAL_ERROR "SOURCE source-file required by clang_tablegen")
   endif()
 
-  set( CLANG_TABLEGEN_ARGUMENTS -I ${CLANG_SOURCE_DIR}/include )
+  set( CLANG_TABLEGEN_ARGUMENTS "" )
   set( LLVM_TARGET_DEFINITIONS ${CTG_SOURCE} )
   tablegen(CLANG ${CTG_UNPARSED_ARGUMENTS} ${CLANG_TABLEGEN_ARGUMENTS})
 

@@ -3,6 +3,9 @@ add_mlir_conversion_library(MLIRVectorToLLVM
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToLLVM
+
+  DEPENDS
+  MLIRConversionPassIncGen
 )
 set(LIBS
   MLIRLLVMIR

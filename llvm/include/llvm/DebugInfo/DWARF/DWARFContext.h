@@ -61,6 +61,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugLine> Line;
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
   std::unique_ptr<DWARFDebugFrame> EHFrame;
+  std::unique_ptr<DWARFDebugMacro> Macro;
   std::unique_ptr<DWARFDebugMacro> Macinfo;
   std::unique_ptr<DWARFDebugNames> Names;
   std::unique_ptr<AppleAcceleratorTable> AppleNames;
@@ -103,6 +104,15 @@ class DWARFContext : public DIContext {
   void parseDWOUnits(bool Lazy = false);
 
   std::unique_ptr<const DWARFObject> DObj;
+
+  /// Helper enum to distinguish between macro[.dwo] and macinfo[.dwo]
+  /// section.
+  enum MacroSecType {
+    MacinfoSection,
+    MacinfoDwoSection,
+    MacroSection
+    // FIXME: Add support for.debug_macro.dwo section.
+  };
 
 public:
   DWARFContext(std::unique_ptr<const DWARFObject> DObj,
@@ -272,11 +282,14 @@ public:
   /// Get a pointer to the parsed eh frame information object.
   const DWARFDebugFrame *getEHFrame();
 
-  /// Get a pointer to the parsed DebugMacro object.
+  /// Get a pointer to the parsed DebugMacinfo information object.
   const DWARFDebugMacro *getDebugMacinfo();
 
-  /// Get a pointer to the parsed dwo DebugMacro object.
+  /// Get a pointer to the parsed DebugMacinfoDWO information object.
   const DWARFDebugMacro *getDebugMacinfoDWO();
+
+  /// Get a pointer to the parsed DebugMacro information object.
+  const DWARFDebugMacro *getDebugMacro();
 
   /// Get a reference to the parsed accelerator table object.
   const DWARFDebugNames &getDebugNames();
@@ -382,6 +395,10 @@ public:
   }
 
 private:
+  /// Parse a macro[.dwo] or macinfo[.dwo] section.
+  std::unique_ptr<DWARFDebugMacro>
+  parseMacroOrMacinfo(MacroSecType SectionType);
+
   /// Return the compile unit which contains instruction with provided
   /// address.
   /// TODO: change input parameter from "uint64_t Address"

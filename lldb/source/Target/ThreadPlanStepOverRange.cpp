@@ -85,7 +85,7 @@ void ThreadPlanStepOverRange::SetupAvoidNoDebug(
     avoid_nodebug = false;
     break;
   case eLazyBoolCalculate:
-    avoid_nodebug = m_thread.GetStepOutAvoidsNoDebug();
+    avoid_nodebug = GetThread().GetStepOutAvoidsNoDebug();
     break;
   }
   if (avoid_nodebug)
@@ -125,12 +125,12 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
 
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Thread &thread = GetThread();
 
   if (log) {
     StreamString s;
-    DumpAddress(
-        s.AsRawOstream(), m_thread.GetRegisterContext()->GetPC(),
-        m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
+    DumpAddress(s.AsRawOstream(), thread.GetRegisterContext()->GetPC(),
+                GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }
 
@@ -151,8 +151,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     // because the trampoline confused the backtracer. As below, we step
     // through first, and then try to figure out how to get back out again.
 
-    new_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
-                                                         stop_others, m_status);
+    new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false,
+                                                       stop_others, m_status);
 
     if (new_plan_sp && log)
       LLDB_LOGF(log,
@@ -161,7 +161,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     // Make sure we really are in a new frame.  Do that by unwinding and seeing
     // if the start function really is our start function...
     for (uint32_t i = 1;; ++i) {
-      StackFrameSP older_frame_sp = m_thread.GetStackFrameAtIndex(i);
+      StackFrameSP older_frame_sp = thread.GetStackFrameAtIndex(i);
       if (!older_frame_sp) {
         // We can't unwind the next frame we should just get out of here &
         // stop...
@@ -175,12 +175,12 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
         // rely on that breakpoint to trigger once we return to the range.
         if (m_next_branch_bp_sp)
           return false;
-        new_plan_sp = m_thread.QueueThreadPlanForStepOutNoShouldStop(
+        new_plan_sp = thread.QueueThreadPlanForStepOutNoShouldStop(
             false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
             m_status, true);
         break;
       } else {
-        new_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+        new_plan_sp = thread.QueueThreadPlanForStepThrough(
             m_stack_id, false, stop_others, m_status);
         // If we found a way through, then we should stop recursing.
         if (new_plan_sp)
@@ -200,8 +200,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       // we are in a stub then it's likely going to be hard to get out from
       // here.  It is probably easiest to step into the stub, and then it will
       // be straight-forward to step out.
-      new_plan_sp = m_thread.QueueThreadPlanForStepThrough(
-          m_stack_id, false, stop_others, m_status);
+      new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false, 
+                                                         stop_others, m_status);
     } else {
       // The current clang (at least through 424) doesn't always get the
       // address range for the DW_TAG_inlined_subroutines right, so that when
@@ -216,7 +216,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
 
       if (m_addr_context.line_entry.IsValid()) {
         SymbolContext sc;
-        StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+        StackFrameSP frame_sp = thread.GetStackFrameAtIndex(0);
         sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
         if (sc.line_entry.IsValid()) {
           if (sc.line_entry.original_file !=
@@ -282,7 +282,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                         m_addr_context.line_entry.original_file) {
                       const bool abort_other_plans = false;
                       const RunMode stop_other_threads = RunMode::eAllThreads;
-                      lldb::addr_t cur_pc = m_thread.GetStackFrameAtIndex(0)
+                      lldb::addr_t cur_pc = thread.GetStackFrameAtIndex(0)
                                                 ->GetRegisterContext()
                                                 ->GetPC();
                       AddressRange step_range(
@@ -290,7 +290,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                           next_line_address.GetLoadAddress(&GetTarget()) -
                               cur_pc);
 
-                      new_plan_sp = m_thread.QueueThreadPlanForStepOverRange(
+                      new_plan_sp = thread.QueueThreadPlanForStepOverRange(
                           abort_other_plans, step_range, sc, stop_other_threads,
                           m_status);
                       break;
@@ -369,23 +369,24 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
   if (resume_state != eStateSuspended && m_first_resume) {
     m_first_resume = false;
     if (resume_state == eStateStepping && current_plan) {
+      Thread &thread = GetThread();
       // See if we are about to step over an inlined call in the middle of the
       // inlined stack, if so figure out its extents and reset our range to
       // step over that.
-      bool in_inlined_stack = m_thread.DecrementCurrentInlinedDepth();
+      bool in_inlined_stack = thread.DecrementCurrentInlinedDepth();
       if (in_inlined_stack) {
         Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
         LLDB_LOGF(log,
                   "ThreadPlanStepInRange::DoWillResume: adjusting range to "
                   "the frame at inlined depth %d.",
-                  m_thread.GetCurrentInlinedDepth());
-        StackFrameSP stack_sp = m_thread.GetStackFrameAtIndex(0);
+                  thread.GetCurrentInlinedDepth());
+        StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
         if (stack_sp) {
           Block *frame_block = stack_sp->GetFrameBlock();
-          lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
+          lldb::addr_t curr_pc = thread.GetRegisterContext()->GetPC();
           AddressRange my_range;
           if (frame_block->GetRangeContainingLoadAddress(
-                  curr_pc, m_thread.GetProcess()->GetTarget(), my_range)) {
+                  curr_pc, m_process.GetTarget(), my_range)) {
             m_address_ranges.clear();
             m_address_ranges.push_back(my_range);
             if (log) {

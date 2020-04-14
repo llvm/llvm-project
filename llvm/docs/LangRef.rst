@@ -1107,14 +1107,16 @@ Currently, only the following parameter attributes are defined:
 .. _noalias:
 
 ``noalias``
-    This indicates that objects accessed via pointer values
+    This indicates that memory locations accessed via pointer values
     :ref:`based <pointeraliasing>` on the argument or return value are not also
     accessed, during the execution of the function, via pointer values not
-    *based* on the argument or return value. The attribute on a return value
-    also has additional semantics described below. The caller shares the
-    responsibility with the callee for ensuring that these requirements are met.
-    For further details, please see the discussion of the NoAlias response in
-    :ref:`alias analysis <Must, May, or No>`.
+    *based* on the argument or return value. This guarantee only holds for
+    memory locations that are *modified*, by any means, during the execution of
+    the function. The attribute on a return value also has additional semantics
+    described below. The caller shares the responsibility with the callee for
+    ensuring that these requirements are met.  For further details, please see
+    the discussion of the NoAlias response in :ref:`alias analysis <Must, May,
+    or No>`.
 
     Note that this definition of ``noalias`` is intentionally similar
     to the definition of ``restrict`` in C99 for function arguments.

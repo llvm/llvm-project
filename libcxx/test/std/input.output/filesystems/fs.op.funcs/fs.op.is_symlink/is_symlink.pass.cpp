@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>

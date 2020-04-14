@@ -62,7 +62,7 @@ struct HoverInfo {
   /// Pretty-printed variable type.
   /// Set only for variables.
   llvm::Optional<std::string> Type;
-  /// Set for functions and lambadas.
+  /// Set for functions and lambdas.
   llvm::Optional<std::string> ReturnType;
   /// Set for functions, lambdas and macros with parameters.
   llvm::Optional<std::vector<Param>> Parameters;

@@ -67,7 +67,7 @@ ENTRY_ALIGN (__strnlen_aarch64, 0)
 	   especially on cores with a high number of issue slots per
 	   cycle, as we get much better parallelism out of the operations.  */
 
-	/* Start of critial section -- keep to one 64Byte cache line.  */
+	/* Start of critical section -- keep to one 64Byte cache line.  */
 L(loop):
 	ldp	data1, data2, [src], #16
 L(realigned):

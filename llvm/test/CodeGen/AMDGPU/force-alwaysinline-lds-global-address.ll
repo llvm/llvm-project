@@ -74,4 +74,21 @@ define i32 @recursive_call_lds(i32 %arg0) {
   ret i32 %call
 }
 
+; Test we don't break the IR and have both alwaysinline and noinline
+; FIXME: We should really not override noinline.
+
+; ALL-LABEL: define i32 @load_lds_simple_noinline() #0 {
+define i32 @load_lds_simple_noinline() noinline {
+  %load = load i32, i32 addrspace(3)* @lds0, align 4
+  ret i32 %load
+}
+
+; ALL-LABEL: define i32 @recursive_call_lds_noinline(i32 %arg0) #0 {
+define i32 @recursive_call_lds_noinline(i32 %arg0) noinline {
+  %load = load i32, i32 addrspace(3)* @lds0, align 4
+  %add = add i32 %arg0, %load
+  %call = call i32 @recursive_call_lds(i32 %add)
+  ret i32 %call
+}
+
 ; ALL: attributes #0 = { alwaysinline }

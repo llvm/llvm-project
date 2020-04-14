@@ -392,7 +392,11 @@ namespace llvm {
 
     /// FIXME: Remove this function once transition to Align is over.
     /// Use getDestAlign() instead.
-    unsigned getDestAlignment() const { return getParamAlignment(ARG_DEST); }
+    unsigned getDestAlignment() const {
+      if (auto MA = getParamAlign(ARG_DEST))
+        return MA->value();
+      return 0;
+    }
     MaybeAlign getDestAlign() const { return getParamAlign(ARG_DEST); }
 
     /// Set the specified arguments of the instruction.
@@ -454,7 +458,9 @@ namespace llvm {
     /// FIXME: Remove this function once transition to Align is over.
     /// Use getSourceAlign() instead.
     unsigned getSourceAlignment() const {
-      return BaseCL::getParamAlignment(ARG_SOURCE);
+      if (auto MA = BaseCL::getParamAlign(ARG_SOURCE))
+        return MA->value();
+      return 0;
     }
 
     MaybeAlign getSourceAlign() const {

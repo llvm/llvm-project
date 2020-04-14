@@ -107,11 +107,10 @@
 # HEX: 0x0004036c 00010294 00010298 0001029c
 
 ## These instructions are referenced by .plt entries.
-# PIE:    00010294 <.glink>:
-# SHARED: 000102b4 <.glink>:
-# CHECK-NEXT: b .+12
-# CHECK-NEXT: b .+8
-# CHECK-NEXT: b .+4
+# CHECK:      [[#%x,GLINK:]] <.glink>:
+# CHECK-NEXT: b 0x[[#%x,GLINK+12]]
+# CHECK-NEXT: b 0x[[#%x,GLINK+12]]
+# CHECK-NEXT: b 0x[[#%x,GLINK+12]]
 
 ## PLTresolve
 ## Operand of addi: 0x100a8-.glink = 24

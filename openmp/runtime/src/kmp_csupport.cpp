@@ -92,7 +92,7 @@ construct, since the master thread is necessarily thread zero).
 
 If multiple non-OpenMP threads all enter an OpenMP construct then this
 will be a unique thread identifier among all the threads created by
-the OpenMP runtime (but the value cannote be defined in terms of
+the OpenMP runtime (but the value cannot be defined in terms of
 OpenMP thread ids returned by omp_get_thread_num()).
 */
 kmp_int32 __kmpc_global_thread_num(ident_t *loc) {

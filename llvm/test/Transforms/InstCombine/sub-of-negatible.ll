@@ -2,6 +2,7 @@
 ; RUN: opt %s -instcombine -S | FileCheck %s
 
 declare void @use8(i8)
+declare void @use_v2i4(<2 x i4>)
 
 ; Constant can be freely negated.
 define i8 @t0(i8 %x) {
@@ -159,8 +160,8 @@ define i8 @n8(i8 %x, i1 %y, i8 %z) {
 ; x - (y - z) -> x - y + z -> x + (z - y)
 define i8 @t9(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[T01:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[T01]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T0_NEG]]
 ;
   %t0 = sub i8 %y, %x
   %t1 = sub i8 0, %t0
@@ -374,4 +375,82 @@ define i8 @n21(i8 %x, i16 %y) {
   call void @use8(i8 %t1)
   %t2 = sub i8 %x, %t1
   ret i8 %t2
+}
+
+define i4 @negate_xor(i4 %x) {
+; CHECK-LABEL: @negate_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], -6
+; CHECK-NEXT:    [[O_NEG:%.*]] = add i4 [[TMP1]], 1
+; CHECK-NEXT:    ret i4 [[O_NEG]]
+;
+  %o = xor i4 %x, 5
+  %r = sub i4 0, %o
+  ret i4 %r
+}
+
+define <2 x i4> @negate_xor_vec(<2 x i4> %x) {
+; CHECK-LABEL: @negate_xor_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[X:%.*]], <i4 -6, i4 5>
+; CHECK-NEXT:    [[O_NEG:%.*]] = add <2 x i4> [[TMP1]], <i4 1, i4 1>
+; CHECK-NEXT:    ret <2 x i4> [[O_NEG]]
+;
+  %o = xor <2 x i4> %x, <i4 5, i4 10>
+  %r = sub <2 x i4> zeroinitializer, %o
+  ret <2 x i4> %r
+}
+
+define i8 @negate_xor_use(i8 %x) {
+; CHECK-LABEL: @negate_xor_use(
+; CHECK-NEXT:    [[O:%.*]] = xor i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use8(i8 [[O]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[O]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = xor i8 %x, 5
+  call void @use8(i8 %o)
+  %r = sub i8 0, %o
+  ret i8 %r
+}
+
+define i4 @negate_shl_xor(i4 %x, i4 %y) {
+; CHECK-LABEL: @negate_shl_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], -6
+; CHECK-NEXT:    [[O_NEG:%.*]] = add i4 [[TMP1]], 1
+; CHECK-NEXT:    [[S_NEG:%.*]] = shl i4 [[O_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[S_NEG]]
+;
+  %o = xor i4 %x, 5
+  %s = shl i4 %o, %y
+  %r = sub i4 0, %s
+  ret i4 %r
+}
+
+define i8 @negate_shl_not_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_shl_not_uses(
+; CHECK-NEXT:    [[O:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[O]])
+; CHECK-NEXT:    [[O_NEG:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[S_NEG:%.*]] = shl i8 [[O_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[S_NEG]]
+;
+  %o = xor i8 %x, -1
+  call void @use8(i8 %o)
+  %s = shl i8 %o, %y
+  %r = sub i8 0, %s
+  ret i8 %r
+}
+
+define <2 x i4> @negate_mul_not_uses_vec(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @negate_mul_not_uses_vec(
+; CHECK-NEXT:    [[O:%.*]] = xor <2 x i4> [[X:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    call void @use_v2i4(<2 x i4> [[O]])
+; CHECK-NEXT:    [[O_NEG:%.*]] = add <2 x i4> [[X]], <i4 1, i4 1>
+; CHECK-NEXT:    [[S_NEG:%.*]] = mul <2 x i4> [[O_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i4> [[S_NEG]]
+;
+  %o = xor <2 x i4> %x, <i4 -1, i4 -1>
+  call void @use_v2i4(<2 x i4> %o)
+  %s = mul <2 x i4> %o, %y
+  %r = sub <2 x i4> zeroinitializer, %s
+  ret <2 x i4> %r
 }

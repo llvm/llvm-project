@@ -24,8 +24,6 @@
 namespace llvm {
 namespace mca {
 
-class Scheduler;
-
 /// A node of a memory dependency graph. A MemoryGroup describes a set of
 /// instructions with same memory dependencies.
 ///

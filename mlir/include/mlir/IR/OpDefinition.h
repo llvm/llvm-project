@@ -368,6 +368,10 @@ LogicalResult verifyAtLeastNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyOperandsAreFloatLike(Operation *op);
 LogicalResult verifyOperandsAreSignlessIntegerLike(Operation *op);
 LogicalResult verifySameTypeOperands(Operation *op);
+LogicalResult verifyZeroRegion(Operation *op);
+LogicalResult verifyOneRegion(Operation *op);
+LogicalResult verifyNRegions(Operation *op, unsigned numRegions);
+LogicalResult verifyAtLeastNRegions(Operation *op, unsigned numRegions);
 LogicalResult verifyZeroResult(Operation *op);
 LogicalResult verifyOneResult(Operation *op);
 LogicalResult verifyNResults(Operation *op, unsigned numOperands);
@@ -528,6 +532,89 @@ public:
 template <typename ConcreteType>
 class VariadicOperands
     : public detail::MultiOperandTraitBase<ConcreteType, VariadicOperands> {};
+
+//===----------------------------------------------------------------------===//
+// Region Traits
+
+/// This class provides verification for ops that are known to have zero
+/// regions.
+template <typename ConcreteType>
+class ZeroRegion : public TraitBase<ConcreteType, ZeroRegion> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifyZeroRegion(op);
+  }
+};
+
+namespace detail {
+/// Utility trait base that provides accessors for derived traits that have
+/// multiple regions.
+template <typename ConcreteType, template <typename> class TraitType>
+struct MultiRegionTraitBase : public TraitBase<ConcreteType, TraitType> {
+  using region_iterator = MutableArrayRef<Region>;
+  using region_range = RegionRange;
+
+  /// Return the number of regions.
+  unsigned getNumRegions() { return this->getOperation()->getNumRegions(); }
+
+  /// Return the region at `index`.
+  Region &getRegion(unsigned i) { return this->getOperation()->getRegion(i); }
+
+  /// Region iterator access.
+  region_iterator region_begin() {
+    return this->getOperation()->region_begin();
+  }
+  region_iterator region_end() { return this->getOperation()->region_end(); }
+  region_range getRegions() { return this->getOperation()->getRegions(); }
+};
+} // end namespace detail
+
+/// This class provides APIs for ops that are known to have a single region.
+template <typename ConcreteType>
+class OneRegion : public TraitBase<ConcreteType, OneRegion> {
+public:
+  Region &getRegion() { return this->getOperation()->getRegion(0); }
+
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifyOneRegion(op);
+  }
+};
+
+/// This class provides the API for ops that are known to have a specified
+/// number of regions.
+template <unsigned N> class NRegions {
+public:
+  static_assert(N > 1, "use ZeroRegion/OneRegion for N < 2");
+
+  template <typename ConcreteType>
+  class Impl
+      : public detail::MultiRegionTraitBase<ConcreteType, NRegions<N>::Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      return impl::verifyNRegions(op, N);
+    }
+  };
+};
+
+/// This class provides APIs for ops that are known to have at least a specified
+/// number of regions.
+template <unsigned N> class AtLeastNRegions {
+public:
+  template <typename ConcreteType>
+  class Impl : public detail::MultiRegionTraitBase<ConcreteType,
+                                                   AtLeastNRegions<N>::Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      return impl::verifyAtLeastNRegions(op, N);
+    }
+  };
+};
+
+/// This class provides the API for ops which have an unknown number of
+/// regions.
+template <typename ConcreteType>
+class VariadicRegions
+    : public detail::MultiRegionTraitBase<ConcreteType, VariadicRegions> {};
 
 //===----------------------------------------------------------------------===//
 // Result Traits

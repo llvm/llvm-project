@@ -19,8 +19,8 @@ define internal i32 @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
-; CHECK-NEXT:    store i32 0, i32* [[X_PRIV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[X_PRIV]]
+; CHECK-NEXT:    store i32 0, i32* [[X_PRIV]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -40,7 +40,7 @@ entry:
 ; Also make sure we don't drop the call zeroext attribute.
 define i32 @test(i32* %X) {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32* nocapture nofree readonly [[X:%.*]])
+; CHECK-SAME: (i32* nocapture nofree readonly align 4 [[X:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0

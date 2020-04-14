@@ -1833,12 +1833,20 @@ public:
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
-      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'i':
         m_internal = true;
+        break;
+      case 't':
+        lldb::tid_t tid;
+        if (option_arg.getAsInteger(0, tid))
+          return Status("invalid tid: '%s'.", option_arg.str().c_str());
+        m_tids.push_back(tid);
+        break;
+      case 'u':
+        m_unreported = false;
         break;
       case 'v':
         m_verbose = true;
@@ -1846,12 +1854,15 @@ public:
       default:
         llvm_unreachable("Unimplemented option");
       }
-      return error;
+      return {};
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
       m_internal = false;
+      m_unreported = true; // The variable is "skip unreported" and we want to
+                           // skip unreported by default.
+      m_tids.clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1861,6 +1872,8 @@ public:
     // Instance variables to hold the values for command options.
     bool m_verbose;
     bool m_internal;
+    bool m_unreported;
+    std::vector<lldb::tid_t> m_tids;
   };
 
   CommandObjectThreadPlanList(CommandInterpreter &interpreter)
@@ -1879,25 +1892,59 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    // If we are reporting all threads, dispatch to the Process to do that:
+    if (command.GetArgumentCount() == 0 && m_options.m_tids.empty()) {
+      Stream &strm = result.GetOutputStream();
+      DescriptionLevel desc_level = m_options.m_verbose
+                                        ? eDescriptionLevelVerbose
+                                        : eDescriptionLevelFull;
+      m_exe_ctx.GetProcessPtr()->DumpThreadPlans(
+          strm, desc_level, m_options.m_internal, true, m_options.m_unreported);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    } else {
+      // Do any TID's that the user may have specified as TID, then do any
+      // Thread Indexes...
+      if (!m_options.m_tids.empty()) {
+        Process *process = m_exe_ctx.GetProcessPtr();
+        StreamString tmp_strm;
+        for (lldb::tid_t tid : m_options.m_tids) {
+          bool success = process->DumpThreadPlansForTID(
+              tmp_strm, tid, eDescriptionLevelFull, m_options.m_internal,
+              true /* condense_trivial */, m_options.m_unreported);
+          // If we didn't find a TID, stop here and return an error.
+          if (!success) {
+            result.SetError("Error dumping plans:");
+            result.AppendError(tmp_strm.GetString());
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+          }
+          // Otherwise, add our data to the output:
+          result.GetOutputStream() << tmp_strm.GetString();
+        }
+      }
+      return CommandObjectIterateOverThreads::DoExecute(command, result);
+    }
+  }
+
 protected:
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
-    ThreadSP thread_sp =
-        m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
-    if (!thread_sp) {
-      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
-                                   tid);
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    // If we have already handled this from a -t option, skip it here.
+    if (std::find(m_options.m_tids.begin(), m_options.m_tids.end(), tid) !=
+        m_options.m_tids.end())
+      return true;
 
-    Thread *thread = thread_sp.get();
+    Process *process = m_exe_ctx.GetProcessPtr();
 
     Stream &strm = result.GetOutputStream();
     DescriptionLevel desc_level = eDescriptionLevelFull;
     if (m_options.m_verbose)
       desc_level = eDescriptionLevelVerbose;
 
-    thread->DumpThreadPlans(&strm, desc_level, m_options.m_internal, true);
+    process->DumpThreadPlansForTID(strm, tid, desc_level, m_options.m_internal,
+                                   true /* condense_trivial */,
+                                   m_options.m_unreported);
     return true;
   }
 
@@ -1974,6 +2021,74 @@ public:
   }
 };
 
+class CommandObjectThreadPlanPrune : public CommandObjectParsed {
+public:
+  CommandObjectThreadPlanPrune(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "thread plan prune",
+                            "Removes any thread plans associated with "
+                            "currently unreported threads.  "
+                            "Specify one or more TID's to remove, or if no "
+                            "TID's are provides, remove threads for all "
+                            "unreported threads",
+                            nullptr,
+                            eCommandRequiresProcess |
+                                eCommandTryTargetAPILock |
+                                eCommandProcessMustBeLaunched |
+                                eCommandProcessMustBePaused) {
+    CommandArgumentEntry arg;
+    CommandArgumentData tid_arg;
+
+    // Define the first (and only) variant of this arg.
+    tid_arg.arg_type = eArgTypeThreadID;
+    tid_arg.arg_repetition = eArgRepeatStar;
+
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg.push_back(tid_arg);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectThreadPlanPrune() override = default;
+
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Process *process = m_exe_ctx.GetProcessPtr();
+    
+    if (args.GetArgumentCount() == 0) {
+      process->PruneThreadPlans();
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return true;  
+    }
+
+    const size_t num_args = args.GetArgumentCount();
+
+    std::lock_guard<std::recursive_mutex> guard(
+        process->GetThreadList().GetMutex());
+
+    for (size_t i = 0; i < num_args; i++) {
+      bool success;
+
+      lldb::tid_t tid = StringConvert::ToUInt64(
+          args.GetArgumentAtIndex(i), 0, 0, &success);
+      if (!success) {
+        result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
+                                     args.GetArgumentAtIndex(i));
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      if (!process->PruneThreadPlansForTID(tid)) {
+        result.AppendErrorWithFormat("Could not find unreported tid: \"%s\"\n",
+                                     args.GetArgumentAtIndex(i));
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
+  }
+};
+
 // CommandObjectMultiwordThreadPlan
 
 class CommandObjectMultiwordThreadPlan : public CommandObjectMultiword {
@@ -1988,6 +2103,9 @@ public:
     LoadSubCommand(
         "discard",
         CommandObjectSP(new CommandObjectThreadPlanDiscard(interpreter)));
+    LoadSubCommand(
+        "prune",
+        CommandObjectSP(new CommandObjectThreadPlanPrune(interpreter)));
   }
 
   ~CommandObjectMultiwordThreadPlan() override = default;

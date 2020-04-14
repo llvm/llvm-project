@@ -362,7 +362,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   }
 }
 
-static CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
+CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
   int IVer =
       Version.getMajor() * 10 + Version.getMinor().getValueOr(0);
   switch(IVer) {

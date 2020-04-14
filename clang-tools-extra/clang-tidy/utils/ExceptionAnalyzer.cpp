@@ -131,7 +131,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   return Result;
 }
 
-/// Analyzes a single statment on it's throwing behaviour. This is in principle
+/// Analyzes a single statement on it's throwing behaviour. This is in principle
 /// possible except some 'Unknown' functions are called.
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const Stmt *St, const ExceptionInfo::Throwables &Caught,

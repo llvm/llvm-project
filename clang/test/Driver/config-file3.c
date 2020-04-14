@@ -16,8 +16,8 @@
 
 //--- Invocation qqq-clang-g++ tries to find config file qqq-clang-g++.cfg first.
 //
+// RUN: rm -rf %T/testdmode
 // RUN: mkdir -p %T/testdmode
-// RUN: [ ! -s %T/testdmode/qqq-clang-g++ ] || rm %T/testdmode/qqq-clang-g++
 // RUN: ln -s %clang %T/testdmode/qqq-clang-g++
 // RUN: echo "-Wundefined-func-template" > %T/testdmode/qqq-clang-g++.cfg
 // RUN: echo "-Werror" > %T/testdmode/qqq.cfg
@@ -53,8 +53,8 @@
 
 //--- Config files are searched for in binary directory as well.
 //
+// RUN: rm -rf %T/testbin
 // RUN: mkdir -p %T/testbin
-// RUN: [ ! -s %T/testbin/clang ] || rm %T/testbin/clang
 // RUN: ln -s %clang %T/testbin/clang
 // RUN: echo "-Werror" > %T/testbin/aaa.cfg
 // RUN: %T/testbin/clang --config-system-dir= --config-user-dir= --config aaa.cfg -c -no-canonical-prefixes %s -### 2>&1 | FileCheck %s -check-prefix CHECK-BIN
@@ -68,8 +68,8 @@
 
 //--- When reloading config file, x86_64-clang-g++ tries to find config i386-clang-g++.cfg first.
 //
+// RUN: rm -rf %T/testreload
 // RUN: mkdir -p %T/testreload
-// RUN: [ ! -s %T/testreload/x86_64-clang-g++ ] || rm %T/testreload/x86_64-clang-g++
 // RUN: ln -s %clang %T/testreload/x86_64-clang-g++
 // RUN: echo "-Wundefined-func-template" > %T/testreload/i386-clang-g++.cfg
 // RUN: echo "-Werror" > %T/testreload/i386.cfg

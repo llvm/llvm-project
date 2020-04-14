@@ -84,17 +84,17 @@ define void @vld3_v8i32(<24 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vmov.32 r2, q2[2]
+; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vdup.32 q4, r2
 ; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vmov.32 r2, q2[1]
-; CHECK-NEXT:    vmov.f64 d8, d2
+; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vdup.32 q5, r2
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f32 s17, s7
 ; CHECK-NEXT:    vmov.f32 s18, s2
 ; CHECK-NEXT:    vmov.f32 s0, s6
@@ -108,6 +108,7 @@ define void @vld3_v8i32(<24 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-NEXT:    vadd.i32 q0, q3, q0
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
 ; CHECK-NEXT:    vmov.f32 s16, s9
+; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.32 r0, q3[2]
 ; CHECK-NEXT:    vdup.32 q5, r0
@@ -116,7 +117,6 @@ define void @vld3_v8i32(<24 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-NEXT:    vmov.32 r0, q3[1]
 ; CHECK-NEXT:    vmov.f64 d10, d4
 ; CHECK-NEXT:    vdup.32 q6, r0
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s21, s11
 ; CHECK-NEXT:    vmov.f32 s22, s6
 ; CHECK-NEXT:    vmov.f32 s4, s10
@@ -148,17 +148,17 @@ define void @vld3_v16i32(<48 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vmov.32 r2, q2[2]
+; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vdup.32 q4, r2
 ; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vmov.32 r2, q2[1]
-; CHECK-NEXT:    vmov.f64 d8, d2
+; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vdup.32 q5, r2
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f32 s17, s7
 ; CHECK-NEXT:    vmov.f32 s18, s2
 ; CHECK-NEXT:    vmov.f32 s0, s6
@@ -181,6 +181,7 @@ define void @vld3_v16i32(<48 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vmov.32 r2, q3[1]
 ; CHECK-NEXT:    vmov.f64 d10, d4
 ; CHECK-NEXT:    vdup.32 q6, r2
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vmov.f32 s21, s11
 ; CHECK-NEXT:    vmov.f32 s22, s6
 ; CHECK-NEXT:    vmov.f32 s4, s10
@@ -202,7 +203,6 @@ define void @vld3_v16i32(<48 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vmov.32 r2, q4[1]
 ; CHECK-NEXT:    vmov.f64 d12, d6
 ; CHECK-NEXT:    vdup.32 q7, r2
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vmov.f32 s25, s15
 ; CHECK-NEXT:    vmov.f32 s26, s10
 ; CHECK-NEXT:    vmov.f32 s8, s14
@@ -1125,17 +1125,17 @@ define void @vld3_v8f32(<24 x float> *%src, <8 x float> *%dst) {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vmov.32 r2, q2[2]
+; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vdup.32 q4, r2
 ; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vmov.32 r2, q2[1]
-; CHECK-NEXT:    vmov.f64 d8, d2
+; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vdup.32 q5, r2
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f32 s17, s7
 ; CHECK-NEXT:    vmov.f32 s18, s2
 ; CHECK-NEXT:    vmov.f32 s0, s6
@@ -1149,6 +1149,7 @@ define void @vld3_v8f32(<24 x float> *%src, <8 x float> *%dst) {
 ; CHECK-NEXT:    vadd.f32 q0, q3, q0
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
 ; CHECK-NEXT:    vmov.f32 s16, s9
+; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.32 r0, q3[2]
 ; CHECK-NEXT:    vdup.32 q5, r0
@@ -1157,7 +1158,6 @@ define void @vld3_v8f32(<24 x float> *%src, <8 x float> *%dst) {
 ; CHECK-NEXT:    vmov.32 r0, q3[1]
 ; CHECK-NEXT:    vmov.f64 d10, d4
 ; CHECK-NEXT:    vdup.32 q6, r0
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s21, s11
 ; CHECK-NEXT:    vmov.f32 s22, s6
 ; CHECK-NEXT:    vmov.f32 s4, s10
@@ -1189,17 +1189,17 @@ define void @vld3_v16f32(<48 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vmov.32 r2, q2[2]
+; CHECK-NEXT:    vmov.f32 s13, s0
 ; CHECK-NEXT:    vdup.32 q4, r2
 ; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vmov.32 r2, q2[1]
-; CHECK-NEXT:    vmov.f64 d8, d2
+; CHECK-NEXT:    vmov.f32 s15, s19
 ; CHECK-NEXT:    vdup.32 q5, r2
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f32 s17, s7
 ; CHECK-NEXT:    vmov.f32 s18, s2
 ; CHECK-NEXT:    vmov.f32 s0, s6
@@ -1222,6 +1222,7 @@ define void @vld3_v16f32(<48 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vmov.32 r2, q3[1]
 ; CHECK-NEXT:    vmov.f64 d10, d4
 ; CHECK-NEXT:    vdup.32 q6, r2
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vmov.f32 s21, s11
 ; CHECK-NEXT:    vmov.f32 s22, s6
 ; CHECK-NEXT:    vmov.f32 s4, s10
@@ -1243,7 +1244,6 @@ define void @vld3_v16f32(<48 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vmov.32 r2, q4[1]
 ; CHECK-NEXT:    vmov.f64 d12, d6
 ; CHECK-NEXT:    vdup.32 q7, r2
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vmov.f32 s25, s15
 ; CHECK-NEXT:    vmov.f32 s26, s10
 ; CHECK-NEXT:    vmov.f32 s8, s14

@@ -729,18 +729,98 @@ terminate:                                        ; preds = %entry
   unreachable
 }
 
+%class.MyClass = type { i32 }
+
+; This crashed on debug mode (= when NDEBUG is not defined) when the logic for
+; computing the innermost region was not correct, in which a loop region
+; contains an exception region. This should pass CFGSort without crashing.
+define void @test12() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %e = alloca %class.MyClass, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %cmp = icmp slt i32 %i.0, 9
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  invoke void @quux(i32 %i.0)
+          to label %for.inc unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %for.body
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* bitcast ({ i8*, i8* }* @_ZTI7MyClass to i8*)]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast ({ i8*, i8* }* @_ZTI7MyClass to i8*)) #3
+  %matches = icmp eq i32 %3, %4
+  br i1 %matches, label %catch, label %rethrow
+
+catch:                                            ; preds = %catch.start
+  %5 = call i8* @__cxa_get_exception_ptr(i8* %2) #3 [ "funclet"(token %1) ]
+  %6 = bitcast i8* %5 to %class.MyClass*
+  %call = call %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* %e, %class.MyClass* dereferenceable(4) %6) [ "funclet"(token %1) ]
+  %7 = call i8* @__cxa_begin_catch(i8* %2) #3 [ "funclet"(token %1) ]
+  %x = getelementptr inbounds %class.MyClass, %class.MyClass* %e, i32 0, i32 0
+  %8 = load i32, i32* %x, align 4
+  invoke void @quux(i32 %8) [ "funclet"(token %1) ]
+          to label %invoke.cont2 unwind label %ehcleanup
+
+invoke.cont2:                                     ; preds = %catch
+  %call3 = call %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* %e) #3 [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %for.inc
+
+rethrow:                                          ; preds = %catch.start
+  call void @llvm.wasm.rethrow.in.catch() #6 [ "funclet"(token %1) ]
+  unreachable
+
+for.inc:                                          ; preds = %invoke.cont2, %for.body
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+
+ehcleanup:                                        ; preds = %catch
+  %9 = cleanuppad within %1 []
+  %call4 = call %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* %e) #3 [ "funclet"(token %9) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %9) ]
+          to label %invoke.cont6 unwind label %terminate7
+
+invoke.cont6:                                     ; preds = %ehcleanup
+  cleanupret from %9 unwind to caller
+
+for.end:                                          ; preds = %for.cond
+  ret void
+
+terminate7:                                       ; preds = %ehcleanup
+  %10 = cleanuppad within %9 []
+  %11 = call i8* @llvm.wasm.get.exception(token %10)
+  call void @__clang_call_terminate(i8* %11) #7 [ "funclet"(token %10) ]
+  unreachable
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT-STAT: 11 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
+; NOSORT-STAT: 14 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
 
 declare void @foo()
 declare void @bar()
 declare i32 @baz()
+declare void @quux(i32)
 declare void @fun(i32)
 ; Function Attrs: nounwind
 declare void @nothrow(i32) #0
 declare i32 @nothrow_i32() #0
+
 ; Function Attrs: nounwind
 declare %class.Object* @_ZN6ObjectD2Ev(%class.Object* returned) #0
+@_ZTI7MyClass = external constant { i8*, i8* }, align 4
+; Function Attrs: nounwind
+declare %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* returned) #0
+; Function Attrs: nounwind
+declare %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* returned, %class.MyClass* dereferenceable(4)) #0
+
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
@@ -748,6 +828,7 @@ declare void @llvm.wasm.rethrow.in.catch()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
+declare i8* @__cxa_get_exception_ptr(i8*)
 declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
 ; Function Attrs: nounwind

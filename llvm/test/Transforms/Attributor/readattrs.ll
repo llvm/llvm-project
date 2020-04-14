@@ -35,7 +35,7 @@ define void @test4_2(i8* %p) {
   ret void
 }
 
-; ATTRIBUTOR: define void @test5(i8** nocapture nofree nonnull writeonly dereferenceable(8) %p, i8* nofree writeonly %q)
+; ATTRIBUTOR: define void @test5(i8** nocapture nofree nonnull writeonly align 8 dereferenceable(8) %p, i8* nofree writeonly %q)
 ; Missed optz'n: we could make %q readnone, but don't break test6!
 define void @test5(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -43,7 +43,7 @@ define void @test5(i8** %p, i8* %q) {
 }
 
 declare void @test6_1()
-; ATTRIBUTOR: define void @test6_2(i8** nocapture nonnull writeonly dereferenceable(8) %p, i8* %q)
+; ATTRIBUTOR: define void @test6_2(i8** nocapture nonnull writeonly align 8 dereferenceable(8) %p, i8* %q)
 ; This is not a missed optz'n.
 define void @test6_2(i8** %p, i8* %q) {
   store i8* %q, i8** %p

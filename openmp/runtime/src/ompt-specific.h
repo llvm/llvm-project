@@ -102,7 +102,7 @@ inline void ompt_set_thread_state(kmp_info_t *thread, ompt_state_t state) {
 inline const char *ompt_get_runtime_version() {
   return &__kmp_version_lib_ver[KMP_VERSION_MAGIC_LEN];
 }
-#endif // OMPT_SUPPRORT
+#endif // OMPT_SUPPORT
 
 // macros providing the OMPT callbacks for reduction clause
 #if OMPT_SUPPORT && OMPT_OPTIONAL

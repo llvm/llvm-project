@@ -6980,6 +6980,8 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   //    ITx   -> x100    (ITT -> 0100, ITE -> 1100)
   //    ITxy  -> xy10    (e.g. ITET -> 1010)
   //    ITxyz -> xyz1    (e.g. ITEET -> 1101)
+  // Note: See the ARM::PredBlockMask enum in
+  //   /lib/Target/ARM/Utils/ARMBaseInfo.h
   if (Mnemonic == "it" || Mnemonic.startswith("vpt") ||
       Mnemonic.startswith("vpst")) {
     SMLoc Loc = Mnemonic == "it"  ? SMLoc::getFromPointer(NameLoc.getPointer() + 2) :

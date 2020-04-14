@@ -25,7 +25,7 @@ llvm::cl::opt<std::string> StandardHeader(
     llvm::cl::desc("The standard header file which is to be generated."),
     llvm::cl::value_desc("<header file>"));
 llvm::cl::list<std::string> ReplacementValues(
-    "args", llvm::cl::desc("Command seperated <argument name>=<value> pairs."),
+    "args", llvm::cl::desc("Command separated <argument name>=<value> pairs."),
     llvm::cl::value_desc("<name=value>[,name=value]"));
 
 void ParseArgValuePairs(std::unordered_map<std::string, std::string> &Map) {

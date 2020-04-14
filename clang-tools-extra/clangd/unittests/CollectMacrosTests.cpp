@@ -100,7 +100,7 @@ TEST(CollectMainFileMacros, SelectedMacros) {
           << "Annotation=" << I << ", MacroName=" << Macro->Name
           << ", Test = " << Test;
     }
-    // Unkown macros.
+    // Unknown macros.
     EXPECT_THAT(AST.getMacros().UnknownMacros,
                 UnorderedElementsAreArray(T.ranges("Unknown")))
         << "Unknown macros doesn't match in " << Test;

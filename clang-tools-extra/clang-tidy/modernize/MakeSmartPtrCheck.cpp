@@ -123,7 +123,7 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Be conservative for cases where we construct an array without any
-  // initalization.
+  // initialization.
   // For example,
   //    P.reset(new int[5]) // check fix: P = std::make_unique<int []>(5)
   //

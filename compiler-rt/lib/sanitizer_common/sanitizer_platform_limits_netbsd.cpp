@@ -207,7 +207,75 @@ typedef struct ipfobj {
 #endif
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
+#if !__NetBSD_Prereq__(9, 99, 51)
 #include <netsmb/smb_dev.h>
+#else
+struct smbioc_flags {
+  int ioc_level;
+  int ioc_mask;
+  int ioc_flags;
+};
+struct smbioc_oshare {
+  int ioc_opt;
+  int ioc_stype;
+  char ioc_share[129];
+  char ioc_password[129];
+  uid_t ioc_owner;
+  gid_t ioc_group;
+  mode_t ioc_mode;
+  mode_t ioc_rights;
+};
+struct smbioc_ossn {
+  int ioc_opt;
+  uint32_t ioc_svlen;
+  struct sockaddr *ioc_server;
+  uint32_t ioc_lolen;
+  struct sockaddr *ioc_local;
+  char ioc_srvname[16];
+  int ioc_timeout;
+  int ioc_retrycount;
+  char ioc_localcs[16];
+  char ioc_servercs[16];
+  char ioc_user[129];
+  char ioc_workgroup[129];
+  char ioc_password[129];
+  uid_t ioc_owner;
+  gid_t ioc_group;
+  mode_t ioc_mode;
+  mode_t ioc_rights;
+};
+struct smbioc_lookup {
+  int ioc_level;
+  int ioc_flags;
+  struct smbioc_ossn ioc_ssn;
+  struct smbioc_oshare ioc_sh;
+};
+struct smbioc_rq {
+  u_char ioc_cmd;
+  u_char ioc_twc;
+  void *ioc_twords;
+  u_short ioc_tbc;
+  void *ioc_tbytes;
+  int ioc_rpbufsz;
+  char *ioc_rpbuf;
+  u_char ioc_rwc;
+  u_short ioc_rbc;
+};
+struct smbioc_rw {
+  u_int16_t ioc_fh;
+  char *ioc_base;
+  off_t ioc_offset;
+  int ioc_cnt;
+};
+#define SMBIOC_OPENSESSION _IOW('n', 100, struct smbioc_ossn)
+#define SMBIOC_OPENSHARE _IOW('n', 101, struct smbioc_oshare)
+#define SMBIOC_REQUEST _IOWR('n', 102, struct smbioc_rq)
+#define SMBIOC_T2RQ _IOWR('n', 103, struct smbioc_t2rq)
+#define SMBIOC_SETFLAGS _IOW('n', 104, struct smbioc_flags)
+#define SMBIOC_LOOKUP _IOW('n', 106, struct smbioc_lookup)
+#define SMBIOC_READ _IOWR('n', 107, struct smbioc_rw)
+#define SMBIOC_WRITE _IOWR('n', 108, struct smbioc_rw)
+#endif
 #include <dev/biovar.h>
 #include <dev/bluetooth/btdev.h>
 #include <dev/bluetooth/btsco.h>

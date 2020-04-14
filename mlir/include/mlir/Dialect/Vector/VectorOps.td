@@ -1320,6 +1320,7 @@ def Vector_TransposeOp :
   let assemblyFormat = [{
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

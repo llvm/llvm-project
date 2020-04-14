@@ -247,7 +247,7 @@ func @non_type_in_type_array_attr_fail() {
 // CHECK-LABEL: func @string_attr_custom_type
 func @string_attr_custom_type() {
   // CHECK: "string_data" : !foo.string
-  test.string_attr_with_type "string_data"
+  test.string_attr_with_type "string_data" : !foo.string
   return
 }
 

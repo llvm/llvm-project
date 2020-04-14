@@ -582,8 +582,9 @@ private:
   /// Get the alignment of the given memory operation instruction. This will
   /// either be the explicitly specified value or the ABI-required alignment for
   /// the type being accessed (according to the Module's DataLayout).
-  /// FIXME: Remove once transition to Align is over.
-  inline unsigned getMemOpAlignment(const Instruction &I) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline unsigned getMemOpAlignment(const Instruction &I),
+      "Use getMemOpAlign instead") {
     return getMemOpAlign(I).value();
   }
 

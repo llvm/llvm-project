@@ -186,14 +186,14 @@ public:
   SourceLocation getLastQualifierNameLoc() const;
 
   /// No scope specifier.
-  bool isEmpty() const { return !Range.isValid(); }
+  bool isEmpty() const { return Range.isInvalid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, but may be valid or invalid.
   bool isNotEmpty() const { return !isEmpty(); }
 
   /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return isNotEmpty() && getScopeRep() == nullptr; }
+  bool isInvalid() const { return Range.isValid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return isNotEmpty() && getScopeRep() != nullptr; }
+  bool isValid() const { return getScopeRep() != nullptr; }
 
   /// Indicate that this nested-name-specifier is invalid.
   void SetInvalid(SourceRange R) {

@@ -37,7 +37,7 @@ bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
 /// extensions.
 inline StringRef defaultHeaderFileExtensions() { return ";h;hh;hpp;hxx"; }
 
-/// Returns recommended default value for the list of implementaiton file
+/// Returns recommended default value for the list of implementation file
 /// extensions.
 inline StringRef defaultImplementationFileExtensions() {
   return "c;cc;cpp;cxx";

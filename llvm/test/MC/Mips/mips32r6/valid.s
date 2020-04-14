@@ -149,8 +149,7 @@ a:
         not       $3, $4         # CHECK: not $3, $4             # encoding: [0x00,0x80,0x18,0x27]
         not       $3             # CHECK: not $3, $3             # encoding: [0x00,0x60,0x18,0x27]
         pause                    # CHECK: pause                  # encoding:  [0x00,0x00,0x01,0x40]
-                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} PAUSE
-                                 # CHECK-NOT                     # <MCInst #{{[0-9}+}} PAUSE_MM
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} PAUSE>
         pref    1, 8($5)         # CHECK: pref 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x35]
                                  # CHECK-NEXT:                   # <MCInst #{{.*}} PREF_R6
         # FIXME: Use the code generator in order to print the .set directives

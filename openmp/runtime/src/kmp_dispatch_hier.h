@@ -993,7 +993,7 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
     th->th.th_hier_bar_data = (kmp_hier_private_bdata_t *)__kmp_allocate(
         sizeof(kmp_hier_private_bdata_t) * kmp_hier_layer_e::LAYER_LAST);
   }
-  // Have threads "register" themselves by modifiying the active count for each
+  // Have threads "register" themselves by modifying the active count for each
   // level they are involved in. The active count will act as nthreads for that
   // level regarding the scheduling algorithms
   for (int i = 0; i < n; ++i) {

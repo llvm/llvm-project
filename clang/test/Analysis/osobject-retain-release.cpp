@@ -53,6 +53,9 @@ struct MyArray : public OSArray {
   OSObject *generateObject(OSObject *input) override;
 };
 
+// These are never refcounted.
+struct OSSymbol : OSObject {};
+
 struct OtherStruct {
   static void doNothingToArray(OSArray *array);
   OtherStruct(OSArray *arr);
@@ -754,3 +757,10 @@ void test() {
   b(0);
 }
 } // namespace inherited_constructor_crash
+
+namespace ossymbol_suppression {
+OSSymbol *createSymbol();
+void test() {
+  OSSymbol *sym = createSymbol(); // no-warning
+}
+} // namespace ossymbol_suppression

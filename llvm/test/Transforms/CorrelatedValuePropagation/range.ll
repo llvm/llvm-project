@@ -457,7 +457,7 @@ define i1 @test14_slt(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[RESULT:%.*]] = or i1 false, false
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -508,7 +508,7 @@ define i1 @test14_sgt(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[RESULT:%.*]] = or i1 false, false
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -585,7 +585,7 @@ define i1 @test14_ugt(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[RESULT:%.*]] = or i1 false, false
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -623,6 +623,31 @@ then:
   %dead = icmp eq i32 %a, 8
   %alive = icmp eq i32 %a, 16
   %result = or i1 %dead, %alive
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_ugt_and(i32 %a) {
+; CHECK-LABEL: @test14_ugt_and(
+; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A_OFF]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[RESULT:%.*]] = and i1 false, false
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %a.off = add i32 %a, -8
+  %cmp = icmp ugt i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead.1 = icmp eq i32 %a, 8
+  %dead.2 = icmp eq i32 %a, 16
+  %result = and i1 %dead.1, %dead.2
   ret i1 %result
 
 else:

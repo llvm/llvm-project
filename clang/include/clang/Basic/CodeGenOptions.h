@@ -110,14 +110,6 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
-  enum class SignReturnAddressScope {
-    None,    // No signing for any function
-    NonLeaf, // Sign the return address of functions that spill LR
-    All      // Sign the return address of all functions
-  };
-
-  enum class SignReturnAddressKeyValue { AKey, BKey };
-
   enum class FramePointerKind {
     None,        // Omit all frame pointers.
     NonLeaf,     // Keep non-leaf frame pointers.

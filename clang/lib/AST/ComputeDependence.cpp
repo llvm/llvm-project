@@ -372,6 +372,22 @@ ExprDependence clang::computeDependence(OMPArrayShapingExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(OMPIteratorExpr *E) {
+  auto D = toExprDependence(E->getType()->getDependence());
+  for (unsigned I = 0, End = E->numOfIterators(); I < End; ++I) {
+    if (auto *VD = cast_or_null<ValueDecl>(E->getIteratorDecl(I)))
+      D |= toExprDependence(VD->getType()->getDependence());
+    OMPIteratorExpr::IteratorRange IR = E->getIteratorRange(I);
+    if (Expr *BE = IR.Begin)
+      D |= BE->getDependence();
+    if (Expr *EE = IR.End)
+      D |= EE->getDependence();
+    if (Expr *SE = IR.Step)
+      D |= SE->getDependence();
+  }
+  return D;
+}
+
 /// Compute the type-, value-, and instantiation-dependence of a
 /// declaration reference
 /// based on the declaration being referenced.

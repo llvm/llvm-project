@@ -124,7 +124,7 @@ EXTERN void __kmpc_end_single(kmp_Ident *loc, int32_t global_tid) {
   PRINT0(LD_IO, "call kmpc_end_single\n");
   // decide to implement single with master: master get the single
   ASSERT0(LT_FUSSY, IsTeamMaster(global_tid), "expected only master here");
-  // sync barrier is explicitely called... so that is not a problem
+  // sync barrier is explicitly called... so that is not a problem
 }
 
 ////////////////////////////////////////////////////////////////////////////////

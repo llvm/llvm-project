@@ -112,3 +112,98 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
+## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readelf --elf-hash-histogram %t3.o 2>&1 | FileCheck %s --check-prefix=ERR1 -DFILE=%t3.o
+
+# ERR1: warning: '[[FILE]]': the hash table at offset 0x2b1 goes past the end of the file (0x2b8){{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ 0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x239
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FileSize: 0x23a
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+
+## Check we report a warning when the hash table goes past the end of the file.
+
+## Case A.1: the hash table ends right before the EOF. We have a broken nbucket
+##           field that has a value larger than the number of buckets.
+# RUN: yaml2obj --docnum=4 %s -o %t4.1.o -DNBUCKET=0x5d -DNCHAIN=0x1
+# RUN: llvm-readelf --elf-hash-histogram %t4.1.o 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+## Case A.2: the hash table ends 1 byte past the EOF. We have a broken nbucket
+##           field that has a value larger than the number of buckets.
+# RUN: yaml2obj --docnum=4 %s -o %t4.2.o -DNBUCKET=0x5e -DNCHAIN=0x1
+# RUN: llvm-readelf --elf-hash-histogram %t4.2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR2 -DFILE=%t4.2.o --implicit-check-not="warning:"
+# ERR2: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 94, nchain = 1{{$}}
+
+## Case B.1: the hash table ends right before the EOF. We have a broken nchain
+##           field that has a value larger than the number of chains.
+# RUN: yaml2obj --docnum=4 %s -o %t4.3.o -DNBUCKET=0x1 -DNCHAIN=0x5d
+# RUN: llvm-readelf --elf-hash-histogram %t4.3.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t4.3.o --implicit-check-not="warning:"
+# ERR3: warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+
+## Case B.2: the hash table ends 1 byte past the EOF. We have a broken nchain
+##           field that has a value larger than the number of chains.
+# RUN: yaml2obj --docnum=4 %s -o %t4.4.o -DNBUCKET=0x1 -DNCHAIN=0x5e
+# RUN: llvm-readelf --elf-hash-histogram %t4.4.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR4 -DFILE=%t4.4.o --implicit-check-not="warning:"
+# ERR4: warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+# ERR4: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 1, nchain = 94{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 0 ]
+    NBucket: [[NBUCKET]]
+    Chain:   [ 0 ]
+    NChain:  [[NCHAIN]]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic

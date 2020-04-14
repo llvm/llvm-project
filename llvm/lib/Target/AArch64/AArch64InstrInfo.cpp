@@ -510,8 +510,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 
 bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Cond,
-                                       unsigned DstReg, unsigned TrueReg,
-                                       unsigned FalseReg, int &CondCycles,
+                                       Register DstReg, Register TrueReg,
+                                       Register FalseReg, int &CondCycles,
                                        int &TrueCycles,
                                        int &FalseCycles) const {
   // Check register classes.
@@ -559,9 +559,9 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
-                                    const DebugLoc &DL, unsigned DstReg,
+                                    const DebugLoc &DL, Register DstReg,
                                     ArrayRef<MachineOperand> Cond,
-                                    unsigned TrueReg, unsigned FalseReg) const {
+                                    Register TrueReg, Register FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
   // Parse the condition code, see parseCondBranch() above.
@@ -931,7 +931,7 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
 }
 
 bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
-                                             unsigned &SrcReg, unsigned &DstReg,
+                                             Register &SrcReg, Register &DstReg,
                                              unsigned &SubIdx) const {
   switch (MI.getOpcode()) {
   default:
@@ -1011,8 +1011,8 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 /// analyzeCompare - For a comparison instruction, return the source registers
 /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
 /// Return true if the comparison instruction can be analyzed.
-bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                                      unsigned &SrcReg2, int &CmpMask,
+bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                      Register &SrcReg2, int &CmpMask,
                                       int &CmpValue) const {
   // The first operand can be a frame index where we'd normally expect a
   // register.
@@ -1207,7 +1207,7 @@ static bool areCFlagsAccessedBetweenInstrs(
 ///    instruction.
 ///    Only comparison with zero is supported.
 bool AArch64InstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int CmpMask,
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int CmpMask,
     int CmpValue, const MachineRegisterInfo *MRI) const {
   assert(CmpInstr.getParent());
   assert(MRI);

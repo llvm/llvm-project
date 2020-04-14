@@ -100,6 +100,11 @@ During this release ...
 Changes to the AMDGPU Target
 -----------------------------
 
+* The backend default denormal handling mode has been switched to on
+  for all targets for all compute function types. Frontends wishing to
+  retain the old behavior should explicitly request f32 denormal
+  flushing.
+
 Changes to the AVR Target
 -----------------------------
 

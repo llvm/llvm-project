@@ -117,6 +117,127 @@ TEST(TBDv3, ReadFile) {
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
 }
 
+TEST(TBDv3, ReadMultipleDocuments) {
+  static const char TBDv3Inlines[] =
+      "--- !tapi-tbd-v3\n"
+      "archs: [ armv7, arm64 ]\n"
+      "uuids: [ 'armv7: 00000000-0000-0000-0000-000000000000',\n"
+      "         'arm64: 11111111-1111-1111-1111-111111111111']\n"
+      "platform: ios\n"
+      "install-name: Test.dylib\n"
+      "current-version: 2.3.4\n"
+      "compatibility-version: 1.0\n"
+      "swift-abi-version: 1.1\n"
+      "parent-umbrella: Umbrella.dylib\n"
+      "exports:\n"
+      "  - archs: [ armv7, arm64 ]\n"
+      "    allowable-clients: [ clientA ]\n"
+      "    re-exports: [ /usr/lib/libfoo.dylib,\n"
+      "                  TestInline.dylib ]\n"
+      "    symbols: [ _sym1, _sym2, _sym3, _sym4, $ld$hide$os9.0$_sym1 ]\n"
+      "    objc-classes: [ class1, class2 ]\n"
+      "    objc-eh-types: [ class1 ]\n"
+      "    objc-ivars: [ class1._ivar1, class1._ivar2 ]\n"
+      "    weak-def-symbols: [ _weak1, _weak2 ]\n"
+      "    thread-local-symbols: [ _tlv1, _tlv3 ]\n"
+      "  - archs: [ armv7 ]\n"
+      "    symbols: [ _sym5 ]\n"
+      "    objc-classes: [ class3 ]\n"
+      "    objc-ivars: [ class1._ivar3 ]\n"
+      "    weak-def-symbols: [ _weak3 ]\n"
+      "    thread-local-symbols: [ _tlv3 ]\n"
+      "--- !tapi-tbd-v3\n"
+      "archs: [ armv7, arm64 ]\n"
+      "uuids: [ 'armv7: 00000000-0000-0000-0000-000000000000',\n"
+      "         'arm64: 11111111-1111-1111-1111-111111111111']\n"
+      "platform: ios\n"
+      "install-name: TestInline.dylib\n"
+      "swift-abi-version: 1.1\n"
+      "exports:\n"
+      "  - archs: [ armv7, arm64 ]\n"
+      "    symbols: [ _sym5, _sym6 ]\n"
+      "...\n";
+
+  auto Result = TextAPIReader::get(MemoryBufferRef(TBDv3Inlines, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(File->documents().size(), 1U);
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  auto Archs = AK_armv7 | AK_arm64;
+  auto Platform = PlatformKind::iOS;
+  TargetList Targets;
+  for (auto &&arch : Archs)
+    Targets.emplace_back(Target(arch, Platform));
+  EXPECT_EQ(Archs, File->getArchitectures());
+  UUIDs Uuids = {{Target(AK_armv7, PlatformKind::unknown),
+                  "00000000-0000-0000-0000-000000000000"},
+                 {Target(AK_arm64, PlatformKind::unknown),
+                  "11111111-1111-1111-1111-111111111111"}};
+  EXPECT_EQ(Uuids, File->uuids());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+  EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
+  EXPECT_EQ(PackedVersion(2, 3, 4), File->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 0, 0), File->getCompatibilityVersion());
+  EXPECT_EQ(2U, File->getSwiftABIVersion());
+  EXPECT_EQ(ObjCConstraintType::Retain_Release, File->getObjCConstraint());
+  EXPECT_TRUE(File->isTwoLevelNamespace());
+  EXPECT_TRUE(File->isApplicationExtensionSafe());
+  EXPECT_FALSE(File->isInstallAPI());
+  InterfaceFileRef Client("clientA", Targets);
+  const std::vector<InterfaceFileRef> Reexports = {
+      InterfaceFileRef("/usr/lib/libfoo.dylib", Targets),
+      InterfaceFileRef("TestInline.dylib", Targets)};
+  EXPECT_EQ(1U, File->allowableClients().size());
+  EXPECT_EQ(Client, File->allowableClients().front());
+  EXPECT_EQ(2U, File->reexportedLibraries().size());
+  EXPECT_EQ(Reexports, File->reexportedLibraries());
+
+  ExportedSymbolSeq Exports;
+  for (const auto *Sym : File->symbols()) {
+    EXPECT_FALSE(Sym->isWeakReferenced());
+    EXPECT_FALSE(Sym->isUndefined());
+    Exports.emplace_back(ExportedSymbol{Sym->getKind(), Sym->getName().str(),
+                                        Sym->isWeakDefined(),
+                                        Sym->isThreadLocalValue()});
+  }
+  llvm::sort(Exports.begin(), Exports.end());
+
+  EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_TRUE(
+      std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
+
+  // Check Second Document
+  Exports.clear();
+  auto Document = File->documents().front();
+  EXPECT_EQ(FileType::TBD_V3, Document->getFileType());
+  EXPECT_EQ(Archs, Document->getArchitectures());
+  EXPECT_EQ(Uuids, Document->uuids());
+  EXPECT_EQ(Platform, *Document->getPlatforms().begin());
+  EXPECT_EQ(std::string("TestInline.dylib"), Document->getInstallName());
+  EXPECT_EQ(PackedVersion(1, 0, 0), Document->getCurrentVersion());
+  EXPECT_EQ(PackedVersion(1, 0, 0), Document->getCompatibilityVersion());
+  EXPECT_EQ(2U, Document->getSwiftABIVersion());
+
+  for (const auto *Sym : Document->symbols()) {
+    EXPECT_FALSE(Sym->isWeakReferenced());
+    EXPECT_FALSE(Sym->isUndefined());
+    Exports.emplace_back(ExportedSymbol{Sym->getKind(), Sym->getName().str(),
+                                        Sym->isWeakDefined(),
+                                        Sym->isThreadLocalValue()});
+  }
+  llvm::sort(Exports.begin(), Exports.end());
+
+  ExportedSymbolSeq DocumentSymbols{
+      {SymbolKind::GlobalSymbol, "_sym5", false, false},
+      {SymbolKind::GlobalSymbol, "_sym6", false, false},
+  };
+
+  EXPECT_EQ(DocumentSymbols.size(), Exports.size());
+  EXPECT_TRUE(
+      std::equal(Exports.begin(), Exports.end(), DocumentSymbols.begin()));
+}
+
 TEST(TBDv3, WriteFile) {
   static const char TBDv3File3[] =
       "--- !tapi-tbd-v3\n"
@@ -169,6 +290,87 @@ TEST(TBDv3, WriteFile) {
   auto Result = TextAPIWriter::writeToStream(OS, File);
   EXPECT_FALSE(Result);
   EXPECT_STREQ(TBDv3File3, Buffer.c_str());
+}
+
+TEST(TBDv3, WriteMultipleDocuments) {
+  static const char TBDv3Inlines[] =
+      "--- !tapi-tbd-v3\n"
+      "archs:           [ i386, x86_64 ]\n"
+      "platform:        zippered\n"
+      "install-name:    '/usr/lib/libfoo.dylib'\n"
+      "current-version: 1.2.3\n"
+      "compatibility-version: 0\n"
+      "swift-abi-version: 5\n"
+      "exports:\n"
+      "  - archs:           [ x86_64 ]\n"
+      "    allowable-clients: [ clientA ]\n"
+      "    re-exports:      [ '/usr/lib/libbar.dylib' ]\n"
+      "  - archs:           [ i386, x86_64 ]\n"
+      "    symbols:         [ _sym1 ]\n"
+      "    objc-classes:    [ Class1 ]\n"
+      "    objc-eh-types:   [ Class1 ]\n"
+      "    objc-ivars:      [ Class1._ivar1 ]\n"
+      "    weak-def-symbols: [ _sym2 ]\n"
+      "    thread-local-symbols: [ _symA ]\n"
+      "--- !tapi-tbd-v3\n"
+      "archs:           [ i386 ]\n"
+      "platform:        macosx\n"
+      "install-name:    '/usr/lib/libbar.dylib'\n"
+      "current-version: 0\n"
+      "compatibility-version: 0\n"
+      "swift-abi-version: 5\n"
+      "objc-constraint: none\n"
+      "exports:\n"
+      "  - archs:           [ i386 ]\n"
+      "    symbols:         [ _sym3, _sym4 ]\n"
+      "...\n";
+
+  InterfaceFile File;
+  TargetList Targets;
+  for (auto &&arch : AK_i386 | AK_x86_64) {
+    Targets.emplace_back(Target(arch, PlatformKind::macOS));
+    Targets.emplace_back(Target(arch, PlatformKind::macCatalyst));
+  }
+  File.addTargets(Targets);
+  File.setPath("libfoo.dylib");
+  File.setInstallName("/usr/lib/libfoo.dylib");
+  File.setFileType(FileType::TBD_V3);
+  File.setCurrentVersion(PackedVersion(1, 2, 3));
+  File.setTwoLevelNamespace();
+  File.setApplicationExtensionSafe();
+  File.setSwiftABIVersion(5);
+  File.setObjCConstraint(ObjCConstraintType::Retain_Release);
+  File.addAllowableClient("clientA", Targets[2]);
+  File.addReexportedLibrary("/usr/lib/libbar.dylib", Targets[2]);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", Targets);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", Targets,
+                 SymbolFlags::WeakDefined);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_symA", Targets,
+                 SymbolFlags::ThreadLocalValue);
+  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", Targets);
+  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", Targets);
+  File.addSymbol(SymbolKind::ObjectiveCInstanceVariable, "Class1._ivar1",
+                 Targets);
+
+  // Inline document
+  InterfaceFile Document;
+  Targets = {Target(AK_i386, PlatformKind::macOS)};
+  Document.addTargets(Targets);
+  Document.setPath("libbar.dylib");
+  Document.setInstallName("/usr/lib/libbar.dylib");
+  Document.setFileType(FileType::TBD_V3);
+  Document.setTwoLevelNamespace();
+  Document.setApplicationExtensionSafe();
+  Document.setSwiftABIVersion(5);
+  Document.addSymbol(SymbolKind::GlobalSymbol, "_sym3", Targets);
+  Document.addSymbol(SymbolKind::GlobalSymbol, "_sym4", Targets);
+  File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
+  
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto Result = TextAPIWriter::writeToStream(OS, File);
+  EXPECT_FALSE(Result);
+  EXPECT_STREQ(TBDv3Inlines, Buffer.c_str());
 }
 
 TEST(TBDv3, Platform_macOS) {

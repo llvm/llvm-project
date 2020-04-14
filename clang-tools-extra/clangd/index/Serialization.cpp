@@ -699,7 +699,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n"
-       "  - numnber of relations: {5}",
+       "  - number of relations: {5}",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
        Index->estimateMemoryUsage(), NumSym, NumRefs, NumRelations);
   return Index;

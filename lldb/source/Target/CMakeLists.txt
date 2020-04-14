@@ -63,6 +63,7 @@ add_lldb_library(lldbTarget
   ThreadPlanStepThrough.cpp
   ThreadPlanStepUntil.cpp
   ThreadPlanTracer.cpp
+  ThreadPlanStack.cpp
   ThreadSpec.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp

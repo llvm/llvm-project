@@ -13,16 +13,16 @@
 
 define i32 @func_vainout(i32, ...) {
 ; CHECK-LABEL: func_vainout:
-; CHECK:         ldl.sx %s1, 184(,%s9)
-; CHECK:         ld2b.sx %s18, 192(,%s9)
-; CHECK:         ld1b.sx %s19, 200(,%s9)
-; CHECK:         ldl.sx %s20, 208(,%s9)
-; CHECK:         ld2b.zx %s21, 216(,%s9)
-; CHECK:         ld1b.zx %s22, 224(,%s9)
-; CHECK:         ldu %s23, 236(,%s9)
-; CHECK:         ld %s24, 240(,%s9)
-; CHECK:         ld %s25, 248(,%s9)
-; CHECK:         ld %s26, 256(,%s9)
+; CHECK:         ldl.sx %s1, 184(, %s9)
+; CHECK:         ld2b.sx %s18, 192(, %s9)
+; CHECK:         ld1b.sx %s19, 200(, %s9)
+; CHECK:         ldl.sx %s20, 208(, %s9)
+; CHECK:         ld2b.zx %s21, 216(, %s9)
+; CHECK:         ld1b.zx %s22, 224(, %s9)
+; CHECK:         ldu %s23, 236(, %s9)
+; CHECK:         ld %s24, 240(, %s9)
+; CHECK:         ld %s25, 248(, %s9)
+; CHECK:         ld %s26, 256(, %s9)
 
   %a = alloca i8*, align 8
   %a8 = bitcast i8** %a to i8*

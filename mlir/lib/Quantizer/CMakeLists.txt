@@ -48,6 +48,9 @@ add_mlir_library(MLIRQuantizerTransforms
   Transforms/RemoveInstrumentationPass.cpp
 
   ADDITIONAL_HEADER_DIRS
+
+  DEPENDS
+  MLIRQuantizerPassIncGen
   )
 target_link_libraries(MLIRQuantizerTransforms
   PUBLIC

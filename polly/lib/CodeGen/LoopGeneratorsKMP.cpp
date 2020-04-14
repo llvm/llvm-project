@@ -59,7 +59,7 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
   Builder.CreateCall(F, Args);
 }
 
-void ParallelLoopGeneratorKMP::deployParallelExecution(Value *SubFn,
+void ParallelLoopGeneratorKMP::deployParallelExecution(Function *SubFn,
                                                        Value *SubFnParam,
                                                        Value *LB, Value *UB,
                                                        Value *Stride) {

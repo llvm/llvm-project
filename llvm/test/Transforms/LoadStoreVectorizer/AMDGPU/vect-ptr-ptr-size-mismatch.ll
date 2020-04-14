@@ -55,7 +55,7 @@ entry:
 }
 
 ; CHECK-LABEL: @ext_ptr
-; CHECK  load <2 x i32>
+; CHECK: load <2 x i32>
 define void @ext_ptr(i32 addrspace(5)* %p) {
 entry:
   %gep1 = getelementptr inbounds i32, i32 addrspace(5)* %p, i64 0
@@ -68,7 +68,7 @@ entry:
 }
 
 ; CHECK-LABEL: @shrink_ptr
-; CHECK  load <2 x i32>
+; CHECK: load <2 x i32>
 define void @shrink_ptr(i32* %p) {
 entry:
   %gep1 = getelementptr inbounds i32, i32* %p, i64 0

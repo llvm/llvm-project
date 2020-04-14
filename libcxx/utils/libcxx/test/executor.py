@@ -10,6 +10,7 @@ import platform
 import os
 import posixpath
 import ntpath
+import shutil
 
 from libcxx.test import tracing
 from libcxx.util import executeCommand
@@ -60,6 +61,12 @@ class LocalExecutor(Executor):
 
         if env:
             env = self.merge_environments(os.environ, env)
+
+        for dep in file_deps:
+            if os.path.isdir(dep):
+                shutil.copytree(dep, os.path.join(work_dir, os.path.basename(dep)), symlinks=True)
+            else:
+                shutil.copy2(dep, work_dir)
 
         out, err, rc = executeCommand(cmd, cwd=work_dir, env=env)
         return (cmd, out, err, rc)

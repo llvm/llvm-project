@@ -211,6 +211,11 @@ public:
   /// implementations.
   virtual void GenerateProtocol(const ObjCProtocolDecl *OPD) = 0;
 
+  /// GetOrEmitProtocol - Get the protocol object for the given
+  /// declaration, emitting it if necessary. The return value has type
+  /// ProtocolPtrTy.
+  virtual llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD) = 0;
+
   /// Generate a function preamble for a method with the specified
   /// types.
 

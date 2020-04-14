@@ -10,6 +10,7 @@
 // into a spv.module operation
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRVPass.h"
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
@@ -19,7 +20,6 @@
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 
 using namespace mlir;
 
@@ -34,6 +34,10 @@ namespace {
 ///
 /// 2) Lower the body of the spirv::ModuleOp.
 struct GPUToSPIRVPass : public ModulePass<GPUToSPIRVPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertGpuToSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
   void runOnModule() override;
 };
 } // namespace
@@ -70,6 +74,3 @@ void GPUToSPIRVPass::runOnModule() {
 std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertGPUToSPIRVPass() {
   return std::make_unique<GPUToSPIRVPass>();
 }
-
-static PassRegistration<GPUToSPIRVPass>
-    pass("convert-gpu-to-spirv", "Convert GPU dialect to SPIR-V dialect");

@@ -532,7 +532,7 @@ with [Tensor Comprehensions](#lessonstc).
 Of course, we are not advocating for using ML everywhere in the stack
 immediately: low-level compilation and machine models are still quite performant
 in LLVM. However, for the high-level and mid-level optimization problems,
-models need to be conditioned (probalistically) on the low-level
+models need to be conditioned (probabilistically) on the low-level
 compiler which acts as a blackbox. For these reasons we prioritize the
 design of IR and transformations with search-friendly properties over
 building cost models.

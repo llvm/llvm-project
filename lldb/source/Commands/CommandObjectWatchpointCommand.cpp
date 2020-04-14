@@ -39,7 +39,7 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
     {
         eScriptLanguageLua,
         "lua",
-        "Commands are in the Python language.",
+        "Commands are in the Lua language.",
     },
     {
         eSortOrderByName,

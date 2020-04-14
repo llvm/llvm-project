@@ -668,7 +668,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
 }
 
 /// If we encounter an array with IndexVar as the index of an
-/// ArraySubsriptExpression, note it as a consistent usage and prune the
+/// ArraySubscriptExpression, note it as a consistent usage and prune the
 /// AST traversal.
 ///
 /// For example, given

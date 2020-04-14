@@ -208,17 +208,18 @@ define i32* @complicated_args_inalloca() {
 
 define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test_sret
-; CHECK-SAME: (%struct.X* noalias nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly dereferenceable(8) [[B:%.*]])
-; CHECK-NEXT:    store %struct.X* [[A]], %struct.X** [[B]]
+; CHECK-SAME: (%struct.X* noalias nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
+; CHECK-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store %struct.X* %a, %struct.X** %b
   ret void
 }
+; FIXME: Alignment and dereferenceability are not propagated to the argument
 define void @complicated_args_sret(%struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_sret
 ; CHECK-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; CHECK-NEXT:    call void @test_sret(%struct.X* noalias nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly [[B]])
+; CHECK-NEXT:    call void @test_sret(%struct.X* noalias nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)

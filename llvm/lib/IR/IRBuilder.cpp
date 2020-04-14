@@ -767,6 +767,382 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
   return createCallHelper(Fn, Args, this, Name, FMFSource);
 }
 
+CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
+    Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource,
+    const Twine &Name, MDNode *FPMathTag,
+    Optional<fp::RoundingMode> Rounding,
+    Optional<fp::ExceptionBehavior> Except) {
+  Value *RoundingV = getConstrainedFPRounding(Rounding);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMF;
+  if (FMFSource)
+    UseFMF = FMFSource->getFastMathFlags();
+
+  CallInst *C = CreateIntrinsic(ID, {L->getType()},
+                                {L, R, RoundingV, ExceptV}, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
+Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
+                                   const Twine &Name, MDNode *FPMathTag) {
+  if (Instruction::isBinaryOp(Opc)) {
+    assert(Ops.size() == 2 && "Invalid number of operands!");
+    return CreateBinOp(static_cast<Instruction::BinaryOps>(Opc),
+                       Ops[0], Ops[1], Name, FPMathTag);
+  }
+  if (Instruction::isUnaryOp(Opc)) {
+    assert(Ops.size() == 1 && "Invalid number of operands!");
+    return CreateUnOp(static_cast<Instruction::UnaryOps>(Opc),
+                      Ops[0], Name, FPMathTag);
+  }
+  llvm_unreachable("Unexpected opcode!");
+}
+
+CallInst *IRBuilderBase::CreateConstrainedFPCast(
+    Intrinsic::ID ID, Value *V, Type *DestTy,
+    Instruction *FMFSource, const Twine &Name, MDNode *FPMathTag,
+    Optional<fp::RoundingMode> Rounding,
+    Optional<fp::ExceptionBehavior> Except) {
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMF;
+  if (FMFSource)
+    UseFMF = FMFSource->getFastMathFlags();
+
+  CallInst *C;
+  bool HasRoundingMD = false;
+  switch (ID) {
+  default:
+    break;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
+  case Intrinsic::INTRINSIC:                                \
+    HasRoundingMD = ROUND_MODE;                             \
+    break;
+#include "llvm/IR/ConstrainedOps.def"
+  }
+  if (HasRoundingMD) {
+    Value *RoundingV = getConstrainedFPRounding(Rounding);
+    C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
+                        nullptr, Name);
+  } else
+    C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, ExceptV}, nullptr,
+                        Name);
+
+  setConstrainedFPCallAttr(C);
+
+  if (isa<FPMathOperator>(C))
+    setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
+Value *IRBuilderBase::CreateFCmpHelper(
+    CmpInst::Predicate P, Value *LHS, Value *RHS, const Twine &Name,
+    MDNode *FPMathTag, bool IsSignaling) {
+  if (IsFPConstrained) {
+    auto ID = IsSignaling ? Intrinsic::experimental_constrained_fcmps
+                          : Intrinsic::experimental_constrained_fcmp;
+    return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
+  }
+
+  if (auto *LC = dyn_cast<Constant>(LHS))
+    if (auto *RC = dyn_cast<Constant>(RHS))
+      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
+}
+
+CallInst *IRBuilderBase::CreateConstrainedFPCmp(
+    Intrinsic::ID ID, CmpInst::Predicate P, Value *L, Value *R,
+    const Twine &Name, Optional<fp::ExceptionBehavior> Except) {
+  Value *PredicateV = getConstrainedFPPredicate(P);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  CallInst *C = CreateIntrinsic(ID, {L->getType()},
+                                {L, R, PredicateV, ExceptV}, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  return C;
+}
+
+CallInst *IRBuilderBase::CreateConstrainedFPCall(
+    Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
+    Optional<fp::RoundingMode> Rounding,
+    Optional<fp::ExceptionBehavior> Except) {
+  llvm::SmallVector<Value *, 6> UseArgs;
+
+  for (auto *OneArg : Args)
+    UseArgs.push_back(OneArg);
+  bool HasRoundingMD = false;
+  switch (Callee->getIntrinsicID()) {
+  default:
+    break;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
+  case Intrinsic::INTRINSIC:                                \
+    HasRoundingMD = ROUND_MODE;                             \
+    break;
+#include "llvm/IR/ConstrainedOps.def"
+  }
+  if (HasRoundingMD)
+    UseArgs.push_back(getConstrainedFPRounding(Rounding));
+  UseArgs.push_back(getConstrainedFPExcept(Except));
+
+  CallInst *C = CreateCall(Callee, UseArgs, Name);
+  setConstrainedFPCallAttr(C);
+  return C;
+}
+
+Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
+                                   const Twine &Name, Instruction *MDFrom) {
+  if (auto *CC = dyn_cast<Constant>(C))
+    if (auto *TC = dyn_cast<Constant>(True))
+      if (auto *FC = dyn_cast<Constant>(False))
+        return Insert(Folder.CreateSelect(CC, TC, FC), Name);
+
+  SelectInst *Sel = SelectInst::Create(C, True, False);
+  if (MDFrom) {
+    MDNode *Prof = MDFrom->getMetadata(LLVMContext::MD_prof);
+    MDNode *Unpred = MDFrom->getMetadata(LLVMContext::MD_unpredictable);
+    Sel = addBranchMetadata(Sel, Prof, Unpred);
+  }
+  if (isa<FPMathOperator>(Sel))
+    setFPAttrs(Sel, nullptr /* MDNode* */, FMF);
+  return Insert(Sel, Name);
+}
+
+Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS,
+                                    const Twine &Name) {
+  assert(LHS->getType() == RHS->getType() &&
+         "Pointer subtraction operand types must match!");
+  auto *ArgType = cast<PointerType>(LHS->getType());
+  Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
+  Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
+  Value *Difference = CreateSub(LHS_int, RHS_int);
+  return CreateExactSDiv(Difference,
+                         ConstantExpr::getSizeOf(ArgType->getElementType()),
+                         Name);
+}
+
+Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
+  assert(isa<PointerType>(Ptr->getType()) &&
+         "launder.invariant.group only applies to pointers.");
+  // FIXME: we could potentially avoid casts to/from i8*.
+  auto *PtrType = Ptr->getType();
+  auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
+  if (PtrType != Int8PtrTy)
+    Ptr = CreateBitCast(Ptr, Int8PtrTy);
+  Module *M = BB->getParent()->getParent();
+  Function *FnLaunderInvariantGroup = Intrinsic::getDeclaration(
+      M, Intrinsic::launder_invariant_group, {Int8PtrTy});
+
+  assert(FnLaunderInvariantGroup->getReturnType() == Int8PtrTy &&
+         FnLaunderInvariantGroup->getFunctionType()->getParamType(0) ==
+             Int8PtrTy &&
+         "LaunderInvariantGroup should take and return the same type");
+
+  CallInst *Fn = CreateCall(FnLaunderInvariantGroup, {Ptr});
+
+  if (PtrType != Int8PtrTy)
+    return CreateBitCast(Fn, PtrType);
+  return Fn;
+}
+
+Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
+  assert(isa<PointerType>(Ptr->getType()) &&
+         "strip.invariant.group only applies to pointers.");
+
+  // FIXME: we could potentially avoid casts to/from i8*.
+  auto *PtrType = Ptr->getType();
+  auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
+  if (PtrType != Int8PtrTy)
+    Ptr = CreateBitCast(Ptr, Int8PtrTy);
+  Module *M = BB->getParent()->getParent();
+  Function *FnStripInvariantGroup = Intrinsic::getDeclaration(
+      M, Intrinsic::strip_invariant_group, {Int8PtrTy});
+
+  assert(FnStripInvariantGroup->getReturnType() == Int8PtrTy &&
+         FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
+             Int8PtrTy &&
+         "StripInvariantGroup should take and return the same type");
+
+  CallInst *Fn = CreateCall(FnStripInvariantGroup, {Ptr});
+
+  if (PtrType != Int8PtrTy)
+    return CreateBitCast(Fn, PtrType);
+  return Fn;
+}
+
+Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
+                                        const Twine &Name) {
+  assert(NumElts > 0 && "Cannot splat to an empty vector!");
+
+  // First insert it into an undef vector so we can shuffle it.
+  Type *I32Ty = getInt32Ty();
+  Value *Undef = UndefValue::get(VectorType::get(V->getType(), NumElts));
+  V = CreateInsertElement(Undef, V, ConstantInt::get(I32Ty, 0),
+                          Name + ".splatinsert");
+
+  // Shuffle the value across the desired number of elements.
+  Value *Zeros = ConstantAggregateZero::get(VectorType::get(I32Ty, NumElts));
+  return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
+}
+
+Value *IRBuilderBase::CreateExtractInteger(
+    const DataLayout &DL, Value *From, IntegerType *ExtractedTy,
+    uint64_t Offset, const Twine &Name) {
+  auto *IntTy = cast<IntegerType>(From->getType());
+  assert(DL.getTypeStoreSize(ExtractedTy) + Offset <=
+             DL.getTypeStoreSize(IntTy) &&
+         "Element extends past full value");
+  uint64_t ShAmt = 8 * Offset;
+  Value *V = From;
+  if (DL.isBigEndian())
+    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) -
+                 DL.getTypeStoreSize(ExtractedTy) - Offset);
+  if (ShAmt) {
+    V = CreateLShr(V, ShAmt, Name + ".shift");
+  }
+  assert(ExtractedTy->getBitWidth() <= IntTy->getBitWidth() &&
+         "Cannot extract to a larger integer!");
+  if (ExtractedTy != IntTy) {
+    V = CreateTrunc(V, ExtractedTy, Name + ".trunc");
+  }
+  return V;
+}
+
+Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
+    Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
+    MDNode *DbgInfo) {
+  assert(isa<PointerType>(Base->getType()) &&
+         "Invalid Base ptr type for preserve.array.access.index.");
+  auto *BaseType = Base->getType();
+
+  Value *LastIndexV = getInt32(LastIndex);
+  Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
+  SmallVector<Value *, 4> IdxList;
+  for (unsigned I = 0; I < Dimension; ++I)
+    IdxList.push_back(Zero);
+  IdxList.push_back(LastIndexV);
+
+  Type *ResultType =
+      GetElementPtrInst::getGEPReturnType(ElTy, Base, IdxList);
+
+  Module *M = BB->getParent()->getParent();
+  Function *FnPreserveArrayAccessIndex = Intrinsic::getDeclaration(
+      M, Intrinsic::preserve_array_access_index, {ResultType, BaseType});
+
+  Value *DimV = getInt32(Dimension);
+  CallInst *Fn =
+      CreateCall(FnPreserveArrayAccessIndex, {Base, DimV, LastIndexV});
+  if (DbgInfo)
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+  return Fn;
+}
+
+Value *IRBuilderBase::CreatePreserveUnionAccessIndex(
+    Value *Base, unsigned FieldIndex, MDNode *DbgInfo) {
+  assert(isa<PointerType>(Base->getType()) &&
+         "Invalid Base ptr type for preserve.union.access.index.");
+  auto *BaseType = Base->getType();
+
+  Module *M = BB->getParent()->getParent();
+  Function *FnPreserveUnionAccessIndex = Intrinsic::getDeclaration(
+      M, Intrinsic::preserve_union_access_index, {BaseType, BaseType});
+
+  Value *DIIndex = getInt32(FieldIndex);
+  CallInst *Fn =
+      CreateCall(FnPreserveUnionAccessIndex, {Base, DIIndex});
+  if (DbgInfo)
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+  return Fn;
+}
+
+Value *IRBuilderBase::CreatePreserveStructAccessIndex(
+    Type *ElTy, Value *Base, unsigned Index, unsigned FieldIndex,
+    MDNode *DbgInfo) {
+  assert(isa<PointerType>(Base->getType()) &&
+         "Invalid Base ptr type for preserve.struct.access.index.");
+  auto *BaseType = Base->getType();
+
+  Value *GEPIndex = getInt32(Index);
+  Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
+  Type *ResultType =
+      GetElementPtrInst::getGEPReturnType(ElTy, Base, {Zero, GEPIndex});
+
+  Module *M = BB->getParent()->getParent();
+  Function *FnPreserveStructAccessIndex = Intrinsic::getDeclaration(
+      M, Intrinsic::preserve_struct_access_index, {ResultType, BaseType});
+
+  Value *DIIndex = getInt32(FieldIndex);
+  CallInst *Fn = CreateCall(FnPreserveStructAccessIndex,
+                            {Base, GEPIndex, DIIndex});
+  if (DbgInfo)
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+  return Fn;
+}
+
+CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(
+    const DataLayout &DL, Value *PtrValue, Value *Mask, Type *IntPtrTy,
+    Value *OffsetValue, Value **TheCheck) {
+  Value *PtrIntValue = CreatePtrToInt(PtrValue, IntPtrTy, "ptrint");
+
+  if (OffsetValue) {
+    bool IsOffsetZero = false;
+    if (const auto *CI = dyn_cast<ConstantInt>(OffsetValue))
+      IsOffsetZero = CI->isZero();
+
+    if (!IsOffsetZero) {
+      if (OffsetValue->getType() != IntPtrTy)
+        OffsetValue = CreateIntCast(OffsetValue, IntPtrTy, /*isSigned*/ true,
+                                    "offsetcast");
+      PtrIntValue = CreateSub(PtrIntValue, OffsetValue, "offsetptr");
+    }
+  }
+
+  Value *Zero = ConstantInt::get(IntPtrTy, 0);
+  Value *MaskedPtr = CreateAnd(PtrIntValue, Mask, "maskedptr");
+  Value *InvCond = CreateICmpEQ(MaskedPtr, Zero, "maskcond");
+  if (TheCheck)
+    *TheCheck = InvCond;
+
+  return CreateAssumption(InvCond);
+}
+
+CallInst *IRBuilderBase::CreateAlignmentAssumption(
+    const DataLayout &DL, Value *PtrValue, unsigned Alignment,
+    Value *OffsetValue, Value **TheCheck) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create an alignment assumption on a non-pointer?");
+  assert(Alignment != 0 && "Invalid Alignment");
+  auto *PtrTy = cast<PointerType>(PtrValue->getType());
+  Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
+
+  Value *Mask = ConstantInt::get(IntPtrTy, Alignment - 1);
+  return CreateAlignmentAssumptionHelper(DL, PtrValue, Mask, IntPtrTy,
+                                         OffsetValue, TheCheck);
+}
+
+CallInst *IRBuilderBase::CreateAlignmentAssumption(
+    const DataLayout &DL, Value *PtrValue, Value *Alignment,
+    Value *OffsetValue, Value **TheCheck) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create an alignment assumption on a non-pointer?");
+  auto *PtrTy = cast<PointerType>(PtrValue->getType());
+  Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
+
+  if (Alignment->getType() != IntPtrTy)
+    Alignment = CreateIntCast(Alignment, IntPtrTy, /*isSigned*/ false,
+                              "alignmentcast");
+
+  Value *Mask = CreateSub(Alignment, ConstantInt::get(IntPtrTy, 1), "mask");
+
+  return CreateAlignmentAssumptionHelper(DL, PtrValue, Mask, IntPtrTy,
+                                         OffsetValue, TheCheck);
+}
+
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() {}
 IRBuilderCallbackInserter::~IRBuilderCallbackInserter() {}
 IRBuilderFolder::~IRBuilderFolder() {}
