@@ -371,14 +371,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S64, S16})
     .clampScalar(0, S16, S64);
 
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-    .legalFor({S1, S32, S64, S16, V2S32, V4S32, V2S16, V4S16, GlobalPtr,
-               ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
-    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .clampScalarOrElt(0, S32, S1024)
-    .legalIf(isMultiple32(0))
-    .widenScalarToNextPow2(0, 32)
-    .clampMaxNumElements(0, S32, 16);
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
+      .legalFor({S1, S32, S64, S16, V2S32, V4S32, V2S16, V4S16, GlobalPtr,
+                 ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
+      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+      .clampScalarOrElt(0, S32, S1024)
+      .legalIf(isMultiple32(0))
+      .widenScalarToNextPow2(0, 32)
+      .clampMaxNumElements(0, S32, 16);
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
