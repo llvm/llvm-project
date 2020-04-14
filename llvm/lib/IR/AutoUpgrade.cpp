@@ -1247,8 +1247,9 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
   Ptr = Builder.CreateBitCast(Ptr,
                               llvm::PointerType::getUnqual(Data->getType()));
   const Align Alignment =
-      Aligned ? Align(cast<VectorType>(Data->getType())->getBitWidth() / 8)
-              : Align(1);
+      Aligned
+          ? Align(Data->getType()->getPrimitiveSizeInBits().getFixedSize() / 8)
+          : Align(1);
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
@@ -1268,8 +1269,10 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
   const Align Alignment =
-      Aligned ? Align(cast<VectorType>(Passthru->getType())->getBitWidth() / 8)
-              : Align(1);
+      Aligned
+          ? Align(Passthru->getType()->getPrimitiveSizeInBits().getFixedSize() /
+                  8)
+          : Align(1);
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
@@ -1739,9 +1742,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *BC = Builder.CreateBitCast(Arg0,
                                         PointerType::getUnqual(Arg1->getType()),
                                         "cast");
-      VectorType *VTy = cast<VectorType>(Arg1->getType());
-      StoreInst *SI =
-          Builder.CreateAlignedStore(Arg1, BC, Align(VTy->getBitWidth() / 8));
+      StoreInst *SI = Builder.CreateAlignedStore(
+          Arg1, BC,
+          Align(Arg1->getType()->getPrimitiveSizeInBits().getFixedSize() / 8));
       SI->setMetadata(M->getMDKindID("nontemporal"), Node);
 
       // Remove intrinsic.
@@ -3079,13 +3082,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
           C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
 
       Value *Ptr = CI->getArgOperand(0);
-      VectorType *VTy = cast<VectorType>(CI->getType());
 
       // Convert the type of the pointer to a pointer to the stored type.
-      Value *BC =
-          Builder.CreateBitCast(Ptr, PointerType::getUnqual(VTy), "cast");
-      LoadInst *LI =
-          Builder.CreateAlignedLoad(VTy, BC, Align(VTy->getBitWidth() / 8));
+      Value *BC = Builder.CreateBitCast(
+          Ptr, PointerType::getUnqual(CI->getType()), "cast");
+      LoadInst *LI = Builder.CreateAlignedLoad(
+          CI->getType(), BC,
+          Align(CI->getType()->getPrimitiveSizeInBits().getFixedSize() / 8));
       LI->setMetadata(M->getMDKindID("nontemporal"), Node);
       Rep = LI;
     } else if (IsX86 && (Name.startswith("fma.vfmadd.") ||
