@@ -171,6 +171,23 @@ extern "C" WEAK int async_safe_write_log(int pri, const char *tag,
 void outputRaw(const char *Buffer) {
   if (&async_safe_write_log) {
     constexpr s32 AndroidLogInfo = 4;
+    constexpr uptr MaxLength = 1024U;
+    char LocalBuffer[MaxLength];
+    while (strlen(Buffer) > MaxLength) {
+      uptr P;
+      for (P = MaxLength - 1; P > 0; P--) {
+        if (Buffer[P] == '\n') {
+          memcpy(LocalBuffer, Buffer, P);
+          LocalBuffer[P] = '\0';
+          async_safe_write_log(AndroidLogInfo, "scudo", LocalBuffer);
+          Buffer = &Buffer[P + 1];
+          break;
+        }
+      }
+      // If no newline was found, just log the buffer.
+      if (P == 0)
+        break;
+    }
     async_safe_write_log(AndroidLogInfo, "scudo", Buffer);
   } else {
     write(2, Buffer, strlen(Buffer));
