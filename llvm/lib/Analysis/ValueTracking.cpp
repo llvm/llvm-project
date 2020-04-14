@@ -4592,6 +4592,91 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
+bool llvm::canCreatePoison(const Instruction *I) {
+  // See whether I has flags that may create poison
+  if (isa<OverflowingBinaryOperator>(I) &&
+      (I->hasNoSignedWrap() || I->hasNoUnsignedWrap()))
+    return true;
+  if (isa<PossiblyExactOperator>(I) && I->isExact())
+    return true;
+  if (auto *FP = dyn_cast<FPMathOperator>(I)) {
+    auto FMF = FP->getFastMathFlags();
+    if (FMF.noNaNs() || FMF.noInfs())
+      return true;
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    if (GEP->isInBounds())
+      return true;
+
+  unsigned Opcode = I->getOpcode();
+
+  // Check whether opcode is a poison-generating operation
+  switch (Opcode) {
+  case Instruction::Shl:
+  case Instruction::AShr:
+  case Instruction::LShr: {
+    // Shifts return poison if shiftwidth is larger than the bitwidth.
+    if (auto *C = dyn_cast<Constant>(I->getOperand(1))) {
+      SmallVector<Constant *, 4> ShiftAmounts;
+      if (C->getType()->isVectorTy()) {
+        unsigned NumElts = cast<VectorType>(C->getType())->getNumElements();
+        for (unsigned i = 0; i < NumElts; ++i)
+          ShiftAmounts.push_back(C->getAggregateElement(i));
+      } else
+        ShiftAmounts.push_back(C);
+
+      bool Safe = llvm::all_of(ShiftAmounts, [](Constant *C) {
+        auto *CI = dyn_cast<ConstantInt>(C);
+        return CI && CI->getZExtValue() < C->getType()->getIntegerBitWidth();
+      });
+      return !Safe;
+    }
+    return true;
+  }
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    // fptosi/ui yields poison if the resulting value does not fit in the
+    // destination type.
+    return true;
+  case Instruction::Call:
+  case Instruction::CallBr:
+  case Instruction::Invoke:
+    // Function calls can return a poison value even if args are non-poison
+    // values. CallBr returns poison when jumping to indirect labels.
+    return true;
+  case Instruction::InsertElement:
+  case Instruction::ExtractElement: {
+    // If index exceeds the length of the vector, it returns poison
+    auto *VTy = cast<VectorType>(I->getOperand(0)->getType());
+    unsigned IdxOp = I->getOpcode() == Instruction::InsertElement ? 2 : 1;
+    auto *Idx = dyn_cast<ConstantInt>(I->getOperand(IdxOp));
+    if (!Idx || Idx->getZExtValue() >= VTy->getElementCount().Min)
+      return true;
+    return false;
+  }
+  case Instruction::FNeg:
+  case Instruction::PHI:
+  case Instruction::Select:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::ShuffleVector:
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+  case Instruction::Freeze:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::GetElementPtr:
+    return false;
+  default:
+    if (isa<CastInst>(I))
+      return false;
+    else if (isa<BinaryOperator>(I))
+      return false;
+    // Be conservative and return true.
+    return true;
+  }
+}
+
 bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                             const Instruction *CtxI,
                                             const DominatorTree *DT) {
