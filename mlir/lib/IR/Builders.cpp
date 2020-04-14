@@ -14,7 +14,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/Functional.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace mlir;
 
@@ -204,47 +203,46 @@ Builder::getSymbolRefAttr(StringRef value,
 }
 
 ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
-  auto attrs = functional::map(
-      [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getI64ArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = functional::map(
-      [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getIndexArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = functional::map(
-      [this](int64_t v) -> Attribute {
+  auto attrs = llvm::to_vector<8>(
+      llvm::map_range(values, [this](int64_t v) -> Attribute {
         return getIntegerAttr(IndexType::get(getContext()), v);
-      },
-      values);
+      }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF32ArrayAttr(ArrayRef<float> values) {
-  auto attrs = functional::map(
-      [this](float v) -> Attribute { return getF32FloatAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](float v) -> Attribute { return getF32FloatAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF64ArrayAttr(ArrayRef<double> values) {
-  auto attrs = functional::map(
-      [this](double v) -> Attribute { return getF64FloatAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](double v) -> Attribute { return getF64FloatAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getStrArrayAttr(ArrayRef<StringRef> values) {
-  auto attrs = functional::map(
-      [this](StringRef v) -> Attribute { return getStringAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](StringRef v) -> Attribute { return getStringAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
-  auto attrs = functional::map(
-      [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }));
   return getArrayAttr(attrs);
 }
 

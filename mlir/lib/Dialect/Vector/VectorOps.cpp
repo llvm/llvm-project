@@ -21,7 +21,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
@@ -893,12 +892,10 @@ static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
 
 static ArrayAttr makeI64ArrayAttr(ArrayRef<int64_t> values,
                                   MLIRContext *context) {
-  auto attrs = functional::map(
-      [context](int64_t v) -> Attribute {
-        return IntegerAttr::get(IntegerType::get(64, context), APInt(64, v));
-      },
-      values);
-  return ArrayAttr::get(attrs, context);
+  auto attrs = llvm::map_range(values, [context](int64_t v) -> Attribute {
+    return IntegerAttr::get(IntegerType::get(64, context), APInt(64, v));
+  });
+  return ArrayAttr::get(llvm::to_vector<8>(attrs), context);
 }
 
 static LogicalResult verify(InsertStridedSliceOp op) {
