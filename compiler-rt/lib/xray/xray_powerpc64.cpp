@@ -52,35 +52,37 @@ namespace __xray {
 bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
                         const XRaySledEntry &Sled,
                         void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
+  const uint64_t Address = Sled.Address;
   if (Enable) {
     // lis 0, FuncId[16..32]
     // li 0, FuncId[0..15]
-    *reinterpret_cast<uint64_t *>(Sled.Address) =
+    *reinterpret_cast<uint64_t *>(Address) =
         (0x3c000000ull + (FuncId >> 16)) +
         ((0x60000000ull + (FuncId & 0xffff)) << 32);
   } else {
     // b +JumpOverInstNum instructions.
-    *reinterpret_cast<uint32_t *>(Sled.Address) =
+    *reinterpret_cast<uint32_t *>(Address) =
         0x48000000ull + (JumpOverInstNum << 2);
   }
-  clearCache(reinterpret_cast<void *>(Sled.Address), 8);
+  clearCache(reinterpret_cast<void *>(Address), 8);
   return true;
 }
 
 bool patchFunctionExit(const bool Enable, uint32_t FuncId,
                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  const uint64_t Address = Sled.Address;
   if (Enable) {
     // lis 0, FuncId[16..32]
     // li 0, FuncId[0..15]
-    *reinterpret_cast<uint64_t *>(Sled.Address) =
+    *reinterpret_cast<uint64_t *>(Address) =
         (0x3c000000ull + (FuncId >> 16)) +
         ((0x60000000ull + (FuncId & 0xffff)) << 32);
   } else {
     // Copy the blr/b instruction after JumpOverInstNum instructions.
-    *reinterpret_cast<uint32_t *>(Sled.Address) =
-        *(reinterpret_cast<uint32_t *>(Sled.Address) + JumpOverInstNum);
+    *reinterpret_cast<uint32_t *>(Address) =
+        *(reinterpret_cast<uint32_t *>(Address) + JumpOverInstNum);
   }
-  clearCache(reinterpret_cast<void *>(Sled.Address), 8);
+  clearCache(reinterpret_cast<void *>(Address), 8);
   return true;
 }
 
