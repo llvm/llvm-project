@@ -191,7 +191,7 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
     return LLTCodeGen(
         LLT::vector(VT.getVectorNumElements(), VT.getScalarSizeInBits()));
 
-  if (VT.isInteger() || VT.isFloatingPoint())
+  if (VT.isInteger() || VT.isFloatingPoint() || VT.isvtAny32())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
   return None;
 }
@@ -386,6 +386,7 @@ getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
   std::string Name = "GIFBS";
   for (const auto &Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
+  dbgs() << Name << "\n";
   return Name;
 }
 
@@ -1079,6 +1080,7 @@ public:
     OPM_PointerToAny,
     OPM_RegBank,
     OPM_MBB,
+    OPM_vtAny32,
   };
 
 protected:
@@ -1248,6 +1250,30 @@ public:
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIM_CheckPointerToAny")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
+          << MatchTable::Comment("SizeInBits")
+          << MatchTable::IntValue(SizeInBits) << MatchTable::LineBreak;
+  }
+};
+
+class vtAny32OperandMatcher : public OperandPredicateMatcher {
+protected:
+  unsigned SizeInBits;
+
+public:
+  vtAny32OperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             unsigned SizeInBits)
+      : OperandPredicateMatcher(OPM_vtAny32, InsnVarID, OpIdx),
+        SizeInBits(SizeInBits) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_vtAny32;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckvtAny32")
           << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
           << MatchTable::Comment("SizeInBits")
@@ -1588,6 +1614,12 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
                                             bool OperandIsAPointer) {
   if (!VTy.isMachineValueType())
     return failedImport("unsupported typeset");
+
+  if (VTy.getMachineValueType() == MVT::vtAny32) {
+    dbgs() << "found vtAny32\n";
+    addPredicate<vtAny32OperandMatcher>(32);
+    return Error::success();
+  }
 
   if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
     addPredicate<PointerToAnyOperandMatcher>(0);
@@ -5232,7 +5264,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
   }
-
+  for (const auto& R : Rules) {
+    dbgs() << "Rules opcodes " << R.getOpcode().str() << "\n";
+  }
   // Comparison function to order records by name.
   auto orderByName = [](const Record *A, const Record *B) {
     return A->getName() < B->getName();

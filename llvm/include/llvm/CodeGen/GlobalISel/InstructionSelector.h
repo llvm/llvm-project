@@ -376,6 +376,7 @@ enum {
 
   /// Keeping track of the number of the GI opcodes. Must be the last entry.
   GIU_NumOpcodes,
+  GIM_CheckvtAny32,
 };
 
 enum {

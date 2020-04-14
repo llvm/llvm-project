@@ -412,6 +412,11 @@ def atomic_load_iptr_#as : PatFrag<(ops node:$ptr), (atomic_load_iptr node:$ptr)
   let MemoryVT = i32;
 }
 
+def atomic_load_vtany32_#as : PatFrag<(ops node:$ptr), (atomic_load_vtany32 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = vtAny32;
+}
+
 def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;

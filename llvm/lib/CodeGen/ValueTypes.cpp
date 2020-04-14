@@ -155,6 +155,7 @@ std::string EVT::getEVTString() const {
   case MVT::Metadata:return "Metadata";
   case MVT::Untyped: return "Untyped";
   case MVT::exnref : return "exnref";
+  case MVT::vtAny32 : return "vtAny32";
   }
 }
 

@@ -386,6 +386,12 @@ def atomic_load_iptr_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i32;
 }
 
+def atomic_load_vtany32_glue : PatFrag<(ops node:$ptr),
+  (AMDGPUatomic_new_ld_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = vtAny32;
+}
+
 def extload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsLoad = 1;
   let IsAnyExtLoad = 1;
@@ -469,6 +475,12 @@ let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
 def atomic_load_iptr_local_m0 : PatFrag<(ops node:$ptr),
                                        (atomic_load_iptr_glue node:$ptr)> {
  let MemoryVT = i32;
+}
+
+def atomic_load_vtany32_local_m0 : PatFrag<(ops node:$ptr),
+                                       (atomic_load_vtany32_glue node:$ptr)> {
+ let MemoryVT = vtAny32;
+ //let isCompatible = isIntType>.ret;
 }
 
 def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),

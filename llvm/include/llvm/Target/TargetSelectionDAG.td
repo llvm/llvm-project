@@ -282,6 +282,7 @@ def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisInt<0>, SDTCisPtrTy<1>
 ]>;
 
+// TODO: Put restriction on 0th operand too.
 def SDTNewAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
 ]>;
@@ -1578,6 +1579,13 @@ def atomic_load_iptr :
           (new_atomic_load node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i32;
+}
+
+def atomic_load_vtany32 :
+  PatFrag<(ops node:$ptr),
+          (new_atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = vtAny32;
 }
 
 def atomic_load_64 :

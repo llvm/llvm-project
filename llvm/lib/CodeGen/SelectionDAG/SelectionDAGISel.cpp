@@ -1,3 +1,4 @@
+;
 //===- SelectionDAGISel.cpp - Implement the SelectionDAGISel class --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -2529,6 +2530,7 @@ CheckPatternPredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
 CheckNodePredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
                    const SelectionDAGISel &SDISel, SDNode *N) {
+  //dbgs() << "passing to check pred " << (unsigned) MatcherTable[MatcherIndex] << "\n"; 
   return SDISel.CheckNodePredicate(N, MatcherTable[MatcherIndex++]);
 }
 
@@ -2540,14 +2542,28 @@ CheckOpcode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   return N->getOpcode() == Opc;
 }
 
+/*
+LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
+isvtAny32Compatible (MVT::SimpleValueType T) {
+  return T == MVT::i32 || T == MVT::f32;
+}
+*/
+
 LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
 CheckType(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
           const TargetLowering *TLI, const DataLayout &DL) {
+  dbgs() << "In check type\n";
   MVT::SimpleValueType VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
   if (N.getValueType() == VT) return true;
 
+  if (VT == MVT::vtAny32) { //dbgs() << "Matching *****\n"; return isvtAny32Compatible(N.getValueType()); 
+    dbgs() << "Matching ***\n";
+    return true;
+  }
+
   // Handle the case when VT is iPTR.
   return VT == MVT::iPTR && N.getValueType() == TLI->getPointerTy(DL);
+
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
@@ -2659,9 +2675,10 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
   case SelectionDAGISel::OPC_CheckPatternPredicate:
     Result = !::CheckPatternPredicate(Table, Index, SDISel);
     return Index;
-  case SelectionDAGISel::OPC_CheckPredicate:
+  case SelectionDAGISel::OPC_CheckPredicate: {
     Result = !::CheckNodePredicate(Table, Index, SDISel, N.getNode());
     return Index;
+  }
   case SelectionDAGISel::OPC_CheckOpcode:
     Result = !::CheckOpcode(Table, Index, N.getNode());
     return Index;
@@ -3056,6 +3073,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckPatternPredicate(MatcherTable, MatcherIndex, *this)) break;
       continue;
     case OPC_CheckPredicate:
+      dbgs() << "Check pred\n";
       if (!::CheckNodePredicate(MatcherTable, MatcherIndex, *this,
                                 N.getNode()))
         break;
@@ -3407,6 +3425,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitNode:     case OPC_MorphNodeTo:
     case OPC_EmitNode0:    case OPC_EmitNode1:    case OPC_EmitNode2:
     case OPC_MorphNodeTo0: case OPC_MorphNodeTo1: case OPC_MorphNodeTo2: {
+      dbgs() << "Enter in interpreter\n";
       uint16_t TargetOpc = MatcherTable[MatcherIndex++];
       TargetOpc |= (unsigned short)MatcherTable[MatcherIndex++] << 8;
       unsigned EmitNodeInfo = MatcherTable[MatcherIndex++];
@@ -3426,6 +3445,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
         if (VT == MVT::iPTR)
           VT = TLI->getPointerTy(CurDAG->getDataLayout()).SimpleTy;
+        if (VT == MVT::vtAny32)
+          VT = MVT::i32;
         VTs.push_back(VT);
       }
 

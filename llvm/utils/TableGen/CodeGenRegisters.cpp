@@ -745,6 +745,11 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
     Record *Type = TypeList[i];
+    if (R->getName() == "VGPR_32") {
+      dbgs() << "Analyzing for VGPR_32\n";
+      dbgs() << Type->getName() << "\n";
+      dbgs() << llvm::getEnumName(llvm::getValueType(Type)) << "\n";
+    }
     if (!Type->isSubClassOf("ValueType"))
       PrintFatalError(R->getLoc(),
                       "RegTypes list member '" + Type->getName() +

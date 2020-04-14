@@ -2096,6 +2096,9 @@ void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_LOAD_ATOMICRMW(MachineInstr &I) const {
   initM0(I);
+  if (I.getOpcode() == 62) 
+    dbgs() << "begin atomic load\n";
+
   return selectImpl(I, *CoverageInfo);
 }
 

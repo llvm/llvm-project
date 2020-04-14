@@ -91,9 +91,10 @@ struct MachineValueTypeSet {
     return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
   }
   std::pair<MachineValueTypeSet&,bool> insert(MVT T) {
-    bool V = count(T.SimpleTy);
+    //bool V = count(T.SimpleTy);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
-    return {*this, V};
+    bool P = count(T.SimpleTy);
+    return {*this, P};
   }
   MachineValueTypeSet &insert(const MachineValueTypeSet &S) {
     for (unsigned i = 0; i != NumWords; ++i)
@@ -202,6 +203,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) {
+    //dbgs() << "hasMode() " << hasMode(Mode) << "\n";
     if (hasMode(Mode))
       return get(Mode);
     return Map.insert({Mode,SetType()}).first->second;
@@ -212,6 +214,12 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
+   // dbgs() << "isDefaultOnly " << isDefaultOnly();
+    //if (!isDefaultOnly()) dbgs() << "Defauly only false\n";
+    if (Map.begin()->second.size() != 1) {
+      //dbgs() << "size not 1\n";
+      //dump();
+    }
     return isDefaultOnly() && Map.begin()->second.size() == 1;
   }
 
@@ -225,6 +233,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isDefaultOnly() const {
+    ///dbgs() << "Map size " << Map.size() << "*\n";
     return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
 
@@ -985,24 +994,41 @@ private:
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
                                             const TypeSetByHwMode &InTy,
                                             TreePattern &TP) {
+  //dbgs() << "in const updatetypenode inty.dump \n";
+  //InTy.dump();
+
   TypeSetByHwMode VTS(InTy);
+  //dbgs() << "inside UpdateNodeType \n";
+  //VTS.dump();
   TP.getInfer().expandOverloads(VTS);
+  //dbgs() << "after expand overloads\n";
+  //VTS.dump();
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
                                             MVT::SimpleValueType InTy,
                                             TreePattern &TP) {
+  //dbgs() << "in MVT UpdateNodeType\n";
   TypeSetByHwMode VTS(InTy);
+  //dbgs() << "before expand overload\n";
+  //VTS.dump();
   TP.getInfer().expandOverloads(VTS);
+  //dbgs() << "after expand overloads\n";
+  //VTS.dump();
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
                                             ValueTypeByHwMode InTy,
                                             TreePattern &TP) {
+  //dbgs() << "in non-const  UpdateNodeType\n";
   TypeSetByHwMode VTS(InTy);
+  //dbgs() << "before expand overload\n";
+  //VTS.dump();
   TP.getInfer().expandOverloads(VTS);
+  //dbgs() << "after expand overloads\n";
+  //VTS.dump();
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 

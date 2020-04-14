@@ -309,6 +309,10 @@ namespace llvm {
               SimpleTy <= MVT::LAST_INTEGER_VALUETYPE);
     }
 
+    bool isvtAny32() const {
+      return (SimpleTy == MVT::vtAny32);
+    }
+
     /// Return true if this is a vector value type.
     bool isVector() const {
       return (SimpleTy >= MVT::FIRST_VECTOR_VALUETYPE &&
@@ -390,8 +394,7 @@ namespace llvm {
     bool isOverloaded() const {
       return (SimpleTy==MVT::Any  ||
               SimpleTy==MVT::iAny || SimpleTy==MVT::fAny ||
-              SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny ||
-              SimpleTy==MVT::vtAny32);
+              SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny);
     }
 
     /// Return a VT for a vector type with the same element type but
@@ -699,6 +702,7 @@ namespace llvm {
                          "in codegen and has no size");
       case Metadata:
         llvm_unreachable("Value type is metadata.");
+      case vtAny32: return TypeSize::Fixed(32);
       case i1:
       case v1i1: return TypeSize::Fixed(1);
       case nxv1i1: return TypeSize::Scalable(1);

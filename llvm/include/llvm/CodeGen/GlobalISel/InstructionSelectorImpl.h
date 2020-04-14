@@ -175,7 +175,7 @@ bool InstructionSelector::executeMatchTable(
       CurrentIdx = MatchTable[CurrentIdx + (Opcode - LowerBound)];
       if (!CurrentIdx) {
         CurrentIdx = Default;
-	break;
+	      break;
       }
       OnFailResumeAt.push_back(Default);
       break;
@@ -396,7 +396,8 @@ bool InstructionSelector::executeMatchTable(
         unsigned AddrSpace = MatchTable[CurrentIdx++];
         DEBUG_WITH_TYPE(
           TgtInstructionSelector::getName(),
-          dbgs() << "addrspace(" << MMOAddrSpace << ") vs "
+          dbgs() << CurrentIdx << ": GIM_CheckMemoryAddressSpace " 
+                 << "addrspace(" << MMOAddrSpace << ") vs "
                  << AddrSpace << '\n');
 
         if (AddrSpace == MMOAddrSpace) {
@@ -532,6 +533,32 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
+    case GIM_CheckvtAny32: {
+      dbgs() << "YOOOOOOOO\n";
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t SizeInBits = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckvtAny32MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), SizeInBits=" << SizeInBits << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      const LLT Ty = MRI.getType(MO.getReg());
+      dbgs() << "Ty size " << Ty.getSizeInBits() << "\n";
+      dbgs() << "SizeInBits" << SizeInBits << "\n";
+
+      if (Ty.getSizeInBits() != SizeInBits) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      } 
+      /*else if (handleReject() == RejectAndGiveUp)
+        return false;*/
+
+      break;
+    }
+
     case GIM_CheckPointerToAny: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
@@ -770,6 +797,9 @@ bool InstructionSelector::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
+      auto T = State.MIs[0];
+      dbgs() << "Dumping MI in GIR_BuildMI";
+      T->dump();
       OutMIs[NewInsnID] = BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
                                   State.MIs[0]->getDebugLoc(), TII.get(Opcode));
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),

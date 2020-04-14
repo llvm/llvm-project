@@ -245,6 +245,14 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
   }
 }
 
+multiclass DS_1A_RET_mc_new<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset> {
+  def "" : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
+
+  let has_m0_read = 0 in {
+    def _gfx9 : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
+  }
+}
+
 class DS_1A_RET_Tied<string opName, RegisterClass rc = VGPR_32> :
   DS_1A_RET<opName, rc, 1>;
 
@@ -539,7 +547,7 @@ defm DS_READ_I8      : DS_1A_RET_mc<"ds_read_i8">;
 defm DS_READ_U8      : DS_1A_RET_mc<"ds_read_u8">;
 defm DS_READ_I16     : DS_1A_RET_mc<"ds_read_i16">;
 defm DS_READ_U16     : DS_1A_RET_mc<"ds_read_u16">;
-defm DS_READ_B32     : DS_1A_RET_mc<"ds_read_b32">;
+defm DS_READ_B32     : DS_1A_RET_mc_new<"ds_read_b32">;
 defm DS_READ_B64     : DS_1A_RET_mc<"ds_read_b64", VReg_64>;
 
 defm DS_READ2_B32    : DS_1A_Off8_RET_mc<"ds_read2_b32", VReg_64>;
@@ -622,8 +630,9 @@ def : GCNPat <
   (DS_SWIZZLE_B32 VGPR_32:$src, (as_i16timm $offset16), (i1 0))
 >;
 
-class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
-  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset))),
+// frag is acting as predicate.
+class DSReadPat <DS_Pseudo inst, ValueType vt1, PatFrag frag, int gds=0> : GCNPat <
+  (vt1 (frag (DS1Addr1Offset i32:$ptr, i16:$offset))),
   (inst $ptr, offset:$offset, (i1 gds))
 >;
 
@@ -656,13 +665,16 @@ defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "load_local">;
 
 foreach vt = Reg32Types.types in {
-defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
+//defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 }
 
 //defm : DSReadPat_mc <DS_READ_B32, p3,  "atomic_load_iptr_local">;
-defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_iptr_local">;
+defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_vtany32_local">;
+//defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_iptr_local">;
+//defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_vtany32_local">;
+//defm : DSReadPat_mc <DS_READ_B32, vtAny32,  "atomic_load_vtany32_local">;
 
-defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
+//defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let AddedComplexity = 100 in {

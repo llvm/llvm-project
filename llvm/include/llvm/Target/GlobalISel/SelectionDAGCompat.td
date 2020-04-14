@@ -154,7 +154,9 @@ def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsNonAtomic = 0;
   let CheckMMOIsAtomic = 1;
 }
-def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;def : GINodeEquiv<G_LOAD, new_atomic_load> {
+def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;
+
+def : GINodeEquiv<G_LOAD, new_atomic_load> {
   let CheckMMOIsNonAtomic = 0;
   let CheckMMOIsAtomic = 1;
 }

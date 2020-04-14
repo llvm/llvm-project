@@ -468,6 +468,7 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16]>;
 def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, p2, p3, p5, p6]>;
+def Reg32AllTypes : RegisterTypes<[vtAny32]>;
 
 def VGPR_LO16 : RegisterClass<"AMDGPU", Reg16Types.types, 16,
                               (add (sequence "VGPR%u_LO16", 0, 255))> {
@@ -486,6 +487,13 @@ def VGPR_HI16 : RegisterClass<"AMDGPU", Reg16Types.types, 16,
 // VGPR 32-bit registers
 // i16/f16 only on VI+
 def VGPR_32 : RegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
+                            (add (sequence "VGPR%u", 0, 255))> {
+  let AllocationPriority = 1;
+  let Size = 32;
+  let Weight = 1;
+}
+
+def VGPR_32_all : RegisterClass<"AMDGPU", [vtAny32], 32,
                             (add (sequence "VGPR%u", 0, 255))> {
   let AllocationPriority = 1;
   let Size = 32;
