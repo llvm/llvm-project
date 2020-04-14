@@ -22,6 +22,7 @@ public:
   static const char *Capture(const char *path);
   static const char *Replay(const char *path);
   static const char *Replay(const char *path, bool skip_version_check);
+  static const char *PassiveReplay(const char *path);
   static const char *GetPath();
   static bool SetAutoGenerate(bool b);
   static bool Generate();

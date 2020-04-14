@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import os
-
+import tempfile
 import subprocess
 import sys
 
@@ -67,14 +67,15 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
+        builddir = getBuildDir(cmd)
+        mkdir_p(builddir)
+
         # The macOS system integrity protection (SIP) doesn't allow injecting
         # libraries into system binaries, but this can be worked around by
         # copying the binary into a different location.
         if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
                 (sys.executable.startswith('/System/') or \
                 sys.executable.startswith('/usr/bin/')):
-            builddir = getBuildDir(cmd)
-            mkdir_p(builddir)
             copied_python = os.path.join(builddir, 'copied-system-python')
             if not os.path.isfile(copied_python):
                 import shutil, subprocess
@@ -85,6 +86,16 @@ class LLDBTest(TestFormat):
                 ]).decode('utf-8').strip()
                 shutil.copy(python, copied_python)
             cmd[0] = copied_python
+
+        if 'lldb-repro-capture' in test.config.available_features or \
+           'lldb-repro-replay' in test.config.available_features:
+            reproducer_root = os.path.join(builddir, 'reproducers')
+            mkdir_p(reproducer_root)
+            reproducer_path = os.path.join(reproducer_root, testFile)
+            if 'lldb-repro-capture' in test.config.available_features:
+                cmd.extend(['--capture-path', reproducer_path])
+            else:
+                cmd.extend(['--replay-path', reproducer_path])
 
         timeoutInfo = None
         try:
