@@ -7496,23 +7496,68 @@ Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
   return C;
 }
 
-Value *CodeGenFunction::EmitSVEMaskedLoad(llvm::Type *ReturnTy,
-                                          SmallVectorImpl<Value *> &Ops) {
-  llvm::PointerType *PTy = cast<llvm::PointerType>(Ops[1]->getType());
-  llvm::Type *MemEltTy = PTy->getPointerElementType();
+Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
+                                          llvm::Type *ReturnTy,
+                                          SmallVectorImpl<Value *> &Ops,
+                                          unsigned BuiltinID,
+                                          bool IsZExtReturn) {
+  QualType LangPTy = E->getArg(1)->getType();
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+      LangPTy->getAs<PointerType>()->getPointeeType());
 
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
   auto VectorTy = cast<llvm::VectorType>(ReturnTy);
   auto MemoryTy = llvm::VectorType::get(MemEltTy, VectorTy->getElementCount());
 
-  Value *Offset = Builder.getInt32(0);
   Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
   Value *BasePtr = Builder.CreateBitCast(Ops[1], MemoryTy->getPointerTo());
+  Value *Offset = Ops.size() > 2 ? Ops[2] : Builder.getInt32(0);
   BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Offset);
 
   Value *Splat0 = Constant::getNullValue(MemoryTy);
-  return Builder.CreateMaskedLoad(BasePtr, Align(1), Predicate, Splat0);
+
+  Value *Load = nullptr;
+  if (!BuiltinID)
+    // Regular masked loads take a different path from the SVE-specific ones.
+    Load = Builder.CreateMaskedLoad(BasePtr, llvm::Align(1), Predicate, Splat0);
+  else {
+    BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
+    Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+    Load = Builder.CreateCall(F, {Predicate, BasePtr});
+  }
+
+  return IsZExtReturn ? Builder.CreateZExt(Load, VectorTy)
+                     : Builder.CreateSExt(Load, VectorTy);
+}
+
+Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
+                                           SmallVectorImpl<Value *> &Ops,
+                                           unsigned BuiltinID) {
+  QualType LangPTy = E->getArg(1)->getType();
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+      LangPTy->getAs<PointerType>()->getPointeeType());
+
+  // The vector type that is stored may be different from the
+  // eventual type stored to memory.
+  auto VectorTy = cast<llvm::VectorType>(Ops.back()->getType());
+  auto MemoryTy =
+      llvm::VectorType::get(MemEltTy, VectorTy->getVectorElementCount());
+
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  Value *BasePtr = Builder.CreateBitCast(Ops[1], MemoryTy->getPointerTo());
+  Value *Offset = Ops.size() == 4 ? Ops[2] : Builder.getInt32(0);
+  BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Offset);
+
+  // Last value is always the data
+  llvm::Value *Val = Builder.CreateTrunc(Ops.back(), MemoryTy);
+
+  if (!BuiltinID)
+    return Builder.CreateMaskedStore(Val, BasePtr, llvm::Align(1), Predicate);
+
+  BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
+  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  return Builder.CreateCall(F, {Val, Predicate, BasePtr});
 }
 
 Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
@@ -7536,7 +7581,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   SVETypeFlags TypeFlags(Builtin->TypeModifier);
   llvm::Type *Ty = ConvertType(E->getType());
   if (TypeFlags.isLoad())
-    return EmitSVEMaskedLoad(Ty, Ops);
+    return EmitSVEMaskedLoad(E, Ty, Ops, Builtin->LLVMIntrinsic,
+                             TypeFlags.isZExtReturn());
+  else if (TypeFlags.isStore())
+    return EmitSVEMaskedStore(E, Ops, Builtin->LLVMIntrinsic);
 
   /// Should not happen
   return nullptr;

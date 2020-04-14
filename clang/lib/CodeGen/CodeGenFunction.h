@@ -3904,8 +3904,12 @@ public:
   llvm::Value *vectorWrapScalar16(llvm::Value *Op);
 
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred, llvm::VectorType *VTy);
-  llvm::Value *EmitSVEMaskedLoad(llvm::Type *ReturnTy,
-                                 SmallVectorImpl<llvm::Value *> &Ops);
+  llvm::Value *EmitSVEMaskedLoad(const CallExpr *, llvm::Type *ReturnTy,
+                                 SmallVectorImpl<llvm::Value *> &Ops,
+                                 unsigned BuiltinID, bool IsZExtReturn);
+  llvm::Value *EmitSVEMaskedStore(const CallExpr *,
+                                  SmallVectorImpl<llvm::Value *> &Ops,
+                                  unsigned BuiltinID);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
