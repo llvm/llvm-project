@@ -1,19 +1,264 @@
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
-; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -S | FileCheck %s
-; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false -S | FileCheck %s
-
-; Check that when we can't predicate this loop that it is still vectorised (with
-; an epilogue).
-; TODO: the reason this can't be predicated is because a primary induction
-; variable can't be found (not yet) for this counting down loop. But with that
-; fixed, this should be able to be predicated.
-
-; CHECK-LABEL: vector.body:
+; RUN: opt < %s -loop-vectorize -S | FileCheck %s --check-prefixes=COMMON,DEFAULT
+; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-unknown-eabihf"
 
-define dso_local void @foo(i8* noalias nocapture readonly %A, i8* noalias nocapture readonly %B, i8* noalias nocapture %C, i32 %N) #0 {
+; This IR corresponds to this type of C-code:
+;
+;  void f(char *a, char *b, char *c, int N) {
+;    while (N-- > 0)
+;      *c++ = *a++ + *b++;
+;  }
+;
+define dso_local void @sgt_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_loopguard(
+; DEFAULT:      vector.body:
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.store
+entry:
+  %cmp5 = icmp sgt i32 %N, 0
+  br i1 %cmp5, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ %N, %while.body.preheader ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %while.body.preheader ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %while.body.preheader ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %while.body.preheader ]
+  %dec = add nsw i32 %N.addr.09, -1
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+; No loop-guard: we need one for this to be valid.
+;
+define dso_local void @sgt_no_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_no_loopguard(
+; DEFAULT:      vector.body:
+;
+; FIXME: I think this is currently miscompiled after D77635
+;
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.store
+entry:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ %N, %entry ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %entry ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %entry ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %entry ]
+  %dec = add nsw i32 %N.addr.09, -1
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @sgt_extra_use_cmp(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_extra_use_cmp(
+; DEFAULT:      vector.body:
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.store
+entry:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ %N, %entry ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %entry ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %entry ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %entry ]
+  %dec = add nsw i32 %N.addr.09, -1
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  %select = select i1 %cmp, i8 %0, i8 %1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @sgt_const_tripcount(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_const_tripcount(
+; COMMON:       vector.body:
+;
+; FIXME: we expect tail-folding here, but is currently not happening:
+;
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.store
+entry:
+  %cmp5 = icmp sgt i32 %N, 0
+  br i1 %cmp5, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ 2048, %while.body.preheader ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %while.body.preheader ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %while.body.preheader ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %while.body.preheader ]
+  %dec = add nsw i32 %N.addr.09, -1
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @sgt_no_guard_0_startval(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_no_guard_0_startval(
+; CHECK-NOT:   vector.body:
+entry:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ 0, %entry ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %entry ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %entry ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %entry]
+  %dec = add nsw i32 %N.addr.09, -1
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @sgt_step_minus_two(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL:  @sgt_step_minus_two(
+; COMMON:        vector.body:
+; CHECK-TF:      masked.load
+; CHECK-TF:      masked.load
+; CHECK-TF:      masked.store
+entry:
+  %cmp5 = icmp sgt i32 %N, 0
+  br i1 %cmp5, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ %N, %while.body.preheader ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %while.body.preheader ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %while.body.preheader ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %while.body.preheader ]
+  %dec = add nsw i32 %N.addr.09, -2
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @sgt_step_not_constant(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N, i32 %S) local_unnamed_addr #0 {
+; COMMON-LABEL:  @sgt_step_not_constant(
+; CHECK-NOT:    vector.body:
+entry:
+  %cmp5 = icmp sgt i32 %N, 0
+  br i1 %cmp5, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ %N, %while.body.preheader ]
+  %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %while.body.preheader ]
+  %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %while.body.preheader ]
+  %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %while.body.preheader ]
+  %dec = add nsw i32 %N.addr.09, %S
+  %incdec.ptr = getelementptr inbounds i8, i8* %a.addr.06, i32 1
+  %0 = load i8, i8* %a.addr.06, align 1
+  %incdec.ptr1 = getelementptr inbounds i8, i8* %b.addr.07, i32 1
+  %1 = load i8, i8* %b.addr.07, align 1
+  %add = add i8 %1, %0
+  %incdec.ptr4 = getelementptr inbounds i8, i8* %c.addr.08, i32 1
+  store i8 %add, i8* %c.addr.08, align 1
+  %cmp = icmp sgt i32 %N.addr.09, 1
+  br i1 %cmp, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define dso_local void @icmp_eq(i8* noalias nocapture readonly %A, i8* noalias nocapture readonly %B, i8* noalias nocapture %C, i32 %N) #0 {
+; COMMON-LABEL: @icmp_eq
+; DEFAULT:      vector.body:
+; TODO
 entry:
   %cmp6 = icmp eq i32 %N, 0
   br i1 %cmp6, label %while.end, label %while.body.preheader
@@ -42,6 +287,146 @@ while.end.loopexit:
 
 while.end:
   ret void
+}
+
+; This IR corresponds to this type of C-code:
+;
+;  void f(char *a, char *b, char * __restrict c, int N) {
+;    for (int i = N; i>0; i--)
+;      c[i] = a[i] + b[i];
+;  }
+;
+define dso_local void @sgt_for_loop(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_for_loop(
+;
+; FIXME: we do want to support this case too, but is currently not recognised.
+;
+; DEFAULT-NOT:  vector.body:
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.store
+entry:
+  %cmp5 = icmp sgt i32 %N, 0
+  br i1 %cmp5, label %for.body.preheader, label %for.end
+
+for.body.preheader:
+  br label %for.body
+
+for.body:
+  %i.011 = phi i32 [ %dec, %for.body ], [ %N, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds i8, i8* %a, i32 %i.011
+  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, i8* %b, i32 %i.011
+  %1 = load i8, i8* %arrayidx1, align 1
+  %add = add i8 %1, %0
+  %arrayidx4 = getelementptr inbounds i8, i8* %c, i32 %i.011
+  store i8 %add, i8* %arrayidx4, align 1
+  %dec = add nsw i32 %i.011, -1
+  %cmp = icmp sgt i32 %i.011, 1
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define dso_local void @sgt_for_loop_i64(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_for_loop_i64(
+; DEFAULT-NOT:  vector.body:
+;
+; FIXME: this shoud be supported, but isn't currently.
+; CHECK-PREFER-NOT: masked.load
+; CHECK-PREFER-NOT: masked.load
+; CHECK-PREFER-NOT: masked.store
+;
+; With -disable-mve-tail-predication=false, the cost-model returns that
+; creating a hardwareloop is not profitable/possible, so here we don't
+; expect the tail-folding:
+;
+; CHECK-ENABLE-TP-NOT:  masked.load
+; CHECK-ENABLE-TP-NOT:  masked.load
+; CHECK-ENABLE-TP-NOT:  masked.store
+;
+entry:
+  %cmp14 = icmp sgt i32 %N, 0
+  br i1 %cmp14, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:
+  %conv16 = zext i32 %N to i64
+  br label %for.body
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.015 = phi i64 [ %dec, %for.body ], [ %conv16, %for.body.preheader ]
+  %idxprom = trunc i64 %i.015 to i32
+  %arrayidx = getelementptr inbounds i8, i8* %a, i32 %idxprom
+  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx4 = getelementptr inbounds i8, i8* %b, i32 %idxprom
+  %1 = load i8, i8* %arrayidx4, align 1
+  %add = add i8 %1, %0
+  %arrayidx8 = getelementptr inbounds i8, i8* %c, i32 %idxprom
+  store i8 %add, i8* %arrayidx8, align 1
+  %dec = add nsw i64 %i.015, -1
+  %cmp = icmp sgt i64 %i.015, 1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}
+
+; This IR corresponds to this nested-loop:
+;
+;   for (int i = 0; i<N; i++)
+;     for (int j = i+1; j>0; j--)
+;       c[j] = a[j] + b[j];
+;
+; while the inner-loop looks similar to previous examples, we can't
+; transform this because the inner loop because isGuarded returns
+; false for the inner-loop.
+;
+define dso_local void @sgt_nested_loop(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+; COMMON-LABEL: @sgt_nested_loop(
+; DEFAULT-NOT:  vector.body:
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.load
+; CHECK-TF-NOT: masked.store
+; COMMON:       }
+;
+entry:
+  %cmp21 = icmp sgt i32 %N, 0
+  br i1 %cmp21, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:
+  br label %for.body
+
+for.cond.loopexit:
+  %exitcond = icmp eq i32 %add, %N
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.022 = phi i32 [ %add, %for.cond.loopexit ], [ 0, %for.body.preheader ]
+  %add = add nuw nsw i32 %i.022, 1
+  br label %for.body4
+
+for.body4:                                        ; preds = %for.body, %for.body4
+  %j.020 = phi i32 [ %add, %for.body ], [ %dec, %for.body4 ]
+  %arrayidx = getelementptr inbounds i8, i8* %a, i32 %j.020
+  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx5 = getelementptr inbounds i8, i8* %b, i32 %j.020
+  %1 = load i8, i8* %arrayidx5, align 1
+  %add7 = add i8 %1, %0
+  %arrayidx9 = getelementptr inbounds i8, i8* %c, i32 %j.020
+  store i8 %add7, i8* %arrayidx9, align 1
+  %dec = add nsw i32 %j.020, -1
+  %cmp2 = icmp sgt i32 %j.020, 1
+  br i1 %cmp2, label %for.body4, label %for.cond.loopexit
 }
 
 attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
