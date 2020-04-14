@@ -237,3 +237,26 @@ TEST_F(TestTypeSystemSwiftTypeRef, Void) {
     ASSERT_TRUE(v.IsVoidType());
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Reference) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n =
+        b.Node(Node::Kind::Global,
+               b.Node(Node::Kind::TypeMangling,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::InOut, b.IntType()))));
+    CompilerType ref = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(ref.IsReferenceType(nullptr, nullptr));
+    CompilerType pointee;
+    bool is_rvalue = true;
+    ASSERT_TRUE(ref.IsReferenceType(&pointee, &is_rvalue));
+    NodePointer int_node = b.Node(
+        Node::Kind::Global, b.Node(Node::Kind::TypeMangling, b.IntType()));
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    ASSERT_EQ(int_type, pointee);
+    ASSERT_FALSE(is_rvalue);
+  }
+}
