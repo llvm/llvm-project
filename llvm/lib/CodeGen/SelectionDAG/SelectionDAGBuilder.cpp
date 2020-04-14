@@ -5698,7 +5698,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
     Align Alignment = commonAlignment(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
@@ -5720,7 +5720,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
     Align Alignment = commonAlignment(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
     SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
@@ -5738,7 +5738,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memset defines 0 and 1 to both mean no alignment.
     Align Alignment = MSI.getDestAlign().valueOrOne();
     bool isVol = MSI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MS = DAG.getMemset(Root, sdl, Op1, Op2, Op3, Alignment, isVol, isTC,
                                MachinePointerInfo(I.getArgOperand(0)));
@@ -5755,7 +5755,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
     Align Alignment = commonAlignment(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memmove DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
@@ -5775,7 +5775,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned SrcAlign = MI.getSourceAlignment();
     Type *LengthTy = MI.getLength()->getType();
     unsigned ElemSz = MI.getElementSizeInBytes();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue MC = DAG.getAtomicMemcpy(getRoot(), sdl, Dst, DstAlign, Src,
                                      SrcAlign, Length, LengthTy, ElemSz, isTC,
                                      MachinePointerInfo(MI.getRawDest()),
@@ -5793,7 +5793,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned SrcAlign = MI.getSourceAlignment();
     Type *LengthTy = MI.getLength()->getType();
     unsigned ElemSz = MI.getElementSizeInBytes();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue MC = DAG.getAtomicMemmove(getRoot(), sdl, Dst, DstAlign, Src,
                                       SrcAlign, Length, LengthTy, ElemSz, isTC,
                                       MachinePointerInfo(MI.getRawDest()),
@@ -5810,7 +5810,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned DstAlign = MI.getDestAlignment();
     Type *LengthTy = MI.getLength()->getType();
     unsigned ElemSz = MI.getElementSizeInBytes();
-    bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue MC = DAG.getAtomicMemset(getRoot(), sdl, Dst, DstAlign, Val, Length,
                                      LengthTy, ElemSz, isTC,
                                      MachinePointerInfo(MI.getRawDest()));
@@ -7124,8 +7124,7 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
 
   // Check if target-independent constraints permit a tail call here.
   // Target-dependent constraints are checked within TLI->LowerCallTo.
-  if (isTailCall &&
-      !isInTailCallPosition(ImmutableCallSite(&CB), DAG.getTarget()))
+  if (isTailCall && !isInTailCallPosition(CB, DAG.getTarget()))
     isTailCall = false;
 
   // Disable tail calls if there is an swifterror argument. Targets have not
