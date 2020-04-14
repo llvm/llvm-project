@@ -1,5 +1,5 @@
 add_lldb_unittest(APITests
-  TestSBCommandInterpreterTest.cpp
+  SBCommandInterpreterTest.cpp
 
   LINK_LIBS
     liblldb
