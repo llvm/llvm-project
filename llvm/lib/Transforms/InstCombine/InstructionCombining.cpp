@@ -1854,12 +1854,16 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
+  bool IsGEPSrcEleScalable =
+      GEPEltType->isVectorTy() && cast<VectorType>(GEPEltType)->isScalable();
   if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.
-  if (auto *GEPVTy = dyn_cast<VectorType>(GEP.getType())) {
-    auto VWidth = GEPVTy->getNumElements();
+  // Skip if GEP return type is scalable. The number of elements is unknown at
+  // compile-time.
+  if (GEPType->isVectorTy() && !cast<VectorType>(GEPType)->isScalable()) {
+    auto VWidth = cast<VectorType>(GEPType)->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
@@ -1896,7 +1900,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *NewIndexType =
         IndexTy->isVectorTy()
             ? VectorType::get(NewScalarIndexTy,
-                              cast<VectorType>(IndexTy)->getNumElements())
+                              cast<VectorType>(IndexTy)->getElementCount())
             : NewScalarIndexTy;
 
     // If the element type has zero size then any index over it is equivalent
@@ -2146,11 +2150,13 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                              GEP.getName());
   }
 
-  if (GEP.getNumIndices() == 1) {
+  // Skip if GEP source element type is scalable. The type alloc size is unknown
+  // at compile-time.
+  if (GEP.getNumIndices() == 1 && !IsGEPSrcEleScalable) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType);
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
 
       bool Matched = false;
       uint64_t C;
@@ -2263,10 +2269,12 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
         }
       }
-    } else if (GEP.getNumOperands() == 2) {
-      // Transform things like:
-      // %t = getelementptr i32* bitcast ([2 x i32]* %str to i32*), i32 %V
-      // into:  %t1 = getelementptr [2 x i32]* %str, i32 0, i32 %V; bitcast
+    } else if (GEP.getNumOperands() == 2 && !IsGEPSrcEleScalable) {
+      // Skip if GEP source element type is scalable. The type alloc size is
+      // unknown at compile-time.
+      // Transform things like: %t = getelementptr i32*
+      // bitcast ([2 x i32]* %str to i32*), i32 %V into:  %t1 = getelementptr [2
+      // x i32]* %str, i32 0, i32 %V; bitcast
       if (StrippedPtrEltTy->isArrayTy() &&
           DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType()) ==
               DL.getTypeAllocSize(GEPEltType)) {
@@ -2290,8 +2298,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
-        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy).getFixedSize();
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2330,9 +2338,10 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           StrippedPtrEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
         uint64_t ArrayEltSize =
-            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType());
+            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
+                .getFixedSize();
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2480,7 +2489,9 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (auto *AI = dyn_cast<AllocaInst>(UnderlyingPtrOp)) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
-        APInt AllocSize(IdxWidth, DL.getTypeAllocSize(AI->getAllocatedType()));
+        APInt AllocSize(
+            IdxWidth,
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, makeArrayRef(Ops).slice(1),
