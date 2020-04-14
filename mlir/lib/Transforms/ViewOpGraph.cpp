@@ -65,7 +65,7 @@ std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
   }
 
   // Print resultant types
-  interleaveComma(op->getResultTypes(), os);
+  llvm::interleaveComma(op->getResultTypes(), os);
   os << "\n";
 
   // A value used to elide large container attribute.

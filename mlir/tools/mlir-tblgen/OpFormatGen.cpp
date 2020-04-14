@@ -795,7 +795,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     body << "  if (parser.resolveOperands(";
     if (op.getNumOperands() > 1) {
       body << "llvm::concat<const OpAsmParser::OperandType>(";
-      interleaveComma(op.getOperands(), body, [&](auto &operand) {
+      llvm::interleaveComma(op.getOperands(), body, [&](auto &operand) {
         body << operand.name << "Operands";
       });
       body << ")";
@@ -815,11 +815,12 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     // the case of a single range, so guard it here.
     if (op.getNumOperands() > 1) {
       body << "llvm::concat<const Type>(";
-      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
-        body << "ArrayRef<Type>(";
-        emitTypeResolver(operandTypes[i], op.getOperand(i).name);
-        body << ")";
-      });
+      llvm::interleaveComma(
+          llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+            body << "ArrayRef<Type>(";
+            emitTypeResolver(operandTypes[i], op.getOperand(i).name);
+            body << ")";
+          });
       body << ")";
     } else {
       emitTypeResolver(operandTypes.front(), op.getOperand(0).name);
@@ -875,7 +876,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    interleaveComma(op.getOperands(), body, interleaveFn);
+    llvm::interleaveComma(op.getOperands(), body, interleaveFn);
     body << "}));\n";
   }
 }
@@ -897,7 +898,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands && op.getTrait("OpTrait::AttrSizedOperandSegments"))
     body << "\"operand_segment_sizes\", ";
-  interleaveComma(usedAttributes, body, [&](const NamedAttribute *attr) {
+  llvm::interleaveComma(usedAttributes, body, [&](const NamedAttribute *attr) {
     body << "\"" << attr->name << "\"";
   });
   body << "});\n";
@@ -1016,13 +1017,13 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     const NamedSuccessor *var = successor->getVar();
     if (var->isVariadic())
-      body << "  interleaveComma(" << var->name << "(), p);\n";
+      body << "  llvm::interleaveComma(" << var->name << "(), p);\n";
     else
       body << "  p << " << var->name << "();\n";
   } else if (isa<OperandsDirective>(element)) {
     body << "  p << getOperation()->getOperands();\n";
   } else if (isa<SuccessorsDirective>(element)) {
-    body << "  interleaveComma(getOperation()->getSuccessors(), p);\n";
+    body << "  llvm::interleaveComma(getOperation()->getSuccessors(), p);\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";

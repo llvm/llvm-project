@@ -248,14 +248,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits =[]> :
     p << getOperationName() << ' ' << getAttr(inType());
     if (hasLenParams()) {
       // print the LEN parameters to a derived type in parens
-      p << '(';
-      p.printOperands(getLenParams());
-      p << " : ";
-      mlir::interleaveComma(getLenParams(), p.getStream(),
-                            [&](const auto &opnd) {
-                                p.printType(opnd.getType());
-                            });
-      p << ')';
+      p << '(' << getLenParams() << " : " << getLenParams().getTypes() << ')';
     }
     // print the shape of the allocation (if any); all must be index type
     for (auto sh : getShapeOperands()) {

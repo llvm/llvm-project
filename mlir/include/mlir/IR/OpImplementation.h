@@ -117,7 +117,7 @@ public:
                    (*types.begin()).template isa<FunctionType>();
     if (wrapped)
       os << '(';
-    interleaveComma(types, *this);
+    llvm::interleaveComma(types, *this);
     if (wrapped)
       os << ')';
   }
@@ -131,7 +131,7 @@ public:
   void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(inputs, *this);
+    llvm::interleaveComma(inputs, *this);
     os << ")";
     printArrowTypeList(results);
   }
@@ -199,11 +199,11 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Block *value) {
 template <typename ValueRangeT>
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
                                 const ValueTypeRange<ValueRangeT> &types) {
-  interleaveComma(types, p);
+  llvm::interleaveComma(types, p);
   return p;
 }
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
-  interleaveComma(types, p);
+  llvm::interleaveComma(types, p);
   return p;
 }
 

@@ -51,7 +51,7 @@ void PrintOpAvailability::runOnFunction() {
       os << opName << " extensions: [";
       for (const auto &exts : extension.getExtensions()) {
         os << " [";
-        interleaveComma(exts, os, [&](spirv::Extension ext) {
+        llvm::interleaveComma(exts, os, [&](spirv::Extension ext) {
           os << spirv::stringifyExtension(ext);
         });
         os << "]";
@@ -63,7 +63,7 @@ void PrintOpAvailability::runOnFunction() {
       os << opName << " capabilities: [";
       for (const auto &caps : capability.getCapabilities()) {
         os << " [";
-        interleaveComma(caps, os, [&](spirv::Capability cap) {
+        llvm::interleaveComma(caps, os, [&](spirv::Capability cap) {
           os << spirv::stringifyCapability(cap);
         });
         os << "]";

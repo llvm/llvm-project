@@ -194,7 +194,7 @@ public:
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
       };
-      interleave(*this, os, printElementFn, ",");
+      llvm::interleave(*this, os, printElementFn, ",");
     }
 
     /// Copy the value from the given option into this one.

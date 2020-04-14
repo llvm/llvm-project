@@ -127,12 +127,12 @@ void printLitHelper(ExprAST *litOrNum) {
 
   // Print the dimension for this literal first
   llvm::errs() << "<";
-  mlir::interleaveComma(literal->getDims(), llvm::errs());
+  llvm::interleaveComma(literal->getDims(), llvm::errs());
   llvm::errs() << ">";
 
   // Now print the content, recursing on every element of the list
   llvm::errs() << "[ ";
-  mlir::interleaveComma(literal->getValues(), llvm::errs(),
+  llvm::interleaveComma(literal->getValues(), llvm::errs(),
                         [&](auto &elt) { printLitHelper(elt.get()); });
   llvm::errs() << "]";
 }
@@ -194,7 +194,7 @@ void ASTDumper::dump(PrintExprAST *node) {
 /// Print type: only the shape is printed in between '<' and '>'
 void ASTDumper::dump(const VarType &type) {
   llvm::errs() << "<";
-  mlir::interleaveComma(type.shape, llvm::errs());
+  llvm::interleaveComma(type.shape, llvm::errs());
   llvm::errs() << ">";
 }
 
@@ -205,7 +205,7 @@ void ASTDumper::dump(PrototypeAST *node) {
   llvm::errs() << "Proto '" << node->getName() << "' " << loc(node) << "'\n";
   indent();
   llvm::errs() << "Params: [";
-  mlir::interleaveComma(node->getArgs(), llvm::errs(),
+  llvm::interleaveComma(node->getArgs(), llvm::errs(),
                         [](auto &arg) { llvm::errs() << arg->getName(); });
   llvm::errs() << "]\n";
 }
