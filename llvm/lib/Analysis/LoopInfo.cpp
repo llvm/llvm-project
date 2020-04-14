@@ -480,8 +480,8 @@ bool Loop::isSafeToClone() const {
       return false;
 
     for (Instruction &I : *BB)
-      if (auto CS = CallSite(&I))
-        if (CS.cannotDuplicate())
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->cannotDuplicate())
           return false;
   }
   return true;

@@ -39,7 +39,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -115,8 +114,8 @@ bool unlikelyExecuted(BasicBlock &BB) {
   // The block is cold if it calls/invokes a cold function. However, do not
   // mark sanitizer traps as cold.
   for (Instruction &I : BB)
-    if (auto CS = CallSite(&I))
-      if (CS.hasFnAttr(Attribute::Cold) && !CS->getMetadata("nosanitize"))
+    if (auto *CB = dyn_cast<CallBase>(&I))
+      if (CB->hasFnAttr(Attribute::Cold) && !CB->getMetadata("nosanitize"))
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's
@@ -360,11 +359,10 @@ Function *HotColdSplitting::extractColdRegion(
   if (Function *OutF = CE.extractCodeRegion(CEAC)) {
     User *U = *OutF->user_begin();
     CallInst *CI = cast<CallInst>(U);
-    CallSite CS(CI);
     NumColdRegionsOutlined++;
     if (TTI.useColdCCForColdCall(*OutF)) {
       OutF->setCallingConv(CallingConv::Cold);
-      CS.setCallingConv(CallingConv::Cold);
+      CI->setCallingConv(CallingConv::Cold);
     }
     CI->setIsNoInline();
 
