@@ -52,3 +52,34 @@ void stream_error_ferror() {
   clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   fclose(F);
 }
+
+void error_fseek() {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  int rc = fseek(F, 0, SEEK_SET);
+  if (rc) {
+    int IsFEof = feof(F), IsFError = ferror(F);
+    // Get feof or ferror or no error.
+    clang_analyzer_eval(IsFEof || IsFError);
+    // expected-warning@-1 {{FALSE}}
+    // expected-warning@-2 {{TRUE}}
+    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Error flags should not change.
+    if (IsFEof)
+      clang_analyzer_eval(feof(F)); // expected-warning {{TRUE}}
+    else
+      clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
+    if (IsFError)
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    else
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    // Error flags should not change.
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  }
+  fclose(F);
+}
