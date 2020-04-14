@@ -76,6 +76,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdio
+  DEF_FILE stdio.h.def
+  GEN_HDR stdio.h
+  DEPENDS
+    llvm_libc_common_h
+)
+
+add_gen_header(
   stdlib
   DEF_FILE stdlib.h.def
   GEN_HDR stdlib.h
