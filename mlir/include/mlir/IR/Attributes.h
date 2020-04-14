@@ -228,7 +228,7 @@ private:
     explicit attr_value_iterator(ArrayAttr::iterator it)
         : llvm::mapped_iterator<ArrayAttr::iterator, AttrTy (*)(Attribute)>(
               it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
-    AttrTy operator*() { return (*this->I).template cast<AttrTy>(); }
+    AttrTy operator*() const { return (*this->I).template cast<AttrTy>(); }
   };
 
 public:
