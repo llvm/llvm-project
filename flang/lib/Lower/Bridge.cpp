@@ -16,6 +16,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
@@ -292,6 +293,17 @@ private:
     return cat == Fortran::lower::CharacterCat;
   }
 
+  mlir::Block *blockOfLabel(Fortran::lower::pft::Evaluation &eval,
+                            Fortran::parser::Label label) {
+    const auto &labelEvaluationMap =
+        eval.getOwningProcedure()->labelEvaluationMap;
+    const auto iter = labelEvaluationMap.find(label);
+    assert(iter != labelEvaluationMap.end() && "label missing from map");
+    auto *block = iter->second->block;
+    assert(block && "missing labeled evaluation block");
+    return block;
+  }
+
   void genFIRUnconditionalBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
     builder->create<mlir::BranchOp>(toLocation(), targetBlock);
@@ -448,29 +460,131 @@ private:
               const Fortran::parser::WhereStmt &) {
     TODO();
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ComputedGotoStmt &stmt) {
-    auto *exp = Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::ScalarIntExpr>(stmt.t));
-    auto e1{genExprValue(*exp)};
-    (void)e1;
-    TODO();
+    mlir::Value selectExpr = genExprValue(*Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::ScalarIntExpr>(stmt.t)));
+    constexpr int vSize = 10;
+    llvm::SmallVector<int64_t, vSize> indexList;
+    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    int64_t index = 0;
+    for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
+      indexList.push_back(++index);
+      blockList.push_back(blockOfLabel(eval, label));
+    }
+    blockList.push_back(eval.lexicalSuccessor->block); // default
+    builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
+                                   blockList);
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ForallStmt &) {
     TODO();
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ArithmeticIfStmt &stmt) {
-    auto *exp =
-        Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t));
-    auto e1{genExprValue(*exp)};
-    (void)e1;
-    TODO();
+    mlir::Value expr = genExprValue(
+        *Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t)));
+    auto exprType = expr.getType();
+    if (exprType.isSignlessInteger()) {
+      // Arithmetic expression has Integer type.  Generate a SelectCaseOp
+      // with ranges {(-inf:-1], 0=default, [1:inf)}.
+      MLIRContext *context = builder->getContext();
+      llvm::SmallVector<mlir::Attribute, 3> attrList;
+      llvm::SmallVector<mlir::Value, 3> valueList;
+      llvm::SmallVector<mlir::Block *, 3> blockList;
+      attrList.push_back(fir::UpperBoundAttr::get(context));
+      valueList.push_back(builder->createIntegerConstant(exprType, -1));
+      blockList.push_back(blockOfLabel(eval, std::get<1>(stmt.t)));
+      attrList.push_back(fir::LowerBoundAttr::get(context));
+      valueList.push_back(builder->createIntegerConstant(exprType, 1));
+      blockList.push_back(blockOfLabel(eval, std::get<3>(stmt.t)));
+      attrList.push_back(mlir::UnitAttr::get(context)); // 0 is the "default"
+      blockList.push_back(blockOfLabel(eval, std::get<2>(stmt.t)));
+      builder->create<fir::SelectCaseOp>(toLocation(), expr, attrList,
+                                         valueList, blockList);
+      return;
+    }
+    // Arithmetic expression has Real type.  Generate
+    //   sum = expr + expr  [ raise an exception if expr is a NaN ]
+    //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
+    assert(eval.localBlocks.size() == 1 && "missing arithmetic if block");
+    mlir::Value sum = builder->create<fir::AddfOp>(toLocation(), expr, expr);
+    mlir::Value zero = builder->create<mlir::ConstantOp>(
+        toLocation(), exprType, builder->getFloatAttr(exprType, 0.0));
+    mlir::Value cond1 = builder->create<mlir::CmpFOp>(
+        toLocation(), mlir::CmpFPredicate::OLT, sum, zero);
+    genFIRConditionalBranch(cond1, blockOfLabel(eval, std::get<1>(stmt.t)),
+                            eval.localBlocks[0]);
+    startBlock(eval.localBlocks[0]);
+    mlir::Value cond2 = builder->create<mlir::CmpFOp>(
+        toLocation(), mlir::CmpFPredicate::OGT, sum, zero);
+    genFIRConditionalBranch(cond2, blockOfLabel(eval, std::get<3>(stmt.t)),
+                            blockOfLabel(eval, std::get<2>(stmt.t)));
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::AssignedGotoStmt &) {
-    TODO();
+              const Fortran::parser::AssignedGotoStmt &stmt) {
+    // Program requirement 1990 8.2.4 -
+    //
+    //   At the time of execution of an assigned GOTO statement, the integer
+    //   variable must be defined with the value of a statement label of a
+    //   branch target statement that appears in the same scoping unit.
+    //   Note that the variable may be defined with a statement label value
+    //   only by an ASSIGN statement in the same scoping unit as the assigned
+    //   GOTO statement.
+
+    const auto &symbolLabelMap =
+        eval.getOwningProcedure()->assignSymbolLabelMap;
+    const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
+    auto variable = localSymbols.lookupSymbol(symbol);
+    if (!variable)
+      variable = createTemporary(toLocation(), symbol);
+    auto selectExpr = builder->create<fir::LoadOp>(toLocation(), variable);
+    auto iter = symbolLabelMap.find(symbol);
+    if (iter == symbolLabelMap.end()) {
+      // This "assert" will fail for a nonconforming program unit that does not
+      // have any ASSIGN statements.  The front end should check for this.
+      // If asserts are inactive, the assigned GOTO statement will be a nop.
+      llvm_unreachable("no assigned goto targets");
+      return;
+    }
+    auto labelSet = iter->second;
+    constexpr int vSize = 10;
+    llvm::SmallVector<int64_t, vSize> indexList;
+    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    auto addLabel = [&](Fortran::parser::Label label) {
+      indexList.push_back(label);
+      blockList.push_back(blockOfLabel(eval, label));
+    };
+    // Add labels from an explicit list.  The list may have duplicates.
+    for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
+      if (labelSet.count(label) == 0) {
+        // This "assert" will fail for a nonconforming program unit that never
+        // ASSIGNs this label to the selector variable.  The front end should
+        // check that there is at least one such ASSIGN statement.  If asserts
+        // are inactive, the label will be ignored.
+        llvm_unreachable("invalid assigned goto target");
+        continue;
+      }
+      if (std::find(indexList.begin(), indexList.end(), label) ==
+          indexList.end()) { // ignore duplicates
+        addLabel(label);
+      }
+    }
+    // Absent an explicit list, add all possible label targets.
+    if (indexList.empty()) {
+      for (auto &label : labelSet) {
+        addLabel(label);
+      }
+    }
+    // Add a nop/fallthrough branch to the switch for a nonconforming program
+    // unit that violates the program requirement above.
+    blockList.push_back(eval.lexicalSuccessor->block); // default
+    builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
+                                   blockList);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -687,8 +801,11 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::CaseConstruct &) {
-    TODO();
+    for (auto &e : *eval.evaluationList) {
+      genFIR(e);
+    }
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::SelectRankConstruct &) {
     TODO();
@@ -783,18 +900,74 @@ private:
               const Fortran::parser::EndBlockStmt &) {
     TODO();
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::SelectCaseStmt &) {
-    TODO();
+              const Fortran::parser::SelectCaseStmt &stmt) {
+    using ScalarExpr = Fortran::parser::Scalar<Fortran::parser::Expr>;
+    MLIRContext *context = builder->getContext();
+    const auto selectExpr = genExprValue(
+        *Fortran::semantics::GetExpr(std::get<ScalarExpr>(stmt.t)));
+    const auto selectType = selectExpr.getType();
+    constexpr int vSize = 10;
+    llvm::SmallVector<mlir::Attribute, vSize> attrList;
+    llvm::SmallVector<mlir::Value, vSize> valueList;
+    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    auto *defaultBlock = eval.parentConstruct->constructExit->block;
+    using CaseValue = Fortran::parser::Scalar<Fortran::parser::ConstantExpr>;
+    auto addValue = [&](const CaseValue &caseValue) {
+      const auto *expr = Fortran::semantics::GetExpr(caseValue.thing);
+      const auto v = Fortran::evaluate::ToInt64(*expr);
+      valueList.push_back(
+          v ? builder->createIntegerConstant(selectType, *v)
+            : builder->create<fir::ConvertOp>(toLocation(), selectType,
+                                              genExprValue(*expr)));
+    };
+    for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
+         e = e->controlSuccessor) {
+      const auto &caseStmt = e->getIf<Fortran::parser::CaseStmt>();
+      assert(e->block && "missing CaseStmt block");
+      const auto &caseSelector =
+          std::get<Fortran::parser::CaseSelector>(caseStmt->t);
+      const auto *caseValueRangeList =
+          std::get_if<std::list<Fortran::parser::CaseValueRange>>(
+              &caseSelector.u);
+      if (!caseValueRangeList) {
+        defaultBlock = e->block;
+        continue;
+      }
+      for (auto &caseValueRange : *caseValueRangeList) {
+        blockList.push_back(e->block);
+        if (const auto *caseValue = std::get_if<CaseValue>(&caseValueRange.u)) {
+          attrList.push_back(fir::PointIntervalAttr::get(context));
+          addValue(*caseValue);
+          continue;
+        }
+        const auto &caseRange =
+            std::get<Fortran::parser::CaseValueRange::Range>(caseValueRange.u);
+        if (caseRange.lower && caseRange.upper) {
+          attrList.push_back(fir::ClosedIntervalAttr::get(context));
+          addValue(*caseRange.lower);
+          addValue(*caseRange.upper);
+        } else if (caseRange.lower) {
+          attrList.push_back(fir::LowerBoundAttr::get(context));
+          addValue(*caseRange.lower);
+        } else {
+          attrList.push_back(fir::UpperBoundAttr::get(context));
+          addValue(*caseRange.upper);
+        }
+      }
+    }
+    attrList.push_back(mlir::UnitAttr::get(context));
+    blockList.push_back(defaultBlock);
+    builder->create<fir::SelectCaseOp>(toLocation(), selectExpr, attrList,
+                                       valueList, blockList);
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::CaseStmt &) {
-    TODO();
-  }
+              const Fortran::parser::CaseStmt &) {} // nop
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::EndSelectStmt &) {
-    TODO();
-  }
+              const Fortran::parser::EndSelectStmt &) {} // nop
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ChangeTeamStmt &) {
     TODO();
@@ -1081,9 +1254,16 @@ private:
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::AssignStmt &) {
-    TODO();
+              const Fortran::parser::AssignStmt &stmt) {
+    const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
+    auto variable = localSymbols.lookupSymbol(symbol);
+    if (!variable)
+      variable = createTemporary(toLocation(), symbol);
+    const auto labelValue = builder->createIntegerConstant(
+        genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
+    builder->create<fir::StoreOp>(toLocation(), labelValue, variable);
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::FormatStmt &) {
     // do nothing. FORMAT statements have no semantics. They may be lowered if
@@ -1552,7 +1732,6 @@ private:
     // lower this procedure
     for (auto &eval : funit.evaluationList)
       genFIR(eval);
-
     endNewFunction(funit);
     // recursively lower internal procedures
     for (auto &f : funit.nestedFunctions)
