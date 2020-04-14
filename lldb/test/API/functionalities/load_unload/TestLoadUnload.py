@@ -186,8 +186,6 @@ class LoadUnloadTestCase(TestBase):
                     substrs=[os.path.basename(old_dylib)],
                     matching=True)
 
-        self.runCmd(env_cmd_string)
-
         lldbutil.run_break_set_by_file_and_line(
             self, "d.cpp", self.line_d_function, num_expected_locations=1)
         # After run, make sure the non-hidden library is picked up.
