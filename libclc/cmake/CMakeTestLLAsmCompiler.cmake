@@ -24,7 +24,7 @@ if(NOT CMAKE_LLAsm_COMPILER_WORKS)
   try_compile(CMAKE_LLAsm_COMPILER_WORKS ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testLLAsmCompiler.ll
     # We never generate executable so bypass the link step
-    CMAKE_FLAGS -DCMAKE_LLAsm_LINK_EXECUTABLE='true'
+    CMAKE_FLAGS -DCMAKE_LLAsm_LINK_EXECUTABLE='echo'
     OUTPUT_VARIABLE __CMAKE_LLAsm_COMPILER_OUTPUT)
   # Move result from cache to normal variable.
   set(CMAKE_LLAsm_COMPILER_WORKS ${CMAKE_LLAsm_COMPILER_WORKS})
