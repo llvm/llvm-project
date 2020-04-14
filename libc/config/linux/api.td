@@ -18,6 +18,12 @@ def OffT : TypeDecl<"off_t"> {
   }];
 }
 
+def FILE : TypeDecl<"FILE"> {
+  let Decl = [{
+    typedef struct FILE FILE;
+  }];
+}
+
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
     #undef assert
@@ -159,10 +165,11 @@ def StringAPI : PublicAPI<"string.h"> {
 def StdIOAPI : PublicAPI<"stdio.h"> {
   let TypeDeclarations = [
     SizeT,
+    FILE,
   ];
 
   let Functions = [
-    "snprintf",
+    "fwrite",
   ];
 }
 
