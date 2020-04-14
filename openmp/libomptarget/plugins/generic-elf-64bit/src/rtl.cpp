@@ -288,6 +288,12 @@ int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t __tgt_rtl_data_transfer(int32_t device_id, void *dst_ptr, void *src_ptr,
+                                int64_t size) {
+  memcpy(dst_ptr, src_ptr, size);
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
   free(tgt_ptr);
   return OFFLOAD_SUCCESS;

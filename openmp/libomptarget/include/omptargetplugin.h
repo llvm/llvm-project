@@ -77,6 +77,16 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t ID, void *HostPtr,
                                       void *TargetPtr, int64_t Size,
                                       __tgt_async_info *AsyncInfoPtr);
 
+// Transfer the data content from one device to the other using address. In case
+// of success, return zero. Otherwise, return an error code.
+int32_t __tgt_rtl_data_transfer(int32_t ID, void *DstPtr, void *SrcPtr,
+                                int64_t Size);
+
+// Asynchronous version of __tgt_rtl_data_transfer
+int32_t __tgt_rtl_data_transfer_async(int32_t ID, void *DstPtr,
+                                      void *SrcPtr, int64_t Size,
+                                      __tgt_async_info *AsyncInfoPtr);
+
 // De-allocate the data referenced by target ptr on the device. In case of
 // success, return zero. Otherwise, return an error code.
 int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr);
