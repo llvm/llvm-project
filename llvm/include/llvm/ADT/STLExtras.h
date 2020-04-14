@@ -214,7 +214,7 @@ public:
 
   ItTy getCurrent() { return this->I; }
 
-  FuncReturnTy operator*() { return F(*this->I); }
+  FuncReturnTy operator*() const { return F(*this->I); }
 
 private:
   FuncTy F;
