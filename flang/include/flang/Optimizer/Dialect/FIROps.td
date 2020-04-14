@@ -2467,8 +2467,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     TypeAttr:$type
   );
 
-  let results = (outs fir_ReferenceType:$resultType);
-
   let regions = (region AtMostRegion<1>:$region);
 
   let parser = [{
@@ -2508,9 +2506,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
         return failure();
     }
 
-    auto refTy = AllocaOp::wrapResultType(globalType);
-    if (parser.addTypeToList(refTy, result.types))
-      return failure();
     return success();
   }];
 
