@@ -92,7 +92,6 @@ session_file_format = 'fnmac'
 
 # Set this flag if there is any session info dumped during the test run.
 sdir_has_content = False
-
 # svn_info stores the output from 'svn info lldb.base.dir'.
 svn_info = ''
 
@@ -128,6 +127,10 @@ results_formatter_name = None
 results_formatter_object = None
 results_formatter_options = None
 test_result = None
+
+# Reproducers
+capture_path = None
+replay_path = None
 
 # Test rerun configuration vars
 rerun_all_issues = False
