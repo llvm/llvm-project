@@ -91,11 +91,17 @@ class Run(object):
             except multiprocessing.TimeoutError:
                 raise TimeoutError()
             else:
-                self.tests[idx] = test
+                self._update_test(self.tests[idx], test)
                 if test.isFailure():
                     self.failures += 1
                     if self.failures == self.max_failures:
                         raise MaxFailuresError()
+
+    # Update local test object "in place" from remote test object.  This
+    # ensures that the original test object which is used for printing test
+    # results reflect the changes.
+    def _update_test(self, local_test, remote_test):
+        local_test.__dict__.update(remote_test.__dict__)
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these
