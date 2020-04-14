@@ -1407,7 +1407,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
   LogicalResult matchAndRewrite(AffineForOp forOp,
                                 PatternRewriter &rewriter) const override {
     // Check that the body only contains a terminator.
-    if (!has_single_element(*forOp.getBody()))
+    if (!llvm::hasSingleElement(*forOp.getBody()))
       return failure();
     rewriter.eraseOp(forOp);
     return success();
@@ -1576,7 +1576,8 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
 
   LogicalResult matchAndRewrite(AffineIfOp ifOp,
                                 PatternRewriter &rewriter) const override {
-    if (ifOp.elseRegion().empty() || !has_single_element(*ifOp.getElseBlock()))
+    if (ifOp.elseRegion().empty() ||
+        !llvm::hasSingleElement(*ifOp.getElseBlock()))
       return failure();
 
     rewriter.startRootUpdate(ifOp);
