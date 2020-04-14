@@ -23,7 +23,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -222,13 +221,13 @@ Optional<SmallVector<Value, 8>> mlir::expandAffineMap(OpBuilder &builder,
                                                       AffineMap affineMap,
                                                       ValueRange operands) {
   auto numDims = affineMap.getNumDims();
-  auto expanded = functional::map(
-      [numDims, &builder, loc, operands](AffineExpr expr) {
-        return expandAffineExpr(builder, loc, expr,
-                                operands.take_front(numDims),
-                                operands.drop_front(numDims));
-      },
-      affineMap.getResults());
+  auto expanded = llvm::to_vector<8>(
+      llvm::map_range(affineMap.getResults(),
+                      [numDims, &builder, loc, operands](AffineExpr expr) {
+                        return expandAffineExpr(builder, loc, expr,
+                                                operands.take_front(numDims),
+                                                operands.drop_front(numDims));
+                      }));
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
   return None;

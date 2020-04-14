@@ -19,7 +19,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -113,8 +112,8 @@ getInputAndOutputIndices(ArrayRef<Value> allIvs, SingleInputPoolingOp op) {
   auto &b = ScopedContext::getBuilder();
   auto loc = ScopedContext::getLocation();
   auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
-  auto maps =
-      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  auto maps = llvm::to_vector<8>(
+      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   SmallVector<ValueHandle, 8> iIdx(
       makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
   SmallVector<ValueHandle, 8> oIdx(
@@ -273,8 +272,8 @@ public:
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
     auto mapsRange = convOp.indexing_maps().getAsRange<AffineMapAttr>();
-    auto maps = functional::map([](AffineMapAttr a) { return a.getValue(); },
-                                mapsRange);
+    auto maps = llvm::to_vector<8>(llvm::map_range(
+        mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
     SmallVector<ValueHandle, 8> fIdx(
         makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
     SmallVector<ValueHandle, 8> imIdx(
@@ -650,8 +649,8 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
   auto nLoops = nPar + nRed + nWin;
   auto mapsRange =
       linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
-  auto maps =
-      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  auto maps = llvm::to_vector<8>(
+      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   AffineMap invertedMap = inversePermutation(concatAffineMaps(maps));
   if (invertedMap.isEmpty()) {
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(

@@ -81,9 +81,9 @@ def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
 }
 
 // CHECK-LABEL: OpJ::verify()
-// CHECK:      llvm::is_splat(mlir::functional::map(
-// CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); },
-// CHECK-SAME:   llvm::ArrayRef<unsigned>({0, 2, 3})))
+// CHECK:      llvm::is_splat(llvm::map_range(
+// CHECK-SAME:   llvm::ArrayRef<unsigned>({0, 2, 3}),
+// CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))
 // CHECK:   return emitOpError("failed to verify that operands indexed at 0, 2, 3 should all have the same type");
 
 def OpK : NS_Op<"op_for_AnyTensorOf", []> {
