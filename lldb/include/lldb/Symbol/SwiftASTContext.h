@@ -421,6 +421,12 @@ private:
   CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
                               swift::Demangle::NodePointer node);
 
+  /// Demangle the mangled name of the canonical type of \p type and
+  /// drill into the Global(TypeMangling(Type())).
+  ///
+  /// \return the child of Type or a nullptr.
+  swift::Demangle::NodePointer
+  DemangleCanonicalType(swift::Demangle::Demangler &Dem, void *opaque_type);
   /// The sibling SwiftASTContext.
   SwiftASTContext *m_swift_ast_context = nullptr;
 };
