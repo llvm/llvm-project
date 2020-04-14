@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,4 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#error This test should not compile.
+// Make sure the test passes if we don't have clang-verify support and
+// the test fails to compile.
+
+// UNSUPPORTED: verify-support
+
+struct Foo { };
+typedef Foo::x x;

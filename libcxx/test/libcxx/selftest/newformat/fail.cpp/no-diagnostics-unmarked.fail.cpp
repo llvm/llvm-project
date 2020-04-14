@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: verify-support
+
 // XFAIL: *
 
-// Make sure the test DOES NOT pass if we don't have clang-verify support and
-// the test compiles successfully.
-
-// UNSUPPORTED: verify-support
+// Make sure the test DOES NOT pass if there are no diagnostics, but we didn't
+// use the 'expected-no-diagnostics' markup.
+//
+// Note: For the purpose of this test, make sure the file would otherwise
+//       compile to make sure we really fail due to a lack of markup.
 
 int main() { }
