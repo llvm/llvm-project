@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -21,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -29,11 +31,8 @@ using namespace ento;
 namespace {
 
 class CallAndMessageChecker
-  : public Checker< check::PreStmt<CallExpr>,
-                    check::PreStmt<CXXDeleteExpr>,
-                    check::PreObjCMessage,
-                    check::ObjCMessageNil,
-                    check::PreCall > {
+    : public Checker<check::PreObjCMessage, check::ObjCMessageNil,
+                     check::PreCall> {
   mutable std::unique_ptr<BugType> BT_call_null;
   mutable std::unique_ptr<BugType> BT_call_undef;
   mutable std::unique_ptr<BugType> BT_cxx_call_null;
@@ -48,11 +47,10 @@ class CallAndMessageChecker
   mutable std::unique_ptr<BugType> BT_call_few_args;
 
 public:
-  DefaultBool Check_CallAndMessageUnInitRefArg;
-  CheckerNameRef CheckName_CallAndMessageUnInitRefArg;
+  enum CheckKind { CK_CallAndMessageUnInitRefArg, CK_NumCheckKinds };
 
-  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
-  void checkPreStmt(const CXXDeleteExpr *DE, CheckerContext &C) const;
+  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
   /// Fill in the return value that results from messaging nil based on the
@@ -144,7 +142,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     CheckerContext &C, const SVal &V, SourceRange ArgRange, const Expr *ArgEx,
     std::unique_ptr<BugType> &BT, const ParmVarDecl *ParamDecl, const char *BD,
     int ArgumentNumber) const {
-  if (!Check_CallAndMessageUnInitRefArg)
+  if (!ChecksEnabled[CK_CallAndMessageUnInitRefArg])
     return false;
 
   // No parameter declaration available, i.e. variadic function argument.
@@ -311,63 +309,36 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
   return false;
 }
 
-void CallAndMessageChecker::checkPreStmt(const CallExpr *CE,
-                                         CheckerContext &C) const{
-
-  const Expr *Callee = CE->getCallee()->IgnoreParens();
-  ProgramStateRef State = C.getState();
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal L = State->getSVal(Callee, LCtx);
-
-  if (L.isUndef()) {
-    if (!BT_call_undef)
-      BT_call_undef.reset(new BuiltinBug(
-          this, "Called function pointer is an uninitialized pointer value"));
-    emitBadCall(BT_call_undef.get(), C, Callee);
-    return;
-  }
-
-  ProgramStateRef StNonNull, StNull;
-  std::tie(StNonNull, StNull) = State->assume(L.castAs<DefinedOrUnknownSVal>());
-
-  if (StNull && !StNonNull) {
-    if (!BT_call_null)
-      BT_call_null.reset(new BuiltinBug(
-          this, "Called function pointer is null (null dereference)"));
-    emitBadCall(BT_call_null.get(), C, Callee);
-    return;
-  }
-
-  C.addTransition(StNonNull);
-}
-
-void CallAndMessageChecker::checkPreStmt(const CXXDeleteExpr *DE,
-                                         CheckerContext &C) const {
-
-  SVal Arg = C.getSVal(DE->getArgument());
-  if (Arg.isUndef()) {
-    StringRef Desc;
-    ExplodedNode *N = C.generateErrorNode();
-    if (!N)
-      return;
-    if (!BT_cxx_delete_undef)
-      BT_cxx_delete_undef.reset(
-          new BuiltinBug(this, "Uninitialized argument value"));
-    if (DE->isArrayFormAsWritten())
-      Desc = "Argument to 'delete[]' is uninitialized";
-    else
-      Desc = "Argument to 'delete' is uninitialized";
-    BugType *BT = BT_cxx_delete_undef.get();
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Desc, N);
-    bugreporter::trackExpressionValue(N, DE, *R);
-    C.emitReport(std::move(R));
-    return;
-  }
-}
-
 void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
                                          CheckerContext &C) const {
   ProgramStateRef State = C.getState();
+  if (const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr())) {
+    const Expr *Callee = CE->getCallee()->IgnoreParens();
+    const LocationContext *LCtx = C.getLocationContext();
+    SVal L = State->getSVal(Callee, LCtx);
+
+    if (L.isUndef()) {
+      if (!BT_call_undef)
+        BT_call_undef.reset(new BuiltinBug(
+            this, "Called function pointer is an uninitialized pointer value"));
+      emitBadCall(BT_call_undef.get(), C, Callee);
+      return;
+    }
+
+    ProgramStateRef StNonNull, StNull;
+    std::tie(StNonNull, StNull) =
+        State->assume(L.castAs<DefinedOrUnknownSVal>());
+
+    if (StNull && !StNonNull) {
+      if (!BT_call_null)
+        BT_call_null.reset(new BuiltinBug(
+            this, "Called function pointer is null (null dereference)"));
+      emitBadCall(BT_call_null.get(), C, Callee);
+      return;
+    }
+
+    State = StNonNull;
+  }
 
   // If this is a call to a C++ method, check if the callee is null or
   // undefined.
@@ -425,6 +396,30 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
     }
   }
 
+  if (const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call)) {
+    const CXXDeleteExpr *DE = DC->getOriginExpr();
+    assert(DE);
+    SVal Arg = C.getSVal(DE->getArgument());
+    if (Arg.isUndef()) {
+      StringRef Desc;
+      ExplodedNode *N = C.generateErrorNode();
+      if (!N)
+        return;
+      if (!BT_cxx_delete_undef)
+        BT_cxx_delete_undef.reset(
+            new BuiltinBug(this, "Uninitialized argument value"));
+      if (DE->isArrayFormAsWritten())
+        Desc = "Argument to 'delete[]' is uninitialized";
+      else
+        Desc = "Argument to 'delete' is uninitialized";
+      BugType *BT = BT_cxx_delete_undef.get();
+      auto R = std::make_unique<PathSensitiveBugReport>(*BT, Desc, N);
+      bugreporter::trackExpressionValue(N, DE, *R);
+      C.emitReport(std::move(R));
+      return;
+    }
+  }
+
   // Don't check for uninitialized field values in arguments if the
   // caller has a body that is available and we have the chance to inline it.
   // This is a hack, but is a reasonable compromise betweens sometimes warning
@@ -444,8 +439,8 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
     if(FD && i < FD->getNumParams())
       ParamDecl = FD->getParamDecl(i);
     if (PreVisitProcessArg(C, Call.getArgSVal(i), Call.getArgSourceRange(i),
-                           Call.getArgExpr(i), i,
-                           checkUninitFields, Call, *BT, ParamDecl))
+                           Call.getArgExpr(i), i, checkUninitFields, Call, *BT,
+                           ParamDecl))
       return;
   }
 
@@ -609,12 +604,13 @@ bool ento::shouldRegisterCallAndMessageChecker(const CheckerManager &mgr) {
   return true;
 }
 
-void ento::registerCallAndMessageUnInitRefArg(CheckerManager &mgr) {
-  CallAndMessageChecker *Checker = mgr.getChecker<CallAndMessageChecker>();
-  Checker->Check_CallAndMessageUnInitRefArg = true;
-  Checker->CheckName_CallAndMessageUnInitRefArg = mgr.getCurrentCheckerName();
-}
+#define REGISTER_CHECKER(name)                                                 \
+  void ento::register##name(CheckerManager &mgr) {                             \
+    CallAndMessageChecker *checker = mgr.getChecker<CallAndMessageChecker>();  \
+    checker->ChecksEnabled[CallAndMessageChecker::CK_##name] = true;           \
+                                                                               \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
-bool ento::shouldRegisterCallAndMessageUnInitRefArg(const CheckerManager &mgr) {
-  return true;
-}
+REGISTER_CHECKER(CallAndMessageUnInitRefArg)
