@@ -161,7 +161,7 @@
 
 // PIE: ld{{.*}}" "--eh-frame-hdr"
 // PIE-NOT: "-Bshareable"
-// PIE "-pie" "-dynamic-linker" "/libexec/ld.elf_so"
+// PIE: "-pie" "-dynamic-linker" "/libexec/ld.elf_so"
 // PIE-NOT: "-Bshareable"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
