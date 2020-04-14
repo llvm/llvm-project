@@ -223,14 +223,13 @@ static void setRelocs(const std::vector<T *> &chunks,
     return;
 
   ArrayRef<WasmRelocation> relocs = section->Relocations;
-  assert(std::is_sorted(relocs.begin(), relocs.end(),
-                        [](const WasmRelocation &r1, const WasmRelocation &r2) {
-                          return r1.Offset < r2.Offset;
-                        }));
-  assert(std::is_sorted(
-      chunks.begin(), chunks.end(), [](InputChunk *c1, InputChunk *c2) {
-        return c1->getInputSectionOffset() < c2->getInputSectionOffset();
+  assert(llvm::is_sorted(
+      relocs, [](const WasmRelocation &r1, const WasmRelocation &r2) {
+        return r1.Offset < r2.Offset;
       }));
+  assert(llvm::is_sorted(chunks, [](InputChunk *c1, InputChunk *c2) {
+    return c1->getInputSectionOffset() < c2->getInputSectionOffset();
+  }));
 
   auto relocsNext = relocs.begin();
   auto relocsEnd = relocs.end();

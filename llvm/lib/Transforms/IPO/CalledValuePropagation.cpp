@@ -72,8 +72,7 @@ public:
   CVPLatticeVal(CVPLatticeStateTy LatticeState) : LatticeState(LatticeState) {}
   CVPLatticeVal(std::vector<Function *> &&Functions)
       : LatticeState(FunctionSet), Functions(std::move(Functions)) {
-    assert(std::is_sorted(this->Functions.begin(), this->Functions.end(),
-                          Compare()));
+    assert(llvm::is_sorted(this->Functions, Compare()));
   }
 
   /// Get a reference to the functions held by this lattice value. The number
