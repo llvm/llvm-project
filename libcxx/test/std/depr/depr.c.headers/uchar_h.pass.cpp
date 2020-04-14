@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // XFAIL: suse-linux-enterprise-server-11
-// XFAIL: apple-darwin
+// XFAIL: darwin
 // XFAIL: newlib
 // XFAIL: netbsd
 

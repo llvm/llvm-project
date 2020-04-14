@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: apple-darwin
+// XFAIL: darwin
 //
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
