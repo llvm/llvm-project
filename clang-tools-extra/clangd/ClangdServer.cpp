@@ -703,9 +703,8 @@ void ClangdServer::semanticHighlights(
                            TUScheduler::InvalidateOnUpdate);
 }
 
-std::vector<std::pair<Path, std::size_t>>
-ClangdServer::getUsedBytesPerFile() const {
-  return WorkScheduler.getUsedBytesPerFile();
+llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
+  return WorkScheduler.fileStats();
 }
 
 LLVM_NODISCARD bool
