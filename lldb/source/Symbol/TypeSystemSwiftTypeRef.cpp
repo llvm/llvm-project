@@ -580,15 +580,46 @@ CompilerType TypeSystemSwiftTypeRef::GetCanonicalType(void *type) {
   return m_swift_ast_context->GetCanonicalType(ReconstructType(type));
 }
 int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(void *type) {
-  return m_swift_ast_context->GetFunctionArgumentCount(ReconstructType(type));
+  auto impl = [&]() { return GetNumberOfFunctionArguments(type); };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentCount(
+                                ReconstructType(type)));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetFunctionArgumentTypeAtIndex(void *type, size_t idx) {
-  return m_swift_ast_context->GetFunctionArgumentTypeAtIndex(
-      ReconstructType(type), idx);
+  auto impl = [&] { return GetFunctionArgumentAtIndex(type, idx); };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentTypeAtIndex(
+                                ReconstructType(type), idx));
 }
 CompilerType TypeSystemSwiftTypeRef::GetFunctionReturnType(void *type) {
-  return m_swift_ast_context->GetFunctionReturnType(ReconstructType(type));
+  auto impl = [&]() -> CompilerType {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node = DemangleCanonicalType(Dem, type);
+    if (!node || (node->getKind() != Node::Kind::FunctionType &&
+                  node->getKind() != Node::Kind::ImplFunctionType))
+      return {};
+    unsigned num_args = 0;
+    for (NodePointer child : *node) {
+      if (child->getKind() == Node::Kind::ImplResult) {
+        for (NodePointer type : *child)
+          if (type->getKind() == Node::Kind::Type)
+            return RemangleAsType(Dem, type);
+      }
+      if (child->getKind() == Node::Kind::ReturnType &&
+          child->getNumChildren() == 1) {
+        NodePointer type = child->getFirstChild();
+        if (type->getKind() == Node::Kind::Type)
+          return RemangleAsType(Dem, type);
+      }
+    }
+    // Else this is a void / "()" type.
+    NodePointer type = Dem.createNode(Node::Kind::Type);
+    NodePointer tuple = Dem.createNode(Node::Kind::Tuple);
+    type->addChild(tuple, Dem);
+    return RemangleAsType(Dem, type);
+  };
+  VALIDATE_AND_RETURN(
+      impl, m_swift_ast_context->GetFunctionReturnType(ReconstructType(type)));
 }
 size_t TypeSystemSwiftTypeRef::GetNumMemberFunctions(void *type) {
   return m_swift_ast_context->GetNumMemberFunctions(ReconstructType(type));
