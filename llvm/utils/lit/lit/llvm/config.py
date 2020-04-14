@@ -115,8 +115,8 @@ class LLVMConfig(object):
 
     def with_environment(self, variable, value, append_path=False):
         if append_path:
-            # For paths, we should be able to take a list of them and process all
-            # of them.
+            # For paths, we should be able to take a list of them and process
+            # all of them.
             paths_to_add = value
             if lit.util.is_string(paths_to_add):
                 paths_to_add = [paths_to_add]
@@ -135,8 +135,8 @@ class LLVMConfig(object):
             # and adding each to the beginning would result in b c a.  So we
             # need to iterate in reverse to end up with the original ordering.
             for p in reversed(paths_to_add):
-                # Move it to the front if it already exists, otherwise insert it at the
-                # beginning.
+                # Move it to the front if it already exists, otherwise insert
+                # it at the beginning.
                 p = norm(p)
                 try:
                     paths.remove(p)
