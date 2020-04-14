@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This test is passing in an uncontrolled manner in some Apple environment.
-// UNSUPPORTED: apple-darwin
+// UNSUPPORTED: darwin
 //
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
