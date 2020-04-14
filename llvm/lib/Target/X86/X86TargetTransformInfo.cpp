@@ -2590,6 +2590,11 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
+unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty, bool Insert,
+                                              bool Extract) {
+  return BaseT::getScalarizationOverhead(Ty, Insert, Extract);
+}
+
 int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 MaybeAlign Alignment, unsigned AddressSpace,
                                 const Instruction *I) {
