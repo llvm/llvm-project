@@ -368,12 +368,6 @@ class Configuration(object):
             self.cxx.use_ccache = True
             self.lit_config.note('enabling ccache')
 
-    def add_deployment_feature(self, feature):
-        (arch, name, version) = self.config.deployment
-        self.config.available_features.add('%s=%s-%s' % (feature, arch, name))
-        self.config.available_features.add('%s=%s' % (feature, name))
-        self.config.available_features.add('%s=%s%s' % (feature, name, version))
-
     def configure_features(self):
         additional_features = self.get_lit_conf('additional_features')
         if additional_features:
@@ -388,27 +382,22 @@ class Configuration(object):
         # XFAIL markers for tests that are known to fail with versions of
         # libc++ as were shipped with a particular triple.
         if self.use_system_cxx_lib:
-            self.config.available_features.add('with_system_cxx_lib')
-            self.config.available_features.add(
-                'with_system_cxx_lib=%s' % self.config.target_triple)
-
-            # Add subcomponents individually.
-            target_components = self.config.target_triple.split('-')
-            for component in target_components:
-                self.config.available_features.add(
-                    'with_system_cxx_lib=%s' % component)
+            self.config.available_features.add('with_system_cxx_lib=%s' % self.config.target_triple)
 
             # Add available features for more generic versions of the target
             # triple attached to  with_system_cxx_lib.
             if self.use_deployment:
-                self.add_deployment_feature('with_system_cxx_lib')
+                (_, name, version) = self.config.deployment
+                self.config.available_features.add('with_system_cxx_lib=%s' % name)
+                self.config.available_features.add('with_system_cxx_lib=%s%s' % (name, version))
 
         # Configure the availability feature. Availability is only enabled
         # with libc++, because other standard libraries do not provide
         # availability markup.
         if self.use_deployment and self.cxx_stdlib_under_test == 'libc++':
-            self.config.available_features.add('availability')
-            self.add_deployment_feature('availability')
+            (_, name, version) = self.config.deployment
+            self.config.available_features.add('availability=%s' % name)
+            self.config.available_features.add('availability=%s%s' % (name, version))
 
         # Insert the platform name into the available features as a lower case.
         self.config.available_features.add(target_platform)

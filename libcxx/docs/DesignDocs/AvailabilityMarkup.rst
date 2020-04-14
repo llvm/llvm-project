@@ -77,11 +77,7 @@ Tests can be marked as XFAIL based on multiple features made available by lit:
 
 * if `--param=platform=macosx10.12` is passed, the following features will be available:
 
-  - availability
-  - availability=x86_64
   - availability=macosx
-  - availability=x86_64-macosx
-  - availability=x86_64-apple-macosx10.12
   - availability=macosx10.12
 
   This feature is used to XFAIL a test that *is* using a class or a method marked
@@ -90,12 +86,9 @@ Tests can be marked as XFAIL based on multiple features made available by lit:
 * if `use_system_cxx_lib` and `--param=platform=macosx10.12` are passed to lit,
   the following features will also be available:
 
-  - with_system_cxx_lib
-  - with_system_cxx_lib=x86_64
   - with_system_cxx_lib=macosx
-  - with_system_cxx_lib=x86_64-macosx
-  - with_system_cxx_lib=x86_64-apple-macosx10.12
   - with_system_cxx_lib=macosx10.12
+  - with_system_cxx_lib=x86_64-apple-macosx10.12
 
   This feature is used to XFAIL a test that is *not* using a class or a method
   marked as unavailable *but* that is expected to fail if deployed on an older
