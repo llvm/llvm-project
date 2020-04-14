@@ -291,11 +291,13 @@ mlir::linalg::permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
   auto linOp = cast<LinalgOp>(op);
   auto permutationMap = inversePermutation(
       AffineMap::getPermutationMap(permutation, rewriter.getContext()));
+  assert(permutationMap && "expected permutation to be invertible");
   SmallVector<AffineMap, 4> newIndexingMap;
   auto indexingMaps = linOp.indexing_maps().getValue();
   for (unsigned i = 0, e = linOp.getNumInputsAndOutputs(); i != e; ++i) {
-    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue().compose(
-        permutationMap);
+    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue();
+    if (!permutationMap.isEmpty())
+      m = m.compose(permutationMap);
     newIndexingMap.push_back(m);
   }
   auto itTypes = linOp.iterator_types().getValue();

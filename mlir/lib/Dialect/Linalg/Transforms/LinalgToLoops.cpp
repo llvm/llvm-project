@@ -652,6 +652,8 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   AffineMap invertedMap = inversePermutation(concatAffineMaps(maps));
+  if (!invertedMap)
+    return {};
   if (invertedMap.isEmpty()) {
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(
         {}, linalgOp);
