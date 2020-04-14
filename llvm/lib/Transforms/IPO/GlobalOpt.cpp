@@ -720,17 +720,17 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         Changed = true;
       }
     } else if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-      CallSite CS(I);
-      if (CS.getCalledValue() == V) {
+      CallBase *CB = cast<CallBase>(I);
+      if (CB->getCalledValue() == V) {
         // Calling through the pointer!  Turn into a direct call, but be careful
         // that the pointer is not also being passed as an argument.
-        CS.setCalledFunction(NewV);
+        CB->setCalledOperand(NewV);
         Changed = true;
         bool PassedAsArg = false;
-        for (unsigned i = 0, e = CS.arg_size(); i != e; ++i)
-          if (CS.getArgument(i) == V) {
+        for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
+          if (CB->getArgOperand(i) == V) {
             PassedAsArg = true;
-            CS.setArgument(i, NewV);
+            CB->setArgOperand(i, NewV);
           }
 
         if (PassedAsArg) {
@@ -2131,8 +2131,7 @@ static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
       continue;
-    CallSite CS(cast<Instruction>(U));
-    CS.setCallingConv(CallingConv::Fast);
+    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
   }
 }
 
@@ -2149,8 +2148,8 @@ static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
       continue;
-    CallSite CS(cast<Instruction>(U));
-    CS.setAttributes(StripAttr(F->getContext(), CS.getAttributes(), A));
+    CallBase *CB = cast<CallBase>(U);
+    CB->setAttributes(StripAttr(F->getContext(), CB->getAttributes(), A));
   }
 }
 
@@ -2230,8 +2229,7 @@ static void changeCallSitesToColdCC(Function *F) {
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
       continue;
-    CallSite CS(cast<Instruction>(U));
-    CS.setCallingConv(CallingConv::Cold);
+    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
   }
 }
 
