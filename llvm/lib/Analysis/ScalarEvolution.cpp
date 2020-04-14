@@ -86,7 +86,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -6579,7 +6578,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
 
   case Instruction::Call:
   case Instruction::Invoke:
-    if (Value *RV = CallSite(U).getReturnedArgOperand())
+    if (Value *RV = cast<CallBase>(U)->getReturnedArgOperand())
       return getSCEV(RV);
     break;
   }

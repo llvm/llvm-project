@@ -21,7 +21,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -287,14 +286,13 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      CallSite CS(&I);
-      if (CS) {
-        const Function *Callee
-          = dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        const Function *Callee =
+            dyn_cast<Function>(CB->getCalledValue()->stripPointerCasts());
 
         // TODO: Do something with indirect calls.
         if (!Callee) {
-          if (!CS.isInlineAsm())
+          if (!CB->isInlineAsm())
             HaveCall = true;
           continue;
         }

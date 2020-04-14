@@ -220,9 +220,8 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
         ++FI.InstCount;
         continue;
       }
-      CallSite CS(const_cast<Instruction *>(&I));
-      if (CS) {
-        Function *Callee = CS.getCalledFunction();
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee->isDeclaration()) {
           ++FI.InstCount;
           continue;
