@@ -219,7 +219,7 @@ int align_a_ll = __alignof(_Atomic(long long));
 // CHECK: @align_a_p = dso_local global i32 8
 int align_a_p = __alignof(_Atomic(void*));
 
-// CHECK @align_a_f = dso_local global i32 4
+// CHECK: @align_a_f = dso_local global i32 4
 int align_a_f = __alignof(_Atomic(float));
 
 // CHECK: @align_a_d = dso_local global i32 8
