@@ -1283,6 +1283,13 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
 
+  // Resolve the file's imports, including the implicit ones returned from
+  // GetImplicitImports.
+  swift::performImportResolution(*source_file);
+
+  if (swift_ast_context->HasErrors())
+    return make_error<SwiftASTContextError>();
+
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
     code_manipulator =
@@ -1330,11 +1337,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
     stack_frame_sp.reset();
   }
-
-  swift::performImportResolution(*source_file);
-
-  if (swift_ast_context->HasErrors())
-    return make_error<SwiftASTContextError>();
 
   // Cache the source file's imports such that they're accessible to future
   // expression evaluations.
