@@ -405,24 +405,31 @@ declare <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, 
 define arm_aapcs_vfpcc <4 x i32> @vpttet_v4i1(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: vpttet_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vpttet.s32 ge, q0, q2
-; CHECK-NEXT:    vmaxt.s32 q3, q0, q1
-; CHECK-NEXT:    vcmpt.s32 gt, q0, zr
-; CHECK-NEXT:    vcmpe.s32 gt, q1, zr
-; CHECK-NEXT:    vmovt q3, q2
-; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %x, %z
-  %1 = tail call <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32> %x, <4 x i32> %y, i32 0, <4 x i1> %0, <4 x i32> %z)
-  %2 = icmp sgt <4 x i32> %x, zeroinitializer
-  %3 = and <4 x i1> %0, %2
-  %4 = xor <4 x i1> %3, <i1 true, i1 true, i1 true, i1 true>
-  %5 = icmp sgt <4 x i32> %y, zeroinitializer
-  %6 = and <4 x i1> %5, %4
-  %7 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %6, <4 x i32> %1)
-  ret <4 x i32> %7
+  %1 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %0, <4 x i32> %x)
+  %2 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %0, <4 x i32> %1)
+  %3 = xor <4 x i1> %0, <i1 true, i1 true, i1 true, i1 true>
+  %4 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %3, <4 x i32> %2)
+  %5 = xor <4 x i1> %3, <i1 true, i1 true, i1 true, i1 true>
+  %6 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %5, <4 x i32> %4)
+  ret <4 x i32> %6
 }
 
 define arm_aapcs_vfpcc <4 x i32> @vpttee_v4i1(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
@@ -445,6 +452,29 @@ entry:
   %5 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %4, <4 x i32> %1)
   %6 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %4, <4 x i32> %5)
   ret <4 x i32> %6
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vpttee2_v4i1(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: vpttee2_v4i1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov q3, q2
+; CHECK-NEXT:    vpttee.s32 ge, q0, q2
+; CHECK-NEXT:    vmaxt.s32 q3, q0, q1
+; CHECK-NEXT:    vcmpt.s32 gt, q0, zr
+; CHECK-NEXT:    vcmpe.s32 gt, q1, zr
+; CHECK-NEXT:    vmove q3, q2
+; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = icmp sge <4 x i32> %x, %z
+  %1 = tail call <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32> %x, <4 x i32> %y, i32 0, <4 x i1> %0, <4 x i32> %z)
+  %2 = icmp sgt <4 x i32> %x, zeroinitializer
+  %3 = and <4 x i1> %0, %2
+  %4 = xor <4 x i1> %3, <i1 true, i1 true, i1 true, i1 true>
+  %5 = icmp sgt <4 x i32> %y, zeroinitializer
+  %6 = and <4 x i1> %5, %4
+  %7 = tail call <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32> %z, <4 x i32> %z, <4 x i1> %6, <4 x i32> %1)
+  ret <4 x i32> %7
 }
 
 define arm_aapcs_vfpcc <4 x i32> @vpttte_v4i1(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
