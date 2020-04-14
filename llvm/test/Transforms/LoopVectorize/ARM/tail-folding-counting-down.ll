@@ -14,7 +14,7 @@ target triple = "thumbv8.1m.main-arm-unknown-eabihf"
 ;
 define dso_local void @sgt_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_loopguard(
-; DEFAULT:      vector.body:
+; COMMON:       vector.body:
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.store
@@ -52,7 +52,7 @@ while.end:
 ;
 define dso_local void @sgt_no_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_no_loopguard(
-; DEFAULT:      vector.body:
+; COMMON:       vector.body:
 ;
 ; FIXME: I think this is currently miscompiled after D77635
 ;
@@ -87,7 +87,7 @@ while.end:
 
 define dso_local void @sgt_extra_use_cmp(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_extra_use_cmp(
-; DEFAULT:      vector.body:
+; COMMON:       vector.body:
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.store
@@ -121,12 +121,9 @@ while.end:
 define dso_local void @sgt_const_tripcount(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_const_tripcount(
 ; COMMON:       vector.body:
-;
-; FIXME: we expect tail-folding here, but is currently not happening:
-;
-; CHECK-TF-NOT: masked.load
-; CHECK-TF-NOT: masked.load
-; CHECK-TF-NOT: masked.store
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.store
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %while.body.preheader, label %while.end
@@ -135,7 +132,7 @@ while.body.preheader:
   br label %while.body
 
 while.body:
-  %N.addr.09 = phi i32 [ %dec, %while.body ], [ 2048, %while.body.preheader ]
+  %N.addr.09 = phi i32 [ %dec, %while.body ], [ 2049, %while.body.preheader ]
   %c.addr.08 = phi i8* [ %incdec.ptr4, %while.body ], [ %c, %while.body.preheader ]
   %b.addr.07 = phi i8* [ %incdec.ptr1, %while.body ], [ %b, %while.body.preheader ]
   %a.addr.06 = phi i8* [ %incdec.ptr, %while.body ], [ %a, %while.body.preheader ]
@@ -159,7 +156,7 @@ while.end:
 
 define dso_local void @sgt_no_guard_0_startval(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_no_guard_0_startval(
-; CHECK-NOT:   vector.body:
+; COMMON-NOT:   vector.body:
 entry:
   br label %while.body
 
@@ -223,8 +220,8 @@ while.end:
 }
 
 define dso_local void @sgt_step_not_constant(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N, i32 %S) local_unnamed_addr #0 {
-; COMMON-LABEL:  @sgt_step_not_constant(
-; CHECK-NOT:    vector.body:
+; COMMON-LABEL: @sgt_step_not_constant(
+; COMMON-NOT:   vector.body:
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %while.body.preheader, label %while.end
@@ -257,7 +254,7 @@ while.end:
 
 define dso_local void @icmp_eq(i8* noalias nocapture readonly %A, i8* noalias nocapture readonly %B, i8* noalias nocapture %C, i32 %N) #0 {
 ; COMMON-LABEL: @icmp_eq
-; DEFAULT:      vector.body:
+; COMMON:       vector.body:
 ; TODO
 entry:
   %cmp6 = icmp eq i32 %N, 0
@@ -292,19 +289,26 @@ while.end:
 ; This IR corresponds to this type of C-code:
 ;
 ;  void f(char *a, char *b, char * __restrict c, int N) {
+;    #pragma clang loop vectorize_width(16)
 ;    for (int i = N; i>0; i--)
 ;      c[i] = a[i] + b[i];
 ;  }
 ;
 define dso_local void @sgt_for_loop(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_for_loop(
+; COMMON :      vector.body:
+; CHECK-PREFER: masked.load
+; CHECK-PREFER: masked.load
+; CHECK-PREFER: masked.store
 ;
-; FIXME: we do want to support this case too, but is currently not recognised.
+; TODO: if tail-predication is requested, tail-folding isn't triggered because
+; the profitability check returns "Different strides found, can't tail-predicate",
+; investigate this.
 ;
-; DEFAULT-NOT:  vector.body:
-; CHECK-TF-NOT: masked.load
-; CHECK-TF-NOT: masked.load
-; CHECK-TF-NOT: masked.store
+; CHECK-ENABLE-TP-NOT: masked.load
+; CHECK-ENABLE-TP-NOT: masked.load
+; CHECK-ENABLE-TP-NOT: masked.store
+;
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %for.body.preheader, label %for.end
@@ -323,7 +327,7 @@ for.body:
   store i8 %add, i8* %arrayidx4, align 1
   %dec = add nsw i32 %i.011, -1
   %cmp = icmp sgt i32 %i.011, 1
-  br i1 %cmp, label %for.body, label %for.end
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !1
 
 for.end:
   ret void
@@ -331,16 +335,15 @@ for.end:
 
 define dso_local void @sgt_for_loop_i64(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_for_loop_i64(
-; DEFAULT-NOT:  vector.body:
+; COMMON:       vector.body:
 ;
-; FIXME: this shoud be supported, but isn't currently.
-; CHECK-PREFER-NOT: masked.load
-; CHECK-PREFER-NOT: masked.load
-; CHECK-PREFER-NOT: masked.store
+; CHECK-PREFER: masked.load
+; CHECK-PREFER: masked.load
+; CHECK-PREFER: masked.store
 ;
-; With -disable-mve-tail-predication=false, the cost-model returns that
-; creating a hardwareloop is not profitable/possible, so here we don't
-; expect the tail-folding:
+; With -disable-mve-tail-predication=false, the target hook returns
+; "preferPredicateOverEpilogue: hardware-loop is not profitable."
+; so here we don't expect the tail-folding. TODO: look into this.
 ;
 ; CHECK-ENABLE-TP-NOT:  masked.load
 ; CHECK-ENABLE-TP-NOT:  masked.load
@@ -372,7 +375,7 @@ for.body:
   store i8 %add, i8* %arrayidx8, align 1
   %dec = add nsw i64 %i.015, -1
   %cmp = icmp sgt i64 %i.015, 1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !1
 }
 
 ; This IR corresponds to this nested-loop:
@@ -430,3 +433,6 @@ for.body4:                                        ; preds = %for.body, %for.body
 }
 
 attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
+
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.vectorize.width", i32 16}
