@@ -442,6 +442,97 @@ void SVEType::applyModifier(char Mod) {
     Bitwidth = 16;
     ElementBitwidth = 1;
     break;
+  case 'l':
+    Predicate = false;
+    Signed = true;
+    Float = false;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    break;
+  case 'S':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 8;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'W':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 8;
+    NumVectors = 0;
+    Signed = false;
+    break;
+  case 'T':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 16;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'X':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 16;
+    NumVectors = 0;
+    Signed = false;
+    break;
+  case 'Y':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = false;
+    break;
+  case 'U':
+    Constant = true;
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'A':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 8;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'B':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 16;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'C':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'D':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    Signed = true;
+    break;
+  case 'E':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 8;
+    NumVectors = 0;
+    Signed = false;
+    break;
+  case 'F':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 16;
+    NumVectors = 0;
+    Signed = false;
+    break;
+  case 'G':
+    Pointer = true;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = false;
+    break;
   default:
     llvm_unreachable("Unhandled character!");
   }
