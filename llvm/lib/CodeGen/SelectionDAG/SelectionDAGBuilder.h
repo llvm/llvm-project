@@ -642,7 +642,7 @@ public:
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
 
-  void LowerCallSiteWithPtrAuthBundle(ImmutableCallSite CS,
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
                                       const BasicBlock *EHPadBB);
 
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.

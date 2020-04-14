@@ -2832,7 +2832,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // with deopt state.
     LowerCallSiteWithDeoptBundle(&I, getValue(Callee), EHPadBB);
   } else if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
-    LowerCallSiteWithPtrAuthBundle(&I, EHPadBB);
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), EHPadBB);
   } else {
     LowerCallTo(I, getValue(Callee), false, EHPadBB);
   }
@@ -7689,7 +7689,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   }
 
   if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
-    LowerCallSiteWithPtrAuthBundle(&I, /*EHPadBB=*/nullptr);
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), /*EHPadBB=*/nullptr);
     return;
   }
 
@@ -7713,9 +7713,9 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
-    ImmutableCallSite CS, const BasicBlock *EHPadBB) {
-  auto PAB = CS.getOperandBundle("ptrauth");
-  auto *CalleeV = CS.getCalledValue();
+    const CallBase &CB, const BasicBlock *EHPadBB) {
+  auto PAB = CB.getOperandBundle("ptrauth");
+  auto *CalleeV = CB.getCalledValue();
 
   // Gather the call ptrauth data from the operand bundle:
   //   [ i32 <key>, i64 <discriminator> ]
@@ -7731,7 +7731,7 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   if (auto CalleePAI = GlobalPtrAuthInfo::analyze(CalleeV)) {
     // FIXME: bring back a static diagnostic when we can guarantee the mismatch
     if (CalleePAI->isCompatibleWith(Key, Discriminator, DAG.getDataLayout())) {
-      LowerCallTo(CS, getValue(CalleePAI->getPointer()), CS.isTailCall(),
+      LowerCallTo(CB, getValue(CalleePAI->getPointer()), CB.isTailCall(),
                   EHPadBB);
       return;
     }
@@ -7749,7 +7749,7 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),
                                      getValue(Discriminator)};
 
-  LowerCallTo(CS, getValue(CalleeV), CS.isTailCall(), EHPadBB, &PAI);
+  LowerCallTo(CB, getValue(CalleeV), CB.isTailCall(), EHPadBB, &PAI);
 }
 
 namespace {
