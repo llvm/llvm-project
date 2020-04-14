@@ -45,7 +45,7 @@ def main():
 
     # Create the execution directory, and make sure we remove it at the end.
     try:
-        os.mkdir(args.execdir)
+        os.makedirs(args.execdir)
 
         # Ensure the file dependencies exist and copy them to the execution directory.
         for dep in args.dependencies:
