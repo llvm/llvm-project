@@ -18,6 +18,10 @@
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand Atomic instructions
+; CHECK-NEXT:     SVE intrinsics optimizations
+; CHECK-NEXT:       FunctionPass Manager
+; CHECK-NEXT:         Dominator Tree Construction
+; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Simplify the CFG
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
