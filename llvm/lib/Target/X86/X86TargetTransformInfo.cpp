@@ -1377,6 +1377,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
     { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 1 },
     { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 1 },
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 },
     { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  1 },
     { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 },
 
