@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -17,7 +18,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Object/ModuleSummaryAnalysis.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ScopedPrinter.h"

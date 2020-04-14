@@ -14,7 +14,6 @@ add_llvm_component_library(LLVMObject
   MachOObjectFile.cpp
   MachOUniversal.cpp
   Minidump.cpp
-  ModuleSummaryAnalysis.cpp
   ModuleSymbolTable.cpp
   Object.cpp
   ObjectFile.cpp
