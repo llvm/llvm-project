@@ -707,7 +707,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (CLI.IsTailCall) {
     auto NoTail = [&](const char *Msg) {
-      if (CLI.CS && CLI.CS.isMustTailCall())
+      if (CLI.CB && CLI.CB->isMustTailCall())
         fail(DL, DAG, Msg);
       CLI.IsTailCall = false;
     };
@@ -735,8 +735,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
              "match");
 
     // If pointers to local stack values are passed, we cannot tail call
-    if (CLI.CS) {
-      for (auto &Arg : CLI.CS.args()) {
+    if (CLI.CB) {
+      for (auto &Arg : CLI.CB->args()) {
         Value *Val = Arg.get();
         // Trace the value back through pointer operations
         while (true) {

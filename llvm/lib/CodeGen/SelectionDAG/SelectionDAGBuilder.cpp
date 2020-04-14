@@ -2834,7 +2834,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   } else if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
     LowerCallSiteWithPtrAuthBundle(&I, EHPadBB);
   } else {
-    LowerCallTo(&I, getValue(Callee), false, EHPadBB);
+    LowerCallTo(I, getValue(Callee), false, EHPadBB);
   }
 
   // If the value of the invoke is used outside of its defining block, make it
@@ -5639,7 +5639,7 @@ void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
   SDValue Callee = DAG.getExternalSymbol(
       FunctionName,
       DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(&I, Callee, I.isTailCall());
+  LowerCallTo(I, Callee, I.isTailCall());
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -7056,10 +7056,9 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
     // There is a platform (e.g. wasm) that uses funclet style IR but does not
     // actually use outlined funclets and their LSDA info style.
     if (MF.hasEHFunclets() && isFuncletEHPersonality(Pers)) {
-      assert(CLI.CS);
+      assert(CLI.CB);
       WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
-      EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CS.getInstruction()),
-                                BeginLabel, EndLabel);
+      EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CB), BeginLabel, EndLabel);
     } else if (!isScopedEHPersonality(Pers)) {
       MF.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
     }
@@ -7068,16 +7067,16 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   return Result;
 }
 
-void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
+void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
                                       bool isTailCall,
                                       const BasicBlock *EHPadBB,
                                       const TargetLowering::PtrAuthInfo *PAI) {
   auto &DL = DAG.getDataLayout();
-  FunctionType *FTy = CS.getFunctionType();
-  Type *RetTy = CS.getType();
+  FunctionType *FTy = CB.getFunctionType();
+  Type *RetTy = CB.getType();
 
   TargetLowering::ArgListTy Args;
-  Args.reserve(CS.arg_size());
+  Args.reserve(CB.arg_size());
 
   const Value *SwiftErrorVal = nullptr;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -7085,7 +7084,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (isTailCall) {
     // Avoid emitting tail calls in functions with the disable-tail-calls
     // attribute.
-    auto *Caller = CS.getInstruction()->getParent()->getParent();
+    auto *Caller = CB.getParent()->getParent();
     if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
         "true")
       isTailCall = false;
@@ -7098,10 +7097,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
       isTailCall = false;
   }
 
-  for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
-       i != e; ++i) {
+  for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
     TargetLowering::ArgListEntry Entry;
-    const Value *V = *i;
+    const Value *V = *I;
 
     // Skip empty types
     if (V->getType()->isEmptyTy())
@@ -7110,16 +7108,16 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     SDValue ArgNode = getValue(V);
     Entry.Node = ArgNode; Entry.Ty = V->getType();
 
-    Entry.setAttributes(&CS, i - CS.arg_begin());
+    Entry.setAttributes(&CB, I - CB.arg_begin());
 
     // Use swifterror virtual register as input to the call.
     if (Entry.IsSwiftError && TLI.supportSwiftError()) {
       SwiftErrorVal = V;
       // We find the virtual register for the actual swifterror argument.
       // Instead of using the Value, we use the virtual register instead.
-      Entry.Node = DAG.getRegister(
-          SwiftError.getOrCreateVRegUseAt(CS.getInstruction(), FuncInfo.MBB, V),
-          EVT(TLI.getPointerTy(DL)));
+      Entry.Node =
+          DAG.getRegister(SwiftError.getOrCreateVRegUseAt(&CB, FuncInfo.MBB, V),
+                          EVT(TLI.getPointerTy(DL)));
     }
 
     Args.push_back(Entry);
@@ -7132,7 +7130,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   // If call site has a cfguardtarget operand bundle, create and add an
   // additional ArgListEntry.
-  if (auto Bundle = CS.getOperandBundle(LLVMContext::OB_cfguardtarget)) {
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_cfguardtarget)) {
     TargetLowering::ArgListEntry Entry;
     Value *V = Bundle->Inputs[0];
     SDValue ArgNode = getValue(V);
@@ -7144,7 +7142,8 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   // Check if target-independent constraints permit a tail call here.
   // Target-dependent constraints are checked within TLI->LowerCallTo.
-  if (isTailCall && !isInTailCallPosition(CS, DAG.getTarget()))
+  if (isTailCall &&
+      !isInTailCallPosition(ImmutableCallSite(&CB), DAG.getTarget()))
     isTailCall = false;
 
   // Disable tail calls if there is an swifterror argument. Targets have not
@@ -7155,9 +7154,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
-      .setCallee(RetTy, FTy, Callee, std::move(Args), CS)
+      .setCallee(RetTy, FTy, Callee, std::move(Args), CB)
       .setTailCall(isTailCall)
-      .setConvergent(CS.isConvergent());
+      .setConvergent(CB.isConvergent());
 
   // Set the pointer authentication info if we have it.
   if (PAI) {
@@ -7170,9 +7169,8 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
-    const Instruction *Inst = CS.getInstruction();
-    Result.first = lowerRangeToAssertZExt(DAG, *Inst, Result.first);
-    setValue(Inst, Result.first);
+    Result.first = lowerRangeToAssertZExt(DAG, CB, Result.first);
+    setValue(&CB, Result.first);
   }
 
   // The last element of CLI.InVals has the SDValue for swifterror return.
@@ -7181,8 +7179,8 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    Register VReg = SwiftError.getOrCreateVRegDefAt(
-        CS.getInstruction(), FuncInfo.MBB, SwiftErrorVal);
+    Register VReg =
+        SwiftError.getOrCreateVRegDefAt(&CB, FuncInfo.MBB, SwiftErrorVal);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
     DAG.setRoot(CopyNode);
   }
@@ -7711,7 +7709,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // Check if we can potentially perform a tail call. More detailed checking
     // is be done within LowerCallTo, after more information about the call is
     // known.
-    LowerCallTo(&I, Callee, I.isTailCall());
+    LowerCallTo(I, Callee, I.isTailCall());
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
@@ -9268,8 +9266,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           Flags.setReturned();
       }
 
-      getCopyToParts(CLI.DAG, CLI.DL, Op, &Parts[0], NumParts, PartVT,
-                     CLI.CS.getInstruction(), CLI.CallConv, ExtendKind);
+      getCopyToParts(CLI.DAG, CLI.DL, Op, &Parts[0], NumParts, PartVT, CLI.CB,
+                     CLI.CallConv, ExtendKind);
 
       for (unsigned j = 0; j != NumParts; ++j) {
         // if it isn't first piece, alignment must be 1

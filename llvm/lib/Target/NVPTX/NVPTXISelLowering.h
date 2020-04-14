@@ -491,7 +491,7 @@ public:
 
   std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                            const SmallVectorImpl<ISD::OutputArg> &,
-                           MaybeAlign retAlignment, ImmutableCallSite CS) const;
+                           MaybeAlign retAlignment, const CallBase &CB) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -578,7 +578,7 @@ private:
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(SDValue Callee, ImmutableCallSite CS, Type *Ty,
+  Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
                              unsigned Idx, const DataLayout &DL) const;
 };
 } // namespace llvm
