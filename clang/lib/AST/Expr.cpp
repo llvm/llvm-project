@@ -913,6 +913,11 @@ FixedPointLiteral *FixedPointLiteral::CreateFromRawInt(const ASTContext &C,
   return new (C) FixedPointLiteral(C, V, type, l, Scale);
 }
 
+FixedPointLiteral *FixedPointLiteral::Create(const ASTContext &C,
+                                             EmptyShell Empty) {
+  return new (C) FixedPointLiteral(Empty);
+}
+
 std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   // Currently the longest decimal number that can be printed is the max for an
   // unsigned long _Accum: 4294967295.99999999976716935634613037109375
