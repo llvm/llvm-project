@@ -21,7 +21,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatVariadic.h"

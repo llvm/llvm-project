@@ -21,7 +21,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
 
 using namespace mlir;

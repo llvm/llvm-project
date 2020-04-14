@@ -11,7 +11,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 

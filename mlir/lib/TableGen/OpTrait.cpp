@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/OpTrait.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/Predicate.h"
 #include "llvm/ADT/StringExtras.h"

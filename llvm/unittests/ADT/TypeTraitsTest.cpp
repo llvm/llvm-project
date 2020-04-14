@@ -33,9 +33,6 @@ template <typename CallableT> struct CheckFunctionTraits {
 using FuncType = bool (*)(const int &);
 struct CheckFunctionPointer : CheckFunctionTraits<FuncType> {};
 
-static bool func(const int &v);
-struct CheckFunctionPointer2 : CheckFunctionTraits<decltype(&func)> {};
-
 /// Test method pointers.
 struct Foo {
   bool func(const int &v);
@@ -43,7 +40,9 @@ struct Foo {
 struct CheckMethodPointer : CheckFunctionTraits<decltype(&Foo::func)> {};
 
 /// Test lambda references.
-auto lambdaFunc = [](const int &v) -> bool { return true; };
+LLVM_ATTRIBUTE_UNUSED auto lambdaFunc = [](const int &v) -> bool {
+  return true;
+};
 struct CheckLambda : CheckFunctionTraits<decltype(lambdaFunc)> {};
 
 } // end anonymous namespace
@@ -70,7 +69,7 @@ static_assert(!is_detected<has_foo_method_t, NoFooMethod>::value,
 // is_invocable
 //===----------------------------------------------------------------------===//
 
-static void invocable_fn(int) {}
+void invocable_fn(int);
 
 static_assert(is_invocable<decltype(invocable_fn), int>::value,
               "expected function to be invocable");

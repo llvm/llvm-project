@@ -29,7 +29,6 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/STLExtras.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

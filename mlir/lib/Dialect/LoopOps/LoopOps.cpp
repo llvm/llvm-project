@@ -19,7 +19,6 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 
 using namespace mlir;
 using namespace mlir::loop;

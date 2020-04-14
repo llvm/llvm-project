@@ -22,7 +22,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MathExtras.h"
