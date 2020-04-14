@@ -83,8 +83,11 @@ func @int_attrs_pass() {
     // CHECK-SAME: attr_20 = 1 : ui1
     attr_20 = 1 : ui1,
     // CHECK-SAME: attr_21 = -1 : si1
-    attr_21 = -1 : si1
-
+    attr_21 = -1 : si1,
+    // CHECK-SAME: attr_22 = 79228162514264337593543950335 : ui96
+    attr_22 = 79228162514264337593543950335 : ui96,
+    // CHECK-SAME: attr_23 = -39614081257132168796771975168 : si96
+    attr_23 = -39614081257132168796771975168 : si96
   } : () -> ()
 
   return
