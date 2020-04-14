@@ -39,8 +39,8 @@
 // CHECK-NEW: @.objc_init = linkonce_odr hidden global { i64, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8**, i8** } { i64 0, i8** @__start___objc_selectors, i8** @__stop___objc_selectors, i8** @__start___objc_classes, i8** @__stop___objc_classes, i8** @__start___objc_class_refs, i8** @__stop___objc_class_refs, i8** @__start___objc_cats, i8** @__stop___objc_cats, i8** @__start___objc_protocols, i8** @__stop___objc_protocols, i8** @__start___objc_protocol_refs, i8** @__stop___objc_protocol_refs, i8** @__start___objc_class_aliases, i8** @__stop___objc_class_aliases, i8** @__start___objc_constant_string, i8** @__stop___objc_constant_string }, comdat, align 8
 
 // Check that the load function is manually inserted into .ctors.
-// CHECK-NEW: @.objc_ctor = linkonce hidden constant void ()* @.objcv2_load_function, section ".ctors", comdat
-// CHECK-INIT_ARRAY: @.objc_ctor = linkonce hidden constant void ()* @.objcv2_load_function, section ".init_array", comdat
+// CHECK-NEW: @.objc_ctor = linkonce hidden global void ()* @.objcv2_load_function, section ".ctors", comdat
+// CHECK-INIT_ARRAY: @.objc_ctor = linkonce hidden global void ()* @.objcv2_load_function, section ".init_array", comdat
 
 
 // Make sure that we provide null versions of everything so the __start /
@@ -91,7 +91,7 @@
 // CHECK-WIN-DAG: @.objc_init = linkonce_odr hidden global { i64, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel* } { i64 0, %.objc_section_sentinel* @"__start_.objcrt$SEL", %.objc_section_sentinel* @"__stop.objcrt$SEL", %.objc_section_sentinel* @"__start_.objcrt$CLS", %.objc_section_sentinel* @"__stop.objcrt$CLS", %.objc_section_sentinel* @"__start_.objcrt$CLR", %.objc_section_sentinel* @"__stop.objcrt$CLR", %.objc_section_sentinel* @"__start_.objcrt$CAT", %.objc_section_sentinel* @"__stop.objcrt$CAT", %.objc_section_sentinel* @"__start_.objcrt$PCL", %.objc_section_sentinel* @"__stop.objcrt$PCL", %.objc_section_sentinel* @"__start_.objcrt$PCR", %.objc_section_sentinel* @"__stop.objcrt$PCR", %.objc_section_sentinel* @"__start_.objcrt$CAL", %.objc_section_sentinel* @"__stop.objcrt$CAL", %.objc_section_sentinel* @"__start_.objcrt$STR", %.objc_section_sentinel* @"__stop.objcrt$STR" }, comdat, align 8
 
 // Make sure our init variable is in the correct section for late library init.
-// CHECK-WIN: @.objc_ctor = linkonce hidden constant void ()* @.objcv2_load_function, section ".CRT$XCLz", comdat
+// CHECK-WIN: @.objc_ctor = linkonce hidden global void ()* @.objcv2_load_function, section ".CRT$XCLz", comdat
 
 // We shouldn't have emitted any null placeholders on Windows.
 // CHECK-WIN: @llvm.used = appending global [2 x i8*] [i8* bitcast ({ { i8*, i8*, i8*, i32, i32, i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8* }*, i8*, i8*, i32, i32, i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8* }** @"$_OBJC_INIT_CLASS_X" to i8*), i8* bitcast (void ()** @.objc_ctor to i8*)], section "llvm.metadata"
