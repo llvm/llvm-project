@@ -580,7 +580,9 @@ CompilerType TypeSystemSwiftTypeRef::GetCanonicalType(void *type) {
   return m_swift_ast_context->GetCanonicalType(ReconstructType(type));
 }
 int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(void *type) {
-  return m_swift_ast_context->GetFunctionArgumentCount(ReconstructType(type));
+  auto impl = [&]() { return GetNumberOfFunctionArguments(type); };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentCount(
+                                ReconstructType(type)));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetFunctionArgumentTypeAtIndex(void *type, size_t idx) {
