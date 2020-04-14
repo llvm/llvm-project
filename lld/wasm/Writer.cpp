@@ -429,7 +429,8 @@ void Writer::populateTargetFeatures() {
     for (const auto &key : used.keys())
       allowed.insert(std::string(key));
 
-  if (allowed.count("atomics") && !config->sharedMemory) {
+  if (!config->relocatable && allowed.count("atomics") &&
+      !config->sharedMemory) {
     if (inferFeatures)
       error(Twine("'atomics' feature is used by ") + used["atomics"] +
             ", so --shared-memory must be used");
