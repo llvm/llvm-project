@@ -362,16 +362,6 @@ multiclass RRmir<string opcStr, bits<8>opc,
            { let cy = 0; let cz = 1; let hasSideEffects = 0; }
 }
 
-multiclass RRmiz<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp,
-                 SDPatternOperator OpNode=null_frag> {
-  def zi : RR<opc, (outs RCo:$sx), (ins immOp:$sy),
-              !strconcat(opcStr, " $sx, $sy"),
-              [(set Tyo:$sx, (OpNode (Tyi simm7:$sy), 0))]>
-           { let cy = 0; let cz = 0; let sz = 0; let hasSideEffects = 0; }
-}
-
 multiclass RRNDmrm<string opcStr, bits<8>opc,
                    RegisterClass RCo, ValueType Tyo,
                    RegisterClass RCi, ValueType Tyi, Operand mOp,
@@ -402,7 +392,6 @@ multiclass RRm<string opcStr, bits<8>opc,
                Operand immOp = simm7, Operand mOp = mimm> :
   RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
   RRmri<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
 
@@ -415,7 +404,6 @@ multiclass RRNCm<string opcStr, bits<8>opc,
                Operand immOp = simm7, Operand mOp = mimm> :
   RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
   RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
 
@@ -428,7 +416,6 @@ multiclass RRFm<string opcStr, bits<8>opc,
                Operand immOp = simm7, Operand mOp = mimm> :
   RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
   RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
-  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, null_frag>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, null_frag>;
 
