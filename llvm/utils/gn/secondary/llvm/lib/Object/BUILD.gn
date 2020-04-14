@@ -28,7 +28,6 @@ static_library("Object") {
     "MachOObjectFile.cpp",
     "MachOUniversal.cpp",
     "Minidump.cpp",
-    "ModuleSummaryAnalysis.cpp",
     "ModuleSymbolTable.cpp",
     "Object.cpp",
     "ObjectFile.cpp",
