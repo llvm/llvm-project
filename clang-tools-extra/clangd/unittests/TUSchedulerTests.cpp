@@ -608,6 +608,37 @@ TEST_F(TUSchedulerTests, EvictedAST) {
               UnorderedElementsAre(Foo, AnyOf(Bar, Baz)));
 }
 
+// We send "empty" changes to TUScheduler when we think some external event
+// *might* have invalidated current state (e.g. a header was edited).
+// Verify that this doesn't evict our cache entries.
+TEST_F(TUSchedulerTests, NoopChangesDontThrashCache) {
+  auto Opts = optsForTest();
+  Opts.RetentionPolicy.MaxRetainedASTs = 1;
+  TUScheduler S(CDB, Opts);
+
+  auto Foo = testPath("foo.cpp");
+  auto FooInputs = getInputs(Foo, "int x=1;");
+  auto Bar = testPath("bar.cpp");
+  auto BarInputs = getInputs(Bar, "int x=2;");
+
+  // After opening Foo then Bar, AST cache contains Bar.
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  S.update(Bar, BarInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
+
+  // Any number of no-op updates to Foo don't dislodge Bar from the cache.
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
+  // In fact each file has been built only once.
+  ASSERT_EQ(S.fileStats().lookup(Foo).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Bar).ASTBuilds, 1u);
+}
+
 TEST_F(TUSchedulerTests, EmptyPreamble) {
   TUScheduler S(CDB, optsForTest());
 
@@ -686,7 +717,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   Files[Header] = "int a;";
   Timestamps[Header] = time_t(0);
 
-  auto SourceContents = R"cpp(
+  std::string SourceContents = R"cpp(
       #include "foo.h"
       int b = a;
     )cpp";
@@ -705,25 +736,32 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
 
   // Test that subsequent updates with the same inputs do not cause rebuilds.
   ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
   ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
 
   // Update to a header should cause a rebuild, though.
   Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 2u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 2u);
 
   // Update to the contents should cause a rebuild.
-  auto OtherSourceContents = R"cpp(
-      #include "foo.h"
-      int c = d;
-    )cpp";
-  ASSERT_TRUE(DoUpdate(OtherSourceContents));
-  ASSERT_FALSE(DoUpdate(OtherSourceContents));
+  SourceContents += "\nint c = b;";
+  ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 3u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 2u);
 
   // Update to the compile commands should also cause a rebuild.
   CDB.ExtraClangFlags.push_back("-DSOMETHING");
-  ASSERT_TRUE(DoUpdate(OtherSourceContents));
-  ASSERT_FALSE(DoUpdate(OtherSourceContents));
+  ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 4u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 3u);
 }
 
 TEST_F(TUSchedulerTests, ForceRebuild) {
