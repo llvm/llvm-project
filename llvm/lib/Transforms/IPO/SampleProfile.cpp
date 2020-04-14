@@ -893,9 +893,11 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
+// FIXME(CallSite): Parameter should be CallBase&, as it's assumed to be that,
+// and non-null.
 bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   assert(isa<CallInst>(I) || isa<InvokeInst>(I));
-  CallSite CS(I);
+  CallBase &CS = *cast<CallBase>(I);
   Function *CalledFunction = CS.getCalledFunction();
   assert(CalledFunction);
   DebugLoc DLoc = I->getDebugLoc();
