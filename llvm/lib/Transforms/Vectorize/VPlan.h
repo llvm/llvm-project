@@ -929,16 +929,16 @@ class VPBlendRecipe : public VPRecipeBase {
 
   /// The blend operation is a User of the incoming values and of their
   /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// would be incoming with a full mask for which there is no VPValue.
+  /// might be incoming with a full mask for which there is no VPValue.
   VPUser User;
 
 public:
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPRecipeBase(VPBlendSC), Phi(Phi), User(Operands) {
-    assert(((Operands.size() == 1) ||
-            (Operands.size() > 2 && Operands.size() % 2 == 0)) &&
-           "Expected either a single incoming value or a greater than two and "
-           "even number of operands");
+    assert(Operands.size() > 0 &&
+           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
+           "Expected either a single incoming value or a positive even number "
+           "of operands");
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
