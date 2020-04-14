@@ -416,6 +416,8 @@ Optional<LinalgOp> mlir::linalg::fuseTensorOps(OpBuilder &b, LinalgOp producer,
   AffineMap consumerIndexMap = consumerOp.getIndexingMap(consumerIdx);
   AffineMap invProducerResultIndexMap =
       inversePermutation(producerOp.getOutputIndexingMap(0));
+  if (!invProducerResultIndexMap)
+    return {};
 
   // Compute the fused op operandslist by replacing the operand corresponding to
   // the result of the producer, with the operands of the producer.
@@ -559,6 +561,9 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
       if (!fusedOp)
         continue;
       rewriter.replaceOp(op, fusedOp.getValue().getOperation()->getResults());
+      if (llvm::all_of(definingOp.getResults(),
+                       [](Value val) -> bool { return val.use_empty(); }))
+        rewriter.eraseOp(definingOp);
       return success();
     }
     return failure();
