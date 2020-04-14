@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: llvm-dwarfdump -v %t 2>%t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -v %t 2>%t.err | FileCheck %s
 # RUN: FileCheck %s <%t.err -check-prefix=ERR
 
 # CHECK: .debug_info contents:
