@@ -254,32 +254,33 @@ private:
   /// is not updated. Instead the value `false` is returned.
   bool addSymbol(const Fortran::semantics::SymbolRef sym, mlir::Value val,
                  bool forced = false) {
-    if (forced) {
+    if (forced)
       localSymbols.erase(sym);
-    } else {
-      if (auto v = lookupSymbol(sym))
-        return false;
-    }
+    else if (lookupSymbol(sym))
+      return false;
     localSymbols.addSymbol(sym, val);
     return true;
   }
 
-  mlir::Value createTemporary(mlir::Location loc,
-                              const Fortran::semantics::Symbol &sym,
-                              llvm::ArrayRef<mlir::Value> shape = {}) {
+  bool addCharSymbol(const Fortran::semantics::SymbolRef sym, mlir::Value val,
+                     mlir::Value len, bool forced = false) {
+    if (forced)
+      localSymbols.erase(sym);
+    else if (lookupSymbol(sym))
+      return false;
+    localSymbols.addCharSymbol(sym, val, len);
+    return true;
+  }
+
+  mlir::Value createTemp(mlir::Location loc,
+                         const Fortran::semantics::Symbol &sym,
+                         llvm::ArrayRef<mlir::Value> shape = {}) {
     if (auto v = lookupSymbol(sym))
       return v;
     auto newVal = builder->createTemporary(loc, genType(sym),
                                            sym.name().ToString(), shape);
     addSymbol(sym, newVal);
     return newVal;
-  }
-
-  mlir::FuncOp genFunctionFIR(llvm::StringRef callee,
-                              mlir::FunctionType funcTy) {
-    if (auto func = builder->getNamedFunction(callee))
-      return func;
-    return builder->createFunction(callee, funcTy);
   }
 
   bool isNumericScalarCategory(Fortran::common::TypeCategory cat) {
@@ -539,9 +540,9 @@ private:
     const auto &symbolLabelMap =
         eval.getOwningProcedure()->assignSymbolLabelMap;
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
-    auto variable = localSymbols.lookupSymbol(symbol);
+    auto variable = lookupSymbol(symbol);
     if (!variable)
-      variable = createTemporary(toLocation(), symbol);
+      variable = createTemp(toLocation(), symbol);
     auto selectExpr = builder->create<fir::LoadOp>(toLocation(), variable);
     auto iter = symbolLabelMap.find(symbol);
     if (iter == symbolLabelMap.end()) {
@@ -685,7 +686,7 @@ private:
                    ? builder->create<mlir::ConstantIndexOp>(location, 1)
                    : builder->createIntegerConstant(info.loopVariableType, 1));
     assert(info.stepValue && "step value must be set");
-    info.loopVariable = createTemporary(location, *info.loopVariableSym);
+    info.loopVariable = createTemp(location, *info.loopVariableSym);
 
     // Structured loop - generate fir.loop.
     if (info.isStructured()) {
@@ -1256,9 +1257,9 @@ private:
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::AssignStmt &stmt) {
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
-    auto variable = localSymbols.lookupSymbol(symbol);
+    auto variable = lookupSymbol(symbol);
     if (!variable)
-      variable = createTemporary(toLocation(), symbol);
+      variable = createTemp(toLocation(), symbol);
     const auto labelValue = builder->createIntegerConstant(
         genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
     builder->create<fir::StoreOp>(toLocation(), labelValue, variable);
@@ -1448,7 +1449,7 @@ private:
       if (auto actualValue = dummyArgs.lookupSymbol(symbol))
         addSymbol(symbol, actualValue);
       else
-        createTemporary(toLocation(), symbol);
+        createTemp(toLocation(), symbol);
     }
     if (const auto *details =
             symbol.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
@@ -1546,14 +1547,16 @@ private:
           // verify that the reboxing is simpatico.
           auto original = lookupSymbol(sym);
           auto unboxed = builder->createUnboxChar(original);
-          addSymbol(sym, builder->createEmboxChar(unboxed.first, len),
-                    /*forced=*/true);
+          auto addr = builder->createEmboxChar(unboxed.first, len);
+          addCharSymbol(sym, addr, len, /*forced=*/true);
         } else {
+          auto charTy = genType(sym);
           if (hasDynamicShape) {
             // case: `CHARACTER(LEN=i_arg) :: c_var(dims)`
             TODO();
           }
-          addSymbol(sym, builder->createCharacterTemp(genType(sym), len));
+          auto addr = builder->createCharacterTemp(charTy, len);
+          addCharSymbol(sym, addr, len);
         }
         return;
       }
@@ -1639,7 +1642,7 @@ private:
         }
 
         // if (details.isFunction())
-        //  createTemporary(toLocation(), details.result());
+        //  createTemp(toLocation(), details.result());
       }
     } else {
       auto *entryBlock = &func.front();

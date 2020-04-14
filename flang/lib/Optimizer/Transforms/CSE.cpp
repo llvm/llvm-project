@@ -20,7 +20,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/Interfaces/SideEffects.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMapInfo.h"
