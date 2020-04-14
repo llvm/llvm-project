@@ -5063,7 +5063,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // to the function type.
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
     llvm::Type *CalleeTy = getTypes().GetFunctionType(FnInfo);
-    CalleeTy = CalleeTy->getPointerTo();
+    int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
+    CalleeTy = CalleeTy->getPointerTo(AS);
 
     llvm::Value *CalleePtr = Callee.getFunctionPointer();
     CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
