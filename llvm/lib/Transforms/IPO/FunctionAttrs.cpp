@@ -1306,7 +1306,7 @@ static bool inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes) {
         // Skip non-throwing functions.
         [](const Function &F) { return F.doesNotThrow(); },
         // Instructions that break non-throwing assumption.
-        [SCCNodes](Instruction &I) {
+        [&SCCNodes](Instruction &I) {
           return InstrBreaksNonThrowing(I, SCCNodes);
         },
         [](Function &F) {
@@ -1329,7 +1329,7 @@ static bool inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes) {
         // Skip functions known not to free memory.
         [](const Function &F) { return F.doesNotFreeMemory(); },
         // Instructions that break non-deallocating assumption.
-        [SCCNodes](Instruction &I) {
+        [&SCCNodes](Instruction &I) {
           return InstrBreaksNoFree(I, SCCNodes);
         },
         [](Function &F) {
