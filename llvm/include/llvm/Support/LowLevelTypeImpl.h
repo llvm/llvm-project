@@ -143,6 +143,20 @@ public:
     return LLT::scalarOrVector(NewNumElts, getScalarType());
   }
 
+  /// Return a type that is \p Factor times smaller. Reduces the number of
+  /// elements if this is a vector, or the bitwidth for scalar/pointers. Does
+  /// not attempt to handle cases that aren't evenly divisible.
+  LLT divide(int Factor) const {
+    assert(Factor != 1);
+    if (isVector()) {
+      assert(getNumElements() % Factor == 0);
+      return scalarOrVector(getNumElements() / Factor, getElementType());
+    }
+
+    assert(getSizeInBits() % Factor == 0);
+    return scalar(getSizeInBits() / Factor);
+  }
+
   bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
 
   unsigned getScalarSizeInBits() const {

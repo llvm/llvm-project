@@ -1317,12 +1317,6 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   return 0;
 }
 
-static LLT divideLLT(LLT Ty, int Factor) {
-  if (Ty.isVector())
-    return LLT::vector(Ty.getNumElements() / Factor, Ty.getElementType());
-  return LLT::scalar(Ty.getSizeInBits() / Factor);
-}
-
 bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -1347,7 +1341,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   int NumLoads = 1;
   if (LoadSize == 256 || LoadSize == 512) {
     NumLoads = LoadSize / 128;
-    Ty = divideLLT(Ty, NumLoads);
+    Ty = Ty.divide(NumLoads);
   }
 
   // Use the alignment to ensure that the required offsets will fit into the
