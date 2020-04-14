@@ -1075,8 +1075,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Tys[D.getOverloadArgNumber()];
   case IITDescriptor::ScalableVecArgument: {
     auto *Ty = cast<VectorType>(DecodeFixedType(Infos, Tys, Context));
-    return VectorType::get(Ty->getElementType(),
-                           {(unsigned)Ty->getNumElements(), true});
+    return VectorType::get(Ty->getElementType(), {Ty->getNumElements(), true});
   }
   }
   llvm_unreachable("unhandled");

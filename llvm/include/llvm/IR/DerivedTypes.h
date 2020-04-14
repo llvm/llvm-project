@@ -420,7 +420,7 @@ public:
 
   /// For scalable vectors, this will return the minimum number of elements
   /// in the vector.
-  uint64_t getNumElements() const { return NumElements; }
+  unsigned getNumElements() const { return NumElements; }
   Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an VectorType.
