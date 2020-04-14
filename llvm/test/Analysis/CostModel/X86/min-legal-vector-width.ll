@@ -139,7 +139,7 @@ define void @trunc256() "min-legal-vector-width"="256" {
 ; VEC512-LABEL: 'trunc256'
 ; VEC512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
 ; VEC512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %B = trunc <8 x i64> undef to <8 x i16>
-; VEC512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
+; VEC512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
 ; VEC512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
 ; VEC512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = trunc <16 x i32> undef to <16 x i8>
 ; VEC512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F = trunc <32 x i16> undef to <32 x i8>
