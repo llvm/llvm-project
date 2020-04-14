@@ -1484,7 +1484,7 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   SourceLocation Loc;
   unsigned Scale;
 
-  /// \brief Construct an empty integer literal.
+  /// \brief Construct an empty fixed-point literal.
   explicit FixedPointLiteral(EmptyShell Empty)
       : Expr(FixedPointLiteralClass, Empty) {}
 
@@ -1498,6 +1498,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
                                              QualType type, SourceLocation l,
                                              unsigned Scale);
 
+  /// Returns an empty fixed-point literal.
+  static FixedPointLiteral *Create(const ASTContext &C, EmptyShell Empty);
+
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
@@ -1505,6 +1508,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   SourceLocation getLocation() const { return Loc; }
 
   void setLocation(SourceLocation Location) { Loc = Location; }
+
+  unsigned getScale() const { return Scale; }
+  void setScale(unsigned S) { Scale = S; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == FixedPointLiteralClass;

@@ -605,6 +605,7 @@ void ASTStmtReader::VisitIntegerLiteral(IntegerLiteral *E) {
 void ASTStmtReader::VisitFixedPointLiteral(FixedPointLiteral *E) {
   VisitExpr(E);
   E->setLocation(readSourceLocation());
+  E->setScale(Record.readInt());
   E->setValue(Record.getContext(), Record.readAPInt());
 }
 
@@ -2855,6 +2856,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_INTEGER_LITERAL:
       S = IntegerLiteral::Create(Context, Empty);
+      break;
+
+    case EXPR_FIXEDPOINT_LITERAL:
+      S = FixedPointLiteral::Create(Context, Empty);
       break;
 
     case EXPR_FLOATING_LITERAL:
