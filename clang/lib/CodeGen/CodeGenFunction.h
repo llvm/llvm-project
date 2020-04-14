@@ -77,6 +77,7 @@ class ObjCAtThrowStmt;
 class ObjCAtSynchronizedStmt;
 class ObjCAutoreleasePoolStmt;
 class ReturnsNonNullAttr;
+class SVETypeFlags;
 
 namespace analyze_os_log {
 class OSLogBufferLayout;
@@ -3903,6 +3904,7 @@ public:
                                  llvm::Type *Ty, bool usgn, const char *name);
   llvm::Value *vectorWrapScalar16(llvm::Value *Op);
 
+  llvm::Type *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred, llvm::VectorType *VTy);
   llvm::Value *EmitSVEMaskedLoad(const CallExpr *, llvm::Type *ReturnTy,
                                  SmallVectorImpl<llvm::Value *> &Ops,

@@ -7464,6 +7464,39 @@ Value *CodeGenFunction::vectorWrapScalar16(Value *Op) {
   return Op;
 }
 
+// Return the llvm vector type corresponding to the specified element TypeFlags.
+llvm::Type *CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
+  switch (TypeFlags.getEltType()) {
+  default:
+    llvm_unreachable("Invalid SVETypeFlag!");
+
+  case SVETypeFlags::EltTyInt8:
+    return llvm::VectorType::get(Builder.getInt8Ty(), {16, true});
+  case SVETypeFlags::EltTyInt16:
+    return llvm::VectorType::get(Builder.getInt16Ty(), {8, true});
+  case SVETypeFlags::EltTyInt32:
+    return llvm::VectorType::get(Builder.getInt32Ty(), {4, true});
+  case SVETypeFlags::EltTyInt64:
+    return llvm::VectorType::get(Builder.getInt64Ty(), {2, true});
+
+  case SVETypeFlags::EltTyFloat16:
+    return llvm::VectorType::get(Builder.getHalfTy(), {8, true});
+  case SVETypeFlags::EltTyFloat32:
+    return llvm::VectorType::get(Builder.getFloatTy(), {4, true});
+  case SVETypeFlags::EltTyFloat64:
+    return llvm::VectorType::get(Builder.getDoubleTy(), {2, true});
+
+  case SVETypeFlags::EltTyBool8:
+    return llvm::VectorType::get(Builder.getInt1Ty(), {16, true});
+  case SVETypeFlags::EltTyBool16:
+    return llvm::VectorType::get(Builder.getInt1Ty(), {8, true});
+  case SVETypeFlags::EltTyBool32:
+    return llvm::VectorType::get(Builder.getInt1Ty(), {4, true});
+  case SVETypeFlags::EltTyBool64:
+    return llvm::VectorType::get(Builder.getInt1Ty(), {2, true});
+  }
+}
+
 // Reinterpret the input predicate so that it can be used to correctly isolate
 // the elements of the specified datatype.
 Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
@@ -7572,8 +7605,19 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
     if ((ICEArguments & (1 << i)) == 0)
       Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    else
-      llvm_unreachable("Not yet implemented");
+    else {
+      // If this is required to be a constant, constant fold it so that we know
+      // that the generated intrinsic gets a ConstantInt.
+      llvm::APSInt Result;
+      if (!E->getArg(i)->isIntegerConstantExpr(Result, getContext()))
+        llvm_unreachable("Expected argument to be a constant");
+
+      // Immediates for SVE llvm intrinsics are always 32bit.  We can safely
+      // truncate because the immediate has been range checked and no valid
+      // immediate requires more than a handful of bits.
+      Result = Result.extOrTrunc(32);
+      Ops.push_back(llvm::ConstantInt::get(getLLVMContext(), Result));
+    }
   }
 
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SVEIntrinsicMap, BuiltinID,
@@ -7585,6 +7629,13 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                              TypeFlags.isZExtReturn());
   else if (TypeFlags.isStore())
     return EmitSVEMaskedStore(E, Ops, Builtin->LLVMIntrinsic);
+  else if (Builtin->LLVMIntrinsic != 0) {
+    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+
+    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic, OverloadedTy);
+    Value *Call = Builder.CreateCall(F, Ops);
+		return Call;
+  }
 
   /// Should not happen
   return nullptr;
