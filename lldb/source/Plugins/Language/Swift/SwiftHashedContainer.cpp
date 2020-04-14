@@ -530,7 +530,7 @@ bool NativeHashedStorageHandler::IsValid() {
     && (m_keys_ptr != LLDB_INVALID_ADDRESS)
     && (m_value_stride == 0 || m_values_ptr != LLDB_INVALID_ADDRESS)
     // Check counts.
-    && (m_count <= GetBucketCount())
+    && ((m_scale < (sizeof(size_t) * 8)) && (m_count <= GetBucketCount()))
     // Buffers are tail-allocated in this order: metadata, keys, values
     && (m_metadata_ptr < m_keys_ptr)
     && (m_value_stride == 0 || m_keys_ptr < m_values_ptr);
@@ -569,13 +569,15 @@ NativeHashedStorageHandler::UpdateBuckets() {
   size_t wordCount = GetWordCount();
   for (size_t wordIndex = 0; wordIndex < wordCount; wordIndex++) {
     Status error;
-    auto word = GetMetadataWord(wordIndex, error);
+    uint64_t word = GetMetadataWord(wordIndex, error);
     if (error.Fail()) {
       return FailBuckets();
     }
     if (wordCount == 1) {
       // Mask off out-of-bounds bits from first partial word.
-      word &= (1ULL << bucketCount) - 1;
+      if (bucketCount > (sizeof(uint64_t) * 8))
+        return FailBuckets();
+      word &= llvm::maskTrailingOnes<uint64_t>(bucketCount);
     }
     for (size_t bit = 0; bit < wordWidth; bit++) {
       if ((word & (1ULL << bit)) != 0) {
