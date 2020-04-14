@@ -459,18 +459,35 @@ public:
           DstRegs.push_back(MI.getOperand(DefIdx).getReg());
 
         if (ConvertOp) {
-          SmallVector<Register, 2> TmpRegs;
-          // This is a vector that is being scalarized and casted. Extract to
-          // the element type, and do the conversion on the scalars.
-          LLT MergeEltTy =
-              MRI.getType(MergeI->getOperand(0).getReg()).getElementType();
-          for (unsigned j = 0; j < NumMergeRegs; ++j)
-            TmpRegs.push_back(MRI.createGenericVirtualRegister(MergeEltTy));
+          LLT MergeSrcTy = MRI.getType(MergeI->getOperand(1).getReg());
+
+          // This is a vector that is being split and casted. Extract to the
+          // element type, and do the conversion on the scalars (or smaller
+          // vectors).
+          LLT MergeEltTy = MergeSrcTy.divide(NewNumDefs);
+
+          // Handle split to smaller vectors, with conversions.
+          // %2(<8 x s8>) = G_CONCAT_VECTORS %0(<4 x s8>), %1(<4 x s8>)
+          // %3(<8 x s16>) = G_SEXT %2
+          // %4(<2 x s16>), %5(<2 x s16>), %6(<2 x s16>), %7(<2 x s16>) = G_UNMERGE_VALUES %3
+          //
+          // =>
+          //
+          // %8(<2 x s8>), %9(<2 x s8>) = G_UNMERGE_VALUES %0
+          // %10(<2 x s8>), %11(<2 x s8>) = G_UNMERGE_VALUES %1
+          // %4(<2 x s16>) = G_SEXT %8
+          // %5(<2 x s16>) = G_SEXT %9
+          // %6(<2 x s16>) = G_SEXT %10
+          // %7(<2 x s16>)= G_SEXT %11
+
+          SmallVector<Register, 4> TmpRegs(NewNumDefs);
+          for (unsigned k = 0; k < NewNumDefs; ++k)
+            TmpRegs[k] = MRI.createGenericVirtualRegister(MergeEltTy);
 
           Builder.buildUnmerge(TmpRegs, MergeI->getOperand(Idx + 1).getReg());
 
-          for (unsigned j = 0; j < NumMergeRegs; ++j)
-            Builder.buildInstr(ConvertOp, {DstRegs[j]}, {TmpRegs[j]});
+          for (unsigned k = 0; k < NewNumDefs; ++k)
+            Builder.buildInstr(ConvertOp, {DstRegs[k]}, {TmpRegs[k]});
         } else {
           Builder.buildUnmerge(DstRegs, MergeI->getOperand(Idx + 1).getReg());
         }
