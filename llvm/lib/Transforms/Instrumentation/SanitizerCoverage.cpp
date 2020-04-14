@@ -85,7 +85,7 @@ static const char *const SanCovPCsInitName = "__sanitizer_cov_pcs_init";
 
 static const char *const SanCovGuardsSectionName = "sancov_guards";
 static const char *const SanCovCountersSectionName = "sancov_cntrs";
-static const char *const SanCovBoolFlagSectionName = "sancov_bool_flag";
+static const char *const SanCovBoolFlagSectionName = "sancov_bools";
 static const char *const SanCovPCsSectionName = "sancov_pcs";
 
 static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
