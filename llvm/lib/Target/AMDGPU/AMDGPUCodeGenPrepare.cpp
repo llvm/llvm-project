@@ -15,7 +15,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -1388,9 +1387,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   DT = DTWP ? &DTWP->getDomTree() : nullptr;
 
   HasUnsafeFPMath = hasUnsafeFPMath(F);
-
-  AMDGPU::SIModeRegisterDefaults Mode(F);
-  HasFP32Denormals = Mode.allFP32Denormals();
+  HasFP32Denormals = ST->hasFP32Denormals(F);
 
   bool MadeChange = false;
 

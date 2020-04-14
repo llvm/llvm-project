@@ -133,7 +133,7 @@ public:
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())),
-      HasFP32Denormals(AMDGPU::SIModeRegisterDefaults(F).allFP32Denormals()) {}
+      HasFP32Denormals(ST->hasFP32Denormals(F)) { }
 
   bool hasBranchDivergence() { return true; }
   bool useGPUDivergenceAnalysis() const;

@@ -1662,10 +1662,9 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
 
   // float fr = mad(fqneg, fb, fa);
-  unsigned OpCode = !MFI->getMode().allFP32Denormals() ?
-                    (unsigned)ISD::FMAD :
-                    (unsigned)AMDGPUISD::FMAD_FTZ;
-
+  unsigned OpCode = MFI->getMode().allFP32Denormals() ?
+                    (unsigned)AMDGPUISD::FMAD_FTZ :
+                    (unsigned)ISD::FMAD;
   SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
 
   // int iq = (int)fq;
@@ -1748,10 +1747,9 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
     // Compute denominator reciprocal.
-    unsigned FMAD = !MFI->getMode().allFP32Denormals() ?
-                    (unsigned)ISD::FMAD :
-                    (unsigned)AMDGPUISD::FMAD_FTZ;
-
+    unsigned FMAD = MFI->getMode().allFP32Denormals() ?
+                    (unsigned)AMDGPUISD::FMAD_FTZ :
+                    (unsigned)ISD::FMAD;
 
     SDValue Cvt_Lo = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Lo);
     SDValue Cvt_Hi = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Hi);
