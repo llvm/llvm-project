@@ -138,6 +138,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(1), void_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentTypeAtIndex(1), void_type);
+    ASSERT_EQ(impl_two_args.GetFunctionReturnType(), void_type);
   }
   {
     NodePointer n = b.GlobalType(b.Node(
@@ -157,6 +158,27 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
     ASSERT_EQ(two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
     ASSERT_EQ(two_args.GetFunctionArgumentTypeAtIndex(1), void_type);
+    ASSERT_EQ(two_args.GetFunctionReturnType(), void_type);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(
+        Node::Kind::FunctionType,
+        b.Node(Node::Kind::ArgumentTuple,
+               b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))),
+        b.Node(Node::Kind::ReturnType, b.Node(Node::Kind::Type, b.IntType()))));
+    CompilerType void_int = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(void_int.IsFunctionType(nullptr));
+    ASSERT_EQ(void_int.GetFunctionReturnType(), int_type);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(
+        Node::Kind::ImplFunctionType, b.Node(Node::Kind::ImplEscaping),
+        b.Node(Node::Kind::ImplConvention, "@callee_guaranteed"),
+        b.Node(Node::Kind::ImplResult,
+               b.Node(Node::Kind::ImplConvention, "@unowned"), b.IntType())));
+    CompilerType impl_void_int = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(impl_void_int.IsFunctionType(nullptr));
+    ASSERT_EQ(impl_void_int.GetFunctionReturnType(), int_type);
   }
 }
 
