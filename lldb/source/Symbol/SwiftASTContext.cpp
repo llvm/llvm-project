@@ -118,6 +118,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "llvm/ADT/ScopeExit.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
@@ -950,7 +951,7 @@ uint32_t SwiftASTContext::GetPluginVersion() { return 1; }
 namespace {
 
 struct SDKTypeMinVersion {
-  PlatformDarwin::SDKType sdk_type;
+  XcodeSDK::Type sdk_type;
   unsigned min_version_major;
   unsigned min_version_minor;
 };
@@ -964,7 +965,7 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   // Only Darwin platforms know the concept of an SDK.
   auto host_os = host.getOS();
   if (host_os != llvm::Triple::OSType::MacOSX)
-    return {PlatformDarwin::SDKType::unknown, 0, 0};
+    return {XcodeSDK::Type::unknown, 0, 0};
 
   auto is_simulator = [&]() -> bool {
     return target.getEnvironment() == llvm::Triple::Simulator ||
@@ -974,21 +975,21 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   switch (target.getOS()) {
   case llvm::Triple::OSType::MacOSX:
   case llvm::Triple::OSType::Darwin:
-    return {PlatformDarwin::SDKType::MacOSX, 10, 10};
+    return {XcodeSDK::Type::MacOSX, 10, 10};
   case llvm::Triple::OSType::IOS:
     if (is_simulator())
-      return {PlatformDarwin::SDKType::iPhoneSimulator, 8, 0};
-    return {PlatformDarwin::SDKType::iPhoneOS, 8, 0};
+      return {XcodeSDK::Type::iPhoneSimulator, 8, 0};
+    return {XcodeSDK::Type::iPhoneOS, 8, 0};
   case llvm::Triple::OSType::TvOS:
     if (is_simulator())
-      return {PlatformDarwin::SDKType::AppleTVSimulator, 9, 0};
-    return {PlatformDarwin::SDKType::AppleTVOS, 9, 0};
+      return {XcodeSDK::Type::AppleTVSimulator, 9, 0};
+    return {XcodeSDK::Type::AppleTVOS, 9, 0};
   case llvm::Triple::OSType::WatchOS:
     if (is_simulator())
-      return {PlatformDarwin::SDKType::WatchSimulator, 2, 0};
-    return {PlatformDarwin::SDKType::watchOS, 2, 0};
+      return {XcodeSDK::Type::WatchSimulator, 2, 0};
+    return {XcodeSDK::Type::watchOS, 2, 0};
   default:
-    return {PlatformDarwin::SDKType::unknown, 0, 0};
+    return {XcodeSDK::Type::unknown, 0, 0};
   }
 }
 
@@ -997,7 +998,7 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
 StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
                                                const llvm::Triple &host) {
   auto sdk = GetSDKType(target, host);
-  llvm::StringRef sdk_name = PlatformDarwin::GetSDKNameForType(sdk.sdk_type);
+  llvm::StringRef sdk_name = XcodeSDK::GetSDKNameForType(sdk.sdk_type);
   if (!sdk_name.empty())
     return sdk_name;
   return target.getOSName();
@@ -2342,7 +2343,7 @@ namespace {
 
 struct SDKEnumeratorInfo {
   FileSpec found_path;
-  PlatformDarwin::SDKType sdk_type;
+  XcodeSDK::Type sdk_type;
   uint32_t least_major;
   uint32_t least_minor;
 };
@@ -2350,91 +2351,46 @@ struct SDKEnumeratorInfo {
 } // anonymous namespace
 
 static bool SDKSupportsSwift(const FileSpec &sdk_path,
-                             PlatformDarwin::SDKType desired_type) {
+                             XcodeSDK::Type desired_type) {
   ConstString last_path_component = sdk_path.GetLastPathComponent();
 
   if (last_path_component) {
     const llvm::StringRef sdk_name_raw = last_path_component.GetStringRef();
-    std::string sdk_name_lower = sdk_name_raw.lower();
-    const llvm::StringRef sdk_name(sdk_name_lower);
+    XcodeSDK sdk(sdk_name_raw);
+    XcodeSDK::Type sdk_type = sdk.GetType();
 
-    llvm::StringRef version_part;
+    // For non-Darwin SDKs assume Swift is supported.
+    if (desired_type == XcodeSDK::Type::unknown &&
+        sdk_type == XcodeSDK::Type::unknown)
+      return true;
 
-    PlatformDarwin::SDKType sdk_type = PlatformDarwin::SDKType::unknown;
-
-    if (desired_type == PlatformDarwin::SDKType::unknown) {
-      for (int i = (int)PlatformDarwin::SDKType::MacOSX;
-           i < PlatformDarwin::SDKType::numSDKTypes; ++i) {
-        PlatformDarwin::SDKType this_type =
-            static_cast<PlatformDarwin::SDKType>(i);
-        llvm::StringRef this_sdk_name =
-            PlatformDarwin::GetSDKNameForType(this_type);
-        if (sdk_name.startswith(this_sdk_name)) {
-          version_part = sdk_name.drop_front(this_sdk_name.size());
-          sdk_type = this_type;
-          break;
-        }
-      }
-
-      // For non-Darwin SDKs assume Swift is supported
-      if (sdk_type == PlatformDarwin::SDKType::unknown)
-        return true;
-    } else {
-      llvm::StringRef desired_sdk_name =
-          PlatformDarwin::GetSDKNameForType(desired_type);
-      if (sdk_name.startswith(desired_sdk_name)) {
-        version_part = sdk_name.drop_front(desired_sdk_name.size());
-        sdk_type = desired_type;
-      } else {
-        return false;
-      }
-    }
-
-    const size_t major_dot_offset = version_part.find('.');
-    if (major_dot_offset == llvm::StringRef::npos)
+    if (sdk_type != desired_type)
       return false;
 
-    const llvm::StringRef major_version =
-        version_part.slice(0, major_dot_offset);
-    const llvm::StringRef minor_part =
-        version_part.drop_front(major_dot_offset + 1);
-
-    const size_t minor_dot_offset = minor_part.find('.');
-    if (minor_dot_offset == llvm::StringRef::npos)
-      return false;
-
-    const llvm::StringRef minor_version = minor_part.slice(0, minor_dot_offset);
-
-    unsigned int major = 0;
-    unsigned int minor = 0;
-
-    if (major_version.getAsInteger(10, major))
-      return false;
-
-    if (minor_version.getAsInteger(10, minor))
-      return false;
-
+    llvm::VersionTuple sdk_version = sdk.GetVersion();
+    unsigned major = sdk_version.getMajor();
+    unsigned minor = sdk_version.getMinor().getValueOr(0);
     switch (sdk_type) {
-    case PlatformDarwin::SDKType::MacOSX:
+    case XcodeSDK::Type::MacOSX:
       if (major > 10 || (major == 10 && minor >= 10))
         return true;
       break;
-    case PlatformDarwin::SDKType::iPhoneOS:
-    case PlatformDarwin::SDKType::iPhoneSimulator:
+    case XcodeSDK::Type::iPhoneOS:
+    case XcodeSDK::Type::iPhoneSimulator:
       if (major >= 8)
         return true;
       break;
-    case PlatformDarwin::SDKType::AppleTVSimulator:
-    case PlatformDarwin::SDKType::AppleTVOS:
+    case XcodeSDK::Type::AppleTVSimulator:
+    case XcodeSDK::Type::AppleTVOS:
       if (major >= 9)
         return true;
       break;
-    case PlatformDarwin::SDKType::WatchSimulator:
-    case PlatformDarwin::SDKType::watchOS:
+    case XcodeSDK::Type::WatchSimulator:
+    case XcodeSDK::Type::watchOS:
       if (major >= 2)
         return true;
       break;
-    case PlatformDarwin::SDKType::Linux:
+    case XcodeSDK::Type::Linux:
       return true;
     default:
       return false;
@@ -2458,7 +2414,7 @@ DirectoryEnumerator(void *baton, llvm::sys::fs::file_type file_type,
 };
 
 static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec,
-                                           PlatformDarwin::SDKType sdk_type,
+                                           XcodeSDK::Type sdk_type,
                                            uint32_t least_major,
                                            uint32_t least_minor) {
   if (!IsDirectory(sdks_spec))
@@ -2484,24 +2440,24 @@ static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec,
     return ConstString();
 }
 
-static ConstString GetSDKDirectory(PlatformDarwin::SDKType sdk_type,
+static ConstString GetSDKDirectory(XcodeSDK::Type sdk_type,
                                    uint32_t least_major, uint32_t least_minor) {
   using namespace llvm::sys;
-  if (sdk_type != PlatformDarwin::SDKType::MacOSX) {
+  if (sdk_type != XcodeSDK::Type::MacOSX) {
     // Look inside Xcode for the required installed iOS SDK version.
     llvm::SmallString<256> sdks_path(
         PlatformDarwin::GetXcodeContentsDirectory().GetPath());
     path::append(sdks_path, "Developer", "Platforms");
 
-    if (sdk_type == PlatformDarwin::SDKType::iPhoneSimulator) {
+    if (sdk_type == XcodeSDK::Type::iPhoneSimulator) {
       path::append(sdks_path, "iPhoneSimulator.platform");
-    } else if (sdk_type == PlatformDarwin::SDKType::AppleTVSimulator) {
+    } else if (sdk_type == XcodeSDK::Type::AppleTVSimulator) {
       path::append(sdks_path, "AppleTVSimulator.platform");
-    } else if (sdk_type == PlatformDarwin::SDKType::AppleTVOS) {
+    } else if (sdk_type == XcodeSDK::Type::AppleTVOS) {
       path::append(sdks_path, "AppleTVOS.platform");
-    } else if (sdk_type == PlatformDarwin::SDKType::WatchSimulator) {
+    } else if (sdk_type == XcodeSDK::Type::WatchSimulator) {
       path::append(sdks_path, "WatchSimulator.platform");
-    } else if (sdk_type == PlatformDarwin::SDKType::watchOS) {
+    } else if (sdk_type == XcodeSDK::Type::watchOS) {
       // For now, we need to be prepared to handle either capitalization of
       // this path.
       llvm::SmallString<256> candidate_path = sdks_path;
@@ -2718,7 +2674,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
     FileSpec platform_sdk(m_platform_sdk_path.c_str());
 
     if (FileSystem::Instance().Exists(platform_sdk) &&
-        SDKSupportsSwift(platform_sdk, PlatformDarwin::SDKType::unknown)) {
+        SDKSupportsSwift(platform_sdk, XcodeSDK::Type::unknown)) {
       invocation.setSDKPath(m_platform_sdk_path.c_str());
       set_sdk = true;
     }
@@ -2737,7 +2693,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   if (!set_sdk) {
     auto sdk = GetSDKType(triple, HostInfo::GetArchitecture().GetTriple());
     // Explicitly leave the SDKPath blank on other platforms.
-    if (sdk.sdk_type != PlatformDarwin::SDKType::unknown) {
+    if (sdk.sdk_type != XcodeSDK::Type::unknown) {
       auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
                                  sdk.min_version_minor);
       // Note that calling setSDKPath() also recomputes all paths that

@@ -8,6 +8,7 @@
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
@@ -294,4 +295,40 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_64.Clear();
     }
   }
+}
+
+std::string HostInfoMacOSX::GetXcodeSDK(XcodeSDK sdk) {
+  std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " +
+                          XcodeSDK::GetSDKNameForType(sdk.GetType()).str();
+  llvm::VersionTuple version = sdk.GetVersion();
+  if (!version.empty())
+    xcrun_cmd += version.getAsString();
+
+  int status = 0;
+  int signo = 0;
+  std::string output_str;
+  lldb_private::Status error =
+      Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
+                            &output_str, std::chrono::seconds(15));
+
+  // Check that xcrun return something useful.
+  if (status != 0 || output_str.empty())
+    return {};
+
+  // Convert to a StringRef so we can manipulate the string without modifying
+  // the underlying data.
+  llvm::StringRef output(output_str);
+
+  // Remove any trailing newline characters.
+  output = output.rtrim();
+
+  // Strip any leading newline characters and everything before them.
+  const size_t last_newline = output.rfind('\n');
+  if (last_newline != llvm::StringRef::npos)
+    output = output.substr(last_newline + 1);
+
+  // Whatever is left in output should be a valid path.
+  if (!FileSystem::Instance().Exists(output))
+    return {};
+  return output.str();
 }

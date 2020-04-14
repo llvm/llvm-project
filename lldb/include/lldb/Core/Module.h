@@ -19,6 +19,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -508,6 +509,12 @@ public:
     m_mod_time = mod_time;
   }
 
+  /// This callback will be called by SymbolFile implementations when
+  /// parsing a compile unit that contains SDK information.
+  /// \param sdk will be merged with \p m_sdk.
+  /// \param sysroot will be added to the path remapping dictionary.
+  void RegisterXcodeSDK(llvm::StringRef sdk, llvm::StringRef sysroot);
+
   /// Tells whether this module is capable of being the main executable for a
   /// process.
   ///
@@ -982,6 +989,10 @@ protected:
                                      ///when you have debug info for a module
                                      ///that doesn't match where the sources
                                      ///currently are
+
+  /// The (Xcode) SDK this module was compiled with.
+  XcodeSDK m_xcode_sdk;
+  
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and and
                                      /// ObjectFile instances for the debug info
