@@ -5,7 +5,7 @@ RUN: cp %p/Inputs/split-dwarf-test.dwo %t
 
 RUN: cd %t
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --obj=%p/Inputs/split-dwarf-test 0x400504 0x4004f4 | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
+RUN:    --obj=%p/Inputs/split-dwarf-test 0x400504 0x4004f4 | FileCheck --check-prefix=SPLIT --check-prefix=DWO %s
 
 Ensure we get the same results in the absence of gmlt-like data in the executable but the presence of a .dwo file
 
