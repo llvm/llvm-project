@@ -1,4 +1,4 @@
-//===-- TestSBCommandInterpreterTest.cpp ----------------------------------===//
+//===-- SBCommandInterpreterTest.cpp ------------------------===----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 
 using namespace lldb;
 
-class TestSBCommandInterpreterTest : public testing::Test {
+class SBCommandInterpreterTest : public testing::Test {
 protected:
   void SetUp() override {
     SBDebugger::Initialize();
@@ -44,7 +44,7 @@ private:
   std::string m_message;
 };
 
-TEST_F(TestSBCommandInterpreterTest, SingleWordCommand) {
+TEST_F(SBCommandInterpreterTest, SingleWordCommand) {
   // We first test a command without autorepeat
   DummyCommand dummy("It worked");
   m_interp.AddCommand("dummy", &dummy, /*help=*/nullptr);
@@ -79,7 +79,7 @@ TEST_F(TestSBCommandInterpreterTest, SingleWordCommand) {
   }
 }
 
-TEST_F(TestSBCommandInterpreterTest, MultiWordCommand) {
+TEST_F(SBCommandInterpreterTest, MultiWordCommand) {
   auto command = m_interp.AddMultiwordCommand("multicommand", /*help=*/nullptr);
   // We first test a subcommand without autorepeat
   DummyCommand subcommand("It worked again");
