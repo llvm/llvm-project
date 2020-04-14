@@ -38,6 +38,11 @@ jumpr r0
 # R_HEX_GOT_16_X
 r0 = add(r1,##bar@GOT)
 
+# R_HEX_GOT_16_X, duplex
+{ r0 = add(r0,##bar@GOT)
+  memw(r0) = r2 }
+
+
 # foo is local so no plt will be generated
 foo:
   jumpr lr
@@ -78,6 +83,7 @@ pvar:
 # TEXT: if (p0) jump:nt 0x102d0
 # TEXT: r0 = #0 ; jump 0x102d0
 # TEXT: r0 = add(r1,##-65548)
+# TEXT: r0 = add(r0,##-65548); memw(r0+#0) = r2 }
 
 # GOT: .got:
 # GOT:  00 00 00 00 00000000 <unknown>
