@@ -227,9 +227,9 @@ int FunctionComparator::cmpConstants(const Constant *L,
     unsigned TyRWidth = 0;
 
     if (auto *VecTyL = dyn_cast<VectorType>(TyL))
-      TyLWidth = VecTyL->getBitWidth();
+      TyLWidth = VecTyL->getPrimitiveSizeInBits().getFixedSize();
     if (auto *VecTyR = dyn_cast<VectorType>(TyR))
-      TyRWidth = VecTyR->getBitWidth();
+      TyRWidth = VecTyR->getPrimitiveSizeInBits().getFixedSize();
 
     if (TyLWidth != TyRWidth)
       return cmpNumbers(TyLWidth, TyRWidth);

@@ -1395,7 +1395,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Flatten a vector type.
   Type *getShadowTyNoVec(Type *ty) {
     if (VectorType *vt = dyn_cast<VectorType>(ty))
-      return IntegerType::get(*MS.C, vt->getBitWidth());
+      return IntegerType::get(*MS.C,
+                              vt->getPrimitiveSizeInBits().getFixedSize());
     return ty;
   }
 
