@@ -14,13 +14,13 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "DebugTranslation.h"
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -316,7 +316,7 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
     ompBuilder->initialize();
   }
-  return mlir::TypeSwitch<Operation *, LogicalResult>(&opInst)
+  return llvm::TypeSwitch<Operation *, LogicalResult>(&opInst)
       .Case([&](omp::BarrierOp) {
         ompBuilder->CreateBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
         return success();

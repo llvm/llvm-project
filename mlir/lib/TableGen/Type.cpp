@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Type.h"
-#include "mlir/ADT/TypeSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;

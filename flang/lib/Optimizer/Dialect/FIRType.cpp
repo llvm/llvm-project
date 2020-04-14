@@ -8,7 +8,6 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
@@ -17,6 +16,7 @@
 #include "mlir/Parser.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace fir;
 
@@ -847,7 +847,7 @@ bool isa_aggregate(mlir::Type t) {
 }
 
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
-  return mlir::TypeSwitch<mlir::Type, mlir::Type>(t)
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>(
           [](auto p) { return p.getEleTy(); })
       .Default([](mlir::Type) { return mlir::Type{}; });
