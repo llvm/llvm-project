@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -327,8 +327,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       // Check if this is an alias to a function. If so, get the
       // called aliasee for the checks below.
       if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
-        assert(!CalledFunction &&
-               "Expected null called function in callsite for alias");
+        assert(!CalledFunction && "Expected null called function in callsite for alias");
         CalledFunction = dyn_cast<Function>(GA->getBaseObject());
       }
       // Check if this is a direct call to a known function or a known
@@ -461,8 +460,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       NonRenamableLocal || HasInlineAsmMaybeReferencingInternal;
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
                                     /* Live = */ false, F.isDSOLocal(),
-                                    F.hasLinkOnceODRLinkage() &&
-                                        F.hasGlobalUnnamedAddr());
+                                    F.hasLinkOnceODRLinkage() && F.hasGlobalUnnamedAddr());
   FunctionSummary::FFlags FunFlags{
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
@@ -580,8 +578,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
                                     /* Live = */ false, V.isDSOLocal(),
-                                    V.hasLinkOnceODRLinkage() &&
-                                        V.hasGlobalUnnamedAddr());
+                                    V.hasLinkOnceODRLinkage() && V.hasGlobalUnnamedAddr());
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -607,7 +604,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                        Constant ? false : CanBeInternalized,
                                        Constant, V.getVCallVisibility());
   auto GVarSummary = std::make_unique<GlobalVarSummary>(Flags, VarFlags,
-                                                        RefEdges.takeVector());
+                                                         RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
   if (HasBlockAddress)
@@ -617,13 +614,13 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 
-static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
-                                DenseSet<GlobalValue::GUID> &CantBePromoted) {
+static void
+computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
+                    DenseSet<GlobalValue::GUID> &CantBePromoted) {
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(A.getLinkage(), NonRenamableLocal,
                                     /* Live = */ false, A.isDSOLocal(),
-                                    A.hasLinkOnceODRLinkage() &&
-                                        A.hasGlobalUnnamedAddr());
+                                    A.hasLinkOnceODRLinkage() && A.hasGlobalUnnamedAddr());
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getBaseObject();
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
@@ -694,14 +691,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           GlobalValue *GV = M.getNamedValue(Name);
           if (!GV)
             return;
-          assert(GV->isDeclaration() &&
-                 "Def in module asm already has definition");
+          assert(GV->isDeclaration() && "Def in module asm already has definition");
           GlobalValueSummary::GVFlags GVFlags(GlobalValue::InternalLinkage,
                                               /* NotEligibleToImport = */ true,
                                               /* Live = */ true,
                                               /* Local */ GV->isDSOLocal(),
-                                              GV->hasLinkOnceODRLinkage() &&
-                                                  GV->hasGlobalUnnamedAddr());
+                                              GV->hasLinkOnceODRLinkage() && GV->hasGlobalUnnamedAddr());
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
@@ -839,8 +834,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
 
-ModuleSummaryIndex ModuleSummaryIndexAnalysis::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+ModuleSummaryIndex
+ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   return buildModuleSummaryIndex(
