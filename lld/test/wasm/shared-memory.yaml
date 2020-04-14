@@ -10,6 +10,8 @@
 
 # RUN: not wasm-ld --no-entry --features=atomics %t1.o -o - 2>&1 | FileCheck %s --check-prefix ATOMICS-NO-SHARED
 
+# RUN: wasm-ld --relocatable --features=atomics %t1.o -o - | obj2yaml | FileCheck %s --check-prefix ATOMICS-RELOCATABLE
+
 # RUN: wasm-ld --no-entry --shared-memory --max-memory=131072 --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
 
 --- !WASM
@@ -64,6 +66,11 @@ Sections:
 # SHARED-NO-BULK-MEM: 'bulk-memory' feature must be used in order to use shared memory
 
 # ATOMICS-NO-SHARED: 'atomics' feature is used, so --shared-memory must be used{{$}}
+
+# ATOMICS-RELOCATABLE:        - Type:            MEMORY
+# ATOMICS-RELOCATABLE-NEXT:     Memories:
+# ATOMICS-RELOCATABLE-NEXT:         Initial:         0x00000001
+# ATOMICS-RELOCATABLE-NEXT:   - Type:
 
 # SHARED:        - Type:            MEMORY
 # SHARED-NEXT:     Memories:
