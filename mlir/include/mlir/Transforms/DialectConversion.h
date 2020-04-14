@@ -108,7 +108,7 @@ public:
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT,
-            typename T = typename FunctionTraits<FnT>::template arg_t<0>>
+            typename T = typename llvm::function_traits<FnT>::template arg_t<0>>
   void addConversion(FnT &&callback) {
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
@@ -172,7 +172,7 @@ private:
   /// different callback forms, that all compose into a single version.
   /// With callback of form: `Optional<Type>(T)`
   template <typename T, typename FnT>
-  std::enable_if_t<is_invocable<FnT, T>::value, ConversionCallbackFn>
+  std::enable_if_t<llvm::is_invocable<FnT, T>::value, ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
     return wrapCallback<T>([callback = std::forward<FnT>(callback)](
                                T type, SmallVectorImpl<Type> &results) {
@@ -187,7 +187,7 @@ private:
   }
   /// With callback of form: `Optional<LogicalResult>(T, SmallVectorImpl<> &)`
   template <typename T, typename FnT>
-  std::enable_if_t<!is_invocable<FnT, T>::value, ConversionCallbackFn>
+  std::enable_if_t<!llvm::is_invocable<FnT, T>::value, ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
     return [callback = std::forward<FnT>(callback)](
                Type type,
@@ -482,7 +482,8 @@ public:
     addDynamicallyLegalOp<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<!is_invocable<Callable, Operation *>::value>::type
+  typename std::enable_if<
+      !llvm::is_invocable<Callable, Operation *>::value>::type
   addDynamicallyLegalOp(Callable &&callback) {
     addDynamicallyLegalOp<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });
@@ -514,7 +515,8 @@ public:
     markOpRecursivelyLegal<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<!is_invocable<Callable, Operation *>::value>::type
+  typename std::enable_if<
+      !llvm::is_invocable<Callable, Operation *>::value>::type
   markOpRecursivelyLegal(Callable &&callback) {
     markOpRecursivelyLegal<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });

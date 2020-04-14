@@ -73,6 +73,7 @@ add_llvm_unittest(ADTTests
   TinyPtrVectorTest.cpp
   TripleTest.cpp
   TwineTest.cpp
+  TypeTraitsTest.cpp
   WaymarkingTest.cpp
   )
 

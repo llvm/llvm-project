@@ -46,7 +46,7 @@ public:
   /// Note: This inference rules for this overload are very simple: strip
   ///       pointers and references.
   template <typename CallableT> DerivedT &Case(CallableT &&caseFn) {
-    using Traits = FunctionTraits<std::decay_t<CallableT>>;
+    using Traits = llvm::function_traits<std::decay_t<CallableT>>;
     using CaseT = std::remove_cv_t<std::remove_pointer_t<
         std::remove_reference_t<typename Traits::template arg_t<0>>>>;
 
@@ -64,20 +64,22 @@ protected:
   /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
   /// selected if `value` already has a suitable dyn_cast method.
   template <typename CastT, typename ValueT>
-  static auto castValue(
-      ValueT value,
-      typename std::enable_if_t<
-          is_detected<has_dyn_cast_t, ValueT, CastT>::value> * = nullptr) {
+  static auto
+  castValue(ValueT value,
+            typename std::enable_if_t<
+                llvm::is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
+                nullptr) {
     return value.template dyn_cast<CastT>();
   }
 
   /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
   /// selected if llvm::dyn_cast should be used.
   template <typename CastT, typename ValueT>
-  static auto castValue(
-      ValueT value,
-      typename std::enable_if_t<
-          !is_detected<has_dyn_cast_t, ValueT, CastT>::value> * = nullptr) {
+  static auto
+  castValue(ValueT value,
+            typename std::enable_if_t<
+                !llvm::is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
+                nullptr) {
     return dyn_cast<CastT>(value);
   }
 

@@ -75,6 +75,79 @@ template <typename T> struct make_const_ref {
       typename std::add_const<T>::type>::type;
 };
 
+/// Utilities for detecting if a given trait holds for some set of arguments
+/// 'Args'. For example, the given trait could be used to detect if a given type
+/// has a copy assignment operator:
+///   template<class T>
+///   using has_copy_assign_t = decltype(std::declval<T&>()
+///                                                 = std::declval<const T&>());
+///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
+namespace detail {
+template <typename...> using void_t = void;
+template <class, template <class...> class Op, class... Args> struct detector {
+  using value_t = std::false_type;
+};
+template <template <class...> class Op, class... Args>
+struct detector<void_t<Op<Args...>>, Op, Args...> {
+  using value_t = std::true_type;
+};
+} // end namespace detail
+
+template <template <class...> class Op, class... Args>
+using is_detected = typename detail::detector<void, Op, Args...>::value_t;
+
+/// Check if a Callable type can be invoked with the given set of arg types.
+namespace detail {
+template <typename Callable, typename... Args>
+using is_invocable =
+    decltype(std::declval<Callable &>()(std::declval<Args>()...));
+} // namespace detail
+
+template <typename Callable, typename... Args>
+using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
+
+/// This class provides various trait information about a callable object.
+///   * To access the number of arguments: Traits::num_args
+///   * To access the type of an argument: Traits::arg_t<i>
+///   * To access the type of the result:  Traits::result_t
+template <typename T, bool isClass = std::is_class<T>::value>
+struct function_traits : public function_traits<decltype(&T::operator())> {};
+
+/// Overload for class function types.
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
+  /// The number of arguments to this function.
+  enum { num_args = sizeof...(Args) };
+
+  /// The result type of this function.
+  using result_t = ReturnType;
+
+  /// The type of an argument to this function.
+  template <size_t i>
+  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+};
+/// Overload for class function types.
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType (ClassType::*)(Args...), false>
+    : function_traits<ReturnType (ClassType::*)(Args...) const> {};
+/// Overload for non-class function types.
+template <typename ReturnType, typename... Args>
+struct function_traits<ReturnType (*)(Args...), false> {
+  /// The number of arguments to this function.
+  enum { num_args = sizeof...(Args) };
+
+  /// The result type of this function.
+  using result_t = ReturnType;
+
+  /// The type of an argument to this function.
+  template <size_t i>
+  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+};
+/// Overload for non-class function type references.
+template <typename ReturnType, typename... Args>
+struct function_traits<ReturnType (&)(Args...), false>
+    : public function_traits<ReturnType (*)(Args...)> {};
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
 //===----------------------------------------------------------------------===//
