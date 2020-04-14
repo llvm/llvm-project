@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure the test passes if it fails at compile-time
+// REQUIRES: verify-support
+
+// Make sure the test passes if the expected diagnostic is correct.
 
 struct Foo { };
-typedef Foo::x x;
-
-int main() { }
+typedef Foo::x x; // expected-error{{no type named 'x' in 'Foo'}}

@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: verify-support
+
 // XFAIL: *
 
-// Make sure the test DOES NOT pass if it fails at compile-time, but the
-// expected-error is wrong.
+// Make sure the test DOES NOT pass if the expected diagnostic is wrong.
 
 struct Foo { };
 typedef Foo::x x; // expected-error{{this is not found in the errors}}
-
-int main() { }
