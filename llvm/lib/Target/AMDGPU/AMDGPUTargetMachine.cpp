@@ -173,13 +173,6 @@ static cl::opt<bool> EnableAtomicOptimizations(
   cl::init(false),
   cl::Hidden);
 
-// Enable conditional discard transformations
-static cl::opt<bool> EnableConditionalDiscardTransformations(
-  "amdgpu-conditional-discard-transformations",
-  cl::desc("Enable conditional discard transformations"),
-  cl::init(false),
-  cl::Hidden);
-
 // Enable Mode register optimization
 static cl::opt<bool> EnableSIModeRegisterPass(
   "amdgpu-mode-register",
@@ -871,8 +864,7 @@ bool GCNPassConfig::addPreISel() {
 
   addPass(createSinkingPass());
 
-  if (EnableConditionalDiscardTransformations)
-    addPass(createAMDGPUConditionalDiscardPass());
+  addPass(createAMDGPUConditionalDiscardPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
