@@ -409,7 +409,7 @@ private:
       markOverdefined(IV, V);
       return true;
     }
-    if (IV.mergeIn(MergeWithV, DL)) {
+    if (IV.mergeIn(MergeWithV)) {
       pushToWorkList(IV, V);
       LLVM_DEBUG(dbgs() << "Merged " << MergeWithV << " into " << *V << " : "
                         << IV << "\n");
@@ -743,7 +743,7 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
       continue;
 
     ValueLatticeElement &Res = getValueState(&PN);
-    Changed |= Res.mergeIn(IV, DL);
+    Changed |= Res.mergeIn(IV);
     if (Res.isOverdefined())
       break;
   }
@@ -909,8 +909,8 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   ValueLatticeElement TVal = getValueState(I.getTrueValue());
   ValueLatticeElement FVal = getValueState(I.getFalseValue());
 
-  bool Changed = ValueState[&I].mergeIn(TVal, DL);
-  Changed |= ValueState[&I].mergeIn(FVal, DL);
+  bool Changed = ValueState[&I].mergeIn(TVal);
+  Changed |= ValueState[&I].mergeIn(FVal);
   if (Changed)
     pushToWorkListMsg(ValueState[&I], &I);
 }
