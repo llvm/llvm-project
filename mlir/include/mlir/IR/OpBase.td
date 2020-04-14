@@ -582,6 +582,7 @@ def I8Tensor   : TensorOf<[I8]>;
 def I16Tensor  : TensorOf<[I16]>;
 def I32Tensor  : TensorOf<[I32]>;
 def I64Tensor  : TensorOf<[I64]>;
+def IndexTensor: TensorOf<[Index]>;
 
 def BF16Tensor : TensorOf<[BF16]>;
 def F16Tensor  : TensorOf<[F16]>;
