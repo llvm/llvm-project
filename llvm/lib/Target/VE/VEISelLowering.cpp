@@ -447,7 +447,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.
-  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CS)
+  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_VE);
