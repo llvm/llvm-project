@@ -1023,8 +1023,9 @@ llvm.func @vect_i64idx(%arg0: !llvm<"<4 x float>">, %arg1: !llvm.i64, %arg2: !ll
 
 // CHECK-LABEL: @alloca
 llvm.func @alloca(%size : !llvm.i64) {
-  //      CHECK: alloca
-  //  CHECK-NOT: align
+  // Alignment automatically set by the LLVM IR builder when alignment attribute
+  // is 0.
+  //  CHECK: alloca {{.*}} align 4
   llvm.alloca %size x !llvm.i32 {alignment = 0} : (!llvm.i64) -> (!llvm<"i32*">)
   // CHECK-NEXT: alloca {{.*}} align 8
   llvm.alloca %size x !llvm.i32 {alignment = 8} : (!llvm.i64) -> (!llvm<"i32*">)
