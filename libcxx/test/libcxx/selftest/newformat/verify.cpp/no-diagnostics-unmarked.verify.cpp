@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure the test passes if it fails at compile-time
+// REQUIRES: verify-support
 
-struct Foo { };
-typedef Foo::x x;
+// XFAIL: *
+
+// Make sure the test DOES NOT pass if there are no diagnostics, but we didn't
+// use the 'expected-no-diagnostics' markup.
+//
+// Note: For the purpose of this test, make sure the file would otherwise
+//       compile to make sure we really fail due to a lack of markup.
 
 int main() { }
