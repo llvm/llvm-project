@@ -812,8 +812,30 @@ TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(void *type, size_t idx,
 bool TypeSystemSwiftTypeRef::IsReferenceType(void *type,
                                              CompilerType *pointee_type,
                                              bool *is_rvalue) {
-  return m_swift_ast_context->IsReferenceType(ReconstructType(type),
-                                              pointee_type, is_rvalue);
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node = DemangleCanonicalType(Dem, type);
+    if (!node || node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::InOut)
+      return false;
+
+    if (pointee_type) {
+      NodePointer referenced = node->getFirstChild();
+      auto type = Dem.createNode(Node::Kind::Type);
+      type->addChild(referenced, Dem);
+      *pointee_type = RemangleAsType(Dem, type);
+    }
+
+    if (is_rvalue)
+      *is_rvalue = false;
+
+    return true;
+  };
+
+  VALIDATE_AND_RETURN(
+      impl, m_swift_ast_context->IsReferenceType(ReconstructType(type),
+                                                 pointee_type, is_rvalue));
 }
 bool TypeSystemSwiftTypeRef::ShouldTreatScalarValueAsAddress(
     lldb::opaque_compiler_type_t type) {
