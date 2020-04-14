@@ -1955,26 +1955,31 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   // Peek through a bitcasted shuffle operand by scaling the mask. If the
   // simulated shuffle can simplify, then this shuffle is unnecessary:
   // shuf (bitcast X), undef, Mask --> bitcast X'
-  // TODO: This could be extended to allow length-changing shuffles and/or casts
-  //       to narrower elements. The transform might also be obsoleted if we
-  //       allowed canonicalization of bitcasted shuffles.
+  // TODO: This could be extended to allow length-changing shuffles.
+  //       The transform might also be obsoleted if we allowed canonicalization
+  //       of bitcasted shuffles.
   Value *X;
   if (match(LHS, m_BitCast(m_Value(X))) && match(RHS, m_Undef()) &&
-      X->getType()->isVectorTy() && VWidth == LHSWidth &&
-      cast<VectorType>(X->getType())->getNumElements() >= VWidth) {
-    // Create the scaled mask constant.
+      X->getType()->isVectorTy() && VWidth == LHSWidth) {
+    // Try to create a scaled mask constant.
     auto *XType = cast<VectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
-    assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
-    unsigned ScaleFactor = XNumElts / VWidth;
     SmallVector<int, 16> ScaledMask;
-    narrowShuffleMaskElts(ScaleFactor, Mask, ScaledMask);
-
-    // If the shuffled source vector simplifies, cast that value to this
-    // shuffle's type.
-    if (auto *V = SimplifyShuffleVectorInst(X, UndefValue::get(XType),
-                                            ScaledMask, XType, ShufQuery))
-      return BitCastInst::Create(Instruction::BitCast, V, SVI.getType());
+    if (XNumElts >= VWidth) {
+      assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
+      narrowShuffleMaskElts(XNumElts / VWidth, Mask, ScaledMask);
+    } else {
+      assert(VWidth % XNumElts == 0 && "Unexpected vector bitcast");
+      if (!widenShuffleMaskElts(VWidth / XNumElts, Mask, ScaledMask))
+        ScaledMask.clear();
+    }
+    if (!ScaledMask.empty()) {
+      // If the shuffled source vector simplifies, cast that value to this
+      // shuffle's type.
+      if (auto *V = SimplifyShuffleVectorInst(X, UndefValue::get(XType),
+                                              ScaledMask, XType, ShufQuery))
+        return BitCastInst::Create(Instruction::BitCast, V, SVI.getType());
+    }
   }
 
   if (LHS == RHS) {
