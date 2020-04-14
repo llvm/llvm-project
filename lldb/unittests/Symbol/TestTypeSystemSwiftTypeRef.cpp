@@ -136,6 +136,8 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(1), void_type);
+    ASSERT_EQ(impl_two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
+    ASSERT_EQ(impl_two_args.GetFunctionArgumentTypeAtIndex(1), void_type);
   }
   {
     NodePointer n = b.GlobalType(b.Node(
@@ -153,6 +155,8 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
+    ASSERT_EQ(two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
+    ASSERT_EQ(two_args.GetFunctionArgumentTypeAtIndex(1), void_type);
   }
 }
 
