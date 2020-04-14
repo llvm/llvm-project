@@ -714,10 +714,12 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
       for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                    D.getFieldLoc(),
-                                    /*IsDecl=*/false,
-                                    {D.getField()}});
+
+        llvm::SmallVector<const NamedDecl *, 1> Targets;
+        if (D.getField())
+          Targets.push_back(D.getField());
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), D.getFieldLoc(),
+                                    /*IsDecl=*/false, std::move(Targets)});
       }
     }
   };

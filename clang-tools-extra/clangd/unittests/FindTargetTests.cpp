@@ -1273,7 +1273,20 @@ TEST_F(FindExplicitReferencesTest, All) {
         "5: targets = {Bar}\n"
         "6: targets = {bar}, decl\n"
         "7: targets = {foo()::Bar::Foo}\n"
-        "8: targets = {foo()::Baz::Field}\n"}};
+        "8: targets = {foo()::Baz::Field}\n"},
+      {R"cpp(
+           template<typename T>
+           void crash(T);
+           template<typename T>
+           void foo() {
+             $0^crash({.$1^x = $2^T()});
+           }
+        )cpp",
+        "0: targets = {crash}\n"
+        "1: targets = {}\n"
+        "2: targets = {T}\n"
+      },
+    };
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;
