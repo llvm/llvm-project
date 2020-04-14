@@ -3,11 +3,11 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/tls-opt-gdie.s -o %tso.o
 // RUN: ld.lld -shared %tso.o -soname=so -o %t.so
 // RUN: ld.lld %t.o %t.so -o %t1
-// RUN: llvm-readobj -S %t1 | FileCheck --check-prefix=SEC --implicit-check-not=.plt %s
+// RUN: llvm-readelf -S %t1 | FileCheck --check-prefix=SEC --implicit-check-not=.plt %s
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
 // RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
-// SEC .got PROGBITS 00000000002020b0 0020b0 000010 00 WA 0 0 8
+// SEC: .got PROGBITS 00000000002023a8 0003a8 000010 00 WA 0 0 8
 
 //RELOC:      Relocations [
 //RELOC-NEXT:   Section (5) .rela.dyn {
