@@ -3188,8 +3188,12 @@ void AsmPrinterHandler::markFunctionEnd() {}
 // describes each instrumentation point.  When XRay patches your code, the index
 // into this table will be given to your handler as a patch point identifier.
 void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
+                                         const MCExpr *Location,
                                          const MCSymbol *CurrentFnSym) const {
-  Out->emitSymbolValue(Sled, Bytes);
+  if (Location)
+    Out->emitValueImpl(Location, Bytes);
+  else
+    Out->emitSymbolValue(Sled, Bytes);
   Out->emitSymbolValue(CurrentFnSym, Bytes);
   auto Kind8 = static_cast<uint8_t>(Kind);
   Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
@@ -3209,9 +3213,14 @@ void AsmPrinter::emitXRayTable() {
   const Function &F = MF->getFunction();
   MCSection *InstMap = nullptr;
   MCSection *FnSledIndex = nullptr;
-  if (MF->getSubtarget().getTargetTriple().isOSBinFormatELF()) {
+  const Triple &TT = TM.getTargetTriple();
+  // Version 2 uses a PC-relative address on all supported targets.
+  bool PCRel = TT.isX86();
+  if (TT.isOSBinFormatELF()) {
     auto LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
-    auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
+    auto Flags = ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
+    if (!PCRel)
+      Flags |= ELF::SHF_WRITE;
     StringRef GroupName;
     if (F.hasComdat()) {
       Flags |= ELF::SHF_GROUP;
@@ -3240,8 +3249,17 @@ void AsmPrinter::emitXRayTable() {
   MCSymbol *SledsStart = OutContext.createTempSymbol("xray_sleds_start", true);
   OutStreamer->SwitchSection(InstMap);
   OutStreamer->emitLabel(SledsStart);
-  for (const auto &Sled : Sleds)
-    Sled.emit(WordSizeBytes, OutStreamer.get(), CurrentFnSym);
+  for (const auto &Sled : Sleds) {
+    const MCExpr *Location = nullptr;
+    if (PCRel) {
+      MCSymbol *Dot = OutContext.createTempSymbol();
+      OutStreamer->emitLabel(Dot);
+      Location = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(Sled.Sled, OutContext),
+          MCSymbolRefExpr::create(Dot, OutContext), OutContext);
+    }
+    Sled.emit(WordSizeBytes, OutStreamer.get(), Location, CurrentFnSym);
+  }
   MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_sleds_end", true);
   OutStreamer->emitLabel(SledsEnd);
 
