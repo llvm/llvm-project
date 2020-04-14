@@ -83,13 +83,15 @@ void ReachingDefAnalysis::enterBasicBlock(
     if (Incoming.empty())
       continue;
 
-    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
-      // Use the most recent predecessor def for each register.
+    // Find the most recent reaching definition from a predecessor.
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
       LiveRegs[Unit] = std::max(LiveRegs[Unit], Incoming[Unit]);
-      if ((LiveRegs[Unit] != ReachingDefDefaultVal))
-        MBBReachingDefs[MBBNumber][Unit].push_back(LiveRegs[Unit]);
-    }
   }
+
+  // Insert the most recent reaching definition we found.
+  for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
+    if (LiveRegs[Unit] != ReachingDefDefaultVal)
+      MBBReachingDefs[MBBNumber][Unit].push_back(LiveRegs[Unit]);
 
   LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
                     << (!TraversedMBB.IsDone ? ": incomplete\n"
@@ -110,7 +112,8 @@ void ReachingDefAnalysis::leaveBasicBlock(
   // only cares about the clearance from the end of the block, so adjust
   // everything to be relative to the end of the basic block.
   for (int &OutLiveReg : MBBOutRegsInfos[MBBNumber])
-    OutLiveReg -= CurInstr;
+    if (OutLiveReg != ReachingDefDefaultVal)
+      OutLiveReg -= CurInstr;
   LiveRegs.clear();
 }
 

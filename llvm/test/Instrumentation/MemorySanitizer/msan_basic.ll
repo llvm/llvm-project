@@ -953,7 +953,7 @@ entry:
 
 attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
 
-; CHECK call void @llvm.memcpy.p0i8.p0i8.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 48
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 48
 
 declare i32 @InnerTailCall(i32 %a)
 

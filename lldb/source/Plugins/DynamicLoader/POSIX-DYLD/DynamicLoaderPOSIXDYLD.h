@@ -136,7 +136,7 @@ protected:
 
   void LoadVDSO();
 
-  // Loading an interpreter module (if present) assumming m_interpreter_base
+  // Loading an interpreter module (if present) assuming m_interpreter_base
   // already points to its base address.
   lldb::ModuleSP LoadInterpreterModule();
 

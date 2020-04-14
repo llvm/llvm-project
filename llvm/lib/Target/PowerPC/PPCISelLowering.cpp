@@ -6866,16 +6866,16 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
     }
 
-    if (ByValSize <= PtrByteSize) {
-      State.AllocateStack(PtrByteSize, PtrByteSize);
-      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
-        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
-        return false;
-      }
-    }
+    State.AllocateStack(alignTo(ByValSize, PtrByteSize), PtrByteSize);
 
-    report_fatal_error(
-        "Pass-by-value arguments are only supported in a single register.");
+    for (unsigned I = 0, E = ByValSize; I < E; I += PtrByteSize) {
+      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32))
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
+      else
+        report_fatal_error(
+            "Pass-by-value arguments are only supported in registers.");
+    }
+    return false;
   }
 
   // Arguments always reserve parameter save area.
@@ -7222,67 +7222,90 @@ SDValue PPCTargetLowering::LowerCall_AIX(
                                    : DAG.getRegister(PPC::R1, MVT::i32);
 
   for (unsigned I = 0, E = ArgLocs.size(); I != E;) {
-    CCValAssign &VA = ArgLocs[I++];
-
-    SDValue Arg = OutVals[VA.getValNo()];
-    ISD::ArgFlagsTy Flags = Outs[VA.getValNo()].Flags;
-    const MVT LocVT = VA.getLocVT();
-    const MVT ValVT = VA.getValVT();
+    const unsigned ValNo = ArgLocs[I].getValNo();
+    SDValue Arg = OutVals[ValNo];
+    ISD::ArgFlagsTy Flags = Outs[ValNo].Flags;
 
     if (Flags.isByVal()) {
       const unsigned ByValSize = Flags.getByValSize();
 
       // Nothing to do for zero-sized ByVals on the caller side.
-      if (!ByValSize)
+      if (!ByValSize) {
+        ++I;
+        continue;
+      }
+
+      auto GetLoad = [&](EVT VT, unsigned LoadOffset) {
+        return DAG.getExtLoad(ISD::ZEXTLOAD, dl, PtrVT, Chain,
+                              (LoadOffset != 0)
+                                  ? DAG.getObjectPtrOffset(dl, Arg, LoadOffset)
+                                  : Arg,
+                              MachinePointerInfo(), VT);
+      };
+
+      unsigned LoadOffset = 0;
+
+      // Initialize registers, which are fully occupied by the by-val argument.
+      while (I != E && LoadOffset + PtrByteSize <= ByValSize) {
+        SDValue Load = GetLoad(PtrVT, LoadOffset);
+        MemOpChains.push_back(Load.getValue(1));
+        LoadOffset += PtrByteSize;
+        const CCValAssign &ByValVA = ArgLocs[I++];
+        assert(ByValVA.isRegLoc() && ByValVA.getValNo() == ValNo &&
+               "Unexpected location for pass-by-value argument.");
+        RegsToPass.push_back(std::make_pair(ByValVA.getLocReg(), Load));
+      }
+
+      if (LoadOffset == ByValSize)
         continue;
 
-      assert(
-          VA.isRegLoc() && ByValSize <= PtrByteSize &&
-          "Pass-by-value arguments are only supported in a single register.");
+      const unsigned ResidueBytes = ByValSize % PtrByteSize;
+      assert(ResidueBytes != 0 && LoadOffset + PtrByteSize > ByValSize &&
+             "Unexpected register residue for by-value argument.");
 
-      // Loads must be a power-of-2 size and cannot be larger than the
-      // ByValSize. For example: a 7 byte by-val arg requires 4, 2 and 1 byte
-      // loads.
-      SDValue RegVal;
-      for (unsigned Bytes = 0; Bytes != ByValSize;) {
-        unsigned N = PowerOf2Floor(ByValSize - Bytes);
+      // Initialize the final register residue.
+      // Any residue that occupies the final by-val arg register must be
+      // left-justified on AIX. Loads must be a power-of-2 size and cannot be
+      // larger than the ByValSize. For example: a 7 byte by-val arg requires 4,
+      // 2 and 1 byte loads.
+      SDValue ResidueVal;
+      for (unsigned Bytes = 0; Bytes != ResidueBytes;) {
+        const unsigned N = PowerOf2Floor(ResidueBytes - Bytes);
         const MVT VT =
             N == 1 ? MVT::i8
                    : ((N == 2) ? MVT::i16 : (N == 4 ? MVT::i32 : MVT::i64));
-
-        SDValue LoadAddr = Arg;
-        if (Bytes != 0) {
-          // Adjust the load offset by the number of bytes read so far.
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
-          LoadAddr = DAG.getNode(ISD::ADD, dl, LocVT, Arg,
-                                 DAG.getConstant(Bytes, dl, LocVT), Flags);
-        }
-        SDValue Load = DAG.getExtLoad(ISD::ZEXTLOAD, dl, PtrVT, Chain, LoadAddr,
-                                      MachinePointerInfo(), VT);
+        SDValue Load = GetLoad(VT, LoadOffset);
         MemOpChains.push_back(Load.getValue(1));
-
+        LoadOffset += N;
         Bytes += N;
-        assert(LocVT.getSizeInBits() >= (Bytes * 8));
-        if (unsigned NumSHLBits = LocVT.getSizeInBits() - (Bytes * 8)) {
-          // By-val arguments are passed left-justfied in register.
-          EVT ShiftAmountTy =
-              getShiftAmountTy(Load->getValueType(0), DAG.getDataLayout());
-          SDValue SHLAmt = DAG.getConstant(NumSHLBits, dl, ShiftAmountTy);
-          SDValue ShiftedLoad =
-              DAG.getNode(ISD::SHL, dl, Load.getValueType(), Load, SHLAmt);
-          RegVal = RegVal ? DAG.getNode(ISD::OR, dl, LocVT, RegVal, ShiftedLoad)
-                          : ShiftedLoad;
-        } else {
-          assert(!RegVal && Bytes == ByValSize &&
-                 "Pass-by-value argument handling unexpectedly incomplete.");
-          RegVal = Load;
-        }
+
+        // By-val arguments are passed left-justfied in register.
+        // Every load here needs to be shifted, otherwise a full register load
+        // should have been used.
+        assert(PtrVT.getSimpleVT().getSizeInBits() > (Bytes * 8) &&
+               "Unexpected load emitted during handling of pass-by-value "
+               "argument.");
+        unsigned NumSHLBits = PtrVT.getSimpleVT().getSizeInBits() - (Bytes * 8);
+        EVT ShiftAmountTy =
+            getShiftAmountTy(Load->getValueType(0), DAG.getDataLayout());
+        SDValue SHLAmt = DAG.getConstant(NumSHLBits, dl, ShiftAmountTy);
+        SDValue ShiftedLoad =
+            DAG.getNode(ISD::SHL, dl, Load.getValueType(), Load, SHLAmt);
+        ResidueVal = ResidueVal ? DAG.getNode(ISD::OR, dl, PtrVT, ResidueVal,
+                                              ShiftedLoad)
+                                : ShiftedLoad;
       }
 
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), RegVal));
+      const CCValAssign &ByValVA = ArgLocs[I++];
+      assert(ByValVA.isRegLoc() && ByValVA.getValNo() == ValNo &&
+             "Additional register location expected for by-value argument.");
+      RegsToPass.push_back(std::make_pair(ByValVA.getLocReg(), ResidueVal));
       continue;
     }
+
+    CCValAssign &VA = ArgLocs[I++];
+    const MVT LocVT = VA.getLocVT();
+    const MVT ValVT = VA.getValVT();
 
     switch (VA.getLocInfo()) {
     default:

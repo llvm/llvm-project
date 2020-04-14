@@ -56,7 +56,7 @@ RUN: llvm-addr2line -pafi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileChe
 #PRETTY: some text
 #PRETTY: {{[0x]+}}40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3:3
 #PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
-#PRETTY   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+#PRETTY:  (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 #PRETTY: some text2
 #
 #ZERO: ??

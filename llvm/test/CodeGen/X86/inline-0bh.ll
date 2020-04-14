@@ -6,7 +6,7 @@ define i32 @PR31007() {
 ; CHECK-LABEL: PR31007:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  #APP
-; CHECK   :    addb $11, %al
+; CHECK:       addb $11, %al
 ; CHECK:       #NO_APP
 ; CHECK-NEXT:  xorl %eax, %eax
 ; CHECK-NEXT:  retq

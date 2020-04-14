@@ -157,7 +157,7 @@ class BreakpointNames(TestBase):
         # Create a dummy breakpoint to use up ID 1
         _ = self.target.BreakpointCreateByLocation(self.main_file_spec, 30)
 
-        # Create a breakpiont to test with
+        # Create a breakpoint to test with
         bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         bkpt_name = "ABreakpoint"
         bkpt_id = bkpt.GetID()

@@ -3791,7 +3791,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
               } // switch(stop_state)
             }   // else // if in All-stop-mode
           }     // if (continue_packet)
-        }       // case eBroadcastBitAysncContinue
+        }       // case eBroadcastBitAsyncContinue
         break;
 
         case eBroadcastBitAsyncThreadShouldExit:
@@ -4682,7 +4682,7 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                   // value.
                   module.set_base_is_offset(true);
                 } else if (name == "l_ld") {
-                  // the memory address of the libraries PT_DYAMIC section.
+                  // the memory address of the libraries PT_DYNAMIC section.
                   module.set_dynamic(StringConvert::ToUInt64(
                       value.data(), LLDB_INVALID_ADDRESS, 0));
                 }

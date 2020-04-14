@@ -103,6 +103,13 @@ Symbol *SymbolTable::find(StringRef name) {
   return sym;
 }
 
+// A version script/dynamic list is only meaningful for a Defined symbol.
+// A CommonSymbol will be converted to a Defined in replaceCommonSymbols().
+// A lazy symbol may be made Defined if an LTO libcall fetches it.
+static bool canBeVersioned(const Symbol &sym) {
+  return sym.isDefined() || sym.isCommon() || sym.isLazy();
+}
+
 // Initialize demangledSyms with a map from demangled symbols to symbol
 // objects. Used to handle "extern C++" directive in version scripts.
 //
@@ -119,11 +126,9 @@ Symbol *SymbolTable::find(StringRef name) {
 StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
-    for (Symbol *sym : symVector) {
-      if (!sym->isDefined() && !sym->isCommon())
-        continue;
-      (*demangledSyms)[demangleItanium(sym->getName())].push_back(sym);
-    }
+    for (Symbol *sym : symVector)
+      if (canBeVersioned(*sym))
+        (*demangledSyms)[demangleItanium(sym->getName())].push_back(sym);
   }
   return *demangledSyms;
 }
@@ -131,9 +136,9 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
 std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion ver) {
   if (ver.isExternCpp)
     return getDemangledSyms().lookup(ver.name);
-  if (Symbol *b = find(ver.name))
-    if (b->isDefined() || b->isCommon())
-      return {b};
+  if (Symbol *sym = find(ver.name))
+    if (canBeVersioned(*sym))
+      return {sym};
   return {};
 }
 
@@ -149,7 +154,7 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver) {
   }
 
   for (Symbol *sym : symVector)
-    if ((sym->isDefined() || sym->isCommon()) && m.match(sym->getName()))
+    if (canBeVersioned(*sym) && m.match(sym->getName()))
       res.push_back(sym);
   return res;
 }

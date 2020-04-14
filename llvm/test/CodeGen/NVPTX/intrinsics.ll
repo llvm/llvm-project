@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
 
-; CHECK-LABEL test_fabsf(
+; CHECK-LABEL: test_fabsf(
 define float @test_fabsf(float %f) {
 ; CHECK: abs.f32
   %x = call float @llvm.fabs.f32(float %f)

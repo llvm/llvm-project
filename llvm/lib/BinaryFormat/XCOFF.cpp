@@ -10,27 +10,37 @@
 
 using namespace llvm;
 
+#define SMC_CASE(A)                                                            \
+  case XCOFF::XMC_##A:                                                         \
+    return #A;
 StringRef XCOFF::getMappingClassString(XCOFF::StorageMappingClass SMC) {
   switch (SMC) {
-  case XCOFF::XMC_DS:
-    return "DS";
-  case XCOFF::XMC_RW:
-    return "RW";
-  case XCOFF::XMC_PR:
-    return "PR";
-  case XCOFF::XMC_TC0:
-    return "TC0";
-  case XCOFF::XMC_BS:
-    return "BS";
-  case XCOFF::XMC_RO:
-    return "RO";
-  case XCOFF::XMC_UA:
-    return "UA";
-  case XCOFF::XMC_TC:
-    return "TC";
-  default:
-    report_fatal_error("Unhandled storage-mapping class.");
+    SMC_CASE(PR)
+    SMC_CASE(RO)
+    SMC_CASE(DB)
+    SMC_CASE(GL)
+    SMC_CASE(XO)
+    SMC_CASE(SV)
+    SMC_CASE(SV64)
+    SMC_CASE(SV3264)
+    SMC_CASE(TI)
+    SMC_CASE(TB)
+    SMC_CASE(RW)
+    SMC_CASE(TC0)
+    SMC_CASE(TC)
+    SMC_CASE(TD)
+    SMC_CASE(DS)
+    SMC_CASE(UA)
+    SMC_CASE(BS)
+    SMC_CASE(UC)
+    SMC_CASE(TL)
+    SMC_CASE(UL)
+    SMC_CASE(TE)
+#undef SMC_CASE
   }
+
+  // TODO: need to add a test case for "Unknown" and other SMC.
+  return "Unknown";
 }
 
 #define RELOC_CASE(A)                                                          \

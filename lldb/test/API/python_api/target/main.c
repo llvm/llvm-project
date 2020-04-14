@@ -2,7 +2,7 @@
 
 // This simple program is to test the lldb Python API SBTarget.
 //
-// When stopped on breakppint 1, and then 2, we can get the line entries using
+// When stopped on breakpoint 1, and then 2, we can get the line entries using
 // SBFrame API SBFrame.GetLineEntry().  We'll get the start addresses for the
 // two line entries; with the start address (of SBAddress type), we can then
 // resolve the symbol context using the SBTarget API

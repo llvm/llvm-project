@@ -11,8 +11,6 @@ def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
 def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
-def DisableInst : Predicate <"false">, AssemblerPredicate<(all_of FeatureDisable)>;
-
 class GCNPredicateControl : PredicateControl {
   Predicate SIAssemblerPredicate = isGFX6GFX7;
   Predicate VIAssemblerPredicate = isGFX8GFX9;

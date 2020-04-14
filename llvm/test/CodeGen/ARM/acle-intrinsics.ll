@@ -71,7 +71,7 @@ define i32 @pack_unpack(i32 %a, i32 %b) nounwind {
 
 define i32 @sel(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: sel
-; CHECK sel r0, r0, r1
+; CHECK: sel r0, r0, r1
   %tmp = call i32 @llvm.arm.sel(i32 %a, i32 %b)
   ret i32 %tmp
 }

@@ -674,3 +674,15 @@
 // RUN:   | FileCheck -check-prefix=CHECK090 %s
 // CHECK090-NOT:          -fno-use-init-array
 // -----------------------------------------------------------------------------
+// Check default linker for musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-linux-musl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK091 %s
+// CHECK091:          ld.lld
+// -----------------------------------------------------------------------------
+// Check default linker for elf
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK092 %s
+// CHECK092:          hexagon-link
+// -----------------------------------------------------------------------------

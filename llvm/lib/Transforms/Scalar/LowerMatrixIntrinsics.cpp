@@ -795,14 +795,12 @@ public:
 
   /// Loads a sub-matrix with shape \p ResultShape from a \p R x \p C matrix,
   /// starting at \p MatrixPtr[I][J].
-  MatrixTy loadMatrix(Value *MatrixPtr, ShapeInfo MatrixShape, unsigned I,
-                      unsigned J, ShapeInfo ResultShape, Type *EltTy,
+  MatrixTy loadMatrix(Value *MatrixPtr, ShapeInfo MatrixShape, Value *I,
+                      Value *J, ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
 
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(Builder.getInt32(J),
-                          Builder.getInt32(MatrixShape.getStride())),
-        Builder.getInt32(I));
+        Builder.CreateMul(J, Builder.getInt32(MatrixShape.getStride())), I);
 
     unsigned AS = cast<PointerType>(MatrixPtr->getType())->getAddressSpace();
     Value *EltPtr =
@@ -843,12 +841,10 @@ public:
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
   /// MatrixPtr[I][J].
   void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr,
-                   ShapeInfo MatrixShape, unsigned I, unsigned J, Type *EltTy,
+                   ShapeInfo MatrixShape, Value *I, Value *J, Type *EltTy,
                    IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(Builder.getInt32(J),
-                          Builder.getInt32(MatrixShape.getStride())),
-        Builder.getInt32(I));
+        Builder.CreateMul(J, Builder.getInt32(MatrixShape.getStride())), I);
 
     unsigned AS = cast<PointerType>(MatrixPtr->getType())->getAddressSpace();
     Value *EltPtr =
@@ -1214,12 +1210,15 @@ public:
         for (unsigned K = 0; K < M; K += TileSize) {
           const unsigned TileM = std::min(M - K, unsigned(TileSize));
           MatrixTy A =
-              loadMatrix(APtr, LShape, I, K, {TileR, TileM}, EltType, Builder);
+              loadMatrix(APtr, LShape, Builder.getInt32(I), Builder.getInt32(K),
+                         {TileR, TileM}, EltType, Builder);
           MatrixTy B =
-              loadMatrix(BPtr, RShape, K, J, {TileM, TileC}, EltType, Builder);
+              loadMatrix(BPtr, RShape, Builder.getInt32(K), Builder.getInt32(J),
+                         {TileM, TileC}, EltType, Builder);
           emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
         }
-        storeMatrix(Res, CPtr, {R, M}, I, J, EltType, Builder);
+        storeMatrix(Res, CPtr, {R, M}, Builder.getInt32(I), Builder.getInt32(J),
+                    EltType, Builder);
       }
 
     // Mark eliminated instructions as fused and remove them.

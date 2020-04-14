@@ -175,7 +175,7 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: test6
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q3
 
 # CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load 16)
@@ -288,7 +288,7 @@ body:             |
 # TODO: Can we check that all instructions that require renaming also support
 #       the second 16 Q registers?
 # CHECK-LABEL: name: test9
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
 
 # CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load 16)
@@ -322,7 +322,7 @@ body:             |
 ---
 # The livein $q7 is killed early, so we can re-use it for renaming.
 # CHECK-LABEL: name: test10
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
 
 # CHECK:         renamable $q7 = FADDv2f64 renamable $q7, renamable $q7

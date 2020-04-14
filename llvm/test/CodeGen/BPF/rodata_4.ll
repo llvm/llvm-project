@@ -34,7 +34,7 @@ entry:
 ; CHECK:  *(u16 *)(r1 + 0) = r2
   ret i32 0
 }
-; CHECK  .section  .rodata,"a",@progbits
+; CHECK:  .section  .rodata,"a",@progbits
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1

@@ -1502,9 +1502,6 @@ public:
   public:
   // Emit all deferred diagnostics.
   void emitDeferredDiags();
-  // Emit any deferred diagnostics for FD and erase them from the map in which
-  // they're stored.
-  void emitDeferredDiags(FunctionDecl *FD, bool ShowCallStack);
 
   enum TUFragmentKind {
     /// The global module fragment, between 'module;' and a module-declaration.

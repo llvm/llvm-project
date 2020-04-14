@@ -9,7 +9,9 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <cstdint>
 #include <memory>
@@ -17,22 +19,48 @@
 
 namespace llvm {
 
+struct XCOFFSymbolInfo {
+  Optional<XCOFF::StorageMappingClass> StorageMappingClass;
+  Optional<uint32_t> Index;
+  bool IsLabel;
+  XCOFFSymbolInfo(Optional<XCOFF::StorageMappingClass> Smc,
+                  Optional<uint32_t> Idx, bool Label)
+      : StorageMappingClass(Smc), Index(Idx), IsLabel(Label) {}
+};
+
 struct SymbolInfoTy {
-	uint64_t  Addr;
-	StringRef Name;
-	uint8_t   Type;
+  uint64_t Addr;
+  StringRef Name;
+  union {
+    uint8_t Type;
+    XCOFFSymbolInfo XCOFFSymInfo;
+  };
 
-        SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
-            : Addr(Addr), Name(Name), Type(Type){};
+private:
+  bool IsXCOFF;
 
-        friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
-          return std::tie(P1.Addr, P1.Name, P1.Type) <
-                 std::tie(P2.Addr, P2.Name, P2.Type);
-        }
+public:
+  SymbolInfoTy(uint64_t Addr, StringRef Name,
+               Optional<XCOFF::StorageMappingClass> Smc, Optional<uint32_t> Idx,
+               bool Label)
+      : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true) {}
+  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
+      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(false) {}
+  bool isXCOFF() const { return IsXCOFF; }
+
+private:
+  friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
+    assert(P1.IsXCOFF == P2.IsXCOFF &&
+           "P1.IsXCOFF should be equal to P2.IsXCOFF.");
+    if (P1.IsXCOFF)
+      return std::tie(P1.Addr, P1.Name) < std::tie(P2.Addr, P2.Name);
+    else
+      return std::tie(P1.Addr, P1.Name, P1.Type) <
+             std::tie(P2.Addr, P2.Name, P2.Type);
+  }
 };
 
 using SectionSymbolsTy = std::vector<SymbolInfoTy>;
-
 
 template <typename T> class ArrayRef;
 class MCContext;

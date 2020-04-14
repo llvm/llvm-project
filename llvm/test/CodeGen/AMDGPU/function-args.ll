@@ -596,7 +596,7 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 ; GCN: buffer_store_byte [[TRUNC_ARG1_I1]], off
 ; GCN: buffer_store_byte [[LOAD_ARG2]], off
 ; GCN: buffer_store_short [[LOAD_ARG3]], off
-; GFX89 buffer_store_short [[LOAD_ARG4]], off
+; GFX89: buffer_store_short [[LOAD_ARG4]], off
 
 ; CI: buffer_store_short [[CVT_ARG4]], off
 define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4) #0 {

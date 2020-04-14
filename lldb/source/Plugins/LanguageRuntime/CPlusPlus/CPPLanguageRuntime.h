@@ -69,7 +69,7 @@ public:
   /// Obtain a ThreadPlan to get us into C++ constructs such as std::function.
   ///
   /// \param[in] thread
-  ///     Curent thrad of execution.
+  ///     Current thrad of execution.
   ///
   /// \param[in] stop_others
   ///     True if other threads should pause during execution.

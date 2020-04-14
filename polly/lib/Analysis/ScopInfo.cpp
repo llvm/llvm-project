@@ -157,6 +157,11 @@ static cl::opt<bool> PollyPrintInstructions(
     "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
     cl::Hidden, cl::Optional, cl::init(false), cl::cat(PollyCategory));
 
+static cl::list<std::string> IslArgs("polly-isl-arg",
+                                     cl::value_desc("argument"),
+                                     cl::desc("Option passed to ISL"),
+                                     cl::ZeroOrMore, cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
@@ -1698,6 +1703,23 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
     : IslCtx(isl_ctx_alloc(), isl_ctx_free), SE(&ScalarEvolution), DT(&DT),
       R(R), name(None), HasSingleExitEdge(R.getExitingBlock()), DC(DC),
       ORE(ORE), Affinator(this, LI), ID(ID) {
+  SmallVector<char *, 8> IslArgv;
+  IslArgv.reserve(1 + IslArgs.size());
+
+  // Substitute for program name.
+  IslArgv.push_back(const_cast<char *>("-polly-isl-arg"));
+
+  for (std::string &Arg : IslArgs)
+    IslArgv.push_back(const_cast<char *>(Arg.c_str()));
+
+  // Abort if unknown argument is passed.
+  // Note that "-V" (print isl version) will always call exit(0), so we cannot
+  // avoid ISL aborting the program at this point.
+  unsigned IslParseFlags = ISL_ARG_ALL;
+
+  isl_ctx_parse_options(IslCtx.get(), IslArgv.size(), IslArgv.data(),
+                        IslParseFlags);
+
   if (IslOnErrorAbort)
     isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
   buildContext();

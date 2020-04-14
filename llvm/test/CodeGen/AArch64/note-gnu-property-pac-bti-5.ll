@@ -21,6 +21,6 @@ attributes #1 = { "sign-return-address"="all" }
 ; ASM: warning: not setting BTI in feature flags
 ; ASM:	    .word	3221225472
 ; ASM-NEXT:	.word	4
-; ASM-NEXT	.word	2
+; ASM-NEXT:	.word	2
 
 ; OBJ: Properties: aarch64 feature: PAC

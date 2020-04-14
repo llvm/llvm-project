@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MachODump.h"
+
 #include "llvm-objdump.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
@@ -57,53 +59,35 @@ extern "C" {
 }
 #endif
 
+using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::objdump;
 
-namespace llvm {
+cl::OptionCategory objdump::MachOCat("llvm-objdump MachO Specific Options");
 
-cl::OptionCategory MachOCat("llvm-objdump MachO Specific Options");
+cl::opt<bool> objdump::FirstPrivateHeader(
+    "private-header",
+    cl::desc("Display only the first format specific file header"),
+    cl::cat(MachOCat));
 
-extern cl::opt<bool> ArchiveHeaders;
-extern cl::opt<bool> Disassemble;
-extern cl::opt<bool> DisassembleAll;
-extern cl::opt<DIDumpType> DwarfDumpType;
-extern cl::list<std::string> FilterSections;
-extern cl::list<std::string> MAttrs;
-extern cl::opt<std::string> MCPU;
-extern cl::opt<bool> NoShowRawInsn;
-extern cl::opt<bool> NoLeadingAddr;
-extern cl::opt<bool> PrintImmHex;
-extern cl::opt<bool> PrivateHeaders;
-extern cl::opt<bool> Relocations;
-extern cl::opt<bool> SectionHeaders;
-extern cl::opt<bool> SectionContents;
-extern cl::opt<bool> SymbolTable;
-extern cl::opt<std::string> TripleName;
-extern cl::opt<bool> UnwindInfo;
+cl::opt<bool> objdump::ExportsTrie("exports-trie",
+                                   cl::desc("Display mach-o exported symbols"),
+                                   cl::cat(MachOCat));
 
-cl::opt<bool>
-    FirstPrivateHeader("private-header",
-                       cl::desc("Display only the first format specific file "
-                                "header"),
-                       cl::cat(MachOCat));
+cl::opt<bool> objdump::Rebase("rebase",
+                              cl::desc("Display mach-o rebasing info"),
+                              cl::cat(MachOCat));
 
-cl::opt<bool> ExportsTrie("exports-trie",
-                          cl::desc("Display mach-o exported symbols"),
-                          cl::cat(MachOCat));
+cl::opt<bool> objdump::Bind("bind", cl::desc("Display mach-o binding info"),
+                            cl::cat(MachOCat));
 
-cl::opt<bool> Rebase("rebase", cl::desc("Display mach-o rebasing info"),
-                     cl::cat(MachOCat));
+cl::opt<bool> objdump::LazyBind("lazy-bind",
+                                cl::desc("Display mach-o lazy binding info"),
+                                cl::cat(MachOCat));
 
-cl::opt<bool> Bind("bind", cl::desc("Display mach-o binding info"),
-                   cl::cat(MachOCat));
-
-cl::opt<bool> LazyBind("lazy-bind",
-                       cl::desc("Display mach-o lazy binding info"),
-                       cl::cat(MachOCat));
-
-cl::opt<bool> WeakBind("weak-bind",
-                       cl::desc("Display mach-o weak binding info"),
-                       cl::cat(MachOCat));
+cl::opt<bool> objdump::WeakBind("weak-bind",
+                                cl::desc("Display mach-o weak binding info"),
+                                cl::cat(MachOCat));
 
 static cl::opt<bool>
     UseDbg("g", cl::Grouping,
@@ -122,63 +106,65 @@ static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
                                       cl::desc("Print no leading headers"),
                                       cl::cat(MachOCat));
 
-cl::opt<bool> UniversalHeaders("universal-headers",
-                               cl::desc("Print Mach-O universal headers "
-                                        "(requires -macho)"),
-                               cl::cat(MachOCat));
+cl::opt<bool> objdump::UniversalHeaders(
+    "universal-headers",
+    cl::desc("Print Mach-O universal headers (requires -macho)"),
+    cl::cat(MachOCat));
+
+static cl::opt<bool> ArchiveMemberOffsets(
+    "archive-member-offsets",
+    cl::desc("Print the offset to each archive member for Mach-O archives "
+             "(requires -macho and -archive-headers)"),
+    cl::cat(MachOCat));
+
+cl::opt<bool> objdump::IndirectSymbols(
+    "indirect-symbols",
+    cl::desc(
+        "Print indirect symbol table for Mach-O objects (requires -macho)"),
+    cl::cat(MachOCat));
+
+cl::opt<bool> objdump::DataInCode(
+    "data-in-code",
+    cl::desc(
+        "Print the data in code table for Mach-O objects (requires -macho)"),
+    cl::cat(MachOCat));
 
 cl::opt<bool>
-    ArchiveMemberOffsets("archive-member-offsets",
-                         cl::desc("Print the offset to each archive member for "
-                                  "Mach-O archives (requires -macho and "
-                                  "-archive-headers)"),
-                         cl::cat(MachOCat));
-
-cl::opt<bool> IndirectSymbols("indirect-symbols",
-                              cl::desc("Print indirect symbol table for Mach-O "
-                                       "objects (requires -macho)"),
-                              cl::cat(MachOCat));
+    objdump::LinkOptHints("link-opt-hints",
+                          cl::desc("Print the linker optimization hints for "
+                                   "Mach-O objects (requires -macho)"),
+                          cl::cat(MachOCat));
 
 cl::opt<bool>
-    DataInCode("data-in-code",
-               cl::desc("Print the data in code table for Mach-O objects "
-                        "(requires -macho)"),
-               cl::cat(MachOCat));
+    objdump::InfoPlist("info-plist",
+                       cl::desc("Print the info plist section as strings for "
+                                "Mach-O objects (requires -macho)"),
+                       cl::cat(MachOCat));
 
-cl::opt<bool> LinkOptHints("link-opt-hints",
-                           cl::desc("Print the linker optimization hints for "
-                                    "Mach-O objects (requires -macho)"),
-                           cl::cat(MachOCat));
-
-cl::opt<bool> InfoPlist("info-plist",
-                        cl::desc("Print the info plist section as strings for "
-                                 "Mach-O objects (requires -macho)"),
+cl::opt<bool>
+    objdump::DylibsUsed("dylibs-used",
+                        cl::desc("Print the shared libraries used for linked "
+                                 "Mach-O files (requires -macho)"),
                         cl::cat(MachOCat));
 
-cl::opt<bool> DylibsUsed("dylibs-used",
-                         cl::desc("Print the shared libraries used for linked "
-                                  "Mach-O files (requires -macho)"),
-                         cl::cat(MachOCat));
+cl::opt<bool> objdump::DylibId("dylib-id",
+                               cl::desc("Print the shared library's id for the "
+                                        "dylib Mach-O file (requires -macho)"),
+                               cl::cat(MachOCat));
 
-cl::opt<bool>
-    DylibId("dylib-id",
-            cl::desc("Print the shared library's id for the dylib Mach-O "
-                     "file (requires -macho)"),
-            cl::cat(MachOCat));
-
-cl::opt<bool>
+static cl::opt<bool>
     NonVerbose("non-verbose",
-               cl::desc("Print the info for Mach-O objects in "
-                        "non-verbose or numeric form (requires -macho)"),
+               cl::desc("Print the info for Mach-O objects in non-verbose or "
+                        "numeric form (requires -macho)"),
                cl::cat(MachOCat));
 
 cl::opt<bool>
-    ObjcMetaData("objc-meta-data",
-                 cl::desc("Print the Objective-C runtime meta data for "
-                          "Mach-O files (requires -macho)"),
-                 cl::cat(MachOCat));
+    objdump::ObjcMetaData("objc-meta-data",
+                          cl::desc("Print the Objective-C runtime meta data "
+                                   "for Mach-O files (requires -macho)"),
+                          cl::cat(MachOCat));
 
-cl::opt<std::string> DisSymName(
+static cl::opt<std::string> DisSymName(
     "dis-symname",
     cl::desc("disassemble just this symbol's instructions (requires -macho)"),
     cl::cat(MachOCat));
@@ -191,6 +177,8 @@ static cl::opt<bool> NoSymbolicOperands(
 static cl::list<std::string>
     ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
               cl::ZeroOrMore, cl::cat(MachOCat));
+
+namespace llvm {
 
 extern StringSet<> FoundSectionSet;
 

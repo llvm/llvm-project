@@ -1,9 +1,6 @@
 // FIXME: Actually, "perl".
 REQUIRES: shell
 
-// FIXME: Should ideally work on Windows.
-UNSUPPORTED: system-windows
-
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: %scan-build -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \
 RUN:     | FileCheck %s -check-prefix CHECK-STDOUT

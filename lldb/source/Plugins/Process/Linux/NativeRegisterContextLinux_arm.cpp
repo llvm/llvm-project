@@ -566,7 +566,7 @@ uint32_t NativeRegisterContextLinux_arm::SetHardwareWatchpoint(
 
   // Check 4-byte alignment for hardware watchpoint target address. Below is a
   // hack to recalculate address and size in order to make sure we can watch
-  // non 4-byte alligned addresses as well.
+  // non 4-byte aligned addresses as well.
   if (addr & 0x03) {
     uint8_t watch_mask = (addr & 0x03) + size;
 
@@ -861,7 +861,7 @@ Status NativeRegisterContextLinux_arm::DoReadRegisterValue(
   // PTRACE_PEEKUSER don't work in the aarch64 linux kernel used on android
   // devices (always return "Bad address"). To avoid using PTRACE_PEEKUSER we
   // read out the full GPR register set instead. This approach is about 4 times
-  // slower but the performance overhead is negligible in comparision to
+  // slower but the performance overhead is negligible in comparison to
   // processing time in lldb-server.
   assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
@@ -881,7 +881,7 @@ Status NativeRegisterContextLinux_arm::DoWriteRegisterValue(
   // devices (always return "Bad address"). To avoid using PTRACE_POKEUSER we
   // read out the full GPR register set, modify the requested register and
   // write it back. This approach is about 4 times slower but the performance
-  // overhead is negligible in comparision to processing time in lldb-server.
+  // overhead is negligible in comparison to processing time in lldb-server.
   assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
     return Status("Register isn't fit into the size of the GPR area");

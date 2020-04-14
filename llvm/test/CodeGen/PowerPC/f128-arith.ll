@@ -71,7 +71,7 @@ entry:
 ; CHECK-LABEL: testLdNSt
 ; CHECK: lxvx
 ; CHECK: stxvx
-; CHECK-NEXT blr
+; CHECK-NEXT: blr
 }
 
 define void @qpSqrt(fp128* nocapture readonly %a, fp128* nocapture %res) {

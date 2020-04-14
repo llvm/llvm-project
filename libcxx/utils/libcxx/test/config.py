@@ -1185,6 +1185,7 @@ class Configuration(object):
 
     def configure_env(self):
         self.target_info.configure_env(self.exec_env)
+        self.config.environment = dict(os.environ)
 
     def add_path(self, dest_env, new_path):
         self.target_info.add_path(dest_env, new_path)

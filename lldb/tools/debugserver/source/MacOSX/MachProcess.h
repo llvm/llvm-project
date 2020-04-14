@@ -421,7 +421,7 @@ private:
   // we don't report a spurious stop on the next resume.
   int m_auto_resume_signo; // If we resume the process and still haven't
                            // received our interrupt signal
-  // acknownledgement, we will shortly after the next resume. We store the
+  // acknowledgement, we will shortly after the next resume. We store the
   // interrupt signal in this variable so when we get the interrupt signal
   // as the sole reason for the process being stopped, we can auto resume
   // the process.

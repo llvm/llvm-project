@@ -1,4 +1,6 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  support
+)
 
 add_clang_library(clangReorderFields
   ReorderFieldsAction.cpp

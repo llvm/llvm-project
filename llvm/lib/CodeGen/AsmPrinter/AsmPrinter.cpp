@@ -460,7 +460,7 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assumed it.
   if (TM.getTargetTriple().isOSBinFormatELF() &&
       GlobalObject::isExternalLinkage(GV.getLinkage()) && GV.isDSOLocal() &&
-      !GV.isDeclaration() && !isa<GlobalIFunc>(GV))
+      !GV.isDeclaration() && !isa<GlobalIFunc>(GV) && !GV.hasComdat())
     return getSymbolWithGlobalValueBase(&GV, "$local");
   return TM.getSymbol(&GV);
 }

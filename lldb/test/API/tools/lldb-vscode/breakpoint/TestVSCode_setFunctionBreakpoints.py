@@ -24,7 +24,7 @@ class TestVSCode_setFunctionBreakpoints(
            is no "clearFunction Breakpoints" packet. Function breakpoints
            are set by sending a "setFunctionBreakpoints" packet with zero or
            more function names. If function breakpoints have been set before,
-           any exising breakpoints must remain set, and any new breakpoints
+           any existing breakpoints must remain set, and any new breakpoints
            must be created, and any breakpoints that were in previous requests
            and are not in the current request must be removed. This function
            tests this setting and clearing and makes sure things happen
@@ -147,7 +147,7 @@ class TestVSCode_setFunctionBreakpoints(
                         "existing breakpoint should have its condition "
                         "updated")
 
-        # Continue with a hitContidtion of 2 and expect it to skip 1 value
+        # Continue with a hitCondition of 2 and expect it to skip 1 value
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.vscode.get_local_variable_value('i'))
         self.assertEquals(i, 6,

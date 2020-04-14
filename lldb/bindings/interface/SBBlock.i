@@ -152,7 +152,7 @@ public:
         sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
         name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
         inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
-        range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
+        range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
         ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
         num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
     %}

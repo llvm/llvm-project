@@ -42,12 +42,12 @@
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: ADD32ri8
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
-# CHECK-SAME                  !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK-NEXT: JMP_1
 
 # CHECK-LABEL: bb.3.bb3:
 # CHECK:      DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
-# CHECK-SAME                  !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK-NEXT: DBG_VALUE $ax, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
 # CHECK-NEXT: XOR32rr

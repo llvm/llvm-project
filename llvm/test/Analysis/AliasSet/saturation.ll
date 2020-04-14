@@ -18,7 +18,7 @@ define void @allmust() {
   ret void
 }
 
-; CHECK-LABEL :'mergemay'
+; CHECK-LABEL: 'mergemay'
 ; NOSAT: AliasSet[{{.*}}, 2] may alias, Mod Pointers: (i32* %a, LocationSize::precise(4)), (i32* %a1, LocationSize::precise(4))
 ; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, LocationSize::precise(4))
 ; SAT: AliasSet[{{.*}}, 2] may alias, Mod forwarding to 0x[[FWD:[0-9a-f]*]]

@@ -27,13 +27,12 @@
 
 ; GCN-LABEL: {{^}}sink_ubfe_i32:
 ; GCN-NOT: lshr
-; GCN: s_cbranch_scc1
+; GCN: s_cbranch_scc{{[0-1]}}
 
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008
-; GCN: BB0_2:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70008
-
 ; GCN: BB0_3:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008
+
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
 define amdgpu_kernel void @sink_ubfe_i32(i32 addrspace(1)* %out, i32 %arg1) #0 {
@@ -122,16 +121,15 @@ ret:
 ; GCN-NOT: lshr
 ; VI: s_load_dword [[ARG:s[0-9]+]], s[0:1], 0x2c
 ; VI: s_bfe_u32 [[BFE:s[0-9]+]], [[ARG]], 0xc0004
-; GCN: s_cbranch_scc1
+; GCN: s_cbranch_scc{{[0-1]}}
 
-; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
-; VI: v_mov_b32_e32 v{{[0-9]+}}, 0xff
-
-; GCN: BB2_2:
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0x7f
 
 ; GCN: BB2_3:
+; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
+; VI: v_mov_b32_e32 v{{[0-9]+}}, 0xff
+
 ; GCN: buffer_store_short
 ; GCN: s_endpgm
 define amdgpu_kernel void @sink_ubfe_i16(i16 addrspace(1)* %out, i16 %arg1) #0 {
@@ -177,14 +175,13 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
 
+; GCN: s_cbranch_scc{{[0-1]}} BB3_2
 ; GCN: v_alignbit_b32 v[[LO:[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}, 30
-; GCN: s_cbranch_scc1 BB3_2
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
-
-; GCN: BB3_2:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7f, v[[LO]]
 
 ; GCN: BB3_3:
+; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
+
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(i64 addrspace(1)* %out, i64 %arg1) #0 {
 entry:
@@ -226,14 +223,13 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_low32:
 
-; GCN: s_cbranch_scc1 BB4_2
+; GCN: s_cbranch_scc{{[0-1]}} BB4_2
 
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
-
-; GCN: BB4_2:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7000f
 
 ; GCN: BB4_3:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
+
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_low32(i64 addrspace(1)* %out, i64 %arg1) #0 {
 entry:
@@ -274,13 +270,12 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_high32:
-; GCN: s_cbranch_scc1 BB5_2
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
-
-; GCN: BB5_2:
+; GCN: s_cbranch_scc{{[0-1]}} BB5_2
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70003
 
 ; GCN: BB5_3:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
+
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_high32(i64 addrspace(1)* %out, i64 %arg1) #0 {
 entry:

@@ -83,18 +83,22 @@ struct DebouncePolicy {
   static DebouncePolicy fixed(clock::duration);
 };
 
-struct TUAction {
-  enum State {
-    Queued,           // The TU is pending in the thread task queue to be built.
-    RunningAction,    // Starting running actions on the TU.
-    BuildingPreamble, // The preamble of the TU is being built.
-    BuildingFile,     // The TU is being built. It is only emitted when building
-                      // the AST for diagnostics in write action (update).
+enum class PreambleAction {
+  Idle,
+  Building,
+};
+
+struct ASTAction {
+  enum Kind {
+    Queued,        // The action is pending in the thread task queue to be run.
+    RunningAction, // Started running actions on the TU.
+    Building,      // The AST is being built.
     Idle, // Indicates the worker thread is idle, and ready to run any upcoming
           // actions.
   };
-  TUAction(State S, llvm::StringRef Name) : S(S), Name(Name) {}
-  State S;
+  ASTAction() = default;
+  ASTAction(Kind K, llvm::StringRef Name) : K(K), Name(Name) {}
+  Kind K = ASTAction::Idle;
   /// The name of the action currently running, e.g. Update, GoToDef, Hover.
   /// Empty if we are in the idle state.
   std::string Name;
@@ -111,7 +115,9 @@ struct TUStatus {
   /// Serialize this to an LSP file status item.
   FileStatus render(PathRef File) const;
 
-  TUAction Action;
+  PreambleAction PreambleActivity = PreambleAction::Idle;
+  ASTAction ASTActivity;
+  /// Stores status of the last build for the translation unit.
   BuildDetails Details;
 };
 

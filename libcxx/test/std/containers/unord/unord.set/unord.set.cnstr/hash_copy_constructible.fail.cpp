@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// GCC 5 does not evaluate static assertions dependent on a template parameter.
+// UNSUPPORTED: gcc-5
+
 // <unordered_map>
 
 // Check that std::unordered_set fails to instantiate if the hash function is

@@ -13,6 +13,6 @@ attributes #0 = { "branch-target-enforcement" "sign-return-address"="non-leaf" }
 ; Both attribute present
 ; ASM:	    .word	3221225472
 ; ASM-NEXT:	.word	4
-; ASM-NEXT	.word	3
+; ASM-NEXT:	.word	3
 
 ; OBJ: Properties: aarch64 feature: BTI, PAC

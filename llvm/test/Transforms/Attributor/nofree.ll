@@ -51,7 +51,7 @@ define void @only_free(i8* nocapture %0) local_unnamed_addr #0 {
 
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR-NEXT :define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr
+; ATTRIBUTOR-NEXT: define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr
 define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr #0 {
   tail call void @free_in_scc2(i8* %0) #1
   ret void

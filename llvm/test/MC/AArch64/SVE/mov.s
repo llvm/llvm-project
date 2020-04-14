@@ -205,6 +205,18 @@ mov     z0.h, #65280
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 ff 78 25 <unknown>
 
+mov     z0.h, #-33024
+// CHECK-INST: dupm z0.h, #0x7f00
+// CHECK-ENCODING: [0xc0,0x44,0xc0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c0 44 c0 05 <unknown>
+
+mov     z0.h, #-32769
+// CHECK-INST: mov z0.h, #32767
+// CHECK-ENCODING: [0xc0,0x05,0xc0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c0 05 c0 05 <unknown>
+
 mov     z0.s, #-32769
 // CHECK-INST: mov     z0.s, #0xffff7fff
 // CHECK-ENCODING: [0xc0,0x83,0xc0,0x05]

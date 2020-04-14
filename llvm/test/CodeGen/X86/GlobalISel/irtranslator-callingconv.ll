@@ -315,7 +315,6 @@ entry:
 }
 
 define i32 * @test_memop_i32(i32 * %p1) {
-;X64    liveins: $rdi
   ; X32-LABEL: name: test_memop_i32
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0

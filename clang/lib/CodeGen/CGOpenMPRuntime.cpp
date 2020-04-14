@@ -11206,10 +11206,9 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     // dims.upper = num_iterations;
     LValue UpperLVal = CGF.EmitLValueForField(
         DimsLVal, *std::next(RD->field_begin(), UpperFD));
-    llvm::Value *NumIterVal =
-        CGF.EmitScalarConversion(CGF.EmitScalarExpr(NumIterations[I]),
-                                 D.getNumIterations()->getType(), Int64Ty,
-                                 D.getNumIterations()->getExprLoc());
+    llvm::Value *NumIterVal = CGF.EmitScalarConversion(
+        CGF.EmitScalarExpr(NumIterations[I]), NumIterations[I]->getType(),
+        Int64Ty, NumIterations[I]->getExprLoc());
     CGF.EmitStoreOfScalar(NumIterVal, UpperLVal);
     // dims.stride = 1;
     LValue StrideLVal = CGF.EmitLValueForField(

@@ -254,6 +254,10 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
 
   void visitVolatileTrivial(QualType FT, const FieldDecl *FD,
                             CharUnits CurStructOffset) {
+    // Zero-length bit-fields don't need to be copied/assigned.
+    if (FD && FD->isZeroLengthBitField(this->Ctx))
+      return;
+
     // Because volatile fields can be bit-fields and are individually copied,
     // their offset and width are in bits.
     uint64_t OffsetInBits =
@@ -543,6 +547,10 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
                             std::array<Address, 2> Addrs) {
     LValue DstLV, SrcLV;
     if (FD) {
+      // No need to copy zero-length bit-fields.
+      if (FD->isZeroLengthBitField(this->CGF->getContext()))
+        return;
+
       QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
       llvm::PointerType *PtrTy = this->CGF->ConvertType(RT)->getPointerTo();
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);

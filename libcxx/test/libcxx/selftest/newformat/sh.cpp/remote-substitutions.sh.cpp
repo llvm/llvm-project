@@ -16,7 +16,7 @@
 // appear first in the command-line or not.
 
 // FILE_DEPENDENCIES: %t.exe
-// RUN: %{cxx} %{compile_flags} %{link_flags} -o %t.exe %s
+// RUN: %{cxx} %{flags} %{compile_flags} %{link_flags} -o %t.exe %s
 // RUN: %{exec} %t.exe 0
 // RUN: %{exec} ! %t.exe 1
 

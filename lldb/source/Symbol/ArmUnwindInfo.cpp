@@ -29,7 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// Converts a prel31 avlue to lldb::addr_t with sign extension
+// Converts a prel31 value to lldb::addr_t with sign extension
 static addr_t Prel31ToAddr(uint32_t prel31) {
   addr_t res = prel31;
   if (prel31 & (1 << 30))

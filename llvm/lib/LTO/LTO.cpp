@@ -98,22 +98,12 @@ void llvm::computeLTOCacheKey(
   };
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
-    Data[0] = I;
-    Data[1] = I >> 8;
-    Data[2] = I >> 16;
-    Data[3] = I >> 24;
+    support::endian::write32le(Data, I);
     Hasher.update(ArrayRef<uint8_t>{Data, 4});
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
-    Data[0] = I;
-    Data[1] = I >> 8;
-    Data[2] = I >> 16;
-    Data[3] = I >> 24;
-    Data[4] = I >> 32;
-    Data[5] = I >> 40;
-    Data[6] = I >> 48;
-    Data[7] = I >> 56;
+    support::endian::write64le(Data, I);
     Hasher.update(ArrayRef<uint8_t>{Data, 8});
   };
   AddString(Conf.CPU);

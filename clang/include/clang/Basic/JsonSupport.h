@@ -97,9 +97,13 @@ inline void printSourceLocationAsJson(raw_ostream &Out, SourceLocation Loc,
     // The macro expansion and spelling pos is identical for file locs.
     if (AddBraces)
       Out << "{ ";
+    std::string filename(PLoc.getFilename());
+#ifdef _WIN32 // Handle windows-specific path delimiters.
+    std::replace(filename.begin(), filename.end(), '\\', '/');
+#endif
     Out << "\"line\": " << PLoc.getLine()
         << ", \"column\": " << PLoc.getColumn()
-        << ", \"file\": \"" << PLoc.getFilename() << "\"";
+        << ", \"file\": \"" << filename << "\"";
     if (AddBraces)
       Out << " }";
     return;

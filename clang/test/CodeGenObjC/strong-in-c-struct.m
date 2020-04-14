@@ -887,4 +887,17 @@ void test_volatile_variable_reference(volatile StrongSmall *a) {
   func(0);
 }
 
+struct ZeroBitfield {
+  int : 0;
+  id strong;
+};
+
+
+// CHECK: define linkonce_odr hidden void @__default_constructor_8_sv0
+// CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_sv0
+void test_zero_bitfield() {
+  struct ZeroBitfield volatile a, b;
+  a = b;
+}
+
 #endif /* USESTRUCT */

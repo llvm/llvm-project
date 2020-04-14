@@ -286,7 +286,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
 
   FileIndex Index;
   bool IndexUpdated = false;
-  buildPreamble(FooCpp, *CI, /*OldPreamble=*/nullptr, PI,
+  buildPreamble(FooCpp, *CI, PI,
                 /*StoreInMemory=*/true,
                 [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
                     const CanonicalIncludes &CanonIncludes) {
@@ -424,7 +424,7 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
 }
 
 TEST(FileIndexTest, MergeMainFileSymbols) {
-  const char* CommonHeader = "void foo();";
+  const char *CommonHeader = "void foo();";
   TestTU Header = TestTU::withCode(CommonHeader);
   TestTU Cpp = TestTU::withCode("void foo() {}");
   Cpp.Filename = "foo.cpp";

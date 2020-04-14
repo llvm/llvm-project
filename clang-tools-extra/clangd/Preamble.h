@@ -27,7 +27,9 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
+#include "Path.h"
 #include "index/CanonicalIncludes.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
 
@@ -72,18 +74,20 @@ using PreambleParsedCallback =
                        const CanonicalIncludes &)>;
 
 /// Build a preamble for the new inputs unless an old one can be reused.
-/// If \p OldPreamble can be reused, it is returned unchanged.
-/// If \p OldPreamble is null, always builds the preamble.
 /// If \p PreambleCallback is set, it will be run on top of the AST while
-/// building the preamble. Note that if the old preamble was reused, no AST is
-/// built and, therefore, the callback will not be executed.
+/// building the preamble.
 std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation &CI,
-              std::shared_ptr<const PreambleData> OldPreamble,
+buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback);
 
-
+/// Returns true if \p Preamble is reusable for \p Inputs. Note that it will
+/// return true when some missing headers are now available.
+/// FIXME: Should return more information about the delta between \p Preamble
+/// and \p Inputs, e.g. new headers.
+bool isPreambleCompatible(const PreambleData &Preamble,
+                          const ParseInputs &Inputs, PathRef FileName,
+                          const CompilerInvocation &CI);
 } // namespace clangd
 } // namespace clang
 

@@ -170,7 +170,6 @@ define i32 @test_null_after_load_addrspace(i32 addrspace(1)* %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
-; CHECK-NEXT     ret i32 %4
   %2 = load i32, i32 addrspace(1)* %0, align 4
   %3 = icmp eq i32 addrspace(1)* %0, null
   %4 = select i1 %3, i32 %2, i32 1

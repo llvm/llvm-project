@@ -909,7 +909,11 @@ struct AdditionalKeywords {
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
   /// \c false if it is a keyword or a pseudo keyword.
-  bool IsJavaScriptIdentifier(const FormatToken &Tok) const {
+  /// If \c AcceptIdentifierName is true, returns true not only for keywords,
+  // but also for IdentifierName tokens (aka pseudo-keywords), such as
+  // ``yield``.
+  bool IsJavaScriptIdentifier(const FormatToken &Tok,
+                              bool AcceptIdentifierName = true) const {
     // Based on the list of JavaScript & TypeScript keywords here:
     // https://github.com/microsoft/TypeScript/blob/master/src/compiler/scanner.ts#L74
     switch (Tok.Tok.getKind()) {
@@ -946,11 +950,14 @@ struct AdditionalKeywords {
     case tok::kw_while:
       // These are JS keywords that are lexed by LLVM/clang as keywords.
       return false;
-    case tok::identifier:
+    case tok::identifier: {
       // For identifiers, make sure they are true identifiers, excluding the
       // JavaScript pseudo-keywords (not lexed by LLVM/clang as keywords).
-      return JsExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
-             JsExtraKeywords.end();
+      bool IsPseudoKeyword =
+          JsExtraKeywords.find(Tok.Tok.getIdentifierInfo()) !=
+          JsExtraKeywords.end();
+      return AcceptIdentifierName || !IsPseudoKeyword;
+    }
     default:
       // Other keywords are handled in the switch below, to avoid problems due
       // to duplicate case labels when using the #include trick.

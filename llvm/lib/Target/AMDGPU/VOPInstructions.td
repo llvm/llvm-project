@@ -492,8 +492,8 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let SDWA = 1;
   let Uses = [EXEC];
 
-  let SubtargetPredicate = !if(P.HasExtSDWA, HasSDWA, DisableInst);
-  let AssemblerPredicate = !if(P.HasExtSDWA, HasSDWA, DisableInst);
+  let SubtargetPredicate = HasSDWA;
+  let AssemblerPredicate = HasSDWA;
   let AsmVariantName = !if(P.HasExtSDWA, AMDGPUAsmVariants.SDWA,
                                          AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
@@ -542,8 +542,8 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let Constraints     = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;
 
-  let SubtargetPredicate = !if(ps.Pfl.HasExtSDWA9, HasSDWA9, DisableInst);
-  let AssemblerPredicate = !if(ps.Pfl.HasExtSDWA9, HasSDWA9, DisableInst);
+  let SubtargetPredicate = HasSDWA9;
+  let AssemblerPredicate = HasSDWA9;
   let AsmVariantName = !if(ps.Pfl.HasExtSDWA9, AMDGPUAsmVariants.SDWA9,
                                                AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA9";
@@ -561,8 +561,8 @@ class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SDWA9>;
 
 class Base_VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> : Base_VOP_SDWA9_Real<ps> {
-  let SubtargetPredicate = !if(ps.Pfl.HasExtSDWA9, HasSDWA10, DisableInst);
-  let AssemblerPredicate = !if(ps.Pfl.HasExtSDWA9, HasSDWA10, DisableInst);
+  let SubtargetPredicate = HasSDWA10;
+  let AssemblerPredicate = HasSDWA10;
   let DecoderNamespace = "SDWA10";
 }
 
@@ -615,7 +615,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
 
   let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
   let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = !if(P.HasExtDPP, HasDPP, DisableInst);
+  let AssemblerPredicate = HasDPP;
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -670,7 +670,7 @@ class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
 
   let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
   let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = !if(P.HasExtDPP, HasDPP, DisableInst);
+  let AssemblerPredicate = HasDPP;
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -702,7 +702,7 @@ class VOP_DPP8<string OpName, VOPProfile P> :
 
   let AsmMatchConverter = "cvtDPP8";
   let SubtargetPredicate = HasDPP8;
-  let AssemblerPredicate = !if(P.HasExt, HasDPP8, DisableInst);
+  let AssemblerPredicate = HasDPP8;
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.DPP,
                                      AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");

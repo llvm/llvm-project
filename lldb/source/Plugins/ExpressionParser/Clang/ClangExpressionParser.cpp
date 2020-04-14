@@ -716,7 +716,7 @@ class CodeComplete : public CodeCompleteConsumer {
     return cmd;
   }
 
-  /// Attemps to merge the given completion from the given position into the
+  /// Attempts to merge the given completion from the given position into the
   /// existing command. Returns the completion string that can be returned to
   /// the lldb completion API.
   std::string mergeCompletion(StringRef existing, unsigned pos,

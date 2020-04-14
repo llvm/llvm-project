@@ -485,7 +485,7 @@ func @reshape(%arg0: memref<?xf32>) {
 // -----
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected rank of the collapsed view(2) to be the number of reassociation maps(1)}}
+  // expected-error @+1 {{expected rank of the collapsed type(2) to be the number of reassociation maps(1)}}
   %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }

@@ -14,9 +14,10 @@ endif()
 
 add_clang_library(clangDynamicASTMatchers
   Diagnostics.cpp
-  VariantValue.cpp
+  Marshallers.cpp
   Parser.cpp
   Registry.cpp
+  VariantValue.cpp
 
   LINK_LIBS
   clangAST

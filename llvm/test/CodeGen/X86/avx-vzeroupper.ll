@@ -83,7 +83,6 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; BTVER2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; BTVER2-NEXT:    addq $56, %rsp
 ; BTVER2-NEXT:    retq
-; DISABLE-VZ       # %bb.0:
   %tmp = load <4 x float>, <4 x float>* @x, align 16
   %call = tail call <4 x float> @do_sse(<4 x float> %tmp) nounwind
   store <4 x float> %call, <4 x float>* @x, align 16

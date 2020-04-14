@@ -873,7 +873,7 @@ bool GCNPassConfig::addPreISel() {
     if (EnableStructurizerWorkarounds) {
       addPass(createUnifyLoopExitsPass());
     }
-    addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
+    addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
 
   // This is a temporary fix for the issue of dealing with in loop uniform values

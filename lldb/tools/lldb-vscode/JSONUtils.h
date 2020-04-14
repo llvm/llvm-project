@@ -221,7 +221,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 /// the Visual Studio Code debug adaptor definition.
 ///
 /// \param[in] bp
-///     The exception breakppoint object to use
+///     The exception breakpoint object to use
 ///
 /// \return
 ///     A "ExceptionBreakpointsFilter" JSON object with that follows

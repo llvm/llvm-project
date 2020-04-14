@@ -117,7 +117,7 @@ text_label:
  dmul $4, $5, $6
 # CHECK:        dmultu  $5, $6                  # encoding: [0x00,0xa6,0x00,0x1d]
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
-# CHECK-TRAP    dmultu  $5, $6                  # encoding: [0x00,0xa6,0x00,0x1d]
+# CHECK-TRAP:   dmultu  $5, $6                  # encoding: [0x00,0xa6,0x00,0x1d]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
  dmul $4, $5, 1
 # CHECK:        addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]

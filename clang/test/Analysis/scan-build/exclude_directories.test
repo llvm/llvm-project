@@ -1,9 +1,6 @@
 // FIXME: Actually, "perl".
 REQUIRES: shell
 
-// FIXME: Should ideally work on Windows.
-UNSUPPORTED: system-windows
-
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: %scan-build -o %t.output_dir %clang -S \
 RUN:     %S/Inputs/multidirectory_project/directory1/file1.c \

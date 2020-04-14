@@ -12,7 +12,7 @@
 ; rb = xor(rb, ra)
 
 ; CHECK: and(##65280,lsr(r
-; CHECK-NOT : ^= and
+; CHECK-NOT: ^= and
 
 define dso_local zeroext i16 @test_compound(i16 zeroext %varA, i16 zeroext %varB) local_unnamed_addr #0 {
 entry:

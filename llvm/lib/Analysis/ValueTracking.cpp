@@ -5157,6 +5157,31 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
 
+  // Look through 'not' ops to find disguised min/max.
+  // (X > Y) ? ~X : ~Y ==> (~X < ~Y) ? ~X : ~Y ==> MIN(~X, ~Y)
+  // (X < Y) ? ~X : ~Y ==> (~X > ~Y) ? ~X : ~Y ==> MAX(~X, ~Y)
+  if (CmpLHS == getNotValue(TrueVal) && CmpRHS == getNotValue(FalseVal)) {
+    switch (Pred) {
+    case CmpInst::ICMP_SGT: return {SPF_SMIN, SPNB_NA, false};
+    case CmpInst::ICMP_SLT: return {SPF_SMAX, SPNB_NA, false};
+    case CmpInst::ICMP_UGT: return {SPF_UMIN, SPNB_NA, false};
+    case CmpInst::ICMP_ULT: return {SPF_UMAX, SPNB_NA, false};
+    default: break;
+    }
+  }
+
+  // (X > Y) ? ~Y : ~X ==> (~X < ~Y) ? ~Y : ~X ==> MAX(~Y, ~X)
+  // (X < Y) ? ~Y : ~X ==> (~X > ~Y) ? ~Y : ~X ==> MIN(~Y, ~X)
+  if (CmpLHS == getNotValue(FalseVal) && CmpRHS == getNotValue(TrueVal)) {
+    switch (Pred) {
+    case CmpInst::ICMP_SGT: return {SPF_SMAX, SPNB_NA, false};
+    case CmpInst::ICMP_SLT: return {SPF_SMIN, SPNB_NA, false};
+    case CmpInst::ICMP_UGT: return {SPF_UMAX, SPNB_NA, false};
+    case CmpInst::ICMP_ULT: return {SPF_UMIN, SPNB_NA, false};
+    default: break;
+    }
+  }
+
   if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
     return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -5172,17 +5197,6 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   // (X <s Y) ? Z : 0 ==> (Z <s 0) ? Z : 0 ==> SMIN(Z, 0)
   if (match(FalseVal, m_Zero()) &&
       match(TrueVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
-
-  // Look through 'not' ops to find disguised signed min/max.
-  // (X >s Y) ? ~X : ~Y ==> (~X <s ~Y) ? ~X : ~Y ==> SMIN(~X, ~Y)
-  // (X <s Y) ? ~X : ~Y ==> (~X >s ~Y) ? ~X : ~Y ==> SMAX(~X, ~Y)
-  if (CmpLHS == getNotValue(TrueVal) && CmpRHS == getNotValue(FalseVal))
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
-
-  // (X >s Y) ? ~Y : ~X ==> (~X <s ~Y) ? ~Y : ~X ==> SMAX(~Y, ~X)
-  // (X <s Y) ? ~Y : ~X ==> (~X >s ~Y) ? ~Y : ~X ==> SMIN(~Y, ~X)
-  if (CmpLHS == getNotValue(FalseVal) && CmpRHS == getNotValue(TrueVal))
     return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
   const APInt *C1;

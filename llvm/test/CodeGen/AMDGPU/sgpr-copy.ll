@@ -211,14 +211,14 @@ ENDIF:                                            ; preds = %LOOP
 ; an assertion failure.
 
 ; CHECK-LABEL: {{^}}sample_v3:
-; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
-; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
+; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
+; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
 ; CHECK: s_branch
 
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
-
 ; CHECK: BB{{[0-9]+_[0-9]+}}:
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
+
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[SAMPLE_LO]]:[[SAMPLE_HI]]{{\]}}
 ; CHECK: exp
 ; CHECK: s_endpgm

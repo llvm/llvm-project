@@ -25,7 +25,7 @@ class TestVSCode_setExceptionBreakpoints(
            is no "clear exception breakpoints" packet. Exception breakpoints
            are set by sending a "setExceptionBreakpoints" packet with zero or
            more exception filters. If exception breakpoints have been set
-           before, any exising breakpoints must remain set, and any new
+           before, any existing breakpoints must remain set, and any new
            breakpoints must be created, and any breakpoints that were in
            previous requests and are not in the current request must be
            removed. This exception tests this setting and clearing and makes

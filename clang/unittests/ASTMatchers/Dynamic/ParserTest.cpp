@@ -317,6 +317,20 @@ TEST(ParserTest, Errors) {
   EXPECT_EQ("Input value has unresolved overloaded type: "
             "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
             ParseMatcherWithError("hasBody(stmt())"));
+  EXPECT_EQ(
+      "1:1: Error parsing argument 1 for matcher decl.\n"
+      "1:6: Error building matcher hasAttr.\n"
+      "1:14: Unknown value 'attr::Fnal' for arg 1; did you mean 'attr::Final'",
+      ParseMatcherWithError(R"query(decl(hasAttr("attr::Fnal")))query"));
+  EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
+            "1:6: Error building matcher hasAttr.\n"
+            "1:14: Unknown value 'Final' for arg 1; did you mean 'attr::Final'",
+            ParseMatcherWithError(R"query(decl(hasAttr("Final")))query"));
+  EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
+            "1:6: Error building matcher hasAttr.\n"
+            "1:14: Incorrect type for arg 1. (Expected = string) != (Actual = "
+            "String)",
+            ParseMatcherWithError(R"query(decl(hasAttr("unrelated")))query"));
 }
 
 TEST(ParserTest, OverloadErrors) {

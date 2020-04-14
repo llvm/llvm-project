@@ -2,7 +2,9 @@
 ; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/event-section2.ll -o %t2.o
 ; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o %t.o
 ; RUN: wasm-ld -o %t.wasm %t.o %t1.o %t2.o
+; RUN: wasm-ld --export-all -o %t-export-all.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: obj2yaml %t-export-all.wasm | FileCheck %s --check-prefix=EXPORT-ALL
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -35,3 +37,9 @@ define void @_start() {
 
 ; Global section has to come after event section
 ; CHECK:        - Type:            GLOBAL
+
+; EXPORT-ALL:   - Type:            EXPORT
+; EXPORT-ALL-NEXT Exports:
+; EXPORT-ALL:       - Name:            __cpp_exception
+; EXPORT-ALL:         Kind:            EVENT
+; EXPORT-ALL:         Index:           0

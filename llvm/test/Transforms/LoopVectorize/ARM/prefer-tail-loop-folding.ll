@@ -200,9 +200,9 @@ define void @narrowing_load_not_allowed(i8* noalias nocapture %A, i8* noalias no
 ; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 
 ; FOLDING-OPT:        vector.body:
-; FOLDING-OPT         call <8 x i16> @llvm.masked.load.v8i16.p0v8i16
-; FOLDING-OPT         call <8 x i8> @llvm.masked.load.v8i8.p0v8i8
-; FOLDING-OPT         call void @llvm.masked.store.v8i8.p0v8i8
+; FOLDING-OPT:        call <8 x i16> @llvm.masked.load.v8i16.p0v8i16
+; FOLDING-OPT:        call <8 x i8> @llvm.masked.load.v8i8.p0v8i8
+; FOLDING-OPT:        call void @llvm.masked.store.v8i8.p0v8i8
 ; FOLDING-OPT:        br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body

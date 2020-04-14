@@ -521,7 +521,7 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
         0                                                                      \
   }
 
-// Defines S and D pseudo registers mapping over correspondig vector register
+// Defines S and D pseudo registers mapping over corresponding vector register
 #define DEFINE_FPU_PSEUDO(reg, size, offset, vreg)                             \
   {                                                                            \
     #reg, nullptr, size, FPU_OFFSET(fpu_##vreg - fpu_v0) + offset,             \

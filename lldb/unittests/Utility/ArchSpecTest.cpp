@@ -281,7 +281,7 @@ TEST(ArchSpecTest, Compatibility) {
     ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
   {
-    // The version information is auxiliary to support availablity but
+    // The version information is auxiliary to support availability but
     // doesn't affect compatibility.
     ArchSpec A("x86_64-apple-macosx10.11");
     ArchSpec B("x86_64-apple-macosx10.12");

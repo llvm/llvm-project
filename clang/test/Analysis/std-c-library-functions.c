@@ -75,7 +75,7 @@ void test_read_write(int fd, char *buf) {
   }
 }
 
-size_t fread(void *, size_t, size_t, FILE *);
+size_t fread(void *restrict, size_t, size_t, FILE *);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
 void test_fread_fwrite(FILE *fp, int *buf) {
 

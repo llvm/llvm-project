@@ -115,7 +115,7 @@
 							},
 							"sourceMap": {
 								"type": "array",
-								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and desination pathname. Overrides sourcePath.",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination pathname. Overrides sourcePath.",
 								"default": []
 							},
 							"debuggerRoot": {
@@ -181,7 +181,7 @@
 							},
 							"sourceMap": {
 								"type": "array",
-								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and desination pathname. Overrides sourcePath.",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination pathname. Overrides sourcePath.",
 								"default": []
 							},
 							"debuggerRoot": {

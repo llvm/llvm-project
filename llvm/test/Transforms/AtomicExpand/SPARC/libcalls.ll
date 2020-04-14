@@ -86,7 +86,7 @@ define i128 @test_load_i128(i128* %arg) {
   ret i128 %ret
 }
 
-; CHECK-LABEL @test_store_i128(
+; CHECK-LABEL: @test_store_i128(
 ; CHECK:  %1 = bitcast i128* %arg to i8*
 ; CHECK:  %2 = alloca i128, align 8
 ; CHECK:  %3 = bitcast i128* %2 to i8*

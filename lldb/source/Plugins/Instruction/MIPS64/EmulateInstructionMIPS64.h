@@ -168,7 +168,7 @@ protected:
 
   bool nonvolatile_reg_p(uint64_t regnum);
 
-  const char *GetRegisterName(unsigned reg_num, bool altnernate_name);
+  const char *GetRegisterName(unsigned reg_num, bool alternate_name);
 
 private:
   std::unique_ptr<llvm::MCDisassembler> m_disasm;

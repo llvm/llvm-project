@@ -394,7 +394,7 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
            GetDebuggedProcessId(), image_base);
 
   // This is the earliest chance we can resolve the process ID and
-  // architecutre if we don't know them yet.
+  // architecture if we don't know them yet.
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     SetID(GetDebuggedProcessId());
 

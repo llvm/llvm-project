@@ -13,6 +13,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/Support/raw_ostream.h"
 #include <vector>
 
 namespace clang {

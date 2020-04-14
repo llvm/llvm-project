@@ -217,6 +217,9 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
   case WASM_EXTERNAL_GLOBAL:
     writeUleb128(os, export_.Index, "global index");
     break;
+  case WASM_EXTERNAL_EVENT:
+    writeUleb128(os, export_.Index, "event index");
+    break;
   case WASM_EXTERNAL_MEMORY:
     writeUleb128(os, export_.Index, "memory index");
     break;

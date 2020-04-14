@@ -8,12 +8,13 @@
 
 // Make sure we have access to the following substitutions at all times:
 // - %{cxx}
+// - %{flags}
 // - %{compile_flags}
 // - %{link_flags}
 // - %{exec}
 
 // FILE_DEPENDENCIES: %t.exe
-// RUN: %{cxx} %{compile_flags} %{link_flags} -o %t.exe %s
+// RUN: %{cxx} %{flags} %{compile_flags} %{link_flags} -o %t.exe %s
 // RUN: %{exec} %t.exe "HELLO"
 
 #include <cassert>

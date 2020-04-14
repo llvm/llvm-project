@@ -2922,7 +2922,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Process);
 };
 
-/// RAII guard that should be aquired when an utility function is called within
+/// RAII guard that should be acquired when an utility function is called within
 /// a given process.
 class UtilityFunctionScope {
   Process *m_process;

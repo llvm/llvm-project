@@ -9,6 +9,7 @@ static_library("Dynamic") {
   ]
   sources = [
     "Diagnostics.cpp",
+    "Marshallers.cpp",
     "Parser.cpp",
     "Registry.cpp",
     "VariantValue.cpp",

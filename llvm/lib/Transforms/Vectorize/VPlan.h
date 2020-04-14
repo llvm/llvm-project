@@ -609,6 +609,7 @@ public:
     VPInterleaveSC,
     VPPredInstPHISC,
     VPReplicateSC,
+    VPWidenCallSC,
     VPWidenGEPSC,
     VPWidenIntOrFpInductionSC,
     VPWidenMemoryInstructionSC,
@@ -776,6 +777,30 @@ public:
   }
 
   /// Produce widened copies of all Ingredients.
+  void execute(VPTransformState &State) override;
+
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+};
+
+/// A recipe for widening Call instructions.
+class VPWidenCallRecipe : public VPRecipeBase {
+private:
+  /// Hold the call to be widened.
+  CallInst &Ingredient;
+
+public:
+  VPWidenCallRecipe(CallInst &I) : VPRecipeBase(VPWidenCallSC), Ingredient(I) {}
+
+  ~VPWidenCallRecipe() override = default;
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *V) {
+    return V->getVPRecipeID() == VPRecipeBase::VPWidenCallSC;
+  }
+
+  /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.

@@ -10,7 +10,7 @@ define i32 @test(i8* %a, i8* %b) !prof !1 {
 ; CHECK: tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* %a, i32 undef, i1 false)
 ; CHECK: MemOP.Case.33:
 ; CHECK: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* %b, i64 3, i1 false)
-; CHECK  MemOP.Case.24:
+; CHECK: MemOP.Case.24:
 ; CHECK: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* %b, i64 2, i1 false)
 ; CHECK: MemOP.Default2:
 ; CHECK: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* %b, i64 undef, i1 false)

@@ -224,7 +224,7 @@ bb3:
 
 ; GCN-LABEL: {{^}}uniform_unconditional_min_long_forward_branch:
 ; GCN: s_cmp_eq_u32
-; GCN-NEXT: s_cbranch_scc0 [[BB2:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc{{[0-1]}} [[BB2:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONG_JUMP0:BB[0-9]+_[0-9]+]]: ; %bb0
 ; GCN-NEXT: s_getpc_b64 s{{\[}}[[PC0_LO:[0-9]+]]:[[PC0_HI:[0-9]+]]{{\]}}
@@ -232,24 +232,17 @@ bb3:
 ; GCN-NEXT: s_addc_u32 s[[PC0_HI]], s[[PC0_HI]], 0{{$}}
 ; GCN-NEXT: s_setpc_b64 s{{\[}}[[PC0_LO]]:[[PC0_HI]]{{\]}}
 
-; GCN-NEXT: [[BB2]]: ; %bb2
-; GCN: v_mov_b32_e32 [[BB2_K:v[0-9]+]], 17
-; GCN: buffer_store_dword [[BB2_K]]
-
-; GCN-NEXT: [[LONG_JUMP1:BB[0-9]+_[0-9]+]]: ; %bb2
-; GCN-NEXT: s_getpc_b64 s{{\[}}[[PC1_LO:[0-9]+]]:[[PC1_HI:[0-9]+]]{{\]}}
-; GCN-NEXT: s_add_u32 s[[PC1_LO]], s[[PC1_LO]], [[BB4:BB[0-9]_[0-9]+]]-([[LONG_JUMP1]]+4)
-; GCN-NEXT: s_addc_u32 s[[PC1_HI]], s[[PC1_HI]], 0{{$}}
-; GCN-NEXT: s_setpc_b64 s{{\[}}[[PC1_LO]]:[[PC1_HI]]{{\]}}
-
-; GCN: [[BB3]]: ; %bb3
+; GCN: [[BB2]]: ; %bb3
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
 
-; GCN-NEXT: [[BB4]]: ; %bb4
+; GCN: [[BB3]]:
+; GCN: v_mov_b32_e32 [[BB2_K:v[0-9]+]], 17
+; GCN: buffer_store_dword [[BB2_K]]
+
 ; GCN: v_mov_b32_e32 [[BB4_K:v[0-9]+]], 63
 ; GCN: buffer_store_dword [[BB4_K]]
 ; GCN-NEXT: s_endpgm
@@ -317,23 +310,15 @@ loop:
 ; GCN-LABEL: {{^}}expand_requires_expand:
 ; GCN-NEXT: ; %bb.0: ; %bb0
 ; GCN: s_load_dword
-; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 0{{$}}
-; GCN-NEXT: s_cbranch_scc0 [[BB1:BB[0-9]+_[0-9]+]]
+; GCN: {{s|v}}_cmp_lt_i32
+; GCN: s_cbranch
 
-; GCN-NEXT: [[LONGBB0:BB[0-9]+_[0-9]+]]: ; %bb0
-
-; GCN-NEXT: s_getpc_b64 s{{\[}}[[PC0_LO:[0-9]+]]:[[PC0_HI:[0-9]+]]{{\]}}
-; GCN-NEXT: s_add_u32 s[[PC0_LO]], s[[PC0_LO]], [[BB2:BB[0-9]_[0-9]+]]-([[LONGBB0]]+4)
-; GCN-NEXT: s_addc_u32 s[[PC0_HI]], s[[PC0_HI]], 0{{$}}
-; GCN-NEXT: s_setpc_b64 s{{\[}}[[PC0_LO]]:[[PC0_HI]]{{\]}}
-
-; GCN-NEXT: [[BB1]]: ; %bb1
-; GCN-NEXT: s_load_dword
+; GCN: s_load_dword
 ; GCN-NEXT: s_waitcnt lgkmcnt(0)
-; GCN-NEXT: s_cmp_eq_u32 s{{[0-9]+}}, 3{{$}}
-; GCN-NEXT: s_cbranch_scc0 [[BB2:BB[0-9]_[0-9]+]]
+; GCN-NEXT: v_cmp_{{eq|ne}}_u32_e64
+; GCN: s_cbranch_vccz [[BB2:BB[0-9]_[0-9]+]]
 
-; GCN-NEXT: [[LONGBB1:BB[0-9]+_[0-9]+]]: ; %bb1
+; GCN-NEXT: [[LONGBB1:BB[0-9]+_[0-9]+]]:
 ; GCN-NEXT: s_getpc_b64 s{{\[}}[[PC1_LO:[0-9]+]]:[[PC1_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC1_LO]], s[[PC1_LO]], [[BB3:BB[0-9]+_[0-9]+]]-([[LONGBB1]]+4)
 ; GCN-NEXT: s_addc_u32 s[[PC1_HI]], s[[PC1_HI]], 0{{$}}
@@ -451,7 +436,7 @@ endif:
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
-; GCN: s_cbranch_vccz [[RET:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_{{vccz|vccnz}} [[RET:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop
 ; GCN-NEXT: ; in Loop: Header=[[LOOP_BODY]] Depth=1
@@ -491,7 +476,7 @@ ret:
 
 ; GCN-LABEL: {{^}}long_branch_hang:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 6
-; GCN: s_cbranch_scc0 [[LONG_BR_0:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc{{[0-1]}} [[LONG_BR_0:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}:
 
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, [[LONG_BR_DEST0:BB[0-9]+_[0-9]+]]-(
@@ -499,14 +484,14 @@ ret:
 ; GCN-NEXT: s_setpc_b64
 
 ; GCN-NEXT: [[LONG_BR_0]]:
-; GCN-DAG: v_cmp_lt_i32
-; GCN-DAG: v_cmp_gt_i32
-; GCN: s_cbranch_vccnz
-
-; GCN: s_setpc_b64
 ; GCN: s_setpc_b64
 
 ; GCN: [[LONG_BR_DEST0]]
+
+; GCN: s_cbranch_vccnz
+; GCN-DAG: v_cmp_lt_i32
+; GCN-DAG: v_cmp_ge_i32
+
 ; GCN: s_cbranch_vccz
 ; GCN: s_setpc_b64
 

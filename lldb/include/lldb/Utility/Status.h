@@ -111,7 +111,7 @@ public:
 
   /// Set accessor from a kern_return_t.
   ///
-  /// Set accesssor for the error value to \a err and the error type to \c
+  /// Set accessor for the error value to \a err and the error type to \c
   /// MachKernel.
   ///
   /// \param[in] err
@@ -123,9 +123,9 @@ public:
   int SetExpressionErrorWithFormat(lldb::ExpressionResults, const char *format,
                                    ...) __attribute__((format(printf, 3, 4)));
 
-  /// Set accesssor with an error value and type.
+  /// Set accessor with an error value and type.
   ///
-  /// Set accesssor for the error value to \a err and the error type to \a
+  /// Set accessor for the error value to \a err and the error type to \a
   /// type.
   ///
   /// \param[in] err

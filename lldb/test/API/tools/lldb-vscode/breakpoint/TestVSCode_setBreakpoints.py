@@ -24,7 +24,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
            is no "clearBreakpoints" packet. Source file and line breakpoints
            are set by sending a "setBreakpoints" packet with a source file
            specified and zero or more source lines. If breakpoints have been
-           set in the source file before, any exising breakpoints must remain
+           set in the source file before, any existing breakpoints must remain
            set, and any new breakpoints must be created, and any breakpoints
            that were in previous requests and are not in the current request
            must be removed. This function tests this setting and clearing
@@ -44,7 +44,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
 
-        # Set 3 breakoints and verify that they got set correctly
+        # Set 3 breakpoints and verify that they got set correctly
         response = self.vscode.request_setBreakpoints(source_path, lines)
         line_to_id = {}
         if response:
@@ -68,7 +68,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         # breakpoint and set it again at the same location. We also need to
         # verify that the second line location was actually removed.
         lines.remove(second_line)
-        # Set 2 breakoints and verify that the previous breakoints that were
+        # Set 2 breakpoints and verify that the previous breakpoints that were
         # set above are still set.
         response = self.vscode.request_setBreakpoints(source_path, lines)
         if response:
@@ -195,7 +195,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                         "existing breakpoint should have its condition "
                         "updated")
 
-        # Continue with a hitContidtion of 2 and expect it to skip 1 value
+        # Continue with a hitCondition of 2 and expect it to skip 1 value
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.vscode.get_local_variable_value('i'))
         self.assertEquals(i, 6,

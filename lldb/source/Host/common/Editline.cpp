@@ -35,7 +35,7 @@ using namespace lldb_private::line_editor;
 // with until TERM is set to VT100 where it stumbles over an implementation
 // assumption that may not exist on other platforms.  The setupterm() function
 // would normally require headers that don't work gracefully in this context,
-// so the function declaraction has been hoisted here.
+// so the function declaration has been hoisted here.
 #if defined(__APPLE__)
 extern "C" {
 int setupterm(char *term, int fildes, int *errret);

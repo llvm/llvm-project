@@ -31,7 +31,7 @@ entry:
 ; CHECK-NOT: bitcast
 ; CHECK: call void @llvm.dbg.value(metadata i8* %p, metadata ![[Q_VAR:[0-9]+]], metadata !DIExpression())
 ; CHECK-NOT: bitcast
-; CHECK ret void
+; CHECK: ret void
 
 ; CHECK: ![[P_VAR]] = !DILocalVariable(name: "p", {{.*}})
 ; CHECK: ![[Q_VAR]] = !DILocalVariable(name: "q", {{.*}})

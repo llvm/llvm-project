@@ -158,7 +158,7 @@ class TestGdbRemoteThreadsInStopReply(
         register = str(pc_register)
         # The jThreadsInfo response is not valid JSON data, so we have to
         # clean it up first.
-        jthreads_info = json.loads(re.sub(r"}]", "}", threads_info))
+        jthreads_info = json.loads(self.decode_gdbremote_binary(threads_info))
         thread_pcs = dict()
         for thread_info in jthreads_info:
             tid = thread_info["tid"]
@@ -166,6 +166,34 @@ class TestGdbRemoteThreadsInStopReply(
             thread_pcs[tid] = self.switch_endian(pc) if little_endian else pc
 
         return thread_pcs
+
+    def gather_threads_info_memory(self):
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+                [
+                    "read packet: $jThreadsInfo#c1",
+                    {
+                        "direction": "send",
+                        "regex": r"^\$(.*)#[0-9a-fA-F]{2}$",
+                        "capture": {
+                            1: "threads_info"}},
+                ],
+                True)
+
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        threads_info = context.get("threads_info")
+        # The jThreadsInfo response is not valid JSON data, so we have to
+        # clean it up first.
+        jthreads_info = json.loads(self.decode_gdbremote_binary(threads_info))
+        # Collect all the memory chunks from all threads
+        memory_chunks = dict()
+        for thread_info in jthreads_info:
+            chunk_list = thread_info["memory"]
+            self.assertNotEqual(len(chunk_list), 0)
+            for chunk in chunk_list:
+                memory_chunks[chunk["address"]] = chunk["bytes"]
+        return memory_chunks
 
     def QListThreadsInStopReply_supported(self):
         procs = self.prep_debug_monitor_and_inferior()
@@ -313,3 +341,45 @@ class TestGdbRemoteThreadsInStopReply(
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_contains_thread_pcs(5)
+
+    def read_memory_chunk(self, address, length):
+        self.test_sequence.add_log_lines(
+            ["read packet: $x{0:x},{1:x}#00".format(address, length),
+             {
+                 "direction": "send",
+                 "regex": r"^\$([\s\S]*)#[0-9a-fA-F]{2}$",
+                 "capture": {
+                     1: "contents"}},
+            ],
+            True)
+        contents = self.expect_gdbremote_sequence()["contents"]
+        contents = self.decode_gdbremote_binary(contents)
+        hex_contents = ""
+        for c in contents:
+            hex_contents += "%02x" % ord(c)
+        return hex_contents
+
+    def check_memory_chunks_equal(self, memory_chunks):
+        self.reset_test_sequence()
+        for address in memory_chunks:
+            contents = memory_chunks[address]
+            byte_size = len(contents) // 2
+            mem = self.read_memory_chunk(address, byte_size)
+            self.assertEqual(mem, contents)
+
+    def stop_reply_thread_info_correct_memory(self, thread_count):
+        # Run and stop the program.
+        self.gather_stop_reply_fields([], thread_count, [])
+        # Read memory chunks from jThreadsInfo.
+        memory_chunks = self.gather_threads_info_memory()
+        # Check the chunks are correct.
+        self.check_memory_chunks_equal(memory_chunks)
+
+    @expectedFailureAll(oslist=["windows"])
+    @skipIfNetBSD
+    @llgs_test
+    def test_stop_reply_thread_info_correct_memory_llgs(self):
+        self.init_llgs_test()
+        self.build()
+        self.set_inferior_startup_launch()
+        self.stop_reply_thread_info_correct_memory(5)

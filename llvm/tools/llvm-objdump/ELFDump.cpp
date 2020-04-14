@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::object;
+using namespace llvm::objdump;
 
 namespace llvm {
 template <class ELFT>
