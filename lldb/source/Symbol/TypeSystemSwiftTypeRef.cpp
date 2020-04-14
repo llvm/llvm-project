@@ -531,11 +531,15 @@ bool TypeSystemSwiftTypeRef::IsScalarType(void *type) {
   return m_swift_ast_context->IsScalarType(ReconstructType(type));
 }
 bool TypeSystemSwiftTypeRef::IsVoidType(void *type) {
-  return m_swift_ast_context->IsVoidType(ReconstructType(type));
-}
-bool TypeSystemSwiftTypeRef::CanPassInRegisters(const CompilerType &type) {
-  return m_swift_ast_context->CanPassInRegisters(
-      {m_swift_ast_context, ReconstructType(type.GetOpaqueQualType())});
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node = DemangleCanonicalType(Dem, type);
+    return node && node->getNumChildren() == 0 &&
+           node->getKind() == Node::Kind::Tuple;
+  };
+  VALIDATE_AND_RETURN(impl,
+                      m_swift_ast_context->IsVoidType(ReconstructType(type)));
 }
 // Type Completion
 bool TypeSystemSwiftTypeRef::GetCompleteType(void *type) {
