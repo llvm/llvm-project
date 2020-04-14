@@ -321,7 +321,7 @@ public:
 
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
-  bool mergeIn(const ValueLatticeElement &RHS, const DataLayout &DL) {
+  bool mergeIn(const ValueLatticeElement &RHS) {
     if (RHS.isUnknown() || isOverdefined())
       return false;
     if (RHS.isOverdefined()) {
