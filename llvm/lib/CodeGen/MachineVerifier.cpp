@@ -1551,26 +1551,27 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
-  case TargetOpcode::STATEPOINT:
-    if (!MI->getOperand(StatepointOpers::IDPos).isImm() ||
-        !MI->getOperand(StatepointOpers::NBytesPos).isImm() ||
-        !MI->getOperand(StatepointOpers::NCallArgsPos).isImm())
+  case TargetOpcode::STATEPOINT: {
+    StatepointOpers SO(MI);
+    if (!MI->getOperand(SO.getIDPos()).isImm() ||
+        !MI->getOperand(SO.getNBytesPos()).isImm() ||
+        !MI->getOperand(SO.getNCallArgsPos()).isImm()) {
       report("meta operands to STATEPOINT not constant!", MI);
-    break;
+      break;
+    }
 
     auto VerifyStackMapConstant = [&](unsigned Offset) {
-      if (!MI->getOperand(Offset).isImm() ||
-          MI->getOperand(Offset).getImm() != StackMaps::ConstantOp ||
-          !MI->getOperand(Offset + 1).isImm())
+      if (!MI->getOperand(Offset - 1).isImm() ||
+          MI->getOperand(Offset - 1).getImm() != StackMaps::ConstantOp ||
+          !MI->getOperand(Offset).isImm())
         report("stack map constant to STATEPOINT not well formed!", MI);
     };
-    const unsigned VarStart = StatepointOpers(MI).getVarIdx();
-    VerifyStackMapConstant(VarStart + StatepointOpers::CCOffset);
-    VerifyStackMapConstant(VarStart + StatepointOpers::FlagsOffset);
-    VerifyStackMapConstant(VarStart + StatepointOpers::NumDeoptOperandsOffset);
+    VerifyStackMapConstant(SO.getCCIdx());
+    VerifyStackMapConstant(SO.getFlagsIdx());
+    VerifyStackMapConstant(SO.getNumDeoptArgsIdx());
 
     // TODO: verify we have properly encoded deopt arguments
-    break;
+  } break;
   }
 }
 
