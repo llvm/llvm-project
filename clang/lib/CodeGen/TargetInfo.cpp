@@ -970,7 +970,8 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                      .Cases("y", "&y", "^Ym", true)
                      .Default(false);
   if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getBitWidth() != 64) {
+    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedSize() !=
+        64) {
       // Invalid MMX constraint
       return nullptr;
     }
@@ -2260,7 +2261,7 @@ public:
     if (info.isDirect()) {
       llvm::Type *ty = info.getCoerceToType();
       if (llvm::VectorType *vectorTy = dyn_cast_or_null<llvm::VectorType>(ty))
-        return (vectorTy->getBitWidth() > 128);
+        return vectorTy->getPrimitiveSizeInBits().getFixedSize() > 128;
     }
     return false;
   }
