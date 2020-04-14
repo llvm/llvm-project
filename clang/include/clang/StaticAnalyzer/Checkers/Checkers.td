@@ -1430,9 +1430,14 @@ def TaintTesterChecker : Checker<"TaintTest">,
   HelpText<"Mark tainted symbols as such.">,
   Documentation<NotDocumented>;
 
+// This checker *technically* depends on SteamChecker, but we don't allow
+// dependency checkers to emit diagnostics, and a debug checker isn't worth
+// the chore needed to create a modeling portion on its own. Since this checker
+// is for development purposes only anyways, make sure that StreamChecker is
+// also enabled, at least for the time being.
 def StreamTesterChecker : Checker<"StreamTester">,
-  HelpText<"Add test functions to StreamChecker for test and debugging purposes.">,
-  Dependencies<[StreamChecker]>,
+  HelpText<"Add test functions to StreamChecker for test and debugging "
+           "purposes.">,
   Documentation<NotDocumented>;
 
 def ExprInspectionChecker : Checker<"ExprInspection">,
