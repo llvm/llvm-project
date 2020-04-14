@@ -190,6 +190,13 @@ namespace clang {
 #include "clang/Basic/arm_sve_typeflags.inc"
 #undef LLVM_GET_SVE_MERGETYPES
     };
+
+    enum ImmCheckType {
+#define LLVM_GET_SVE_IMMCHECKTYPES
+#include "clang/Basic/arm_sve_typeflags.inc"
+#undef LLVM_GET_SVE_IMMCHECKTYPES
+    };
+
     SVETypeFlags(uint64_t F) : Flags(F) {
       EltTypeShift = llvm::countTrailingZeros(EltTypeMask);
       MemEltTypeShift = llvm::countTrailingZeros(MemEltTypeMask);

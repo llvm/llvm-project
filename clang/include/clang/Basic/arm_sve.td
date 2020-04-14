@@ -61,6 +61,10 @@
 // d: default
 // c: const pointer type
 // P: predicate type
+//
+// i: constant uint64_t
+//
+// I: Predicate Pattern (sv_pattern)
 
 // l: int64_t
 
@@ -147,9 +151,22 @@ def IsStructLoad              : FlagType<0x00020000>;
 def IsStructStore             : FlagType<0x00040000>;
 def IsZExtReturn              : FlagType<0x00080000>; // Return value is sign-extend by default
 
+// These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
+class ImmCheckType<int val> {
+  int Value = val;
+}
+def ImmCheck0_31                : ImmCheckType<0>;  // 0..31 (used for e.g. predicate patterns)
+def ImmCheck1_16                : ImmCheckType<1>;  // 1..16
+
+class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
+  int Arg = arg;
+	int EltSizeArg = eltSizeArg;
+  ImmCheckType Kind = kind;
+}
+
 // Every intrinsic subclasses Inst.
 class Inst<string n, string p, string t, MergeType mt, string i,
-           list<FlagType> ft, MemEltType met> {
+           list<FlagType> ft, list<ImmCheck> ch, MemEltType met> {
   string Name = n;
   string Prototype = p;
   string Types = t;
@@ -158,13 +175,21 @@ class Inst<string n, string p, string t, MergeType mt, string i,
   string MergeSuffix = mt.Suffix;
   string LLVMIntrinsic = i;
   list<FlagType> Flags = ft;
+  list<ImmCheck> ImmChecks = ch;
   int MemEltType = met.Value;
+}
+
+// SInst: Instruction with signed/unsigned suffix (e.g., "s8", "u8")
+class SInst<string n, string p, string t, MergeType mt, string i = "",
+            list<FlagType> ft = [], list<ImmCheck> ch = []>
+    : Inst<n, p, t, mt, i, ft, ch, MemEltTyDefault> {
 }
 
 // MInst: Instructions which access memory
 class MInst<string n, string p, string t, list<FlagType> f,
-            MemEltType met=MemEltTyDefault, string i="">
-  : Inst<n, p, t, MergeNone, i, f, met> {}
+            MemEltType met = MemEltTyDefault, string i = "">
+    : Inst<n, p, t, MergeNone, i, f, [], met> {
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads
@@ -256,3 +281,8 @@ def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEl
 
 // Store one vector, with no truncation, non-temporal (scalar base, VL displacement)
 def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
+
+////////////////////////////////////////////////////////////////////////////////
+// Saturating scalar arithmetic
+def SVQDECH_S : SInst<"svqdech_pat[_{d}]",   "ddIi", "s", MergeNone, "aarch64_sve_sqdech", [], [ImmCheck<2, ImmCheck1_16>]>;
+def SVQDECH_U : SInst<"svqdech_pat[_{d}]",   "ddIi", "Us", MergeNone, "aarch64_sve_uqdech", [], [ImmCheck<2, ImmCheck1_16>]>;

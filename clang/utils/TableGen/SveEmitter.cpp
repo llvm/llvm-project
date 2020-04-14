@@ -46,6 +46,22 @@ using TypeSpec = std::string;
 
 namespace {
 
+class ImmCheck {
+  unsigned Arg;
+  unsigned Kind;
+  unsigned ElementSizeInBits;
+
+public:
+  ImmCheck(unsigned Arg, unsigned Kind, unsigned ElementSizeInBits = 0)
+      : Arg(Arg), Kind(Kind), ElementSizeInBits(ElementSizeInBits) {}
+  ImmCheck(const ImmCheck &Other) = default;
+  ~ImmCheck() = default;
+
+  unsigned getArg() const { return Arg; }
+  unsigned getKind() const { return Kind; }
+  unsigned getElementSizeInBits() const { return ElementSizeInBits; }
+};
+
 class SVEType {
   TypeSpec TS;
   bool Float, Signed, Immediate, Void, Constant, Pointer;
@@ -146,11 +162,13 @@ class Intrinsic {
 
   uint64_t Flags;
 
+  SmallVector<ImmCheck, 2> ImmChecks;
+
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
-            uint64_t Flags, TypeSpec BT, ClassKind Class, SVEEmitter &Emitter,
-            StringRef Guard);
+            uint64_t Flags, ArrayRef<ImmCheck> ImmChecks, TypeSpec BT,
+            ClassKind Class, SVEEmitter &Emitter, StringRef Guard);
 
   ~Intrinsic()=default;
 
@@ -170,6 +188,8 @@ public:
 
   uint64_t getFlags() const { return Flags; }
   bool isFlagSet(uint64_t Flag) const { return Flags & Flag;}
+
+  ArrayRef<ImmCheck> getImmChecks() const { return ImmChecks; }
 
   /// Return the type string for a BUILTIN() macro in Builtins.def.
   std::string getBuiltinTypeStr();
@@ -204,6 +224,7 @@ private:
   llvm::StringMap<uint64_t> MemEltTypes;
   llvm::StringMap<uint64_t> FlagTypes;
   llvm::StringMap<uint64_t> MergeTypes;
+  llvm::StringMap<uint64_t> ImmCheckTypes;
 
 public:
   SVEEmitter(RecordKeeper &R) : Records(R) {
@@ -215,6 +236,16 @@ public:
       FlagTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
     for (auto *RV : Records.getAllDerivedDefinitions("MergeType"))
       MergeTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
+    for (auto *RV : Records.getAllDerivedDefinitions("ImmCheckType"))
+      ImmCheckTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
+  }
+
+  /// Returns the enum value for the immcheck type
+  unsigned getEnumValueForImmCheck(StringRef C) const {
+    auto It = ImmCheckTypes.find(C);
+    if (It != ImmCheckTypes.end())
+      return It->getValue();
+    llvm_unreachable("Unsupported imm check");
   }
 
   // Returns the SVETypeFlags for a given value and mask.
@@ -257,6 +288,9 @@ public:
 
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGenMap(raw_ostream &o);
+
+  /// Emit all the range checks for the immediates.
+  void createRangeChecks(raw_ostream &o);
 
   /// Create the SVETypeFlags used in CGBuiltins
   void createTypeFlags(raw_ostream &o);
@@ -428,6 +462,23 @@ void SVEType::applyModifier(char Mod) {
     Bitwidth = 16;
     ElementBitwidth = 1;
     break;
+  case 'i':
+    Predicate = false;
+    Float = false;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    Signed = false;
+    Immediate = true;
+    break;
+  case 'I':
+    Predicate = false;
+    Float = false;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = true;
+    Immediate = true;
+    PredicatePattern = true;
+    break;
   case 'l':
     Predicate = false;
     Signed = true;
@@ -531,16 +582,25 @@ void SVEType::applyModifier(char Mod) {
 
 Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
                      StringRef MergeSuffix, uint64_t MemoryElementTy,
-                     StringRef LLVMName, uint64_t Flags, TypeSpec BT,
-                     ClassKind Class, SVEEmitter &Emitter, StringRef Guard)
+                     StringRef LLVMName, uint64_t Flags,
+                     ArrayRef<ImmCheck> Checks, TypeSpec BT, ClassKind Class,
+                     SVEEmitter &Emitter, StringRef Guard)
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
       BaseTypeSpec(BT), Class(Class), Guard(Guard.str()),
-      MergeSuffix(MergeSuffix.str()), BaseType(BT, 'd'), Flags(Flags) {
+      MergeSuffix(MergeSuffix.str()), BaseType(BT, 'd'), Flags(Flags),
+      ImmChecks(Checks.begin(), Checks.end()) {
 
   // Types[0] is the return value.
   for (unsigned I = 0; I < Proto.size(); ++I) {
     SVEType T(BaseTypeSpec, Proto[I]);
     Types.push_back(T);
+
+    // Add range checks for immediates
+    if (I > 0) {
+      if (T.isPredicatePattern())
+        ImmChecks.emplace_back(
+            I - 1, Emitter.getEnumValueForImmCheck("ImmCheck0_31"));
+    }
   }
 
   // Set flags based on properties
@@ -714,6 +774,7 @@ void SVEEmitter::createIntrinsic(
   StringRef MergeSuffix = R->getValueAsString("MergeSuffix");
   uint64_t MemEltType = R->getValueAsInt("MemEltType");
   std::vector<Record*> FlagsList = R->getValueAsListOfDefs("Flags");
+  std::vector<Record*> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
 
   int64_t Flags = 0;
   for (auto FlagRec : FlagsList)
@@ -737,15 +798,30 @@ void SVEEmitter::createIntrinsic(
 
   // Create an Intrinsic for each type spec.
   for (auto TS : TypeSpecs) {
-    Out.push_back(std::make_unique<Intrinsic>(Name, Proto, Merge, MergeSuffix,
-                                              MemEltType, LLVMName, Flags, TS,
-                                              ClassS, *this, Guard));
+    // Collate a list of range/option checks for the immediates.
+    SmallVector<ImmCheck, 2> ImmChecks;
+    for (auto *R : ImmCheckList) {
+      unsigned Arg = R->getValueAsInt("Arg");
+      unsigned EltSizeArg = R->getValueAsInt("EltSizeArg");
+      unsigned Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
+
+      unsigned ElementSizeInBits = 0;
+      if (EltSizeArg >= 0)
+        ElementSizeInBits =
+            SVEType(TS, Proto[EltSizeArg + /* offset by return arg */ 1])
+                .getElementSizeInBits();
+      ImmChecks.push_back(ImmCheck(Arg, Kind, ElementSizeInBits));
+    }
+
+    Out.push_back(std::make_unique<Intrinsic>(
+        Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags, ImmChecks,
+        TS, ClassS, *this, Guard));
 
     // Also generate the short-form (e.g. svadd_m) for the given type-spec.
     if (Intrinsic::isOverloadedIntrinsic(Name))
-      Out.push_back(std::make_unique<Intrinsic>(Name, Proto, Merge, MergeSuffix,
-                                                MemEltType, LLVMName, Flags, TS,
-                                                ClassG, *this, Guard));
+      Out.push_back(std::make_unique<Intrinsic>(
+          Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags,
+          ImmChecks, TS, ClassG, *this, Guard));
   }
 }
 
@@ -794,6 +870,27 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
+
+  OS << "typedef enum\n";
+  OS << "{\n";
+  OS << "  SV_POW2 = 0,\n";
+  OS << "  SV_VL1 = 1,\n";
+  OS << "  SV_VL2 = 2,\n";
+  OS << "  SV_VL3 = 3,\n";
+  OS << "  SV_VL4 = 4,\n";
+  OS << "  SV_VL5 = 5,\n";
+  OS << "  SV_VL6 = 6,\n";
+  OS << "  SV_VL7 = 7,\n";
+  OS << "  SV_VL8 = 8,\n";
+  OS << "  SV_VL16 = 9,\n";
+  OS << "  SV_VL32 = 10,\n";
+  OS << "  SV_VL64 = 11,\n";
+  OS << "  SV_VL128 = 12,\n";
+  OS << "  SV_VL256 = 13,\n";
+  OS << "  SV_MUL4 = 29,\n";
+  OS << "  SV_MUL3 = 30,\n";
+  OS << "  SV_ALL = 31\n";
+  OS << "} sv_pattern;\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __aio static inline __attribute__((__always_inline__, "
@@ -897,6 +994,41 @@ void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+void SVEEmitter::createRangeChecks(raw_ostream &OS) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // The mappings must be sorted based on BuiltinID.
+  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+    return A->getMangledName() < B->getMangledName();
+  });
+
+
+  OS << "#ifdef GET_SVE_IMMEDIATE_CHECK\n";
+
+  // Ensure these are only emitted once.
+  std::set<std::string> Emitted;
+
+  for (auto &Def : Defs) {
+    if (Emitted.find(Def->getMangledName()) != Emitted.end() ||
+        Def->getImmChecks().empty())
+      continue;
+
+    OS << "case SVE::BI__builtin_sve_" << Def->getMangledName() << ":\n";
+    for (auto &Check : Def->getImmChecks())
+      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << "));\n";
+    OS << "  break;\n";
+
+    Emitted.insert(Def->getMangledName());
+  }
+
+  OS << "#endif\n\n";
+}
+
 /// Create the SVETypeFlags used in CGBuiltins
 void SVEEmitter::createTypeFlags(raw_ostream &OS) {
   OS << "#ifdef LLVM_GET_SVE_TYPEFLAGS\n";
@@ -918,6 +1050,11 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
   for (auto &KV : MergeTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
+
+  OS << "#ifdef LLVM_GET_SVE_IMMCHECKTYPES\n";
+  for (auto &KV : ImmCheckTypes)
+    OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
+  OS << "#endif\n\n";
 }
 
 namespace clang {
@@ -932,6 +1069,11 @@ void EmitSveBuiltins(RecordKeeper &Records, raw_ostream &OS) {
 void EmitSveBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createCodeGenMap(OS);
 }
+
+void EmitSveRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createRangeChecks(OS);
+}
+
 void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
 }
