@@ -181,7 +181,7 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
   let results = (outs Shape_ShapeType:$result);
 }
 
-def Shape_ToExtentTensorOp : Shape_Op<"to_tensor", []> {
+def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", []> {
   let summary = "Creates a dimension tensor from a shape";
   // TODO: Think more about the error situation. Perhaps factor out the
   // error detection into a separate op so downstream consumers can control
@@ -197,7 +197,7 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_tensor", []> {
   }];
 
   let arguments = (ins Shape_ShapeType:$input);
-  let results = (outs I32Tensor:$result);
+  let results = (outs IndexTensor:$result);
 }
 
 def Shape_JoinOp : Shape_Op<"join", []> {
