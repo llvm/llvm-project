@@ -69,6 +69,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -481,6 +482,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // used in the loop, instead, just delete it.
       if (isInstructionTriviallyDead(&I, TLI)) {
         LLVM_DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
+        salvageKnowledge(&I);
         salvageDebugInfo(I);
         ++II;
         eraseInstruction(I, *SafetyInfo, CurAST, MSSAU);
