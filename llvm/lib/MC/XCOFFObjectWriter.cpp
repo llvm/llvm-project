@@ -384,11 +384,26 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
                                          const MCFragment *Fragment,
                                          const MCFixup &Fixup, MCValue Target,
                                          uint64_t &FixedValue) {
+  auto getIndex = [this](const MCSymbol *Sym,
+                         const MCSectionXCOFF *ContainingCsect) {
+    // If we could not find the symbol directly in SymbolIndexMap, this symbol
+    // could either be a temporary symbol or an undefined symbol. In this case,
+    // we would need to have the relocation reference its csect instead.
+    return SymbolIndexMap.find(Sym) != SymbolIndexMap.end()
+               ? SymbolIndexMap[Sym]
+               : SymbolIndexMap[ContainingCsect->getQualNameSymbol()];
+  };
 
-  if (Target.getSymB())
-    report_fatal_error("Handling Target.SymB for relocation is unimplemented.");
+  auto getVirtualAddress = [this,
+                            &Layout](const MCSymbol *Sym,
+                                     const MCSectionXCOFF *ContainingCsect) {
+    // If Sym is a csect, return csect's address.
+    // If Sym is a label, return csect's address + label's offset from the csect.
+    return SectionMap[ContainingCsect]->Address +
+           (Sym->isDefined() ? Layout.getSymbolOffset(*Sym) : 0);
+  };
 
-  const MCSymbol &SymA = Target.getSymA()->getSymbol();
+  const MCSymbol *const SymA = &Target.getSymA()->getSymbol();
 
   MCAsmBackend &Backend = Asm.getBackend();
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
@@ -399,26 +414,15 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   std::tie(Type, SignAndSize) =
       TargetObjectWriter->getRelocTypeAndSignSize(Target, Fixup, IsPCRel);
 
-  const MCSectionXCOFF *SymASec =
-      getContainingCsect(cast<MCSymbolXCOFF>(&SymA));
+  const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
   assert(SectionMap.find(SymASec) != SectionMap.end() &&
          "Expected containing csect to exist in map.");
 
-  // If we could not find SymA directly in SymbolIndexMap, this symbol could
-  // either be a temporary symbol or an undefined symbol. In this case, we
-  // would need to have the relocation reference its csect instead.
-  uint32_t Index = SymbolIndexMap.find(&SymA) != SymbolIndexMap.end()
-                       ? SymbolIndexMap[&SymA]
-                       : SymbolIndexMap[SymASec->getQualNameSymbol()];
-
+  const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS)
     // The FixedValue should be symbol's virtual address in this object file
     // plus any constant value that we might get.
-    // Notice that SymA.isDefined() could return false, but SymASec could still
-    // be a defined csect. One of the example is the TOC-base symbol.
-    FixedValue = SectionMap[SymASec]->Address +
-                 (SymA.isDefined() ? Layout.getSymbolOffset(SymA) : 0) +
-                 Target.getConstant();
+    FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();
   else if (Type == XCOFF::RelocationType::R_TOC)
     // The FixedValue should be the TC entry offset from TOC-base.
     FixedValue = SectionMap[SymASec]->Address - TOCCsects.front().Address;
@@ -435,6 +439,33 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   assert(SectionMap.find(RelocationSec) != SectionMap.end() &&
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);
+
+  if (!Target.getSymB())
+    return;
+
+  const MCSymbol *const SymB = &Target.getSymB()->getSymbol();
+  if (SymA == SymB)
+    report_fatal_error("relocation for opposite term is not yet supported");
+
+  const MCSectionXCOFF *SymBSec = getContainingCsect(cast<MCSymbolXCOFF>(SymB));
+  assert(SectionMap.find(SymBSec) != SectionMap.end() &&
+         "Expected containing csect to exist in map.");
+  if (SymASec == SymBSec)
+    report_fatal_error(
+        "relocation for paired relocatable term is not yet supported");
+
+  assert(Type == XCOFF::RelocationType::R_POS &&
+         "SymA must be R_POS here if it's not opposite term or paired "
+         "relocatable term.");
+  const uint32_t IndexB = getIndex(SymB, SymBSec);
+  // SymB must be R_NEG here, given the general form of Target(MCValue) is
+  // "SymbolA - SymbolB + imm64".
+  const uint8_t TypeB = XCOFF::RelocationType::R_NEG;
+  XCOFFRelocation RelocB = {IndexB, FixupOffsetInCsect, SignAndSize, TypeB};
+  SectionMap[RelocationSec]->Relocations.push_back(RelocB);
+  // We already folded "SymbolA + imm64" above when Type is R_POS for SymbolA,
+  // now we just need to fold "- SymbolB" here.
+  FixedValue -= getVirtualAddress(SymB, SymBSec);
 }
 
 void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
