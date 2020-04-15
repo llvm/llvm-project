@@ -1195,9 +1195,11 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    const auto &KindToAbstractAttributeMap = AAMap.lookup(IRP);
+    auto KindToAbstractAttributeMapIt = AAMap.find(IRP);
+    if ( KindToAbstractAttributeMapIt == AAMap.end())
+      return nullptr;
     if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
+            KindToAbstractAttributeMapIt->second.lookup(&AAType::ID))) {
       // Do not register a dependence on an attribute with an invalid state.
       if (TrackDependence && AA->getState().isValidState())
         recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
