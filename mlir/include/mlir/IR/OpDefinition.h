@@ -116,6 +116,12 @@ public:
     return getOperation()->getParentOfType<OpTy>();
   }
 
+  /// Returns the closest surrounding parent operation with trait `Trait`.
+  template <template <typename T> class Trait>
+  Operation *getParentWithTrait() {
+    return getOperation()->getParentWithTrait<Trait>();
+  }
+
   /// Return the context this operation belongs to.
   MLIRContext *getContext() { return getOperation()->getContext(); }
 

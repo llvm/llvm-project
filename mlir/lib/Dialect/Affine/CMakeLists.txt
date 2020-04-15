@@ -19,3 +19,4 @@ target_link_libraries(MLIRAffine
   )
 
 add_subdirectory(Transforms)
+add_subdirectory(Utils)
