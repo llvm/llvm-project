@@ -1207,7 +1207,7 @@ private:
   /// the inner level.
   ///{
   using KindToAbstractAttributeMap =
-      DenseMap<const char *, AbstractAttribute *>;
+      SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
   DenseMap<IRPosition, KindToAbstractAttributeMap> AAMap;
   ///}
 
