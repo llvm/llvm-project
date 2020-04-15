@@ -398,9 +398,14 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   // Create a file large enough to mmap. A 32KiB file should be enough.
   for (unsigned i = 0; i < 0x1000; ++i)
     OF << "01234567";
-  OF.flush();
+  OF.close();
 
-  auto MBOrError = MemoryBuffer::getOpenFile(FD, TestPath,
+  Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  auto OnExit =
+      make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+
+  auto MBOrError = MemoryBuffer::getOpenFile(*File, TestPath,
       /*FileSize=*/-1, /*RequiresNullTerminator=*/false, /*IsVolatile=*/true);
   ASSERT_NO_ERROR(MBOrError.getError())
   OwningBuffer MB = std::move(*MBOrError);
