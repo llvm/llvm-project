@@ -1398,8 +1398,8 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
     DagNotMatches = ImplicitNegativeChecks;
   }
 
-  // Add an EOF pattern for any trailing CHECK-DAG/-NOTs, and use the first
-  // prefix as a filler for the error message.
+  // Add an EOF pattern for any trailing --implicit-check-not/CHECK-DAG/-NOTs,
+  // and use the first prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
     CheckStrings->emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
