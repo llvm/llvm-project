@@ -1,16 +1,11 @@
 ; RUN: not --crash llc -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
 ; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
 
-%struct.S = type { [1 x i8] }
+%struct.S = type { i8 }
 
-define void @bar() {
+define void @foo(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, %struct.S* byval(%struct.S) align 1 %s) {
 entry:
-  %s1 = alloca %struct.S, align 1
-  %agg.tmp = alloca %struct.S, align 1
-  call void @foo(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct.S* byval(%struct.S) align 1 %agg.tmp)
   ret void
 }
 
-declare void @foo(i32, i32, i32, i32, i32, i32, i32, i32, %struct.S* byval(%struct.S) align 1)
-
-; CHECK: LLVM ERROR: Pass-by-value arguments are only supported in registers.
+; CHECK: LLVM ERROR: ByVal arguments passed on stack not implemented yet
