@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure the test passes if it fails at compile-time, without verify
+// REQUIRES: verify-support
 
-struct Foo { };
-typedef Foo::x x;
+// Make sure the test passes if we expected no diagnostics and included
+// the markup.
 
-int main() { }
+// expected-no-diagnostics
