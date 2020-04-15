@@ -1035,8 +1035,16 @@ static void readConfigs(opt::InputArgList &args) {
     parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
-  for (auto *arg : args.filtered(OPT_plugin_opt))
-    parseClangOption(arg->getValue(), arg->getSpelling());
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
+    parseClangOption(std::string("-") + arg->getValue(), arg->getSpelling());
+
+  // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
+  // relative path. Just ignore. If not ended with "lto-wrapper", consider it an
+  // unsupported LLVMgold.so option and error.
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq))
+    if (!StringRef(arg->getValue()).endswith("lto-wrapper"))
+      error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
+            "'");
 
   // Parse -mllvm options.
   for (auto *arg : args.filtered(OPT_mllvm))
