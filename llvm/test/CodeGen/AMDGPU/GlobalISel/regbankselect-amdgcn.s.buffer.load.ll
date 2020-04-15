@@ -308,8 +308,8 @@ define amdgpu_ps <16 x float> @s_buffer_load_v16f32_vgpr_offset(<4 x i32> inreg 
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<4 x s32>), [[AMDGPU_BUFFER_LOAD1]](<4 x s32>), [[AMDGPU_BUFFER_LOAD2]](<4 x s32>), [[AMDGPU_BUFFER_LOAD3]](<4 x s32>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -399,8 +399,8 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[MV:%[0-9]+]]:vgpr(s512) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](s128), [[AMDGPU_BUFFER_LOAD1]](s128), [[AMDGPU_BUFFER_LOAD2]](s128), [[AMDGPU_BUFFER_LOAD3]](s128)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128), [[UV2:%[0-9]+]]:vgpr(s128), [[UV3:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](s512)
   ; CHECK:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store 16 into `i512 addrspace(1)* undef`, align 8, addrspace 1)
@@ -463,8 +463,8 @@ define amdgpu_ps void @s_buffer_load_v32i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<32 x s16>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<8 x s16>), [[AMDGPU_BUFFER_LOAD1]](<8 x s16>), [[AMDGPU_BUFFER_LOAD2]](<8 x s16>), [[AMDGPU_BUFFER_LOAD3]](<8 x s16>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(<8 x s16>), [[UV1:%[0-9]+]]:vgpr(<8 x s16>), [[UV2:%[0-9]+]]:vgpr(<8 x s16>), [[UV3:%[0-9]+]]:vgpr(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<32 x s16>)
   ; CHECK:   G_STORE [[UV]](<8 x s16>), [[DEF]](p1) :: (store 16 into `<32 x i16> addrspace(1)* undef`, align 64, addrspace 1)
@@ -527,8 +527,8 @@ define amdgpu_ps void @s_buffer_load_v8i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x s64>), [[AMDGPU_BUFFER_LOAD1]](<2 x s64>), [[AMDGPU_BUFFER_LOAD2]](<2 x s64>), [[AMDGPU_BUFFER_LOAD3]](<2 x s64>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(<2 x s64>), [[UV1:%[0-9]+]]:vgpr(<2 x s64>), [[UV2:%[0-9]+]]:vgpr(<2 x s64>), [[UV3:%[0-9]+]]:vgpr(<2 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
   ; CHECK:   G_STORE [[UV]](<2 x s64>), [[DEF]](p1) :: (store 16 into `<8 x i64> addrspace(1)* undef`, align 64, addrspace 1)
@@ -591,8 +591,8 @@ define amdgpu_ps void @s_buffer_load_v8p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x p1>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x p1>), [[AMDGPU_BUFFER_LOAD1]](<2 x p1>), [[AMDGPU_BUFFER_LOAD2]](<2 x p1>), [[AMDGPU_BUFFER_LOAD3]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(<2 x p1>), [[UV1:%[0-9]+]]:vgpr(<2 x p1>), [[UV2:%[0-9]+]]:vgpr(<2 x p1>), [[UV3:%[0-9]+]]:vgpr(<2 x p1>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x p1>)
   ; CHECK:   G_STORE [[UV]](<2 x p1>), [[DEF]](p1) :: (store 16 into `<8 x i8 addrspace(1)*> addrspace(1)* undef`, align 64, addrspace 1)
@@ -763,8 +763,8 @@ define amdgpu_ps <16 x float> @s_buffer_load_v16f32_vgpr_offset_add_4032(<4 x i3
   ; CHECK:   [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4032, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4048, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4064, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4080, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4064, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C2]](s32), [[COPY4]], [[C1]], 4080, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<4 x s32>), [[AMDGPU_BUFFER_LOAD1]](<4 x s32>), [[AMDGPU_BUFFER_LOAD2]](<4 x s32>), [[AMDGPU_BUFFER_LOAD3]](<4 x s32>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -805,8 +805,8 @@ define amdgpu_ps <16 x float> @s_buffer_load_v16f32_vgpr_offset_add_4036(<4 x i3
   ; CHECK:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load 16, align 4)
   ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load 16 + 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load 16 + 48, align 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<4 x s32>), [[AMDGPU_BUFFER_LOAD1]](<4 x s32>), [[AMDGPU_BUFFER_LOAD2]](<4 x s32>), [[AMDGPU_BUFFER_LOAD3]](<4 x s32>)
   ; CHECK:   [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -1003,7 +1003,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4095, 0, 0 :: (dereferenceable invariant load 4, align 1)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4095, 0, 0 :: (dereferenceable invariant load 4 + 4095, align 1)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -1448,8 +1448,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4064, 0, 0 :: (dereferenceable invariant load 16, align 4)
-  ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4080, 0, 0 :: (dereferenceable invariant load 16, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4064, 0, 0 :: (dereferenceable invariant load 16 + 4064, align 4)
+  ; CHECK:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[C3]](s32), [[C1]], [[C2]], 4080, 0, 0 :: (dereferenceable invariant load 16 + 4064, align 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
