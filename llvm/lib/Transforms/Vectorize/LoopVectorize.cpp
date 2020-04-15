@@ -6931,22 +6931,24 @@ VPRecipeBuilder::tryToWidenCall(Instruction *I, VFRange &Range, VPlan &Plan) {
   return new VPWidenCallRecipe(*CI, VPValues);
 }
 
-VPWidenSelectRecipe *VPRecipeBuilder::tryToWidenSelect(Instruction *I,
-                                                       VFRange &Range) {
+bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
+  assert(!isa<PHINode>(I) && !isa<LoadInst>(I) && !isa<StoreInst>(I) &&
+         "Instruction should have been handled earlier");
+  // Instruction should be widened, unless it is scalar after vectorization,
+  // scalarization is profitable or it is predicated.
+  auto WillScalarize = [this, I](unsigned VF) -> bool {
+    return CM.isScalarAfterVectorization(I, VF) ||
+           CM.isProfitableToScalarize(I, VF) ||
+           CM.isScalarWithPredication(I, VF);
+  };
+  return !LoopVectorizationPlanner::getDecisionAndClampRange(WillScalarize,
+                                                             Range);
+}
+
+VPWidenSelectRecipe *VPRecipeBuilder::tryToWidenSelect(Instruction *I) {
   auto *SI = dyn_cast<SelectInst>(I);
   if (!SI)
     return nullptr;
-
-  // SI should be widened, unless it is scalar after vectorization,
-  // scalarization is profitable or it is predicated.
-  auto willWiden = [this, SI](unsigned VF) -> bool {
-    return !CM.isScalarAfterVectorization(SI, VF) &&
-           !CM.isProfitableToScalarize(SI, VF) &&
-           !CM.isScalarWithPredication(SI, VF);
-  };
-  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
-    return nullptr;
-
   auto *SE = PSE.getSE();
   bool InvariantCond =
       SE->isLoopInvariant(PSE.getSCEV(SI->getOperand(0)), OrigLoop);
@@ -6954,14 +6956,7 @@ VPWidenSelectRecipe *VPRecipeBuilder::tryToWidenSelect(Instruction *I,
   return new VPWidenSelectRecipe(*SI, InvariantCond);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
-  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
-
-  if (IsPredicated)
-    return nullptr;
-
-  assert(!isa<PHINode>(I) && "PHIs should have been handled earlier");
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VPlan &Plan) {
   auto IsVectorizableOpcode = [](unsigned Opcode) {
     switch (Opcode) {
     case Instruction::Add:
@@ -7005,14 +7000,6 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
   };
 
   if (!IsVectorizableOpcode(I->getOpcode()))
-    return nullptr;
-
-  auto willWiden = [&](unsigned VF) -> bool {
-    return !CM.isScalarAfterVectorization(I, VF) &&
-           !CM.isProfitableToScalarize(I, VF);
-  };
-
-  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return nullptr;
 
   // Success: widen this instruction.
@@ -7095,7 +7082,6 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
   // operations, inductions and Phi nodes.
   if ((Recipe = tryToWidenCall(Instr, Range, *Plan)) ||
       (Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
-      (Recipe = tryToWidenSelect(Instr, Range)) ||
       (Recipe = tryToOptimizeInduction(Instr, Range)) ||
       (Recipe = tryToBlend(Instr, Plan)) ||
       (isa<PHINode>(Instr) &&
@@ -7105,24 +7091,19 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
     return true;
   }
 
-  // Handle GEP widening.
-  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
-    auto Scalarize = [&](unsigned VF) {
-      return CM.isScalarWithPredication(Instr, VF) ||
-             CM.isScalarAfterVectorization(Instr, VF) ||
-             CM.isProfitableToScalarize(Instr, VF);
-    };
-    if (LoopVectorizationPlanner::getDecisionAndClampRange(Scalarize, Range))
-      return false;
-    VPWidenGEPRecipe *Recipe = new VPWidenGEPRecipe(GEP, OrigLoop);
-    setRecipe(Instr, Recipe);
-    VPBB->appendRecipe(Recipe);
-    return true;
-  }
+  // Calls and memory instructions are widened by the specialized recipes above,
+  // or scalarized.
+  if (isa<CallInst>(Instr) || isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
+    return false;
 
-  // Check if Instr is to be widened by a general VPWidenRecipe, after
-  // having first checked for specific widening recipes.
-  if ((Recipe = tryToWiden(Instr, Range))) {
+  if (!shouldWiden(Instr, Range))
+    return false;
+
+  if ((Recipe = tryToWidenSelect(Instr)) ||
+      (isa<GetElementPtrInst>(Instr) &&
+       (Recipe =
+            new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), OrigLoop))) ||
+      (Recipe = tryToWiden(Instr, *Plan))) {
     setRecipe(Instr, Recipe);
     VPBB->appendRecipe(Recipe);
     return true;
