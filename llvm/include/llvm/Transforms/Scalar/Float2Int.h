@@ -30,13 +30,12 @@ public:
   bool runImpl(Function &F, const DominatorTree &DT);
 
 private:
-  void findRoots(Function &F, const DominatorTree &DT,
-                 SmallPtrSet<Instruction *, 8> &Roots);
+  void findRoots(Function &F, const DominatorTree &DT);
   void seen(Instruction *I, ConstantRange R);
   ConstantRange badRange();
   ConstantRange unknownRange();
   ConstantRange validateRange(ConstantRange R);
-  void walkBackwards(const SmallPtrSetImpl<Instruction *> &Roots);
+  void walkBackwards();
   void walkForwards();
   bool validateAndTransform();
   Value *convert(Instruction *I, Type *ToTy);
