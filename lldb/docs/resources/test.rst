@@ -23,6 +23,9 @@ executable.
 .. contents::
    :local:
 
+Running The Tests
+-----------------
+
 .. note::
 
    On Windows any invocations of python should be replaced with python_d, the
@@ -35,7 +38,7 @@ executable.
    This is due to lack of the ``$ORIGIN`` linker feature.
 
 Running the Full Test Suite
----------------------------
+```````````````````````````
 
 The easiest way to run the LLDB test suite is to use the ``check-lldb`` build
 target.
@@ -58,7 +61,7 @@ Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
 
 Running a Single Test Suite
----------------------------
+```````````````````````````
 
 Each test suite can be run separately, similar to running the whole test suite
 with ``check-lldb``.
@@ -74,7 +77,7 @@ tests don't actually live under ``lldb/test``, this convenience is only
 available for the shell tests.
 
 Running a Single Test
----------------------
+`````````````````````
 
 The recommended way to run a single test is by invoking the lit driver with a
 filter. This ensures that the test is run with the same configuration as when
@@ -105,7 +108,7 @@ Below is an overview of running individual test in the unit and API test suites
 without going through the lit driver.
 
 Running a Specific Test or Set of Tests: API Tests
---------------------------------------------------
+``````````````````````````````````````````````````
 
 In addition to running all the LLDB test suites with the ``check-lldb`` CMake
 target above, it is possible to run individual LLDB tests. If you have a CMake
@@ -146,7 +149,7 @@ Many more options that are available. To see a list of all of them, run:
 
 
 Running a Specific Test or Set of Tests: Unit Tests
----------------------------------------------------
+```````````````````````````````````````````````````
 
 The unit tests are simple executables, located in the build directory under ``tools/lldb/unittests``.
 
@@ -165,7 +168,7 @@ To run a specific test, pass a filter, for example:
 
 
 Running the Test Suite Remotely
--------------------------------
+```````````````````````````````
 
 Running the test-suite remotely is similar to the process of running a local
 test suite, but there are two things to have in mind:
@@ -191,7 +194,7 @@ On non-Windows platforms, you can use the ``-d`` option to ``dotest.py`` which
 will cause the script to wait for a while until a debugger is attached.
 
 Debugging Test Failures on Windows
-----------------------------------
+``````````````````````````````````
 
 On Windows, it is strongly recommended to use Python Tools for Visual Studio
 for debugging test failures. It can seamlessly step between native and managed
@@ -240,6 +243,5 @@ A quick guide to getting started with PTVS is as follows:
 ::
 
    --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
-
 
 
