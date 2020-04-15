@@ -71,8 +71,10 @@ ExprDependence clang::computeDependence(UnaryExprOrTypeTraitExpr *E) {
   if (!D)
     return Deps;
   for (const auto *I : D->specific_attrs<AlignedAttr>()) {
+    if (I->isAlignmentErrorDependent())
+      Deps |= ExprDependence::Error;
     if (I->isAlignmentDependent())
-      return Deps | ExprDependence::ValueInstantiation;
+      Deps |= ExprDependence::ValueInstantiation;
   }
   return Deps;
 }
