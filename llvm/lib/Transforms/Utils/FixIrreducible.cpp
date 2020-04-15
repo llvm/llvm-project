@@ -236,8 +236,10 @@ static void createNaturalLoopInternal(LoopInfo &LI, DominatorTree &DT,
 #endif // EXPENSIVE_CHECKS
 }
 
+namespace llvm {
 // Enable the graph traits required for traversing a Loop body.
-template <> struct llvm::GraphTraits<Loop> : LoopBodyTraits {};
+template <> struct GraphTraits<Loop> : LoopBodyTraits {};
+} // namespace llvm
 
 // Overloaded wrappers to go with the function template below.
 BasicBlock *unwrapBlock(BasicBlock *B) { return B; }
