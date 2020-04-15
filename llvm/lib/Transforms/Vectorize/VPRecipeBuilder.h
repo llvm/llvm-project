@@ -64,6 +64,11 @@ class VPRecipeBuilder {
     Ingredient2Recipe[I] = R;
   }
 
+  /// Check if \p I can be widened at the start of \p Range and possibly
+  /// decrease the range such that the returned value holds for the entire \p
+  /// Range. The function should not be called for memory instructions or calls.
+  bool shouldWiden(Instruction *I, VFRange &Range) const;
+
 public:
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True. It returns the *entry*
@@ -114,14 +119,15 @@ public:
   /// ensure same decision from \p Range.Start to \p Range.End.
   VPWidenCallRecipe *tryToWidenCall(Instruction *I, VFRange &Range,
                                     VPlan &Plan);
+  /// Check if \p I is a SelectInst and return a VPWidenSelectRecipe if it is.
+  /// The function should only be called if the cost-model indicates that
+  /// widening should be performed.
+  VPWidenSelectRecipe *tryToWidenSelect(Instruction *I);
 
-  VPWidenSelectRecipe *tryToWidenSelect(Instruction *I, VFRange &Range);
-
-  /// Check if \p I can be widened within the given VF \p Range. If \p I can be
-  /// widened for \p Range.Start, build a new VPWidenRecipe and return it.
-  /// Range.End may be decreased to ensure same decision from \p Range.Start to
-  /// \p Range.End.
-  VPWidenRecipe *tryToWiden(Instruction *I, VFRange &Range);
+  /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
+  /// if it can. The function should only be called if the cost-model indicates
+  /// that widening should be performed.
+  VPWidenRecipe *tryToWiden(Instruction *I, VPlan &Plan);
 
   /// Create a replicating region for instruction \p I that requires
   /// predication. \p PredRecipe is a VPReplicateRecipe holding \p I.
