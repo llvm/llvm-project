@@ -27,6 +27,6 @@
 // CHECK-CHILD4-NEXT: value: '0'
 
 // RUN: clang-tidy --explain-config %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-EXPLAIN
-// CHECK-EXPLAIN: 'llvm-qualified-auto' is enabled in the {{.*}}/Inputs/config-files/4/44/.clang-tidy.
-// CHECK-EXPLAIN: 'modernize-loop-convert' is enabled in the {{.*}}/Inputs/config-files/4/.clang-tidy.
-// CHECK-EXPLAIN: 'modernize-use-using' is enabled in the {{.*}}/Inputs/config-files/4/.clang-tidy.
+// CHECK-EXPLAIN: 'llvm-qualified-auto' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}44{{[/\\]}}.clang-tidy.
+// CHECK-EXPLAIN: 'modernize-loop-convert' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}.clang-tidy.
+// CHECK-EXPLAIN: 'modernize-use-using' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}.clang-tidy.
