@@ -6692,7 +6692,7 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<MSAllocatorAttr>(S, D, AL);
 }
 
-static void handeAcquireHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleAcquireHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.isUsedAsTypeAttr())
     return;
   // Warn if the parameter is definitely not an output parameter.
@@ -7373,7 +7373,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   case ParsedAttr::AT_AcquireHandle:
-    handeAcquireHandleAttr(S, D, AL);
+    handleAcquireHandleAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_ReleaseHandle:
