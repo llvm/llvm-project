@@ -484,12 +484,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
           uint32_t EleSize = ArgType->getScalarSizeInBits();
           uint32_t TotalSize = EleCount * EleSize;
           if (EleCount == 3) {
-            IntegerType *Int32Ty = Type::getInt32Ty(ArgType->getContext());
-            Constant *Indices[4] = {
-                ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 1),
-                ConstantInt::get(Int32Ty, 2), ConstantInt::get(Int32Ty, 2)};
-            Constant *Mask = ConstantVector::get(Indices);
-            ShuffleVectorInst *Shuffle = new ShuffleVectorInst(Arg, Arg, Mask);
+            ShuffleVectorInst *Shuffle =
+                new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
             Shuffle->insertBefore(Brnch);
             Arg = Shuffle;
             ArgType = Arg->getType();

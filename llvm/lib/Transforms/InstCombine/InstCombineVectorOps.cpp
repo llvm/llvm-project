@@ -452,26 +452,25 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
 /// If V is a shuffle of values that ONLY returns elements from either LHS or
 /// RHS, return the shuffle mask and true. Otherwise, return false.
 static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
-                                         SmallVectorImpl<Constant*> &Mask) {
+                                         SmallVectorImpl<int> &Mask) {
   assert(LHS->getType() == RHS->getType() &&
          "Invalid CollectSingleShuffleElements");
   unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
 
   if (isa<UndefValue>(V)) {
-    Mask.assign(NumElts, UndefValue::get(Type::getInt32Ty(V->getContext())));
+    Mask.assign(NumElts, -1);
     return true;
   }
 
   if (V == LHS) {
     for (unsigned i = 0; i != NumElts; ++i)
-      Mask.push_back(ConstantInt::get(Type::getInt32Ty(V->getContext()), i));
+      Mask.push_back(i);
     return true;
   }
 
   if (V == RHS) {
     for (unsigned i = 0; i != NumElts; ++i)
-      Mask.push_back(ConstantInt::get(Type::getInt32Ty(V->getContext()),
-                                      i+NumElts));
+      Mask.push_back(i + NumElts);
     return true;
   }
 
@@ -490,7 +489,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
       // transitively ok.
       if (collectSingleShuffleElements(VecOp, LHS, RHS, Mask)) {
         // If so, update the mask to reflect the inserted undef.
-        Mask[InsertedIdx] = UndefValue::get(Type::getInt32Ty(V->getContext()));
+        Mask[InsertedIdx] = -1;
         return true;
       }
     } else if (ExtractElementInst *EI = dyn_cast<ExtractElementInst>(ScalarOp)){
@@ -507,14 +506,10 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
           if (collectSingleShuffleElements(VecOp, LHS, RHS, Mask)) {
             // If so, update the mask to reflect the inserted value.
             if (EI->getOperand(0) == LHS) {
-              Mask[InsertedIdx % NumElts] =
-              ConstantInt::get(Type::getInt32Ty(V->getContext()),
-                               ExtractedIdx);
+              Mask[InsertedIdx % NumElts] = ExtractedIdx;
             } else {
               assert(EI->getOperand(0) == RHS);
-              Mask[InsertedIdx % NumElts] =
-              ConstantInt::get(Type::getInt32Ty(V->getContext()),
-                               ExtractedIdx + NumLHSElts);
+              Mask[InsertedIdx % NumElts] = ExtractedIdx + NumLHSElts;
             }
             return true;
           }
@@ -546,12 +541,11 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   // values. The mask selects all of the values of the original vector followed
   // by as many undefined values as needed to create a vector of the same length
   // as the inserted-to vector.
-  SmallVector<Constant *, 16> ExtendMask;
-  IntegerType *IntType = Type::getInt32Ty(InsElt->getContext());
+  SmallVector<int, 16> ExtendMask;
   for (unsigned i = 0; i < NumExtElts; ++i)
-    ExtendMask.push_back(ConstantInt::get(IntType, i));
+    ExtendMask.push_back(i);
   for (unsigned i = NumExtElts; i < NumInsElts; ++i)
-    ExtendMask.push_back(UndefValue::get(IntType));
+    ExtendMask.push_back(-1);
 
   Value *ExtVecOp = ExtElt->getVectorOperand();
   auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp);
@@ -579,8 +573,8 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   if (InsElt->hasOneUse() && isa<InsertElementInst>(InsElt->user_back()))
     return;
 
-  auto *WideVec = new ShuffleVectorInst(ExtVecOp, UndefValue::get(ExtVecType),
-                                        ConstantVector::get(ExtendMask));
+  auto *WideVec =
+      new ShuffleVectorInst(ExtVecOp, UndefValue::get(ExtVecType), ExtendMask);
 
   // Insert the new shuffle after the vector operand of the extract is defined
   // (as long as it's not a PHI) or at the start of the basic block of the
@@ -613,21 +607,20 @@ static void replaceExtractElements(InsertElementInst *InsElt,
 /// often been chosen carefully to be efficiently implementable on the target.
 using ShuffleOps = std::pair<Value *, Value *>;
 
-static ShuffleOps collectShuffleElements(Value *V,
-                                         SmallVectorImpl<Constant *> &Mask,
+static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
                                          Value *PermittedRHS,
                                          InstCombiner &IC) {
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
   unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
 
   if (isa<UndefValue>(V)) {
-    Mask.assign(NumElts, UndefValue::get(Type::getInt32Ty(V->getContext())));
+    Mask.assign(NumElts, -1);
     return std::make_pair(
         PermittedRHS ? UndefValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
   if (isa<ConstantAggregateZero>(V)) {
-    Mask.assign(NumElts, ConstantInt::get(Type::getInt32Ty(V->getContext()),0));
+    Mask.assign(NumElts, 0);
     return std::make_pair(V, nullptr);
   }
 
@@ -658,15 +651,13 @@ static ShuffleOps collectShuffleElements(Value *V,
             // We tried our best, but we can't find anything compatible with RHS
             // further up the chain. Return a trivial shuffle.
             for (unsigned i = 0; i < NumElts; ++i)
-              Mask[i] = ConstantInt::get(Type::getInt32Ty(V->getContext()), i);
+              Mask[i] = i;
             return std::make_pair(V, nullptr);
           }
 
           unsigned NumLHSElts =
               cast<VectorType>(RHS->getType())->getNumElements();
-          Mask[InsertedIdx % NumElts] =
-            ConstantInt::get(Type::getInt32Ty(V->getContext()),
-                             NumLHSElts+ExtractedIdx);
+          Mask[InsertedIdx % NumElts] = NumLHSElts + ExtractedIdx;
           return std::make_pair(LR.first, RHS);
         }
 
@@ -676,9 +667,7 @@ static ShuffleOps collectShuffleElements(Value *V,
           unsigned NumLHSElts =
               cast<VectorType>(EI->getOperand(0)->getType())->getNumElements();
           for (unsigned i = 0; i != NumElts; ++i)
-            Mask.push_back(ConstantInt::get(
-                Type::getInt32Ty(V->getContext()),
-                i == InsertedIdx ? ExtractedIdx : NumLHSElts + i));
+            Mask.push_back(i == InsertedIdx ? ExtractedIdx : NumLHSElts + i);
           return std::make_pair(EI->getOperand(0), PermittedRHS);
         }
 
@@ -694,7 +683,7 @@ static ShuffleOps collectShuffleElements(Value *V,
 
   // Otherwise, we can't do anything fancy. Return an identity vector.
   for (unsigned i = 0; i != NumElts; ++i)
-    Mask.push_back(ConstantInt::get(Type::getInt32Ty(V->getContext()), i));
+    Mask.push_back(i);
   return std::make_pair(V, nullptr);
 }
 
@@ -815,12 +804,12 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
     FirstIE = InsertElementInst::Create(UndefVec, SplatVal, Zero, "", &InsElt);
 
   // Splat from element 0, but replace absent elements with undef in the mask.
-  SmallVector<Constant *, 16> Mask(NumElements, Zero);
+  SmallVector<int, 16> Mask(NumElements, 0);
   for (unsigned i = 0; i != NumElements; ++i)
     if (!ElementPresent[i])
-      Mask[i] = UndefValue::get(Int32Ty);
+      Mask[i] = -1;
 
-  return new ShuffleVectorInst(FirstIE, UndefVec, ConstantVector::get(Mask));
+  return new ShuffleVectorInst(FirstIE, UndefVec, Mask);
 }
 
 /// Try to fold an insert element into an existing splat shuffle by changing
@@ -996,33 +985,29 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
         !match(IEI->getOperand(1), m_Constant(Val[1])))
       return nullptr;
     SmallVector<Constant *, 16> Values(NumElts);
-    SmallVector<Constant *, 16> Mask(NumElts);
+    SmallVector<int, 16> Mask(NumElts);
     auto ValI = std::begin(Val);
     // Generate new constant vector and mask.
     // We have 2 values/masks from the insertelements instructions. Insert them
     // into new value/mask vectors.
     for (uint64_t I : InsertIdx) {
       if (!Values[I]) {
-        assert(!Mask[I]);
         Values[I] = *ValI;
-        Mask[I] = ConstantInt::get(Type::getInt32Ty(InsElt.getContext()),
-                                   NumElts + I);
+        Mask[I] = NumElts + I;
       }
       ++ValI;
     }
     // Remaining values are filled with 'undef' values.
     for (unsigned I = 0; I < NumElts; ++I) {
       if (!Values[I]) {
-        assert(!Mask[I]);
         Values[I] = UndefValue::get(InsElt.getType()->getElementType());
-        Mask[I] = ConstantInt::get(Type::getInt32Ty(InsElt.getContext()), I);
+        Mask[I] = I;
       }
     }
     // Create new operands for a shuffle that includes the constant of the
     // original insertelt.
     return new ShuffleVectorInst(IEI->getOperand(0),
-                                 ConstantVector::get(Values),
-                                 ConstantVector::get(Mask));
+                                 ConstantVector::get(Values), Mask);
   }
   return nullptr;
 }
@@ -1084,7 +1069,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
     // Try to form a shuffle from a chain of extract-insert ops.
     if (isShuffleRootCandidate(IE)) {
-      SmallVector<Constant*, 16> Mask;
+      SmallVector<int, 16> Mask;
       ShuffleOps LR = collectShuffleElements(&IE, Mask, nullptr, *this);
 
       // The proposed shuffle may be trivial, in which case we shouldn't
@@ -1093,8 +1078,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
         // We now have a shuffle of LHS, RHS, Mask.
         if (LR.second == nullptr)
           LR.second = UndefValue::get(LR.first->getType());
-        return new ShuffleVectorInst(LR.first, LR.second,
-                                     ConstantVector::get(Mask));
+        return new ShuffleVectorInst(LR.first, LR.second, Mask);
       }
     }
   }
@@ -1907,9 +1891,8 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   int WideElts = Shuffle0->getType()->getNumElements();
   assert(WideElts > NarrowElts && "Unexpected types for identity with padding");
 
-  Type *I32Ty = IntegerType::getInt32Ty(Shuf.getContext());
   ArrayRef<int> Mask = Shuf.getShuffleMask();
-  SmallVector<Constant *, 16> NewMask(Mask.size(), UndefValue::get(I32Ty));
+  SmallVector<int, 16> NewMask(Mask.size(), -1);
   for (int i = 0, e = Mask.size(); i != e; ++i) {
     if (Mask[i] == -1)
       continue;
@@ -1929,13 +1912,13 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
     // element is offset down to adjust for the narrow vector widths.
     if (Mask[i] < WideElts) {
       assert(Mask[i] < NarrowElts && "Unexpected shuffle mask");
-      NewMask[i] = ConstantInt::get(I32Ty, Mask[i]);
+      NewMask[i] = Mask[i];
     } else {
       assert(Mask[i] < (WideElts + NarrowElts) && "Unexpected shuffle mask");
-      NewMask[i] = ConstantInt::get(I32Ty, Mask[i] - (WideElts - NarrowElts));
+      NewMask[i] = Mask[i] - (WideElts - NarrowElts);
     }
   }
-  return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
+  return new ShuffleVectorInst(X, Y, NewMask);
 }
 
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {

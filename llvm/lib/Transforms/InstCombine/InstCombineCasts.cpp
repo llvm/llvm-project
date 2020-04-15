@@ -1923,8 +1923,8 @@ static Instruction *optimizeVectorResizeWithIntegerBitCasts(Value *InVal,
   // Now that the element types match, get the shuffle mask and RHS of the
   // shuffle to use, which depends on whether we're increasing or decreasing the
   // size of the input.
-  SmallVector<uint32_t, 16> ShuffleMaskStorage;
-  ArrayRef<uint32_t> ShuffleMask;
+  SmallVector<int, 16> ShuffleMaskStorage;
+  ArrayRef<int> ShuffleMask;
   Value *V2;
 
   // Produce an identify shuffle mask for the src vector.
@@ -1963,9 +1963,7 @@ static Instruction *optimizeVectorResizeWithIntegerBitCasts(Value *InVal,
     ShuffleMask = ShuffleMaskStorage;
   }
 
-  return new ShuffleVectorInst(InVal, V2,
-                               ConstantDataVector::get(V2->getContext(),
-                                                       ShuffleMask));
+  return new ShuffleVectorInst(InVal, V2, ShuffleMask);
 }
 
 static bool isMultipleOfTypeSize(unsigned Value, Type *Ty) {
