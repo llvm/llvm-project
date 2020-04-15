@@ -18,6 +18,7 @@
 #include "llvm-objdump.h"
 #include "COFFDump.h"
 #include "MachODump.h"
+#include "WasmDump.h"
 #include "XCOFFDump.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
