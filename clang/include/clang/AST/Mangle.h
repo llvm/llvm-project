@@ -111,6 +111,7 @@ public:
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
+  virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream&);
 
   void mangleGlobalBlock(const BlockDecl *BD,
                          const NamedDecl *ID,

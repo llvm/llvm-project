@@ -797,6 +797,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case TranslationUnit:
     case ExternCContext:
     case Decomposition:
+    case MSGuid:
 
     case UsingDirective:
     case BuiltinTemplate:

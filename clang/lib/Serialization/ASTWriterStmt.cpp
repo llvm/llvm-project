@@ -2070,7 +2070,7 @@ void ASTStmtWriter::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *E) {
 void ASTStmtWriter::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   VisitExpr(E);
   Record.AddSourceRange(E->getSourceRange());
-  Record.AddString(E->getUuidStr());
+  Record.AddDeclRef(E->getGuidDecl());
   if (E->isTypeOperand()) {
     Record.AddTypeSourceInfo(E->getTypeOperandSourceInfo());
     Code = serialization::EXPR_CXX_UUIDOF_TYPE;

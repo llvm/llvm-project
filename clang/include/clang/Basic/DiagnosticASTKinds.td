@@ -338,6 +338,8 @@ def note_constexpr_delete_base_nonvirt_dtor : Note<
 def note_constexpr_memory_leak : Note<
   "allocation performed here was not deallocated"
   "%plural{0:|: (along with %0 other memory leak%s0)}0">;
+def note_constexpr_unsupported_layout : Note<
+  "type %0 has unexpected layout">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
