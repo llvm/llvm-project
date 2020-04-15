@@ -45,19 +45,32 @@ mlir::edsc::LoopNestBuilder::LoopNestBuilder(ArrayRef<ValueHandle *> ivs,
   assert(ivs.size() == steps.size() &&
          "expected size of ivs and steps to match");
   loops.reserve(ivs.size());
-  for (auto it : llvm::zip(ivs, lbs, ubs, steps)) {
+  for (auto it : llvm::zip(ivs, lbs, ubs, steps))
     loops.emplace_back(makeLoopBuilder(std::get<0>(it), std::get<1>(it),
                                        std::get<2>(it), std::get<3>(it)));
-  }
   assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
 }
 
-void mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
+mlir::edsc::LoopNestBuilder::LoopNestBuilder(
+    ValueHandle *iv, ValueHandle lb, ValueHandle ub, ValueHandle step,
+    ArrayRef<ValueHandle *> iter_args_handles,
+    ValueRange iter_args_init_values) {
+  assert(iter_args_init_values.size() == iter_args_handles.size() &&
+         "expected size of arguments and argument_handles to match");
+  loops.emplace_back(makeLoopBuilder(iv, lb, ub, step, iter_args_handles,
+                                     iter_args_init_values));
+}
+
+Operation::result_range
+mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
     std::function<void(void)> fun) {
   if (fun)
     fun();
+
   for (auto &lit : reverse(loops))
     lit({});
+
+  return loops[0].getOp()->getResults();
 }
 
 LoopBuilder mlir::edsc::makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
@@ -78,15 +91,21 @@ LoopBuilder mlir::edsc::makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
   return result;
 }
 
-mlir::edsc::LoopBuilder mlir::edsc::makeLoopBuilder(ValueHandle *iv,
-                                                    ValueHandle lbHandle,
-                                                    ValueHandle ubHandle,
-                                                    ValueHandle stepHandle) {
+mlir::edsc::LoopBuilder
+mlir::edsc::makeLoopBuilder(ValueHandle *iv, ValueHandle lbHandle,
+                            ValueHandle ubHandle, ValueHandle stepHandle,
+                            ArrayRef<ValueHandle *> iter_args_handles,
+                            ValueRange iter_args_init_values) {
   mlir::edsc::LoopBuilder result;
-  auto forOp =
-      OperationHandle::createOp<loop::ForOp>(lbHandle, ubHandle, stepHandle);
+  auto forOp = OperationHandle::createOp<loop::ForOp>(
+      lbHandle, ubHandle, stepHandle, iter_args_init_values);
   *iv = ValueHandle(forOp.getInductionVar());
   auto *body = loop::getForInductionVarOwner(iv->getValue()).getBody();
+  for (size_t i = 0, e = iter_args_handles.size(); i < e; ++i) {
+    // Skipping the induction variable.
+    *(iter_args_handles[i]) = ValueHandle(body->getArgument(i + 1));
+  }
+  result.setOp(forOp);
   result.enter(body, /*prev=*/1);
   return result;
 }

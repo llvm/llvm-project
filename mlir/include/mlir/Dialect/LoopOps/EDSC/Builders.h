@@ -33,7 +33,9 @@ LoopBuilder makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
 /// variable. A ValueHandle pointer is passed as the first argument and is the
 /// *only* way to capture the loop induction variable.
 LoopBuilder makeLoopBuilder(ValueHandle *iv, ValueHandle lbHandle,
-                            ValueHandle ubHandle, ValueHandle stepHandle);
+                            ValueHandle ubHandle, ValueHandle stepHandle,
+                            ArrayRef<ValueHandle *> iter_args_handles = {},
+                            ValueRange iter_args_init_values = {});
 
 /// Helper class to sugar building loop.parallel loop nests from lower/upper
 /// bounds and step sizes.
@@ -54,9 +56,13 @@ private:
 /// loop.for.
 class LoopNestBuilder {
 public:
-  LoopNestBuilder(ArrayRef<edsc::ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
+  LoopNestBuilder(ValueHandle *iv, ValueHandle lb, ValueHandle ub,
+                  ValueHandle step,
+                  ArrayRef<ValueHandle *> iter_args_handles = {},
+                  ValueRange iter_args_init_values = {});
+  LoopNestBuilder(ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
                   ArrayRef<ValueHandle> ubs, ArrayRef<ValueHandle> steps);
-  void operator()(std::function<void(void)> fun = nullptr);
+  Operation::result_range operator()(std::function<void(void)> fun = nullptr);
 
 private:
   SmallVector<LoopBuilder, 4> loops;
