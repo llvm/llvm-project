@@ -7622,7 +7622,7 @@ bool TypeSystemClang::AddObjCClassProperty(
                         : class_interface_decl->lookupClassMethod(getter_sel);
   if (!getter_sel.isNull() && !getter) {
     const bool isVariadic = false;
-    const bool isPropertyAccessor = false;
+    const bool isPropertyAccessor = true;
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
