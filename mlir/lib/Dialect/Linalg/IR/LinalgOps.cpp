@@ -523,8 +523,10 @@ getSymbolLessAffineMaps(ArrayRef<ArrayRef<AffineExpr>> reassociation) {
          "Expected symbol-less expressions");
   SmallVector<AffineMap, 4> maps;
   maps.reserve(reassociation.size());
-  for (auto exprs : reassociation)
-    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs));
+  for (auto exprs : reassociation) {
+    assert(exprs.size() != 0);
+    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs, exprs[0].getContext()));
+  }
   return maps;
 }
 
