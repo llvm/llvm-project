@@ -96,6 +96,14 @@ During this release ...
 * Functions with the probe-stack attribute set to "inline-asm" are now protected
   against stack clash without the need of a third-party probing function and
   with limited impact on performance.
+* -x86-enable-old-knl-abi command line switch has been removed. v32i16/v64i8
+  vectors are always passed in ZMM register when avx512f is enabled and avx512bw
+  is disabled.
+* Vectors larger than 512 bits with i16 or i8 elements will be passed in
+  multiple ZMM registers when avx512f is enabled. Previously this required
+  avx512bw otherwise they would split into multiple YMM registers. This means
+  vXi16/vXi8 vectors are consistently treated the same as
+  vXi32/vXi64/vXf64/vXf32 vectors of the same total width.
 
 Changes to the AMDGPU Target
 -----------------------------
