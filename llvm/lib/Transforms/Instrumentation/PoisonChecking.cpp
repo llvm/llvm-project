@@ -103,8 +103,8 @@ static Value *buildOrChain(IRBuilder<> &B, ArrayRef<Value*> Ops) {
   return Accum;
 }
 
-static void generatePoisonChecksForBinOp(Instruction &I,
-                                         SmallVector<Value*, 2> &Checks) {
+static void generateCreationChecksForBinOp(Instruction &I,
+                                           SmallVectorImpl<Value*> &Checks) {
   assert(isa<BinaryOperator>(I));
   
   IRBuilder<> B(&I);
@@ -183,11 +183,14 @@ static void generatePoisonChecksForBinOp(Instruction &I,
   };
 }
 
-static Value* generatePoisonChecks(Instruction &I) {
+/// Given an instruction which can produce poison on non-poison inputs
+/// (i.e. canCreatePoison returns true), generate runtime checks to produce
+/// boolean indicators of when poison would result.
+static void generateCreationChecks(Instruction &I,
+                                   SmallVectorImpl<Value*> &Checks) {
   IRBuilder<> B(&I);
-  SmallVector<Value*, 2> Checks;
   if (isa<BinaryOperator>(I) && !I.getType()->isVectorTy())
-    generatePoisonChecksForBinOp(I, Checks);
+    generateCreationChecksForBinOp(I, Checks);
 
   // Handle non-binops seperately
   switch (I.getOpcode()) {
@@ -222,7 +225,6 @@ static Value* generatePoisonChecks(Instruction &I) {
     break;
   }
   };
-  return buildOrChain(B, Checks);
 }
 
 static Value *getPoisonFor(DenseMap<Value *, Value *> &ValToPoison, Value *V) {
@@ -299,8 +301,7 @@ static bool rewrite(Function &F) {
           Checks.push_back(getPoisonFor(ValToPoison, V));
 
       if (canCreatePoison(&I))
-        if (auto *Check = generatePoisonChecks(I))
-          Checks.push_back(Check);
+        generateCreationChecks(I, Checks);
       ValToPoison[&I] = buildOrChain(B, Checks);
     }
 
