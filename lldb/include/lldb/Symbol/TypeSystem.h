@@ -259,12 +259,9 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
-  /// \param opaque_payload      The m_payload field of Type, which may
-  /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
                                      const char *name,
-                                     const CompilerDeclContext &decl_ctx,
-                                     uint32_t opaque_payload);
+                                     const CompilerDeclContext &decl_ctx);
 
   // Exploring the type
 
