@@ -909,6 +909,11 @@ class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = bit_0;
   let horizontalReduction = 1;
+  // Allow tail predication for non-exchanging versions. As this is also a
+  // horizontalReduction, ARMLowOverheadLoops will also have to check that
+  // the vector operands contain zeros in their false lanes for the instruction
+  // to be properly valid.
+  let validForTailPredication = !eq(X, 0);
 }
 
 multiclass MVE_VMLAMLSDAV_A<string iname, string x, MVEVectorVTInfo VTI,
@@ -1068,6 +1073,11 @@ class MVE_VMLALDAVBase<string iname, string suffix, dag iops, string cstr,
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = bit_0;
   let horizontalReduction = 1;
+  // Allow tail predication for non-exchanging versions. As this is also a
+  // horizontalReduction, ARMLowOverheadLoops will also have to check that
+  // the vector operands contain zeros in their false lanes for the instruction
+  // to be properly valid.
+  let validForTailPredication = !eq(X, 0);
 
   let hasSideEffects = 0;
 }
