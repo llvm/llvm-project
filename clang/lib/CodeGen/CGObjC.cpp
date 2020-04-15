@@ -1491,11 +1491,11 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
                                            argLoad.getType()))
     finalArg = &argCast;
 
-
-  BinaryOperator assign(&ivarRef, finalArg, BO_Assign,
-                        ivarRef.getType(), VK_RValue, OK_Ordinary,
-                        SourceLocation(), FPOptions());
-  EmitStmt(&assign);
+  BinaryOperator *assign = BinaryOperator::Create(
+      getContext(), &ivarRef, finalArg, BO_Assign, ivarRef.getType(), VK_RValue,
+      OK_Ordinary, SourceLocation(),
+      FPOptions(getContext().getLangOpts()));
+  EmitStmt(assign);
 }
 
 /// Generate an Objective-C property setter function.
@@ -3569,7 +3569,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   CallExpr *CalleeExp = cast<CallExpr>(PID->getSetterCXXAssignment());
   CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
       C, OO_Equal, CalleeExp->getCallee(), Args, DestTy->getPointeeType(),
-      VK_LValue, SourceLocation(), FPOptions());
+      VK_LValue, SourceLocation(), FPOptions(C.getLangOpts()));
 
   EmitStmt(TheCall);
 

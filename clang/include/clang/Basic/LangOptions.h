@@ -27,6 +27,8 @@
 
 namespace clang {
 
+class ASTContext;
+
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
@@ -399,6 +401,14 @@ public:
         {}
   // FIXME: Use getDefaultFEnvAccessMode() when available.
 
+  /// Return the default value of FPOptions that's used when trailing
+  /// storage isn't required.
+  static FPOptions defaultWithoutTrailingStorage(const ASTContext &C);
+
+  /// Does this FPOptions require trailing storage when stored in various
+  /// AST nodes, or can it be recreated using `defaultWithoutTrailingStorage`?
+  bool requiresTrailingStorage(const ASTContext &C);
+
   bool allowFPContractWithinStatement() const {
     return fp_contract == LangOptions::FPC_On;
   }
@@ -450,9 +460,9 @@ public:
   }
 
   /// Used to serialize this.
-  unsigned getInt() const {
-    return fp_contract | (fenv_access << 2) | (rounding << 3)
-        | (exceptions << 6);
+  unsigned getAsOpaqueInt() const {
+    return fp_contract | (fenv_access << 2) | (rounding << 3) |
+           (exceptions << 6);
   }
 
 private:
