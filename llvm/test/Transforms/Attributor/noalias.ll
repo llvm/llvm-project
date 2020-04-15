@@ -407,13 +407,13 @@ define void @only_store(i32* %p) {
   ret void
 }
 
-; CHECK-LABEL define void @test15_caller(i32* noalias %p, i32 %c)
+; CHECK-LABEL: define void @test15_caller(i32* noalias nofree writeonly %p, i32 %c)
 define void @test15_caller(i32* noalias %p, i32 %c) {
   %tobool = icmp eq i32 %c, 0
   br i1 %tobool, label %if.end, label %if.then
 
-; CHECK tail call void @only_store(i32* noalias %p)
-; CHECK tail call void @make_alias(i32* %p)
+; CHECK: tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 %p)
+; CHECK: tail call void @make_alias(i32* nofree writeonly %p)
 
 if.then:
   tail call void @only_store(i32* %p)
@@ -439,12 +439,12 @@ if.end:
 ;   test16_sub(p, c, c);
 ; }
 
-; CHECK-LABEL define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2)
+; CHECK-LABEL: define internal void @test16_sub(i32* noalias nofree writeonly %p, i32 %c1, i32 %c2)
 define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
   %tobool = icmp eq i32 %c1, 0
   br i1 %tobool, label %if.end, label %if.then
 
-; CHECK tail call void @only_store(i32* noalias %p)
+; CHECK: tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 %p)
 if.then:
   tail call void @only_store(i32* %p) 
   tail call void @make_alias(i32* %p) 
@@ -457,7 +457,7 @@ if.end:
 ; FIXME: this should be tail @only_store(i32* noalias %p)
 ;        when test16_caller is called, c1 always equals to c2. (Note that linkage is internal)
 ;        Therefore, only one of the two conditions of if statementes will be fulfilled.
-; CHECK tail call void @only_store(i32* %p)
+; CHECK: tail call void @only_store(i32* nofree writeonly align 4 %p)
 if.then2:
   tail call void @only_store(i32* %p)
   br label %if.end3
