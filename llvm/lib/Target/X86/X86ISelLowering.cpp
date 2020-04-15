@@ -2202,7 +2202,7 @@ static void getMaxByValAlign(Type *Ty, unsigned &MaxAlign) {
   if (MaxAlign == 16)
     return;
   if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
-    if (VTy->getBitWidth() == 128)
+    if (VTy->getPrimitiveSizeInBits().getFixedSize() == 128)
       MaxAlign = 16;
   } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
     unsigned EltAlign = 0;
