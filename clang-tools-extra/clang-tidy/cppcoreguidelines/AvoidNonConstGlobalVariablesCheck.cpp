@@ -17,11 +17,15 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
+namespace {
+AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+} // namespace
+
 void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
   auto GlobalVariable = varDecl(
       hasGlobalStorage(),
       unless(anyOf(
-          isConstexpr(), hasType(isConstQualified()),
+          isLocalVarDecl(), isConstexpr(), hasType(isConstQualified()),
           hasType(referenceType())))); // References can't be changed, only the
                                        // data they reference can be changed.
 

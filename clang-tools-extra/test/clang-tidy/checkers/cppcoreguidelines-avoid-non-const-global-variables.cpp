@@ -231,7 +231,8 @@ constexpr T templateVariable = T(0L);
 // CHECKING AGAINST FALSE POSITIVES INSIDE FUNCTION SCOPE /////////////////////
 int main() {
   for (int i = 0; i < 3; ++i) {
+    static int staticNonConstLoopVariable = 42;
     int nonConstLoopVariable = 42;
-    nonConstInt = nonConstLoopVariable + i;
+    nonConstInt = nonConstLoopVariable + i + staticNonConstLoopVariable;
   }
 }
