@@ -9,8 +9,9 @@ config_map = {}
 def map_config(source_dir, site_config):
     global config_map
     source_dir = os.path.realpath(source_dir)
+    source_dir = os.path.normcase(source_dir)
     site_config = os.path.normpath(site_config)
-    config_map[os.path.normcase(source_dir)] = source_dir, site_config
+    config_map[source_dir] = site_config
 
 # Set up some builtin parameters, so that by default the LLVM test suite
 # configuration file knows how to find the object tree.
