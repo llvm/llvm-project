@@ -6936,14 +6936,18 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
     }
 
-    State.AllocateStack(alignTo(ByValSize, PtrByteSize), PtrByteSize);
-
-    for (unsigned I = 0, E = ByValSize; I < E; I += PtrByteSize) {
+    const unsigned StackSize = alignTo(ByValSize, PtrByteSize);
+    unsigned Offset = State.AllocateStack(StackSize, PtrByteSize);
+    for (const unsigned E = Offset + StackSize; Offset < E;
+         Offset += PtrByteSize) {
       if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32))
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
-      else
-        report_fatal_error(
-            "Pass-by-value arguments are only supported in registers.");
+      else {
+        State.addLoc(CCValAssign::getMem(ValNo, MVT::INVALID_SIMPLE_VALUE_TYPE,
+                                         Offset, MVT::INVALID_SIMPLE_VALUE_TYPE,
+                                         LocInfo));
+        break;
+      }
     }
     return false;
   }
@@ -7370,12 +7374,12 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       unsigned LoadOffset = 0;
 
       // Initialize registers, which are fully occupied by the by-val argument.
-      while (I != E && LoadOffset + PtrByteSize <= ByValSize) {
+      while (LoadOffset + PtrByteSize <= ByValSize && ArgLocs[I].isRegLoc()) {
         SDValue Load = GetLoad(PtrVT, LoadOffset);
         MemOpChains.push_back(Load.getValue(1));
         LoadOffset += PtrByteSize;
         const CCValAssign &ByValVA = ArgLocs[I++];
-        assert(ByValVA.isRegLoc() && ByValVA.getValNo() == ValNo &&
+        assert(ByValVA.getValNo() == ValNo &&
                "Unexpected location for pass-by-value argument.");
         RegsToPass.push_back(std::make_pair(ByValVA.getLocReg(), Load));
       }
@@ -7383,15 +7387,32 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       if (LoadOffset == ByValSize)
         continue;
 
-      const unsigned ResidueBytes = ByValSize % PtrByteSize;
-      assert(ResidueBytes != 0 && LoadOffset + PtrByteSize > ByValSize &&
-             "Unexpected register residue for by-value argument.");
+      // There must be one more loc to handle the remainder.
+      assert(ArgLocs[I].getValNo() == ValNo &&
+             "Expected additional location for by-value argument.");
+
+      if (ArgLocs[I].isMemLoc()) {
+        assert(LoadOffset < ByValSize && "Unexpected memloc for by-val arg.");
+        const CCValAssign &ByValVA = ArgLocs[I++];
+        ISD::ArgFlagsTy MemcpyFlags = Flags;
+        // Only memcpy the bytes that don't pass in register.
+        MemcpyFlags.setByValSize(ByValSize - LoadOffset);
+        Chain = CallSeqStart = createMemcpyOutsideCallSeq(
+            (LoadOffset != 0) ? DAG.getObjectPtrOffset(dl, Arg, LoadOffset)
+                              : Arg,
+            DAG.getObjectPtrOffset(dl, StackPtr, ByValVA.getLocMemOffset()),
+            CallSeqStart, MemcpyFlags, DAG, dl);
+        continue;
+      }
 
       // Initialize the final register residue.
       // Any residue that occupies the final by-val arg register must be
       // left-justified on AIX. Loads must be a power-of-2 size and cannot be
       // larger than the ByValSize. For example: a 7 byte by-val arg requires 4,
       // 2 and 1 byte loads.
+      const unsigned ResidueBytes = ByValSize % PtrByteSize;
+      assert(ResidueBytes != 0 && LoadOffset + PtrByteSize > ByValSize &&
+             "Unexpected register residue for by-value argument.");
       SDValue ResidueVal;
       for (unsigned Bytes = 0; Bytes != ResidueBytes;) {
         const unsigned N = PowerOf2Floor(ResidueBytes - Bytes);
@@ -7421,8 +7442,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       }
 
       const CCValAssign &ByValVA = ArgLocs[I++];
-      assert(ByValVA.isRegLoc() && ByValVA.getValNo() == ValNo &&
-             "Additional register location expected for by-value argument.");
       RegsToPass.push_back(std::make_pair(ByValVA.getLocReg(), ResidueVal));
       continue;
     }
