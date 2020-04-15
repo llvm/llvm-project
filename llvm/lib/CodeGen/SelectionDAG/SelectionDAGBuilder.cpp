@@ -8247,8 +8247,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
         if (Register::isPhysicalRegister(Reg) &&
             TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
           const char *RegName = TRI.getName(Reg);
-          emitInlineAsmError(CS, "write to reserved register '" +
-                                     Twine(RegName) + "'");
+          emitInlineAsmError(Call, "write to reserved register '" +
+                                       Twine(RegName) + "'");
           return true;
         }
       }
