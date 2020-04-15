@@ -6084,9 +6084,9 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
                SI->getPointerOperand() == I;
 
     // A call to null is undefined.
-    if (auto CS = CallSite(Use))
-      return !NullPointerIsDefined(CS->getFunction()) &&
-             CS.getCalledValue() == I;
+    if (auto *CB = dyn_cast<CallBase>(Use))
+      return !NullPointerIsDefined(CB->getFunction()) &&
+             CB->getCalledValue() == I;
   }
   return false;
 }
