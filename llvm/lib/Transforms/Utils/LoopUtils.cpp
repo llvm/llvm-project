@@ -917,19 +917,17 @@ llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
   assert(isPowerOf2_32(VF) &&
          "Reduction emission only supported for pow2 vectors!");
   Value *TmpVec = Src;
-  SmallVector<Constant *, 32> ShuffleMask(VF, nullptr);
+  SmallVector<int, 32> ShuffleMask(VF);
   for (unsigned i = VF; i != 1; i >>= 1) {
     // Move the upper half of the vector to the lower half.
     for (unsigned j = 0; j != i / 2; ++j)
-      ShuffleMask[j] = Builder.getInt32(i / 2 + j);
+      ShuffleMask[j] = i / 2 + j;
 
     // Fill the rest of the mask with undef.
-    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(),
-              UndefValue::get(Builder.getInt32Ty()));
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
 
     Value *Shuf = Builder.CreateShuffleVector(
-        TmpVec, UndefValue::get(TmpVec->getType()),
-        ConstantVector::get(ShuffleMask), "rdx.shuf");
+        TmpVec, UndefValue::get(TmpVec->getType()), ShuffleMask, "rdx.shuf");
 
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
       // The builder propagates its fast-math-flags setting.
