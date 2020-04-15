@@ -93,27 +93,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(LoopOp loop, mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
-    auto low = loop.getLowerBoundOperand();
-    if (!low) {
-      assert(loop.constantLowerBound().hasValue());
-      auto lb = *loop.constantLowerBound();
-      low = rewriter.create<mlir::ConstantIndexOp>(loc, lb.getSExtValue());
-    }
-    auto high = loop.getUpperBoundOperand();
-    if (!high) {
-      assert(loop.constantUpperBound().hasValue());
-      auto ub = *loop.constantUpperBound();
-      high = rewriter.create<mlir::ConstantIndexOp>(loc, ub.getSExtValue());
-    }
-    auto step = loop.getStepOperand();
-    if (!step) {
-      if (loop.constantStep().hasValue()) {
-        auto st = *loop.constantStep();
-        step = rewriter.create<mlir::ConstantIndexOp>(loc, st.getSExtValue());
-      } else {
-        step = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
-      }
-    }
+    auto low = loop.lowerBound();
+    auto high = loop.upperBound();
+    auto step = loop.step();
     assert(low && high && step);
     // ForOp has different bounds semantics. Adjust upper bound.
     auto adjustUp = rewriter.create<mlir::AddIOp>(loc, high, step);
@@ -150,13 +132,90 @@ public:
 };
 
 /// Replace FirEndOp with TerminatorOp
-class LoopFirEndConv : public mlir::OpRewritePattern<FirEndOp> {
+class LoopResultConv : public mlir::OpRewritePattern<ResultOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(FirEndOp op, mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(fir::ResultOp op,
+                  mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<mlir::loop::YieldOp>(op);
+    return success();
+  }
+};
+
+class LoopIterWhileConv : public mlir::OpRewritePattern<fir::IterWhileOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IterWhileOp whileOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = whileOp.getLoc();
+
+    // Start by splitting the block containing the 'fir.do_loop' into two parts.
+    // The part before will get the init code, the part after will be the end
+    // point.
+    auto *initBlock = rewriter.getInsertionBlock();
+    auto initPosition = rewriter.getInsertionPoint();
+    auto *endBlock = rewriter.splitBlock(initBlock, initPosition);
+
+    // Use the first block of the loop body as the condition block since it is
+    // the block that has the induction variable and loop-carried values as
+    // arguments. Split out all operations from the first block into a new
+    // block. Move all body blocks from the loop body region to the region
+    // containing the loop.
+    auto *conditionBlock = &whileOp.region().front();
+    auto *firstBodyBlock =
+        rewriter.splitBlock(conditionBlock, conditionBlock->begin());
+    auto *lastBodyBlock = &whileOp.region().back();
+    rewriter.inlineRegionBefore(whileOp.region(), endBlock);
+    auto iv = conditionBlock->getArgument(0);
+    auto iterateVar = conditionBlock->getArgument(1);
+
+    // Append the induction variable stepping logic to the last body block and
+    // branch back to the condition block. Loop-carried values are taken from
+    // operands of the loop terminator.
+    mlir::Operation *terminator = lastBodyBlock->getTerminator();
+    rewriter.setInsertionPointToEnd(lastBodyBlock);
+    auto step = whileOp.step();
+    auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
+    if (!stepped)
+      return failure();
+
+    llvm::SmallVector<mlir::Value, 8> loopCarried;
+    loopCarried.push_back(stepped);
+    loopCarried.append(terminator->operand_begin(), terminator->operand_end());
+    rewriter.create<BranchOp>(loc, conditionBlock, loopCarried);
+    rewriter.eraseOp(terminator);
+
+    // Compute loop bounds before branching to the condition.
+    rewriter.setInsertionPointToEnd(initBlock);
+    mlir::Value lowerBound = whileOp.lowerBound();
+    mlir::Value upperBound = whileOp.upperBound();
+    if (!lowerBound || !upperBound)
+      return failure();
+
+    // The initial values of loop-carried values is obtained from the operands
+    // of the loop operation.
+    llvm::SmallVector<mlir::Value, 8> destOperands;
+    destOperands.push_back(lowerBound);
+    auto iterOperands = whileOp.getIterOperands();
+    destOperands.append(iterOperands.begin(), iterOperands.end());
+    rewriter.create<BranchOp>(loc, conditionBlock, destOperands);
+
+    // With the body block done, we can fill in the condition block.
+    rewriter.setInsertionPointToEnd(conditionBlock);
+    auto comp1 =
+        rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, iv, upperBound);
+    // Remember to AND in the early-exit bool.
+    auto comparison = rewriter.create<AndOp>(loc, comp1, iterateVar);
+    rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
+                                  ArrayRef<Value>(), endBlock,
+                                  ArrayRef<Value>());
+    // The result of the loop operation is the values of the condition block
+    // arguments except the induction variable on the last iteration.
+    rewriter.replaceOp(whileOp, conditionBlock->getArguments().drop_front());
     return success();
   }
 };
@@ -170,17 +229,27 @@ public:
       return;
 
     auto *context = &getContext();
-    mlir::OwningRewritePatternList patterns;
-    patterns.insert<LoopLoopConv, LoopWhereConv, LoopFirEndConv>(context);
+    mlir::OwningRewritePatternList patterns1;
+    patterns1.insert<LoopIterWhileConv>(context);
+
+    mlir::OwningRewritePatternList patterns2;
+    patterns2.insert<LoopLoopConv, LoopWhereConv, LoopResultConv>(context);
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
                            mlir::loop::LoopOpsDialect,
                            mlir::StandardOpsDialect>();
-    target.addIllegalOp<FirEndOp, LoopOp, WhereOp>();
 
     // apply the patterns
+    target.addIllegalOp<IterWhileOp>();
     if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
-                                                  std::move(patterns)))) {
+                                                  std::move(patterns1)))) {
+      mlir::emitError(mlir::UnknownLoc::get(context),
+                      "error in converting to CFG\n");
+      signalPassFailure();
+    }
+    target.addIllegalOp<ResultOp, LoopOp, WhereOp>();
+    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
+                                                  std::move(patterns2)))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "error in converting to MLIR loop dialect\n");
       signalPassFailure();

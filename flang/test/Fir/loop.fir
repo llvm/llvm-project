@@ -6,12 +6,12 @@
 func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   // CHECK: %[[COND:.*]] = icmp slt i64
   // CHECK: br i1 %[[COND]]
-  fir.loop %iv = %lb to %ub step %step unordered {
+  fir.do_loop %iv = %lb to %ub step %step unordered {
     // CHECK: br i1 %
-    fir.where %b {
+    fir.if %b {
       // CHECK: store i64
       fir.store %iv to %addr : !fir.ref<index>
-    } otherwise {
+    } else {
       %zero = constant 0 : index
       // CHECK: store i64
       fir.store %zero to %addr : !fir.ref<index>
