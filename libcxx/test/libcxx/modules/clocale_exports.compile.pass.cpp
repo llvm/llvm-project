@@ -14,17 +14,17 @@
 // but still gets built as part of the 'std' module, which breaks the build.
 // XFAIL: libcpp-has-no-threads
 
+// UNSUPPORTED: c++98, c++03
+
 // REQUIRES: modules-support
+// ADDITIONAL_COMPILE_FLAGS: -fmodules
 
-// Test that <cstdint> re-exports <stdint.h>
-
-// RUN: %{build_module}
-
-#include <cstdint>
+#include <clocale>
 
 int main(int, char**) {
-  int8_t x; ((void)x);
-  std::int8_t y; ((void)y);
+  std::lconv l; (void)l;
+  using T = decltype(std::setlocale(0, ""));
+  using U = decltype(std::localeconv());
 
   return 0;
 }
