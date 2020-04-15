@@ -181,16 +181,13 @@ public:
   }
 
   bool Get(ValueObject &valobj, MapValueType &entry,
-           lldb::DynamicValueType use_dynamic, uint32_t *why = nullptr) {
-    uint32_t value = lldb_private::eFormatterChoiceCriterionDirectChoice;
+           lldb::DynamicValueType use_dynamic) {
     CompilerType ast_type(valobj.GetCompilerType());
-    bool ret = Get(valobj, ast_type, entry, use_dynamic, value);
+    bool ret = Get(valobj, ast_type, entry, use_dynamic);
     if (ret)
       entry = MapValueType(entry);
     else
       entry = MapValueType();
-    if (why)
-      *why = value;
     return ret;
   }
 
@@ -308,16 +305,13 @@ protected:
     return false;
   }
 
-  bool Get(const FormattersMatchVector &candidates, MapValueType &entry,
-           uint32_t *reason) {
+  bool Get(const FormattersMatchVector &candidates, MapValueType &entry) {
     for (const FormattersMatchCandidate &candidate : candidates) {
       if (Get(candidate.GetTypeName(), entry)) {
         if (candidate.IsMatch(entry) == false) {
           entry.reset();
           continue;
         } else {
-          if (reason)
-            *reason = candidate.GetReason();
           return true;
         }
       }
