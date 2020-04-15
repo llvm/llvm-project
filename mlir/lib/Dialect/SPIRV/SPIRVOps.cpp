@@ -21,7 +21,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Support/StringExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
 using namespace mlir;
@@ -335,15 +335,15 @@ static LogicalResult verifyLoadStorePtrAndValTypes(LoadStoreOpTy op, Value ptr,
 
 static ParseResult parseVariableDecorations(OpAsmParser &parser,
                                             OperationState &state) {
-  auto builtInName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::BuiltIn));
+  auto builtInName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::BuiltIn));
   if (succeeded(parser.parseOptionalKeyword("bind"))) {
     Attribute set, binding;
     // Parse optional descriptor binding
-    auto descriptorSetName = convertToSnakeCase(
+    auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
         stringifyDecoration(spirv::Decoration::DescriptorSet));
-    auto bindingName =
-        convertToSnakeCase(stringifyDecoration(spirv::Decoration::Binding));
+    auto bindingName = llvm::convertToSnakeFromCamelCase(
+        stringifyDecoration(spirv::Decoration::Binding));
     Type i32Type = parser.getBuilder().getIntegerType(32);
     if (parser.parseLParen() ||
         parser.parseAttribute(set, i32Type, descriptorSetName,
@@ -373,10 +373,10 @@ static ParseResult parseVariableDecorations(OpAsmParser &parser,
 static void printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
   // Print optional descriptor binding
-  auto descriptorSetName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::DescriptorSet));
-  auto bindingName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::Binding));
+  auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::DescriptorSet));
+  auto bindingName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::Binding));
   auto descriptorSet = op->getAttrOfType<IntegerAttr>(descriptorSetName);
   auto binding = op->getAttrOfType<IntegerAttr>(bindingName);
   if (descriptorSet && binding) {
@@ -387,8 +387,8 @@ static void printVariableDecorations(Operation *op, OpAsmPrinter &printer,
   }
 
   // Print BuiltIn attribute if present
-  auto builtInName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::BuiltIn));
+  auto builtInName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::BuiltIn));
   if (auto builtin = op->getAttrOfType<StringAttr>(builtInName)) {
     printer << " " << builtInName << "(\"" << builtin.getValue() << "\")";
     elidedAttrs.push_back(builtInName);
@@ -2625,12 +2625,12 @@ static LogicalResult verify(spirv::VariableOp varOp) {
 
   // TODO(antiagainst): generate these strings using ODS.
   auto *op = varOp.getOperation();
-  auto descriptorSetName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::DescriptorSet));
-  auto bindingName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::Binding));
-  auto builtInName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::BuiltIn));
+  auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::DescriptorSet));
+  auto bindingName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::Binding));
+  auto builtInName = llvm::convertToSnakeFromCamelCase(
+      stringifyDecoration(spirv::Decoration::BuiltIn));
 
   for (const auto &attr : {descriptorSetName, bindingName, builtInName}) {
     if (op->getAttr(attr))
