@@ -29,6 +29,7 @@ public:
 
   template <int B, bool C> constexpr Logical &operator=(Logical<B, C> x) {
     word_ = Represent(x.IsTrue());
+    return *this;
   }
 
   // Fortran actually has only .EQV. & .NEQV. relational operations
