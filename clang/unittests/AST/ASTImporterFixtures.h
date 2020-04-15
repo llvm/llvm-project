@@ -67,9 +67,9 @@ protected:
 };
 
 const auto DefaultTestArrayForRunOptions = std::array<ArgVector, 4>{
-    ArgVector(), ArgVector{"-fdelayed-template-parsing"},
-    ArgVector{"-fms-compatibility"},
-    ArgVector{"-fdelayed-template-parsing", "-fms-compatibility"}};
+    {ArgVector(), ArgVector{"-fdelayed-template-parsing"},
+     ArgVector{"-fms-compatibility"},
+     ArgVector{"-fdelayed-template-parsing", "-fms-compatibility"}}};
 
 const auto DefaultTestValuesForRunOptions =
     ::testing::ValuesIn(DefaultTestArrayForRunOptions);
