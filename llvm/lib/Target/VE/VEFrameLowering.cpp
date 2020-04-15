@@ -121,7 +121,7 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   if (NumBytes >= -64 && NumBytes < 63) {
-    BuildMI(MBB, MBBI, dl, TII.get(VE::ADXri), VE::SX11)
+    BuildMI(MBB, MBBI, dl, TII.get(VE::ADDSLri), VE::SX11)
         .addReg(VE::SX11)
         .addImm(NumBytes);
     return;

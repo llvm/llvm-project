@@ -141,7 +141,7 @@ define i64 @max2u64(i64, i64) {
 define i32 @maxi32(i32, i32) {
 ; CHECK-LABEL: maxi32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    maxs.w.zx %s0, %s0, %s1
+; CHECK-NEXT:    maxs.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp sgt i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
@@ -151,7 +151,7 @@ define i32 @maxi32(i32, i32) {
 define i32 @max2i32(i32, i32) {
 ; CHECK-LABEL: max2i32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    maxs.w.zx %s0, %s0, %s1
+; CHECK-NEXT:    maxs.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp sge i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
