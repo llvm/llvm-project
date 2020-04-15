@@ -14,6 +14,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -395,8 +396,10 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
       "MemoryBufferTest_mmapVolatileNoNull", "temp", FD, TestPath));
   FileRemover Cleanup(TestPath);
   raw_fd_ostream OF(FD, true);
-  // Create a file large enough to mmap. A 32KiB file should be enough.
-  for (unsigned i = 0; i < 0x1000; ++i)
+  // Create a file large enough to mmap. 4 pages should be enough.
+  unsigned PageSize = sys::Process::getPageSizeEstimate();
+  unsigned FileWrites = (PageSize * 4) / 8;
+  for (unsigned i = 0; i < FileWrites; ++i)
     OF << "01234567";
   OF.close();
 
@@ -410,7 +413,7 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   ASSERT_NO_ERROR(MBOrError.getError())
   OwningBuffer MB = std::move(*MBOrError);
   EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
-  EXPECT_EQ(MB->getBufferSize(), std::size_t(0x8000));
+  EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
   EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
 }
 }
