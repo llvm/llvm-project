@@ -156,21 +156,42 @@ class StatepointOpers {
   // Flags should be part of meta operands, with args and deopt operands, and
   // gc operands all prefixed by their length and a type code. This would be
   // much more consistent.
-public:
-  // These values are aboolute offsets into the operands of the statepoint
+
+  // These values are absolute offsets into the operands of the statepoint
   // instruction.
   enum { IDPos, NBytesPos, NCallArgsPos, CallTargetPos, MetaEnd };
 
-  // These values are relative offests from the start of the statepoint meta
+  // These values are relative offsets from the start of the statepoint meta
   // arguments (i.e. the end of the call arguments).
   enum { CCOffset = 1, FlagsOffset = 3, NumDeoptOperandsOffset = 5 };
 
+public:
   explicit StatepointOpers(const MachineInstr *MI) : MI(MI) {}
+
+  /// Get index of statepoint ID operand.
+  unsigned getIDPos() const { return IDPos; }
+
+  /// Get index of Num Patch Bytes operand.
+  unsigned getNBytesPos() const { return NBytesPos; }
+
+  /// Get index of Num Call Arguments operand.
+  unsigned getNCallArgsPos() const { return NCallArgsPos; }
 
   /// Get starting index of non call related arguments
   /// (calling convention, statepoint flags, vm state and gc state).
   unsigned getVarIdx() const {
     return MI->getOperand(NCallArgsPos).getImm() + MetaEnd;
+  }
+
+  /// Get index of Calling Convention operand.
+  unsigned getCCIdx() const { return getVarIdx() + CCOffset; }
+
+  /// Get index of Flags operand.
+  unsigned getFlagsIdx() const { return getVarIdx() + FlagsOffset; }
+
+  /// Get index of Number Deopt Arguments operand.
+  unsigned getNumDeoptArgsIdx() const {
+    return getVarIdx() + NumDeoptOperandsOffset;
   }
 
   /// Return the ID for the given statepoint.
@@ -181,10 +202,18 @@ public:
     return MI->getOperand(NBytesPos).getImm();
   }
 
-  /// Returns the target of the underlying call.
+  /// Return the target of the underlying call.
   const MachineOperand &getCallTarget() const {
     return MI->getOperand(CallTargetPos);
   }
+
+  /// Return the calling convention.
+  CallingConv::ID getCallingConv() const {
+    return MI->getOperand(getCCIdx()).getImm();
+  }
+
+  /// Return the statepoint flags.
+  uint64_t getFlags() const { return MI->getOperand(getFlagsIdx()).getImm(); }
 
 private:
   const MachineInstr *MI;
