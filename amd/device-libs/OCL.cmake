@@ -16,10 +16,6 @@ if (WIN32)
 else()
   set(EXE_SUFFIX)
 endif()
-set(CLANG "${LLVM_TOOLS_BINARY_DIR}/clang${EXE_SUFFIX}")
-set(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link${EXE_SUFFIX}")
-set(LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump${EXE_SUFFIX}")
-set(LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt${EXE_SUFFIX}")
 
 # -Wno-error=atomic-alignment was added to workaround build problems due to
 # potential mis-aligned atomic ops detected by clang

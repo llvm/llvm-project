@@ -42,4 +42,5 @@ configure_file(AMDDeviceLibsConfig.cmake.in
   @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/AMDDeviceLibsConfig.cmake.install
   DESTINATION ${PACKAGE_PREFIX}
+  COMPONENT device-libs
   RENAME AMDDeviceLibsConfig.cmake)
