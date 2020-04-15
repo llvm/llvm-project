@@ -801,9 +801,10 @@ void SVEEmitter::createIntrinsic(
     // Collate a list of range/option checks for the immediates.
     SmallVector<ImmCheck, 2> ImmChecks;
     for (auto *R : ImmCheckList) {
-      unsigned Arg = R->getValueAsInt("Arg");
-      unsigned EltSizeArg = R->getValueAsInt("EltSizeArg");
-      unsigned Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
+      int64_t Arg = R->getValueAsInt("Arg");
+      int64_t EltSizeArg = R->getValueAsInt("EltSizeArg");
+      int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
+      assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
       if (EltSizeArg >= 0)
