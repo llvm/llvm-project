@@ -477,8 +477,8 @@ struct SymbolScope {
   /// 'walkSymbolUses'.
   template <typename CallbackT,
             typename std::enable_if_t<!std::is_same<
-                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
-                nullptr>
+                typename llvm::function_traits<CallbackT>::result_t,
+                void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
     if (Region *region = limit.dyn_cast<Region *>())
       return walkSymbolUses(*region, cback);
@@ -488,8 +488,8 @@ struct SymbolScope {
   /// void(SymbolTable::SymbolUse use)
   template <typename CallbackT,
             typename std::enable_if_t<std::is_same<
-                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
-                nullptr>
+                typename llvm::function_traits<CallbackT>::result_t,
+                void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
     return walk([=](SymbolTable::SymbolUse use, ArrayRef<int>) {
       return cback(use), WalkResult::advance();

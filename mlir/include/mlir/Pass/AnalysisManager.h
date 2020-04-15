@@ -71,13 +71,13 @@ using has_is_invalidated = decltype(std::declval<T &>().isInvalidated(
 
 /// Implementation of 'isInvalidated' if the analysis provides a definition.
 template <typename AnalysisT>
-std::enable_if_t<is_detected<has_is_invalidated, AnalysisT>::value, bool>
+std::enable_if_t<llvm::is_detected<has_is_invalidated, AnalysisT>::value, bool>
 isInvalidated(AnalysisT &analysis, const PreservedAnalyses &pa) {
   return analysis.isInvalidated(pa);
 }
 /// Default implementation of 'isInvalidated'.
 template <typename AnalysisT>
-std::enable_if_t<!is_detected<has_is_invalidated, AnalysisT>::value, bool>
+std::enable_if_t<!llvm::is_detected<has_is_invalidated, AnalysisT>::value, bool>
 isInvalidated(AnalysisT &analysis, const PreservedAnalyses &pa) {
   return !pa.isPreserved<AnalysisT>();
 }
