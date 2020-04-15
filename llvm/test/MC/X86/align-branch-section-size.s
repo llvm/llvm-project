@@ -5,16 +5,16 @@
 
   # CHECK:  Name: text1
   # CHECK:  AddressAlignment: 32
-  .section text1
+  .section text1, "ax"
 foo:
   ret
 
   # CHECK:  Name: text2
   # CHECK:  AddressAlignment: 1
-  .section text2
+  .section text2, "ax"
   nop
 
   # CHECK:  Name: text3
   # CHECK:  AddressAlignment: 1
-  .section text3
+  .section text3, "ax"
   jmp foo
