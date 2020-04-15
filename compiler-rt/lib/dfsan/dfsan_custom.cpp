@@ -84,7 +84,13 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strchr(const char *s, int c,
         *ret_label = dfsan_union(dfsan_read_label(s, i + 1),
                                  dfsan_union(s_label, c_label));
       }
-      return s[i] == 0 ? nullptr : const_cast<char *>(s+i);
+
+      // If s[i] is the \0 at the end of the string, and \0 is not the
+      // character we are searching for, then return null.
+      if (s[i] == 0 && c != 0) {
+        return nullptr;
+      }
+      return const_cast<char *>(s + i);
     }
   }
 }
