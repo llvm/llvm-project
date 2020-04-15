@@ -469,7 +469,7 @@ struct MustBeExecutedContextExplorer {
   /// true if \p Pred holds in every instruction.
   bool checkForAllContext(const Instruction *PP,
                           const function_ref<bool(const Instruction *)> &Pred) {
-    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; EIt++)
+    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; ++EIt)
       if (!Pred(*EIt))
         return false;
     return true;
