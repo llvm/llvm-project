@@ -1,11 +1,11 @@
 Basic tests for cutoff options in show command.
 
-RUN: llvm-profdata show -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=CUTOFF1 -check-prefix=CHECK
-RUN: llvm-profdata show -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=CUTOFF1000 -check-prefix=CHECK
-RUN: llvm-profdata show -all-functions -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=CUTOFF1FUNC -check-prefix=CUTOFF1 -check-prefix=CHECK
-RUN: llvm-profdata show -all-functions -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=CUTOFF1000FUNC -check-prefix=CUTOFF1000 -check-prefix=CHECK
-RUN: llvm-profdata show -value-cutoff=1 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=BELOW1 -check-prefix=CUTOFF1 -check-prefix=CHECK
-RUN: llvm-profdata show -value-cutoff=1000 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefix=BELOW1000 -check-prefix=CUTOFF1000 -check-prefix=CHECK
+RUN: llvm-profdata show -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1,CHECK
+RUN: llvm-profdata show -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1000,CHECK
+RUN: llvm-profdata show -all-functions -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1FUNC,CUTOFF1,CHECK
+RUN: llvm-profdata show -all-functions -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1000FUNC,CUTOFF1000,CHECK
+RUN: llvm-profdata show -value-cutoff=1 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=BELOW1,CUTOFF1,CHECK
+RUN: llvm-profdata show -value-cutoff=1000 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=BELOW1000,CUTOFF1000,CHECK
 CUTOFF1FUNC-NOT: bar
 CUTOFF1FUNC: Functions shown: 2
 CUTOFF1000FUNC-NOT: bar
