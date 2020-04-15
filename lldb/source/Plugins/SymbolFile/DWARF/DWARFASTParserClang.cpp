@@ -2013,13 +2013,18 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (class_language == eLanguageTypeObjC) {
       ConstString class_name(clang_type.GetTypeName());
       if (class_name) {
-        dwarf->GetObjCMethods(class_name, [&](DIERef die_ref) {
+        DIEArray method_die_offsets;
+        dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
+
+        const size_t num_matches = method_die_offsets.size();
+        for (size_t i = 0; i < num_matches; ++i) {
+          const DIERef &die_ref = method_die_offsets[i];
           DWARFDebugInfo &debug_info = dwarf->DebugInfo();
           DWARFDIE method_die = debug_info.GetDIE(die_ref);
+
           if (method_die)
             method_die.ResolveType();
-          return true;
-        });
+        }
 
         for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
                                            pe = delayed_properties.end();

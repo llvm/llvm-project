@@ -32,10 +32,6 @@ public:
     T value;
   };
 
-  typedef std::vector<Entry> collection;
-  typedef typename collection::iterator iterator;
-  typedef typename collection::const_iterator const_iterator;
-
   // Call this function multiple times to add a bunch of entries to this map,
   // then later call UniqueCStringMap<T>::Sort() before doing any searches by
   // name.
@@ -179,18 +175,6 @@ public:
     }
   }
 
-  iterator begin() { return m_map.begin(); }
-  iterator end() { return m_map.end(); }
-  const_iterator begin() const { return m_map.begin(); }
-  const_iterator end() const { return m_map.end(); }
-
-  // Range-based for loop for all entries of the specified ConstString name.
-  llvm::iterator_range<const_iterator>
-  equal_range(ConstString unique_cstr) const {
-    return llvm::make_range(
-        std::equal_range(m_map.begin(), m_map.end(), unique_cstr, Compare()));
-  };
-
 protected:
   struct Compare {
     bool operator()(const Entry &lhs, const Entry &rhs) {
@@ -212,6 +196,9 @@ protected:
       return uintptr_t(lhs.GetCString()) < uintptr_t(rhs.GetCString());
     }
   };
+  typedef std::vector<Entry> collection;
+  typedef typename collection::iterator iterator;
+  typedef typename collection::const_iterator const_iterator;
   collection m_map;
 };
 
