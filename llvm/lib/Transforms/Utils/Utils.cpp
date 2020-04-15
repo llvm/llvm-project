@@ -40,6 +40,7 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeStripGCRelocatesPass(Registry);
   initializePredicateInfoPrinterLegacyPassPass(Registry);
   initializeInjectTLIMappingsLegacyPass(Registry);
+  initializeFixIrreduciblePass(Registry);
   initializeUnifyLoopExitsPass(Registry);
 }
 
