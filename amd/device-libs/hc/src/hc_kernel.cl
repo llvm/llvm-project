@@ -8,24 +8,23 @@
 ATTR uint
 amp_get_global_id(int dim)
 {
-  __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
   uint l, g, s;
 
   switch(dim) {
   case 0:
     l = __builtin_amdgcn_workitem_id_x();
     g = __builtin_amdgcn_workgroup_id_x();
-    s = p->workgroup_size_x;
+    s = __builtin_amdgcn_workgroup_size_x();
     break;
   case 1:
     l = __builtin_amdgcn_workitem_id_y();
     g = __builtin_amdgcn_workgroup_id_y();
-    s = p->workgroup_size_y;
+    s = __builtin_amdgcn_workgroup_size_y();
     break;
   case 2:
     l = __builtin_amdgcn_workitem_id_z();
     g = __builtin_amdgcn_workgroup_id_z();
-    s = p->workgroup_size_z;
+    s = __builtin_amdgcn_workgroup_size_z();
     break;
   default:
     l = 0;
@@ -78,15 +77,15 @@ amp_get_num_groups(int dim)
     switch(dim) {
     case 0:
         n = p->grid_size_x;
-        d = p->workgroup_size_x;
+        d = __builtin_amdgcn_workgroup_size_x();
         break;
     case 1:
         n = p->grid_size_y;
-        d = p->workgroup_size_y;
+        d = __builtin_amdgcn_workgroup_size_y();
         break;
     case 2:
         n = p->grid_size_z;
-        d = p->workgroup_size_z;
+        d = __builtin_amdgcn_workgroup_size_z();
         break;
     default:
         n = 1;
