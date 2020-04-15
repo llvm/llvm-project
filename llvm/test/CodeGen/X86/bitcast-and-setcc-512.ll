@@ -266,20 +266,20 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ;
 ; AVX512F-LABEL: v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm4
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm5
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
 ; AVX512F-NEXT:    vpcmpgtw %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
-; AVX512F-NEXT:    vpcmpgtw %ymm5, %ymm6, %ymm5
-; AVX512F-NEXT:    vpand %ymm4, %ymm5, %ymm4
 ; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm2, %ymm1
-; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm5
+; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm5, %ymm1
+; AVX512F-NEXT:    vpand %ymm1, %ymm4, %ymm1
+; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %ecx
-; AVX512F-NEXT:    vpmovsxwd %ymm4, %zmm0
+; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    shll $16, %eax
@@ -558,38 +558,18 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ;
 ; AVX512F-LABEL: v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm4
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm5
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
 ; AVX512F-NEXT:    vpcmpgtb %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
-; AVX512F-NEXT:    vpcmpgtb %ymm5, %ymm6, %ymm5
-; AVX512F-NEXT:    vextracti128 $1, %ymm5, %xmm6
 ; AVX512F-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vextracti128 $1, %ymm4, %xmm7
-; AVX512F-NEXT:    vpand %xmm7, %xmm6, %xmm6
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm5
+; AVX512F-NEXT:    vpcmpgtb %ymm1, %ymm5, %ymm1
+; AVX512F-NEXT:    vpand %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpcmpgtb %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512F-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
-; AVX512F-NEXT:    shll $16, %ecx
-; AVX512F-NEXT:    orl %eax, %ecx
-; AVX512F-NEXT:    vpand %xmm4, %xmm5, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %edx
-; AVX512F-NEXT:    vpmovsxbd %xmm6, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    orl %edx, %eax
+; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX512F-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %rcx, %rax
 ; AVX512F-NEXT:    vzeroupper
