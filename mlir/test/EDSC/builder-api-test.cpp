@@ -10,7 +10,7 @@
 
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/LoopOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/EDSC/Builders.h"
@@ -1070,6 +1070,44 @@ TEST_FUNC(memref_vector_matmul_test) {
   };
   linalg_generic_matmul(A, B, C, contractionBuilder);
 
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(builder_loop_for_yield) {
+  auto indexType = IndexType::get(&globalContext());
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto f = makeFunction("builder_loop_for_yield", {},
+                        {indexType, indexType, indexType, indexType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  ValueHandle init0 = std_constant_float(llvm::APFloat(1.0f), f32Type);
+  ValueHandle init1 = std_constant_float(llvm::APFloat(2.0f), f32Type);
+  ValueHandle i(indexType), a(f.getArgument(0)), b(f.getArgument(1)),
+      c(f.getArgument(2)), d(f.getArgument(3));
+  ValueHandle arg0(f32Type);
+  ValueHandle arg1(f32Type);
+  using namespace edsc::op;
+  auto results =
+      LoopNestBuilder(&i, a - b, c + d, a, {&arg0, &arg1}, {init0, init1})([&] {
+        auto sum = arg0 + arg1;
+        loop_yield(ArrayRef<ValueHandle>{arg1, sum});
+      });
+  ValueHandle(results[0]) + ValueHandle(results[1]);
+
+  // clang-format off
+  // CHECK-LABEL: func @builder_loop_for_yield(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
+  // CHECK:     [[init0:%.*]] = constant
+  // CHECK:     [[init1:%.*]] = constant
+  // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%{{.*}}, %{{.*}}]
+  // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
+  // CHECK-NEXT: [[res:%[0-9]+]]:2 = loop.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} iter_args([[arg0:%.*]] = [[init0]], [[arg1:%.*]] = [[init1]]) -> (f32, f32) {
+  // CHECK:     [[sum:%[0-9]+]] = addf [[arg0]], [[arg1]] : f32
+  // CHECK:     loop.yield [[arg1]], [[sum]] : f32, f32
+  // CHECK:     addf [[res]]#0, [[res]]#1 : f32
+
+  // clang-format on
   f.print(llvm::outs());
   f.erase();
 }
