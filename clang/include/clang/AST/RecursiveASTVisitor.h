@@ -1993,7 +1993,7 @@ DEF_TRAVERSE_DECL(BindingDecl, {
 
 DEF_TRAVERSE_DECL(MSPropertyDecl, { TRY_TO(TraverseDeclaratorHelper(D)); })
 
-DEF_TRAVERSE_DECL(MSGuidDecl, {});
+DEF_TRAVERSE_DECL(MSGuidDecl, {})
 
 DEF_TRAVERSE_DECL(FieldDecl, {
   TRY_TO(TraverseDeclaratorHelper(D));
