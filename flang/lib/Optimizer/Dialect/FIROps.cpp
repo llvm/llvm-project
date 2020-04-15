@@ -10,7 +10,6 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Function.h"
@@ -18,6 +17,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace fir;
 
@@ -351,7 +351,7 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
 
 /// Get the element type of a reference like type; otherwise null
 static mlir::Type elementTypeOf(mlir::Type ref) {
-  return mlir::TypeSwitch<mlir::Type, mlir::Type>(ref)
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ref)
       .Case<ReferenceType, PointerType, HeapType>(
           [](auto type) { return type.getEleTy(); })
       .Default([](mlir::Type) { return mlir::Type{}; });
