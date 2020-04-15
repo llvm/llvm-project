@@ -58,7 +58,9 @@ struct ClangTidyOptions {
 
   /// Creates a new \c ClangTidyOptions instance combined from all fields
   /// of this instance overridden by the fields of \p Other that have a value.
-  ClangTidyOptions mergeWith(const ClangTidyOptions &Other) const;
+  /// \p Order specifies precedence of \p Other option.
+  ClangTidyOptions mergeWith(const ClangTidyOptions &Other,
+                             unsigned Order) const;
 
   /// Checks filter.
   llvm::Optional<std::string> Checks;
@@ -93,8 +95,20 @@ struct ClangTidyOptions {
   /// comments in the relevant check.
   llvm::Optional<std::string> User;
 
+  /// Helper structure for storing option value with priority of the value.
+  struct ClangTidyValue {
+    ClangTidyValue() : Value(), Priority(0) {}
+    ClangTidyValue(const char *Value) : Value(Value), Priority(0) {}
+    ClangTidyValue(llvm::StringRef Value, unsigned Priority = 0)
+        : Value(Value), Priority(Priority) {}
+
+    std::string Value;
+    /// Priority stores relative precedence of the value loaded from config
+    /// files to disambigute local vs global value from different levels.
+    unsigned Priority;
+  };
   typedef std::pair<std::string, std::string> StringPair;
-  typedef std::map<std::string, std::string> OptionMap;
+  typedef std::map<std::string, ClangTidyValue> OptionMap;
 
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;
@@ -106,6 +120,12 @@ struct ClangTidyOptions {
 
   /// Add extra compilation arguments to the start of the list.
   llvm::Optional<ArgList> ExtraArgsBefore;
+
+  /// Only used in the FileOptionsProvider. If true, FileOptionsProvider will
+  /// take a configuration file in the parent directory (if any exists) and
+  /// apply this config file on top of the parent one. If false or missing,
+  /// only this configuration file will be used.
+  llvm::Optional<bool> InheritParentConfig;
 };
 
 /// Abstract interface for retrieving various ClangTidy options.
