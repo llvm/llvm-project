@@ -16,15 +16,14 @@ using namespace lldb;
 
 DWARFIndex::~DWARFIndex() = default;
 
-void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
-                                    SymbolFileDWARF &dwarf,
-                                    const CompilerDeclContext &parent_decl_ctx,
-                                    uint32_t name_type_mask,
-                                    std::vector<DWARFDIE> &dies) {
+bool DWARFIndex::ProcessFunctionDIE(
+    llvm::StringRef name, DIERef ref, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
     ReportInvalidDIERef(ref, name);
-    return;
+    return true;
   }
 
   // Exit early if we're searching exclusively for methods or selectors and
@@ -32,26 +31,22 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
   uint32_t looking_for_nonmethods =
       name_type_mask & ~(eFunctionNameTypeMethod | eFunctionNameTypeSelector);
   if (!looking_for_nonmethods && parent_decl_ctx.IsValid())
-    return;
+    return true;
 
   // Otherwise, we need to also check that the context matches. If it does not
   // match, we do nothing.
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-    return;
+    return true;
 
   // In case of a full match, we just insert everything we find.
-  if (name_type_mask & eFunctionNameTypeFull) {
-    dies.push_back(die);
-    return;
-  }
+  if (name_type_mask & eFunctionNameTypeFull)
+    return callback(die);
 
   // If looking for ObjC selectors, we need to also check if the name is a
   // possible selector.
   if (name_type_mask & eFunctionNameTypeSelector &&
-      ObjCLanguage::IsPossibleObjCMethodName(die.GetName())) {
-    dies.push_back(die);
-    return;
-  }
+      ObjCLanguage::IsPossibleObjCMethodName(die.GetName()))
+    return callback(die);
 
   bool looking_for_methods = name_type_mask & lldb::eFunctionNameTypeMethod;
   bool looking_for_functions = name_type_mask & lldb::eFunctionNameTypeBase;
@@ -61,6 +56,8 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
     // searching for.
     if ((looking_for_methods && looking_for_functions) ||
         looking_for_methods == die.IsMethod())
-      dies.push_back(die);
+      return callback(die);
   }
+
+  return true;
 }
