@@ -42,7 +42,7 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
   explicit NoTTIImpl(const DataLayout &DL)
       : TargetTransformInfoImplCRTPBase<NoTTIImpl>(DL) {}
 };
-}
+} // namespace
 
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   // If the loop has irreducible control flow, it can not be converted to
@@ -171,23 +171,22 @@ int TargetTransformInfo::getExtCost(const Instruction *I,
   return TTIImpl->getExtCost(I, Src);
 }
 
-int TargetTransformInfo::getIntrinsicCost(
-    Intrinsic::ID IID, Type *RetTy, ArrayRef<const Value *> Arguments,
-    const User *U) const {
+int TargetTransformInfo::getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                                          ArrayRef<const Value *> Arguments,
+                                          const User *U) const {
   int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments, U);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-unsigned
-TargetTransformInfo::getEstimatedNumberOfCaseClusters(
+unsigned TargetTransformInfo::getEstimatedNumberOfCaseClusters(
     const SwitchInst &SI, unsigned &JTSize, ProfileSummaryInfo *PSI,
     BlockFrequencyInfo *BFI) const {
   return TTIImpl->getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
 }
 
 int TargetTransformInfo::getUserCost(const User *U,
-    ArrayRef<const Value *> Operands) const {
+                                     ArrayRef<const Value *> Operands) const {
   int Cost = TTIImpl->getUserCost(U, Operands);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
@@ -214,12 +213,13 @@ unsigned TargetTransformInfo::getFlatAddressSpace() const {
 }
 
 bool TargetTransformInfo::collectFlatAddressOperands(
-  SmallVectorImpl<int> &OpIndexes, Intrinsic::ID IID) const  {
+    SmallVectorImpl<int> &OpIndexes, Intrinsic::ID IID) const {
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
 }
 
-bool TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
-  IntrinsicInst *II, Value *OldV, Value *NewV) const {
+bool TargetTransformInfo::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                                           Value *OldV,
+                                                           Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
 }
 
@@ -228,14 +228,15 @@ bool TargetTransformInfo::isLoweredToCall(const Function *F) const {
 }
 
 bool TargetTransformInfo::isHardwareLoopProfitable(
-  Loop *L, ScalarEvolution &SE, AssumptionCache &AC,
-  TargetLibraryInfo *LibInfo, HardwareLoopInfo &HWLoopInfo) const {
+    Loop *L, ScalarEvolution &SE, AssumptionCache &AC,
+    TargetLibraryInfo *LibInfo, HardwareLoopInfo &HWLoopInfo) const {
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 
-bool TargetTransformInfo::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
-    ScalarEvolution &SE, AssumptionCache &AC, TargetLibraryInfo *TLI,
-    DominatorTree *DT, const LoopAccessInfo *LAI) const {
+bool TargetTransformInfo::preferPredicateOverEpilogue(
+    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
+    TargetLibraryInfo *TLI, DominatorTree *DT,
+    const LoopAccessInfo *LAI) const {
   return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
 }
 
@@ -254,8 +255,7 @@ bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
 
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                                 int64_t BaseOffset,
-                                                bool HasBaseReg,
-                                                int64_t Scale,
+                                                bool HasBaseReg, int64_t Scale,
                                                 unsigned AddrSpace,
                                                 Instruction *I) const {
   return TTIImpl->isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
@@ -337,8 +337,7 @@ bool TargetTransformInfo::prefersVectorizedAddressing() const {
 
 int TargetTransformInfo::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                               int64_t BaseOffset,
-                                              bool HasBaseReg,
-                                              int64_t Scale,
+                                              bool HasBaseReg, int64_t Scale,
                                               unsigned AddrSpace) const {
   int Cost = TTIImpl->getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg,
                                            Scale, AddrSpace);
@@ -367,7 +366,8 @@ bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }
-bool TargetTransformInfo::shouldBuildLookupTablesForConstant(Constant *C) const {
+bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
+    Constant *C) const {
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
@@ -375,14 +375,13 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
 }
 
-unsigned TargetTransformInfo::
-getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) const {
+unsigned TargetTransformInfo::getScalarizationOverhead(Type *Ty, bool Insert,
+                                                       bool Extract) const {
   return TTIImpl->getScalarizationOverhead(Ty, Insert, Extract);
 }
 
-unsigned TargetTransformInfo::
-getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                 unsigned VF) const {
+unsigned TargetTransformInfo::getOperandsScalarizationOverhead(
+    ArrayRef<const Value *> Args, unsigned VF) const {
   return TTIImpl->getOperandsScalarizationOverhead(Args, VF);
 }
 
@@ -390,7 +389,8 @@ bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
   return TTIImpl->supportsEfficientVectorElementLoadStore();
 }
 
-bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) const {
+bool TargetTransformInfo::enableAggressiveInterleaving(
+    bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
 }
 
@@ -416,8 +416,8 @@ bool TargetTransformInfo::allowsMisalignedMemoryAccesses(LLVMContext &Context,
                                                          unsigned AddressSpace,
                                                          unsigned Alignment,
                                                          bool *Fast) const {
-  return TTIImpl->allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
-                                                 Alignment, Fast);
+  return TTIImpl->allowsMisalignedMemoryAccesses(Context, BitWidth,
+                                                 AddressSpace, Alignment, Fast);
 }
 
 TargetTransformInfo::PopcntSupportKind
@@ -471,11 +471,12 @@ unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
 
-unsigned TargetTransformInfo::getRegisterClassForType(bool Vector, Type *Ty) const {
+unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,
+                                                      Type *Ty) const {
   return TTIImpl->getRegisterClassForType(Vector, Ty);
 }
 
-const char* TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
+const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
@@ -505,13 +506,13 @@ unsigned TargetTransformInfo::getCacheLineSize() const {
   return TTIImpl->getCacheLineSize();
 }
 
-llvm::Optional<unsigned> TargetTransformInfo::getCacheSize(CacheLevel Level)
-  const {
+llvm::Optional<unsigned>
+TargetTransformInfo::getCacheSize(CacheLevel Level) const {
   return TTIImpl->getCacheSize(Level);
 }
 
-llvm::Optional<unsigned> TargetTransformInfo::getCacheAssociativity(
-  CacheLevel Level) const {
+llvm::Optional<unsigned>
+TargetTransformInfo::getCacheAssociativity(CacheLevel Level) const {
   return TTIImpl->getCacheAssociativity(Level);
 }
 
@@ -519,10 +520,9 @@ unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }
 
-unsigned TargetTransformInfo::getMinPrefetchStride(unsigned NumMemAccesses,
-                                                  unsigned NumStridedMemAccesses,
-                                                   unsigned NumPrefetches,
-                                                   bool HasCall) const {
+unsigned TargetTransformInfo::getMinPrefetchStride(
+    unsigned NumMemAccesses, unsigned NumStridedMemAccesses,
+    unsigned NumPrefetches, bool HasCall) const {
   return TTIImpl->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
                                        NumPrefetches, HasCall);
 }
@@ -606,10 +606,10 @@ int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, Type *Ty, int Index,
   return Cost;
 }
 
-int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst,
-                                 Type *Src, const Instruction *I) const {
-  assert ((I == nullptr || I->getOpcode() == Opcode) &&
-          "Opcode should reflect passed instruction.");
+int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                          const Instruction *I) const {
+  assert((I == nullptr || I->getOpcode() == Opcode) &&
+         "Opcode should reflect passed instruction.");
   int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
@@ -630,9 +630,10 @@ int TargetTransformInfo::getCFInstrCost(unsigned Opcode) const {
 }
 
 int TargetTransformInfo::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                 Type *CondTy, const Instruction *I) const {
-  assert ((I == nullptr || I->getOpcode() == Opcode) &&
-          "Opcode should reflect passed instruction.");
+                                            Type *CondTy,
+                                            const Instruction *I) const {
+  assert((I == nullptr || I->getOpcode() == Opcode) &&
+         "Opcode should reflect passed instruction.");
   int Cost = TTIImpl->getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
@@ -649,8 +650,8 @@ int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
                                          MaybeAlign Alignment,
                                          unsigned AddressSpace,
                                          const Instruction *I) const {
-  assert ((I == nullptr || I->getOpcode() == Opcode) &&
-          "Opcode should reflect passed instruction.");
+  assert((I == nullptr || I->getOpcode() == Opcode) &&
+         "Opcode should reflect passed instruction.");
   int Cost = TTIImpl->getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
@@ -679,10 +680,9 @@ int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     unsigned Alignment, unsigned AddressSpace, bool UseMaskForCond,
     bool UseMaskForGaps) const {
-  int Cost = TTIImpl->getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                                 Alignment, AddressSpace,
-                                                 UseMaskForCond,
-                                                 UseMaskForGaps);
+  int Cost = TTIImpl->getInterleavedMemoryOpCost(
+      Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, UseMaskForCond,
+      UseMaskForGaps);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -767,22 +767,16 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
   return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
 }
 
-Type *TargetTransformInfo::getMemcpyLoopLoweringType(LLVMContext &Context,
-                                                     Value *Length,
-                                                     unsigned SrcAddrSpace,
-                                                     unsigned DestAddrSpace,
-                                                     unsigned SrcAlign,
-                                                     unsigned DestAlign) const {
+Type *TargetTransformInfo::getMemcpyLoopLoweringType(
+    LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
+    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign) const {
   return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
-                                            DestAddrSpace, SrcAlign,
-                                            DestAlign);
+                                            DestAddrSpace, SrcAlign, DestAlign);
 }
 
 void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
-    unsigned RemainingBytes,
-    unsigned SrcAddrSpace,
-    unsigned DestAddrSpace,
+    unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
     unsigned SrcAlign, unsigned DestAlign) const {
   TTIImpl->getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                              SrcAddrSpace, DestAddrSpace,
@@ -848,8 +842,8 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::useReductionIntrinsic(unsigned Opcode,
-                                                Type *Ty, ReductionFlags Flags) const {
+bool TargetTransformInfo::useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                                                ReductionFlags Flags) const {
   return TTIImpl->useReductionIntrinsic(Opcode, Ty, Flags);
 }
 
@@ -1246,7 +1240,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return getCastInstrCost(I->getOpcode(), I->getType(), SrcTy, I);
   }
   case Instruction::ExtractElement: {
-    const ExtractElementInst * EEI = cast<ExtractElementInst>(I);
+    const ExtractElementInst *EEI = cast<ExtractElementInst>(I);
     ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
     unsigned Idx = -1;
     if (CI)
@@ -1260,7 +1254,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     switch (matchVectorSplittingReduction(EEI, ReduxOpCode, ReduxType)) {
     case RK_Arithmetic:
       return getArithmeticReductionCost(ReduxOpCode, ReduxType,
-                                             /*IsPairwiseForm=*/false);
+                                        /*IsPairwiseForm=*/false);
     case RK_MinMax:
       return getMinMaxReductionCost(
           ReduxType, CmpInst::makeCmpResultType(ReduxType),
@@ -1276,7 +1270,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     switch (matchPairwiseReduction(EEI, ReduxOpCode, ReduxType)) {
     case RK_Arithmetic:
       return getArithmeticReductionCost(ReduxOpCode, ReduxType,
-                                             /*IsPairwiseForm=*/true);
+                                        /*IsPairwiseForm=*/true);
     case RK_MinMax:
       return getMinMaxReductionCost(
           ReduxType, CmpInst::makeCmpResultType(ReduxType),
@@ -1289,17 +1283,16 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
       break;
     }
 
-    return getVectorInstrCost(I->getOpcode(),
-                                   EEI->getOperand(0)->getType(), Idx);
+    return getVectorInstrCost(I->getOpcode(), EEI->getOperand(0)->getType(),
+                              Idx);
   }
   case Instruction::InsertElement: {
-    const InsertElementInst * IE = cast<InsertElementInst>(I);
+    const InsertElementInst *IE = cast<InsertElementInst>(I);
     ConstantInt *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
     unsigned Idx = -1;
     if (CI)
       Idx = CI->getZExtValue();
-    return getVectorInstrCost(I->getOpcode(),
-                                   IE->getType(), Idx);
+    return getVectorInstrCost(I->getOpcode(), IE->getType(), Idx);
   }
   case Instruction::ExtractValue:
     return 0; // Model all ExtractValue nodes as free.
