@@ -588,6 +588,7 @@ namespace clang {
     ExpectedStmt VisitIntegerLiteral(IntegerLiteral *E);
     ExpectedStmt VisitFloatingLiteral(FloatingLiteral *E);
     ExpectedStmt VisitImaginaryLiteral(ImaginaryLiteral *E);
+    ExpectedStmt VisitFixedPointLiteral(FixedPointLiteral *E);
     ExpectedStmt VisitCharacterLiteral(CharacterLiteral *E);
     ExpectedStmt VisitStringLiteral(StringLiteral *E);
     ExpectedStmt VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
@@ -6501,6 +6502,20 @@ ExpectedStmt ASTNodeImporter::VisitImaginaryLiteral(ImaginaryLiteral *E) {
 
   return new (Importer.getToContext()) ImaginaryLiteral(
       *ToSubExprOrErr, *ToTypeOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitFixedPointLiteral(FixedPointLiteral *E) {
+  auto ToTypeOrErr = import(E->getType());
+  if (!ToTypeOrErr)
+    return ToTypeOrErr.takeError();
+
+  ExpectedSLoc ToLocationOrErr = import(E->getLocation());
+  if (!ToLocationOrErr)
+    return ToLocationOrErr.takeError();
+
+  return new (Importer.getToContext()) FixedPointLiteral(
+      Importer.getToContext(), E->getValue(), *ToTypeOrErr, *ToLocationOrErr,
+      Importer.getToContext().getFixedPointScale(*ToTypeOrErr));
 }
 
 ExpectedStmt ASTNodeImporter::VisitCharacterLiteral(CharacterLiteral *E) {
