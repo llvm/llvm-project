@@ -25,22 +25,24 @@
 namespace mlir {
 
 inline bool isRowMajorMatmul(ArrayAttr indexingMaps) {
+  auto context = indexingMaps.getContext();
   AffineExpr m, n, k;
-  bindDims(indexingMaps.getContext(), m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}));
-  auto maps = ArrayAttr::get({mapA, mapB, mapC}, indexingMaps.getContext());
+  bindDims(context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, context));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
   return indexingMaps == maps;
 }
 
 inline bool isColumnMajorMatmul(ArrayAttr indexingMaps) {
+  auto context = indexingMaps.getContext();
   AffineExpr m, n, k;
-  bindDims(indexingMaps.getContext(), m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}));
-  auto maps = ArrayAttr::get({mapA, mapB, mapC}, indexingMaps.getContext());
+  bindDims(context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}, context));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
   return indexingMaps == maps;
 }
 

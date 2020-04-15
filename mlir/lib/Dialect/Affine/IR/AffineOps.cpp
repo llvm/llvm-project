@@ -522,7 +522,8 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
          "Unexpected number of concatenated symbols");
   auto numDims = dimValueToPosition.size();
   auto numSymbols = concatenatedSymbols.size() - map.getNumSymbols();
-  auto auxiliaryMap = AffineMap::get(numDims, numSymbols, auxiliaryExprs);
+  auto auxiliaryMap =
+      AffineMap::get(numDims, numSymbols, auxiliaryExprs, map.getContext());
 
   LLVM_DEBUG(map.print(dbgs() << "\nCompose map: "));
   LLVM_DEBUG(auxiliaryMap.print(dbgs() << "\nWith map: "));
@@ -2163,19 +2164,13 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 
 void AffineParallelOp::build(Builder *builder, OperationState &result,
                              ArrayRef<int64_t> ranges) {
-  // Default initialize empty maps.
-  auto lbMap = AffineMap::get(builder->getContext());
-  auto ubMap = AffineMap::get(builder->getContext());
-  // If there are ranges, set each to [0, N).
-  if (ranges.size()) {
-    SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
-                                       builder->getAffineConstantExpr(0));
-    lbMap = AffineMap::get(0, 0, lbExprs);
-    SmallVector<AffineExpr, 8> ubExprs;
-    for (int64_t range : ranges)
-      ubExprs.push_back(builder->getAffineConstantExpr(range));
-    ubMap = AffineMap::get(0, 0, ubExprs);
-  }
+  SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
+                                     builder->getAffineConstantExpr(0));
+  auto lbMap = AffineMap::get(0, 0, lbExprs, builder->getContext());
+  SmallVector<AffineExpr, 8> ubExprs;
+  for (int64_t range : ranges)
+    ubExprs.push_back(builder->getAffineConstantExpr(range));
+  auto ubMap = AffineMap::get(0, 0, ubExprs, builder->getContext());
   build(builder, result, lbMap, {}, ubMap, {});
 }
 
