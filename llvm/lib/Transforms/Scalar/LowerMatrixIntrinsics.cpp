@@ -916,21 +916,19 @@ public:
 
     // If Col is 7 long and I is 2 and BlockNumElts is 2 the mask is: 0, 1, 7,
     // 8, 4, 5, 6
-    SmallVector<Constant *, 16> Mask;
+    SmallVector<int, 16> Mask;
     unsigned i;
     for (i = 0; i < I; i++)
-      Mask.push_back(Builder.getInt32(i));
+      Mask.push_back(i);
 
     unsigned VecNumElts = cast<VectorType>(Col->getType())->getNumElements();
     for (; i < I + BlockNumElts; i++)
-      Mask.push_back(Builder.getInt32(i - I + VecNumElts));
+      Mask.push_back(i - I + VecNumElts);
 
     for (; i < VecNumElts; i++)
-      Mask.push_back(Builder.getInt32(i));
+      Mask.push_back(i);
 
-    Value *MaskVal = ConstantVector::get(Mask);
-
-    return Builder.CreateShuffleVector(Col, Block, MaskVal);
+    return Builder.CreateShuffleVector(Col, Block, Mask);
   }
 
   Value *createMulAdd(Value *Sum, Value *A, Value *B, bool UseFPOp,

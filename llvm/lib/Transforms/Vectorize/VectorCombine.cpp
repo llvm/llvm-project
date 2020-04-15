@@ -237,16 +237,13 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
     uint64_t SplatIndex = ConvertToShuffle == Ext0 ? C0 : C1;
     uint64_t CheapExtIndex = ConvertToShuffle == Ext0 ? C1 : C0;
     auto *VecTy = cast<VectorType>(V0->getType());
-    Type *I32Ty = IntegerType::getInt32Ty(I.getContext());
-    UndefValue *Undef = UndefValue::get(I32Ty);
-    SmallVector<Constant *, 32> ShufMask(VecTy->getNumElements(), Undef);
-    ShufMask[CheapExtIndex] = ConstantInt::get(I32Ty, SplatIndex);
+    SmallVector<int, 32> ShufMask(VecTy->getNumElements(), -1);
+    ShufMask[CheapExtIndex] = SplatIndex;
     IRBuilder<> Builder(ConvertToShuffle);
 
     // extelt X, C --> extelt (splat X), C'
     Value *Shuf = Builder.CreateShuffleVector(ConvertToShuffle->getOperand(0),
-                                              UndefValue::get(VecTy),
-                                              ConstantVector::get(ShufMask));
+                                              UndefValue::get(VecTy), ShufMask);
     Value *NewExt = Builder.CreateExtractElement(Shuf, CheapExtIndex);
     if (ConvertToShuffle == Ext0)
       Ext0 = cast<Instruction>(NewExt);
