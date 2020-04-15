@@ -14,20 +14,15 @@
 // but still gets built as part of the 'std' module, which breaks the build.
 // XFAIL: libcpp-has-no-threads
 
+// Test that intypes.h re-exports stdint.h
+
 // REQUIRES: modules-support
-// UNSUPPORTED: c++98, c++03
+// ADDITIONAL_COMPILE_FLAGS: -fmodules
 
-// RUN: %{build_module}
-
-#include <clocale>
-
-#define TEST(...) do { using T = decltype( __VA_ARGS__ ); } while(false)
+#include <inttypes.h>
 
 int main(int, char**) {
-  std::lconv l; ((void)l);
-
-  TEST(std::setlocale(0, ""));
-  TEST(std::localeconv());
+  int8_t x; (void)x;
 
   return 0;
 }

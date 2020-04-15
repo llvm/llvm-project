@@ -14,17 +14,16 @@
 // but still gets built as part of the 'std' module, which breaks the build.
 // XFAIL: libcpp-has-no-threads
 
+// Test that <cstdint> re-exports <stdint.h>
+
 // REQUIRES: modules-support
+// ADDITIONAL_COMPILE_FLAGS: -fmodules
 
-// Test that <cinttypes> re-exports <cstdint>
-
-// RUN: %{build_module}
-
-#include <cinttypes>
+#include <cstdint>
 
 int main(int, char**) {
-  int8_t x; ((void)x);
-  std::int8_t y; ((void)y);
+  int8_t x; (void)x;
+  std::int8_t y; (void)y;
 
   return 0;
 }

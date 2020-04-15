@@ -10,16 +10,15 @@
 // but still gets built as part of the 'std' module, which breaks the build.
 // XFAIL: libcpp-has-no-threads
 
+// Test that int8_t and the like are exported from stdint.h, not inttypes.h
+
 // REQUIRES: modules-support
-
-// Test that int8_t and the like are exported from stdint.h not inttypes.h
-
-// RUN: %{build_module}
+// ADDITIONAL_COMPILE_FLAGS: -fmodules
 
 #include <stdint.h>
 
 int main(int, char**) {
-  int8_t x; ((void)x);
+  int8_t x; (void)x;
 
   return 0;
 }
