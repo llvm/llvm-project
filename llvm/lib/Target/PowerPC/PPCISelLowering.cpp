@@ -7720,15 +7720,17 @@ void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
 
   // Emit a store to the stack slot.
   SDValue Chain;
+  unsigned Alignment = DAG.getEVTAlignment(Tmp.getValueType());
   if (i32Stack) {
     MachineFunction &MF = DAG.getMachineFunction();
+    Alignment = 4;
     MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MPI, MachineMemOperand::MOStore, 4, 4);
+      MF.getMachineMemOperand(MPI, MachineMemOperand::MOStore, 4, Alignment);
     SDValue Ops[] = { DAG.getEntryNode(), Tmp, FIPtr };
     Chain = DAG.getMemIntrinsicNode(PPCISD::STFIWX, dl,
               DAG.getVTList(MVT::Other), Ops, MVT::i32, MMO);
   } else
-    Chain = DAG.getStore(DAG.getEntryNode(), dl, Tmp, FIPtr, MPI);
+    Chain = DAG.getStore(DAG.getEntryNode(), dl, Tmp, FIPtr, MPI, Alignment);
 
   // Result is a load from the stack slot.  If loading 4 bytes, make sure to
   // add in a bias on big endian.
@@ -7741,6 +7743,7 @@ void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
   RLI.Chain = Chain;
   RLI.Ptr = FIPtr;
   RLI.MPI = MPI;
+  RLI.Alignment = Alignment;
 }
 
 /// Custom lowers floating point to integer conversions to use
