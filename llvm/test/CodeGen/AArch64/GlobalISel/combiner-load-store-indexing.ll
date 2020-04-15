@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -verify-machineinstrs -stop-after=aarch64-prelegalizer-combiner -force-legal-indexing %s -o - | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -verify-machineinstrs -stop-after=aarch64-prelegalizer-combiner -force-legal-indexing %s -o - | FileCheck %s
 
 define i8* @test_simple_load_pre(i8* %ptr) {
 ; CHECK-LABEL: name: test_simple_load_pre
