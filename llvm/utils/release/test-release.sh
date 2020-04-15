@@ -484,6 +484,10 @@ function package_release() {
 set -e
 set -o pipefail
 
+# Turn off core dumps, as some test cases can easily fill up even the largest
+# file systems.
+ulimit -c 0
+
 if [ "$do_checkout" = "yes" ]; then
     export_sources
 fi
