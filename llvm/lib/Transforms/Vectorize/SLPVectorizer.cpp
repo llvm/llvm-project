@@ -108,9 +108,8 @@ using namespace slpvectorizer;
 
 STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
 
-cl::opt<bool>
-    llvm::RunSLPVectorization("vectorize-slp", cl::init(false), cl::Hidden,
-                              cl::desc("Run the SLP vectorization passes"));
+cl::opt<bool> RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
+                                  cl::desc("Run the SLP vectorization passes"));
 
 static cl::opt<int>
     SLPCostThreshold("slp-threshold", cl::init(0), cl::Hidden,
@@ -5647,6 +5646,8 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
                                 OptimizationRemarkEmitter *ORE_) {
+  if (!RunSLPVectorization)
+    return false;
   SE = SE_;
   TTI = TTI_;
   TLI = TLI_;
