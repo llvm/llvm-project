@@ -242,8 +242,8 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
   // Extract even elements and odd elements and add them together. This will
   // be pattern matched by SelectionDAG to pmaddwd. This instruction will be
   // half the original width.
-  SmallVector<uint32_t, 16> EvenMask(NumElts / 2);
-  SmallVector<uint32_t, 16> OddMask(NumElts / 2);
+  SmallVector<int, 16> EvenMask(NumElts / 2);
+  SmallVector<int, 16> OddMask(NumElts / 2);
   for (int i = 0, e = NumElts / 2; i != e; ++i) {
     EvenMask[i] = i * 2;
     OddMask[i] = i * 2 + 1;
@@ -253,7 +253,7 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
   Value *MAdd = Builder.CreateAdd(EvenElts, OddElts);
 
   // Concatenate zeroes to extend back to the original type.
-  SmallVector<uint32_t, 32> ConcatMask(NumElts);
+  SmallVector<int, 32> ConcatMask(NumElts);
   std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
   Value *Zero = Constant::getNullValue(MAdd->getType());
   Value *Concat = Builder.CreateShuffleVector(MAdd, Zero, ConcatMask);
@@ -339,7 +339,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
 
   if (NumElts < 16) {
     // Pad input with zeroes.
-    SmallVector<uint32_t, 32> ConcatMask(16);
+    SmallVector<int, 32> ConcatMask(16);
     for (unsigned i = 0; i != NumElts; ++i)
       ConcatMask[i] = i;
     for (unsigned i = NumElts; i != 16; ++i)
@@ -360,7 +360,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   // First collect the pieces we need.
   SmallVector<Value *, 4> Ops(NumSplits);
   for (unsigned i = 0; i != NumSplits; ++i) {
-    SmallVector<uint32_t, 64> ExtractMask(IntrinsicNumElts);
+    SmallVector<int, 64> ExtractMask(IntrinsicNumElts);
     std::iota(ExtractMask.begin(), ExtractMask.end(), i * IntrinsicNumElts);
     Value *ExtractOp0 = Builder.CreateShuffleVector(Op0, Op0, ExtractMask);
     Value *ExtractOp1 = Builder.CreateShuffleVector(Op1, Op0, ExtractMask);
@@ -373,7 +373,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   for (unsigned s = Stages; s > 0; --s) {
     unsigned NumConcatElts = Ops[0]->getType()->getVectorNumElements() * 2;
     for (unsigned i = 0; i != 1U << (s - 1); ++i) {
-      SmallVector<uint32_t, 64> ConcatMask(NumConcatElts);
+      SmallVector<int, 64> ConcatMask(NumConcatElts);
       std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
       Ops[i] = Builder.CreateShuffleVector(Ops[i*2], Ops[i*2+1], ConcatMask);
     }
@@ -386,7 +386,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
     // Extract down to 2 elements.
     Ops[0] = Builder.CreateShuffleVector(Ops[0], Ops[0], ArrayRef<int>{0, 1});
   } else if (NumElts >= 8) {
-    SmallVector<uint32_t, 32> ConcatMask(NumElts);
+    SmallVector<int, 32> ConcatMask(NumElts);
     unsigned SubElts = Ops[0]->getType()->getVectorNumElements();
     for (unsigned i = 0; i != SubElts; ++i)
       ConcatMask[i] = i;

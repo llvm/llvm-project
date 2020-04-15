@@ -1437,7 +1437,7 @@ private:
       return VL.size() == ReuseShuffleIndices.size() &&
              std::equal(
                  VL.begin(), VL.end(), ReuseShuffleIndices.begin(),
-                 [this](Value *V, unsigned Idx) { return V == Scalars[Idx]; });
+                 [this](Value *V, int Idx) { return V == Scalars[Idx]; });
     }
 
     /// A vector of scalars.
@@ -1451,7 +1451,7 @@ private:
     EntryState State;
 
     /// Does this sequence require some shuffling?
-    SmallVector<unsigned, 4> ReuseShuffleIndices;
+    SmallVector<int, 4> ReuseShuffleIndices;
 
     /// Does this entry require reordering?
     ArrayRef<unsigned> ReorderIndices;
@@ -4027,9 +4027,9 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
             V = SV->getOperand(0);
           } else {
             // Reshuffle to get only unique values.
-            SmallVector<unsigned, 4> UniqueIdxs;
-            SmallSet<unsigned, 4> UsedIdxs;
-            for(unsigned Idx : E->ReuseShuffleIndices)
+            SmallVector<int, 4> UniqueIdxs;
+            SmallSet<int, 4> UsedIdxs;
+            for (int Idx : E->ReuseShuffleIndices)
               if (UsedIdxs.insert(Idx).second)
                 UniqueIdxs.emplace_back(Idx);
             V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
@@ -4046,7 +4046,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
     ScalarTy = SI->getValueOperand()->getType();
 
   // Check that every instruction appears once in this bundle.
-  SmallVector<unsigned, 4> ReuseShuffleIndicies;
+  SmallVector<int, 4> ReuseShuffleIndicies;
   SmallVector<Value *, 4> UniqueValues;
   if (VL.size() > 2) {
     DenseMap<Value *, unsigned> UniquePositions;

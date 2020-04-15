@@ -2099,12 +2099,11 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       if (!BegIsAligned) {
         // Shuffle the input so [0,NumElements) contains the output, and
         // [NumElems,SrcNumElems) is undef.
-        SmallVector<Constant *, 16> ShuffleMask(SrcNumElems,
-                                                UndefValue::get(Int32Ty));
+        SmallVector<int, 16> ShuffleMask(SrcNumElems, -1);
         for (unsigned I = 0, E = MaskElems, Idx = BegIdx; I != E; ++Idx, ++I)
-          ShuffleMask[I] = ConstantInt::get(Int32Ty, Idx);
+          ShuffleMask[I] = Idx;
         V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
-                                        ConstantVector::get(ShuffleMask),
+                                        ShuffleMask,
                                         SVI.getName() + ".extract");
         BegIdx = 0;
       }
