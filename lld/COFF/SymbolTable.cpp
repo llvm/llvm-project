@@ -789,20 +789,16 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
 }
 
-std::vector<StringRef> SymbolTable::compileBitcodeFiles() {
-  lto.reset(new BitcodeCompiler);
-  for (BitcodeFile *f : BitcodeFile::instances)
-    lto->add(*f);
-  return lto->compile();
-}
-
 void SymbolTable::addCombinedLTOObjects() {
   if (BitcodeFile::instances.empty())
     return;
 
   ScopedTimer t(ltoTimer);
-  for (StringRef object : compileBitcodeFiles()) {
-    auto *obj = make<ObjFile>(MemoryBufferRef(object, "lto.tmp"));
+  lto.reset(new BitcodeCompiler);
+  for (BitcodeFile *f : BitcodeFile::instances)
+    lto->add(*f);
+  for (InputFile *newObj : lto->compile()) {
+    ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();
     ObjFile::instances.push_back(obj);
   }
