@@ -6,21 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// AIX system headers need stdint.h to be re-enterable when macro _STD_TYPES_T
-// is defined. This test case tests that after including sys/types.h which
-// defines macro _STD_TYPES_T, includes stdint.h, and then undefines
-// _STD_TYPES_T, stdint.h can be entered to get to macros like UINT32_MAX.
+// Test that limits macros are available when <stdint.h> is included
+// with or without macro _XOPEN_SOURCE=700.
 //
-// REQUIRES: aix
-// RUN: %{compile} -c
-// RUN: %{compile} -c -D_XOPEN_SOURCE=700
+// https://reviews.llvm.org/D59253
 
-// test <stdint.h>
-//
-// Test that limits macros are available when <stdint.h> is included with
-// or without macro _XOPEN_SOURCE=700.
+// ADDITIONAL_COMPILE_FLAGS: -D_XOPEN_SOURCE=700
 
-#include <sys/types.h>
 #include <stdint.h>
 
 #ifndef INT8_MIN
@@ -266,3 +258,5 @@
 #ifndef UINTMAX_C
 #error UINTMAX_C not defined
 #endif
+
+int main() { }
