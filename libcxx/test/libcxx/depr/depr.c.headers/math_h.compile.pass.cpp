@@ -6,17 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %{compile} -fsyntax-only
+// Code on Windows expects to be able to do:
+//
+//  #define _USE_MATH_DEFINES
+//  #include <math.h>
+//
+// and receive the definitions of mathematical constants, even if <math.h>
+// has previously been included. Make sure that works.
+//
 
 #ifdef _MSC_VER
+#   include <math.h>
+#   define _USE_MATH_DEFINES
+#   include <math.h>
 
-#include <math.h>
-
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-#ifndef M_PI
-#error M_PI not defined
+#   ifndef M_PI
+#       error M_PI not defined
+#   endif
 #endif
 
-#endif
+int main() { }
