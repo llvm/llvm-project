@@ -192,6 +192,8 @@ static Value* generatePoisonChecks(Instruction &I) {
   // Handle non-binops seperately
   switch (I.getOpcode()) {
   default:
+    // Note there are a couple of missing cases here, once implemented, this
+    // should become an llvm_unreachable.
     break;
   case Instruction::ExtractElement: {
     Value *Vec = I.getOperand(0);
@@ -296,8 +298,9 @@ static bool rewrite(Function &F) {
         for (Value *V : I.operands())
           Checks.push_back(getPoisonFor(ValToPoison, V));
 
-      if (auto *Check = generatePoisonChecks(I))
-        Checks.push_back(Check);
+      if (canCreatePoison(&I))
+        if (auto *Check = generatePoisonChecks(I))
+          Checks.push_back(Check);
       ValToPoison[&I] = buildOrChain(B, Checks);
     }
 
