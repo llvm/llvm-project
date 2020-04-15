@@ -14,7 +14,6 @@
 #define MLIR_IR_DIAGNOSTICS_H
 
 #include "mlir/IR/Location.h"
-#include "mlir/Support/STLExtras.h"
 #include <functional>
 
 namespace llvm {

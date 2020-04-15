@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpFormatGen.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"

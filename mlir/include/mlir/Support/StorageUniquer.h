@@ -9,8 +9,7 @@
 #ifndef MLIR_SUPPORT_STORAGEUNIQUER_H
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
-#include "mlir/Support/STLExtras.h"
-#include "llvm/ADT/DenseMap.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Allocator.h"
 
