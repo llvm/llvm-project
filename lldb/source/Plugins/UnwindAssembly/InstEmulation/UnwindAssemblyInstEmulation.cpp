@@ -125,18 +125,12 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         // Add the initial state to the save list with offset 0.
         saved_unwind_states.insert({0, {last_row, m_register_values}});
 
-        // cache the pc register number (in whatever register numbering this
-        // UnwindPlan uses) for quick reference during instruction parsing.
-        RegisterInfo pc_reg_info;
-        m_inst_emulator_up->GetRegisterInfo(
-            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC, pc_reg_info);
-
-        // cache the return address register number (in whatever register
+        // cache the stack pointer register number (in whatever register
         // numbering this UnwindPlan uses) for quick reference during
         // instruction parsing.
-        RegisterInfo ra_reg_info;
+        RegisterInfo sp_reg_info;
         m_inst_emulator_up->GetRegisterInfo(
-            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA, ra_reg_info);
+            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, sp_reg_info);
 
         // The architecture dependent condition code of the last processed
         // instruction.
@@ -167,6 +161,23 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
               *newrow = *it->second.first;
               m_curr_row.reset(newrow);
               m_register_values = it->second.second;
+              // re-set the CFA register ivars to match the
+              // new m_curr_row.
+              if (sp_reg_info.name &&
+                  m_curr_row->GetCFAValue().IsRegisterPlusOffset()) {
+                uint32_t row_cfa_regnum =
+                    m_curr_row->GetCFAValue().GetRegisterNumber();
+                lldb::RegisterKind row_kind =
+                    m_unwind_plan_ptr->GetRegisterKind();
+                // set m_cfa_reg_info to the row's CFA reg.
+                m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
+                                                    m_cfa_reg_info);
+                // set m_fp_is_cfa.
+                if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
+                  m_fp_is_cfa = false;
+                else
+                  m_fp_is_cfa = true;
+              }
             }
 
             m_inst_emulator_up->SetInstruction(inst->GetOpcode(),
@@ -197,6 +208,23 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                     std::make_shared<UnwindPlan::Row>(*saved_state.first);
                 m_curr_row->SetOffset(current_offset);
                 m_register_values = saved_state.second;
+                // re-set the CFA register ivars to match the
+                // new m_curr_row.
+                if (sp_reg_info.name &&
+                    m_curr_row->GetCFAValue().IsRegisterPlusOffset()) {
+                  uint32_t row_cfa_regnum =
+                      m_curr_row->GetCFAValue().GetRegisterNumber();
+                  lldb::RegisterKind row_kind =
+                      m_unwind_plan_ptr->GetRegisterKind();
+                  // set m_cfa_reg_info to the row's CFA reg.
+                  m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
+                                                      m_cfa_reg_info);
+                  // set m_fp_is_cfa.
+                  if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
+                    m_fp_is_cfa = false;
+                  else
+                    m_fp_is_cfa = true;
+                }
                 bool replace_existing =
                     true; // The last instruction might already
                           // created a row for this offset and
