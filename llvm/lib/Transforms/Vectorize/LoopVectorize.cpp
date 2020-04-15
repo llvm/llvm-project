@@ -6930,8 +6930,8 @@ VPRecipeBuilder::tryToWidenCall(Instruction *I, VFRange &Range, VPlan &Plan) {
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
-  assert(!isa<PHINode>(I) && !isa<LoadInst>(I) && !isa<StoreInst>(I) &&
-         "Instruction should have been handled earlier");
+  assert(!isa<BranchInst>(I) && !isa<PHINode>(I) && !isa<LoadInst>(I) &&
+         !isa<StoreInst>(I) && "Instruction should have been handled earlier");
   // Instruction should be widened, unless it is scalar after vectorization,
   // scalarization is profitable or it is predicated.
   auto WillScalarize = [this, I](unsigned VF) -> bool {
@@ -6961,7 +6961,6 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VPlan &Plan) {
     case Instruction::And:
     case Instruction::AShr:
     case Instruction::BitCast:
-    case Instruction::Br:
     case Instruction::FAdd:
     case Instruction::FCmp:
     case Instruction::FDiv:
