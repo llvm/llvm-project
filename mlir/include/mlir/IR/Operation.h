@@ -126,6 +126,16 @@ public:
     return OpTy();
   }
 
+  /// Returns the closest surrounding parent operation with trait `Trait`.
+  template <template <typename T> class Trait>
+  Operation *getParentWithTrait() {
+    Operation *op = this;
+    while ((op = op->getParentOp()))
+      if (op->hasTrait<Trait>())
+        return op;
+    return nullptr;
+  }
+
   /// Return true if this operation is a proper ancestor of the `other`
   /// operation.
   bool isProperAncestor(Operation *other);
