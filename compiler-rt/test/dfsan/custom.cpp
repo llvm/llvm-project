@@ -250,6 +250,17 @@ void test_strchr() {
 #else
   ASSERT_LABEL(crv, i_label);
 #endif
+
+  // `man strchr` says:
+  // The terminating null byte is considered part of the string, so that if c
+  // is specified as '\0', these functions return a pointer to the terminator.
+  crv = strchr(str1, '\0');
+  assert(crv == &str1[4]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(crv);
+#else
+  ASSERT_LABEL(crv, i_label);
+#endif
 }
 
 void test_calloc() {
