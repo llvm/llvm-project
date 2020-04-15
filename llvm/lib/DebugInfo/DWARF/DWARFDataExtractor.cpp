@@ -50,9 +50,11 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
     *SecNdx = object::SectionedAddress::UndefSection;
   if (!Section)
     return getUnsigned(Off, Size, Err);
+
+  ErrorAsOutParameter ErrAsOut(Err);
   Optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
   uint64_t A = getUnsigned(Off, Size, Err);
-  if (!E)
+  if (!E || (Err && *Err))
     return A;
   if (SecNdx)
     *SecNdx = E->SectionIndex;
