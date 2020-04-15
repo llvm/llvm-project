@@ -6,7 +6,7 @@ main_config = sys.argv[1]
 main_config = os.path.realpath(main_config)
 main_config = os.path.normcase(main_config)
 
-config_map = {main_config : sys.argv[2]}
+config_map = {os.path.normcase(main_config) : (main_config, sys.argv[2])}
 builtin_parameters = {'config_map' : config_map}
 
 if __name__=='__main__':
