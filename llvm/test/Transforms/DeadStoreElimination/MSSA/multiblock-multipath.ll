@@ -136,10 +136,11 @@ bb5:
 
 ; Tests where the pointer/object is *NOT* accessible after the function returns.
 
+; The store in the entry block can be eliminated, because it is overwritten
+; on all paths to the exit.
 define void @alloca_1(i1 %c1) {
 ; CHECK-LABEL: @alloca_1(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1, i32* [[P]]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]]
@@ -167,10 +168,11 @@ bb5:
   ret void
 }
 
+; The store in the entry block can be eliminated, because it is overwritten
+; on all paths to the exit.
 define void @alloca_2(i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @alloca_2(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1, i32* [[P]]
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]]
@@ -211,6 +213,8 @@ bb5:
   ret void
 }
 
+; The store in the entry block cannot be eliminated. There's a path from the
+; first store to the read in bb5, where the location is not overwritten.
 define void @alloca_3(i1 %c1) {
 ; CHECK-LABEL: @alloca_3(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
@@ -240,10 +244,12 @@ bb5:
   ret void
 }
 
+; The store in the entry block can be eliminated, because it is overwritten
+; before the use in bb1 and not read on other paths to the function exit. The
+; object cannot be accessed by the caller.
 define void @alloca_4(i1 %c1) {
 ; CHECK-LABEL: @alloca_4(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1, i32* [[P]]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]]
