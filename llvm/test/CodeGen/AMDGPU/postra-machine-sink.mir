@@ -20,7 +20,7 @@ body: |
     S_CBRANCH_SCC0 %bb.2, implicit $scc
 
   bb.1:
-    liveins: $vgpr2, $sgpr0_sgpr1:0x00000001
+    liveins: $vgpr2, $sgpr0_sgpr1:0x00000003
     S_BRANCH %bb.4
 
   bb.2:
