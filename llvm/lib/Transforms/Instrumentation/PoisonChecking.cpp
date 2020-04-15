@@ -21,17 +21,15 @@
 // 2) A propagation rule which translates dynamic information about the poison
 //    state of each input to whether the dynamic output of the instruction
 //    produces poison.
-// 3) A flag validation rule which validates any poison producing flags on the
+// 3) A creation rule which validates any poison producing flags on the
 //    instruction itself (e.g. checks for overflow on nsw).
 // 4) A check rule which traps (to a handler function) if this instruction must
 //    execute undefined behavior given the poison state of it's inputs.
 //
-// At the moment, the UB detection is done in a best effort manner; that is,
-// the resulting code may produce a false negative result (not report UB when
-// it actually exists according to the LangRef spec), but should never produce
-// a false positive (report UB where it doesn't exist).  The intention is to
-// eventually support a "strict" mode which never dynamically reports a false
-// negative at the cost of rejecting some valid inputs to translation.
+// This is a must analysis based transform; that is, the resulting code may
+// produce a false negative result (not report UB when actually exists
+// according to the LangRef spec), but should never produce a false positive
+// (report UB where it doesn't exist).
 //
 // Use cases for this pass include:
 // - Understanding (and testing!) the implications of the definition of poison
