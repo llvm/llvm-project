@@ -1,19 +1,19 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -simplify-affine-structures | FileCheck %s
 
-// CHECK-DAG: #[[SET_EMPTY_2D:.*]] = affine_set<(d0, d1) : (1 == 0)>
+// CHECK-DAG: #[[SET_EMPTY:.*]] = affine_set<() : (1 == 0)>
 // CHECK-DAG: #[[SET_2D:.*]] = affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0)>
-// CHECK-DAG: #[[SET_EMPTY_2D_2S:.*]] = affine_set<(d0, d1)[s0, s1] : (1 == 0)>
-// CHECK-DAG: #[[SET_2D_2S:.*]] = affine_set<(d0, d1)[s0, s1] : (d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0, d0 * 5 - d1 * 11 + s0 * 7 + s1 == 0, d0 * 11 + d1 * 7 - s0 * 5 + s1 == 0, d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0)>
-// CHECK-DAG: #[[SET_EMPTY_1D:.*]] = affine_set<(d0) : (1 == 0)>
-// CHECK-DAG: #[[SET_EMPTY_1D_2S:.*]] = affine_set<(d0)[s0, s1] : (1 == 0)>
-// CHECK-DAG: #[[SET_EMPTY_3D:.*]] = affine_set<(d0, d1, d2) : (1 == 0)>
+// CHECK-DAG: #[[SET_7_11:.*]] = affine_set<(d0, d1) : (d0 * 7 + d1 * 5 + 88 == 0, d0 * 5 - d1 * 11 + 60 == 0, d0 * 11 + d1 * 7 - 24 == 0, d0 * 7 + d1 * 5 + 88 == 0)>
+
+// An external function that we will use in bodies to avoid DCE.
+func @external() -> ()
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set0() {
 func @test_gaussian_elimination_empty_set0() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
-      // CHECK: [[SET_EMPTY_2D]](%arg0, %arg1)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (2 == 0)>(%arg0, %arg1) {
+        call @external() : () -> ()
       }
     }
   }
@@ -24,8 +24,9 @@ func @test_gaussian_elimination_empty_set0() {
 func @test_gaussian_elimination_empty_set1() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
-      // CHECK: [[SET_EMPTY_2D]](%arg0, %arg1)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (1 >= 0, -1 >= 0)> (%arg0, %arg1) {
+        call @external() : () -> ()
       }
     }
   }
@@ -38,6 +39,7 @@ func @test_gaussian_elimination_non_empty_set2() {
     affine.for %arg1 = 1 to 100 {
       // CHECK: #[[SET_2D]](%arg0, %arg1)
       affine.if affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0, d1 + 101 >= 0)>(%arg0, %arg1) {
+        call @external() : () -> ()
       }
     }
   }
@@ -50,8 +52,9 @@ func @test_gaussian_elimination_empty_set3() {
   %c11 = constant 11 : index
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
-      // CHECK: #[[SET_EMPTY_2D_2S]](%arg0, %arg1)[%c7, %c11]
+      // CHECK: #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1)[s0, s1] : (d0 - s0 == 0, d0 + s0 == 0, s0 - 1 == 0)>(%arg0, %arg1)[%c7, %c11] {
+        call @external() : () -> ()
       }
     }
   }
@@ -70,8 +73,9 @@ func @test_gaussian_elimination_non_empty_set4() {
   %c11 = constant 11 : index
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
-      // CHECK: #[[SET_2D_2S]](%arg0, %arg1)[%c7, %c11]
+      // CHECK: #[[SET_7_11]](%arg0, %arg1)
       affine.if #set_2d_non_empty(%arg0, %arg1)[%c7, %c11] {
+        call @external() : () -> ()
       }
     }
   }
@@ -79,7 +83,6 @@ func @test_gaussian_elimination_non_empty_set4() {
 }
 
 // Add invalid constraints to previous non-empty set to make it empty.
-// Set for test case: test_gaussian_elimination_empty_set5
 #set_2d_empty = affine_set<(d0, d1)[s0, s1] : (d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0,
                                        d0 * 5 - d1 * 11 + s0 * 7 + s1 == 0,
                                        d0 * 11 + d1 * 7 - s0 * 5 + s1 == 0,
@@ -92,8 +95,9 @@ func @test_gaussian_elimination_empty_set5() {
   %c11 = constant 11 : index
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
-      // CHECK: #[[SET_EMPTY_2D_2S]](%arg0, %arg1)[%c7, %c11]
+      // CHECK: #[[SET_EMPTY]]()
       affine.if #set_2d_empty(%arg0, %arg1)[%c7, %c11] {
+        call @external() : () -> ()
       }
     }
   }
@@ -147,6 +151,7 @@ func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : i
   affine.for %arg4 = 1 to 10 {
     affine.for %arg5 = 1 to 100 {
       affine.if #set_fuzz_virus(%arg4, %arg5, %arg0, %arg1, %arg2, %arg3) {
+        call @external() : () -> ()
       }
     }
   }
@@ -157,33 +162,33 @@ func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : i
 func @test_empty_set(%N : index) {
   affine.for %i = 0 to 10 {
     affine.for %j = 0 to 10 {
-      // CHECK: affine.if #[[SET_EMPTY_2D]](%arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (d0 - d1 >= 0, d1 - d0 - 1 >= 0)>(%i, %j) {
         "foo"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_1D]](%arg1)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0) : (d0 >= 0, -d0 - 1 >= 0)>(%i) {
         "bar"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_1D]](%arg1)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0) : (d0 >= 0, -d0 - 1 >= 0)>(%i) {
         "foo"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_1D_2S]](%arg1)[%arg0, %arg0]
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0)[s0, s1] : (d0 >= 0, -d0 + s0 - 1 >= 0, -s0 >= 0)>(%i)[%N, %N] {
         "bar"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_3D]](%arg1, %arg2, %arg0)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       // The set below implies d0 = d1; so d1 >= d0, but d0 >= d1 + 1.
       affine.if affine_set<(d0, d1, d2) : (d0 - d1 == 0, d2 - d0 >= 0, d0 - d1 - 1 >= 0)>(%i, %j, %N) {
         "foo"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_2D]](%arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       // The set below has rational solutions but no integer solutions; GCD test catches it.
       affine.if affine_set<(d0, d1) : (d0*2 -d1*2 - 1 == 0, d0 >= 0, -d0 + 100 >= 0, d1 >= 0, -d1 + 100 >= 0)>(%i, %j) {
         "foo"() : () -> ()
       }
-      // CHECK: affine.if #[[SET_EMPTY_2D]](%arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (d1 == 0, d0 - 1 >= 0, - d0 - 1 >= 0)>(%i, %j) {
         "foo"() : () -> ()
       }
@@ -193,12 +198,12 @@ func @test_empty_set(%N : index) {
   affine.for %k = 0 to 10 {
     affine.for %l = 0 to 10 {
       // Empty because no multiple of 8 lies between 4 and 7.
-      // CHECK: affine.if #[[SET_EMPTY_1D]](%arg1)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0) : (8*d0 - 4 >= 0, -8*d0 + 7 >= 0)>(%k) {
         "foo"() : () -> ()
       }
       // Same as above but with equalities and inequalities.
-      // CHECK: affine.if #[[SET_EMPTY_2D]](%arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (d0 - 4*d1 == 0, 4*d1 - 5 >= 0, -4*d1 + 7 >= 0)>(%k, %l) {
         "foo"() : () -> ()
       }
@@ -206,12 +211,12 @@ func @test_empty_set(%N : index) {
       // 8*d1 here is a multiple of 4, and so can't lie between 9 and 11. GCD
       // tightening will tighten constraints to 4*d0 + 8*d1 >= 12 and 4*d0 +
       // 8*d1 <= 8; hence infeasible.
-      // CHECK: affine.if #[[SET_EMPTY_2D]](%arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1) : (4*d0 + 8*d1 - 9 >= 0, -4*d0 - 8*d1 + 11 >= 0)>(%k, %l) {
         "foo"() : () -> ()
       }
       // Same as above but with equalities added into the mix.
-      // CHECK: affine.if #[[SET_EMPTY_3D]](%arg1, %arg1, %arg2)
+      // CHECK: affine.if #[[SET_EMPTY]]()
       affine.if affine_set<(d0, d1, d2) : (d0 - 4*d2 == 0, d0 + 8*d1 - 9 >= 0, -d0 - 8*d1 + 11 >= 0)>(%k, %k, %l) {
         "foo"() : () -> ()
       }
@@ -219,7 +224,7 @@ func @test_empty_set(%N : index) {
   }
 
   affine.for %m = 0 to 10 {
-    // CHECK: affine.if #[[SET_EMPTY_1D]](%arg{{[0-9]+}})
+    // CHECK: affine.if #[[SET_EMPTY]]()
     affine.if affine_set<(d0) : (d0 mod 2 - 3 == 0)> (%m) {
       "foo"() : () -> ()
     }
@@ -230,20 +235,39 @@ func @test_empty_set(%N : index) {
 
 // -----
 
-// CHECK-DAG: #[[SET_2D:.*]] = affine_set<(d0, d1) : (d0 >= 0, -d0 + 50 >= 0)
-// CHECK-DAG: #[[SET_EMPTY:.*]] = affine_set<(d0, d1) : (1 == 0)
-// CHECK-DAG: #[[SET_UNIV:.*]] = affine_set<(d0, d1) : (0 == 0)
+// An external function that we will use in bodies to avoid DCE.
+func @external() -> ()
+
+// CHECK-DAG: #[[SET:.*]] = affine_set<()[s0] : (s0 >= 0, -s0 + 50 >= 0)
+// CHECK-DAG: #[[EMPTY_SET:.*]] = affine_set<() : (1 == 0)
+// CHECK-DAG: #[[UNIV_SET:.*]] = affine_set<() : (0 == 0)
 
 // CHECK-LABEL: func @simplify_set
 func @simplify_set(%a : index, %b : index) {
-  // CHECK: affine.if #[[SET_2D]]
+  // CHECK: affine.if #[[SET]]
   affine.if affine_set<(d0, d1) : (d0 - d1 + d1 + d0 >= 0, 2 >= 0, d0 >= 0, -d0 + 50 >= 0, -d0 + 100 >= 0)>(%a, %b) {
+    call @external() : () -> ()
   }
-  // CHECK: affine.if #[[SET_EMPTY]]
+  // CHECK: affine.if #[[EMPTY_SET]]
   affine.if affine_set<(d0, d1) : (d0 mod 2 - 1 == 0, d0 - 2 * (d0 floordiv 2) == 0)>(%a, %b) {
+    call @external() : () -> ()
   }
-  // CHECK: affine.if #[[SET_UNIV]]
+  // CHECK: affine.if #[[UNIV_SET]]
   affine.if affine_set<(d0, d1) : (1 >= 0, 3 >= 0)>(%a, %b) {
+    call @external() : () -> ()
   }
 	return
+}
+
+// -----
+
+// CHECK-DAG: -> (s0 * 2 + 1)
+
+// Test "op local" simplification on affine.apply. DCE on addi will not happen.
+func @affine.apply(%N : index) {
+  %v = affine.apply affine_map<(d0, d1) -> (d0 + d1 + 1)>(%N, %N)
+  addi %v, %v : index
+  // CHECK: affine.apply #map{{.*}}()[%arg0]
+  // CHECK-NEXT: addi
+  return
 }
