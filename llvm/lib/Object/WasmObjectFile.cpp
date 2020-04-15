@@ -1469,8 +1469,6 @@ bool WasmObjectFile::isSectionBSS(DataRefImpl Sec) const { return false; }
 
 bool WasmObjectFile::isSectionVirtual(DataRefImpl Sec) const { return false; }
 
-bool WasmObjectFile::isSectionBitcode(DataRefImpl Sec) const { return false; }
-
 relocation_iterator WasmObjectFile::section_rel_begin(DataRefImpl Ref) const {
   DataRefImpl RelocRef;
   RelocRef.d.a = Ref.d.a;
