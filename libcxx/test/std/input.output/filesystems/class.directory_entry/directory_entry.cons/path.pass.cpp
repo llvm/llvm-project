@@ -121,6 +121,8 @@ TEST_CASE(path_ctor_calls_refresh) {
 TEST_CASE(path_ctor_dne) {
   using namespace fs;
 
+  static_test_env static_env;
+
   {
     std::error_code ec = GetTestEC();
     directory_entry ent(StaticEnv::DNE, ec);

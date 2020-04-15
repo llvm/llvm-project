@@ -54,18 +54,21 @@ TEST_CASE(test_signature_3) {
 }
 
 TEST_CASE(test_signature_4) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir);
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir));
 }
 
 TEST_CASE(test_signature_5) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir / "dir2/.");
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir / "dir2"));
 }
 
 TEST_CASE(test_signature_6) {
+  static_test_env static_env;
   // FIXME? If the trailing separator occurs in a part of the path that exists,
   // it is omitted. Otherwise it is added to the end of the result.
   fs::path p(StaticEnv::SymlinkToDir / "dir2/./");
@@ -74,24 +77,28 @@ TEST_CASE(test_signature_6) {
 }
 
 TEST_CASE(test_signature_7) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir / "dir2/DNE/./");
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir / "dir2/DNE/"));
 }
 
 TEST_CASE(test_signature_8) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir / "dir2");
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir2));
 }
 
 TEST_CASE(test_signature_9) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir / "dir2/../dir2/DNE/..");
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir2 / ""));
 }
 
 TEST_CASE(test_signature_10) {
+  static_test_env static_env;
   fs::path p(StaticEnv::SymlinkToDir / "dir2/dir3/../DNE/DNE2");
   const fs::path output = fs::weakly_canonical(p);
   TEST_CHECK(output == std::string(StaticEnv::Dir2 / "DNE/DNE2"));

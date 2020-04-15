@@ -80,6 +80,8 @@ TEST_CASE(test_error_reporting)
 
 TEST_CASE(basic_space_test)
 {
+    static_test_env static_env;
+
     // All the test cases should reside on the same filesystem and therefore
     // should have the same expected result. Compute this expected result
     // one and check that it looks semi-sane.

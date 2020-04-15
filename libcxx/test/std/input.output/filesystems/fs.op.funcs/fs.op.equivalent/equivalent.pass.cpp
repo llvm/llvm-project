@@ -36,6 +36,7 @@ TEST_CASE(signature_test) {
 }
 
 TEST_CASE(equivalent_test) {
+  static_test_env static_env;
   struct TestCase {
     path lhs;
     path rhs;
