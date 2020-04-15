@@ -889,29 +889,11 @@ define void @test_nt64xi8(<64 x i8>* nocapture %ptr, <64 x i8> %X) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512VL-LABEL: test_nt64xi8:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
-; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
-;
-; AVX512F-LABEL: test_nt64xi8:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512F-NEXT:    vmovntdq %ymm0, (%rdi)
-; AVX512F-NEXT:    vmovntdq %ymm1, 32(%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_nt64xi8:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vmovntdq %zmm0, (%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_nt64xi8:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovntdq %zmm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 entry:
   store <64 x i8> %X, <64 x i8>* %ptr, align 64, !nontemporal !1
   ret void
@@ -933,29 +915,11 @@ define void @test_nt32xi16(<32 x i16>* nocapture %ptr, <32 x i16> %X) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512VL-LABEL: test_nt32xi16:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
-; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
-;
-; AVX512F-LABEL: test_nt32xi16:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512F-NEXT:    vmovntdq %ymm0, (%rdi)
-; AVX512F-NEXT:    vmovntdq %ymm1, 32(%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_nt32xi16:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vmovntdq %zmm0, (%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_nt32xi16:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovntdq %zmm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 entry:
   store <32 x i16> %X, <32 x i16>* %ptr, align 64, !nontemporal !1
   ret void
