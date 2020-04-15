@@ -19,7 +19,6 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"

@@ -12,7 +12,6 @@
 
 #include "toy/AST.h"
 
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"

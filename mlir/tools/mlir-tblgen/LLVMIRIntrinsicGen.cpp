@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"

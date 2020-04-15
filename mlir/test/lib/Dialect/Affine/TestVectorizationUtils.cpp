@@ -19,7 +19,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"

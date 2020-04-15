@@ -23,7 +23,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
