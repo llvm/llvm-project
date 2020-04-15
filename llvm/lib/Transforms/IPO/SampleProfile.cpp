@@ -719,8 +719,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   // it means that the inlined callsite has no sample, thus the call
   // instruction should have 0 count.
   if ((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
-      !ImmutableCallSite(&Inst).isIndirectCall() &&
-      findCalleeFunctionSamples(Inst))
+      !cast<CallBase>(Inst).isIndirectCall() && findCalleeFunctionSamples(Inst))
     return 0;
 
   const DILocation *DIL = DLoc;
@@ -933,7 +932,7 @@ bool SampleProfileLoader::shouldInlineColdCallee(Instruction &CallInst) {
   if (!ProfileSizeInline)
     return false;
 
-  Function *Callee = CallSite(&CallInst).getCalledFunction();
+  Function *Callee = cast<CallBase>(CallInst).getCalledFunction();
   if (Callee == nullptr)
     return false;
 
@@ -948,7 +947,7 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
     const SmallVector<Instruction *, 10> &Candidates, const Function &F,
     bool Hot) {
   for (auto I : Candidates) {
-    Function *CalledFunction = CallSite(I).getCalledFunction();
+    Function *CalledFunction = cast<CallBase>(I)->getCalledFunction();
     if (CalledFunction) {
       ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineAttempt", 
                                            I->getDebugLoc(), I->getParent())
@@ -1019,11 +1018,11 @@ bool SampleProfileLoader::inlineHotFunctions(
       }
     }
     for (auto I : CIS) {
-      Function *CalledFunction = CallSite(I).getCalledFunction();
+      Function *CalledFunction = cast<CallBase>(I)->getCalledFunction();
       // Do not inline recursive calls.
       if (CalledFunction == &F)
         continue;
-      if (CallSite(I).isIndirectCall()) {
+      if (cast<CallBase>(I)->isIndirectCall()) {
         if (PromotedInsns.count(I))
           continue;
         uint64_t Sum;
@@ -1091,7 +1090,7 @@ bool SampleProfileLoader::inlineHotFunctions(
   // Accumulate not inlined callsite information into notInlinedSamples
   for (const auto &Pair : localNotInlinedCallSites) {
     Instruction *I = Pair.getFirst();
-    Function *Callee = CallSite(I).getCalledFunction();
+    Function *Callee = cast<CallBase>(I)->getCalledFunction();
     if (!Callee || Callee->isDeclaration())
       continue;
 
@@ -1537,8 +1536,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
       for (auto &I : BB->getInstList()) {
         if (!isa<CallInst>(I) && !isa<InvokeInst>(I))
           continue;
-        CallSite CS(&I);
-        if (!CS.getCalledFunction()) {
+        if (!cast<CallBase>(I).getCalledFunction()) {
           const DebugLoc &DLoc = I.getDebugLoc();
           if (!DLoc)
             continue;
