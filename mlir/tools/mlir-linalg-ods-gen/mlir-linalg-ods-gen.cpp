@@ -1480,22 +1480,23 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os, StringRef opId,
   std::string iteratorsStr;
   llvm::raw_string_ostream ss(iteratorsStr);
   unsigned pos = 0;
-  interleaveComma(state.dims, ss, [&](std::pair<StringRef, AffineExpr> p) {
-    bool reduction = false;
-    for (auto &expr : state.expressions) {
-      visitPostorder(*expr, [&](const Expression &e) {
-        if (auto *pTensorExpr = dyn_cast<TensorExpr>(&e)) {
-          if (pTensorExpr->reductionDimensions.count(pos) > 0)
-            reduction = true;
+  llvm::interleaveComma(
+      state.dims, ss, [&](std::pair<StringRef, AffineExpr> p) {
+        bool reduction = false;
+        for (auto &expr : state.expressions) {
+          visitPostorder(*expr, [&](const Expression &e) {
+            if (auto *pTensorExpr = dyn_cast<TensorExpr>(&e)) {
+              if (pTensorExpr->reductionDimensions.count(pos) > 0)
+                reduction = true;
+            }
+          });
+          if (reduction)
+            break;
         }
+        ss << (reduction ? "getReductionIteratorTypeName()"
+                         : "getParallelIteratorTypeName()");
+        pos++;
       });
-      if (reduction)
-        break;
-    }
-    ss << (reduction ? "getReductionIteratorTypeName()"
-                     : "getParallelIteratorTypeName()");
-    pos++;
-  });
   ss.flush();
 
   os << llvm::formatv(referenceReferenceIteratorsFmt, opId, iteratorsStr);
@@ -1515,8 +1516,9 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
 
   std::string dimsStr;
   llvm::raw_string_ostream ss(dimsStr);
-  interleaveComma(state.dims, ss,
-                  [&](std::pair<StringRef, AffineExpr> p) { ss << p.second; });
+  llvm::interleaveComma(
+      state.dims, ss,
+      [&](std::pair<StringRef, AffineExpr> p) { ss << p.second; });
   ss.flush();
 
   std::string mapsStr;
@@ -1524,7 +1526,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
   SmallVector<TensorUse, 4> orderedUses(state.orderedTensorArgs.size());
   for (auto it : state.orderedTensorArgs)
     orderedUses[it.second] = it.first;
-  interleaveComma(orderedUses, mapsStringStream, [&](TensorUse u) {
+  llvm::interleaveComma(orderedUses, mapsStringStream, [&](TensorUse u) {
     assert(u.indexingMap);
     const char *mapFmt = "\n\tAffineMap::get({0}, 0, {1})";
     if (u.indexingMap.isEmpty()) {
@@ -1535,7 +1537,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
     std::string exprsStr;
     llvm::raw_string_ostream exprsStringStream(exprsStr);
     exprsStringStream << "{";
-    interleaveComma(u.indexingMap.getResults(), exprsStringStream);
+    llvm::interleaveComma(u.indexingMap.getResults(), exprsStringStream);
     exprsStringStream << "}";
     exprsStringStream.flush();
 
@@ -1563,10 +1565,10 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
     } else {
       std::string subExprs;
       llvm::raw_string_ostream subExprsStringStream(subExprs);
-      interleaveComma(pTensorExpr->expressions, subExprsStringStream,
-                      [&](const std::unique_ptr<Expression> &e) {
-                        printExpr(subExprsStringStream, *e);
-                      });
+      llvm::interleaveComma(pTensorExpr->expressions, subExprsStringStream,
+                            [&](const std::unique_ptr<Expression> &e) {
+                              printExpr(subExprsStringStream, *e);
+                            });
       subExprsStringStream.flush();
       const char *tensorExprFmt = "\n    ValueHandle _{0} = {1}({2});";
       os << llvm::formatv(tensorExprFmt, ++count, pTensorExpr->opId, subExprs);
@@ -1586,10 +1588,11 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
   unsigned idx = 0;
   std::string valueHandleStr;
   llvm::raw_string_ostream valueHandleStringStream(valueHandleStr);
-  interleaveComma(state.orderedTensorArgs, valueHandleStringStream, [&](auto) {
-    valueHandleStringStream << "_" << idx << "(args[" << idx << "])";
-    idx++;
-  });
+  llvm::interleaveComma(
+      state.orderedTensorArgs, valueHandleStringStream, [&](auto) {
+        valueHandleStringStream << "_" << idx << "(args[" << idx << "])";
+        idx++;
+      });
 
   std::string expressionsStr;
   llvm::raw_string_ostream expressionStringStream(expressionsStr);
@@ -1601,10 +1604,10 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
 
   std::string yieldStr;
   llvm::raw_string_ostream yieldStringStream(yieldStr);
-  interleaveComma(state.expressions, yieldStringStream,
-                  [&](const std::unique_ptr<Expression> &e) {
-                    printExpr(yieldStringStream, *e);
-                  });
+  llvm::interleaveComma(state.expressions, yieldStringStream,
+                        [&](const std::unique_ptr<Expression> &e) {
+                          printExpr(yieldStringStream, *e);
+                        });
 
   valueHandleStringStream.flush();
   expressionStringStream.flush();

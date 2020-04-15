@@ -933,7 +933,7 @@ public:
 
   template <typename Container, typename UnaryFunctor>
   inline void interleaveComma(const Container &c, UnaryFunctor each_fn) const {
-    mlir::interleaveComma(c, os, each_fn);
+    llvm::interleaveComma(c, os, each_fn);
   }
 
   /// This enum describes the different kinds of elision for the type of an

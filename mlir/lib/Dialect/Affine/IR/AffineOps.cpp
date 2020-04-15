@@ -2304,7 +2304,7 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
   }
   if (!elideSteps) {
     p << " step (";
-    interleaveComma(steps, p);
+    llvm::interleaveComma(steps, p);
     p << ')';
   }
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
