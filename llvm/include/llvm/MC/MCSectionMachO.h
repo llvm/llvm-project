@@ -44,7 +44,7 @@ public:
       return StringRef(SegmentName, 16);
     return StringRef(SegmentName);
   }
-  StringRef getSectionName() const {
+  StringRef getName() const {
     // SectionName is not necessarily null terminated!
     if (SectionName[15])
       return StringRef(SectionName, 16);

@@ -771,8 +771,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     const TargetMachine &TM) const {
   assert(MBB.isBeginSection() && "Basic block does not start a section!");
   SmallString<128> Name;
-  Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
-             ->getSectionName();
+  Name =
+      (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))->getName();
   unsigned UniqueID = MCContext::GenericSectionID;
 
   switch (MBB.getSectionID().Type) {

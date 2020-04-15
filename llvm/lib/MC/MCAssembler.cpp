@@ -688,7 +688,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
           if (DF.getContents()[i]) {
             if (auto *ELFSec = dyn_cast<const MCSectionELF>(Sec))
               report_fatal_error("non-zero initializer found in section '" +
-                  ELFSec->getSectionName() + "'");
+                                 ELFSec->getName() + "'");
             else
               report_fatal_error("non-zero initializer found in virtual section");
           }

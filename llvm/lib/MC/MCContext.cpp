@@ -330,7 +330,7 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   // SHF_LINK_ORDER flag.
   unsigned UniqueID = Section->getUniqueID();
   ELFUniquingMap.erase(
-      ELFSectionKey{Section->getSectionName(), GroupName, "", UniqueID});
+      ELFSectionKey{Section->getName(), GroupName, "", UniqueID});
   auto I = ELFUniquingMap
                .insert(std::make_pair(
                    ELFSectionKey{Name, GroupName, "", UniqueID}, Section))
@@ -500,13 +500,13 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   unsigned Characteristics = Sec->getCharacteristics();
   if (KeySym) {
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    return getCOFFSection(Sec->getSectionName(), Characteristics,
-                          Sec->getKind(), KeySym->getName(),
+    return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(),
+                          KeySym->getName(),
                           COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
   }
 
-  return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
-                        "", 0, UniqueID);
+  return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(), "", 0,
+                        UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
