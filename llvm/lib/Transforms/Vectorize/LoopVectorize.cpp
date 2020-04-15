@@ -1598,9 +1598,8 @@ struct LoopVectorize : public FunctionPass {
 
   explicit LoopVectorize(bool InterleaveOnlyWhenForced = false,
                          bool VectorizeOnlyWhenForced = false)
-      : FunctionPass(ID) {
-    Impl.InterleaveOnlyWhenForced = InterleaveOnlyWhenForced;
-    Impl.VectorizeOnlyWhenForced = VectorizeOnlyWhenForced;
+      : FunctionPass(ID),
+        Impl({InterleaveOnlyWhenForced, VectorizeOnlyWhenForced}) {
     initializeLoopVectorizePass(*PassRegistry::getPassRegistry());
   }
 
@@ -7671,6 +7670,12 @@ static bool processLoopInVPlanNativePath(
   LLVM_DEBUG(verifyFunction(*L->getHeader()->getParent()));
   return true;
 }
+
+LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
+    : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced ||
+                               !EnableLoopInterleaving),
+      VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced ||
+                              !EnableLoopVectorization) {}
 
 bool LoopVectorizePass::processLoop(Loop *L) {
   assert((EnableVPlanNativePath || L->empty()) &&

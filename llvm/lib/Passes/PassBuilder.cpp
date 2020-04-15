@@ -242,9 +242,9 @@ static cl::opt<bool> EnableCallGraphProfile(
     cl::desc("Enable call graph profile pass for the new PM (default = on)"));
 
 PipelineTuningOptions::PipelineTuningOptions() {
-  LoopInterleaving = EnableLoopInterleaving;
-  LoopVectorization = EnableLoopVectorization;
-  SLPVectorization = RunSLPVectorization;
+  LoopInterleaving = true;
+  LoopVectorization = true;
+  SLPVectorization = false;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   Coroutines = false;
