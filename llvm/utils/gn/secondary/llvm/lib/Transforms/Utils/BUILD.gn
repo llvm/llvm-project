@@ -27,7 +27,6 @@ static_library("Utils") {
     "EntryExitInstrumenter.cpp",
     "EscapeEnumerator.cpp",
     "Evaluator.cpp",
-    "FixIrreducible.cpp",
     "FlattenCFG.cpp",
     "FunctionComparator.cpp",
     "FunctionImportUtils.cpp",
