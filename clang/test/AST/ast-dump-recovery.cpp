@@ -98,3 +98,8 @@ void test(int x) {
   foo.abc;
   foo->func(x);
 }
+
+// CHECK:     |-AlignedAttr {{.*}} alignas
+// CHECK-NEXT:| `-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:|   `-UnresolvedLookupExpr {{.*}} 'invalid'
+struct alignas(invalid()) Aligned {};
