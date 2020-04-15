@@ -132,36 +132,33 @@ public:
     bool ReadHashData(uint32_t hash_data_offset,
                       HashData &hash_data) const override;
 
-    void
+    size_t
     AppendAllDIEsThatMatchingRegex(const lldb_private::RegularExpression &regex,
                                    DIEInfoArray &die_info_array) const;
 
-    void AppendAllDIEsInRange(const uint32_t die_offset_start,
-                              const uint32_t die_offset_end,
-                              DIEInfoArray &die_info_array) const;
+    size_t AppendAllDIEsInRange(const uint32_t die_offset_start,
+                                const uint32_t die_offset_end,
+                                DIEInfoArray &die_info_array) const;
 
-    bool FindByName(llvm::StringRef name,
-                    llvm::function_ref<bool(DIERef ref)> callback);
+    size_t FindByName(llvm::StringRef name, DIEArray &die_offsets);
 
-    void FindByNameAndTag(llvm::StringRef name, const dw_tag_t tag,
-                          llvm::function_ref<bool(DIERef ref)> callback);
+    size_t FindByNameAndTag(llvm::StringRef name, const dw_tag_t tag,
+                            DIEArray &die_offsets);
 
-    void FindByNameAndTagAndQualifiedNameHash(
+    size_t FindByNameAndTagAndQualifiedNameHash(
         llvm::StringRef name, const dw_tag_t tag,
-        const uint32_t qualified_name_hash,
-        llvm::function_ref<bool(DIERef ref)> callback);
+        const uint32_t qualified_name_hash, DIEArray &die_offsets);
 
-    void
-    FindCompleteObjCClassByName(llvm::StringRef name,
-                                llvm::function_ref<bool(DIERef ref)> callback,
-                                bool must_be_implementation);
+    size_t FindCompleteObjCClassByName(llvm::StringRef name,
+                                       DIEArray &die_offsets,
+                                       bool must_be_implementation);
 
   protected:
     Result AppendHashDataForRegularExpression(
         const lldb_private::RegularExpression &regex,
         lldb::offset_t *hash_data_offset_ptr, Pair &pair) const;
 
-    void FindByName(llvm::StringRef name, DIEInfoArray &die_info_array);
+    size_t FindByName(llvm::StringRef name, DIEInfoArray &die_info_array);
 
     Result GetHashDataForName(llvm::StringRef name,
                               lldb::offset_t *hash_data_offset_ptr,
@@ -172,28 +169,27 @@ public:
     std::string m_name;
   };
 
-  static bool ExtractDIEArray(const DIEInfoArray &die_info_array,
-                              llvm::function_ref<bool(DIERef ref)> callback);
+  static void ExtractDIEArray(const DIEInfoArray &die_info_array,
+                              DIEArray &die_offsets);
 
 protected:
   static void ExtractDIEArray(const DIEInfoArray &die_info_array,
-                              const dw_tag_t tag,
-                              llvm::function_ref<bool(DIERef ref)> callback);
+                              const dw_tag_t tag, DIEArray &die_offsets);
 
   static void ExtractDIEArray(const DIEInfoArray &die_info_array,
                               const dw_tag_t tag,
                               const uint32_t qualified_name_hash,
-                              llvm::function_ref<bool(DIERef ref)> callback);
+                              DIEArray &die_offsets);
 
   static void
   ExtractClassOrStructDIEArray(const DIEInfoArray &die_info_array,
                                bool return_implementation_only_if_available,
-                               llvm::function_ref<bool(DIERef ref)> callback);
+                               DIEArray &die_offsets);
 
-  static void
-  ExtractTypesFromDIEArray(const DIEInfoArray &die_info_array,
-                           uint32_t type_flag_mask, uint32_t type_flag_value,
-                           llvm::function_ref<bool(DIERef ref)> callback);
+  static void ExtractTypesFromDIEArray(const DIEInfoArray &die_info_array,
+                                       uint32_t type_flag_mask,
+                                       uint32_t type_flag_value,
+                                       DIEArray &die_offsets);
 
   static const char *GetAtomTypeName(uint16_t atom);
 };
