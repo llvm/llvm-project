@@ -152,6 +152,8 @@ public:
   /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
   /// scoped within a LoopBuilder.
   void operator()(function_ref<void(void)> fun = nullptr);
+  void setOp(Operation *op) { this->op = op; }
+  Operation *getOp() { return op; }
 
 private:
   LoopBuilder() = default;
@@ -166,7 +168,10 @@ private:
                                              ArrayRef<ValueHandle> steps);
   friend LoopBuilder makeLoopBuilder(ValueHandle *iv, ValueHandle lbHandle,
                                      ValueHandle ubHandle,
-                                     ValueHandle stepHandle);
+                                     ValueHandle stepHandle,
+                                     ArrayRef<ValueHandle *> iter_args_handles,
+                                     ValueRange iter_args_init_values);
+  Operation *op;
 };
 
 // This class exists solely to handle the C++ vexing parse case when
