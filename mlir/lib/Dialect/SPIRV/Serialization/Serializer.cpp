@@ -20,11 +20,11 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/StringExtras.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
@@ -627,7 +627,7 @@ LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
   auto attrName = attr.first.strref();
-  auto decorationName = mlir::convertToCamelCase(attrName, true);
+  auto decorationName = llvm::convertToCamelFromSnakeCase(attrName, true);
   auto decoration = spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
     return emitError(
