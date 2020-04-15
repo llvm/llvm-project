@@ -120,7 +120,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
       opInst->emitRemark("NOT MATCHED");
     } else {
       outs << "\nmatched: " << *opInst << " with shape ratio: ";
-      interleaveComma(MutableArrayRef<int64_t>(*ratio), outs);
+      llvm::interleaveComma(MutableArrayRef<int64_t>(*ratio), outs);
     }
   }
 }

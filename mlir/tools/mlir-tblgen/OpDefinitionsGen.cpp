@@ -1107,14 +1107,16 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
     body << "  " << builderOpState
          << ".addAttribute(\"operand_segment_sizes\", "
             "odsBuilder->getI32VectorAttr({";
-    interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
-      if (op.getOperand(i).isOptional())
-        body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
-      else if (op.getOperand(i).isVariadic())
-        body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
-      else
-        body << "1";
-    });
+    llvm::interleaveComma(
+        llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+          if (op.getOperand(i).isOptional())
+            body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
+          else if (op.getOperand(i).isVariadic())
+            body << "static_cast<int32_t>(" << getArgumentName(op, i)
+                 << ".size())";
+          else
+            body << "1";
+        });
     body << "}));\n";
   }
 
@@ -1212,7 +1214,7 @@ void OpEmitter::genOpInterfaceMethods() {
         continue;
       std::string args;
       llvm::raw_string_ostream os(args);
-      mlir::interleaveComma(method.getArguments(), os,
+      llvm::interleaveComma(method.getArguments(), os,
                             [&](const OpInterfaceMethod::Argument &arg) {
                               os << arg.type << " " << arg.name;
                             });
@@ -1766,7 +1768,7 @@ static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
 static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
   IfDefScope scope("GET_OP_LIST", os);
 
-  interleave(
+  llvm::interleave(
       // TODO: We are constructing the Operator wrapper instance just for
       // getting it's qualified class name here. Reduce the overhead by having a
       // lightweight version of Operator class just for that purpose.

@@ -36,10 +36,10 @@ static void emitMethodNameAndArgs(const OpInterfaceMethod &method,
   os << method.getName() << '(';
   if (addOperationArg)
     os << "Operation *tablegen_opaque_op" << (method.arg_empty() ? "" : ", ");
-  interleaveComma(method.getArguments(), os,
-                  [&](const OpInterfaceMethod::Argument &arg) {
-                    os << arg.type << " " << arg.name;
-                  });
+  llvm::interleaveComma(method.getArguments(), os,
+                        [&](const OpInterfaceMethod::Argument &arg) {
+                          os << arg.type << " " << arg.name;
+                        });
   os << ')';
 }
 
@@ -72,7 +72,7 @@ static void emitInterfaceDef(OpInterface &interface, raw_ostream &os) {
     os << " {\n      return getImpl()->" << method.getName() << '(';
     if (!method.isStatic())
       os << "getOperation()" << (method.arg_empty() ? "" : ", ");
-    interleaveComma(
+    llvm::interleaveComma(
         method.getArguments(), os,
         [&](const OpInterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n  }\n";
@@ -135,7 +135,7 @@ static void emitModelDecl(OpInterface &interface, raw_ostream &os) {
 
     // Add the arguments to the call.
     os << method.getName() << '(';
-    interleaveComma(
+    llvm::interleaveComma(
         method.getArguments(), os,
         [&](const OpInterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n    }\n";
@@ -255,10 +255,10 @@ static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
     if (method.isStatic())
       os << "static ";
     emitCPPType(method.getReturnType(), os) << method.getName() << '(';
-    interleaveComma(method.getArguments(), os,
-                    [&](const OpInterfaceMethod::Argument &arg) {
-                      emitCPPType(arg.type, os) << arg.name;
-                    });
+    llvm::interleaveComma(method.getArguments(), os,
+                          [&](const OpInterfaceMethod::Argument &arg) {
+                            emitCPPType(arg.type, os) << arg.name;
+                          });
     os << ");\n```\n";
 
     // Emit the description.

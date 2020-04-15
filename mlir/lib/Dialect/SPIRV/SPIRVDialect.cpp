@@ -587,12 +587,12 @@ static void print(StructType type, DialectAsmPrinter &os) {
       auto eachFn = [&os](spirv::Decoration decoration) {
         os << stringifyDecoration(decoration);
       };
-      interleaveComma(decorations, os, eachFn);
+      llvm::interleaveComma(decorations, os, eachFn);
       os << "]";
     }
   };
-  interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
-                  printMember);
+  llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
+                        printMember);
   os << ">";
 }
 
@@ -856,11 +856,11 @@ static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
   auto &os = printer.getStream();
   printer << spirv::VerCapExtAttr::getKindName() << "<"
           << spirv::stringifyVersion(triple.getVersion()) << ", [";
-  interleaveComma(triple.getCapabilities(), os, [&](spirv::Capability cap) {
-    os << spirv::stringifyCapability(cap);
-  });
+  llvm::interleaveComma(
+      triple.getCapabilities(), os,
+      [&](spirv::Capability cap) { os << spirv::stringifyCapability(cap); });
   printer << "], [";
-  interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
+  llvm::interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
     os << attr.cast<StringAttr>().getValue();
   });
   printer << "]>";

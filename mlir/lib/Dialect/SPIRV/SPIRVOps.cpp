@@ -1064,7 +1064,7 @@ static void print(spirv::BranchConditionalOp branchOp, OpAsmPrinter &printer) {
 
   if (auto weights = branchOp.branch_weights()) {
     printer << " [";
-    interleaveComma(weights->getValue(), printer, [&](Attribute a) {
+    llvm::interleaveComma(weights->getValue(), printer, [&](Attribute a) {
       printer << a.cast<IntegerAttr>().getInt();
     });
     printer << "]";
@@ -1465,7 +1465,7 @@ static void print(spirv::EntryPointOp entryPointOp, OpAsmPrinter &printer) {
   auto interfaceVars = entryPointOp.interface().getValue();
   if (!interfaceVars.empty()) {
     printer << ", ";
-    interleaveComma(interfaceVars, printer);
+    llvm::interleaveComma(interfaceVars, printer);
   }
 }
 
@@ -1521,7 +1521,7 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
   if (!values.size())
     return;
   printer << ", ";
-  interleaveComma(values, printer, [&](Attribute a) {
+  llvm::interleaveComma(values, printer, [&](Attribute a) {
     printer << a.cast<IntegerAttr>().getInt();
   });
 }

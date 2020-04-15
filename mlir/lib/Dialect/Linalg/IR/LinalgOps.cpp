@@ -1056,7 +1056,7 @@ static void appendMangledType(llvm::raw_string_ostream &ss, Type t) {
     appendMangledType(ss, memref.getElementType());
   } else if (auto vec = t.dyn_cast<VectorType>()) {
     ss << "vector";
-    interleave(
+    llvm::interleave(
         vec.getShape(), [&](int64_t i) { ss << i; }, [&]() { ss << "x"; });
     appendMangledType(ss, vec.getElementType());
   } else if (t.isSignlessIntOrIndexOrFloat()) {
@@ -1074,7 +1074,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
   llvm::raw_string_ostream ss(name);
   ss << "_";
   auto types = op->getOperandTypes();
-  interleave(
+  llvm::interleave(
       types.begin(), types.end(), [&](Type t) { appendMangledType(ss, t); },
       [&]() { ss << "_"; });
   return ss.str();

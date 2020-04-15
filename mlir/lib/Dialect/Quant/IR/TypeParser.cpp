@@ -354,7 +354,7 @@ static void printUniformQuantizedPerAxisType(UniformQuantizedPerAxisType type,
   ArrayRef<double> scales = type.getScales();
   ArrayRef<int64_t> zeroPoints = type.getZeroPoints();
   out << "{";
-  interleave(
+  llvm::interleave(
       llvm::seq<size_t>(0, scales.size()), out,
       [&](size_t index) {
         printQuantParams(scales[index], zeroPoints[index], out);
