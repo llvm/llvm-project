@@ -13,14 +13,13 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
+// REQUIRES: verify-support
 // REQUIRES: -faligned-allocation
-// RUN: %{compile} %{verify} -faligned-allocation
+// ADDITIONAL_COMPILE_FLAGS: -faligned-allocation
 
 #include <new>
 
-int main(int, char**)
-{
+int main(int, char**) {
     ::operator new(4, std::align_val_t{4}, std::nothrow);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  return 0;
+    return 0;
 }
