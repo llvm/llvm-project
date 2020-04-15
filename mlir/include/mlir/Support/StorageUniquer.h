@@ -215,7 +215,7 @@ private:
   /// 'ImplTy::getKey' function for the provided arguments.
   template <typename ImplTy, typename... Args>
   static typename std::enable_if<
-      is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
+      llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
   getKey(Args &&... args) {
     return ImplTy::getKey(args...);
@@ -224,7 +224,7 @@ private:
   /// the 'ImplTy::KeyTy' with the provided arguments.
   template <typename ImplTy, typename... Args>
   static typename std::enable_if<
-      !is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
+      !llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
   getKey(Args &&... args) {
     return typename ImplTy::KeyTy(args...);
@@ -238,7 +238,7 @@ private:
   /// instance if there is an 'ImplTy::hashKey' overload for 'DerivedKey'.
   template <typename ImplTy, typename DerivedKey>
   static typename std::enable_if<
-      is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
+      llvm::is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
       ::llvm::hash_code>::type
   getHash(unsigned kind, const DerivedKey &derivedKey) {
     return llvm::hash_combine(kind, ImplTy::hashKey(derivedKey));
@@ -246,9 +246,9 @@ private:
   /// If there is no 'ImplTy::hashKey' default to using the
   /// 'llvm::DenseMapInfo' definition for 'DerivedKey' for generating a hash.
   template <typename ImplTy, typename DerivedKey>
-  static typename std::enable_if<
-      !is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
-      ::llvm::hash_code>::type
+  static typename std::enable_if<!llvm::is_detected<detail::has_impltype_hash_t,
+                                                    ImplTy, DerivedKey>::value,
+                                 ::llvm::hash_code>::type
   getHash(unsigned kind, const DerivedKey &derivedKey) {
     return llvm::hash_combine(
         kind, DenseMapInfo<DerivedKey>::getHashValue(derivedKey));
