@@ -172,11 +172,11 @@ raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
     static unsigned getHashValue(const VersionTuple &value) {
       unsigned result = value.getMajor();
       if (auto minor = value.getMinor())
-        result = combineHashValue(result, *minor);
+        result = detail::combineHashValue(result, *minor);
       if (auto subminor = value.getSubminor())
-        result = combineHashValue(result, *subminor);
+        result = detail::combineHashValue(result, *subminor);
       if (auto build = value.getBuild())
-        result = combineHashValue(result, *build);
+        result = detail::combineHashValue(result, *build);
 
       return result;
     }
