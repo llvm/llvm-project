@@ -190,7 +190,7 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
   }
 }
 std::vector<PathRef> FileShardedIndex::getAllFiles() const {
-  return {Shards.keys().begin(), Shards.keys().end()};
+  return std::vector<PathRef>(Shards.keys().begin(), Shards.keys().end());
 }
 
 IndexFileIn FileShardedIndex::getShard(PathRef File) const {
