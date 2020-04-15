@@ -1748,14 +1748,10 @@ void ASTStmtReader::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
 void ASTStmtReader::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
   VisitExpr(E);
   E->setSourceRange(readSourceRange());
-  if (E->isTypeOperand()) { // typeid(int)
-    E->setTypeOperandSourceInfo(
-        readTypeSourceInfo());
-    return;
-  }
-
-  // typeid(42+2)
-  E->setExprOperand(Record.readSubExpr());
+  if (E->isTypeOperand())
+    E->Operand = readTypeSourceInfo();
+  else
+    E->Operand = Record.readSubExpr();
 }
 
 void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
@@ -2162,14 +2158,10 @@ void ASTStmtReader::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   E->setSourceRange(readSourceRange());
   std::string UuidStr = readString();
   E->setUuidStr(StringRef(UuidStr).copy(Record.getContext()));
-  if (E->isTypeOperand()) { // __uuidof(ComType)
-    E->setTypeOperandSourceInfo(
-        readTypeSourceInfo());
-    return;
-  }
-
-  // __uuidof(expr)
-  E->setExprOperand(Record.readSubExpr());
+  if (E->isTypeOperand())
+    E->Operand = readTypeSourceInfo();
+  else
+    E->Operand = Record.readSubExpr();
 }
 
 void ASTStmtReader::VisitSEHLeaveStmt(SEHLeaveStmt *S) {
