@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -1111,7 +1110,7 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
                 enumName);
   os << "  "
      << formatv("static constexpr const char attrName[] = \"{0}\";\n",
-                mlir::convertToSnakeCase(enumName));
+                llvm::convertToSnakeFromCamelCase(enumName));
   os << "  return attrName;\n";
   os << "}\n";
 }

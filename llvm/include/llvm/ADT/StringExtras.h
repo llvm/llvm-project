@@ -292,6 +292,18 @@ void printHTMLEscaped(StringRef String, raw_ostream &Out);
 /// printLowerCase - Print each character as lowercase if it is uppercase.
 void printLowerCase(StringRef String, raw_ostream &Out);
 
+/// Converts a string from camel-case to snake-case by replacing all uppercase
+/// letters with '_' followed by the letter in lowercase, except if the
+/// uppercase letter is the first character of the string.
+std::string convertToSnakeFromCamelCase(StringRef input);
+
+/// Converts a string from snake-case to camel-case by replacing all occurrences
+/// of '_' followed by a lowercase letter with the letter in uppercase.
+/// Optionally allow capitalization of the first letter (if it is a lowercase
+/// letter)
+std::string convertToCamelFromSnakeCase(StringRef input,
+                                        bool capitalizeFirst = false);
+
 namespace detail {
 
 template <typename IteratorT>

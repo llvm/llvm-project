@@ -19,7 +19,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Parser.h"
-#include "mlir/Support/StringExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
@@ -133,7 +132,7 @@ SPIRVDialect::SPIRVDialect(MLIRContext *context)
 }
 
 std::string SPIRVDialect::getAttributeName(Decoration decoration) {
-  return convertToSnakeCase(stringifyDecoration(decoration));
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
 }
 
 //===----------------------------------------------------------------------===//
