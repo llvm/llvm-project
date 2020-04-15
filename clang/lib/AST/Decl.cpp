@@ -1542,10 +1542,19 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName() || isa<DecompositionDecl>(this))
+  if (getDeclName())
     OS << *this;
-  else
-    OS << "(anonymous)";
+  else {
+    // Give the printName override a chance to pick a different name before we
+    // fall back to "(anonymous)".
+    SmallString<64> NameBuffer;
+    llvm::raw_svector_ostream NameOS(NameBuffer);
+    printName(NameOS);
+    if (NameBuffer.empty())
+      OS << "(anonymous)";
+    else
+      OS << NameBuffer;
+  }
 }
 
 void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {
