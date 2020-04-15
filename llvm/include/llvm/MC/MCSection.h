@@ -100,16 +100,19 @@ private:
   SmallVector<PendingLabel, 2> PendingLabels;
 
 protected:
+  // TODO Make Name private when possible.
+  StringRef Name;
   SectionVariant Variant;
   SectionKind Kind;
 
-  MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
   ~MCSection();
 
 public:
   MCSection(const MCSection &) = delete;
   MCSection &operator=(const MCSection &) = delete;
 
+  StringRef getName() const { return Name; }
   SectionKind getKind() const { return Kind; }
 
   SectionVariant getVariant() const { return Variant; }

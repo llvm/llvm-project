@@ -33,17 +33,16 @@ namespace llvm {
 class MCSectionXCOFF final : public MCSection {
   friend class MCContext;
 
-  StringRef Name;
   XCOFF::StorageMappingClass MappingClass;
   XCOFF::SymbolType Type;
   XCOFF::StorageClass StorageClass;
   MCSymbolXCOFF *const QualName;
 
-  MCSectionXCOFF(StringRef Section, XCOFF::StorageMappingClass SMC,
+  MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
                  XCOFF::SymbolType ST, XCOFF::StorageClass SC, SectionKind K,
                  MCSymbolXCOFF *QualName, MCSymbol *Begin)
-      : MCSection(SV_XCOFF, K, Begin), Name(Section), MappingClass(SMC),
-        Type(ST), StorageClass(SC), QualName(QualName) {
+      : MCSection(SV_XCOFF, Name, K, Begin), MappingClass(SMC), Type(ST),
+        StorageClass(SC), QualName(QualName) {
     assert((ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
            "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
@@ -58,7 +57,6 @@ public:
     return S->getVariant() == SV_XCOFF;
   }
 
-  StringRef getName() const { return Name; }
   XCOFF::StorageMappingClass getMappingClass() const { return MappingClass; }
   XCOFF::StorageClass getStorageClass() const { return StorageClass; }
   XCOFF::SymbolType getCSectType() const { return Type; }
