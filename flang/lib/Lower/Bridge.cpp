@@ -1581,7 +1581,35 @@ private:
   /// the global to the ModuleOp as a new uniqued symbol and initialize it with
   /// the correct value. It will be referenced on demand using `fir.addr_of`.
   void instantiateGlobal(const Fortran::lower::pft::Variable &var) {
-    llvm_unreachable("Varun: put your code here");
+    const auto &sym = var.getSymbol();
+    std::string globalName = mangleName(sym);
+    fir::GlobalOp global;
+    if (builder->getNamedGlobal(globalName))
+      return;
+    if (const auto *details =
+            sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      if (details->init()) {
+        if (details->IsArray()) {
+          TODO();
+          return;
+        } else if (!sym.GetType()->AsIntrinsic()) {
+          TODO(); // Derived type / polymorphic
+          return;
+        } else
+          global = builder->createGlobal(
+              toLocation(), genType(sym), globalName, false,
+              [&](Fortran::lower::FirOpBuilder &builder) {
+                auto initVal = genExprValue(details->init().value());
+                builder.create<fir::HasValueOp>(toLocation(), initVal);
+              });
+      } else
+        global = builder->createGlobal(toLocation(), genType(sym), globalName);
+      auto addrOf = builder->create<fir::AddrOfOp>(
+          toLocation(), global.resultType(), global.getSymbol());
+      addSymbol(sym, addrOf);
+    } else {
+      TODO(); // Procedure pointer
+    }
   }
 
   /// Create a stack slot for a local variable. Precondition: the insertion
