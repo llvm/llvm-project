@@ -15,15 +15,15 @@
 // XFAIL: libcpp-has-no-threads
 
 // REQUIRES: modules-support
+// ADDITIONAL_COMPILE_FLAGS: -fmodules
 
-// Test that intypes.h re-exports stdint.h
+// Test that <cinttypes> re-exports <cstdint>
 
-// RUN: %{build_module}
-
-#include <inttypes.h>
+#include <cinttypes>
 
 int main(int, char**) {
-  int8_t x; ((void)x);
+  int8_t x; (void)x;
+  std::int8_t y; (void)y;
 
   return 0;
 }
