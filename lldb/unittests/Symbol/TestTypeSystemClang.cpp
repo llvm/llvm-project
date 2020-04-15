@@ -14,7 +14,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "gtest/gtest.h"
 
@@ -227,8 +226,8 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
       TypeSystemClang::GetOpaqueCompilerType(&context, lldb::eBasicTypeBool);
   CompilerType bool_type(m_ast.get(), bool_ctype);
   CompilerType record_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(100), lldb::eAccessPublic, "FooRecord",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "FooRecord", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   // Clang builtin type and record type should pass
   EXPECT_TRUE(ClangUtil::IsClangType(bool_type));
   EXPECT_TRUE(ClangUtil::IsClangType(record_type));
@@ -239,8 +238,8 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
 
 TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   CompilerType record_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "FooRecord",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "FooRecord", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
@@ -311,8 +310,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
   // Test that a record with no fields returns false
   CompilerType empty_base = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyBase",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "EmptyBase", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_base);
   TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
@@ -322,8 +321,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
   // Test that a record with direct fields returns true
   CompilerType non_empty_base = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "NonEmptyBase",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "NonEmptyBase", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
   FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
       non_empty_base, "MyField", int_type, eAccessPublic, 0);
@@ -338,8 +337,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
   // Test that a record with no direct fields, but fields in a base returns true
   CompilerType empty_derived = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "EmptyDerived", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -361,8 +360,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   // Test that a record with no direct fields, but fields in a virtual base
   // returns true
   CompilerType empty_derived2 = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived2",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      nullptr, lldb::eAccessPublic, "EmptyDerived2", clang::TTK_Struct,
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -393,15 +392,13 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
 
   // template<typename T, int I> struct foo;
   ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
-      m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
-      "foo", TTK_Struct, infos);
+      m_ast->GetTranslationUnitDecl(), eAccessPublic, "foo", TTK_Struct, infos);
   ASSERT_NE(decl, nullptr);
 
   // foo<int, 47>
   ClassTemplateSpecializationDecl *spec_decl =
       m_ast->CreateClassTemplateSpecializationDecl(
-          m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), decl,
-          TTK_Struct, infos);
+          m_ast->GetTranslationUnitDecl(), decl, TTK_Struct, infos);
   ASSERT_NE(spec_decl, nullptr);
   CompilerType type = m_ast->CreateClassTemplateSpecializationType(spec_decl);
   ASSERT_TRUE(type);
@@ -410,8 +407,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
 
   // typedef foo<int, 47> foo_def;
   CompilerType typedef_type = m_ast->CreateTypedefType(
-      type, "foo_def",
-      m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()), 0);
+      type, "foo_def", m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()));
 
   CompilerType auto_type(
       m_ast.get(),
@@ -485,14 +481,13 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   // Prepare the declarations/types we need for the template.
   CompilerType clang_type =
       m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
-  FunctionDecl *func = m_ast->CreateFunctionDeclaration(
-      TU, OptionalClangModuleID(), "foo", clang_type, 0, false);
+  FunctionDecl *func =
+      m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
-      m_ast->CreateFunctionTemplateDecl(TU, OptionalClangModuleID(), func,
-                                        "foo", empty_params);
+      m_ast->CreateFunctionTemplateDecl(TU, func, "foo", empty_params);
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
@@ -516,14 +511,13 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // We create the FunctionDecl for the template in the TU DeclContext because:
   // 1. FunctionDecls can't be in a Record (only CXXMethodDecls can).
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
-  FunctionDecl *func = m_ast->CreateFunctionDeclaration(
-      TU, OptionalClangModuleID(), "foo", clang_type, 0, false);
+  FunctionDecl *func =
+      m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
-      m_ast->CreateFunctionTemplateDecl(record, OptionalClangModuleID(), func,
-                                        "foo", empty_params);
+      m_ast->CreateFunctionTemplateDecl(record, func, "foo", empty_params);
 
   EXPECT_EQ(record, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
