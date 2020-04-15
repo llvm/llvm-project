@@ -1010,7 +1010,7 @@ static ParseResult parseOptionalLLVMKeyword(OpAsmParser &parser,
   return success();
 }
 
-// operation ::= `llvm.mlir.global` linkage `constant`? `@` identifier
+// operation ::= `llvm.mlir.global` linkage? `constant`? `@` identifier
 //               `(` attribute? `)` attribute-list? (`:` type)? region?
 //
 // The type can be omitted for string attributes, in which case it will be
@@ -1018,7 +1018,9 @@ static ParseResult parseOptionalLLVMKeyword(OpAsmParser &parser,
 static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   if (failed(parseOptionalLLVMKeyword<Linkage>(parser, result,
                                                getLinkageAttrName())))
-    return parser.emitError(parser.getCurrentLocation(), "expected linkage");
+    result.addAttribute(getLinkageAttrName(),
+                        parser.getBuilder().getI64IntegerAttr(
+                            static_cast<int64_t>(LLVM::Linkage::External)));
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
     result.addAttribute("constant", parser.getBuilder().getUnitAttr());

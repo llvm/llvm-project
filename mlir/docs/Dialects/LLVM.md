@@ -105,6 +105,14 @@ llvm.func @func() attributes {
 If the attribute is not known to LLVM IR, it will be attached as a string
 attribute.
 
+#### Linkage
+
+An LLVM IR dialect function has a linkage attribute derived from LLVM IR
+[linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
+specified by the same keyword as in LLVM IR and is located between `llvm.func`
+and the symbol name. If no linkage keyword is present, `external` linkage is
+assumed by default.
+
 ### LLVM IR operations
 
 The following operations are currently supported. The semantics of these
@@ -421,6 +429,21 @@ llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
   %2 = llvm.getelementptr %0[%1] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
   llvm.return %2 : !llvm<"i32*">
 }
+```
+
+Similarly to functions, globals have a linkage attribute. In the custom syntax,
+this attribute is placed between `llvm.mlir.global` and the optional `constant`
+keyword. If the attribute is omitted, `external` linkage is assumed by default.
+
+Examples:
+
+```mlir
+// A constant with internal linkage will not participate in linking.
+llvm.mlir.global internal constant @cst(42 : i32) : !llvm.i32
+
+// By default, "external" linkage is assumed and the global participates in
+// symbol resolution at link-time.
+llvm.mlir.global @glob(0 : f32) : !llvm.float
 ```
 
 #### `llvm.mlir.null`
