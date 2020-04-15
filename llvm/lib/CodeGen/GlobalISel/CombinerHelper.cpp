@@ -642,7 +642,7 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
 
   Addr = MI.getOperand(1).getReg();
   MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_PTR_ADD, Addr, MRI);
-  if (!AddrDef || MRI.hasOneUse(Addr))
+  if (!AddrDef || MRI.hasOneNonDBGUse(Addr))
     return false;
 
   Base = AddrDef->getOperand(1).getReg();
@@ -792,7 +792,7 @@ bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {
 
   MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
   if (!CmpMI || CmpMI->getOpcode() != TargetOpcode::G_ICMP ||
-      !MRI.hasOneUse(CmpMI->getOperand(0).getReg()))
+      !MRI.hasOneNonDBGUse(CmpMI->getOperand(0).getReg()))
     return false;
   return true;
 }
