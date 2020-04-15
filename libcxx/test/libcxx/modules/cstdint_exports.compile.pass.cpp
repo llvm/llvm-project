@@ -12,7 +12,10 @@
 
 // FIXME: The <atomic> header is not supported for single-threaded systems,
 // but still gets built as part of the 'std' module, which breaks the build.
-// XFAIL: libcpp-has-no-threads
+// The failure only shows up when modules are enabled AND we're building
+// without threads, which is when the __config_site macro for _LIBCPP_HAS_NO_THREADS
+// is honored.
+// XFAIL: libcpp-has-no-threads && -fmodules
 
 // Test that <cstdint> re-exports <stdint.h>
 
