@@ -79,7 +79,7 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
          "expected operation to have SymbolTable trait");
   assert(symbolTableOp->getNumRegions() == 1 &&
          "expected operation to have a single region");
-  assert(has_single_element(symbolTableOp->getRegion(0)) &&
+  assert(llvm::hasSingleElement(symbolTableOp->getRegion(0)) &&
          "expected operation to have a single block");
 
   for (auto &op : symbolTableOp->getRegion(0).front()) {
@@ -290,7 +290,7 @@ LogicalResult OpTrait::impl::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one region";
-  if (!has_single_element(op->getRegion(0)))
+  if (!llvm::hasSingleElement(op->getRegion(0)))
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one block";
 

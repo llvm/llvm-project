@@ -158,7 +158,7 @@ TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
     this->base = owner.ptr.get<const Value *>();
 }
 
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 TypeRange::OwnerT TypeRange::offset_base(OwnerT object, ptrdiff_t index) {
   if (auto *value = object.dyn_cast<const Value *>())
     return {value + index};
@@ -166,7 +166,7 @@ TypeRange::OwnerT TypeRange::offset_base(OwnerT object, ptrdiff_t index) {
     return {operand + index};
   return {object.dyn_cast<const Type *>() + index};
 }
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 Type TypeRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
   if (auto *value = object.dyn_cast<const Value *>())
     return (value + index)->getType();
@@ -198,7 +198,7 @@ ArrayRef<Type> ResultRange::getTypes() const {
   return getBase()->getResultTypes();
 }
 
-/// See `indexed_accessor_range` for details.
+/// See `llvm::indexed_accessor_range` for details.
 OpResult ResultRange::dereference(Operation *op, ptrdiff_t index) {
   return op->getResult(index);
 }
@@ -215,7 +215,7 @@ ValueRange::ValueRange(ResultRange values)
           {values.getBase(), static_cast<unsigned>(values.getStartIndex())},
           values.size()) {}
 
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
                                            ptrdiff_t index) {
   if (auto *value = owner.ptr.dyn_cast<const Value *>())
@@ -225,7 +225,7 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
   Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
   return {operation, owner.startIndex + static_cast<unsigned>(index)};
 }
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
   if (auto *value = owner.ptr.dyn_cast<const Value *>())
     return value[index];
