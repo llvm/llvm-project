@@ -470,9 +470,9 @@ function package_release() {
     cd $BuildDir/Phase3/Release
     mv llvmCore-$Release-$RC.install/usr/local $Package
     if [ "$use_gzip" = "yes" ]; then
-      tar cfz $BuildDir/$Package.tar.gz $Package
+      tar cf - $Package | gzip -9c > $BuildDir/$Package.tar.gz
     else
-      tar cfJ $BuildDir/$Package.tar.xz $Package
+      tar cf - $Package | xz -9ce > $BuildDir/$Package.tar.xz
     fi
     mv $Package llvmCore-$Release-$RC.install/usr/local
     cd $cwd
