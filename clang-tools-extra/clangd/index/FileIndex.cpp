@@ -190,7 +190,13 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
   }
 }
 std::vector<PathRef> FileShardedIndex::getAllFiles() const {
-  return std::vector<PathRef>(Shards.keys().begin(), Shards.keys().end());
+  // It should be enough to construct a vector with {Shards.keys().begin(),
+  // Shards.keys().end()} but MSVC fails to compile that.
+  std::vector<PathRef> Result;
+  Result.reserve(Shards.size());
+  for (PathRef Key : Shards.keys())
+    Result.push_back(Key);
+  return Result;
 }
 
 IndexFileIn FileShardedIndex::getShard(PathRef File) const {
