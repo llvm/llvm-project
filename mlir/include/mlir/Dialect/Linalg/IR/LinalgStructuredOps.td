@@ -188,9 +188,9 @@ def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
       MLIRContext *context = getContext();
       auto r_i = getAffineDimExpr(0, context);
       return SmallVector<AffineMap, 8>{
-        AffineMap::get(1, 0, {r_i}),
-        AffineMap::get(1, 0, {r_i}),
-        AffineMap::get(1, 0, context)};
+        AffineMap::get(1, 0, {r_i}, context),
+        AffineMap::get(1, 0, {r_i}, context),
+        AffineMap::get(1, 0, {}, context)};
     }
   }];
 
@@ -215,8 +215,10 @@ def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
       AffineExpr i, r_j;
       bindDims(context, i, r_j);
       return SmallVector<AffineMap, 8>{
-        AffineMap::get(2, 0, {i, r_j}), AffineMap::get(2, 0, {r_j}),
-        AffineMap::get(2, 0, {i})};
+        AffineMap::get(2, 0, {i, r_j}, context), 
+        AffineMap::get(2, 0, {r_j}, context),
+        AffineMap::get(2, 0, {i}, context)
+      };
     }
   }];
 
@@ -242,9 +244,11 @@ def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
       MLIRContext *context = getContext();
       AffineExpr i, j, r_k;
       bindDims(context, i, j, r_k);
-      return SmallVector<AffineMap, 8>{AffineMap::get(3, 0, {i, r_k}),
-                                       AffineMap::get(3, 0, {r_k, j}),
-                                       AffineMap::get(3, 0, {i, j})};
+      return SmallVector<AffineMap, 8>{
+        AffineMap::get(3, 0, {i, r_k}, context),
+        AffineMap::get(3, 0, {r_k, j},context),
+        AffineMap::get(3, 0, {i, j}, context)
+      };
     }
   }];
 
@@ -403,15 +407,15 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       auto ws = weightedPoolingInputIndex(*this, xs, zs);
       return SmallVector<AffineMap, 8>{
         // filter[z[0], ..., z[N-1], q, k]
-        AffineMap::get(idx, 0, concat(concat(zs, qs), ks)),
+        AffineMap::get(idx, 0, concat(concat(zs, qs), ks), context),
         // input[b,
         //       x[0]*s[0] + d[0]*z[0] - pad_low[0],
         //       ...
         //       x[N-1]*s[N-1] + d[N-1]*z[N-1] - pad_low[N-1],
         //       q]
-        AffineMap::get(idx, 0, concat(concat(bs, ws), qs)),
+        AffineMap::get(idx, 0, concat(concat(bs, ws), qs), context),
         // output[b, x[0], ..., x[N-1], k]
-        AffineMap::get(idx, 0, concat(concat(bs, xs), ks))};
+        AffineMap::get(idx, 0, concat(concat(bs, xs), ks), context)};
     }
   }];
 
@@ -465,11 +469,11 @@ class SingleInputPoolingBase_Op<string mnemonic>
           weightedPoolingInputIndex(*this, outputDims, windowDims);
       return SmallVector<AffineMap, 8>{
         // input
-        AffineMap::get(idx, 0, inputDims),
+        AffineMap::get(idx, 0, inputDims, context),
         // windowDims
-        AffineMap::get(idx, 0, windowDims),
+        AffineMap::get(idx, 0, windowDims, context),
         // output
-        AffineMap::get(idx, 0, outputDims)
+        AffineMap::get(idx, 0, outputDims, context)
         };
     }
   }];
