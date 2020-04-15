@@ -9338,24 +9338,30 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   // Get a pointer to the first element of the array.
   Array.addArray(Info, E, ArrayType);
 
+  auto InvalidType = [&] {
+    Info.FFDiag(E, diag::note_constexpr_unsupported_layout)
+      << E->getType();
+    return false;
+  };
+
   // FIXME: Perform the checks on the field types in SemaInit.
   RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   if (Field == Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   // Start pointer.
   if (!Field->getType()->isPointerType() ||
       !Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
                             ArrayType->getElementType()))
-    return Error(E);
+    return InvalidType();
 
   // FIXME: What if the initializer_list type has base classes, etc?
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
   if (++Field == Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   if (Field->getType()->isPointerType() &&
       Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -9370,10 +9376,10 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
     // Length.
     Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
   else
-    return Error(E);
+    return InvalidType();
 
   if (++Field != Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   return true;
 }
