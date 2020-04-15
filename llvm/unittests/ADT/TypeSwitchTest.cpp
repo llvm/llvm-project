@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/ADT/TypeSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "gtest/gtest.h"
 
-using namespace mlir;
+using namespace llvm;
 
 namespace {
 /// Utility classes to setup casting functionality.
@@ -28,7 +28,7 @@ struct DerivedD : public DerivedImpl<Base::DerivedD> {};
 struct DerivedE : public DerivedImpl<Base::DerivedE> {};
 } // end anonymous namespace
 
-TEST(StringSwitchTest, CaseResult) {
+TEST(TypeSwitchTest, CaseResult) {
   auto translate = [](auto value) {
     return TypeSwitch<Base *, int>(&value)
         .Case<DerivedA>([](DerivedA *) { return 0; })
@@ -42,7 +42,7 @@ TEST(StringSwitchTest, CaseResult) {
   EXPECT_EQ(-1, translate(DerivedD()));
 }
 
-TEST(StringSwitchTest, CasesResult) {
+TEST(TypeSwitchTest, CasesResult) {
   auto translate = [](auto value) {
     return TypeSwitch<Base *, int>(&value)
         .Case<DerivedA, DerivedB, DerivedD>([](auto *) { return 0; })
@@ -56,7 +56,7 @@ TEST(StringSwitchTest, CasesResult) {
   EXPECT_EQ(-1, translate(DerivedE()));
 }
 
-TEST(StringSwitchTest, CaseVoid) {
+TEST(TypeSwitchTest, CaseVoid) {
   auto translate = [](auto value) {
     int result = -2;
     TypeSwitch<Base *>(&value)
@@ -72,7 +72,7 @@ TEST(StringSwitchTest, CaseVoid) {
   EXPECT_EQ(-1, translate(DerivedD()));
 }
 
-TEST(StringSwitchTest, CasesVoid) {
+TEST(TypeSwitchTest, CasesVoid) {
   auto translate = [](auto value) {
     int result = -1;
     TypeSwitch<Base *>(&value)

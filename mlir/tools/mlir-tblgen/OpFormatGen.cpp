@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpFormatGen.h"
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Format.h"
@@ -20,6 +19,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"

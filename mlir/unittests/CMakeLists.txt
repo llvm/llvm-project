@@ -5,7 +5,6 @@ function(add_mlir_unittest test_dirname)
   add_unittest(MLIRUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
-add_subdirectory(ADT)
 add_subdirectory(Dialect)
 add_subdirectory(IR)
 add_subdirectory(Pass)
