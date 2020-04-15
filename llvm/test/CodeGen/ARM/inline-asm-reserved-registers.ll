@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple thumbv6m-arm-none-eabi -frame-pointer=all %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -mtriple thumbv6m-arm-none-eabi -frame-pointer=all %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; CHECK-ERROR: error: write to reserved register 'R7'
 define void @test_framepointer_output(i32 %input) {
