@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
 
-using namespace mlir;
-using namespace mlir::detail;
+using namespace llvm;
+using namespace llvm::detail;
 
 namespace {
 /// Simple indexed accessor range that wraps an array.
@@ -24,7 +24,7 @@ struct ArrayIndexedAccessorRange
   using indexed_accessor_range<ArrayIndexedAccessorRange<T>, T *,
                                T>::indexed_accessor_range;
 
-  /// See `indexed_accessor_range` for details.
+  /// See `llvm::indexed_accessor_range` for details.
   static T &dereference(T *data, ptrdiff_t index) { return data[index]; }
 };
 } // end anonymous namespace

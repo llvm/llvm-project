@@ -138,7 +138,7 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
   (void)toType;
   assert(fromType.getShape() == toType.getShape());
   assert(fromType.getRank() != 0);
-  assert(has_single_element(region) &&
+  assert(llvm::hasSingleElement(region) &&
          "unstructured control flow not supported");
 
   OpBuilder builder(region.getContext());

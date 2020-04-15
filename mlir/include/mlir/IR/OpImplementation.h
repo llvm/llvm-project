@@ -113,7 +113,7 @@ public:
   void printArrowTypeList(TypeRange &&types) {
     auto &os = getStream() << " -> ";
 
-    bool wrapped = !has_single_element(types) ||
+    bool wrapped = !llvm::hasSingleElement(types) ||
                    (*types.begin()).template isa<FunctionType>();
     if (wrapped)
       os << '(';

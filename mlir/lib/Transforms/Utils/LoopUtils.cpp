@@ -414,7 +414,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
     return promoteIfSingleIteration(forOp);
 
   // Nothing in the loop body other than the terminator.
-  if (has_single_element(forOp.getBody()->getOperations()))
+  if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
 
   // Loops where the lower bound is a max expression isn't supported for
@@ -538,7 +538,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
     return promoteIfSingleIteration(forOp);
 
   // Nothing in the loop body other than the terminator.
-  if (has_single_element(forOp.getBody()->getOperations()))
+  if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
 
   // Loops where both lower and upper bounds are multi-result maps won't be

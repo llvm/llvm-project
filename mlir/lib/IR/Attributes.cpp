@@ -554,8 +554,8 @@ static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
 /// Constructs a new iterator.
 DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
     DenseElementsAttr attr, size_t index)
-    : indexed_accessor_iterator<AttributeElementIterator, const void *,
-                                Attribute, Attribute, Attribute>(
+    : llvm::indexed_accessor_iterator<AttributeElementIterator, const void *,
+                                      Attribute, Attribute, Attribute>(
           attr.getAsOpaquePointer(), index) {}
 
 /// Accesses the Attribute value at this iterator position.
