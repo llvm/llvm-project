@@ -13,7 +13,7 @@ define void @test1(i1 %c) {
 ; CHECK:       cond.true.i.i.i:
 ; CHECK-NEXT:    ret void
 ; CHECK:       cond.end.i.i.i:
-; CHECK-NEXT:    [[CALL_I_I_I_I_I:%.*]] = tail call noalias nonnull i8* @_Znam() #2
+; CHECK-NEXT:    [[CALL_I_I_I_I_I:%.*]] = tail call noalias nonnull i8* @_Znam()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL_I_I_I_I_I]] to i64*
 ; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* nonnull align 8 [[CALL_I_I_I_I_I]], i8 0, i64 undef, i1 false)
 ; CHECK-NEXT:    store i64 0, i64* [[TMP0]], align 8
@@ -42,7 +42,7 @@ define void @test2(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[CLEANUP_CONT104:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[MUL_I_I_I_I:%.*]] = shl nuw nsw i64 undef, 3
-; CHECK-NEXT:    [[CALL_I_I_I_I_I_I131:%.*]] = call noalias nonnull i8* @_Znwm() #2
+; CHECK-NEXT:    [[CALL_I_I_I_I_I_I131:%.*]] = call noalias nonnull i8* @_Znwm()
 ; CHECK-NEXT:    [[DOTCAST_I_I:%.*]] = bitcast i8* [[CALL_I_I_I_I_I_I131]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[DOTCAST_I_I]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 [[CALL_I_I_I_I_I_I131]], i8 0, i64 [[MUL_I_I_I_I]], i1 false)

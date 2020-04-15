@@ -175,7 +175,6 @@ bb3:
 define void @test11() {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 0, i32* [[P]]
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]]
