@@ -28,8 +28,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @add_ashr_v4i32(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: add_ashr_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vshr.s32 q0, q0, #1
+; CHECK-NEXT:    vhadd.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = add nsw <4 x i32> %src1, %src2
@@ -100,8 +99,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @sub_ashr_v4i32(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: sub_ashr_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
-; CHECK-NEXT:    vshr.s32 q0, q0, #1
+; CHECK-NEXT:    vhsub.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = sub nsw <4 x i32> %src1, %src2
