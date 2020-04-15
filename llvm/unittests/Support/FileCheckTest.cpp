@@ -528,9 +528,7 @@ private:
 
 public:
   PatternTester() {
-    std::vector<std::string> GlobalDefines;
-    GlobalDefines.emplace_back(std::string("#FOO=42"));
-    GlobalDefines.emplace_back(std::string("BAR=BAZ"));
+    std::vector<StringRef> GlobalDefines = {"#FOO=42", "BAR=BAZ"};
     // An ASSERT_FALSE would make more sense but cannot be used in a
     // constructor.
     EXPECT_THAT_ERROR(Context.defineCmdlineVariables(GlobalDefines, SM),
@@ -849,9 +847,7 @@ TEST_F(FileCheckTest, Match) {
 TEST_F(FileCheckTest, Substitution) {
   SourceMgr SM;
   FileCheckPatternContext Context;
-  std::vector<std::string> GlobalDefines;
-  GlobalDefines.emplace_back(std::string("FOO=BAR"));
-  EXPECT_THAT_ERROR(Context.defineCmdlineVariables(GlobalDefines, SM),
+  EXPECT_THAT_ERROR(Context.defineCmdlineVariables({"FOO=BAR"}, SM),
                     Succeeded());
 
   // Substitution of an undefined string variable fails and error holds that
@@ -890,72 +886,53 @@ TEST_F(FileCheckTest, Substitution) {
 
 TEST_F(FileCheckTest, FileCheckContext) {
   FileCheckPatternContext Cxt;
-  std::vector<std::string> GlobalDefines;
   SourceMgr SM;
 
   // No definition.
-  EXPECT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
+  EXPECT_THAT_ERROR(Cxt.defineCmdlineVariables({}, SM), Succeeded());
 
   // Missing equal sign.
-  GlobalDefines.emplace_back(std::string("LocalVar"));
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("#LocalNumVar"));
+                        Cxt.defineCmdlineVariables({"LocalVar"}, SM));
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
+                        Cxt.defineCmdlineVariables({"#LocalNumVar"}, SM));
 
   // Empty variable name.
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("=18"));
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("#=18"));
+                        Cxt.defineCmdlineVariables({"=18"}, SM));
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
+                        Cxt.defineCmdlineVariables({"#=18"}, SM));
 
   // Invalid variable name.
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("18LocalVar=18"));
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("#18LocalNumVar=18"));
+                        Cxt.defineCmdlineVariables({"18LocalVar=18"}, SM));
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
+                        Cxt.defineCmdlineVariables({"#18LocalNumVar=18"}, SM));
 
   // Name conflict between pattern and numeric variable.
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("LocalVar=18"));
-  GlobalDefines.emplace_back(std::string("#LocalVar=36"));
-  expectDiagnosticError("string variable with name 'LocalVar' already exists",
-                        Cxt.defineCmdlineVariables(GlobalDefines, SM));
+  expectDiagnosticError(
+      "string variable with name 'LocalVar' already exists",
+      Cxt.defineCmdlineVariables({"LocalVar=18", "#LocalVar=36"}, SM));
   Cxt = FileCheckPatternContext();
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("#LocalNumVar=18"));
-  GlobalDefines.emplace_back(std::string("LocalNumVar=36"));
   expectDiagnosticError(
       "numeric variable with name 'LocalNumVar' already exists",
-      Cxt.defineCmdlineVariables(GlobalDefines, SM));
+      Cxt.defineCmdlineVariables({"#LocalNumVar=18", "LocalNumVar=36"}, SM));
   Cxt = FileCheckPatternContext();
 
   // Invalid numeric value for numeric variable.
-  GlobalDefines.clear();
-  GlobalDefines.emplace_back(std::string("#LocalNumVar=x"));
-  expectUndefErrors({"x"}, Cxt.defineCmdlineVariables(GlobalDefines, SM));
+  expectUndefErrors({"x"}, Cxt.defineCmdlineVariables({"#LocalNumVar=x"}, SM));
 
   // Define local variables from command-line.
-  GlobalDefines.clear();
+  std::vector<StringRef> GlobalDefines;
   // Clear local variables to remove dummy numeric variable x that
   // parseNumericSubstitutionBlock would have created and stored in
   // GlobalNumericVariableTable.
   Cxt.clearLocalVars();
-  GlobalDefines.emplace_back(std::string("LocalVar=FOO"));
-  GlobalDefines.emplace_back(std::string("EmptyVar="));
-  GlobalDefines.emplace_back(std::string("#LocalNumVar1=18"));
-  GlobalDefines.emplace_back(std::string("#%x,LocalNumVar2=LocalNumVar1+2"));
-  GlobalDefines.emplace_back(std::string("#LocalNumVar3=0xc"));
+  GlobalDefines.emplace_back("LocalVar=FOO");
+  GlobalDefines.emplace_back("EmptyVar=");
+  GlobalDefines.emplace_back("#LocalNumVar1=18");
+  GlobalDefines.emplace_back("#%x,LocalNumVar2=LocalNumVar1+2");
+  GlobalDefines.emplace_back("#LocalNumVar3=0xc");
   ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
 
   // Create @LINE pseudo numeric variable and check it is present by matching
@@ -1045,8 +1022,8 @@ TEST_F(FileCheckTest, FileCheckContext) {
   Cxt.clearLocalVars();
 
   // Redefine global variables and check variables are defined again.
-  GlobalDefines.emplace_back(std::string("$GlobalVar=BAR"));
-  GlobalDefines.emplace_back(std::string("#$GlobalNumVar=36"));
+  GlobalDefines.emplace_back("$GlobalVar=BAR");
+  GlobalDefines.emplace_back("#$GlobalNumVar=36");
   ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
   StringRef GlobalVarStr = "$GlobalVar";
   StringRef GlobalNumVarRef = bufferize(SM, "$GlobalNumVar");
