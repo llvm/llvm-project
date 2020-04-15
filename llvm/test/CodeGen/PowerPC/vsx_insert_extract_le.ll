@@ -34,7 +34,7 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs1, f1, f1, 2
+; CHECK-P9-NEXT:    xxswapd vs1, f1
 ; CHECK-P9-NEXT:    xxpermdi v2, vs0, vs1, 1
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1
@@ -68,7 +68,7 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs1, f1, f1, 2
+; CHECK-P9-NEXT:    xxswapd vs1, f1
 ; CHECK-P9-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1

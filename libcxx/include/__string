@@ -164,8 +164,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_of(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by(size_type, size_type, size_type, size_type, size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by_and_replace(size_type, size_type, size_type, size_type, size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__assign_no_alias<false>(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__assign_no_alias<true>(value_type const*, size_type)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<false>(value_type const*, size_type)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<true>(value_type const*, size_type)) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::push_back(value_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(size_type, value_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type, size_type) const) \

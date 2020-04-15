@@ -31,7 +31,7 @@ TEST(Parallel, sort) {
     i = dist(randEngine);
 
   sort(parallel::par, std::begin(array), std::end(array));
-  ASSERT_TRUE(std::is_sorted(std::begin(array), std::end(array)));
+  ASSERT_TRUE(llvm::is_sorted(array));
 }
 
 TEST(Parallel, parallel_for) {

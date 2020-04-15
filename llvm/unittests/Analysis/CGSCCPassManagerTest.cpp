@@ -1608,6 +1608,10 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
           FnF->getEntryBlock().front().moveBefore(RI);
         ASSERT_NE(FnF, nullptr);
 
+        // Create an unsused constant that is referencing the old (=replaced)
+        // function.
+        ConstantExpr::getBitCast(FnF, Type::getInt8PtrTy(FnF->getContext()));
+
         // Use the CallGraphUpdater to update the call graph.
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);

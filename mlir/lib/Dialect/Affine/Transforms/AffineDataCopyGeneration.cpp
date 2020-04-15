@@ -19,11 +19,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Affine/Passes.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -33,32 +34,6 @@
 #define DEBUG_TYPE "affine-data-copy-generate"
 
 using namespace mlir;
-
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-static llvm::cl::opt<unsigned long long> clFastMemoryCapacity(
-    "affine-data-copy-generate-fast-mem-capacity",
-    llvm::cl::desc(
-        "Set fast memory space capacity in KiB (default: unlimited)"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool>
-    clDma("affine-data-copy-generate-dma",
-          llvm::cl::desc("Generate DMA instead of point-wise copy"),
-          llvm::cl::cat(clOptionsCategory), llvm::cl::init(true));
-
-static llvm::cl::opt<unsigned> clFastMemorySpace(
-    "affine-data-copy-generate-fast-mem-space", llvm::cl::init(1),
-    llvm::cl::desc(
-        "Fast memory space identifier for copy generation (default: 1)"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool> clSkipNonUnitStrideLoop(
-    "affine-data-copy-generate-skip-non-unit-stride-loops", llvm::cl::Hidden,
-    llvm::cl::init(false),
-    llvm::cl::desc("Testing purposes: avoid non-unit stride loop choice depths "
-                   "for copy placement"),
-    llvm::cl::cat(clOptionsCategory));
 
 namespace {
 
@@ -74,54 +49,22 @@ namespace {
 // TODO(bondhugula): We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
-    : public FunctionPass<AffineDataCopyGeneration> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineDataCopyGeneration
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
-  explicit AffineDataCopyGeneration(
-      unsigned slowMemorySpace = 0,
-      unsigned fastMemorySpace = clFastMemorySpace, unsigned tagMemorySpace = 0,
-      int minDmaTransferSize = 1024,
-      uint64_t fastMemCapacityBytes =
-          (clFastMemoryCapacity.getNumOccurrences() > 0
-               ? clFastMemoryCapacity * 1024 // cl-provided size is in KiB
-               : std::numeric_limits<uint64_t>::max()),
-      bool generateDma = clDma,
-      bool skipNonUnitStrideLoops = clSkipNonUnitStrideLoop)
-      : slowMemorySpace(slowMemorySpace), fastMemorySpace(fastMemorySpace),
-        tagMemorySpace(tagMemorySpace), minDmaTransferSize(minDmaTransferSize),
-        fastMemCapacityBytes(fastMemCapacityBytes), generateDma(generateDma),
-        skipNonUnitStrideLoops(skipNonUnitStrideLoops) {}
-
-  explicit AffineDataCopyGeneration(const AffineDataCopyGeneration &other)
-      : slowMemorySpace(other.slowMemorySpace),
-        fastMemorySpace(other.fastMemorySpace),
-        tagMemorySpace(other.tagMemorySpace),
-        minDmaTransferSize(other.minDmaTransferSize),
-        fastMemCapacityBytes(other.fastMemCapacityBytes),
-        generateDma(other.generateDma),
-        skipNonUnitStrideLoops(other.skipNonUnitStrideLoops) {}
+    : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
+  AffineDataCopyGeneration() = default;
+  explicit AffineDataCopyGeneration(unsigned slowMemorySpace,
+                                    unsigned fastMemorySpace,
+                                    unsigned tagMemorySpace,
+                                    int minDmaTransferSize,
+                                    uint64_t fastMemCapacityBytes) {
+    this->slowMemorySpace = slowMemorySpace;
+    this->fastMemorySpace = fastMemorySpace;
+    this->tagMemorySpace = tagMemorySpace;
+    this->minDmaTransferSize = minDmaTransferSize;
+    this->fastMemoryCapacity = fastMemCapacityBytes / 1024;
+  }
 
   void runOnFunction() override;
   LogicalResult runOnBlock(Block *block, DenseSet<Operation *> &copyNests);
-
-  // Slow memory space associated with copies.
-  const unsigned slowMemorySpace;
-  // Fast memory space associated with copies.
-  unsigned fastMemorySpace;
-  // Memory space associated with DMA tags.
-  unsigned tagMemorySpace;
-  // Minimum DMA transfer size supported by the target in bytes.
-  const int minDmaTransferSize;
-  // Capacity of the faster memory space.
-  uint64_t fastMemCapacityBytes;
-
-  // If set, generate DMA operations instead of read/write.
-  bool generateDma;
-
-  // If set, ignore loops with steps other than 1.
-  bool skipNonUnitStrideLoops;
 
   // Constant zero index to avoid too many duplicates.
   Value zeroIndex = nullptr;
@@ -133,14 +76,15 @@ struct AffineDataCopyGeneration
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
 /// by the latter. Only load op's handled for now.
 /// TODO(bondhugula): extend this to store op's.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass(
+std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
     int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
   return std::make_unique<AffineDataCopyGeneration>(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createAffineDataCopyGenerationPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createAffineDataCopyGenerationPass() {
   return std::make_unique<AffineDataCopyGeneration>();
 }
 
@@ -154,6 +98,10 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
   if (block->empty())
     return success();
 
+  uint64_t fastMemCapacityBytes =
+      fastMemoryCapacity != std::numeric_limits<uint64_t>::max()
+          ? fastMemoryCapacity * 1024
+          : fastMemoryCapacity;
   AffineCopyOptions copyOptions = {generateDma, slowMemorySpace,
                                    fastMemorySpace, tagMemorySpace,
                                    fastMemCapacityBytes};
@@ -264,7 +212,19 @@ void AffineDataCopyGeneration::runOnFunction() {
     runOnBlock(&block, copyNests);
 
   // Promote any single iteration loops in the copy nests.
-  for (auto nest : copyNests) {
+  for (auto nest : copyNests)
     nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
+
+  // Promoting single iteration loops could lead to simplification of
+  // load's/store's. We will run canonicalization patterns on load/stores.
+  // TODO: this whole function load/store canonicalization should be replaced by
+  // canonicalization that is limited to only the load/store ops
+  // introduced/touched by this pass (those inside 'copyNests'). This would be
+  // possible once the necessary support is available in the pattern rewriter.
+  if (!copyNests.empty()) {
+    OwningRewritePatternList patterns;
+    AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
+    AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
+    applyPatternsAndFoldGreedily(f, std::move(patterns));
   }
 }

@@ -257,9 +257,9 @@ bool SparcFrameLowering::hasFP(const MachineFunction &MF) const {
       MFI.isFrameAddressTaken();
 }
 
-
-int SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                               unsigned &FrameReg) const {
+int SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                               int FI,
+                                               Register &FrameReg) const {
   const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const SparcRegisterInfo *RegInfo = Subtarget.getRegisterInfo();

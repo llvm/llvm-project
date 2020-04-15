@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-codegenprepare < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-codegenprepare -amdgpu-codegenprepare-widen-constant-loads < %s | FileCheck -check-prefix=OPT %s
 
 declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 
@@ -190,7 +190,7 @@ define amdgpu_kernel void @use_dispatch_ptr(i32 addrspace(1)* %ptr) #1 {
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_range(
-; OPT: load i32, i32 addrspace(4)* %1, !range !0
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !range !0
 define amdgpu_kernel void @constant_load_i16_align4_range(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !0
   %ext = sext i16 %ld to i32
@@ -199,7 +199,7 @@ define amdgpu_kernel void @constant_load_i16_align4_range(i32 addrspace(1)* %out
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_range_max(
-; OPT: load i32, i32 addrspace(4)* %1, !range !0
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !range !0
 define amdgpu_kernel void @constant_load_i16_align4_range_max(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !1
   %ext = sext i16 %ld to i32
@@ -208,7 +208,7 @@ define amdgpu_kernel void @constant_load_i16_align4_range_max(i32 addrspace(1)* 
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_complex_range(
-; OPT: load i32, i32 addrspace(4)* %1, !range !1
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !range !1
 define amdgpu_kernel void @constant_load_i16_align4_complex_range(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !2
   %ext = sext i16 %ld to i32
@@ -217,7 +217,7 @@ define amdgpu_kernel void @constant_load_i16_align4_complex_range(i32 addrspace(
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_range_from_0(
-; OPT: load i32, i32 addrspace(4)* %1{{$}}
+; OPT: load i32, i32 addrspace(4)* %1, align 4{{$}}
 define amdgpu_kernel void @constant_load_i16_align4_range_from_0(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !3
   %ext = sext i16 %ld to i32
@@ -226,7 +226,7 @@ define amdgpu_kernel void @constant_load_i16_align4_range_from_0(i32 addrspace(1
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_range_from_neg(
-; OPT: load i32, i32 addrspace(4)* %1, !range !2
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !range !2
 define amdgpu_kernel void @constant_load_i16_align4_range_from_neg(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !4
   %ext = sext i16 %ld to i32
@@ -235,7 +235,7 @@ define amdgpu_kernel void @constant_load_i16_align4_range_from_neg(i32 addrspace
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_range_from_neg_to_0(
-; OPT: load i32, i32 addrspace(4)* %1, !range !2
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !range !2
 define amdgpu_kernel void @constant_load_i16_align4_range_from_neg_to_0(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !range !5
   %ext = sext i16 %ld to i32
@@ -244,7 +244,7 @@ define amdgpu_kernel void @constant_load_i16_align4_range_from_neg_to_0(i32 addr
 }
 
 ; OPT-LABEL: @constant_load_i16_align4_invariant
-; OPT: load i32, i32 addrspace(4)* %1, !invariant.load !3
+; OPT: load i32, i32 addrspace(4)* %1, align 4, !invariant.load !3
 define amdgpu_kernel void @constant_load_i16_align4_invariant(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
   %ld = load i16, i16 addrspace(4)* %in, align 4, !invariant.load !6
   %ext = sext i16 %ld to i32

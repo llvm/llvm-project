@@ -297,7 +297,7 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
               SemanticHighlighting->getBoolean("semanticHighlighting"))
         R.TheiaSemanticHighlighting = *SemanticHighlightingSupport;
     }
-    if (auto *SemanticHighlighting = TextDocument->getObject("semanticTokens"))
+    if (TextDocument->getObject("semanticTokens"))
       R.SemanticTokens = true;
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
       if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
@@ -448,6 +448,11 @@ bool fromJSON(const llvm::json::Value &Params, DidOpenTextDocumentParams &R) {
 }
 
 bool fromJSON(const llvm::json::Value &Params, DidCloseTextDocumentParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument);
+}
+
+bool fromJSON(const llvm::json::Value &Params, DidSaveTextDocumentParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument);
 }

@@ -1,4 +1,4 @@
-//===- StringPool.h - Interned string pool ----------------------*- C++ -*-===//
+//===- StringPool.h - Intern'd string pool ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares an interned string pool, which helps reduce the cost of
-// strings by using the same storage for identical strings.
+// This file declares an interned string pool with separately malloc and
+// reference counted entries.  This can reduce the cost of strings by using the
+// same storage for identical strings.
 //
 // To intern a string:
 //
@@ -29,110 +30,112 @@
 #define LLVM_SUPPORT_STRINGPOOL_H
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
 
 namespace llvm {
 
-  class PooledStringPtr;
+class PooledStringPtr;
 
-  /// StringPool - An interned string pool. Use the intern method to add a
-  /// string. Strings are removed automatically as PooledStringPtrs are
-  /// destroyed.
-  class StringPool {
-    /// PooledString - This is the value of an entry in the pool's interning
-    /// table.
-    struct PooledString {
-      StringPool *Pool = nullptr;  ///< So the string can remove itself.
-      unsigned Refcount = 0;       ///< Number of referencing PooledStringPtrs.
-
-    public:
-      PooledString() = default;
-    };
-
-    friend class PooledStringPtr;
-
-    using table_t = StringMap<PooledString>;
-    using entry_t = StringMapEntry<PooledString>;
-    table_t InternTable;
+/// StringPool - An interned string pool. Use the intern method to add a
+/// string. Strings are removed automatically as PooledStringPtrs are
+/// destroyed.
+class StringPool {
+  /// PooledString - This is the value of an entry in the pool's interning
+  /// table.
+  struct PooledString {
+    StringPool *pool = nullptr; ///< So the string can remove itself.
+    unsigned refcount = 0;      ///< Number of referencing PooledStringPtrs.
 
   public:
-    StringPool();
-    ~StringPool();
-
-    /// intern - Adds a string to the pool and returns a reference-counted
-    /// pointer to it. No additional memory is allocated if the string already
-    /// exists in the pool.
-    PooledStringPtr intern(StringRef Str);
-
-    /// empty - Checks whether the pool is empty. Returns true if so.
-    ///
-    inline bool empty() const { return InternTable.empty(); }
+    PooledString() = default;
   };
 
-  /// PooledStringPtr - A pointer to an interned string. Use operator bool to
-  /// test whether the pointer is valid, and operator * to get the string if so.
-  /// This is a lightweight value class with storage requirements equivalent to
-  /// a single pointer, but it does have reference-counting overhead when
-  /// copied.
-  class PooledStringPtr {
-    using entry_t = StringPool::entry_t;
+  friend class PooledStringPtr;
+  using Entry = StringMapEntry<PooledString>;
+  StringMap<PooledString> internTable;
 
-    entry_t *S = nullptr;
+public:
+  StringPool();
+  ~StringPool();
 
-  public:
-    PooledStringPtr() = default;
+  /// intern - Adds a string to the pool and returns a reference-counted
+  /// pointer to it. No additional memory is allocated if the string already
+  /// exists in the pool.
+  PooledStringPtr intern(StringRef string);
 
-    explicit PooledStringPtr(entry_t *E) : S(E) {
-      if (S) ++S->getValue().Refcount;
+  /// empty - Checks whether the pool is empty. Returns true if so.
+  bool empty() const { return internTable.empty(); }
+};
+
+/// PooledStringPtr - A pointer to an interned string. Use operator bool to
+/// test whether the pointer is valid, and operator * to get the string if so.
+/// This is a lightweight value class with storage requirements equivalent to
+/// a single pointer, but it does have reference-counting overhead when
+/// copied.
+class PooledStringPtr {
+  using Entry = StringPool::Entry;
+  Entry *entry = nullptr;
+
+public:
+  PooledStringPtr() = default;
+
+  explicit PooledStringPtr(Entry *e) : entry(e) {
+    if (entry)
+      ++entry->getValue().refcount;
+  }
+
+  PooledStringPtr(const PooledStringPtr &that) : entry(that.entry) {
+    if (entry)
+      ++entry->getValue().refcount;
+  }
+
+  PooledStringPtr &operator=(const PooledStringPtr &that) {
+    if (entry != that.entry) {
+      clear();
+      entry = that.entry;
+      if (entry)
+        ++entry->getValue().refcount;
     }
+    return *this;
+  }
 
-    PooledStringPtr(const PooledStringPtr &That) : S(That.S) {
-      if (S) ++S->getValue().Refcount;
+  void clear() {
+    if (!entry)
+      return;
+    if (--entry->getValue().refcount == 0) {
+      entry->getValue().pool->internTable.remove(entry);
+      MallocAllocator allocator;
+      entry->Destroy(allocator);
     }
+    entry = nullptr;
+  }
 
-    PooledStringPtr &operator=(const PooledStringPtr &That) {
-      if (S != That.S) {
-        clear();
-        S = That.S;
-        if (S) ++S->getValue().Refcount;
-      }
-      return *this;
-    }
+  ~PooledStringPtr() { clear(); }
 
-    void clear() {
-      if (!S)
-        return;
-      if (--S->getValue().Refcount == 0) {
-        S->getValue().Pool->InternTable.remove(S);
-        S->Destroy();
-      }
-      S = nullptr;
-    }
+  const char *begin() const {
+    assert(*this && "Attempt to dereference empty PooledStringPtr!");
+    return entry->getKeyData();
+  }
 
-    ~PooledStringPtr() { clear(); }
+  const char *end() const {
+    assert(*this && "Attempt to dereference empty PooledStringPtr!");
+    return entry->getKeyData() + entry->getKeyLength();
+  }
 
-    inline const char *begin() const {
-      assert(*this && "Attempt to dereference empty PooledStringPtr!");
-      return S->getKeyData();
-    }
+  unsigned size() const {
+    assert(*this && "Attempt to dereference empty PooledStringPtr!");
+    return entry->getKeyLength();
+  }
 
-    inline const char *end() const {
-      assert(*this && "Attempt to dereference empty PooledStringPtr!");
-      return S->getKeyData() + S->getKeyLength();
-    }
+  const char *operator*() const { return begin(); }
+  explicit operator bool() const { return entry != nullptr; }
 
-    inline unsigned size() const {
-      assert(*this && "Attempt to dereference empty PooledStringPtr!");
-      return S->getKeyLength();
-    }
-
-    inline const char *operator*() const { return begin(); }
-    inline explicit operator bool() const { return S != nullptr; }
-
-    inline bool operator==(const PooledStringPtr &That) const { return S == That.S; }
-    inline bool operator!=(const PooledStringPtr &That) const { return S != That.S; }
-  };
+  bool operator==(const PooledStringPtr &that) const {
+    return entry == that.entry;
+  }
+  bool operator!=(const PooledStringPtr &that) const {
+    return entry != that.entry;
+  }
+};
 
 } // end namespace llvm
 

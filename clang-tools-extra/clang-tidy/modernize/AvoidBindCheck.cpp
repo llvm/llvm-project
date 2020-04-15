@@ -576,7 +576,7 @@ getForwardedArgumentList(const LambdaProperties &P) {
 }
 AvoidBindCheck::AvoidBindCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      PermissiveParameterList(Options.get("PermissiveParameterList", 0) != 0) {}
+      PermissiveParameterList(Options.get("PermissiveParameterList", false)) {}
 
 void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

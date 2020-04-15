@@ -32,6 +32,8 @@
 // Note: 'if/else' blocks are not jammed. So, if there are loops inside if
 // op's, bodies of those loops will not be jammed.
 //===----------------------------------------------------------------------===//
+
+#include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -39,7 +41,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,35 +49,20 @@ using namespace mlir;
 
 #define DEBUG_TYPE "affine-loop-unroll-jam"
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-// Loop unroll and jam factor.
-static llvm::cl::opt<unsigned>
-    clUnrollJamFactor("unroll-jam-factor", llvm::cl::Hidden,
-                      llvm::cl::desc("Use this unroll jam factor for all loops"
-                                     " (default 4)"),
-                      llvm::cl::cat(clOptionsCategory));
-
 namespace {
 /// Loop unroll jam pass. Currently, this just unroll jams the first
 /// outer loop in a Function.
-struct LoopUnrollAndJam : public FunctionPass<LoopUnrollAndJam> {
-/// Include the generated pass utilities.
-#define GEN_PASS_AffineLoopUnrollAndJam
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
-  Optional<unsigned> unrollJamFactor;
-  static const unsigned kDefaultUnrollJamFactor = 4;
-
-  explicit LoopUnrollAndJam(Optional<unsigned> unrollJamFactor = None)
-      : unrollJamFactor(unrollJamFactor) {}
+struct LoopUnrollAndJam : public AffineLoopUnrollAndJamBase<LoopUnrollAndJam> {
+  explicit LoopUnrollAndJam(Optional<unsigned> unrollJamFactor = None) {
+    if (unrollJamFactor)
+      this->unrollJamFactor = *unrollJamFactor;
+  }
 
   void runOnFunction() override;
-  LogicalResult runOnAffineForOp(AffineForOp forOp);
 };
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopUnrollAndJamPass(int unrollJamFactor) {
   return std::make_unique<LoopUnrollAndJam>(
       unrollJamFactor == -1 ? None : Optional<unsigned>(unrollJamFactor));
@@ -88,19 +74,5 @@ void LoopUnrollAndJam::runOnFunction() {
   // any for operation.
   auto &entryBlock = getFunction().front();
   if (auto forOp = dyn_cast<AffineForOp>(entryBlock.front()))
-    runOnAffineForOp(forOp);
-}
-
-/// Unroll and jam a 'affine.for' op. Default unroll jam factor is
-/// kDefaultUnrollJamFactor. Return failure if nothing was done.
-LogicalResult LoopUnrollAndJam::runOnAffineForOp(AffineForOp forOp) {
-  // Unroll and jam by the factor that was passed if any.
-  if (unrollJamFactor.hasValue())
-    return loopUnrollJamByFactor(forOp, unrollJamFactor.getValue());
-  // Otherwise, unroll jam by the command-line factor if one was specified.
-  if (clUnrollJamFactor.getNumOccurrences() > 0)
-    return loopUnrollJamByFactor(forOp, clUnrollJamFactor);
-
-  // Unroll and jam by four otherwise.
-  return loopUnrollJamByFactor(forOp, kDefaultUnrollJamFactor);
+    loopUnrollJamByFactor(forOp, unrollJamFactor);
 }

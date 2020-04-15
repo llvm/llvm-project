@@ -16,12 +16,13 @@ def LoopParallelLoopFusion : Pass<"parallel-loop-fusion"> {
   let constructor = "mlir::createParallelLoopFusionPass()";
 }
 
-def LoopParallelLoopSpecialization : Pass<"parallel-loop-specialization"> {
+def LoopParallelLoopSpecialization
+    : FunctionPass<"parallel-loop-specialization"> {
   let summary = "Specialize parallel loops for vectorization";
   let constructor = "mlir::createParallelLoopSpecializationPass()";
 }
 
-def LoopParallelLoopTiling : Pass<"parallel-loop-tiling"> {
+def LoopParallelLoopTiling : FunctionPass<"parallel-loop-tiling"> {
   let summary = "Tile parallel loops";
   let constructor = "mlir::createParallelLoopTilingPass()";
   let options = [

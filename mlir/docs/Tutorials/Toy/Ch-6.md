@@ -61,7 +61,7 @@ everything to the LLVM dialect.
 
 ```c++
   mlir::ConversionTarget target(getContext());
-  target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<mlir::LLVMDialect>();
   target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
 ```
 
@@ -105,7 +105,7 @@ We want to completely lower to LLVM, so we use a `FullConversion`. This ensures
 that only legal operations will remain after the conversion.
 
 ```c++
-  mlir::ModuleOp module = getModule();
+  mlir::ModuleOp module = getOperation();
   if (mlir::failed(mlir::applyFullConversion(module, target, patterns,
                                              &typeConverter)))
     signalPassFailure();

@@ -18,14 +18,11 @@
 // TYPE-ERR: invalid argument 'foo' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 // TYPE-ERR: invalid argument 'bar' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 
-/// Test -malign-branch-prefix-size=
-// RUN: %clang -target x86_64 -malign-branch-prefix-size=0 %s -c -### 2>&1 | FileCheck %s --check-prefix=PREFIX-0
-// PREFIX-0: "-mllvm" "-x86-align-branch-prefix-size=0"
-// RUN: %clang -target x86_64 -malign-branch-prefix-size=5 %s -c -### 2>&1 | FileCheck %s --check-prefix=PREFIX-5
-// PREFIX-5: "-mllvm" "-x86-align-branch-prefix-size=5"
-
-// RUN: %clang -target x86_64 -malign-branch-prefix-size=6 %s -c -### 2>&1 | FileCheck %s --check-prefix=PREFIX-6
-// PREFIX-6: invalid argument
+/// Test -mpad-max-prefix-size=
+// RUN: %clang -target x86_64 -mpad-max-prefix-size=0 %s -c -### 2>&1 | FileCheck %s --check-prefix=PREFIX-0
+// PREFIX-0: "-mllvm" "-x86-pad-max-prefix-size=0"
+// RUN: %clang -target x86_64 -mpad-max-prefix-size=15 %s -c -### 2>&1 | FileCheck %s --check-prefix=PREFIX-15
+// PREFIX-15: "-mllvm" "-x86-pad-max-prefix-size=15"
 
 /// Test -mbranches-within-32B-boundaries
 // RUN: %clang -target x86_64 -mbranches-within-32B-boundaries %s -c -### 2>&1 | FileCheck %s --check-prefix=32B
@@ -34,6 +31,6 @@
 /// Unsupported on other targets.
 // RUN: %clang -target aarch64 -malign-branch=jmp %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
 // RUN: %clang -target aarch64 -malign-branch-boundary=7 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// RUN: %clang -target aarch64 -malign-branch-prefix-size=15 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
+// RUN: %clang -target aarch64 -mpad-max-prefix-size=15 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
 // RUN: %clang -target aarch64 -mbranches-within-32B-boundaries %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
 // UNUSED: warning: argument unused

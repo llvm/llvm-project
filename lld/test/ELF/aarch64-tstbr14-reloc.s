@@ -17,10 +17,10 @@
 # CHECK-NEXT:  210134: nop
 # CHECK-NEXT:  210138: nop
 # CHECK:      <_start>:
-# CHECK-NEXT:  21013c: tbnz w3, #15, #-28 <_foo>
-# CHECK-NEXT:  210140: tbnz w3, #15, #-16 <_bar>
-# CHECK-NEXT:  210144: tbz x6, #45, #-36 <_foo>
-# CHECK-NEXT:  210148: tbz x6, #45, #-24 <_bar>
+# CHECK-NEXT:  21013c: tbnz w3, #15, 0x210120 <_foo>
+# CHECK-NEXT:  210140: tbnz w3, #15, 0x210130 <_bar>
+# CHECK-NEXT:  210144: tbz x6, #45, 0x210120 <_foo>
+# CHECK-NEXT:  210148: tbz x6, #45, 0x210130 <_bar>
 
 #DSOREL:      Section {
 #DSOREL:        Index:
@@ -57,10 +57,10 @@
 #DSO-NEXT:  1030c: nop
 #DSO-NEXT:  10310: nop
 #DSO:      <_start>:
-#DSO-NEXT:  10314: tbnz w3, #15, #60 <_foo@plt>
-#DSO-NEXT:  10318: tbnz w3, #15, #72 <_bar@plt>
-#DSO-NEXT:  1031c: tbz x6, #45, #52 <_foo@plt>
-#DSO-NEXT:  10320: tbz x6, #45, #64 <_bar@plt>
+#DSO-NEXT:  10314: tbnz w3, #15, 0x10350 <_foo@plt>
+#DSO-NEXT:  10318: tbnz w3, #15, 0x10360 <_bar@plt>
+#DSO-NEXT:  1031c: tbz x6, #45, 0x10350 <_foo@plt>
+#DSO-NEXT:  10320: tbz x6, #45, 0x10360 <_bar@plt>
 #DSO-EMPTY:
 #DSO-NEXT: Disassembly of section .plt:
 #DSO-EMPTY:

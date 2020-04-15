@@ -19,7 +19,7 @@ using namespace mlir;
 
 namespace {
 
-struct TestLivenessPass : public FunctionPass<TestLivenessPass> {
+struct TestLivenessPass : public PassWrapper<TestLivenessPass, FunctionPass> {
   void runOnFunction() override {
     llvm::errs() << "Testing : " << getFunction().getName() << "\n";
     getAnalysis<Liveness>().print(llvm::errs());

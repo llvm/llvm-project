@@ -239,21 +239,22 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
   DelAttr(FD->getAttr<OverrideAttr>());
   DelAttr(FD->getAttr<FinalAttr>());
 
-  if (FD->isVirtualAsWritten()) {
-    SourceRange SpecRange{FD->getBeginLoc(), FD->getLocation()};
-    bool HasErrors = true;
-
-    // Clang allows duplicating virtual specifiers so check for multiple
-    // occurrences.
-    for (const auto &Tok : TokBuf.expandedTokens(SpecRange)) {
-      if (Tok.kind() != tok::kw_virtual)
+  auto DelKeyword = [&](tok::TokenKind Kind, SourceRange FromRange) {
+    bool FoundAny = false;
+    for (const auto &Tok : TokBuf.expandedTokens(FromRange)) {
+      if (Tok.kind() != Kind)
         continue;
+      FoundAny = true;
       auto Spelling = TokBuf.spelledForExpanded(llvm::makeArrayRef(Tok));
       if (!Spelling) {
-        HasErrors = true;
+        Errors = llvm::joinErrors(
+            std::move(Errors),
+            llvm::createStringError(
+                llvm::inconvertibleErrorCode(),
+                llvm::formatv("define outline: couldn't remove `{0}` keyword.",
+                              tok::getKeywordSpelling(Kind))));
         break;
       }
-      HasErrors = false;
       CharSourceRange DelRange =
           syntax::Token::range(SM, Spelling->front(), Spelling->back())
               .toCharRange(SM);
@@ -261,13 +262,22 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
               DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
         Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
     }
-    if (HasErrors) {
+    if (!FoundAny) {
       Errors = llvm::joinErrors(
           std::move(Errors),
-          llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                  "define outline: Can't move out of line as "
-                                  "function has a macro `virtual` specifier."));
+          llvm::createStringError(
+              llvm::inconvertibleErrorCode(),
+              llvm::formatv(
+                  "define outline: couldn't find `{0}` keyword to remove.",
+                  tok::getKeywordSpelling(Kind))));
     }
+  };
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (MD->isVirtualAsWritten())
+      DelKeyword(tok::kw_virtual, {FD->getBeginLoc(), FD->getLocation()});
+    if (MD->isStatic())
+      DelKeyword(tok::kw_static, {FD->getBeginLoc(), FD->getLocation()});
   }
 
   if (Errors)

@@ -200,12 +200,16 @@ body: |
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: fabs_s64_ss
     ; GCN: liveins: $sgpr0_sgpr1
-    ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FABS:%[0-9]+]]:sreg_64(s64) = G_FABS [[COPY]]
-    ; GCN: $sgpr0_sgpr1 = COPY [[FABS]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FABS %0
-    $sgpr0_sgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
 ...
 
 ---
@@ -225,10 +229,10 @@ body: |
     ; GCN: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
     ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
-    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FABS %0
-    $vgpr0_vgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
 ...
 
 ---
@@ -243,9 +247,56 @@ body: |
     ; GCN-LABEL: name: fabs_s64_vs
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FABS:%[0-9]+]]:vreg_64(s64) = G_FABS [[COPY]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FABS]](s64)
+    ; GCN: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
+    ; GCN: S_ENDPGM 0, implicit [[FABS]](s64)
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_FABS %0
-    $vgpr0_vgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
+...
+
+# Make sure the source register is constrained
+---
+name: fabs_s64_vv_no_src_constraint
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: fabs_s64_vv_no_src_constraint
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483647, implicit $exec
+    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub1
+    ; GCN: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub0
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    %0:vgpr(s64) = IMPLICIT_DEF
+    %1:vgpr(s64) = G_FABS %0:vgpr(s64)
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: fabs_s64_ss_no_src_constraint
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GCN-LABEL: name: fabs_s64_ss_no_src_constraint
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    %0:sgpr(s64) = IMPLICIT_DEF
+    %1:sgpr(s64) = G_FABS %0:sgpr(s64)
+    S_ENDPGM 0, implicit %1
 ...

@@ -158,6 +158,16 @@ MCSymbol *MCContext::getOrCreateLSDASymbol(StringRef FuncName) {
 
 MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
                                       bool IsTemporary) {
+  static_assert(std::is_trivially_destructible<MCSymbolCOFF>(),
+                "MCSymbol classes must be trivially destructible");
+  static_assert(std::is_trivially_destructible<MCSymbolELF>(),
+                "MCSymbol classes must be trivially destructible");
+  static_assert(std::is_trivially_destructible<MCSymbolMachO>(),
+                "MCSymbol classes must be trivially destructible");
+  static_assert(std::is_trivially_destructible<MCSymbolWasm>(),
+                "MCSymbol classes must be trivially destructible");
+  static_assert(std::is_trivially_destructible<MCSymbolXCOFF>(),
+                "MCSymbol classes must be trivially destructible");
   if (MOFI) {
     switch (MOFI->getObjectFileType()) {
     case MCObjectFileInfo::IsCOFF:

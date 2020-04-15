@@ -26,7 +26,6 @@ ifeq ($(OS),Darwin)
 	install_name_tool -id @executable_path/libloadunload_d.dylib libloadunload_d.dylib
 endif
 
-hidden_lib_d:
-	mkdir -p hidden
+hidden_lib_d: hidden
 	$(MAKE) VPATH=$(SRCDIR)/hidden -C hidden -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=d.cpp DYLIB_NAME=loadunload_d

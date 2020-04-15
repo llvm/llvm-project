@@ -11,8 +11,8 @@
 // deque()
 // deque::iterator()
 
-// MODULES_DEFINES: _LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
-#define _LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
+
 #include <deque>
 #include <cassert>
 

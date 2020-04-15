@@ -69,8 +69,9 @@ static const char KnownStringCompareFunctions[] = "__builtin_memcmp;"
 SuspiciousStringCompareCheck::SuspiciousStringCompareCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnImplicitComparison(Options.get("WarnOnImplicitComparison", 1)),
-      WarnOnLogicalNotComparison(Options.get("WarnOnLogicalNotComparison", 0)),
+      WarnOnImplicitComparison(Options.get("WarnOnImplicitComparison", true)),
+      WarnOnLogicalNotComparison(
+          Options.get("WarnOnLogicalNotComparison", false)),
       StringCompareLikeFunctions(
           Options.get("StringCompareLikeFunctions", "")) {}
 

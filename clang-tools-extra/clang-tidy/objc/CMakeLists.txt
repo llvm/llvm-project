@@ -1,10 +1,14 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyObjCModule
   AvoidNSErrorInitCheck.cpp
   DeallocInCategoryCheck.cpp
   ForbiddenSubclassingCheck.cpp
   MissingHashCheck.cpp
+  NSInvocationArgumentLifetimeCheck.cpp
   ObjCTidyModule.cpp
   PropertyDeclarationCheck.cpp
   SuperSelfCheck.cpp

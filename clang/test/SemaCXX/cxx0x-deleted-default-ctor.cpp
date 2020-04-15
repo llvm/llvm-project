@@ -8,9 +8,9 @@ struct non_trivial {
 };
 
 union bad_union {
-  non_trivial nt; // expected-note {{non-trivial default constructor}}
+  non_trivial nt; // expected-note {{non-trivial default constructor}} expected-note {{destructor of 'bad_union' is implicitly deleted}}
 };
-bad_union u; // expected-error {{call to implicitly-deleted default constructor}}
+bad_union u; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
 union bad_union2 { // expected-note {{all data members are const-qualified}}
   const int i;
 };
@@ -18,10 +18,10 @@ bad_union2 u2; // expected-error {{call to implicitly-deleted default constructo
 
 struct bad_anon {
   union {
-    non_trivial nt; // expected-note {{non-trivial default constructor}}
+    non_trivial nt; // expected-note {{non-trivial default constructor}} expected-note {{destructor of 'bad_anon' is implicitly deleted}}
   };
 };
-bad_anon a; // expected-error {{call to implicitly-deleted default constructor}}
+bad_anon a; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
 struct bad_anon2 {
   union { // expected-note {{all data members of an anonymous union member are const-qualified}}
     const int i;
@@ -62,7 +62,7 @@ struct no_default {
   no_default() = delete; // expected-note 5{{deleted here}}
 };
 struct no_dtor {
-  ~no_dtor() = delete; // expected-note 2{{deleted here}}
+  ~no_dtor() = delete; // expected-note 4{{deleted here}}
 };
 
 struct bad_field_default {
@@ -74,12 +74,12 @@ struct bad_base_default : no_default { // expected-note {{base class 'no_default
 bad_base_default bbd; // expected-error {{call to implicitly-deleted default constructor}}
 
 struct bad_field_dtor {
-  no_dtor nd; // expected-note {{field 'nd' has a deleted destructor}}
+  no_dtor nd; // expected-note {{field 'nd' has a deleted destructor}} expected-note {{destructor of 'bad_field_dtor' is implicitly deleted }}
 };
-bad_field_dtor bfx; // expected-error {{call to implicitly-deleted default constructor}}
-struct bad_base_dtor : no_dtor { // expected-note {{base class 'no_dtor' has a deleted destructor}}
+bad_field_dtor bfx; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+struct bad_base_dtor : no_dtor { // expected-note {{base class 'no_dtor' has a deleted destructor}} expected-note {{destructor of 'bad_base_dtor' is implicitly deleted}}
 };
-bad_base_dtor bbx; // expected-error {{call to implicitly-deleted default constructor}}
+bad_base_dtor bbx; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
 
 struct ambiguous_default {
   ambiguous_default();

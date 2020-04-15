@@ -161,6 +161,13 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
+static bool isDuplex(uint32_t insn) {
+  // Duplex forms have a fixed mask and parse bits 15:14 are always
+  // zero.  Non-duplex insns will always have at least one bit set in the
+  // parse field.
+  return (0xC000 & insn) == 0;
+}
+
 static uint32_t findMaskR6(uint32_t insn) {
   // There are (arguably too) many relocation masks for the DSP's
   // R_HEX_6_X type.  The table below is used to select the correct mask
@@ -185,10 +192,7 @@ static uint32_t findMaskR6(uint32_t insn) {
       {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
       {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
-  // Duplex forms have a fixed mask and parse bits 15:14 are always
-  // zero.  Non-duplex insns will always have at least one bit set in the
-  // parse field.
-  if ((0xC000 & insn) == 0x0)
+  if (isDuplex(insn))
     return 0x03f00000;
 
   for (InstructionMask i : r6)
@@ -223,6 +227,9 @@ static uint32_t findMaskR16(uint32_t insn) {
     return 0x00df3fe0;
   if ((0xff000000 & insn) == 0xb0000000)
     return 0x0fe03fe0;
+
+  if (isDuplex(insn))
+    return 0x03f00000;
 
   error("unrecognized instruction for R_HEX_16_X relocation: 0x" +
         utohexstr(insn));

@@ -34,7 +34,7 @@
 
 ; Test with many more threads than the system has
 ; RUN: rm -f %t31.lto.o %t32.lto.o
-; RUN: wasm-ld -r -save-temps --thinlto-jobs=1000 %t1.o %t2.o -o %t3
+; RUN: wasm-ld -r -save-temps --thinlto-jobs=100 %t1.o %t2.o -o %t3
 ; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 

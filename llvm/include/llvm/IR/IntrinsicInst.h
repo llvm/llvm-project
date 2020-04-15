@@ -63,20 +63,26 @@ namespace llvm {
     }
   };
 
+  /// Check if \p ID corresponds to a debug info intrinsic.
+  static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_addr:
+    case Intrinsic::dbg_label:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// This is the common base class for debug info intrinsics.
   class DbgInfoIntrinsic : public IntrinsicInst {
   public:
     /// \name Casting methods
     /// @{
     static bool classof(const IntrinsicInst *I) {
-      switch (I->getIntrinsicID()) {
-      case Intrinsic::dbg_declare:
-      case Intrinsic::dbg_value:
-      case Intrinsic::dbg_addr:
-      case Intrinsic::dbg_label:
-        return true;
-      default: return false;
-      }
+      return isDbgInfoIntrinsic(I->getIntrinsicID());
     }
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -253,7 +259,7 @@ namespace llvm {
   public:
     bool isUnaryOp() const;
     bool isTernaryOp() const;
-    Optional<fp::RoundingMode> getRoundingMode() const;
+    Optional<RoundingMode> getRoundingMode() const;
     Optional<fp::ExceptionBehavior> getExceptionBehavior() const;
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:

@@ -110,10 +110,6 @@ protected:
   /// Float).
   Type * const *ContainedTys = nullptr;
 
-  static bool isSequentialType(TypeID TyID) {
-    return TyID == ArrayTyID || TyID == VectorTyID;
-  }
-
 public:
   /// Print the current type.
   /// Omit the type details if \p NoDetails == true.
@@ -227,7 +223,7 @@ public:
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
   /// True if this is an instance of VectorType.
-  bool isVectorTy() const { return getTypeID() == VectorTyID; }
+  inline bool isVectorTy() const;
 
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
@@ -357,11 +353,6 @@ public:
   inline StringRef getStructName() const;
   inline unsigned getStructNumElements() const;
   inline Type *getStructElementType(unsigned N) const;
-
-  inline Type *getSequentialElementType() const {
-    assert(isSequentialType(getTypeID()) && "Not a sequential type!");
-    return ContainedTys[0];
-  }
 
   inline uint64_t getArrayNumElements() const;
 

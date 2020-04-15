@@ -25,7 +25,8 @@ static llvm::cl::OptionCategory clOptionsCategory(PASS_NAME " options");
 namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
-struct TestLoopPermutation : public FunctionPass<TestLoopPermutation> {
+struct TestLoopPermutation
+    : public PassWrapper<TestLoopPermutation, FunctionPass> {
   TestLoopPermutation() = default;
   TestLoopPermutation(const TestLoopPermutation &pass){};
 

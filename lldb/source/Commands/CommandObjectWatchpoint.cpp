@@ -41,7 +41,7 @@ static bool CheckTargetForWatchpointOperations(Target *target,
   bool process_is_valid =
       target->GetProcessSP() && target->GetProcessSP()->IsAlive();
   if (!process_is_valid) {
-    result.AppendError("Thre's no process or it is not alive.");
+    result.AppendError("There's no process or it is not alive.");
     result.SetStatus(eReturnStatusFailed);
     return false;
   }

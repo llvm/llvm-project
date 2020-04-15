@@ -157,7 +157,7 @@ private:
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
 class RegionRange
-    : public detail::indexed_accessor_range_base<
+    : public llvm::detail::indexed_accessor_range_base<
           RegionRange, PointerUnion<Region *, const std::unique_ptr<Region> *>,
           Region *, Region *, Region *> {
   /// The type representing the owner of this range. This is either a list of
@@ -178,9 +178,9 @@ public:
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
 
 private:
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(const OwnerT &owner, ptrdiff_t index);
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static Region *dereference_iterator(const OwnerT &owner, ptrdiff_t index);
 
   /// Allow access to `offset_base` and `dereference_iterator`.

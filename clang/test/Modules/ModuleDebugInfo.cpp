@@ -133,7 +133,7 @@
 // CHECK-SAME:           baseType: ![[BASE:.*]])
 // CHECK: ![[BASE]] = !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:                         name: "Template1<void *>",
-// CHECK-SAME:                         flags: DIFlagFwdDecl,
+// CHECK-SAME:                         flags: DIFlagFwdDecl
 // CHECK-SAME:                         identifier: "_ZTS9Template1IPvE")
 
 // Explicit instantiation.
@@ -154,7 +154,7 @@
 // CHECK-SAME:           baseType: ![[SPECIALIZEDBASE:.*]])
 // CHECK: ![[SPECIALIZEDBASE]] = !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:                             name: "WithSpecializedBase<float>",
-// CHECK-SAME:                             flags: DIFlagFwdDecl,
+// CHECK-SAME:                             flags: DIFlagFwdDecl
 
 // CHECK-MOD: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: ![[DEBUGCXX]],
 // CHECK-MOD-SAME:              entity: ![[DUMMY:[0-9]+]],

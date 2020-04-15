@@ -856,10 +856,10 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   Value *VecOp;
   if (match(Src,
             m_OneUse(m_ExtractElement(m_Value(VecOp), m_ConstantInt(Cst))))) {
-    Type *VecOpTy = VecOp->getType();
+    auto *VecOpTy = cast<VectorType>(VecOp->getType());
     unsigned DestScalarSize = DestTy->getScalarSizeInBits();
     unsigned VecOpScalarSize = VecOpTy->getScalarSizeInBits();
-    unsigned VecNumElts = VecOpTy->getVectorNumElements();
+    unsigned VecNumElts = VecOpTy->getNumElements();
 
     // A badly fit destination size would result in an invalid cast.
     if (VecOpScalarSize % DestScalarSize == 0) {
@@ -1514,12 +1514,13 @@ static Type *shrinkFPConstant(ConstantFP *CFP) {
 // TODO: Make these support undef elements.
 static Type *shrinkFPConstantVector(Value *V) {
   auto *CV = dyn_cast<Constant>(V);
-  if (!CV || !CV->getType()->isVectorTy())
+  auto *CVVTy = dyn_cast<VectorType>(V->getType());
+  if (!CV || !CVVTy)
     return nullptr;
 
   Type *MinType = nullptr;
 
-  unsigned NumElts = CV->getType()->getVectorNumElements();
+  unsigned NumElts = CVVTy->getNumElements();
   for (unsigned i = 0; i != NumElts; ++i) {
     auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
     if (!CFP)
@@ -1820,8 +1821,9 @@ Instruction *InstCombiner::visitIntToPtr(IntToPtrInst &CI) {
   if (CI.getOperand(0)->getType()->getScalarSizeInBits() !=
       DL.getPointerSizeInBits(AS)) {
     Type *Ty = DL.getIntPtrType(CI.getContext(), AS);
-    if (CI.getType()->isVectorTy()) // Handle vectors of pointers.
-      Ty = VectorType::get(Ty, CI.getType()->getVectorNumElements());
+    // Handle vectors of pointers.
+    if (auto *CIVTy = dyn_cast<VectorType>(CI.getType()))
+      Ty = VectorType::get(Ty, CIVTy->getElementCount());
 
     Value *P = Builder.CreateZExtOrTrunc(CI.getOperand(0), Ty);
     return new IntToPtrInst(P, CI.getType());
@@ -1868,8 +1870,8 @@ Instruction *InstCombiner::visitPtrToInt(PtrToIntInst &CI) {
     return commonPointerCastTransforms(CI);
 
   Type *PtrTy = DL.getIntPtrType(CI.getContext(), AS);
-  if (Ty->isVectorTy()) // Handle vectors of pointers.
-    PtrTy = VectorType::get(PtrTy, Ty->getVectorNumElements());
+  if (auto *VTy = dyn_cast<VectorType>(Ty)) // Handle vectors of pointers.
+    PtrTy = VectorType::get(PtrTy, VTy->getNumElements());
 
   Value *P = Builder.CreatePtrToInt(CI.getOperand(0), PtrTy);
   return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
@@ -2199,10 +2201,10 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
   // A vector select must maintain the same number of elements in its operands.
   Type *CondTy = Cond->getType();
   Type *DestTy = BitCast.getType();
-  if (CondTy->isVectorTy()) {
+  if (auto *CondVTy = dyn_cast<VectorType>(CondTy)) {
     if (!DestTy->isVectorTy())
       return nullptr;
-    if (DestTy->getVectorNumElements() != CondTy->getVectorNumElements())
+    if (cast<VectorType>(DestTy)->getNumElements() != CondVTy->getNumElements())
       return nullptr;
   }
 
@@ -2536,10 +2538,11 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
     // a bitcast to a vector with the same # elts.
     Value *ShufOp0 = Shuf->getOperand(0);
     Value *ShufOp1 = Shuf->getOperand(1);
-    unsigned NumShufElts = Shuf->getType()->getVectorNumElements();
-    unsigned NumSrcVecElts = ShufOp0->getType()->getVectorNumElements();
+    unsigned NumShufElts = Shuf->getType()->getNumElements();
+    unsigned NumSrcVecElts =
+        cast<VectorType>(ShufOp0->getType())->getNumElements();
     if (Shuf->hasOneUse() && DestTy->isVectorTy() &&
-        DestTy->getVectorNumElements() == NumShufElts &&
+        cast<VectorType>(DestTy)->getNumElements() == NumShufElts &&
         NumShufElts == NumSrcVecElts) {
       BitCastInst *Tmp;
       // If either of the operands is a cast from CI.getType(), then

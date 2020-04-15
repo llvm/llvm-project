@@ -189,15 +189,17 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
         ->setName("new_func_ptr_load_cast");
     // load the new function address ready for a jump
     llvm::LoadInst *new_func_addr_load =
-        new llvm::LoadInst(new_func_ptr, "load_func_pointer", call_inst);
+        new llvm::LoadInst(new_func_ptr->getType()->getPointerElementType(),
+                           new_func_ptr, "load_func_pointer", call_inst);
     // and create a callinstruction from it
     llvm::CallInst *new_call_inst =
         llvm::CallInst::Create(new_func_type, new_func_addr_load, new_call_args,
                                "new_func_call", call_inst);
     new_call_inst->setCallingConv(call_inst->getCallingConv());
     new_call_inst->setTailCall(call_inst->isTailCall());
-    llvm::LoadInst *lldb_save_result_address =
-        new llvm::LoadInst(return_value_alloc, "save_return_val", call_inst);
+    llvm::LoadInst *lldb_save_result_address = new llvm::LoadInst(
+        return_value_alloc->getType()->getPointerElementType(),
+        return_value_alloc, "save_return_val", call_inst);
 
     // Now remove the old broken call
     call_inst->replaceAllUsesWith(lldb_save_result_address);

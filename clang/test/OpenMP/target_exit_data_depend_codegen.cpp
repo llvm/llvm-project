@@ -94,7 +94,7 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[MAIN_DEP:%.+]], i[[sz]] 0, i[[sz]] 0
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -102,8 +102,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
-  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
+  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[MAIN_DEP]] to i8*
   // CK1: = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]], i32 1, i8* [[BC]], i32 0, i8* null)
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
@@ -161,7 +160,7 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP:%.+]], i[[sz]] 0, i[[sz]] 0
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -169,7 +168,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 1
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -177,15 +176,14 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 2
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 2
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: store i[[sz]] ptrtoint ([100 x double]* @gc to i[[sz]]), i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
-  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
+  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[MAIN_DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 3, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
   // CK1: = call i32 [[TASK_ENTRY2]](i32 %{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]])
@@ -243,7 +241,7 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP:%.+]], i[[sz]] 0, i[[sz]] 0
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -251,7 +249,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 1
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -259,7 +257,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 2
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 2
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -267,15 +265,14 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 3
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 3
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: store i[[sz]] ptrtoint ([100 x double]* @gc to i[[sz]]), i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
-  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
+  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[MAIN_DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 4, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
   // CK1: = call i32 [[TASK_ENTRY3]](i32 %{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]])
@@ -327,7 +324,7 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [2 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{16|8}}, i1 false)
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP:%.+]], i[[sz]] 0, i[[sz]] 0
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint double* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -335,7 +332,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 1
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -343,7 +340,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 2
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 2
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -351,14 +348,14 @@ void foo(int arg) {
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 3
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 3
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: store i[[sz]] ptrtoint ([100 x double]* @gc to i[[sz]]), i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 4
+  // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 4
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
   // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
@@ -366,8 +363,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
-  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
+  // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[MAIN_DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 5, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
   // CK1: = call i32 [[TASK_ENTRY4]](i32 %{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]])

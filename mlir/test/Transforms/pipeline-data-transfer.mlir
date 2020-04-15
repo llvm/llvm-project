@@ -136,7 +136,7 @@ func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32x
     // CHECK: [[TAG_ARG1:%[0-9]+]] = alloc() : memref<2x2xi32>
     // CHECK: affine.dma_start %{{.*}}[
     // CHECK: affine.dma_start %{{.*}}[
-    // CHECK-NEXT affine.for %{{.*}} = 1 to 8 {
+    // CHECK-NEXT: affine.for %{{.*}} = 1 to 8 {
     affine.for %i1 = 0 to 8 {
       %7 = affine.apply #map1(%i0, %i1)
       %8 = affine.apply #map2(%i1)

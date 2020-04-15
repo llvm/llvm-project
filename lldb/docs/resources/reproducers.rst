@@ -91,32 +91,100 @@ debugger can have bugs, the reproducer can have bugs too.
 Design
 ------
 
-Coming soon.
+
+Replay
+``````
+
+Reproducers support two replay modes. The main and most common mode is active
+replay. It's called active, because it's LLDB that is driving replay by calling
+the captured SB API functions one after each other. The second mode is passive
+replay. In this mode, LLDB sits idle until an SB API function is called, for
+example from Python, and then replays just this individual call.
+
+Active Replay
+^^^^^^^^^^^^^
+
+No matter how a reproducer was captured, they can always be replayed with the
+command line driver. When a reproducer is passed with the `--replay` flag, the
+driver short-circuits and passes off control to the reproducer infrastructure,
+effectively bypassing its normal operation. This works because the driver is
+implemented using the SB API and is therefore nothing more than a sequence of
+SB API calls.
+
+Replay is driven by the ``Registry::Replay``. As long as there's data in the
+buffer holding the API data, the next SB API function call is deserialized.
+Once the function is known, the registry can retrieve its signature, and use
+that to deserialize its arguments. The function can then be invoked, most
+commonly through the synthesized default replayer, or potentially using a
+custom defined replay function. This process continues, until more data is
+available or a replay error is encountered.
+
+During replay only a function's side effects matter. The result returned by the
+replayed function is ignored because it cannot be observed beyond the driver.
+This is sound, because anything that is passed into a subsequent API call will
+have been serialized as an input argument. This also works for SB API objects
+because the reproducers know about every object that has crossed the API
+boundary, which is true by definition for object return values.
+
+
+Passive Replay
+^^^^^^^^^^^^^^
+
+Passive replay exists to support running the API test suite against a
+reproducer. The API test suite is written in Python and tests the debugger by
+calling into its API from Python. To make this work, the API must transparently
+replay itself when called. This is what makes passive replay different from
+driver replay, where it is lldb itself that's driving replay. For passive
+replay, the driving factor is external.
+
+In order to replay API calls, the reproducers need a way to intercept them.
+Every API call is already instrumented with an ``LLDB_RECORD_*`` macro that
+captures its input arguments. Furthermore, it also contains the necessary logic
+to detect which calls cross the API boundary and should be intercepted. We were
+able to reuse all of this to implement passive replay.
+
+During passive replay is enabled, nothing happens until an SB API is called.
+Inside that API function, the macro detects whether this call should be
+replayed (i.e. crossed the API boundary). If the answer is yes, the next
+function is deserialized from the SB API data and compared to the current
+function. If the signature matches, we deserialize its input arguments and
+reinvoke the current function with the deserialized arguments. We don't need to
+do anything special to prevent us from recursively calling the replayed version
+again, as the API boundary crossing logic knows that we're still behind the API
+boundary when we re-invoked the current function.
+
+Another big difference with driver replay is the return value. While this
+didn't matter for driver replay, it's key for passive replay, because that's
+what gets checked by the test suite. Luckily, the ``LLDB_RECORD_*`` macros
+contained sufficient type information to derive the result type.
 
 Testing
 -------
 
 Reproducers are tested in the following ways:
 
- - Unit tests to cover the generic reproducer infrastructure.
- - Focused test cases in the ``test/Shell/Reproducer`` directory. These tests
-   serve as integration tests for the reproducers infrastructure, as well as
-   doing some sanity checking for basic debugger functionality.
-
-Additional testing is possible:
-
- - It's possible to unconditionally capture reproducers while running the
-   entire test suite by setting the ``LLDB_CAPTURE_REPRODUCER`` environment
-   variable. Assuming the reproducers behave correctly, this can also help to
-   reproduce test failures.
- - It's possible to run the shell tests from a reproducer replay. The
+ - Unit tests to cover the reproducer infrastructure. There are tests for the
+   provider, loader and for the reproducer instrumentation.
+ - Feature specific end-to-end test cases in the ``test/Shell/Reproducer``
+   directory. These tests serve as integration and regression tests for the
+   reproducers infrastructure, as well as doing some sanity checking for basic
+   debugger functionality.
+ - The shell tests can be run against a reproducer replay. The
    ``check-lldb-repro`` target will run the shell test suite twice. First it
    runs the test suite and captures a reproducer for every lldb invocation and
    saves it to a known location based off lldb's arguments and  working
    directory. Then it runs the test suite again, this time replaying the
    reproducers. Certain tests do not fit this paradigm (for example test that
-   check the output of the binary being debugged) and can be skipped by setting
-   ``UNSUPPORTED: lldb-repro`` at the top of the test.
+   check the output of the binary being debugged) and are skipped by marking
+   them as unsupported by adding ``UNSUPPORTED: lldb-repro`` to the top of the
+   test.
+
+Additional testing is possible:
+
+ - It's possible to unconditionally capture reproducers while running the
+   entire test suite by setting the ``LLDB_CAPTURE_REPRODUCER`` environment
+   variable. Assuming no bugs in reproducers, this can also help to reproduce
+   and investigate test failures.
 
 Knows Issues
 ------------

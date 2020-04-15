@@ -17,7 +17,6 @@
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/Functional.h"
 
 using namespace mlir;
 
@@ -131,11 +130,10 @@ void spirv::BitcastOp::getCanonicalizationPatterns(
 
 OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1 && "spv.CompositeExtract expects one operand");
-  auto indexVector = functional::map(
-      [](Attribute attr) {
+  auto indexVector =
+      llvm::to_vector<8>(llvm::map_range(indices(), [](Attribute attr) {
         return static_cast<unsigned>(attr.cast<IntegerAttr>().getInt());
-      },
-      indices());
+      }));
   return extractCompositeElement(operands[0], indexVector);
 }
 

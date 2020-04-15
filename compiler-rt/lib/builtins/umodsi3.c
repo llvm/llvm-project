@@ -12,8 +12,12 @@
 
 #include "int_lib.h"
 
+typedef su_int fixuint_t;
+typedef si_int fixint_t;
+#include "int_div_impl.inc"
+
 // Returns: a % b
 
 COMPILER_RT_ABI su_int __umodsi3(su_int a, su_int b) {
-  return a - __udivsi3(a, b) * b;
+  return __umodXi3(a, b);
 }

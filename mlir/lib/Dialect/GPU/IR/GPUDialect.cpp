@@ -44,7 +44,7 @@ GPUDialect::GPUDialect(MLIRContext *context)
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
   if (!attr.second.isa<UnitAttr>() ||
-      !attr.first.is(getContainerModuleAttrName()))
+      attr.first != getContainerModuleAttrName())
     return success();
 
   auto module = dyn_cast<ModuleOp>(op);
@@ -610,8 +610,8 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
     return;
 
   p << ' ' << keyword << '(';
-  interleaveComma(values, p,
-                  [&p](BlockArgument v) { p << v << " : " << v.getType(); });
+  llvm::interleaveComma(
+      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
   p << ')';
 }
 

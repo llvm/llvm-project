@@ -1215,6 +1215,9 @@ void test() {
     |   `-}
     `-}
        )txt");
+}
+
+TEST_F(SyntaxTreeTest, ModifiableNodes) {
   // All nodes can be mutated.
   expectTreeDumpEqual(
       R"cpp(

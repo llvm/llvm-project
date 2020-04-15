@@ -970,7 +970,8 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                      .Cases("y", "&y", "^Ym", true)
                      .Default(false);
   if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getBitWidth() != 64) {
+    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedSize() !=
+        64) {
       // Invalid MMX constraint
       return nullptr;
     }
@@ -2260,7 +2261,7 @@ public:
     if (info.isDirect()) {
       llvm::Type *ty = info.getCoerceToType();
       if (llvm::VectorType *vectorTy = dyn_cast_or_null<llvm::VectorType>(ty))
-        return (vectorTy->getBitWidth() > 128);
+        return vectorTy->getPrimitiveSizeInBits().getFixedSize() > 128;
     }
     return false;
   }
@@ -3054,7 +3055,7 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
     // Don't pass vXi128 vectors in their native type, the backend can't
     // legalize them.
     if (passInt128VectorsInMem() &&
-        IRType->getVectorElementType()->isIntegerTy(128)) {
+        cast<llvm::VectorType>(IRType)->getElementType()->isIntegerTy(128)) {
       // Use a vXi64 vector.
       uint64_t Size = getContext().getTypeSize(Ty);
       return llvm::VectorType::get(llvm::Type::getInt64Ty(getVMContext()),
@@ -8407,23 +8408,13 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
          (isa<VarDecl>(D) &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-           D->hasAttr<HIPPinnedShadowAttr>()));
-}
-
-static bool requiresAMDGPUDefaultVisibility(const Decl *D,
-                                            llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return isa<VarDecl>(D) && D->hasAttr<HIPPinnedShadowAttr>();
+           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType()));
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUDefaultVisibility(D, GV)) {
-    GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    GV->setDSOLocal(false);
-  } else if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }

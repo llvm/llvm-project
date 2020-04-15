@@ -59,8 +59,7 @@ binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
   using CheckerOrPackage = typename CheckerOrPackageInfoList::value_type;
   using CheckerOrPackageFullNameLT = FullNameLT<CheckerOrPackage>;
 
-  assert(std::is_sorted(Collection.begin(), Collection.end(),
-                        CheckerOrPackageFullNameLT{}) &&
+  assert(llvm::is_sorted(Collection, CheckerOrPackageFullNameLT{}) &&
          "In order to efficiently gather checkers/packages, this function "
          "expects them to be already sorted!");
 

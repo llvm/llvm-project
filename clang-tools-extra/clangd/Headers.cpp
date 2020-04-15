@@ -227,7 +227,7 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Inclusion &Inc) {
   return OS << Inc.Written << " = "
-            << (Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]") << " at "
+            << (!Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]") << " at "
             << Inc.R;
 }
 

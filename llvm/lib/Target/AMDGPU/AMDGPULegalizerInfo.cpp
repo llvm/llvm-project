@@ -1066,9 +1066,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
           LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1, S32})
     .clampScalar(0, S16, S64)
+    .scalarize(1)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf(numElementsNotEven(0), scalarize(0))
-    .scalarize(1)
     .clampMaxNumElements(0, S32, 2)
     .clampMaxNumElements(0, LocalPtr, 2)
     .clampMaxNumElements(0, PrivatePtr, 2)
@@ -1082,12 +1082,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{S32, S32}, {S64, S32}});
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts()) {
-      Shifts.legalFor({{S16, S32}, {S16, S16}, {V2S16, V2S16}})
+      Shifts.legalFor({{S16, S16}, {V2S16, V2S16}})
             .clampMaxNumElements(0, S16, 2);
     } else
-      Shifts.legalFor({{S16, S32}, {S16, S16}});
+      Shifts.legalFor({{S16, S16}});
 
-    // TODO: Support 16-bit shift amounts
+    // TODO: Support 16-bit shift amounts for all types
+    Shifts.widenScalarIf(
+      [=](const LegalityQuery &Query) {
+        // Use 16-bit shift amounts for any 16-bit shift. Otherwise we want a
+        // 32-bit amount.
+        const LLT ValTy = Query.Types[0];
+        const LLT AmountTy = Query.Types[1];
+        return ValTy.getSizeInBits() <= 16 &&
+               AmountTy.getSizeInBits() < 16;
+      }, changeTo(1, S16));
+    Shifts.maxScalarIf(typeIs(0, S16), 1, S16);
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
@@ -2895,15 +2905,15 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   auto DenominatorScaled =
     B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S32, S1}, false)
-      .addUse(RHS)
       .addUse(LHS)
-      .addImm(1)
+      .addUse(RHS)
+      .addImm(0)
       .setMIFlags(Flags);
   auto NumeratorScaled =
     B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S32, S1}, false)
       .addUse(LHS)
       .addUse(RHS)
-      .addImm(0)
+      .addImm(1)
       .setMIFlags(Flags);
 
   auto ApproxRcp = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {S32}, false)
@@ -2961,7 +2971,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
   auto DivScale0 = B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S64, S1}, false)
     .addUse(LHS)
     .addUse(RHS)
-    .addImm(1)
+    .addImm(0)
     .setMIFlags(Flags);
 
   auto NegDivScale0 = B.buildFNeg(S64, DivScale0.getReg(0), Flags);
@@ -2977,7 +2987,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
   auto DivScale1 = B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S64, S1}, false)
     .addUse(LHS)
     .addUse(RHS)
-    .addImm(0)
+    .addImm(1)
     .setMIFlags(Flags);
 
   auto Fma3 = B.buildFMA(S64, Fma1, Fma2, Fma1, Flags);

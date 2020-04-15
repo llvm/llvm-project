@@ -88,7 +88,20 @@ public:
     relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
   }
 
+  virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
+                                 JumpModType val) const {}
+
   virtual ~TargetInfo();
+
+  // This deletes a jump insn at the end of the section if it is a fall thru to
+  // the next section.  Further, if there is a conditional jump and a direct
+  // jump consecutively, it tries to flip the conditional jump to convert the
+  // direct jump into a fall thru and delete it.  Returns true if a jump
+  // instruction can be deleted.
+  virtual bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+                                     InputSection *nextIS) const {
+    return false;
+  }
 
   unsigned defaultCommonPageSize = 4096;
   unsigned defaultMaxPageSize = 4096;
@@ -125,6 +138,10 @@ public:
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
   std::array<uint8_t, 4> trapInstr;
+
+  // Stores the NOP instructions of different sizes for the target and is used
+  // to pad sections that are relaxed.
+  llvm::Optional<std::vector<std::vector<uint8_t>>> nopInstrs;
 
   // If a target needs to rewrite calls to __morestack to instead call
   // __morestack_non_split when a split-stack enabled caller calls a

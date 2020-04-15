@@ -253,10 +253,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     ExtraOpts.push_back("relro");
   }
 
-  // The lld default page size is too large for Aarch64, which produces much
-  // larger .so files and images for arm64 device targets. Use 4KB page size
-  // for Android arm64 targets instead.
-  if (Triple.isAArch64() && Triple.isAndroid()) {
+  // Android ARM/AArch64 use max-page-size=4096 to reduce VMA usage. Note, lld
+  // from 11 onwards default max-page-size to 65536 for both ARM and AArch64.
+  if ((Triple.isARM() || Triple.isAArch64()) && Triple.isAndroid()) {
     ExtraOpts.push_back("-z");
     ExtraOpts.push_back("max-page-size=4096");
   }
@@ -989,10 +988,10 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 
-llvm::DenormalMode Linux::getDefaultDenormalModeForType(
-  const llvm::opt::ArgList &DriverArgs,
-  Action::OffloadKind DeviceOffloadKind,
-  const llvm::fltSemantics *FPType) const {
+llvm::DenormalMode
+Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
+                                     const JobAction &JA,
+                                     const llvm::fltSemantics *FPType) const {
   switch (getTriple().getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {

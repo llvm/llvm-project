@@ -15,18 +15,17 @@
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
 #include "llvm/BinaryFormat/XCOFF.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 
 class GlobalValue;
 class MachineModuleInfo;
-class Mangler;
 class MCContext;
+class MCExpr;
 class MCSection;
 class MCSymbol;
+class Module;
 class TargetMachine;
 
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
@@ -69,10 +68,6 @@ public:
   getSectionForMachineBasicBlock(const Function &F,
                                  const MachineBasicBlock &MBB,
                                  const TargetMachine &TM) const override;
-
-  MCSection *getNamedSectionForMachineBasicBlock(
-      const Function &F, const MachineBasicBlock &MBB, const TargetMachine &TM,
-      const char *Suffix) const override;
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;

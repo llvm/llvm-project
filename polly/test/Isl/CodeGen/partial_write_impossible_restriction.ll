@@ -50,10 +50,10 @@ if.then.i.i1141.loopexit:                         ; preds = %cond.end
 
 ; CHECK-LABEL: polly.stmt.cond.false:
 ; CHECK:         %polly.access..pn2 = getelementptr i32, i32* %.pn, i64 %polly.indvar
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn2, !alias.scope !0, !noalias !2
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn2, align 4, !alias.scope !0, !noalias !2
 ; CHECK:         br label %polly.merge
 
 ; CHECK-LABEL: polly.stmt.cond.false11:
 ; CHECK:         %polly.access..pn14 = getelementptr i32, i32* %.pn, i64 0
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_13, i32* %polly.access..pn14, !alias.scope !0, !noalias !2
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_13, i32* %polly.access..pn14, align 4, !alias.scope !0, !noalias !2
 ; CHECK:         br label %polly.stmt.cond.end15

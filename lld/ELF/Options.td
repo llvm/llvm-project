@@ -42,6 +42,10 @@ defm compress_debug_sections:
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
+defm optimize_bb_jumps: B<"optimize-bb-jumps",
+    "Remove direct jumps at the end to the next basic block",
+    "Do not remove any direct jumps at the end to the next basic block (default)">;
+
 defm split_stack_adjust_size
     : Eq<"split-stack-adjust-size",
          "Specify adjustment to stack size when a split-stack function calls a "
@@ -502,6 +506,11 @@ def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
 defm plugin_opt: Eq<"plugin-opt", "specifies LTO options for compatibility with GNU linkers">;
 def save_temps: F<"save-temps">;
+def lto_basicblock_sections: J<"lto-basicblock-sections=">,
+  HelpText<"Enable basic block sections for LTO">;
+defm lto_unique_bb_section_names: B<"lto-unique-bb-section-names",
+    "Give unique names to every basic block section for LTO",
+    "Do not give unique names to every basic block section for LTO (default)">;
 def shuffle_sections: J<"shuffle-sections=">, MetaVarName<"<seed>">,
   HelpText<"Shuffle input sections using the given seed. If 0, use a random seed">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,

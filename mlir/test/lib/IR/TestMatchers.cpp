@@ -15,7 +15,7 @@ using namespace mlir;
 
 namespace {
 /// This is a test pass for verifying matchers.
-struct TestMatchers : public FunctionPass<TestMatchers> {
+struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace

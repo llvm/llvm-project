@@ -42,7 +42,7 @@ class TestDSYMSourcePathRemapping(lldbtest.TestBase):
             f.write('<dict>\n')
             f.write('  <key>DBGSourcePathRemapping</key>\n')
             f.write('  <dict>\n')
-            f.write('    <key>' + botdir + '</key>\n')
+            f.write('    <key>' + os.path.realpath(botdir) + '</key>\n')
             f.write('    <string>' + userdir + '</string>\n')
             f.write('  </dict>\n')
             f.write('</dict>\n')

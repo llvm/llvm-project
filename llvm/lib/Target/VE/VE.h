@@ -94,5 +94,8 @@ inline static const char *VECondCodeToString(VECC::CondCode CC) {
   llvm_unreachable("Invalid cond code");
 }
 
+inline unsigned M0(unsigned Val) { return Val + 64; }
+inline unsigned M1(unsigned Val) { return Val; }
+
 } // namespace llvm
 #endif

@@ -8,7 +8,6 @@ static_library("Analysis") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/IR",
-    "//llvm/lib/Object",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
   ]
@@ -49,6 +48,7 @@ static_library("Analysis") {
     "EHPersonalities.cpp",
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
+    "HeatUtils.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
     "IndirectCallPromotionAnalysis.cpp",

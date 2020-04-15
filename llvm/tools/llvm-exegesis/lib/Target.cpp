@@ -107,8 +107,8 @@ const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
                                                   0u};
 
 const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
-  assert(std::is_sorted(
-             CpuPfmCounters.begin(), CpuPfmCounters.end(),
+  assert(llvm::is_sorted(
+             CpuPfmCounters,
              [](const CpuAndPfmCounters &LHS, const CpuAndPfmCounters &RHS) {
                return strcmp(LHS.CpuName, RHS.CpuName) < 0;
              }) &&

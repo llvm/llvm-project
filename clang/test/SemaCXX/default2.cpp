@@ -130,5 +130,8 @@ template <int I1 = I2, int I2 = 1> struct T {};  // expected-error-re {{use of u
 T<0, 1> t;
 
 struct PR28105 {
-  PR28105 (int = 0, int = 0, PR28105 = 0);  // expected-error{{recursive evaluation of default argument}}
+  PR28105 (int = 0, int = 0,
+      PR28105  // expected-error{{recursive evaluation of default argument}}
+      =
+      0); // expected-note {{default argument used here}}
 };

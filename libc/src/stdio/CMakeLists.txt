@@ -1,0 +1,10 @@
+add_entrypoint_object(
+  fwrite
+  SRCS
+    fwrite.cpp
+  HDRS
+    fwrite.h
+  DEPENDS
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+)

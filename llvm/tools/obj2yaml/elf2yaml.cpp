@@ -317,7 +317,11 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     PH.Flags = Phdr.p_flags;
     PH.VAddr = Phdr.p_vaddr;
     PH.PAddr = Phdr.p_paddr;
-    PH.Align = static_cast<llvm::yaml::Hex64>(Phdr.p_align);
+
+    // yaml2obj sets the alignment of a segment to 1 by default.
+    // We do not print the default alignment to reduce noise in the output.
+    if (Phdr.p_align != 1)
+      PH.Align = static_cast<llvm::yaml::Hex64>(Phdr.p_align);
 
     // Here we match sections with segments.
     // It is not possible to have a non-Section chunk, because

@@ -878,8 +878,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
 
   if (CInfo.Kind == BPFPreserveFieldInfoAI) {
     // Load the global variable which represents the returned field info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV);
-    BB->getInstList().insert(Call->getIterator(), LDInst);
+    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
+                                Call);
     Call->replaceAllUsesWith(LDInst);
     Call->eraseFromParent();
     return true;
@@ -896,8 +896,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV);
-  BB->getInstList().insert(Call->getIterator(), LDInst);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
 
   // Generate a BitCast
   auto *BCInst = new BitCastInst(Base, Type::getInt8PtrTy(BB->getContext()));

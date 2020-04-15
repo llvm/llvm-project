@@ -27,6 +27,7 @@
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -170,7 +171,7 @@ template <> struct ArgTypeTraits<CastKind> {
 private:
   static Optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
     return llvm::StringSwitch<Optional<CastKind>>(AttrKind)
-#define CAST_OPERATION(Name) .Case( #Name, CK_##Name)
+#define CAST_OPERATION(Name) .Case("CK_" #Name, CK_##Name)
 #include "clang/AST/OperationKinds.def"
         .Default(llvm::None);
   }
@@ -207,6 +208,35 @@ public:
 
   static OpenMPClauseKind get(const VariantValue &Value) {
     return *getClauseKind(Value.getString());
+  }
+
+  static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+};
+
+template <> struct ArgTypeTraits<UnaryExprOrTypeTrait> {
+private:
+  static Optional<UnaryExprOrTypeTrait>
+  getUnaryOrTypeTraitKind(llvm::StringRef ClauseKind) {
+    // FIXME: Type traits should probably be in a `.def` to make less error
+    // prone.
+    return llvm::StringSwitch<Optional<UnaryExprOrTypeTrait>>(ClauseKind)
+        .Case("UETT_SizeOf", UETT_SizeOf)
+        .Case("UETT_AlignOf", UETT_AlignOf)
+        .Case("UETT_VecStep", UETT_VecStep)
+        .Case("UETT_OpenMPRequiredSimdAlign", UETT_OpenMPRequiredSimdAlign)
+        .Case("UETT_PreferredAlignOf", UETT_PreferredAlignOf)
+        .Default(llvm::None);
+  }
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() && getUnaryOrTypeTraitKind(Value.getString());
+  }
+
+  static UnaryExprOrTypeTrait get(const VariantValue &Value) {
+    return *getUnaryOrTypeTraitKind(Value.getString());
   }
 
   static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }

@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Utils.h"
 
 #define DEBUG_TYPE "simplify-affine-structure"
@@ -27,11 +27,7 @@ namespace {
 /// all memrefs with non-trivial layout maps are converted to ones with trivial
 /// identity layout ones.
 struct SimplifyAffineStructures
-    : public FunctionPass<SimplifyAffineStructures> {
-/// Include the generated pass utilities.
-#define GEN_PASS_SimplifyAffineStructures
-#include "mlir/Dialect/Affine/Passes.h.inc"
-
+    : public SimplifyAffineStructuresBase<SimplifyAffineStructures> {
   void runOnFunction() override;
 
   /// Utility to simplify an affine attribute and update its entry in the parent
@@ -73,7 +69,8 @@ struct SimplifyAffineStructures
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createSimplifyAffineStructuresPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createSimplifyAffineStructuresPass() {
   return std::make_unique<SimplifyAffineStructures>();
 }
 

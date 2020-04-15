@@ -236,3 +236,53 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.EntryPoint "GLCompute" @fmul_kernel, @__builtin_var_WorkgroupId__, @__builtin_var_NumWorkgroups__
   spv.ExecutionMode @fmul_kernel "LocalSize", 32, 1, 1
 }
+
+// -----
+
+// Test back-to-back loops with block arguments
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  spv.func @fmul_kernel() "None" {
+    %cst4 = spv.constant 4 : i32
+
+    %val1 = spv.constant 43 : i32
+    %val2 = spv.constant 44 : i32
+
+// CHECK:        spv.constant 43
+// CHECK-NEXT:   spv.Branch ^[[BB1:.+]](%{{.+}} : i32)
+// CHECK-NEXT: ^[[BB1]](%{{.+}}: i32):
+// CHECK-NEXT:   spv.loop
+    spv.loop { // loop 1
+      spv.Branch ^bb1(%val1 : i32)
+    ^bb1(%loop1_bb_arg: i32):
+      %loop1_lt = spv.SLessThan %loop1_bb_arg, %cst4 : i32
+      spv.BranchConditional %loop1_lt, ^bb2, ^bb3
+    ^bb2:
+      %loop1_add = spv.IAdd %loop1_bb_arg, %cst4 : i32
+      spv.Branch ^bb1(%loop1_add : i32)
+    ^bb3:
+      spv._merge
+    }
+
+// CHECK:        spv.constant 44
+// CHECK-NEXT:   spv.Branch ^[[BB2:.+]](%{{.+}} : i32)
+// CHECK-NEXT: ^[[BB2]](%{{.+}}: i32):
+// CHECK-NEXT:   spv.loop
+    spv.loop { // loop 2
+      spv.Branch ^bb1(%val2 : i32)
+    ^bb1(%loop2_bb_arg: i32):
+      %loop2_lt = spv.SLessThan %loop2_bb_arg, %cst4 : i32
+      spv.BranchConditional %loop2_lt, ^bb2, ^bb3
+    ^bb2:
+      %loop2_add = spv.IAdd %loop2_bb_arg, %cst4 : i32
+      spv.Branch ^bb1(%loop2_add : i32)
+    ^bb3:
+      spv._merge
+    }
+
+    spv.Return
+  }
+
+  spv.EntryPoint "GLCompute" @fmul_kernel
+  spv.ExecutionMode @fmul_kernel "LocalSize", 32, 1, 1
+}

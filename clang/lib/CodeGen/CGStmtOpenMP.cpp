@@ -3400,9 +3400,11 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
   Data.Reductions = CGM.getOpenMPRuntime().emitTaskReductionInit(
       *this, S.getBeginLoc(), LHSs, RHSs, Data);
   // Build list of dependences.
-  for (const auto *C : S.getClausesOfKind<OMPDependClause>())
-    for (const Expr *IRef : C->varlists())
-      Data.Dependences.emplace_back(C->getDependencyKind(), IRef);
+  for (const auto *C : S.getClausesOfKind<OMPDependClause>()) {
+    OMPTaskDataTy::DependData &DD =
+        Data.Dependences.emplace_back(C->getDependencyKind(), C->getModifier());
+    DD.DepExprs.append(C->varlist_begin(), C->varlist_end());
+  }
   auto &&CodeGen = [&Data, &S, CS, &BodyGen, &LastprivateDstsOrigs,
                     CapturedRegion](CodeGenFunction &CGF,
                                     PrePostActionTy &Action) {
@@ -3655,9 +3657,11 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
   }
   (void)TargetScope.Privatize();
   // Build list of dependences.
-  for (const auto *C : S.getClausesOfKind<OMPDependClause>())
-    for (const Expr *IRef : C->varlists())
-      Data.Dependences.emplace_back(C->getDependencyKind(), IRef);
+  for (const auto *C : S.getClausesOfKind<OMPDependClause>()) {
+    OMPTaskDataTy::DependData &DD =
+        Data.Dependences.emplace_back(C->getDependencyKind(), C->getModifier());
+    DD.DepExprs.append(C->varlist_begin(), C->varlist_end());
+  }
   auto &&CodeGen = [&Data, &S, CS, &BodyGen, BPVD, PVD, SVD,
                     &InputInfo](CodeGenFunction &CGF, PrePostActionTy &Action) {
     // Set proper addresses for generated private copies.
@@ -3820,12 +3824,11 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
   const auto *DO = S.getSingleClause<OMPDepobjClause>();
   LValue DOLVal = EmitLValue(DO->getDepobj());
   if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
-    SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4>
-        Dependencies;
-    for (const Expr *IRef : DC->varlists())
-      Dependencies.emplace_back(DC->getDependencyKind(), IRef);
-    Address DepAddr = CGM.getOpenMPRuntime().emitDependClause(
-        *this, Dependencies, /*ForDepobj=*/true, DC->getBeginLoc()).second;
+    OMPTaskDataTy::DependData Dependencies(DC->getDependencyKind(),
+                                           DC->getModifier());
+    Dependencies.DepExprs.append(DC->varlist_begin(), DC->varlist_end());
+    Address DepAddr = CGM.getOpenMPRuntime().emitDepobjDependClause(
+        *this, Dependencies, DC->getBeginLoc());
     EmitStoreOfScalar(DepAddr.getPointer(), DOLVal);
     return;
   }

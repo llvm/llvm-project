@@ -18,12 +18,12 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
+#include "../PassDetail.h"
 
 using namespace mlir;
 
@@ -138,9 +138,9 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
     // not specific to function modeling.
     SmallVector<NamedAttribute, 4> attributes;
     for (const auto &attr : gpuFuncOp.getAttrs()) {
-      if (attr.first.is(SymbolTable::getSymbolAttrName()) ||
-          attr.first.is(impl::getTypeAttrName()) ||
-          attr.first.is(gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName()))
+      if (attr.first == SymbolTable::getSymbolAttrName() ||
+          attr.first == impl::getTypeAttrName() ||
+          attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
         continue;
       attributes.push_back(attr);
     }
@@ -246,12 +246,8 @@ struct GPUReturnOpLowering : public ConvertToLLVMPattern {
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
 class LowerGpuOpsToNVVMOpsPass
-    : public OperationPass<LowerGpuOpsToNVVMOpsPass, gpu::GPUModuleOp> {
+    : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
 public:
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertGpuOpsToNVVMOps
-#include "mlir/Conversion/Passes.h.inc"
-
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
@@ -272,7 +268,7 @@ public:
     // which need to be lowered further, which is not supported by a single
     // conversion pass.
     populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsGreedily(m, patterns);
+    applyPatternsAndFoldGreedily(m, patterns);
     patterns.clear();
 
     populateStdToLLVMConversionPatterns(converter, patterns);
@@ -324,7 +320,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                 "__nv_tanh");
 }
 
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 mlir::createLowerGpuOpsToNVVMOpsPass() {
   return std::make_unique<LowerGpuOpsToNVVMOpsPass>();
 }

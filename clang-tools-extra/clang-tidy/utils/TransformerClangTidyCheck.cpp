@@ -73,16 +73,15 @@ void TransformerClangTidyCheck::check(
 
   assert(Rule && "check() should not fire if Rule is None");
   RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, *Rule);
-  Expected<SmallVector<transformer::detail::Transformation, 1>>
-      Transformations = transformer::detail::translateEdits(Result, Case.Edits);
-  if (!Transformations) {
-    llvm::errs() << "Rewrite failed: "
-                 << llvm::toString(Transformations.takeError()) << "\n";
+  Expected<SmallVector<transformer::Edit, 1>> Edits = Case.Edits(Result);
+  if (!Edits) {
+    llvm::errs() << "Rewrite failed: " << llvm::toString(Edits.takeError())
+                 << "\n";
     return;
   }
 
   // No rewrite applied, but no error encountered either.
-  if (Transformations->empty())
+  if (Edits->empty())
     return;
 
   Expected<std::string> Explanation = Case.Explanation->eval(Result);
@@ -93,9 +92,8 @@ void TransformerClangTidyCheck::check(
   }
 
   // Associate the diagnostic with the location of the first change.
-  DiagnosticBuilder Diag =
-      diag((*Transformations)[0].Range.getBegin(), *Explanation);
-  for (const auto &T : *Transformations)
+  DiagnosticBuilder Diag = diag((*Edits)[0].Range.getBegin(), *Explanation);
+  for (const auto &T : *Edits)
     Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
 
   for (const auto &I : Case.AddedIncludes) {

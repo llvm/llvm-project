@@ -56,21 +56,23 @@ int g(int) { return 0; }
 
 int main(int, char**)
 {
-    assert(globalMemCounter.checkOutstandingNewEq(0));
-    {
-        std::function<int(int)> f = A();
-        assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert(f.target<A>());
-        assert(f.target<int(*)(int)>() == 0);
-        std::function<int(int)> f2(std::allocator_arg, bare_allocator<A>(), std::move(f));
-        assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert(f2.target<A>());
-        assert(f2.target<int(*)(int)>() == 0);
-        assert(f.target<A>() == 0);
-        assert(f.target<int(*)(int)>() == 0);
-    }
+  globalMemCounter.reset();
+  assert(globalMemCounter.checkOutstandingNewEq(0));
+  {
+    std::function<int(int)> f = A();
+    assert(A::count == 1);
+    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(f.target<A>());
+    assert(f.target<int (*)(int)>() == 0);
+    std::function<int(int)> f2(std::allocator_arg, bare_allocator<A>(),
+                               std::move(f));
+    assert(A::count == 1);
+    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(f2.target<A>());
+    assert(f2.target<int (*)(int)>() == 0);
+    assert(f.target<A>() == 0);
+    assert(f.target<int (*)(int)>() == 0);
+  }
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
         // Test that moving a function constructed from a reference wrapper

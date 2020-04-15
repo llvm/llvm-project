@@ -33,7 +33,7 @@ define i32 @masked_load() {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1148 for instruction: %V64I8 = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* undef, i32 1, <64 x i1> undef, <64 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 574 for instruction: %V32I8 = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* undef, i32 1, <32 x i1> undef, <32 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 287 for instruction: %V16I8 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 143 for instruction: %V8I8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SSE42-LABEL: 'masked_load'
@@ -371,7 +371,7 @@ define i32 @masked_gather() {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 960 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 240 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SSE42-LABEL: 'masked_gather'
@@ -763,7 +763,7 @@ define i32 @masked_expandload() {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 960 for instruction: %V64I8 = call <64 x i8> @llvm.masked.expandload.v64i8(i8* undef, <64 x i1> undef, <64 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V32I8 = call <32 x i8> @llvm.masked.expandload.v32i8(i8* undef, <32 x i1> undef, <32 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 240 for instruction: %V16I8 = call <16 x i8> @llvm.masked.expandload.v16i8(i8* undef, <16 x i1> undef, <16 x i8> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %V8I8 = call <8 x i8> @llvm.masked.expandload.v8i8(i8* undef, <8 x i1> undef, <8 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V8I8 = call <8 x i8> @llvm.masked.expandload.v8i8(i8* undef, <8 x i1> undef, <8 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SSE42-LABEL: 'masked_expandload'

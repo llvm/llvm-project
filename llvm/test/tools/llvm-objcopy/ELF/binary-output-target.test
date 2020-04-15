@@ -30,11 +30,15 @@
 # RUN: llvm-objcopy -I binary -O elf32-sparcel %t.txt %t.sparcel.o
 # RUN: llvm-readobj --file-headers %t.sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32
 
+# RUN: llvm-objcopy -I binary -O elf32-hexagon %t.txt %t.hexagon.o
+# RUN: llvm-readobj --file-headers %t.hexagon.o | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32
+
 # CHECK: Format:
 # 32-SAME:      elf32-
 # 64-SAME:      elf64-
 # AARCH64-SAME: littleaarch64
 # ARM-SAME:     littlearm
+# HEXAGON-SAME: hexagon
 # I386-SAME:    i386
 # MIPS-SAME:    mips{{$}}
 # RISCV32-SAME: riscv{{$}}
@@ -47,6 +51,7 @@
 
 # AARCH64-NEXT: Arch: aarch64
 # ARM-NEXT:     Arch: arm
+# HEXAGON-NEXT: Arch: hexagon
 # I386-NEXT:    Arch: i386
 # MIPS-NEXT:    Arch: mips{{$}}
 # PPC-NEXT:     Arch: powerpc{{$}}
@@ -79,6 +84,7 @@
 ## We fill in the field regardless of -B.
 # AARCH64-NEXT:   Machine: EM_AARCH64 (0xB7)
 # ARM-NEXT:       Machine: EM_ARM (0x28)
+# HEXAGON-NEXT:   Machine: EM_HEXAGON (0xA4)
 # I386-NEXT:      Machine: EM_386 (0x3)
 # MIPS-NEXT:      Machine: EM_MIPS (0x8)
 # PPC-NEXT:       Machine: EM_PPC (0x14)

@@ -91,7 +91,6 @@ def parse_args():
             action="append",
             default=[])
     execution_group.add_argument("--time-tests",
-            dest="timeTests",
             help="Track elapsed wall time for each test",
             action="store_true")
     execution_group.add_argument("--no-execute",
@@ -152,12 +151,10 @@ def parse_args():
             help="Enable debugging (for 'lit' development)",
             action="store_true")
     debug_group.add_argument("--show-suites",
-            dest="showSuites",
-            help="Show discovered test suites",
+            help="Show discovered test suites and exit",
             action="store_true")
     debug_group.add_argument("--show-tests",
-            dest="showTests",
-            help="Show all discovered tests",
+            help="Show all discovered tests and exit",
             action="store_true")
 
     # LIT is special: environment variables override command line arguments.

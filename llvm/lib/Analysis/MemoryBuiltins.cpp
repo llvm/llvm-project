@@ -650,7 +650,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
     return unknown();
 
   if (I.getAllocatedType()->isVectorTy() &&
-      I.getAllocatedType()->getVectorIsScalable())
+      cast<VectorType>(I.getAllocatedType())->isScalable())
     return unknown();
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));

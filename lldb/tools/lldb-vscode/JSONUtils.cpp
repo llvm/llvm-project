@@ -8,7 +8,10 @@
 
 #include <algorithm>
 
+#include "llvm/ADT/Optional.h"
+
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/Path.h"
 
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
@@ -281,7 +284,9 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   },
 //   "required": [ "verified" ]
 // }
-llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp) {
+llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
+                                   llvm::Optional<llvm::StringRef> request_path,
+                                   llvm::Optional<uint32_t> request_line) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
@@ -300,7 +305,7 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp) {
   // that is at least loaded in the current process.
   lldb::SBBreakpointLocation bp_loc;
   const auto num_locs = bp.GetNumLocations();
-  for (size_t i=0; i<num_locs; ++i) {
+  for (size_t i = 0; i < num_locs; ++i) {
     bp_loc = bp.GetLocationAtIndex(i);
     if (bp_loc.IsResolved())
       break;
@@ -309,6 +314,10 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp) {
   if (!bp_loc.IsResolved())
     bp_loc = bp.GetLocationAtIndex(0);
   auto bp_addr = bp_loc.GetAddress();
+
+  if (request_path)
+    object.try_emplace("source", CreateSource(*request_path));
+
   if (bp_addr.IsValid()) {
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();
@@ -316,11 +325,16 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp) {
       object.try_emplace("line", line);
     object.try_emplace("source", CreateSource(line_entry));
   }
+  // We try to add request_line as a fallback
+  if (request_line)
+    object.try_emplace("line", *request_line);
   return llvm::json::Value(std::move(object));
 }
 
-void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints) {
-  breakpoints.emplace_back(CreateBreakpoint(bp));
+void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
+                      llvm::Optional<llvm::StringRef> request_path,
+                      llvm::Optional<uint32_t> request_line) {
+  breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
 }
 
 // "Event": {
@@ -479,6 +493,14 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
     }
   }
   return llvm::json::Value(std::move(object));
+}
+
+llvm::json::Value CreateSource(llvm::StringRef source_path) {
+  llvm::json::Object source;
+  llvm::StringRef name = llvm::sys::path::filename(source_path);
+  EmplaceSafeString(source, "name", name);
+  EmplaceSafeString(source, "path", source_path);
+  return llvm::json::Value(std::move(source));
 }
 
 llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {

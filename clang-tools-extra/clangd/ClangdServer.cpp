@@ -214,8 +214,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
                this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
-    if (isCancelled())
-      return CB(llvm::make_error<CancelledError>());
+    if (auto Reason = isCancelled())
+      return CB(llvm::make_error<CancelledError>(Reason));
 
     llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
     if (!IP->Preamble) {
@@ -703,9 +703,8 @@ void ClangdServer::semanticHighlights(
                            TUScheduler::InvalidateOnUpdate);
 }
 
-std::vector<std::pair<Path, std::size_t>>
-ClangdServer::getUsedBytesPerFile() const {
-  return WorkScheduler.getUsedBytesPerFile();
+llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
+  return WorkScheduler.fileStats();
 }
 
 LLVM_NODISCARD bool

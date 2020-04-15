@@ -13,13 +13,14 @@
 using namespace mlir;
 
 namespace {
-struct TestModulePass : public ModulePass<TestModulePass> {
-  void runOnModule() final {}
+struct TestModulePass
+    : public PassWrapper<TestModulePass, OperationPass<ModuleOp>> {
+  void runOnOperation() final {}
 };
-struct TestFunctionPass : public FunctionPass<TestFunctionPass> {
+struct TestFunctionPass : public PassWrapper<TestFunctionPass, FunctionPass> {
   void runOnFunction() final {}
 };
-class TestOptionsPass : public FunctionPass<TestOptionsPass> {
+class TestOptionsPass : public PassWrapper<TestOptionsPass, FunctionPass> {
 public:
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",
@@ -34,10 +35,9 @@ public:
   TestOptionsPass() = default;
   TestOptionsPass(const TestOptionsPass &) {}
   TestOptionsPass(const Options &options) {
-    listOption->assign(options.listOption.begin(), options.listOption.end());
-    stringOption.setValue(options.stringOption);
-    stringListOption->assign(options.stringListOption.begin(),
-                             options.stringListOption.end());
+    listOption = options.listOption;
+    stringOption = options.stringOption;
+    stringListOption = options.stringListOption;
   }
 
   void runOnFunction() final {}
@@ -53,12 +53,14 @@ public:
 
 /// A test pass that always aborts to enable testing the crash recovery
 /// mechanism of the pass manager.
-class TestCrashRecoveryPass : public OperationPass<TestCrashRecoveryPass> {
+class TestCrashRecoveryPass
+    : public PassWrapper<TestCrashRecoveryPass, OperationPass<>> {
   void runOnOperation() final { abort(); }
 };
 
 /// A test pass that contains a statistic.
-struct TestStatisticPass : public OperationPass<TestStatisticPass> {
+struct TestStatisticPass
+    : public PassWrapper<TestStatisticPass, OperationPass<>> {
   TestStatisticPass() = default;
   TestStatisticPass(const TestStatisticPass &) {}
 

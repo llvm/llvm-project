@@ -203,11 +203,17 @@ if config.build_examples:
 if config.linked_bye_extension:
     config.substitutions.append(('%llvmcheckext', 'CHECK-EXT'))
     config.substitutions.append(('%loadbye', ''))
+    config.substitutions.append(('%loadnewpmbye', ''))
 else:
     config.substitutions.append(('%llvmcheckext', 'CHECK-NOEXT'))
     config.substitutions.append(('%loadbye',
                                  '-load={}/Bye{}'.format(config.llvm_shlib_dir,
-                                                                  config.llvm_shlib_ext)))
+                                                         config.llvm_shlib_ext)))
+    config.substitutions.append(('%loadnewpmbye',
+                                 '-load-pass-plugin={}/Bye{}'
+                                 .format(config.llvm_shlib_dir,
+                                         config.llvm_shlib_ext)))
+
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:

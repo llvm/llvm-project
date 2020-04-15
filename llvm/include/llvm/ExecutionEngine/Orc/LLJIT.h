@@ -107,7 +107,14 @@ public:
   /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
   /// look up symbols based on their IR name use the lookup function instead).
   Expected<JITEvaluatedSymbol> lookupLinkerMangled(JITDylib &JD,
-                                                   StringRef Name);
+                                                   SymbolStringPtr Name);
+
+  /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
+  /// look up symbols based on their IR name use the lookup function instead).
+  Expected<JITEvaluatedSymbol> lookupLinkerMangled(JITDylib &JD,
+                                                   StringRef Name) {
+    return lookupLinkerMangled(JD, ES->intern(Name));
+  }
 
   /// Look up a symbol in the main JITDylib by the symbol's linker-mangled name
   /// (to look up symbols based on their IR name use the lookup function
@@ -166,6 +173,14 @@ public:
   /// Returns a reference to the IR compile layer.
   IRCompileLayer &getIRCompileLayer() { return *CompileLayer; }
 
+  /// Returns a linker-mangled version of UnmangledName.
+  std::string mangle(StringRef UnmangledName) const;
+
+  /// Returns an interned, linker-mangled version of UnmangledName.
+  SymbolStringPtr mangleAndIntern(StringRef UnmangledName) const {
+    return ES->intern(mangle(UnmangledName));
+  }
+
 protected:
   static std::unique_ptr<ObjectLayer>
   createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
@@ -175,8 +190,6 @@ protected:
 
   /// Create an LLJIT instance with a single compile thread.
   LLJIT(LLJITBuilderState &S, Error &Err);
-
-  std::string mangle(StringRef UnmangledName);
 
   Error applyDataLayout(Module &M);
 

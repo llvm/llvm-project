@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   support
   AllTargetsInfos
+  FrontendOpenMP
   )
 
 get_filename_component(CLANGD_SOURCE_DIR
@@ -29,6 +30,7 @@ add_unittest(ClangdUnitTests ClangdTests
   CancellationTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
+  ClangdLSPServerTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   CollectMacrosTests.cpp
@@ -54,6 +56,7 @@ add_unittest(ClangdUnitTests ClangdTests
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
+  LSPClient.cpp
   ParsedASTTests.cpp
   PathMappingTests.cpp
   PrintASTTests.cpp

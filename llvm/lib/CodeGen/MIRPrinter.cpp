@@ -79,6 +79,9 @@ static cl::opt<bool> SimplifyMIR(
     "simplify-mir", cl::Hidden,
     cl::desc("Leave out unnecessary information when printing MIR"));
 
+static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
+                                    cl::desc("Print MIR debug-locations"));
+
 namespace {
 
 /// This structure describes how to print out stack object references.
@@ -640,24 +643,18 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "align " << MBB.getAlignment().value();
     HasAttributes = true;
   }
-  if (MBB.getSectionType() != MBBS_None) {
+  if (MBB.getSectionID() != MBBSectionID(0)) {
     OS << (HasAttributes ? ", " : " (");
     OS << "bbsections ";
-    switch (MBB.getSectionType()) {
-    case MBBS_Entry:
-      OS << "Entry";
-      break;
-    case MBBS_Exception:
+    switch (MBB.getSectionID().Type) {
+    case MBBSectionID::SectionType::Exception:
       OS << "Exception";
       break;
-    case MBBS_Cold:
+    case MBBSectionID::SectionType::Cold:
       OS << "Cold";
       break;
-    case MBBS_Unique:
-      OS << "Unique";
-      break;
     default:
-      llvm_unreachable("No such section type");
+      OS << MBB.getSectionID().Number;
     }
     HasAttributes = true;
   }
@@ -819,11 +816,13 @@ void MIPrinter::print(const MachineInstr &MI) {
     NeedComma = true;
   }
 
-  if (const DebugLoc &DL = MI.getDebugLoc()) {
-    if (NeedComma)
-      OS << ',';
-    OS << " debug-location ";
-    DL->printAsOperand(OS, MST);
+  if (PrintLocations) {
+    if (const DebugLoc &DL = MI.getDebugLoc()) {
+      if (NeedComma)
+        OS << ',';
+      OS << " debug-location ";
+      DL->printAsOperand(OS, MST);
+    }
   }
 
   if (!MI.memoperands_empty()) {

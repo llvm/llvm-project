@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
@@ -40,25 +41,24 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // it must already be a !spv.ptr<!spv.struct<...>>.
   auto varType = funcOp.getType().getInput(argIndex);
   if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
-    auto storageClass =
-        static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
+    auto storageClass = abiInfo.getStorageClass();
+    if (!storageClass)
+      return nullptr;
     varType =
-        spirv::PointerType::get(spirv::StructType::get(varType), storageClass);
+        spirv::PointerType::get(spirv::StructType::get(varType), *storageClass);
   }
   auto varPtrType = varType.cast<spirv::PointerType>();
   auto varPointeeType = varPtrType.getPointeeType().cast<spirv::StructType>();
 
   // Set the offset information.
-  VulkanLayoutUtils::Size size = 0, alignment = 0;
   varPointeeType =
-      VulkanLayoutUtils::decorateType(varPointeeType, size, alignment)
-          .cast<spirv::StructType>();
+      VulkanLayoutUtils::decorateType(varPointeeType).cast<spirv::StructType>();
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
   return builder.create<spirv::GlobalVariableOp>(
-      funcOp.getLoc(), varType, varName, abiInfo.descriptor_set().getInt(),
-      abiInfo.binding().getInt());
+      funcOp.getLoc(), varType, varName, abiInfo.getDescriptorSet(),
+      abiInfo.getBinding());
 }
 
 /// Gets the global variables that need to be specified as interface variable
@@ -148,8 +148,7 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public OperationPass<LowerABIAttributesPass, spirv::ModuleOp> {
-private:
+    : public SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -260,7 +259,7 @@ void LowerABIAttributesPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<OpPassBase<spirv::ModuleOp>>
+std::unique_ptr<OperationPass<spirv::ModuleOp>>
 mlir::spirv::createLowerABIAttributesPass() {
   return std::make_unique<LowerABIAttributesPass>();
 }

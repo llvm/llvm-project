@@ -354,46 +354,21 @@ Type *Type::getStructElementType(unsigned N) const {
   return cast<StructType>(this)->getElementType(N);
 }
 
-/// This is the superclass of the array and vector type classes. Both of these
-/// represent "arrays" in memory. The array type represents a specifically sized
-/// array, and the vector type represents a specifically sized array that allows
-/// for use of SIMD instructions. SequentialType holds the common features of
-/// both, which stem from the fact that both lay their components out in memory
-/// identically.
-class SequentialType : public Type {
-  Type *ContainedType;               ///< Storage for the single contained type.
+/// Class to represent array types.
+class ArrayType : public Type {
+  /// The element type of the array.
+  Type *ContainedType;
+  /// Number of elements in the array.
   uint64_t NumElements;
 
-protected:
-  SequentialType(TypeID TID, Type *ElType, uint64_t NumElements)
-      : Type(ElType->getContext(), TID), ContainedType(ElType),
-        NumElements(NumElements) {
-    ContainedTys = &ContainedType;
-    NumContainedTys = 1;
-  }
-
-public:
-  SequentialType(const SequentialType &) = delete;
-  SequentialType &operator=(const SequentialType &) = delete;
-
-  /// For scalable vectors, this will return the minimum number of elements
-  /// in the vector.
-  uint64_t getNumElements() const { return NumElements; }
-  Type *getElementType() const { return ContainedType; }
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == ArrayTyID || T->getTypeID() == VectorTyID;
-  }
-};
-
-/// Class to represent array types.
-class ArrayType : public SequentialType {
   ArrayType(Type *ElType, uint64_t NumEl);
 
 public:
   ArrayType(const ArrayType &) = delete;
   ArrayType &operator=(const ArrayType &) = delete;
+
+  uint64_t getNumElements() const { return NumElements; }
+  Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an ArrayType
   static ArrayType *get(Type *ElementType, uint64_t NumElements);
@@ -412,7 +387,7 @@ uint64_t Type::getArrayNumElements() const {
 }
 
 /// Class to represent vector types.
-class VectorType : public SequentialType {
+class VectorType : public Type {
   /// A fully specified VectorType is of the form <vscale x n x Ty>. 'n' is the
   /// minimum number of elements of type Ty contained within the vector, and
   /// 'vscale x' indicates that the total element count is an integer multiple
@@ -426,17 +401,27 @@ class VectorType : public SequentialType {
   /// <vscale x 4 x i32> - a vector containing an unknown integer multiple
   ///                      of 4 i32s
 
+  /// The element type of the vector.
+  Type *ContainedType;
+  /// Minumum number of elements in the vector.
+  uint64_t NumElements;
+
   VectorType(Type *ElType, unsigned NumEl, bool Scalable = false);
   VectorType(Type *ElType, ElementCount EC);
 
   // If true, the total number of elements is an unknown multiple of the
-  // minimum 'NumElements' from SequentialType. Otherwise the total number
-  // of elements is exactly equal to 'NumElements'.
+  // minimum 'NumElements'. Otherwise the total number of elements is exactly
+  // equal to 'NumElements'.
   bool Scalable;
 
 public:
   VectorType(const VectorType &) = delete;
   VectorType &operator=(const VectorType &) = delete;
+
+  /// For scalable vectors, this will return the minimum number of elements
+  /// in the vector.
+  unsigned getNumElements() const { return NumElements; }
+  Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an VectorType.
   static VectorType *get(Type *ElementType, ElementCount EC);
@@ -557,6 +542,8 @@ bool Type::getVectorIsScalable() const {
 ElementCount Type::getVectorElementCount() const {
   return cast<VectorType>(this)->getElementCount();
 }
+
+bool Type::isVectorTy() const { return isa<VectorType>(this); }
 
 /// Class to represent pointers.
 class PointerType : public Type {

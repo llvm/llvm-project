@@ -297,8 +297,11 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   // Add features according to the ELF attribute section.
   // If there are any unrecognized features, ignore them.
   RISCVAttributeParser Attributes;
-  if (Error E = getBuildAttributes(Attributes))
+  if (Error E = getBuildAttributes(Attributes)) {
+    // TODO Propagate Error.
+    consumeError(std::move(E));
     return Features; // Keep "c" feature if there is one in PlatformFlags.
+  }
 
   Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
   if (Attr.hasValue()) {

@@ -248,8 +248,7 @@ Align IRTranslator::getMemOpAlign(const Instruction &I) {
     return SI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
   }
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    Type *ValTy = LI->getType();
-    return LI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
+    return DL->getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
   }
   if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
     // TODO(PR27168): This instruction has no alignment attribute, but unlike
@@ -1599,24 +1598,23 @@ bool IRTranslator::translateInlineAsm(const CallInst &CI,
   return true;
 }
 
-bool IRTranslator::translateCallSite(const ImmutableCallSite &CS,
+bool IRTranslator::translateCallBase(const CallBase &CB,
                                      MachineIRBuilder &MIRBuilder) {
-  const Instruction &I = *CS.getInstruction();
-  ArrayRef<Register> Res = getOrCreateVRegs(I);
+  ArrayRef<Register> Res = getOrCreateVRegs(CB);
 
   SmallVector<ArrayRef<Register>, 8> Args;
   Register SwiftInVReg = 0;
   Register SwiftErrorVReg = 0;
-  for (auto &Arg : CS.args()) {
+  for (auto &Arg : CB.args()) {
     if (CLI->supportSwiftError() && isSwiftError(Arg)) {
       assert(SwiftInVReg == 0 && "Expected only one swift error argument");
       LLT Ty = getLLTForType(*Arg->getType(), *DL);
       SwiftInVReg = MRI->createGenericVirtualRegister(Ty);
       MIRBuilder.buildCopy(SwiftInVReg, SwiftError.getOrCreateVRegUseAt(
-                                            &I, &MIRBuilder.getMBB(), Arg));
+                                            &CB, &MIRBuilder.getMBB(), Arg));
       Args.emplace_back(makeArrayRef(SwiftInVReg));
       SwiftErrorVReg =
-          SwiftError.getOrCreateVRegDefAt(&I, &MIRBuilder.getMBB(), Arg);
+          SwiftError.getOrCreateVRegDefAt(&CB, &MIRBuilder.getMBB(), Arg);
       continue;
     }
     Args.push_back(getOrCreateVRegs(*Arg));
@@ -1626,8 +1624,8 @@ bool IRTranslator::translateCallSite(const ImmutableCallSite &CS,
   // optimize into tail calls. Instead, we defer that to selection where a final
   // scan is done to check if any instructions are calls.
   bool Success =
-      CLI->lowerCall(MIRBuilder, CS, Res, Args, SwiftErrorVReg,
-                     [&]() { return getOrCreateVReg(*CS.getCalledValue()); });
+      CLI->lowerCall(MIRBuilder, CB, Res, Args, SwiftErrorVReg,
+                     [&]() { return getOrCreateVReg(*CB.getCalledValue()); });
 
   // Check if we just inserted a tail call.
   if (Success) {
@@ -1665,7 +1663,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   if (!F || !F->isIntrinsic() || ID == Intrinsic::not_intrinsic)
-    return translateCallSite(&CI, MIRBuilder);
+    return translateCallBase(CI, MIRBuilder);
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
@@ -1758,7 +1756,7 @@ bool IRTranslator::translateInvoke(const User &U,
   MCSymbol *BeginSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
 
-  if (!translateCallSite(&I, MIRBuilder))
+  if (!translateCallBase(I, MIRBuilder))
     return false;
 
   MCSymbol *EndSymbol = Context.createTempSymbol();
@@ -1910,7 +1908,7 @@ bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (U.getType()->getVectorNumElements() == 1) {
+  if (cast<VectorType>(U.getType())->getNumElements() == 1) {
     Register Elt = getOrCreateVReg(*U.getOperand(1));
     auto &Regs = *VMap.getVRegs(U);
     if (Regs.empty()) {
@@ -1934,7 +1932,7 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (U.getOperand(0)->getType()->getVectorNumElements() == 1) {
+  if (cast<VectorType>(U.getOperand(0)->getType())->getNumElements() == 1) {
     Register Elt = getOrCreateVReg(*U.getOperand(0));
     auto &Regs = *VMap.getVRegs(U);
     if (Regs.empty()) {

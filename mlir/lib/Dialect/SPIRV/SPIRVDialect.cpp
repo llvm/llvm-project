@@ -19,7 +19,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Parser.h"
-#include "mlir/Support/StringExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
@@ -118,7 +117,7 @@ SPIRVDialect::SPIRVDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addTypes<ArrayType, ImageType, PointerType, RuntimeArrayType, StructType>();
 
-  addAttributes<TargetEnvAttr, VerCapExtAttr>();
+  addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
 
   // Add SPIR-V ops.
   addOperations<
@@ -133,7 +132,7 @@ SPIRVDialect::SPIRVDialect(MLIRContext *context)
 }
 
 std::string SPIRVDialect::getAttributeName(Decoration decoration) {
-  return convertToSnakeCase(stringifyDecoration(decoration));
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
 }
 
 //===----------------------------------------------------------------------===//
@@ -149,7 +148,7 @@ Optional<Type> parseAndVerify<Type>(SPIRVDialect const &dialect,
                                     DialectAsmParser &parser);
 
 template <>
-Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
+Optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                             DialectAsmParser &parser);
 
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
@@ -196,13 +195,39 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   return type;
 }
 
+/// Parses an optional `, stride = N` assembly segment. If no parsing failure
+/// occurs, writes `N` to `stride` if existing and writes 0 to `stride` if
+/// missing.
+static LogicalResult parseOptionalArrayStride(const SPIRVDialect &dialect,
+                                              DialectAsmParser &parser,
+                                              unsigned &stride) {
+  if (failed(parser.parseOptionalComma())) {
+    stride = 0;
+    return success();
+  }
+
+  if (parser.parseKeyword("stride") || parser.parseEqual())
+    return failure();
+
+  llvm::SMLoc strideLoc = parser.getCurrentLocation();
+  Optional<unsigned> optStride = parseAndVerify<unsigned>(dialect, parser);
+  if (!optStride)
+    return failure();
+
+  if (!(stride = optStride.getValue())) {
+    parser.emitError(strideLoc, "ArrayStride must be greater than zero");
+    return failure();
+  }
+  return success();
+}
+
 // element-type ::= integer-type
 //                | floating-point-type
 //                | vector-type
 //                | spirv-type
 //
-// array-type ::= `!spv.array<` integer-literal `x` element-type
-//                (`[` integer-literal `]`)? `>`
+// array-type ::= `!spv.array` `<` integer-literal `x` element-type
+//                (`,` `stride` `=` integer-literal)? `>`
 static Type parseArrayType(SPIRVDialect const &dialect,
                            DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -230,25 +255,13 @@ static Type parseArrayType(SPIRVDialect const &dialect,
   if (!elementType)
     return Type();
 
-  ArrayType::LayoutInfo layoutInfo = 0;
-  if (succeeded(parser.parseOptionalLSquare())) {
-    llvm::SMLoc layoutLoc = parser.getCurrentLocation();
-    auto layout = parseAndVerify<ArrayType::LayoutInfo>(dialect, parser);
-    if (!layout)
-      return Type();
-
-    if (!(layoutInfo = layout.getValue())) {
-      parser.emitError(layoutLoc, "ArrayStride must be greater than zero");
-      return Type();
-    }
-
-    if (parser.parseRSquare())
-      return Type();
-  }
+  unsigned stride = 0;
+  if (failed(parseOptionalArrayStride(dialect, parser, stride)))
+    return Type();
 
   if (parser.parseGreater())
     return Type();
-  return ArrayType::get(elementType, count, layoutInfo);
+  return ArrayType::get(elementType, count, stride);
 }
 
 // TODO(ravishankarm) : Reorder methods to be utilities first and parse*Type
@@ -285,7 +298,8 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   return PointerType::get(pointeeType, *storageClass);
 }
 
-// runtime-array-type ::= `!spv.rtarray<` element-type `>`
+// runtime-array-type ::= `!spv.rtarray` `<` element-type
+//                        (`,` `stride` `=` integer-literal)? `>`
 static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
                                   DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -295,9 +309,13 @@ static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
   if (!elementType)
     return Type();
 
+  unsigned stride = 0;
+  if (failed(parseOptionalArrayStride(dialect, parser, stride)))
+    return Type();
+
   if (parser.parseGreater())
     return Type();
-  return RuntimeArrayType::get(elementType);
+  return RuntimeArrayType::get(elementType, stride);
 }
 
 // Specialize this function to parse each of the parameters that define an
@@ -311,7 +329,7 @@ static Optional<ValTy> parseAndVerify(SPIRVDialect const &dialect,
     return llvm::None;
   }
 
-  auto val = spirv::symbolizeEnum<ValTy>()(enumSpec);
+  auto val = spirv::symbolizeEnum<ValTy>(enumSpec);
   if (!val)
     parser.emitError(enumLoc, "unknown attribute: '") << enumSpec << "'";
   return val;
@@ -337,9 +355,9 @@ static Optional<IntTy> parseAndVerifyInteger(SPIRVDialect const &dialect,
 }
 
 template <>
-Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
+Optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                             DialectAsmParser &parser) {
-  return parseAndVerifyInteger<uint64_t>(dialect, parser);
+  return parseAndVerifyInteger<unsigned>(dialect, parser);
 }
 
 namespace {
@@ -526,14 +544,16 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
 
 static void print(ArrayType type, DialectAsmPrinter &os) {
   os << "array<" << type.getNumElements() << " x " << type.getElementType();
-  if (type.hasLayout()) {
-    os << " [" << type.getArrayStride() << "]";
-  }
+  if (unsigned stride = type.getArrayStride())
+    os << ", stride=" << stride;
   os << ">";
 }
 
 static void print(RuntimeArrayType type, DialectAsmPrinter &os) {
-  os << "rtarray<" << type.getElementType() << ">";
+  os << "rtarray<" << type.getElementType();
+  if (unsigned stride = type.getArrayStride())
+    os << ", stride=" << stride;
+  os << ">";
 }
 
 static void print(PointerType type, DialectAsmPrinter &os) {
@@ -566,12 +586,12 @@ static void print(StructType type, DialectAsmPrinter &os) {
       auto eachFn = [&os](spirv::Decoration decoration) {
         os << stringifyDecoration(decoration);
       };
-      interleaveComma(decorations, os, eachFn);
+      llvm::interleaveComma(decorations, os, eachFn);
       os << "]";
     }
   };
-  interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
-                  printMember);
+  llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
+                        printMember);
   os << ">";
 }
 
@@ -626,6 +646,75 @@ static ParseResult parseKeywordList(
     return failure();
 
   return success();
+}
+
+/// Parses a spirv::InterfaceVarABIAttr.
+static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Builder &builder = parser.getBuilder();
+
+  if (parser.parseLParen())
+    return {};
+
+  IntegerAttr descriptorSetAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t descriptorSet = 0;
+    auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
+
+    if (!descriptorSetParseResult.hasValue() ||
+        failed(*descriptorSetParseResult)) {
+      parser.emitError(loc, "missing descriptor set");
+      return {};
+    }
+    descriptorSetAttr = builder.getI32IntegerAttr(descriptorSet);
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  IntegerAttr bindingAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t binding = 0;
+    auto bindingParseResult = parser.parseOptionalInteger(binding);
+
+    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
+      parser.emitError(loc, "missing binding");
+      return {};
+    }
+    bindingAttr = builder.getI32IntegerAttr(binding);
+  }
+
+  if (parser.parseRParen())
+    return {};
+
+  IntegerAttr storageClassAttr;
+  {
+    if (succeeded(parser.parseOptionalComma())) {
+      auto loc = parser.getCurrentLocation();
+      StringRef storageClass;
+      if (parser.parseKeyword(&storageClass))
+        return {};
+
+      if (auto storageClassSymbol =
+              spirv::symbolizeStorageClass(storageClass)) {
+        storageClassAttr = builder.getI32IntegerAttr(
+            static_cast<uint32_t>(*storageClassSymbol));
+      } else {
+        parser.emitError(loc, "unknown storage class: ") << storageClass;
+        return {};
+      }
+    }
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return spirv::InterfaceVarABIAttr::get(descriptorSetAttr, bindingAttr,
+                                         storageClassAttr);
 }
 
 static Attribute parseVerCapExtAttr(DialectAsmParser &parser) {
@@ -750,6 +839,8 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
     return parseTargetEnvAttr(parser);
   if (attrKind == spirv::VerCapExtAttr::getKindName())
     return parseVerCapExtAttr(parser);
+  if (attrKind == spirv::InterfaceVarABIAttr::getKindName())
+    return parseInterfaceVarABIAttr(parser);
 
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V attribute kind: ")
       << attrKind;
@@ -764,11 +855,11 @@ static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
   auto &os = printer.getStream();
   printer << spirv::VerCapExtAttr::getKindName() << "<"
           << spirv::stringifyVersion(triple.getVersion()) << ", [";
-  interleaveComma(triple.getCapabilities(), os, [&](spirv::Capability cap) {
-    os << spirv::stringifyCapability(cap);
-  });
+  llvm::interleaveComma(
+      triple.getCapabilities(), os,
+      [&](spirv::Capability cap) { os << spirv::stringifyCapability(cap); });
   printer << "], [";
-  interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
+  llvm::interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
     os << attr.cast<StringAttr>().getValue();
   });
   printer << "]>";
@@ -780,12 +871,25 @@ static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
   printer << ", " << targetEnv.getResourceLimits() << ">";
 }
 
+static void print(spirv::InterfaceVarABIAttr interfaceVarABIAttr,
+                  DialectAsmPrinter &printer) {
+  printer << spirv::InterfaceVarABIAttr::getKindName() << "<("
+          << interfaceVarABIAttr.getDescriptorSet() << ", "
+          << interfaceVarABIAttr.getBinding() << ")";
+  auto storageClass = interfaceVarABIAttr.getStorageClass();
+  if (storageClass)
+    printer << ", " << spirv::stringifyStorageClass(*storageClass);
+  printer << ">";
+}
+
 void SPIRVDialect::printAttribute(Attribute attr,
                                   DialectAsmPrinter &printer) const {
   if (auto targetEnv = attr.dyn_cast<TargetEnvAttr>())
     print(targetEnv, printer);
   else if (auto vceAttr = attr.dyn_cast<VerCapExtAttr>())
     print(vceAttr, printer);
+  else if (auto interfaceVarABIAttr = attr.dyn_cast<InterfaceVarABIAttr>())
+    print(interfaceVarABIAttr, printer);
   else
     llvm_unreachable("unhandled SPIR-V attribute kind");
 }
@@ -845,11 +949,9 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
   auto varABIAttr = attr.dyn_cast<spirv::InterfaceVarABIAttr>();
   if (!varABIAttr)
     return emitError(loc, "'")
-           << symbol
-           << "' attribute must be a dictionary attribute containing two or "
-              "three 32-bit integer attributes: 'descriptor_set', 'binding', "
-              "and optional 'storage_class'";
-  if (varABIAttr.storage_class() && !valueType.isIntOrIndexOrFloat())
+           << symbol << "' must be a spirv::InterfaceVarABIAttr";
+
+  if (varABIAttr.getStorageClass() && !valueType.isIntOrIndexOrFloat())
     return emitError(loc, "'") << symbol
                                << "' attribute cannot specify storage class "
                                   "when attaching to a non-scalar value";

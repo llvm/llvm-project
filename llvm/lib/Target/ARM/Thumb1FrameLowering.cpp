@@ -88,8 +88,10 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
                             0, MIFlags);
     }
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tADDhirr), ARM::SP)
-      .addReg(ARM::SP).addReg(ScratchReg, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+        .addReg(ARM::SP)
+        .addReg(ScratchReg, RegState::Kill)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MIFlags);
     return;
   }
   // FIXME: This is assuming the heuristics in emitThumbRegPlusImmediate

@@ -26,8 +26,8 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnFloatingPointNarrowingConversion(
-          Options.get("WarnOnFloatingPointNarrowingConversion", 1)),
-      PedanticMode(Options.get("PedanticMode", 0)) {}
+          Options.get("WarnOnFloatingPointNarrowingConversion", true)),
+      PedanticMode(Options.get("PedanticMode", false)) {}
 
 void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // ceil() and floor() are guaranteed to return integers, even though the type

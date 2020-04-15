@@ -65,37 +65,30 @@ Some parameters can be passed to lit to run the test-suite and exercise the
 availability.
 
 * The `platform` parameter controls the deployment target. For example lit can
-  be invoked with `--param=platform=macosx10.8`. Default is the current host.
+  be invoked with `--param=platform=macosx10.12`. Default is the current host.
 * The `use_system_cxx_lib` parameter indicates to use another library than the
   just built one. Invoking lit with `--param=use_system_cxx_lib=true` will run
   the test-suite against the host system library. Alternatively a path to the
   directory containing a specific prebuilt libc++ can be used, for example:
-  `--param=use_system_cxx_lib=/path/to/macOS/10.8/`.
+  `--param=use_system_cxx_lib=/path/to/macOS/10.12/`.
 
 Tests can be marked as XFAIL based on multiple features made available by lit:
 
 
-* if `--param=platform=macosx10.8` is passed, the following features will be available:
+* if `--param=platform=macosx10.12` is passed, the following features will be available:
 
-  - availability
-  - availability=x86_64
   - availability=macosx
-  - availability=x86_64-macosx
-  - availability=x86_64-apple-macosx10.8
-  - availability=macosx10.8
+  - availability=macosx10.12
 
   This feature is used to XFAIL a test that *is* using a class or a method marked
   as unavailable *and* that is expected to *fail* if deployed on an older system.
 
-* if `use_system_cxx_lib` and `--param=platform=macosx10.8` are passed to lit,
+* if `use_system_cxx_lib` and `--param=platform=macosx10.12` are passed to lit,
   the following features will also be available:
 
-  - with_system_cxx_lib
-  - with_system_cxx_lib=x86_64
   - with_system_cxx_lib=macosx
-  - with_system_cxx_lib=x86_64-macosx
-  - with_system_cxx_lib=x86_64-apple-macosx10.8
-  - with_system_cxx_lib=macosx10.8
+  - with_system_cxx_lib=macosx10.12
+  - with_system_cxx_lib=x86_64-apple-macosx10.12
 
   This feature is used to XFAIL a test that is *not* using a class or a method
   marked as unavailable *but* that is expected to fail if deployed on an older

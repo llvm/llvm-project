@@ -56,8 +56,8 @@ func @test_mod_floordiv_ceildiv() {
       %idy1 = affine.apply affine_map<(d0, d1, d2) -> (d1 floordiv 4)>(%i, %j, %j)
       %idy2 = affine.apply affine_map<(d0, d1, d2) -> (d2 ceildiv 4 - 1)>(%i, %j, %j)
       affine.store %x, %A[%idy0, %idy1, %idy2] : memref<128 x 64 x 64 x i32> // expected-error {{'affine.store' op memref out of lower bound access along dimension #3}}
-    } // CHECK }
-  } // CHECK }
+    } // CHECK: }
+  } // CHECK: }
   return
 }
 
@@ -82,7 +82,7 @@ func @test_no_out_of_bounds() {
       %x  = affine.load %A[%idx0, %zero] : memref<257 x 256 x i32>
       %idy = affine.apply affine_map<(d0, d1) -> (d0 floordiv 256)>(%i, %i)
       %y  = affine.load %B[%idy] : memref<1 x i32>
-    } // CHECK-NEXT }
+    } // CHECK-NEXT: }
   }
   return
 }

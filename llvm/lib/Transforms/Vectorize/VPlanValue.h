@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -39,12 +40,11 @@ class VPSlotTracker;
 // and live-outs which the VPlan will need to fix accordingly.
 class VPValue {
   friend class VPBuilder;
-  friend class VPlanTransforms;
+  friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
 
-private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
@@ -132,7 +132,6 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser : public VPValue {
-private:
   SmallVector<VPValue *, 2> Operands;
 
 protected:
@@ -147,6 +146,12 @@ public:
   VPUser(ArrayRef<VPValue *> Operands) : VPUser(VPValue::VPUserSC, Operands) {}
   VPUser(std::initializer_list<VPValue *> Operands)
       : VPUser(ArrayRef<VPValue *>(Operands)) {}
+  template <typename IterT>
+  VPUser(iterator_range<IterT> Operands) : VPValue(VPValue::VPUserSC) {
+    for (VPValue *Operand : Operands)
+      addOperand(Operand);
+  }
+
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
 
@@ -191,7 +196,6 @@ class VPRegionBlock;
 /// VPlan and allows querying the numbering for printing, similar to the
 /// ModuleSlotTracker for IR values.
 class VPSlotTracker {
-private:
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 

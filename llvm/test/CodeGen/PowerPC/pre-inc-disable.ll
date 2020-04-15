@@ -18,7 +18,7 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK-NEXT:    addis r5, r2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    addi r5, r5, .LCPI0_1@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r5
-; CHECK-NEXT:    xxpermdi v5, f0, f0, 2
+; CHECK-NEXT:    xxswapd v5, f0
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    li r5, 4
 ; CHECK-NEXT:    vperm v0, v3, v5, v2
@@ -32,7 +32,7 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK-NEXT:  .LBB0_1: # %for.cond1.preheader
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lfd f0, 0(r3)
-; CHECK-NEXT:    xxpermdi v1, f0, f0, 2
+; CHECK-NEXT:    xxswapd v1, f0
 ; CHECK-NEXT:    lfdx f0, r3, r4
 ; CHECK-NEXT:    vperm v6, v1, v3, v4
 ; CHECK-NEXT:    vperm v1, v3, v1, v2
@@ -46,7 +46,7 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK-NEXT:    vadduwm v1, v1, v6
 ; CHECK-NEXT:    xxspltw v6, v1, 2
 ; CHECK-NEXT:    vadduwm v1, v1, v6
-; CHECK-NEXT:    xxpermdi v6, f0, f0, 2
+; CHECK-NEXT:    xxswapd v6, f0
 ; CHECK-NEXT:    vextuwrx r3, r5, v1
 ; CHECK-NEXT:    vperm v7, v6, v3, v4
 ; CHECK-NEXT:    vperm v6, v3, v6, v2
@@ -186,12 +186,12 @@ define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* noc
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_0@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_1@toc@ha
-; CHECK-NEXT:    xxpermdi v2, f0, f0, 2
+; CHECK-NEXT:    xxswapd v2, f0
 ; CHECK-NEXT:    lfd f0, 0(r4)
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_1@toc@l
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    lxvx v0, 0, r3
-; CHECK-NEXT:    xxpermdi v1, f0, f0, 2
+; CHECK-NEXT:    xxswapd v1, f0
 ; CHECK-NEXT:    vperm v5, v2, v3, v4
 ; CHECK-NEXT:    vperm v2, v3, v2, v0
 ; CHECK-NEXT:    vperm v0, v3, v1, v0
@@ -291,11 +291,11 @@ define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; CHECK-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    xxpermdi v2, f0, f0, 2
+; CHECK-NEXT:    xxswapd v2, f0
 ; CHECK-NEXT:    lfiwzx f0, r5, r3
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    vperm v2, v2, v3, v4
-; CHECK-NEXT:    xxpermdi v5, f0, f0, 2
+; CHECK-NEXT:    xxswapd v5, f0
 ; CHECK-NEXT:    vperm v3, v5, v3, v4
 ; CHECK-NEXT:    vspltisw v4, 8
 ; CHECK-NEXT:    vnegw v3, v3

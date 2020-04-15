@@ -28,6 +28,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -127,6 +128,29 @@ Error Config::addSaveTemps(std::string OutputFileName,
   return Error::success();
 }
 
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
+static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
+                                PassBuilder &PB) {
+#define HANDLE_EXTENSION(Ext)                                                  \
+  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
+#include "llvm/Support/Extension.def"
+
+  // Load requested pass plugins and let them register pass builder callbacks
+  for (auto &PluginFN : PassPlugins) {
+    auto PassPlugin = PassPlugin::Load(PluginFN);
+    if (!PassPlugin) {
+      errs() << "Failed to load passes from '" << PluginFN
+             << "'. Request ignored.\n";
+      continue;
+    }
+
+    PassPlugin->registerPassBuilderCallbacks(PB);
+  }
+}
+
 namespace {
 
 std::unique_ptr<TargetMachine>
@@ -181,6 +205,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (auto Err = PB.parseAAPipeline(AA, "default"))
     report_fatal_error("Error parsing default AA pipeline");
 
+  RegisterPassPlugins(Conf.PassPlugins, PB);
+
   LoopAnalysisManager LAM(Conf.DebugPassManager);
   FunctionAnalysisManager FAM(Conf.DebugPassManager);
   CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
@@ -228,8 +254,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // FIXME (davide): verify the output.
 }
 
-static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
-                                 std::string PipelineDesc,
+static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
+                                 TargetMachine *TM, std::string PipelineDesc,
                                  std::string AAPipelineDesc,
                                  bool DisableVerify) {
   PassBuilder PB(TM);
@@ -240,6 +266,8 @@ static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
     if (auto Err = PB.parseAAPipeline(AA, AAPipelineDesc))
       report_fatal_error("unable to parse AA pipeline description '" +
                          AAPipelineDesc + "': " + toString(std::move(Err)));
+
+  RegisterPassPlugins(Conf.PassPlugins, PB);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -307,7 +335,7 @@ bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          const ModuleSummaryIndex *ImportSummary) {
   // FIXME: Plumb the combined index into the new pass manager.
   if (!Conf.OptPipeline.empty())
-    runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
+    runNewPMCustomPasses(Conf, Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
   else if (Conf.UseNewPM)
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
@@ -521,7 +549,13 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  renameModuleForThinLTO(Mod, CombinedIndex);
+  // When linking an ELF shared object, dso_local should be dropped. We
+  // conservatively do this for -fpic.
+  bool ClearDSOLocalOnDeclarations =
+      TM->getTargetTriple().isOSBinFormatELF() &&
+      TM->getRelocationModel() != Reloc::Static &&
+      Mod.getPIELevel() == PIELevel::Default;
+  renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);
 
   dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
@@ -547,7 +581,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                                    /*IsImporting*/ true);
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader);
+  FunctionImporter Importer(CombinedIndex, ModuleLoader,
+                            ClearDSOLocalOnDeclarations);
   if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
     return Err;
 

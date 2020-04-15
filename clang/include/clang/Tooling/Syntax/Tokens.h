@@ -171,7 +171,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 /// To build a token buffer use the TokenCollector class. You can also compute
 /// the spelled tokens of a file using the tokenize() helper.
 ///
-/// FIXME: allow to map from spelled to expanded tokens when use-case shows up.
 /// FIXME: allow mappings into macro arguments.
 class TokenBuffer {
 public:
@@ -227,6 +226,36 @@ public:
   /// Complexity is logarithmic.
   llvm::Optional<llvm::ArrayRef<syntax::Token>>
   spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const;
+
+  /// Find the subranges of expanded tokens, corresponding to \p Spelled.
+  ///
+  /// Some spelled tokens may not be present in the expanded token stream, so
+  /// this function can return an empty vector, e.g. for tokens of macro
+  /// directives or disabled preprocessor branches.
+  ///
+  /// Some spelled tokens can be duplicated in the expanded token stream
+  /// multiple times and this function will return multiple results in those
+  /// cases. This happens when \p Spelled is inside a macro argument.
+  ///
+  /// FIXME: return correct results on macro arguments. For now, we return an
+  ///        empty list.
+  ///
+  /// (!) will return empty vector on tokens from #define body:
+  /// E.g. for the following example:
+  ///
+  ///   #define FIRST(A) f1 A = A f2
+  ///   #define SECOND s
+  ///
+  ///   a FIRST(arg) b SECOND c // expanded tokens are: a f1 arg = arg f2 b s
+  /// The results would be
+  ///   spelled           => expanded
+  ///   ------------------------
+  ///   #define FIRST     => {}
+  ///   a FIRST(arg)      => {a f1 arg = arg f2}
+  ///   arg               => {arg, arg} // arg #1 is before `=` and arg #2 is
+  ///                                   // after `=` in the expanded tokens.
+  llvm::SmallVector<llvm::ArrayRef<syntax::Token>, 1>
+  expandedForSpelled(llvm::ArrayRef<syntax::Token> Spelled) const;
 
   /// An expansion produced by the preprocessor, includes macro expansions and
   /// preprocessor directives. Preprocessor always maps a non-empty range of
@@ -316,6 +345,12 @@ private:
   /// produced it.
   std::pair<const syntax::Token *, const Mapping *>
   spelledForExpandedToken(const syntax::Token *Expanded) const;
+
+  /// Returns a mapping starting before \p Spelled token, or nullptr if no
+  /// such mapping exists.
+  static const Mapping *
+  mappingStartingBeforeSpelled(const MarkedFile &F,
+                               const syntax::Token *Spelled);
 
   /// Token stream produced after preprocessing, conceputally this captures the
   /// same stream as 'clang -E' (excluding the preprocessor directives like

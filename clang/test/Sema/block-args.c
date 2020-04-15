@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
 
 // radar 7528255
 void f0() {
-  ^(int, double d, char) {}(1, 1.34, 'a'); // expected-error {{parameter name omitted}} \
-				 	   // expected-error {{parameter name omitted}}
+  ^(int, double d, char) {}(1, 1.34, 'a'); // expected-warning {{omitting the parameter name in a function definition is a C2x extension}} \
+                                           // expected-warning {{omitting the parameter name in a function definition is a C2x extension}}
 }
 
 // rdar://problem/8962770

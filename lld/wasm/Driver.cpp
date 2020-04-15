@@ -453,6 +453,8 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r -and --undefined may not be used together");
     if (config->pie)
       error("-r and -pie may not be used together");
+    if (config->sharedMemory)
+      error("-r and --shared-memory may not be used together");
   }
 }
 

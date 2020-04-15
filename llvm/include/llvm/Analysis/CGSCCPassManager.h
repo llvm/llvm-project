@@ -95,7 +95,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
@@ -605,8 +604,8 @@ public:
             CallCounts.insert(std::make_pair(&N.getFunction(), CountLocal))
                 .first->second;
         for (Instruction &I : instructions(N.getFunction()))
-          if (auto CS = CallSite(&I)) {
-            if (CS.getCalledFunction()) {
+          if (auto *CB = dyn_cast<CallBase>(&I)) {
+            if (CB->getCalledFunction()) {
               ++Count.Direct;
             } else {
               ++Count.Indirect;
@@ -648,17 +647,17 @@ public:
       auto IsDevirtualizedHandle = [&](WeakTrackingVH &CallH) {
         if (!CallH)
           return false;
-        auto CS = CallSite(CallH);
-        if (!CS)
+        auto *CB = dyn_cast<CallBase>(CallH);
+        if (!CB)
           return false;
 
         // If the call is still indirect, leave it alone.
-        Function *F = CS.getCalledFunction();
+        Function *F = CB->getCalledFunction();
         if (!F)
           return false;
 
         LLVM_DEBUG(dbgs() << "Found devirtualized call from "
-                          << CS.getParent()->getParent()->getName() << " to "
+                          << CB->getParent()->getParent()->getName() << " to "
                           << F->getName() << "\n");
 
         // We now have a direct call where previously we had an indirect call,

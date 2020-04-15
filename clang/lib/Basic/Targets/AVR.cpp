@@ -300,6 +300,7 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("AVR");
   Builder.defineMacro("__AVR");
   Builder.defineMacro("__AVR__");
+  Builder.defineMacro("__ELF__");
 
   if (!this->CPU.empty()) {
     auto It = llvm::find_if(

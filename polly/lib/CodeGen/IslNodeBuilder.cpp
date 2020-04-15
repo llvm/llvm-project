@@ -1213,8 +1213,7 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
   PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
-    PreloadInst->setAlignment(
-        MaybeAlign(dyn_cast<LoadInst>(AccInst)->getAlignment()));
+    PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
 
   // TODO: This is only a hot fix for SCoP sequences that use the same load
   //       instruction contained and hoisted by one of the SCoPs.

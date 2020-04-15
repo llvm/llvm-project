@@ -5,10 +5,10 @@ add_entrypoint_object(
   HDRS
     ../mmap.h
   DEPENDS
-    sys_mman_h
-    sys_syscall_h
-    linux_syscall_h
-    __errno_location
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -18,8 +18,8 @@ add_entrypoint_object(
   HDRS
     ../munmap.h
   DEPENDS
-    sys_mman_h
-    sys_syscall_h
-    linux_syscall_h
-    __errno_location
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.errno.__errno_location
 )

@@ -1243,7 +1243,7 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
-    ImmutableCallSite CS) const {
+    const CallBase &CB) const {
   auto PtrVT = getPointerTy(DL);
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -1300,7 +1300,7 @@ std::string NVPTXTargetLowering::getPrototype(
     if (!Outs[OIdx].Flags.isByVal()) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
         unsigned align = 0;
-        const CallInst *CallI = cast<CallInst>(CS.getInstruction());
+        const CallInst *CallI = cast<CallInst>(&CB);
         // +1 because index 0 is reserved for return type alignment
         if (!getAlign(*CallI, i + 1, align))
           align = DL.getABITypeAlignment(Ty);
@@ -1353,30 +1353,28 @@ std::string NVPTXTargetLowering::getPrototype(
 }
 
 Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
-                                                ImmutableCallSite CS, Type *Ty,
+                                                const CallBase *CB, Type *Ty,
                                                 unsigned Idx,
                                                 const DataLayout &DL) const {
-  if (!CS) {
+  if (!CB) {
     // CallSite is zero, fallback to ABI type alignment
     return DL.getABITypeAlign(Ty);
   }
 
   unsigned Alignment = 0;
-  const Value *DirectCallee = CS.getCalledFunction();
+  const Value *DirectCallee = CB->getCalledFunction();
 
   if (!DirectCallee) {
     // We don't have a direct function symbol, but that may be because of
     // constant cast instructions in the call.
-    const Instruction *CalleeI = CS.getInstruction();
-    assert(CalleeI && "Call target is not a function or derived value?");
 
     // With bitcast'd call targets, the instruction will be the call
-    if (isa<CallInst>(CalleeI)) {
+    if (isa<CallInst>(CB)) {
       // Check if we have call alignment metadata
-      if (getAlign(*cast<CallInst>(CalleeI), Idx, Alignment))
+      if (getAlign(*cast<CallInst>(CB), Idx, Alignment))
         return Align(Alignment);
 
-      const Value *CalleeV = cast<CallInst>(CalleeI)->getCalledValue();
+      const Value *CalleeV = cast<CallInst>(CB)->getCalledValue();
       // Ignore any bitcast instructions
       while (isa<ConstantExpr>(CalleeV)) {
         const ConstantExpr *CE = cast<ConstantExpr>(CalleeV);
@@ -1416,7 +1414,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall = CLI.IsTailCall;
   ArgListTy &Args = CLI.getArgs();
   Type *RetTy = CLI.RetTy;
-  ImmutableCallSite CS = CLI.CS;
+  const CallBase *CB = CLI.CB;
   const DataLayout &DL = DAG.getDataLayout();
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -1449,7 +1447,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
       ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets);
-      Align ArgAlign = getArgumentAlignment(Callee, CS, Ty, paramCount + 1, DL);
+      Align ArgAlign = getArgumentAlignment(Callee, CB, Ty, paramCount + 1, DL);
       unsigned AllocSize = DL.getTypeAllocSize(Ty);
       SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       bool NeedAlign; // Does argument declaration specify alignment?
@@ -1641,7 +1639,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           DeclareRetOps);
       InFlag = Chain.getValue(1);
     } else {
-      retAlignment = getArgumentAlignment(Callee, CS, RetTy, 0, DL);
+      retAlignment = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
       assert(retAlignment && "retAlignment is guaranteed to be set");
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = {
@@ -1657,7 +1655,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Both indirect calls and libcalls have nullptr Func. In order to distinguish
   // between them we must rely on the call site value which is valid for
   // indirect calls but is always null for libcalls.
-  bool isIndirectCall = !Func && CS;
+  bool isIndirectCall = !Func && CB;
 
   if (isa<ExternalSymbolSDNode>(Callee)) {
     Function* CalleeFunc = nullptr;
@@ -1680,7 +1678,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // The prototype is embedded in a string and put as the operand for a
     // CallPrototype SDNode which will print out to the value of the string.
     SDVTList ProtoVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-    std::string Proto = getPrototype(DL, RetTy, Args, Outs, retAlignment, CS);
+    std::string Proto = getPrototype(DL, RetTy, Args, Outs, retAlignment, *CB);
     const char *ProtoStr =
       nvTM->getManagedStrPool()->getManagedString(Proto.c_str())->c_str();
     SDValue ProtoOps[] = {
@@ -1753,7 +1751,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets, 0);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    Align RetAlign = getArgumentAlignment(Callee, CS, RetTy, 0, DL);
+    Align RetAlign = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
     auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
 
     SmallVector<EVT, 6> LoadVTs;

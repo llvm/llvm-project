@@ -8,7 +8,7 @@ entry:
   ret void;
 }
 
-define void @fakeresume2(i64*)  {
+define void @fakeresume2(i64* align 8)  {
 entry:
   ret void;
 }
@@ -29,7 +29,7 @@ entry:
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(i8* null)
-  call fastcc void @fakeresume2(i64* null)
+  call fastcc void @fakeresume2(i64* align 8 null)
 
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %exit [
@@ -47,7 +47,7 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK: musttail call fastcc void @fakeresume2(i64* null)
+; CHECK: musttail call fastcc void @fakeresume2(i64* align 8 null)
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #1

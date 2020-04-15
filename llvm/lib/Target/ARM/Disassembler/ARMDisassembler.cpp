@@ -1225,10 +1225,12 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
+  // According to the Arm ARM RegNo = 14 is undefined, but we return fail
+  // rather than SoftFail as there is no GPRPair table entry for index 7.
   if (RegNo > 13)
     return MCDisassembler::Fail;
 
-  if ((RegNo & 1) || RegNo == 0xe)
+  if (RegNo & 1)
      S = MCDisassembler::SoftFail;
 
   unsigned RegisterPair = GPRPairDecoderTable[RegNo/2];

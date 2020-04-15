@@ -115,21 +115,6 @@ CodeGenFunction::~CodeGenFunction() {
     OMPBuilder->finalize();
 }
 
-// Map the LangOption for rounding mode into
-// the corresponding enum in the IR.
-static llvm::fp::RoundingMode ToConstrainedRoundingMD(
-  LangOptions::FPRoundingModeKind Kind) {
-
-  switch (Kind) {
-  case LangOptions::FPR_ToNearest:  return llvm::fp::rmToNearest;
-  case LangOptions::FPR_Downward:   return llvm::fp::rmDownward;
-  case LangOptions::FPR_Upward:     return llvm::fp::rmUpward;
-  case LangOptions::FPR_TowardZero: return llvm::fp::rmTowardZero;
-  case LangOptions::FPR_Dynamic:    return llvm::fp::rmDynamic;
-  }
-  llvm_unreachable("Unsupported FP RoundingMode");
-}
-
 // Map the LangOption for exception behavior into
 // the corresponding enum in the IR.
 static llvm::fp::ExceptionBehavior ToConstrainedExceptMD(
@@ -144,18 +129,17 @@ static llvm::fp::ExceptionBehavior ToConstrainedExceptMD(
 }
 
 void CodeGenFunction::SetFPModel() {
-  auto fpRoundingMode = ToConstrainedRoundingMD(
-                          getLangOpts().getFPRoundingMode());
+  llvm::RoundingMode RM = getLangOpts().getFPRoundingMode();
   auto fpExceptionBehavior = ToConstrainedExceptMD(
                                getLangOpts().getFPExceptionMode());
 
   if (fpExceptionBehavior == llvm::fp::ebIgnore &&
-      fpRoundingMode == llvm::fp::rmToNearest)
+      RM == llvm::RoundingMode::NearestTiesToEven)
     // Constrained intrinsics are not used.
     ;
   else {
     Builder.setIsFPConstrained(true);
-    Builder.setDefaultConstrainedRounding(fpRoundingMode);
+    Builder.setDefaultConstrainedRounding(RM);
     Builder.setDefaultConstrainedExcept(fpExceptionBehavior);
   }
 }
@@ -2359,8 +2343,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
 
     SmallVector<StringRef, 1> ReqFeatures;
     llvm::StringMap<bool> CalleeFeatureMap;
-    CGM.getContext().getFunctionFeatureMap(CalleeFeatureMap,
-                                           GlobalDecl(TargetDecl));
+    CGM.getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
 
     for (const auto &F : ParsedAttr.Features) {
       if (F[0] == '+' && CalleeFeatureMap.lookup(F.substr(1)))

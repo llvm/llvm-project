@@ -75,7 +75,7 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool VERegisterInfo::isConstantPhysReg(unsigned PhysReg) const { return false; }
+bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const { return false; }
 
 const TargetRegisterClass *
 VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
@@ -85,11 +85,11 @@ VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
 
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
                       MachineInstr &MI, const DebugLoc &dl,
-                      unsigned FIOperandNum, int Offset, unsigned FramePtr) {
+                      unsigned FIOperandNum, int Offset, Register FrameReg) {
   // Replace frame index with a frame pointer reference directly.
   // VE has 32 bit offset field, so no need to expand a target instruction.
   // Directly encode it.
-  MI.getOperand(FIOperandNum).ChangeToRegister(FramePtr, false);
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
   MI.getOperand(FIOperandNum + 2).ChangeToImmediate(Offset);
 }
 
@@ -104,7 +104,7 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineFunction &MF = *MI.getParent()->getParent();
   const VEFrameLowering *TFI = getFrameLowering(MF);
 
-  unsigned FrameReg;
+  Register FrameReg;
   int Offset;
   Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
 

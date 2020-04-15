@@ -143,7 +143,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
   return true;
 }
 
-unsigned MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
+Register MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
   Register Reg = Register::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
   RegAllocHints.grow(Reg);
@@ -448,20 +448,20 @@ bool MachineRegisterInfo::isLiveIn(Register Reg) const {
 
 /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
 /// corresponding live-in physical register.
-unsigned MachineRegisterInfo::getLiveInPhysReg(Register VReg) const {
+MCRegister MachineRegisterInfo::getLiveInPhysReg(Register VReg) const {
   for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
     if (I->second == VReg)
       return I->first;
-  return 0;
+  return MCRegister();
 }
 
 /// getLiveInVirtReg - If PReg is a live-in physical register, return the
 /// corresponding live-in physical register.
-unsigned MachineRegisterInfo::getLiveInVirtReg(MCRegister PReg) const {
+Register MachineRegisterInfo::getLiveInVirtReg(MCRegister PReg) const {
   for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
     if (I->first == PReg)
       return I->second;
-  return 0;
+  return Register();
 }
 
 /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
@@ -610,7 +610,7 @@ bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg) const {
   return false;
 }
 
-void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
+void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   assert(Reg && (Reg < TRI->getNumRegs()) &&

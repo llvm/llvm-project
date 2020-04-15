@@ -200,14 +200,6 @@ func @illegaltype(i0) // expected-error {{invalid integer width}}
 
 // -----
 
-func @illegaltype(ui1) // expected-error {{cannot have signedness semantics for i1}}
-
-// -----
-
-func @illegaltype(si1) // expected-error {{cannot have signedness semantics for i1}}
-
-// -----
-
 func @malformed_for_percent() {
   affine.for i = 1 to 10 { // expected-error {{expected SSA operand}}
 
@@ -1464,6 +1456,36 @@ func @large_bound() {
   "test.out_of_range_attribute"() {
     // expected-error @+1 {{integer constant out of range for attribute}}
     attr = 18446744073709551616 : ui64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 79228162514264337593543950336 : ui96
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 79228162514264337593543950336 : i96
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @really_large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 39614081257132168796771975168 : si96
   } : () -> ()
   return
 }

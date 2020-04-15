@@ -23,7 +23,7 @@
 using namespace mlir;
 
 namespace {
-struct Inliner : public FunctionPass<Inliner> {
+struct Inliner : public PassWrapper<Inliner, FunctionPass> {
   void runOnFunction() override {
     auto function = getFunction();
 

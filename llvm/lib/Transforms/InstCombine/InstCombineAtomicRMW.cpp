@@ -124,7 +124,7 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     auto *SI = new StoreInst(RMWI.getValOperand(),
                              RMWI.getPointerOperand(), &RMWI);
     SI->setAtomic(Ordering, RMWI.getSyncScopeID());
-    SI->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
+    SI->setAlignment(DL.getABITypeAlign(RMWI.getType()));
     return eraseInstFromFunction(RMWI);
   }
   
@@ -150,8 +150,8 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
       Ordering != AtomicOrdering::Monotonic)
     return nullptr;
   
-  LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand());
-  Load->setAtomic(Ordering, RMWI.getSyncScopeID());
-  Load->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
+  LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand(), "",
+                                false, DL.getABITypeAlign(RMWI.getType()),
+                                Ordering, RMWI.getSyncScopeID());
   return Load;
 }

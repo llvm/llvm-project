@@ -164,6 +164,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
 
   // Much like WebAssemblyAsmPrinter in the backend, we have to own these.
   std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
+  std::vector<std::unique_ptr<std::string>> Names;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -230,6 +231,12 @@ public:
 
   void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
     Signatures.push_back(std::move(Sig));
+  }
+
+  StringRef storeName(StringRef Name) {
+    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
+    Names.push_back(std::move(N));
+    return *Names.back();
   }
 
   std::pair<StringRef, StringRef> nestingString(NestingType NT) {
@@ -725,7 +732,7 @@ public:
         return true;
       auto ExportName = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setExportName(ExportName);
+      WasmSym->setExportName(storeName(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
     }
 
@@ -737,7 +744,7 @@ public:
         return true;
       auto ImportModule = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportModule(ImportModule);
+      WasmSym->setImportModule(storeName(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
     }
 
@@ -749,7 +756,7 @@ public:
         return true;
       auto ImportName = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportName(ImportName);
+      WasmSym->setImportName(storeName(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
     }
 

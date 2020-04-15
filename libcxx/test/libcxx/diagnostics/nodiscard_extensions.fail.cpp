@@ -21,8 +21,7 @@
 // be tested here and in nodiscard_extensions.pass.cpp. They should also
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
-// MODULES_DEFINES: _LIBCPP_ENABLE_NODISCARD
-#define _LIBCPP_ENABLE_NODISCARD
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_NODISCARD
 
 #include <algorithm>
 #include <functional>

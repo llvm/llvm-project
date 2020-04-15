@@ -829,7 +829,7 @@ void llvm::addUnpredicatedMveVpredNOp(MachineInstrBuilder &MIB) {
 }
 
 void llvm::addUnpredicatedMveVpredROp(MachineInstrBuilder &MIB,
-                                      unsigned DestReg) {
+                                      Register DestReg) {
   addUnpredicatedMveVpredNOp(MIB);
   MIB.addReg(DestReg, RegState::Undef);
 }
@@ -2168,7 +2168,7 @@ ARMBaseInstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
 /// condition, otherwise returns AL. It also returns the condition code
 /// register by reference.
 ARMCC::CondCodes llvm::getInstrPredicate(const MachineInstr &MI,
-                                         unsigned &PredReg) {
+                                         Register &PredReg) {
   int PIdx = MI.findFirstPredOperandIdx();
   if (PIdx == -1) {
     PredReg = 0;
@@ -2198,7 +2198,7 @@ MachineInstr *ARMBaseInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case ARM::MOVCCr:
   case ARM::t2MOVCCr: {
     // MOVCC can be commuted by inverting the condition.
-    unsigned PredReg = 0;
+    Register PredReg;
     ARMCC::CondCodes CC = getInstrPredicate(MI, PredReg);
     // MOVCC AL can't be inverted. Shouldn't happen.
     if (CC == ARMCC::AL || PredReg != ARM::CPSR)
@@ -2219,9 +2219,9 @@ MachineInstr *ARMBaseInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 /// Identify instructions that can be folded into a MOVCC instruction, and
 /// return the defining instruction.
 MachineInstr *
-ARMBaseInstrInfo::canFoldIntoMOVCC(unsigned Reg, const MachineRegisterInfo &MRI,
+ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                    const TargetInstrInfo *TII) const {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
     return nullptr;
@@ -2401,9 +2401,9 @@ unsigned llvm::convertAddSubFlagsOpcode(unsigned OldOpc) {
 
 void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator &MBBI,
-                                   const DebugLoc &dl, unsigned DestReg,
-                                   unsigned BaseReg, int NumBytes,
-                                   ARMCC::CondCodes Pred, unsigned PredReg,
+                                   const DebugLoc &dl, Register DestReg,
+                                   Register BaseReg, int NumBytes,
+                                   ARMCC::CondCodes Pred, Register PredReg,
                                    const ARMBaseInstrInfo &TII,
                                    unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
@@ -2563,7 +2563,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
 }
 
 bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                                unsigned FrameReg, int &Offset,
+                                Register FrameReg, int &Offset,
                                 const ARMBaseInstrInfo &TII) {
   unsigned Opcode = MI.getOpcode();
   const MCInstrDesc &Desc = MI.getDesc();
@@ -5452,7 +5452,7 @@ MachineInstr *llvm::findCMPToFoldIntoCBZ(MachineInstr *Br,
   if (CmpMI->getOpcode() != ARM::tCMPi8 && CmpMI->getOpcode() != ARM::t2CMPri)
     return nullptr;
   Register Reg = CmpMI->getOperand(0).getReg();
-  unsigned PredReg = 0;
+  Register PredReg;
   ARMCC::CondCodes Pred = getInstrPredicate(*CmpMI, PredReg);
   if (Pred != ARMCC::AL || CmpMI->getOperand(1).getImm() != 0)
     return nullptr;

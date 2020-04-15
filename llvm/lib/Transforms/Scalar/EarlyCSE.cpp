@@ -948,7 +948,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         continue;
       }
 
-      salvageKnowledge(&Inst);
+      salvageKnowledge(&Inst, &AC);
       salvageDebugInfoOrMarkUndef(Inst);
       removeMSSA(Inst);
       Inst.eraseFromParent();
@@ -1015,7 +1015,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                 cast<ConstantInt>(KnownCond)->isOne()) {
               LLVM_DEBUG(dbgs()
                          << "EarlyCSE removing guard: " << Inst << '\n');
-              salvageKnowledge(&Inst);
+              salvageKnowledge(&Inst, &AC);
               removeMSSA(Inst);
               Inst.eraseFromParent();
               Changed = true;
@@ -1051,7 +1051,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           Changed = true;
         }
         if (isInstructionTriviallyDead(&Inst, &TLI)) {
-          salvageKnowledge(&Inst);
+          salvageKnowledge(&Inst, &AC);
           removeMSSA(Inst);
           Inst.eraseFromParent();
           Changed = true;
@@ -1077,7 +1077,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         if (auto *I = dyn_cast<Instruction>(V))
           I->andIRFlags(&Inst);
         Inst.replaceAllUsesWith(V);
-        salvageKnowledge(&Inst);
+        salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
         Inst.eraseFromParent();
         Changed = true;
@@ -1138,7 +1138,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           }
           if (!Inst.use_empty())
             Inst.replaceAllUsesWith(Op);
-          salvageKnowledge(&Inst);
+          salvageKnowledge(&Inst, &AC);
           removeMSSA(Inst);
           Inst.eraseFromParent();
           Changed = true;
@@ -1182,7 +1182,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         }
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(InVal.first);
-        salvageKnowledge(&Inst);
+        salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
         Inst.eraseFromParent();
         Changed = true;
@@ -1235,7 +1235,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        salvageKnowledge(&Inst);
+        salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
         Inst.eraseFromParent();
         Changed = true;
@@ -1271,7 +1271,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             if (!DebugCounter::shouldExecute(CSECounter)) {
               LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
             } else {
-              salvageKnowledge(&Inst);
+              salvageKnowledge(&Inst, &AC);
               removeMSSA(*LastStore);
               LastStore->eraseFromParent();
               Changed = true;

@@ -155,11 +155,11 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If the element types match, IR can fold it.
   unsigned NumDstElt = DestVTy->getNumElements();
-  unsigned NumSrcElt = C->getType()->getVectorNumElements();
+  unsigned NumSrcElt = cast<VectorType>(C->getType())->getNumElements();
   if (NumDstElt == NumSrcElt)
     return ConstantExpr::getBitCast(C, DestTy);
 
-  Type *SrcEltTy = C->getType()->getVectorElementType();
+  Type *SrcEltTy = cast<VectorType>(C->getType())->getElementType();
   Type *DstEltTy = DestVTy->getElementType();
 
   // Otherwise, we're changing the number of elements in a vector, which
@@ -218,7 +218,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
         if (Src && isa<UndefValue>(Src))
-          Src = Constant::getNullValue(C->getType()->getVectorElementType());
+          Src = Constant::getNullValue(
+              cast<VectorType>(C->getType())->getElementType());
         else
           Src = dyn_cast_or_null<ConstantInt>(Src);
         if (!Src)  // Reject constantexpr elements.
@@ -463,15 +464,18 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C)) {
-    Type *EltTy = C->getType()->getSequentialElementType();
+    uint64_t NumElts;
+    Type *EltTy;
+    if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
+      NumElts = AT->getNumElements();
+      EltTy = AT->getElementType();
+    } else {
+      NumElts = cast<VectorType>(C->getType())->getNumElements();
+      EltTy = cast<VectorType>(C->getType())->getElementType();
+    }
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
     uint64_t Offset = ByteOffset - Index * EltSize;
-    uint64_t NumElts;
-    if (auto *AT = dyn_cast<ArrayType>(C->getType()))
-      NumElts = AT->getNumElements();
-    else
-      NumElts = C->getType()->getVectorNumElements();
 
     for (; Index != NumElts; ++Index) {
       if (!ReadDataFromGlobal(C->getAggregateElement(Index), Offset, CurPtr,
@@ -505,7 +509,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
                                           const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
-  if (LoadTy->isVectorTy() && LoadTy->getVectorIsScalable())
+  if (LoadTy->isVectorTy() && cast<VectorType>(LoadTy)->isScalable())
     return nullptr;
 
   auto *PTy = cast<PointerType>(C->getType());
@@ -742,8 +746,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
       return Op1;
     }
 
-    Known0.Zero |= Known1.Zero;
-    Known0.One &= Known1.One;
+    Known0 &= Known1;
     if (Known0.isConstant())
       return ConstantInt::get(Op0->getType(), Known0.getConstant());
   }
@@ -834,7 +837,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized() ||
-      (SrcElemTy->isVectorTy() && SrcElemTy->getVectorIsScalable()))
+      (SrcElemTy->isVectorTy() && cast<VectorType>(SrcElemTy)->isScalable()))
     return nullptr;
 
   if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy,
@@ -936,11 +939,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         // Only handle pointers to sized types, not pointers to functions.
         if (!Ty->isSized())
           return nullptr;
-      } else if (auto *ATy = dyn_cast<SequentialType>(Ty)) {
-        Ty = ATy->getElementType();
       } else {
-        // We've reached some non-indexable type.
-        break;
+        Type *NextTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
+        if (!NextTy)
+          break;
+        Ty = NextTy;
       }
 
       // Determine which element of the array the offset points into.
@@ -1825,10 +1828,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::experimental_constrained_nearbyint:
     case Intrinsic::experimental_constrained_rint: {
       auto CI = cast<ConstrainedFPIntrinsic>(Call);
-      Optional<fp::RoundingMode> RMOp = CI->getRoundingMode();
-      if (RMOp)
-        RM = getAPFloatRoundingMode(*RMOp);
-      if (!RM)
+      RM = CI->getRoundingMode();
+      if (!RM || RM.getValue() == RoundingMode::Dynamic)
         return nullptr;
       break;
     }
@@ -2571,7 +2572,7 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
 
   // Do not iterate on scalable vector. The number of elements is unknown at
   // compile-time.
-  if (VTy->getVectorIsScalable())
+  if (VTy->isScalable())
     return nullptr;
 
   if (IntrinsicID == Intrinsic::masked_load) {

@@ -65,7 +65,7 @@ private:
 // underlying event.
 struct Counter {
   // event: the PerfEvent to measure.
-  explicit Counter(const PerfEvent &event);
+  explicit Counter(PerfEvent &&event);
 
   Counter(const Counter &) = delete;
   Counter(Counter &&other) = default;
@@ -77,28 +77,11 @@ struct Counter {
   int64_t read() const; // Return the current value of the counter.
 
 private:
+  PerfEvent Event;
 #ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
 #endif
 };
-
-// Helper to measure a list of PerfEvent for a particular function.
-// callback is called for each successful measure (PerfEvent needs to be valid).
-template <typename Function>
-void Measure(
-    ArrayRef<PerfEvent> Events,
-    const std::function<void(const PerfEvent &Event, int64_t Value)> &Callback,
-    Function Fn) {
-  for (const auto &Event : Events) {
-    if (!Event.valid())
-      continue;
-    Counter Cnt(Event);
-    Cnt.start();
-    Fn();
-    Cnt.stop();
-    Callback(Event, Cnt.read());
-  }
-}
 
 } // namespace pfm
 } // namespace exegesis

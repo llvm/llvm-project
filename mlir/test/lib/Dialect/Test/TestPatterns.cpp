@@ -38,7 +38,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct TestPatternDriver : public FunctionPass<TestPatternDriver> {
+struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
@@ -46,7 +46,7 @@ struct TestPatternDriver : public FunctionPass<TestPatternDriver> {
     // Verify named pattern is generated with expected name.
     patterns.insert<TestNamedPatternRule>(&getContext());
 
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 } // end anonymous namespace
@@ -96,7 +96,8 @@ static void reifyReturnShape(Operation *op) {
                      << it.value().getDefiningOp();
 }
 
-struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
+struct TestReturnTypeDriver
+    : public PassWrapper<TestReturnTypeDriver, FunctionPass> {
   void runOnFunction() override {
     if (getFunction().getName() == "testCreateFunctions") {
       std::vector<Operation *> ops;
@@ -359,6 +360,28 @@ struct TestNonRootReplacement : public RewritePattern {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Recursive Rewrite Testing
+/// This pattern is applied to the same operation multiple times, but has a
+/// bounded recursion.
+struct TestBoundedRecursiveRewrite
+    : public OpRewritePattern<TestRecursiveRewriteOp> {
+  using OpRewritePattern<TestRecursiveRewriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TestRecursiveRewriteOp op,
+                                PatternRewriter &rewriter) const final {
+    // Decrement the depth of the op in-place.
+    rewriter.updateRootInPlace(op, [&] {
+      op.setAttr("depth",
+                 rewriter.getI64IntegerAttr(op.depth().getSExtValue() - 1));
+    });
+    return success();
+  }
+
+  /// The conversion target handles bounding the recursion of this pattern.
+  bool hasBoundedRewriteRecursion() const final { return true; }
+};
 } // namespace
 
 namespace {
@@ -398,13 +421,13 @@ struct TestTypeConverter : public TypeConverter {
 };
 
 struct TestLegalizePatternDriver
-    : public ModulePass<TestLegalizePatternDriver> {
+    : public PassWrapper<TestLegalizePatternDriver, OperationPass<ModuleOp>> {
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
 
   TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
-  void runOnModule() override {
+  void runOnOperation() override {
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
@@ -413,7 +436,7 @@ struct TestLegalizePatternDriver
         TestCreateIllegalBlock, TestPassthroughInvalidOp, TestSplitReturnType,
         TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
         TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-        TestNonRootReplacement>(&getContext());
+        TestNonRootReplacement, TestBoundedRecursiveRewrite>(&getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
@@ -448,9 +471,14 @@ struct TestLegalizePatternDriver
           op->getAttrOfType<UnitAttr>("test.recursively_legal"));
     });
 
+    // Mark the bound recursion operation as dynamically legal.
+    target.addDynamicallyLegalOp<TestRecursiveRewriteOp>(
+        [](TestRecursiveRewriteOp op) { return op.depth() == 0; });
+
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
-      (void)applyPartialConversion(getModule(), target, patterns, &converter);
+      (void)applyPartialConversion(getOperation(), target, patterns,
+                                   &converter);
       return;
     }
 
@@ -461,7 +489,7 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      (void)applyFullConversion(getModule(), target, patterns, &converter);
+      (void)applyFullConversion(getOperation(), target, patterns, &converter);
       return;
     }
 
@@ -470,7 +498,7 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
-    if (failed(applyAnalysisConversion(getModule(), target, patterns,
+    if (failed(applyAnalysisConversion(getOperation(), target, patterns,
                                        legalizedOps, &converter)))
       return signalPassFailure();
 
@@ -533,7 +561,8 @@ struct OneVResOneVOperandOp1Converter
   }
 };
 
-struct TestRemappedValue : public mlir::FunctionPass<TestRemappedValue> {
+struct TestRemappedValue
+    : public mlir::PassWrapper<TestRemappedValue, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
     patterns.insert<OneVResOneVOperandOp1Converter>(&getContext());

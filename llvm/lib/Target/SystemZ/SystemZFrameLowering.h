@@ -46,7 +46,7 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
@@ -54,7 +54,7 @@ public:
   // Return the byte offset from the incoming stack pointer of Reg's
   // ABI-defined save slot.  Return 0 if no slot is defined for Reg.  Adjust
   // the offset in case MF has packed-stack.
-  unsigned getRegSpillOffset(MachineFunction &MF, unsigned Reg) const;
+  unsigned getRegSpillOffset(MachineFunction &MF, Register Reg) const;
 
   // Get or create the frame index of where the old frame pointer is stored.
   int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const;

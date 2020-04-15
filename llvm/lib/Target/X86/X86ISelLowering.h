@@ -1179,12 +1179,12 @@ namespace llvm {
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     virtual bool needsFixedCatchObjects() const override;
@@ -1456,9 +1456,6 @@ namespace llvm {
     MachineBasicBlock *EmitLoweredSelect(MachineInstr &I,
                                          MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *EmitLoweredAtomicFP(MachineInstr &I,
-                                           MachineBasicBlock *BB) const;
-
     MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
@@ -1488,9 +1485,6 @@ namespace llvm {
 
     MachineBasicBlock *emitLongJmpShadowStackFix(MachineInstr &MI,
                                                  MachineBasicBlock *MBB) const;
-
-    MachineBasicBlock *emitFMA3Instr(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const;
 
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;

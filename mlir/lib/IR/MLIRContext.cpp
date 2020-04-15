@@ -24,11 +24,10 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
@@ -42,16 +41,68 @@ using namespace mlir::detail;
 using llvm::hash_combine;
 using llvm::hash_combine_range;
 
-static llvm::cl::opt<bool> clPrintOpOnDiagnostic(
-    "mlir-print-op-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
-                   "the operation as an attached note"),
-    llvm::cl::init(true));
+//===----------------------------------------------------------------------===//
+// MLIRContext CommandLine Options
+//===----------------------------------------------------------------------===//
 
-static llvm::cl::opt<bool> clPrintStackTraceOnDiagnostic(
-    "mlir-print-stacktrace-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
-                   "as an attached note"));
+namespace {
+/// This struct contains command line options that can be used to initialize
+/// various bits of an MLIRContext. This uses a struct wrapper to avoid the need
+/// for global command line options.
+struct MLIRContextOptions {
+  llvm::cl::opt<bool> printOpOnDiagnostic{
+      "mlir-print-op-on-diagnostic",
+      llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
+                     "the operation as an attached note"),
+      llvm::cl::init(true)};
+
+  llvm::cl::opt<bool> printStackTraceOnDiagnostic{
+      "mlir-print-stacktrace-on-diagnostic",
+      llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
+                     "as an attached note")};
+};
+} // end anonymous namespace
+
+static llvm::ManagedStatic<MLIRContextOptions> clOptions;
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the MLIRContext. These flags are used when constructing
+/// an MLIR context for initialization.
+void mlir::registerMLIRContextCLOptions() {
+  // Make sure that the options struct has been initialized.
+  *clOptions;
+}
+
+//===----------------------------------------------------------------------===//
+// Builtin Dialect
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A builtin dialect to define types/etc that are necessary for the validity of
+/// the IR.
+struct BuiltinDialect : public Dialect {
+  BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
+    addAttributes<AffineMapAttr, ArrayAttr, BoolAttr, DenseElementsAttr,
+                  DictionaryAttr, FloatAttr, SymbolRefAttr, IntegerAttr,
+                  IntegerSetAttr, OpaqueAttr, OpaqueElementsAttr,
+                  SparseElementsAttr, StringAttr, TypeAttr, UnitAttr>();
+    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
+                  UnknownLoc>();
+
+    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
+             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
+             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
+
+    // TODO: These operations should be moved to a different dialect when they
+    // have been fully decoupled from the core.
+    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
+  }
+};
+} // end anonymous namespace.
+
+//===----------------------------------------------------------------------===//
+// AffineMap and IntegerSet hashing
+//===----------------------------------------------------------------------===//
 
 /// A utility function to safely get or create a uniqued instance within the
 /// given set container.
@@ -81,27 +132,6 @@ static ValueT safeGetOrCreate(DenseSet<ValueT, DenseInfoT> &container,
 }
 
 namespace {
-/// A builtin dialect to define types/etc that are necessary for the validity of
-/// the IR.
-struct BuiltinDialect : public Dialect {
-  BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
-    addAttributes<AffineMapAttr, ArrayAttr, BoolAttr, DenseElementsAttr,
-                  DictionaryAttr, FloatAttr, SymbolRefAttr, IntegerAttr,
-                  IntegerSetAttr, OpaqueAttr, OpaqueElementsAttr,
-                  SparseElementsAttr, StringAttr, TypeAttr, UnitAttr>();
-    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                  UnknownLoc>();
-
-    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
-             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
-
-    // TODO: These operations should be moved to a different dialect when they
-    // have been fully decoupled from the core.
-    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
-  }
-};
-
 struct AffineMapKeyInfo : DenseMapInfo<AffineMap> {
   // Affine maps are uniqued based on their dim/symbol counts and affine
   // expressions.
@@ -155,6 +185,10 @@ struct IntegerSetKeyInfo : DenseMapInfo<IntegerSet> {
 };
 } // end anonymous namespace.
 
+//===----------------------------------------------------------------------===//
+// MLIRContextImpl
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 /// This is the implementation of the MLIRContext class, using the pImpl idiom.
 /// This class is completely private to this file, so everything is public.
@@ -184,10 +218,10 @@ public:
 
   /// If the operation should be attached to diagnostics printed via the
   /// Operation::emit methods.
-  bool printOpOnDiagnostic;
+  bool printOpOnDiagnostic = true;
 
   /// If the current stack trace should be attached when emitting diagnostics.
-  bool printStackTraceOnDiagnostic;
+  bool printStackTraceOnDiagnostic = false;
 
   //===--------------------------------------------------------------------===//
   // Other
@@ -205,12 +239,12 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// This is a mapping from class identifier to Dialect for registered
-  /// attributes and types.
-  DenseMap<const ClassID *, Dialect *> registeredDialectSymbols;
+  /// This is a mapping from type id to Dialect for registered attributes and
+  /// types.
+  DenseMap<TypeID, Dialect *> registeredDialectSymbols;
 
   /// These are identifiers uniqued into this MLIRContext.
-  llvm::StringMap<char, llvm::BumpPtrAllocator &> identifiers;
+  llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -253,10 +287,13 @@ public:
   UnknownLoc unknownLocAttr;
 
 public:
-  MLIRContextImpl()
-      : printOpOnDiagnostic(clPrintOpOnDiagnostic),
-        printStackTraceOnDiagnostic(clPrintStackTraceOnDiagnostic),
-        identifiers(identifierAllocator) {}
+  MLIRContextImpl() : identifiers(identifierAllocator) {
+    // Initialize values based on the command line flags if they were provided.
+    if (clOptions.isConstructed()) {
+      printOpOnDiagnostic = clOptions->printOpOnDiagnostic;
+      printStackTraceOnDiagnostic = clOptions->printStackTraceOnDiagnostic;
+    }
+  }
 };
 } // end namespace mlir
 
@@ -397,9 +434,7 @@ bool MLIRContext::shouldPrintOpOnDiagnostic() {
 /// Set the flag specifying if we should attach the operation to diagnostics
 /// emitted via Operation::emit.
 void MLIRContext::printOpOnDiagnostic(bool enable) {
-  // Let the command line option take priority.
-  if (!clPrintOpOnDiagnostic.getNumOccurrences())
-    impl->printOpOnDiagnostic = enable;
+  impl->printOpOnDiagnostic = enable;
 }
 
 /// Return true if we should attach the current stacktrace to diagnostics when
@@ -411,9 +446,7 @@ bool MLIRContext::shouldPrintStackTraceOnDiagnostic() {
 /// Set the flag specifying if we should attach the current stacktrace when
 /// emitting diagnostics.
 void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
-  // Let the command line option take priority.
-  if (!clPrintStackTraceOnDiagnostic.getNumOccurrences())
-    impl->printStackTraceOnDiagnostic = enable;
+  impl->printStackTraceOnDiagnostic = enable;
 }
 
 /// Return information about all registered operations.  This isn't very
@@ -462,12 +495,12 @@ void Dialect::addOperation(AbstractOperation opInfo) {
 }
 
 /// Register a dialect-specific symbol(e.g. type) with the current context.
-void Dialect::addSymbol(const ClassID *const classID) {
+void Dialect::addSymbol(TypeID typeID) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
   llvm::sys::SmartScopedWriter<true> registryLock(impl.contextMutex);
-  if (!impl.registeredDialectSymbols.insert({classID, this}).second) {
+  if (!impl.registeredDialectSymbols.insert({typeID, this}).second) {
     llvm::errs() << "error: dialect symbol already registered.\n";
     abort();
   }
@@ -493,33 +526,35 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
 
 /// Return an identifier for the specified string.
 Identifier Identifier::get(StringRef str, MLIRContext *context) {
-  assert(!str.empty() && "Cannot create an empty identifier");
-  assert(str.find('\0') == StringRef::npos &&
-         "Cannot create an identifier with a nul character");
-
   auto &impl = context->getImpl();
 
   { // Check for an existing identifier in read-only mode.
     llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
     auto it = impl.identifiers.find(str);
     if (it != impl.identifiers.end())
-      return Identifier(it->getKeyData());
+      return Identifier(&*it);
   }
+
+  // Check invariants after seeing if we already have something in the
+  // identifier table - if we already had it in the table, then it already
+  // passed invariant checks.
+  assert(!str.empty() && "Cannot create an empty identifier");
+  assert(str.find('\0') == StringRef::npos &&
+         "Cannot create an identifier with a nul character");
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
-  auto it = impl.identifiers.insert({str, char()}).first;
-  return Identifier(it->getKeyData());
+  auto it = impl.identifiers.insert(str).first;
+  return Identifier(&*it);
 }
 
 //===----------------------------------------------------------------------===//
 // Type uniquing
 //===----------------------------------------------------------------------===//
 
-static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
-                                       const ClassID *const classID) {
+static Dialect &lookupDialectForSymbol(MLIRContext *ctx, TypeID typeID) {
   auto &impl = ctx->getImpl();
-  auto it = impl.registeredDialectSymbols.find(classID);
+  auto it = impl.registeredDialectSymbols.find(typeID);
   assert(it != impl.registeredDialectSymbols.end() &&
          "symbol is not registered.");
   return *it->second;
@@ -530,8 +565,7 @@ static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 /// Get the dialect that registered the type with the provided typeid.
-Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx,
-                                           const ClassID *const typeID) {
+Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx, TypeID typeID) {
   return lookupDialectForSymbol(ctx, typeID);
 }
 
@@ -623,16 +657,15 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
   return getImpl().attributeUniquer;
 }
 
-/// Returns a functor used to initialize new attribute storage instances.
-std::function<void(AttributeStorage *)>
-AttributeUniquer::getInitFn(MLIRContext *ctx, const ClassID *const attrID) {
-  return [ctx, attrID](AttributeStorage *storage) {
-    storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
+/// Initialize the given attribute storage instance.
+void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
+                                                  MLIRContext *ctx,
+                                                  TypeID attrID) {
+  storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
 
-    // If the attribute did not provide a type, then default to NoneType.
-    if (!storage->getType())
-      storage->setType(NoneType::get(ctx));
-  };
+  // If the attribute did not provide a type, then default to NoneType.
+  if (!storage->getType())
+    storage->setType(NoneType::get(ctx));
 }
 
 BoolAttr BoolAttr::get(bool value, MLIRContext *context) {

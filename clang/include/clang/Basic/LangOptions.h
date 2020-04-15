@@ -19,6 +19,7 @@
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/Visibility.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include <string>
@@ -53,6 +54,7 @@ enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
 class LangOptions : public LangOptionsBase {
 public:
   using Visibility = clang::Visibility;
+  using RoundingMode = llvm::RoundingMode;
 
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
@@ -190,23 +192,9 @@ public:
     FEA_On
   };
 
-  // Values of the following enumerations correspond to metadata arguments
-  // specified for constrained floating-point intrinsics:
-  // http://llvm.org/docs/LangRef.html#constrained-floating-point-intrinsics.
-
-  /// Possible rounding modes.
-  enum FPRoundingModeKind {
-    /// Rounding to nearest, corresponds to "round.tonearest".
-    FPR_ToNearest,
-    /// Rounding toward -Inf, corresponds to "round.downward".
-    FPR_Downward,
-    /// Rounding toward +Inf, corresponds to "round.upward".
-    FPR_Upward,
-    /// Rounding toward zero, corresponds to "round.towardzero".
-    FPR_TowardZero,
-    /// Is determined by runtime environment, corresponds to "round.dynamic".
-    FPR_Dynamic
-  };
+  /// Alias for RoundingMode::NearestTiesToEven.
+  static constexpr unsigned FPR_ToNearest =
+      static_cast<unsigned>(llvm::RoundingMode::NearestTiesToEven);
 
   /// Possible floating point exception behavior.
   enum FPExceptionModeKind {
@@ -386,6 +374,8 @@ public:
 
 /// Floating point control options
 class FPOptions {
+  using RoundingMode = llvm::RoundingMode;
+
 public:
   FPOptions() : fp_contract(LangOptions::FPC_Off),
                 fenv_access(LangOptions::FEA_Off),
@@ -395,10 +385,10 @@ public:
 
   // Used for serializing.
   explicit FPOptions(unsigned I)
-      : fp_contract(static_cast<LangOptions::FPContractModeKind>(I & 3)),
-        fenv_access(static_cast<LangOptions::FEnvAccessModeKind>((I >> 2) & 1)),
-        rounding(static_cast<LangOptions::FPRoundingModeKind>((I >> 3) & 7)),
-        exceptions(static_cast<LangOptions::FPExceptionModeKind>((I >> 6) & 3))
+      : fp_contract(I & 3),
+        fenv_access((I >> 2) & 1),
+        rounding   ((I >> 3) & 7),
+        exceptions ((I >> 6) & 3)
         {}
 
   explicit FPOptions(const LangOptions &LangOpts)
@@ -437,12 +427,12 @@ public:
 
   void setDisallowFEnvAccess() { fenv_access = LangOptions::FEA_Off; }
 
-  LangOptions::FPRoundingModeKind getRoundingMode() const {
-    return static_cast<LangOptions::FPRoundingModeKind>(rounding);
+  RoundingMode getRoundingMode() const {
+    return static_cast<RoundingMode>(rounding);
   }
 
-  void setRoundingMode(LangOptions::FPRoundingModeKind RM) {
-    rounding = RM;
+  void setRoundingMode(RoundingMode RM) {
+    rounding = static_cast<unsigned>(RM);
   }
 
   LangOptions::FPExceptionModeKind getExceptionMode() const {
@@ -454,7 +444,7 @@ public:
   }
 
   bool isFPConstrained() const {
-    return getRoundingMode() != LangOptions::FPR_ToNearest ||
+    return getRoundingMode() != RoundingMode::NearestTiesToEven ||
            getExceptionMode() != LangOptions::FPE_Ignore ||
            allowFEnvAccess();
   }

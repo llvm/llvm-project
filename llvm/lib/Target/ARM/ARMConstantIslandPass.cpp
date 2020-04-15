@@ -1353,8 +1353,8 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     //   displacement.
     MachineBasicBlock::iterator I = UserMI;
     ++I;
-    for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI),
-                  PredReg = 0;
+    Register PredReg;
+    for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI);
          I->getOpcode() != ARM::t2IT &&
          getITInstrPredicate(*I, PredReg) != ARMCC::AL;
          Offset += TII->getInstSizeInBytes(*I), I = std::next(I)) {
@@ -1399,7 +1399,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
 
   // Avoid splitting an IT block.
   if (LastIT) {
-    unsigned PredReg = 0;
+    Register PredReg;
     ARMCC::CondCodes CC = getITInstrPredicate(*MI, PredReg);
     if (CC != ARMCC::AL)
       MI = LastIT;
@@ -1423,7 +1423,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
 
   // We really must not split an IT block.
 #ifndef NDEBUG
-  unsigned PredReg;
+  Register PredReg;
   assert(!isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL);
 #endif
   NewMBB = splitBlockBeforeInstr(&*MI);
@@ -1828,7 +1828,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     if (!Br.MI->killsRegister(ARM::CPSR))
       return false;
 
-    unsigned PredReg = 0;
+    Register PredReg;
     unsigned NewOpc = 0;
     ARMCC::CondCodes Pred = getInstrPredicate(*Br.MI, PredReg);
     if (Pred == ARMCC::EQ)

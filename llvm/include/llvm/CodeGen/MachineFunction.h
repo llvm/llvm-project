@@ -224,7 +224,7 @@ struct LandingPadInfo {
 };
 
 class MachineFunction {
-  const Function &F;
+  Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
@@ -346,11 +346,6 @@ class MachineFunction {
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
-  /// With Basic Block Sections, this stores the bb ranges of cold and
-  /// exception sections.
-  std::pair<int, int> ColdSectionRange = {-1, -1};
-  std::pair<int, int> ExceptionSectionRange = {-1, -1};
-
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -435,7 +430,7 @@ public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
-  MachineFunction(const Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
   MachineFunction(const MachineFunction &) = delete;
@@ -484,6 +479,9 @@ public:
   const DataLayout &getDataLayout() const;
 
   /// Return the LLVM function that this machine code represents
+  Function &getFunction() { return F; }
+
+  /// Return the LLVM function that this machine code represents
   const Function &getFunction() const { return F; }
 
   /// getName - Return the name of the corresponding LLVM function.
@@ -505,21 +503,12 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
-  void setSectionRange();
-
-  /// Returns true if this basic block number starts a cold or exception
-  /// section.
-  bool isSectionStartMBB(int N) const {
-    return (N == ColdSectionRange.first || N == ExceptionSectionRange.first);
-  }
-
-  /// Returns true if this basic block ends a cold or exception section.
-  bool isSectionEndMBB(int N) const {
-    return (N == ColdSectionRange.second || N == ExceptionSectionRange.second);
-  }
-
   /// Creates basic block Labels for this function.
   void createBBLabels();
+
+  /// Assign IsBeginSection IsEndSection fields for basic blocks in this
+  /// function.
+  void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
   const LLVMTargetMachine &getTarget() const { return Target; }
@@ -817,19 +806,6 @@ public:
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline MachineMemOperand *getMachineMemOperand(
-          MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-          unsigned base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-          const MDNode *Ranges = nullptr,
-          SyncScope::ID SSID = SyncScope::System,
-          AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-          AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic),
-      "Use the version that takes Align instead") {
-    return getMachineMemOperand(PtrInfo, f, s, Align(base_alignment), AAInfo,
-                                Ranges, SSID, Ordering, FailureOrdering);
-  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.

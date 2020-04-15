@@ -86,51 +86,43 @@ void TypeCategoryImpl::AddLanguage(lldb::LanguageType lang) {
 
 bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
-                           lldb::TypeFormatImplSP &entry, uint32_t *reason) {
+                           lldb::TypeFormatImplSP &entry) {
   if (!IsEnabled() || !IsApplicable(lang))
     return false;
-  if (GetTypeFormatsContainer()->Get(candidates, entry, reason))
+  if (GetTypeFormatsContainer()->Get(candidates, entry))
     return true;
-  bool regex = GetRegexTypeFormatsContainer()->Get(candidates, entry, reason);
-  if (regex && reason)
-    *reason |= lldb_private::eFormatterChoiceCriterionRegularExpressionSummary;
+  bool regex = GetRegexTypeFormatsContainer()->Get(candidates, entry);
   return regex;
 }
 
 bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
-                           lldb::TypeSummaryImplSP &entry, uint32_t *reason) {
+                           lldb::TypeSummaryImplSP &entry) {
   if (!IsEnabled() || !IsApplicable(lang))
     return false;
-  if (GetTypeSummariesContainer()->Get(candidates, entry, reason))
+  if (GetTypeSummariesContainer()->Get(candidates, entry))
     return true;
-  bool regex = GetRegexTypeSummariesContainer()->Get(candidates, entry, reason);
-  if (regex && reason)
-    *reason |= lldb_private::eFormatterChoiceCriterionRegularExpressionSummary;
+  bool regex = GetRegexTypeSummariesContainer()->Get(candidates, entry);
   return regex;
 }
 
 bool TypeCategoryImpl::Get(lldb::LanguageType lang,
                            const FormattersMatchVector &candidates,
-                           lldb::SyntheticChildrenSP &entry, uint32_t *reason) {
+                           lldb::SyntheticChildrenSP &entry) {
   if (!IsEnabled() || !IsApplicable(lang))
     return false;
   TypeFilterImpl::SharedPointer filter_sp;
-  uint32_t reason_filter = 0;
   bool regex_filter = false;
   // first find both Filter and Synth, and then check which is most recent
 
-  if (!GetTypeFiltersContainer()->Get(candidates, filter_sp, &reason_filter))
-    regex_filter = GetRegexTypeFiltersContainer()->Get(candidates, filter_sp,
-                                                       &reason_filter);
+  if (!GetTypeFiltersContainer()->Get(candidates, filter_sp))
+    regex_filter = GetRegexTypeFiltersContainer()->Get(candidates, filter_sp);
 
   bool regex_synth = false;
-  uint32_t reason_synth = 0;
   bool pick_synth = false;
   ScriptedSyntheticChildren::SharedPointer synth;
-  if (!GetTypeSyntheticsContainer()->Get(candidates, synth, &reason_synth))
-    regex_synth = GetRegexTypeSyntheticsContainer()->Get(candidates, synth,
-                                                         &reason_synth);
+  if (!GetTypeSyntheticsContainer()->Get(candidates, synth))
+    regex_synth = GetRegexTypeSyntheticsContainer()->Get(candidates, synth);
   if (!filter_sp.get() && !synth.get())
     return false;
   else if (!filter_sp.get() && synth.get())
@@ -144,13 +136,9 @@ bool TypeCategoryImpl::Get(lldb::LanguageType lang,
     pick_synth = filter_sp->GetRevision() <= synth->GetRevision();
   }
   if (pick_synth) {
-    if (regex_synth && reason)
-      *reason |= lldb_private::eFormatterChoiceCriterionRegularExpressionFilter;
     entry = synth;
     return true;
   } else {
-    if (regex_filter && reason)
-      *reason |= lldb_private::eFormatterChoiceCriterionRegularExpressionFilter;
     entry = filter_sp;
     return true;
   }

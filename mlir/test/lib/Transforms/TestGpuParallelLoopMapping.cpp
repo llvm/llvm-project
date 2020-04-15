@@ -20,7 +20,8 @@ namespace {
 /// Simple pass for testing the mapping of parallel loops to hardware ids using
 /// a greedy mapping strategy.
 class TestGpuGreedyParallelLoopMappingPass
-    : public OperationPass<TestGpuGreedyParallelLoopMappingPass, FuncOp> {
+    : public PassWrapper<TestGpuGreedyParallelLoopMappingPass,
+                         OperationPass<FuncOp>> {
   void runOnOperation() override {
     Operation *op = getOperation();
     for (Region &region : op->getRegions())

@@ -28,7 +28,6 @@
 #ifndef LLVM_PASS_H
 #define LLVM_PASS_H
 
-#include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace llvm {
@@ -43,6 +42,7 @@ class PassInfo;
 class PMDataManager;
 class PMStack;
 class raw_ostream;
+class StringRef;
 
 // AnalysisID - Use the PassInfo to identify a pass...
 using AnalysisID = const void *;

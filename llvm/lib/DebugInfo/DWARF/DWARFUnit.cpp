@@ -73,12 +73,15 @@ void DWARFUnitVector::addUnitsImpl(
       DWARFDataExtractor Data(Obj, InfoSection, LE, 0);
       if (!Data.isValidOffset(Offset))
         return nullptr;
-      const DWARFUnitIndex *Index = nullptr;
-      if (IsDWO)
-        Index = &getDWARFUnitIndex(Context, SectionKind);
       DWARFUnitHeader Header;
-      if (!Header.extract(Context, Data, &Offset, SectionKind, Index,
-                          IndexEntry))
+      if (!Header.extract(Context, Data, &Offset, SectionKind))
+        return nullptr;
+      if (!IndexEntry && IsDWO) {
+        const DWARFUnitIndex &Index = getDWARFUnitIndex(
+            Context, Header.isTypeUnit() ? DW_SECT_EXT_TYPES : DW_SECT_INFO);
+        IndexEntry = Index.getFromOffset(Header.getOffset());
+      }
+      if (IndexEntry && !Header.applyIndexEntry(IndexEntry))
         return nullptr;
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
@@ -251,14 +254,10 @@ Optional<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
 bool DWARFUnitHeader::extract(DWARFContext &Context,
                               const DWARFDataExtractor &debug_info,
                               uint64_t *offset_ptr,
-                              DWARFSectionKind SectionKind,
-                              const DWARFUnitIndex *Index,
-                              const DWARFUnitIndex::Entry *Entry) {
+                              DWARFSectionKind SectionKind) {
   Offset = *offset_ptr;
   Error Err = Error::success();
-  IndexEntry = Entry;
-  if (!IndexEntry && Index)
-    IndexEntry = Index->getFromOffset(*offset_ptr);
+  IndexEntry = nullptr;
   std::tie(Length, FormParams.Format) =
       debug_info.getInitialLength(offset_ptr, &Err);
   FormParams.Version = debug_info.getU16(offset_ptr, &Err);
@@ -288,19 +287,6 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   if (errorToBool(std::move(Err)))
     return false;
 
-  if (IndexEntry) {
-    if (AbbrOffset)
-      return false;
-    auto *UnitContrib = IndexEntry->getContribution();
-    if (!UnitContrib ||
-        UnitContrib->Length != (Length + getUnitLengthFieldByteSize()))
-      return false;
-    auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
-    if (!AbbrEntry)
-      return false;
-    AbbrOffset = AbbrEntry->Offset;
-  }
-
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
   Size = uint8_t(*offset_ptr - Offset);
@@ -321,6 +307,23 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
 
   // Keep track of the highest DWARF version we encounter across all units.
   Context.setMaxVersionIfGreater(getVersion());
+  return true;
+}
+
+bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
+  assert(Entry);
+  assert(!IndexEntry);
+  IndexEntry = Entry;
+  if (AbbrOffset)
+    return false;
+  auto *UnitContrib = IndexEntry->getContribution();
+  if (!UnitContrib ||
+      UnitContrib->Length != (getLength() + getUnitLengthFieldByteSize()))
+    return false;
+  auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
+  if (!AbbrEntry)
+    return false;
+  AbbrOffset = AbbrEntry->Offset;
   return true;
 }
 
@@ -524,14 +527,20 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
 
     // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
     // Setting LocSectionBase to point past the table header.
-    if (IsDWO)
-      setLocSection(&Context.getDWARFObj().getLoclistsDWOSection(),
+    if (IsDWO) {
+      auto &DWOSection = Context.getDWARFObj().getLoclistsDWOSection();
+      if (DWOSection.Data.empty())
+        return Error::success();
+      setLocSection(&DWOSection,
                     DWARFListTableHeader::getHeaderSize(Header.getFormat()));
-    else
+    } else if (auto X = UnitDie.find(DW_AT_loclists_base)) {
       setLocSection(&Context.getDWARFObj().getLoclistsSection(),
-                    toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0));
+                    toSectionOffset(X, 0));
+    } else {
+      return Error::success();
+    }
 
-    if (LocSection->Data.size()) {
+    if (LocSection) {
       if (IsDWO)
         LoclistTableHeader.emplace(".debug_loclists.dwo", "locations");
       else

@@ -19,7 +19,6 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 
 using namespace mlir;
 using namespace mlir::loop;
@@ -107,7 +106,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
     auto regionArgs = op.getRegionIterArgs();
     auto operands = op.getIterOperands();
 
-    mlir::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
+    llvm::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
       p << std::get<0>(it) << " = " << std::get<1>(it);
     });
     p << ")";

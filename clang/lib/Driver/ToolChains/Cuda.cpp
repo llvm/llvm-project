@@ -45,17 +45,22 @@ void CudaInstallationDetector::ParseCudaVersionFile(llvm::StringRef V) {
     return;
   DetectedVersion = join_items(".", VersionParts[0], VersionParts[1]);
   Version = CudaStringToVersion(DetectedVersion);
-  if (Version != CudaVersion::UNKNOWN)
+  if (Version != CudaVersion::UNKNOWN) {
+    // TODO(tra): remove the warning once we have all features of 10.2 and 11.0
+    // implemented.
+    DetectedVersionIsNotSupported = Version > CudaVersion::LATEST_SUPPORTED;
     return;
+  }
 
-  Version = CudaVersion::LATEST;
+  Version = CudaVersion::LATEST_SUPPORTED;
   DetectedVersionIsNotSupported = true;
 }
 
 void CudaInstallationDetector::WarnIfUnsupportedVersion() {
   if (DetectedVersionIsNotSupported)
     D.Diag(diag::warn_drv_unknown_cuda_version)
-        << DetectedVersion << CudaVersionToString(Version);
+        << DetectedVersion
+        << CudaVersionToString(CudaVersion::LATEST_SUPPORTED);
 }
 
 CudaInstallationDetector::CudaInstallationDetector(
@@ -161,13 +166,13 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        for (const char *GpuArchName :
-             {"sm_30", "sm_32", "sm_35", "sm_37", "sm_50", "sm_52", "sm_53",
-              "sm_60", "sm_61", "sm_62", "sm_70", "sm_72", "sm_75"}) {
-          const CudaArch GpuArch = StringToCudaArch(GpuArchName);
-          if (Version >= MinVersionForCudaArch(GpuArch) &&
-              Version <= MaxVersionForCudaArch(GpuArch))
-            LibDeviceMap[GpuArchName] = FilePath;
+        for (int Arch = (int)CudaArch::SM_30, E = (int)CudaArch::LAST; Arch < E;
+             ++Arch) {
+          CudaArch GpuArch = static_cast<CudaArch>(Arch);
+          if (!IsNVIDIAGpuArch(GpuArch))
+            continue;
+          std::string GpuArchName(CudaArchToString(GpuArch));
+          LibDeviceMap[GpuArchName] = FilePath;
         }
       }
     } else {
@@ -471,10 +476,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       continue;
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
-    const char *Arch =
-        (II.getType() == types::TY_PP_Asm)
-            ? CudaVirtualArchToString(VirtualArchForCudaArch(gpu_arch))
-            : gpu_arch_str;
+    const char *Arch = (II.getType() == types::TY_PP_Asm)
+                           ? CudaArchToVirtualArchString(gpu_arch)
+                           : gpu_arch_str;
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("--image=profile=") +
                                          Arch + ",file=" + II.getFilename()));
   }
@@ -640,24 +644,30 @@ void CudaToolChain::addClangTargetOptions(
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
   const char *PtxFeature = nullptr;
-  switch(CudaInstallation.version()) {
-    case CudaVersion::CUDA_101:
-      PtxFeature = "+ptx64";
-      break;
-    case CudaVersion::CUDA_100:
-      PtxFeature = "+ptx63";
-      break;
-    case CudaVersion::CUDA_92:
-      PtxFeature = "+ptx61";
-      break;
-    case CudaVersion::CUDA_91:
-      PtxFeature = "+ptx61";
-      break;
-    case CudaVersion::CUDA_90:
-      PtxFeature = "+ptx60";
-      break;
-    default:
-      PtxFeature = "+ptx42";
+  switch (CudaInstallation.version()) {
+  case CudaVersion::CUDA_110:
+    PtxFeature = "+ptx70";
+    break;
+  case CudaVersion::CUDA_102:
+    PtxFeature = "+ptx65";
+    break;
+  case CudaVersion::CUDA_101:
+    PtxFeature = "+ptx64";
+    break;
+  case CudaVersion::CUDA_100:
+    PtxFeature = "+ptx63";
+    break;
+  case CudaVersion::CUDA_92:
+    PtxFeature = "+ptx61";
+    break;
+  case CudaVersion::CUDA_91:
+    PtxFeature = "+ptx61";
+    break;
+  case CudaVersion::CUDA_90:
+    PtxFeature = "+ptx60";
+    break;
+  default:
+    PtxFeature = "+ptx42";
   }
   CC1Args.append({"-target-feature", PtxFeature});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
@@ -711,9 +721,9 @@ void CudaToolChain::addClangTargetOptions(
 }
 
 llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
-    const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
+    const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
     const llvm::fltSemantics *FPType) const {
-  if (DeviceOffloadKind == Action::OFK_Cuda) {
+  if (JA.getOffloadingDeviceKind() == Action::OFK_Cuda) {
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
         DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
                            options::OPT_fno_cuda_flush_denormals_to_zero,
@@ -721,7 +731,7 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
       return llvm::DenormalMode::getPreserveSign();
   }
 
-  assert(DeviceOffloadKind != Action::OFK_Host);
+  assert(JA.getOffloadingDeviceKind() != Action::OFK_Host);
   return llvm::DenormalMode::getIEEE();
 }
 

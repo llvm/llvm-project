@@ -370,7 +370,7 @@ func @dead_dealloc_fold_multi_use(%cond : i1) {
 
 // CHECK-LABEL: func @dead_block_elim
 func @dead_block_elim() {
-  // CHECK-NOT ^bb
+  // CHECK-NOT: ^bb
   func @nested() {
     return
 
@@ -392,14 +392,20 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
   %N = constant 1024 : index
   %K = constant 512 : index
 
-  // CHECK-NEXT: %0 = alloc(%arg0) : memref<?x1024xf32>
+  // CHECK-NEXT: alloc(%arg0) : memref<?x1024xf32>
   %a = alloc(%L, %N) : memref<? x ? x f32>
 
-  // CHECK-NEXT: %1 = alloc(%arg1) : memref<4x1024x8x512x?xf32>
+  // CHECK-NEXT: alloc(%arg1) : memref<4x1024x8x512x?xf32>
   %b = alloc(%N, %K, %M) : memref<4 x ? x 8 x ? x ? x f32>
 
-  // CHECK-NEXT: %2 = alloc() : memref<512x1024xi32>
+  // CHECK-NEXT: alloc() : memref<512x1024xi32>
   %c = alloc(%K, %N) : memref<? x ? x i32>
+
+  // CHECK: alloc() : memref<9x9xf32>
+  %d = alloc(%nine, %nine) : memref<? x ? x f32>
+
+  // CHECK: alloca(%arg1) : memref<4x1024x8x512x?xf32>
+  %e = alloca(%N, %K, %M) : memref<4 x ? x 8 x ? x ? x f32>
 
   // CHECK: affine.for
   affine.for %i = 0 to %L {
@@ -411,9 +417,6 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
       store %v, %b[%zero, %zero, %i, %j, %zero] : memref<4x?x8x?x?xf32>
     }
   }
-
-  // CHECK: alloc() : memref<9x9xf32>
-  %d = alloc(%nine, %nine) : memref<? x ? x f32>
 
   return %c, %d : memref<? x ? x i32>, memref<? x ? x f32>
 }

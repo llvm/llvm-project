@@ -93,8 +93,15 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       switch (Modifier) {
       default:
         llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
+      case MCSymbolRefExpr::VK_None: {
+        if (const MCSymbolRefExpr *SymRef = Target.getSymA()) {
+          // For GNU AS compatibility expressions such as
+          // _GLOBAL_OFFSET_TABLE_ - label emit a R_ARM_BASE_PREL relocation.
+          if (SymRef->getSymbol().getName() == "_GLOBAL_OFFSET_TABLE_")
+            return ELF::R_ARM_BASE_PREL;
+        }
         return ELF::R_ARM_REL32;
+      }
       case MCSymbolRefExpr::VK_GOTTPOFF:
         return ELF::R_ARM_TLS_IE32;
       case MCSymbolRefExpr::VK_ARM_GOT_PREL:

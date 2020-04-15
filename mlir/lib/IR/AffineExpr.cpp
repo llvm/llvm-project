@@ -12,7 +12,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
@@ -613,7 +612,7 @@ AffineExpr AffineExpr::compose(AffineMap map) const {
                                              map.getResults().end());
   return replaceDimsAndSymbols(dimReplacements, {});
 }
-raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr &expr) {
+raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr expr) {
   expr.print(os);
   return os;
 }

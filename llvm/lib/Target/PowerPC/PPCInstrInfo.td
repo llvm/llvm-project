@@ -252,6 +252,9 @@ def PPCcall  : SDNode<"PPCISD::CALL", SDT_PPCCall,
 def PPCcall_nop  : SDNode<"PPCISD::CALL_NOP", SDT_PPCCall,
                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                            SDNPVariadic]>;
+def PPCcall_notoc : SDNode<"PPCISD::CALL_NOTOC", SDT_PPCCall,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
 def PPCmtctr      : SDNode<"PPCISD::MTCTR", SDT_PPCCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def PPCbctrl : SDNode<"PPCISD::BCTRL", SDTNone,
@@ -315,6 +318,9 @@ def SDTDynOp  : SDTypeProfile<1, 2, []>;
 def SDTDynAreaOp  : SDTypeProfile<1, 1, []>;
 def PPCdynalloc   : SDNode<"PPCISD::DYNALLOC", SDTDynOp, [SDNPHasChain]>;
 def PPCdynareaoffset   : SDNode<"PPCISD::DYNAREAOFFSET", SDTDynAreaOp, [SDNPHasChain]>;
+
+// PC Relative Specific Nodes
+def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -727,6 +733,7 @@ def PPCS34ImmAsmOperand : AsmOperandClass {
 }
 def s34imm : Operand<i64> {
   let PrintMethod = "printS34ImmOperand";
+  let EncoderMethod = "getImm34Encoding";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
 }
@@ -974,6 +981,9 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 /// This is just the offset part of iaddr, used for preinc.
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
+// PC Relative Address
+def pcreladdr : ComplexPattern<iPTR, 1, "SelectAddrPCRel", [], []>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
 def In32BitMode  : Predicate<"!PPCSubTarget->isPPC64()">;
@@ -994,6 +1004,7 @@ def HasBPERMD : Predicate<"PPCSubTarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"PPCSubTarget->hasExtDiv()">;
 def IsISA3_0 : Predicate<"PPCSubTarget->isISA3_0()">;
 def HasFPU : Predicate<"PPCSubTarget->hasFPU()">;
+def PCRelativeMemops : Predicate<"PPCSubTarget->hasPCRelativeMemops()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.

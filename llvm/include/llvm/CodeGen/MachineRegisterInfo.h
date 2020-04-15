@@ -98,7 +98,7 @@ private:
   /// first member of the pair being non-zero. If the hinted register is
   /// virtual, it means the allocator should prefer the physical register
   /// allocated to it if any.
-  IndexedMap<std::pair<unsigned, SmallVector<unsigned, 4>>,
+  IndexedMap<std::pair<Register, SmallVector<Register, 4>>,
              VirtReg2IndexFunctor> RegAllocHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
@@ -232,7 +232,7 @@ public:
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
-  void disableCalleeSavedRegister(unsigned Reg);
+  void disableCalleeSavedRegister(MCRegister Reg);
 
   /// Returns list of callee saved registers.
   /// The function returns the updated CSR list (after taking into account
@@ -748,7 +748,7 @@ public:
   /// temporarily while constructing machine instructions. Most operations are
   /// undefined on an incomplete register until one of setRegClass(),
   /// setRegBank() or setSize() has been called on it.
-  unsigned createIncompleteVirtualRegister(StringRef Name = "");
+  Register createIncompleteVirtualRegister(StringRef Name = "");
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }
@@ -760,7 +760,7 @@ public:
   /// specified virtual register. This is typically used by target, and in case
   /// of an earlier hint it will be overwritten.
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
-    assert(Register::isVirtualRegister(VReg));
+    assert(VReg.isVirtual());
     RegAllocHints[VReg].first  = Type;
     RegAllocHints[VReg].second.clear();
     RegAllocHints[VReg].second.push_back(PrefReg);
@@ -779,8 +779,8 @@ public:
     setRegAllocationHint(VReg, /*Type=*/0, PrefReg);
   }
 
-  void clearSimpleHint(unsigned VReg) {
-    assert (RegAllocHints[VReg].first == 0 &&
+  void clearSimpleHint(Register VReg) {
+    assert (!RegAllocHints[VReg].first &&
             "Expected to clear a non-target hint!");
     RegAllocHints[VReg].second.clear();
   }
@@ -788,12 +788,12 @@ public:
   /// getRegAllocationHint - Return the register allocation hint for the
   /// specified virtual register. If there are many hints, this returns the
   /// one with the greatest weight.
-  std::pair<unsigned, unsigned>
+  std::pair<Register, Register>
   getRegAllocationHint(Register VReg) const {
     assert(VReg.isVirtual());
-    unsigned BestHint = (RegAllocHints[VReg.id()].second.size() ?
-                         RegAllocHints[VReg.id()].second[0] : 0);
-    return std::pair<unsigned, unsigned>(RegAllocHints[VReg.id()].first,
+    Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
+                         RegAllocHints[VReg.id()].second[0] : Register());
+    return std::pair<Register, Register>(RegAllocHints[VReg.id()].first,
                                          BestHint);
   }
 
@@ -801,15 +801,15 @@ public:
   /// a target independent hint.
   Register getSimpleHint(Register VReg) const {
     assert(VReg.isVirtual());
-    std::pair<unsigned, unsigned> Hint = getRegAllocationHint(VReg);
-    return Hint.first ? 0 : Hint.second;
+    std::pair<Register, Register> Hint = getRegAllocationHint(VReg);
+    return Hint.first ? Register() : Hint.second;
   }
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<unsigned, SmallVector<unsigned, 4>>
-  &getRegAllocationHints(unsigned VReg) const {
-    assert(Register::isVirtualRegister(VReg));
+  const std::pair<Register, SmallVector<Register, 4>>
+  &getRegAllocationHints(Register VReg) const {
+    assert(VReg.isVirtual());
     return RegAllocHints[VReg];
   }
 
@@ -876,7 +876,7 @@ public:
   /// canReserveReg - Returns true if PhysReg can be used as a reserved
   /// register.  Any register can be reserved before freezeReservedRegs() is
   /// called.
-  bool canReserveReg(unsigned PhysReg) const {
+  bool canReserveReg(MCRegister PhysReg) const {
     return !reservedRegsFrozen() || ReservedRegs.test(PhysReg);
   }
 
@@ -912,7 +912,7 @@ public:
   /// Allocatable registers may show up in the allocation order of some virtual
   /// register, so a register allocator needs to track its liveness and
   /// availability.
-  bool isAllocatable(unsigned PhysReg) const {
+  bool isAllocatable(MCRegister PhysReg) const {
     return getTargetRegisterInfo()->isInAllocatableClass(PhysReg) &&
       !isReserved(PhysReg);
   }
@@ -943,11 +943,11 @@ public:
 
   /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
   /// corresponding live-in physical register.
-  unsigned getLiveInPhysReg(Register VReg) const;
+  MCRegister getLiveInPhysReg(Register VReg) const;
 
   /// getLiveInVirtReg - If PReg is a live-in physical register, return the
   /// corresponding live-in physical register.
-  unsigned getLiveInVirtReg(MCRegister PReg) const;
+  Register getLiveInVirtReg(MCRegister PReg) const;
 
   /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
   /// into the given entry block.

@@ -30,13 +30,13 @@ WhitespaceManager::Change::Change(const FormatToken &Tok,
                                   int Spaces, unsigned StartOfTokenColumn,
                                   unsigned NewlinesBefore,
                                   StringRef PreviousLinePostfix,
-                                  StringRef CurrentLinePrefix,
+                                  StringRef CurrentLinePrefix, bool IsAligned,
                                   bool ContinuesPPDirective, bool IsInsideToken)
     : Tok(&Tok), CreateReplacement(CreateReplacement),
       OriginalWhitespaceRange(OriginalWhitespaceRange),
       StartOfTokenColumn(StartOfTokenColumn), NewlinesBefore(NewlinesBefore),
       PreviousLinePostfix(PreviousLinePostfix),
-      CurrentLinePrefix(CurrentLinePrefix),
+      CurrentLinePrefix(CurrentLinePrefix), IsAligned(IsAligned),
       ContinuesPPDirective(ContinuesPPDirective), Spaces(Spaces),
       IsInsideToken(IsInsideToken), IsTrailingComment(false), TokenLength(0),
       PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
@@ -45,13 +45,13 @@ WhitespaceManager::Change::Change(const FormatToken &Tok,
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned Spaces,
                                           unsigned StartOfTokenColumn,
-                                          bool InPPDirective) {
+                                          bool IsAligned, bool InPPDirective) {
   if (Tok.Finalized)
     return;
   Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
   Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
                            Spaces, StartOfTokenColumn, Newlines, "", "",
-                           InPPDirective && !Tok.IsFirst,
+                           IsAligned, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -62,7 +62,7 @@ void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
   Changes.push_back(Change(Tok, /*CreateReplacement=*/false,
                            Tok.WhitespaceRange, /*Spaces=*/0,
                            Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
-                           InPPDirective && !Tok.IsFirst,
+                           /*IsAligned=*/false, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -82,7 +82,8 @@ void WhitespaceManager::replaceWhitespaceInToken(
       Change(Tok, /*CreateReplacement=*/true,
              SourceRange(Start, Start.getLocWithOffset(ReplaceChars)), Spaces,
              std::max(0, Spaces), Newlines, PreviousPostfix, CurrentPrefix,
-             InPPDirective && !Tok.IsFirst, /*IsInsideToken=*/true));
+             /*IsAligned=*/true, InPPDirective && !Tok.IsFirst,
+             /*IsInsideToken=*/true));
 }
 
 const tooling::Replacements &WhitespaceManager::generateReplacements() {
@@ -761,9 +762,9 @@ void WhitespaceManager::generateChanges() {
                                  C.EscapedNewlineColumn);
       else
         appendNewlineText(ReplacementText, C.NewlinesBefore);
-      appendIndentText(ReplacementText, C.Tok->IndentLevel,
-                       std::max(0, C.Spaces),
-                       C.StartOfTokenColumn - std::max(0, C.Spaces));
+      appendIndentText(
+          ReplacementText, C.Tok->IndentLevel, std::max(0, C.Spaces),
+          C.StartOfTokenColumn - std::max(0, C.Spaces), C.IsAligned);
       ReplacementText.append(C.CurrentLinePrefix);
       storeReplacement(C.OriginalWhitespaceRange, ReplacementText);
     }
@@ -809,7 +810,8 @@ void WhitespaceManager::appendEscapedNewlineText(
 
 void WhitespaceManager::appendIndentText(std::string &Text,
                                          unsigned IndentLevel, unsigned Spaces,
-                                         unsigned WhitespaceStartColumn) {
+                                         unsigned WhitespaceStartColumn,
+                                         bool IsAligned) {
   switch (Style.UseTab) {
   case FormatStyle::UT_Never:
     Text.append(Spaces, ' ');
@@ -838,27 +840,38 @@ void WhitespaceManager::appendIndentText(std::string &Text,
   case FormatStyle::UT_ForIndentation:
     if (WhitespaceStartColumn == 0) {
       unsigned Indentation = IndentLevel * Style.IndentWidth;
-      // This happens, e.g. when a line in a block comment is indented less than
-      // the first one.
-      if (Indentation > Spaces)
-        Indentation = Spaces;
-      if (Style.TabWidth) {
-        unsigned Tabs = Indentation / Style.TabWidth;
-        Text.append(Tabs, '\t');
-        Spaces -= Tabs * Style.TabWidth;
-      }
+      Spaces = appendTabIndent(Text, Spaces, Indentation);
     }
     Text.append(Spaces, ' ');
     break;
   case FormatStyle::UT_ForContinuationAndIndentation:
-    if (WhitespaceStartColumn == 0 && Style.TabWidth) {
-      unsigned Tabs = Spaces / Style.TabWidth;
-      Text.append(Tabs, '\t');
-      Spaces -= Tabs * Style.TabWidth;
+    if (WhitespaceStartColumn == 0)
+      Spaces = appendTabIndent(Text, Spaces, Spaces);
+    Text.append(Spaces, ' ');
+    break;
+  case FormatStyle::UT_AlignWithSpaces:
+    if (WhitespaceStartColumn == 0) {
+      unsigned Indentation =
+          IsAligned ? IndentLevel * Style.IndentWidth : Spaces;
+      Spaces = appendTabIndent(Text, Spaces, Indentation);
     }
     Text.append(Spaces, ' ');
     break;
   }
+}
+
+unsigned WhitespaceManager::appendTabIndent(std::string &Text, unsigned Spaces,
+                                            unsigned Indentation) {
+  // This happens, e.g. when a line in a block comment is indented less than the
+  // first one.
+  if (Indentation > Spaces)
+    Indentation = Spaces;
+  if (Style.TabWidth) {
+    unsigned Tabs = Indentation / Style.TabWidth;
+    Text.append(Tabs, '\t');
+    Spaces -= Tabs * Style.TabWidth;
+  }
+  return Spaces;
 }
 
 } // namespace format

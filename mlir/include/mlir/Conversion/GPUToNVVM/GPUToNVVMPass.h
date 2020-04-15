@@ -14,7 +14,7 @@ namespace mlir {
 class LLVMTypeConverter;
 class OwningRewritePatternList;
 
-template <typename OpT> class OpPassBase;
+template <typename OpT> class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
@@ -25,7 +25,8 @@ void populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns);
 
 /// Creates a pass that lowers GPU dialect operations to NVVM counterparts.
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>> createLowerGpuOpsToNVVMOpsPass();
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
+createLowerGpuOpsToNVVMOpsPass();
 
 } // namespace mlir
 

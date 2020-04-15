@@ -30,12 +30,12 @@ using namespace mlir::detail;
 // DiagnosticArgument
 //===----------------------------------------------------------------------===//
 
-// Construct from an Attribute.
+/// Construct from an Attribute.
 DiagnosticArgument::DiagnosticArgument(Attribute attr)
     : kind(DiagnosticArgumentKind::Attribute),
       opaqueVal(reinterpret_cast<intptr_t>(attr.getAsOpaquePointer())) {}
 
-// Construct from a Type.
+/// Construct from a Type.
 DiagnosticArgument::DiagnosticArgument(Type val)
     : kind(DiagnosticArgumentKind::Type),
       opaqueVal(reinterpret_cast<intptr_t>(val.getAsOpaquePointer())) {}
@@ -64,9 +64,6 @@ void DiagnosticArgument::print(raw_ostream &os) const {
     break;
   case DiagnosticArgumentKind::Integer:
     os << getAsInteger();
-    break;
-  case DiagnosticArgumentKind::Operation:
-    getAsOperation().print(os, OpPrintingFlags().useLocalScope());
     break;
   case DiagnosticArgumentKind::String:
     os << getAsString();
@@ -123,6 +120,14 @@ Diagnostic &Diagnostic::operator<<(OperationName val) {
   // the lifetime of its data.
   arguments.push_back(DiagnosticArgument(val.getStringRef()));
   return *this;
+}
+
+/// Stream in an Operation.
+Diagnostic &Diagnostic::operator<<(Operation &val) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << val;
+  return *this << os.str();
 }
 
 /// Outputs this diagnostic to a stream.

@@ -37,10 +37,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class raw_ostream;
-}
-
-namespace llvm {
 namespace objcarc {
 
 /// A handy option to enable/disable all ARC Optimizations.

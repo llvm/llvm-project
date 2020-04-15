@@ -1084,16 +1084,26 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
   unsigned SrcReg, DstReg;
 
-  if (Opc == ARM::tPUSH || Opc == ARM::tLDRpci) {
-    // Two special cases:
-    // 1) tPUSH does not have src/dst regs.
-    // 2) for Thumb1 code we sometimes materialize the constant via constpool
-    // load. Yes, this is pretty fragile, but for now I don't see better
-    // way... :(
+  switch (Opc) {
+  case ARM::tPUSH:
+    // special case: tPUSH does not have src/dst regs.
     SrcReg = DstReg = ARM::SP;
-  } else {
+    break;
+  case ARM::tLDRpci:
+  case ARM::t2MOVi16:
+  case ARM::t2MOVTi16:
+    // special cases:
+    // 1) for Thumb1 code we sometimes materialize the constant via constpool
+    //    load.
+    // 2) for Thumb2 execute only code we materialize the constant via
+    //    immediate constants in 2 seperate instructions (MOVW/MOVT).
+    SrcReg = ~0U;
+    DstReg = MI->getOperand(0).getReg();
+    break;
+  default:
     SrcReg = MI->getOperand(1).getReg();
     DstReg = MI->getOperand(0).getReg();
+    break;
   }
 
   // Try to figure out the unwinding opcode out of src / dst regs.
@@ -1197,22 +1207,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       case ARM::tADDrSPi:
         Offset = -MI->getOperand(2).getImm()*4;
         break;
-      case ARM::tLDRpci: {
-        // Grab the constpool index and check, whether it corresponds to
-        // original or cloned constpool entry.
-        unsigned CPI = MI->getOperand(1).getIndex();
-        const MachineConstantPool *MCP = MF.getConstantPool();
-        if (CPI >= MCP->getConstants().size())
-          CPI = AFI->getOriginalCPIdx(CPI);
-        assert(CPI != -1U && "Invalid constpool index");
-
-        // Derive the actual offset.
-        const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
-        assert(!CPE.isMachineConstantPoolEntry() && "Invalid constpool entry");
-        // FIXME: Check for user, it should be "add" instruction!
-        Offset = -cast<ConstantInt>(CPE.Val.ConstVal)->getSExtValue();
+      case ARM::tADDhirr:
+        Offset =
+            -AFI->EHPrologueOffsetInRegs.lookup(MI->getOperand(2).getReg());
         break;
-      }
       }
 
       if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
@@ -1233,14 +1231,43 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     } else if (DstReg == ARM::SP) {
       MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
-    } else if (Opc == ARM::tMOVr) {
-      // If a Thumb1 function spills r8-r11, we copy the values to low
-      // registers before pushing them. Record the copy so we can emit the
-      // correct ".save" later.
-      AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
     } else {
-      MI->print(errs());
-      llvm_unreachable("Unsupported opcode for unwinding information");
+      int64_t Offset = 0;
+      switch (Opc) {
+      case ARM::tMOVr:
+        // If a Thumb1 function spills r8-r11, we copy the values to low
+        // registers before pushing them. Record the copy so we can emit the
+        // correct ".save" later.
+        AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
+        break;
+      case ARM::tLDRpci: {
+        // Grab the constpool index and check, whether it corresponds to
+        // original or cloned constpool entry.
+        unsigned CPI = MI->getOperand(1).getIndex();
+        const MachineConstantPool *MCP = MF.getConstantPool();
+        if (CPI >= MCP->getConstants().size())
+          CPI = AFI->getOriginalCPIdx(CPI);
+        assert(CPI != -1U && "Invalid constpool index");
+
+        // Derive the actual offset.
+        const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
+        assert(!CPE.isMachineConstantPoolEntry() && "Invalid constpool entry");
+        Offset = cast<ConstantInt>(CPE.Val.ConstVal)->getSExtValue();
+        AFI->EHPrologueOffsetInRegs[DstReg] = Offset;
+        break;
+      }
+      case ARM::t2MOVi16:
+        Offset = MI->getOperand(1).getImm();
+        AFI->EHPrologueOffsetInRegs[DstReg] = Offset;
+        break;
+      case ARM::t2MOVTi16:
+        Offset = MI->getOperand(2).getImm();
+        AFI->EHPrologueOffsetInRegs[DstReg] |= (Offset << 16);
+        break;
+      default:
+        MI->print(errs());
+        llvm_unreachable("Unsupported opcode for unwinding information");
+      }
     }
   }
 }

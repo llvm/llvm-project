@@ -29,10 +29,10 @@ public:
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
   bool saveScavengerRegister(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator I,
-                                     MachineBasicBlock::iterator &UseMI,
-                                     const TargetRegisterClass *RC,
-                                     unsigned Reg) const override;
+                             MachineBasicBlock::iterator I,
+                             MachineBasicBlock::iterator &UseMI,
+                             const TargetRegisterClass *RC,
+                             Register Reg) const override;
 
   const TargetRegisterClass *intRegClass(unsigned Size) const override;
 

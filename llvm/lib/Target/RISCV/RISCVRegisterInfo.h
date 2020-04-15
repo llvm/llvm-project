@@ -31,13 +31,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
-                        unsigned PhysReg) const override;
+                        MCRegister PhysReg) const override;
 
-  bool isConstantPhysReg(unsigned PhysReg) const override;
+  bool isConstantPhysReg(MCRegister PhysReg) const override;
 
   const uint32_t *getNoPreservedMask() const override;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,

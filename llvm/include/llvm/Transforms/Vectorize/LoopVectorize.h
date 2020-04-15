@@ -118,6 +118,7 @@ struct LoopVectorizeOptions {
 
 /// The LoopVectorize Pass.
 struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
+private:
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
   bool InterleaveOnlyWhenForced;
@@ -126,9 +127,8 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   /// If true, only loops that explicitly request vectorization are considered.
   bool VectorizeOnlyWhenForced;
 
-  LoopVectorizePass(LoopVectorizeOptions Opts = {})
-      : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced),
-        VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced) {}
+public:
+  LoopVectorizePass(LoopVectorizeOptions Opts = {});
 
   ScalarEvolution *SE;
   LoopInfo *LI;

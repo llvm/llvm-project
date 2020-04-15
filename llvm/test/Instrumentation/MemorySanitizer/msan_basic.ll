@@ -4,6 +4,8 @@
 ; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=CHECK,CHECK-ORIGINS %s
 ; RUN: opt < %s -passes='module(msan-module),function(msan)' -msan-check-access-address=0 -msan-track-origins=1 -S | \
 ; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=CHECK,CHECK-ORIGINS %s
+; RUN: opt < %s -passes='module(msan-module),function(msan)' -msan-instrumentation-with-call-threshold=0 -msan-track-origins=1 -S | \
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=CHECK-CALLS %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -1007,3 +1009,12 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 
 ; CHECK-LABEL: define internal void @msan.module_ctor() {
 ; CHECK: call void @__msan_init()
+
+; CHECK-CALLS: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_1(i8 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_warning_2(i16 zeroext, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_2(i16 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_warning_4(i32 zeroext, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64 zeroext, i8*, i32 zeroext)

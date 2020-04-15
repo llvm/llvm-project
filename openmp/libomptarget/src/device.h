@@ -24,6 +24,7 @@
 struct RTLInfoTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
+struct __tgt_async_info;
 
 /// Map between host data and target data.
 struct HostDataToTargetTy {
@@ -173,14 +174,21 @@ struct DeviceTy {
   int32_t initOnce();
   __tgt_target_table *load_binary(void *Img);
 
-  int32_t data_submit(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size);
-  int32_t data_retrieve(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
+  // Data transfer. When AsyncInfoPtr is nullptr, the transfer will be
+  // synchronous.
+  int32_t data_submit(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                      __tgt_async_info *AsyncInfoPtr);
+  int32_t data_retrieve(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                        __tgt_async_info *AsyncInfoPtr);
 
   int32_t run_region(void *TgtEntryPtr, void **TgtVarsPtr,
-      ptrdiff_t *TgtOffsets, int32_t TgtVarsSize);
+                     ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                     __tgt_async_info *AsyncInfoPtr);
   int32_t run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
-      ptrdiff_t *TgtOffsets, int32_t TgtVarsSize, int32_t NumTeams,
-      int32_t ThreadLimit, uint64_t LoopTripCount);
+                          ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                          int32_t NumTeams, int32_t ThreadLimit,
+                          uint64_t LoopTripCount,
+                          __tgt_async_info *AsyncInfoPtr);
 
 private:
   // Call to RTL

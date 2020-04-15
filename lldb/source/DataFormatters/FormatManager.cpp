@@ -174,7 +174,7 @@ void FormatManager::DisableAllCategories() {
 }
 
 void FormatManager::GetPossibleMatches(
-    ValueObject &valobj, CompilerType compiler_type, uint32_t reason,
+    ValueObject &valobj, CompilerType compiler_type,
     lldb::DynamicValueType use_dynamic, FormattersMatchVector &entries,
     bool did_strip_ptr, bool did_strip_ref, bool did_strip_typedef,
     bool root_level) {
@@ -185,17 +185,16 @@ void FormatManager::GetPossibleMatches(
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
     entries.push_back(
-        {bitfieldname, 0, did_strip_ptr, did_strip_ref, did_strip_typedef});
-    reason |= lldb_private::eFormatterChoiceCriterionStrippedBitField;
+        {bitfieldname, did_strip_ptr, did_strip_ref, did_strip_typedef});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
     entries.push_back(
-        {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
+        {type_name, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
     ConstString display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
-      entries.push_back({display_type_name, reason, did_strip_ptr,
+      entries.push_back({display_type_name, did_strip_ptr,
                          did_strip_ref, did_strip_typedef});
   }
 
@@ -204,8 +203,6 @@ void FormatManager::GetPossibleMatches(
     CompilerType non_ref_type = compiler_type.GetNonReferenceType();
     GetPossibleMatches(
         valobj, non_ref_type,
-        reason |
-            lldb_private::eFormatterChoiceCriterionStrippedPointerReference,
         use_dynamic, entries, did_strip_ptr, true, did_strip_typedef);
     if (non_ref_type.IsTypedefType()) {
       CompilerType deffed_referenced_type = non_ref_type.GetTypedefedType();
@@ -214,7 +211,6 @@ void FormatManager::GetPossibleMatches(
                         : deffed_referenced_type.GetLValueReferenceType();
       GetPossibleMatches(
           valobj, deffed_referenced_type,
-          reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
           use_dynamic, entries, did_strip_ptr, did_strip_ref,
           true); // this is not exactly the usual meaning of stripping typedefs
     }
@@ -224,8 +220,6 @@ void FormatManager::GetPossibleMatches(
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
     GetPossibleMatches(
         valobj, non_ptr_type,
-        reason |
-            lldb_private::eFormatterChoiceCriterionStrippedPointerReference,
         use_dynamic, entries, true, did_strip_ref, did_strip_typedef);
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
@@ -233,7 +227,6 @@ void FormatManager::GetPossibleMatches(
       const bool stripped_typedef = true;
       GetPossibleMatches(
           valobj, deffed_pointed_type,
-          reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
           use_dynamic, entries, did_strip_ptr, did_strip_ref,
           stripped_typedef); // this is not exactly the usual meaning of
                              // stripping typedefs
@@ -253,7 +246,6 @@ void FormatManager::GetPossibleMatches(
       const bool stripped_typedef = true;
       GetPossibleMatches(
           valobj, deffed_array_type,
-          reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
           use_dynamic, entries, did_strip_ptr, did_strip_ref,
           stripped_typedef); // this is not exactly the usual meaning of
                              // stripping typedefs
@@ -267,7 +259,6 @@ void FormatManager::GetPossibleMatches(
            language->GetPossibleFormattersMatches(valobj, use_dynamic)) {
         entries.push_back(
             {candidate,
-             reason | lldb_private::eFormatterChoiceCriterionLanguagePlugin,
              did_strip_ptr, did_strip_ref, did_strip_typedef});
       }
     }
@@ -278,7 +269,6 @@ void FormatManager::GetPossibleMatches(
     CompilerType deffed_type = compiler_type.GetTypedefedType();
     GetPossibleMatches(
         valobj, deffed_type,
-        reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
         use_dynamic, entries, did_strip_ptr, did_strip_ref, true);
   }
 
@@ -293,7 +283,7 @@ void FormatManager::GetPossibleMatches(
         break;
       if (unqual_compiler_ast_type.GetOpaqueQualType() !=
           compiler_type.GetOpaqueQualType())
-        GetPossibleMatches(valobj, unqual_compiler_ast_type, reason,
+        GetPossibleMatches(valobj, unqual_compiler_ast_type,
                            use_dynamic, entries, did_strip_ptr, did_strip_ref,
                            did_strip_typedef);
     } while (false);
@@ -304,7 +294,6 @@ void FormatManager::GetPossibleMatches(
       if (static_value_sp)
         GetPossibleMatches(
             *static_value_sp.get(), static_value_sp->GetCompilerType(),
-            reason | lldb_private::eFormatterChoiceCriterionWentToStaticValue,
             use_dynamic, entries, did_strip_ptr, did_strip_ref,
             did_strip_typedef, true);
     }

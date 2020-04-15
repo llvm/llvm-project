@@ -295,7 +295,10 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
         strcmp(Name, getInfo(Id).Name) == 0)
       return Id;
   }
-
+  // Accept "cu" as an alias for "cuda" for NVCC compatibility
+  if (strcmp(Name, "cu") == 0) {
+    return types::TY_CUDA;
+  }
   return TY_INVALID;
 }
 

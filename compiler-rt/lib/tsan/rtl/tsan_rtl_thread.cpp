@@ -145,6 +145,9 @@ void ThreadContext::OnFinished() {
 #if !SANITIZER_GO
   thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
 #endif
+#if !SANITIZER_GO
+  PlatformCleanUpThreadState(thr);
+#endif
   thr->~ThreadState();
 #if TSAN_COLLECT_STATS
   StatAggregate(ctx->stat, thr->stat);

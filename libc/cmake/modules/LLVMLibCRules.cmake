@@ -1,3 +1,4 @@
+include(LLVMLibCTargetNameUtils)
 
 # A rule for self contained header file targets.
 # This rule merely copies the header file from the current source directory to
@@ -12,7 +13,7 @@ function(add_header target_name)
     "ADD_HEADER"
     ""    # No optional arguments
     "HDR" # Single value arguments
-    "DEPENDS"    # No multi value arguments
+    "DEPENDS"
     ${ARGN}
   )
   if(NOT ADD_HEADER_HDR)
@@ -28,15 +29,17 @@ function(add_header target_name)
     DEPENDS ${src_file}
   )
 
+  get_fq_target_name(${target_name} fq_target_name)
   add_custom_target(
-    ${target_name}
+    ${fq_target_name}
     DEPENDS ${dest_file}
   )
 
   if(ADD_HEADER_DEPENDS)
-  add_dependencies(
-    ${target_name} ${ADD_HEADER_DEPENDS}
-  )
+    get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
+    add_dependencies(
+      ${fq_target_name} ${fq_deps_list}
+    )
   endif()
 endfunction(add_header)
 
@@ -88,9 +91,13 @@ function(add_gen_header target_name)
     DEPENDS ${in_file} ${fq_data_files} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
   )
 
+  get_fq_target_name(${target_name} fq_target_name)
+  if(ADD_GEN_HDR_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
+  endif()
   add_custom_target(
-    ${target_name}
-    DEPENDS ${out_file} ${ADD_GEN_HDR_DEPENDS}
+    ${fq_target_name}
+    DEPENDS ${out_file} ${fq_deps_list}
   )
 endfunction(add_gen_header)
 
@@ -118,31 +125,38 @@ function(add_object_library target_name)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
   endif()
 
+  get_fq_target_name(${target_name} fq_target_name)
   add_library(
-    ${target_name}
+    ${fq_target_name}
     OBJECT
     ${ADD_OBJECT_SRCS}
     ${ADD_OBJECT_HDRS}
   )
   target_include_directories(
-    ${target_name}
+    ${fq_target_name}
     PRIVATE
       "${LIBC_BUILD_DIR}/include;${LIBC_SOURCE_DIR};${LIBC_BUILD_DIR}"
   )
   if(ADD_OBJECT_COMPILE_OPTIONS)
     target_compile_options(
-      ${target_name}
+      ${fq_target_name}
       PRIVATE ${ADD_OBJECT_COMPILE_OPTIONS}
     )
   endif()
 
-  set(all_object_files $<TARGET_OBJECTS:${target_name}>)
+  set(all_object_files $<TARGET_OBJECTS:${fq_target_name}>)
   if(ADD_OBJECT_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
     add_dependencies(
-      ${target_name}
-      ${ADD_OBJECT_DEPENDS}
+      ${fq_target_name}
+      ${fq_deps_list}
     )
-    foreach(obj_target IN LISTS ADD_ENTRYPOINT_OBJ_SPECIAL_OBJECTS)
+    foreach(obj_target IN LISTS fq_deps_list)
+      if(NOT TARGET obj_target)
+        # Not all targets will be visible. So, we will ignore those which aren't
+        # visible yet.
+        continue()
+      endif()
       get_target_property(obj_type ${obj_target} "TARGET_TYPE")
       if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})))
         continue()
@@ -156,7 +170,7 @@ function(add_object_library target_name)
   list(REMOVE_DUPLICATES all_object_files)
 
   set_target_properties(
-    ${target_name}
+    ${fq_target_name}
     PROPERTIES
       "TARGET_TYPE" ${OBJECT_LIBRARY_TARGET_TYPE}
       "OBJECT_FILES" "${all_object_files}"
@@ -169,7 +183,7 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 # Usage:
 #     add_entrypoint_object(
 #       <target_name>
-#       [REDIRECTED] # Specified if the entrypoint is redirected.
+#       [ALIAS|REDIRECTED] # Specified if the entrypoint is redirected or an alias.
 #       [NAME] <the C name of the entrypoint if different from target_name>
 #       SRCS <list of .cpp files>
 #       HDRS <list of .h files>
@@ -180,11 +194,48 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "REDIRECTED" # Optional argument
+    "ALIAS;REDIRECTED" # Optional argument
     "NAME" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS"  # Multi value arguments
     ${ARGN}
   )
+
+  get_fq_target_name(${target_name} fq_target_name)
+
+  if(ADD_ENTRYPOINT_OBJ_ALIAS)
+    # Alias targets help one add aliases to other entrypoint object targets.
+    # One can use alias targets setup OS/machine independent entrypoint targets.
+    list(LENGTH ADD_ENTRYPOINT_OBJ_DEPENDS deps_size)
+    if(NOT (${deps_size} EQUAL "1"))
+      message(FATAL_ERROR "An entrypoint alias should have exactly one dependency.")
+    endif()
+    list(GET ADD_ENTRYPOINT_OBJ_DEPENDS 0 dep_target)
+    get_fq_dep_name(fq_dep_name ${dep_target})
+    if(NOT TARGET ${fq_dep_name})
+      message(WARNING "Aliasee ${fq_dep_name} for entrypoint alias ${target_name} missing; "
+                      "Target ${target_name} will be ignored.")
+      return()
+    endif()
+
+    get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
+    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})))
+      message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
+    endif()
+
+    add_custom_target(${fq_target_name})
+    add_dependencies(${fq_target_name} ${fq_dep_name})
+    get_target_property(all_objects ${fq_dep_name} "OBJECT_FILES")
+    get_target_property(all_objects_raw ${fq_dep_name} "OBJECT_FILES_RAW")
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "OBJECT_FILES" "${all_objects}"
+        "OBJECT_FILES_RAW" "${all_objects_raw}"
+    )
+    return()
+  endif()
+
   if(NOT ADD_ENTRYPOINT_OBJ_SRCS)
     message(FATAL_ERROR "`add_entrypoint_object` rule requires SRCS to be specified.")
   endif()
@@ -197,8 +248,10 @@ function(add_entrypoint_object target_name)
     set(entrypoint_name ${ADD_ENTRYPOINT_OBJ_NAME})
   endif()
 
+  set(objects_target_name "${fq_target_name}_objects")
+
   add_library(
-    "${target_name}_objects"
+    ${objects_target_name}
     # We want an object library as the objects will eventually get packaged into
     # an archive (like libc.a).
     OBJECT
@@ -206,27 +259,28 @@ function(add_entrypoint_object target_name)
     ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
   target_compile_options(
-    ${target_name}_objects
+    ${objects_target_name}
     BEFORE
     PRIVATE
       -fpie ${LLVM_CXX_STD_default}
   )
   target_include_directories(
-    ${target_name}_objects
+    ${objects_target_name}
     PRIVATE
       "${LIBC_BUILD_DIR}/include;${LIBC_SOURCE_DIR};${LIBC_BUILD_DIR}"
   )
   add_dependencies(
-    ${target_name}_objects
-    support_common_h
+    ${objects_target_name}
+    libc.src.__support.common
   )
   set(dep_objects "")
   if(ADD_ENTRYPOINT_OBJ_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
     add_dependencies(
-      ${target_name}_objects
-      ${ADD_ENTRYPOINT_OBJ_DEPENDS}
+      ${objects_target_name}
+      ${fq_deps_list}
     )
-    foreach(dep_target IN LISTS ADD_ENTRYPOINT_OBJ_DEPENDS)
+    foreach(dep_target IN LISTS fq_deps_list)
       if(NOT TARGET ${dep_target})
         # Not all targets will be visible. So, we will ignore those which aren't
         # visible yet.
@@ -250,7 +304,7 @@ function(add_entrypoint_object target_name)
 
   if(ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS)
     target_compile_options(
-      ${target_name}_objects
+      ${objects_target_name}
       PRIVATE ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
     )
   endif()
@@ -258,7 +312,7 @@ function(add_entrypoint_object target_name)
   set(object_file_raw "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_raw.o")
   set(object_file "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.o")
 
-  set(input_objects $<TARGET_OBJECTS:${target_name}_objects>)
+  set(input_objects $<TARGET_OBJECTS:${objects_target_name}>)
   add_custom_command(
     OUTPUT ${object_file_raw}
     DEPENDS ${input_objects}
@@ -278,7 +332,7 @@ function(add_entrypoint_object target_name)
   )
 
   add_custom_target(
-    ${target_name}
+    ${fq_target_name}
     ALL
     DEPENDS ${object_file}
   )
@@ -287,7 +341,7 @@ function(add_entrypoint_object target_name)
   set(all_objects_raw ${object_file_raw})
   list(APPEND all_objects_raw ${dep_objects})
   set_target_properties(
-    ${target_name}
+    ${fq_target_name}
     PROPERTIES
       "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
       "OBJECT_FILES" "${all_objects}"
@@ -427,7 +481,8 @@ function(add_libc_unittest target_name)
   endif()
 
   set(library_deps "")
-  foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
+  get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
+  foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
       get_target_property(obj_files ${dep} "OBJECT_FILES_RAW")
@@ -441,14 +496,15 @@ function(add_libc_unittest target_name)
   endforeach(dep)
   list(REMOVE_DUPLICATES library_deps)
 
+  get_fq_target_name(${target_name} fq_target_name)
   add_executable(
-    ${target_name}
+    ${fq_target_name}
     EXCLUDE_FROM_ALL
     ${LIBC_UNITTEST_SRCS}
     ${LIBC_UNITTEST_HDRS}
   )
   target_include_directories(
-    ${target_name}
+    ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
@@ -462,27 +518,27 @@ function(add_libc_unittest target_name)
   endif()
 
   if(library_deps)
-    target_link_libraries(${target_name} PRIVATE ${library_deps})
+    target_link_libraries(${fq_target_name} PRIVATE ${library_deps})
   endif()
 
-  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${fq_target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   add_dependencies(
-    ${target_name}
-    ${LIBC_UNITTEST_DEPENDS}
+    ${fq_target_name}
+    ${fq_deps_list}
   )
 
-  target_link_libraries(${target_name} PRIVATE LibcUnitTest libc_test_utils)
+  target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest libc_test_utils)
 
   add_custom_command(
-    TARGET ${target_name}
+    TARGET ${fq_target_name}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${target_name}>
+    COMMAND $<TARGET_FILE:${fq_target_name}>
   )
   if(LIBC_UNITTEST_SUITE)
     add_dependencies(
       ${LIBC_UNITTEST_SUITE}
-      ${target_name}
+      ${fq_target_name}
     )
   endif()
 endfunction(add_libc_unittest)
@@ -515,8 +571,9 @@ function(add_libc_fuzzer target_name)
     message(FATAL_ERROR "'add_libc_fuzzer' target requires a DEPENDS list of 'add_entrypoint_object' targets.")
   endif()
 
+  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
   set(library_deps "")
-  foreach(dep IN LISTS LIBC_FUZZER_DEPENDS)
+  foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if (dep_type)
       string(COMPARE EQUAL ${dep_type} ${ENTRYPOINT_OBJ_TARGET_TYPE} dep_is_entrypoint)
@@ -530,14 +587,15 @@ function(add_libc_fuzzer target_name)
     # to the list of library_deps.
   endforeach(dep)
 
+  get_fq_target_name(${target_name} fq_target_name)
   add_executable(
-    ${target_name}
+    ${fq_target_name}
     EXCLUDE_FROM_ALL
     ${LIBC_FUZZER_SRCS}
     ${LIBC_FUZZER_HDRS}
   )
   target_include_directories(
-    ${target_name}
+    ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
@@ -545,16 +603,16 @@ function(add_libc_fuzzer target_name)
   )
 
   if(library_deps)
-    target_link_libraries(${target_name} PRIVATE ${library_deps})
+    target_link_libraries(${fq_target_name} PRIVATE ${library_deps})
   endif()
 
-  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${fq_target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   add_dependencies(
-    ${target_name}
-    ${LIBC_FUZZER_DEPENDS}
+    ${fq_target_name}
+    ${fq_deps_list}
   )
-  add_dependencies(libc-fuzzer ${target_name})
+  add_dependencies(libc-fuzzer ${fq_target_name})
 endfunction(add_libc_fuzzer)
 
 # Rule to add header only libraries.
@@ -577,6 +635,8 @@ function(add_header_library target_name)
     message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
   endif()
 
+  get_fq_target_name(${target_name} fq_target_name)
+
   set(FULL_HDR_PATHS "")
   # TODO: Remove this foreach block when we can switch to the new
   # version of the CMake policy CMP0076.
@@ -584,18 +644,19 @@ function(add_header_library target_name)
     list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
   endforeach()
 
-  set(interface_target_name "${target_name}_header_library__")
+  set(interface_target_name "${fq_target_name}_header_library__")
 
   add_library(${interface_target_name} INTERFACE)
   target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
   if(ADD_HEADER_DEPENDS)
-    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
+    get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
+    add_dependencies(${interface_target_name} ${fq_deps_list})
   endif()
 
-  add_custom_target(${target_name})
-  add_dependencies(${target_name} ${interface_target_name})
+  add_custom_target(${fq_target_name})
+  add_dependencies(${fq_target_name} ${interface_target_name})
   set_target_properties(
-    ${target_name}
+    ${fq_target_name}
     PROPERTIES
       "TARGET_TYPE" "HDR_LIBRARY"
   )

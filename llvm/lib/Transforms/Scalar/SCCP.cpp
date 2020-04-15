@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
@@ -369,8 +370,10 @@ private:
   // markConstant - Make a value be marked as "constant".  If the value
   // is not already a constant, add it to the instruction work list so that
   // the users of the instruction are updated later.
-  bool markConstant(ValueLatticeElement &IV, Value *V, Constant *C) {
-    if (!IV.markConstant(C)) return false;
+  bool markConstant(ValueLatticeElement &IV, Value *V, Constant *C,
+                    bool MayIncludeUndef = false) {
+    if (!IV.markConstant(C, MayIncludeUndef))
+      return false;
     LLVM_DEBUG(dbgs() << "markConstant: " << *C << ": " << *V << '\n');
     pushToWorkList(IV, V);
     return true;
@@ -406,7 +409,7 @@ private:
       markOverdefined(IV, V);
       return true;
     }
-    if (IV.mergeIn(MergeWithV, DL)) {
+    if (IV.mergeIn(MergeWithV)) {
       pushToWorkList(IV, V);
       LLVM_DEBUG(dbgs() << "Merged " << MergeWithV << " into " << *V << " : "
                         << IV << "\n");
@@ -740,7 +743,7 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
       continue;
 
     ValueLatticeElement &Res = getValueState(&PN);
-    Changed |= Res.mergeIn(IV, DL);
+    Changed |= Res.mergeIn(IV);
     if (Res.isOverdefined())
       break;
   }
@@ -906,8 +909,8 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   ValueLatticeElement TVal = getValueState(I.getTrueValue());
   ValueLatticeElement FVal = getValueState(I.getFalseValue());
 
-  bool Changed = ValueState[&I].mergeIn(TVal, DL);
-  Changed |= ValueState[&I].mergeIn(FVal, DL);
+  bool Changed = ValueState[&I].mergeIn(TVal);
+  Changed |= ValueState[&I].mergeIn(FVal);
   if (Changed)
     pushToWorkListMsg(ValueState[&I], &I);
 }
@@ -954,23 +957,33 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
   if (V1State.isOverdefined() && V2State.isOverdefined())
     return (void)markOverdefined(&I);
 
-  // Both operands are non-integer constants or constant expressions.
+  // If either of the operands is a constant, try to fold it to a constant.
   // TODO: Use information from notconstant better.
-  if (isConstant(V1State) && isConstant(V2State)) {
-    Constant *C = ConstantExpr::get(I.getOpcode(), getConstant(V1State),
-                                    getConstant(V2State));
-    // X op Y -> undef.
-    if (isa<UndefValue>(C))
-      return;
-    return (void)markConstant(IV, &I, C);
+  if ((V1State.isConstant() || V2State.isConstant())) {
+    Value *V1 = isConstant(V1State) ? getConstant(V1State) : I.getOperand(0);
+    Value *V2 = isConstant(V2State) ? getConstant(V2State) : I.getOperand(1);
+    Value *R = SimplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
+    auto *C = dyn_cast_or_null<Constant>(R);
+    if (C) {
+      // X op Y -> undef.
+      if (isa<UndefValue>(C))
+        return;
+      // Conservatively assume that the result may be based on operands that may
+      // be undef. Note that we use mergeInValue to combine the constant with
+      // the existing lattice value for I, as different constants might be found
+      // after one of the operands go to overdefined, e.g. due to one operand
+      // being a special floating value.
+      ValueLatticeElement NewV;
+      NewV.markConstant(C, /*MayIncludeUndef=*/true);
+      return (void)mergeInValue(&I, NewV);
+    }
   }
 
   // Only use ranges for binary operators on integers.
   if (!I.getType()->isIntegerTy())
     return markOverdefined(&I);
 
-  // Operands are either constant ranges, notconstant, overdefined or one of the
-  // operands is a constant.
+  // Try to simplify to a constant range.
   ConstantRange A = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
   ConstantRange B = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
   if (V1State.isConstantRange())
@@ -1219,24 +1232,19 @@ void SCCPSolver::handleCallResult(CallSite CS) {
 
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-      if (isOverdefined(ValueState[I]))
-        return (void)markOverdefined(I);
-
-      auto *PI = getPredicateInfoFor(I);
-      if (!PI)
+      if (ValueState[I].isOverdefined())
         return;
 
       Value *CopyOf = I->getOperand(0);
-      auto *PBranch = dyn_cast<PredicateBranch>(PI);
-      if (!PBranch) {
+      auto *PI = getPredicateInfoFor(I);
+      auto *PBranch = dyn_cast_or_null<PredicateBranch>(PI);
+      if (!PI || !PBranch) {
         mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;
       }
 
-      Value *Cond = PBranch->Condition;
-
       // Everything below relies on the condition being a comparison.
-      auto *Cmp = dyn_cast<CmpInst>(Cond);
+      auto *Cmp = dyn_cast<CmpInst>(PBranch->Condition);
       if (!Cmp) {
         mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;
@@ -1249,26 +1257,60 @@ void SCCPSolver::handleCallResult(CallSite CS) {
         return;
       }
 
-      if (CmpOp0 != CopyOf)
+      auto Pred = Cmp->getPredicate();
+      if (CmpOp0 != CopyOf) {
         std::swap(CmpOp0, CmpOp1);
+        Pred = Cmp->getSwappedPredicate();
+      }
 
-      ValueLatticeElement OriginalVal = getValueState(CopyOf);
-      ValueLatticeElement EqVal = getValueState(CmpOp1);
-      ValueLatticeElement &IV = ValueState[I];
-      if (PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_EQ) {
+      // Wait until CmpOp1 is resolved.
+      if (getValueState(CmpOp1).isUnknown()) {
         addAdditionalUser(CmpOp1, I);
-        if (isConstant(OriginalVal))
-          mergeInValue(IV, I, OriginalVal);
-        else
-          mergeInValue(IV, I, EqVal);
         return;
       }
-      if (!PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_NE) {
+
+      if (!PBranch->TrueEdge)
+        Pred = CmpInst::getInversePredicate(Pred);
+
+      ValueLatticeElement CondVal = getValueState(CmpOp1);
+      ValueLatticeElement &IV = ValueState[I];
+      ValueLatticeElement OriginalVal = getValueState(CopyOf);
+      if (CondVal.isConstantRange() || OriginalVal.isConstantRange()) {
+        auto NewCR =
+            ConstantRange::getFull(DL.getTypeSizeInBits(CopyOf->getType()));
+
+        // Get the range imposed by the condition.
+        if (CondVal.isConstantRange())
+          NewCR = ConstantRange::makeAllowedICmpRegion(
+              Pred, CondVal.getConstantRange());
+
+        // Combine range info for the original value with the new range from the
+        // condition.
+        auto OriginalCR = OriginalVal.isConstantRange()
+                              ? OriginalVal.getConstantRange()
+                              : ConstantRange::getFull(
+                                    DL.getTypeSizeInBits(CopyOf->getType()));
+        NewCR = NewCR.intersectWith(OriginalCR);
+
         addAdditionalUser(CmpOp1, I);
-        if (isConstant(OriginalVal))
-          mergeInValue(IV, I, OriginalVal);
-        else
-          mergeInValue(IV, I, EqVal);
+        // TODO: Actually filp MayIncludeUndef for the created range to false,
+        // once most places in the optimizer respect the branches on
+        // undef/poison are UB rule. The reason why the new range cannot be
+        // undef is as follows below:
+        // The new range is based on a branch condition. That guarantees that
+        // neither of the compare operands can be undef in the branch targets,
+        // unless we have conditions that are always true/false (e.g. icmp ule
+        // i32, %a, i32_max). For the latter overdefined/empty range will be
+        // inferred, but the branch will get folded accordingly anyways.
+        mergeInValue(
+            IV, I,
+            ValueLatticeElement::getRange(NewCR, /*MayIncludeUndef=*/true));
+        return;
+      } else if (Pred == CmpInst::ICMP_EQ && CondVal.isConstant()) {
+        // For non-integer values or integer constant expressions, only
+        // propagate equal constants.
+        addAdditionalUser(CmpOp1, I);
+        mergeInValue(IV, I, CondVal);
         return;
       }
 

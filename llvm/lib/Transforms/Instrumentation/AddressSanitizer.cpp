@@ -1513,9 +1513,10 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         unsigned Granularity, uint32_t TypeSize,
                                         bool IsWrite, Value *SizeArgument,
                                         bool UseCalls, uint32_t Exp) {
-  auto *VTy = cast<PointerType>(Addr->getType())->getElementType();
+  auto *VTy =
+      cast<VectorType>(cast<PointerType>(Addr->getType())->getElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
-  unsigned Num = VTy->getVectorNumElements();
+  unsigned Num = VTy->getNumElements();
   auto Zero = ConstantInt::get(IntptrTy, 0);
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
     Value *InstrumentedAddress = nullptr;
@@ -2983,6 +2984,59 @@ void FunctionStackPoisoner::processDynamicAllocas() {
   unpoisonDynamicAllocas();
 }
 
+/// Collect instructions in the entry block after \p InsBefore which initialize
+/// permanent storage for a function argument. These instructions must remain in
+/// the entry block so that uninitialized values do not appear in backtraces. An
+/// added benefit is that this conserves spill slots. This does not move stores
+/// before instrumented / "interesting" allocas.
+static void findStoresToUninstrumentedArgAllocas(
+    AddressSanitizer &ASan, Instruction &InsBefore,
+    SmallVectorImpl<Instruction *> &InitInsts) {
+  Instruction *Start = InsBefore.getNextNonDebugInstruction();
+  for (Instruction *It = Start; It; It = It->getNextNonDebugInstruction()) {
+    // Argument initialization looks like:
+    // 1) store <Argument>, <Alloca> OR
+    // 2) <CastArgument> = cast <Argument> to ...
+    //    store <CastArgument> to <Alloca>
+    // Do not consider any other kind of instruction.
+    //
+    // Note: This covers all known cases, but may not be exhaustive. An
+    // alternative to pattern-matching stores is to DFS over all Argument uses:
+    // this might be more general, but is probably much more complicated.
+    if (isa<AllocaInst>(It) || isa<CastInst>(It))
+      continue;
+    if (auto *Store = dyn_cast<StoreInst>(It)) {
+      // The store destination must be an alloca that isn't interesting for
+      // ASan to instrument. These are moved up before InsBefore, and they're
+      // not interesting because allocas for arguments can be mem2reg'd.
+      auto *Alloca = dyn_cast<AllocaInst>(Store->getPointerOperand());
+      if (!Alloca || ASan.isInterestingAlloca(*Alloca))
+        continue;
+
+      Value *Val = Store->getValueOperand();
+      bool IsDirectArgInit = isa<Argument>(Val);
+      bool IsArgInitViaCast =
+          isa<CastInst>(Val) &&
+          isa<Argument>(cast<CastInst>(Val)->getOperand(0)) &&
+          // Check that the cast appears directly before the store. Otherwise
+          // moving the cast before InsBefore may break the IR.
+          Val == It->getPrevNonDebugInstruction();
+      bool IsArgInit = IsDirectArgInit || IsArgInitViaCast;
+      if (!IsArgInit)
+        continue;
+
+      if (IsArgInitViaCast)
+        InitInsts.push_back(cast<Instruction>(Val));
+      InitInsts.push_back(Store);
+      continue;
+    }
+
+    // Do not reorder past unknown instructions: argument initialization should
+    // only involve casts and stores.
+    return;
+  }
+}
+
 void FunctionStackPoisoner::processStaticAllocas() {
   if (AllocaVec.empty()) {
     assert(StaticAllocaPoisonCallVec.empty());
@@ -3005,6 +3059,15 @@ void FunctionStackPoisoner::processStaticAllocas() {
   for (auto *AI : StaticAllocasToMoveUp)
     if (AI->getParent() == InsBeforeB)
       AI->moveBefore(InsBefore);
+
+  // Move stores of arguments into entry-block allocas as well. This prevents
+  // extra stack slots from being generated (to house the argument values until
+  // they can be stored into the allocas). This also prevents uninitialized
+  // values from being shown in backtraces.
+  SmallVector<Instruction *, 8> ArgInitInsts;
+  findStoresToUninstrumentedArgAllocas(ASan, *InsBefore, ArgInitInsts);
+  for (Instruction *ArgInitInst : ArgInitInsts)
+    ArgInitInst->moveBefore(InsBefore);
 
   // If we have a call to llvm.localescape, keep it in the entry block.
   if (LocalEscapeCall) LocalEscapeCall->moveBefore(InsBefore);

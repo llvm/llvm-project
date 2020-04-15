@@ -41,6 +41,7 @@ struct Config {
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
+  std::vector<std::string> PassPlugins;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   Optional<CodeModel::Model> CodeModel = None;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;

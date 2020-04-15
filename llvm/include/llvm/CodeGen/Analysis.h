@@ -31,9 +31,6 @@ class MachineFunction;
 class TargetLoweringBase;
 class TargetLowering;
 class TargetMachine;
-class SDNode;
-class SDValue;
-class SelectionDAG;
 struct EVT;
 
 /// Compute the linearized index of a member in a nested
@@ -122,7 +119,7 @@ ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM);
+bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM);
 
 /// Test if given that the input instruction is in the tail call position, if
 /// there is an attribute mismatch between the caller and the callee that will

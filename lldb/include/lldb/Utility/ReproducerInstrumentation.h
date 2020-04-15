@@ -77,45 +77,42 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
   R.Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class, \
                                 #Class, #Signature)
+
 #define LLDB_REGISTER_METHOD(Result, Class, Method, Signature)                 \
   R.Register(                                                                  \
       &invoke<Result(Class::*) Signature>::method<(&Class::Method)>::doit,     \
       #Result, #Class, #Method, #Signature)
+
 #define LLDB_REGISTER_METHOD_CONST(Result, Class, Method, Signature)           \
   R.Register(&invoke<Result(Class::*) Signature const>::method_const<(         \
                  &Class::Method)>::doit,                                       \
              #Result, #Class, #Method, #Signature)
+
 #define LLDB_REGISTER_STATIC_METHOD(Result, Class, Method, Signature)          \
-  R.Register<Result Signature>(                                                \
-      static_cast<Result(*) Signature>(&Class::Method), #Result, #Class,       \
-      #Method, #Signature)
+  R.Register(                                                                  \
+      &invoke<Result(*) Signature>::method_static<(&Class::Method)>::doit,     \
+      #Result, #Class, #Method, #Signature)
 
 #define LLDB_REGISTER_CHAR_PTR_REDIRECT_STATIC(Result, Class, Method)          \
-  {                                                                            \
-    static auto _redirect = [](char *s, size_t l) -> Result {                  \
-      return char_ptr_redirect_static<Result>(Class::Method, s, l);            \
-    };                                                                         \
-    R.Register<Result(char *, size_t)>(                                        \
-        static_cast<Result (*)(char *, size_t)>(&Class::Method), _redirect,    \
-        #Result, #Class, #Method, "(char*, size_t");                           \
-  }
+  R.Register(&invoke<Result (*)(char *, size_t)>::method_static<(              \
+                 &Class::Method)>::doit,                                       \
+             &char_ptr_redirect<Result (*)(char *, size_t)>::method_static<(   \
+                 &Class::Method)>::doit,                                       \
+             #Result, #Class, #Method, "(char*, size_t");
+
 #define LLDB_REGISTER_CHAR_PTR_REDIRECT(Result, Class, Method)                 \
-  {                                                                            \
-    R.Register(&invoke<Result (Class::*)(char *, size_t)>::method<(            \
-                   &Class::Method)>::doit,                                     \
-               &char_ptr_redirect<Result (Class::*)(char *, size_t)>::method<( \
-                   &Class::Method)>::doit,                                     \
-               #Result, #Class, #Method, "(char*, size_t");                    \
-  }
+  R.Register(&invoke<Result (Class::*)(char *, size_t)>::method<(              \
+                 &Class::Method)>::doit,                                       \
+             &char_ptr_redirect<Result (Class::*)(char *, size_t)>::method<(   \
+                 &Class::Method)>::doit,                                       \
+             #Result, #Class, #Method, "(char*, size_t");
+
 #define LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(Result, Class, Method)           \
-  {                                                                            \
-    R.Register(                                                                \
-        &invoke<Result (Class::*)(char *, size_t)                              \
-                    const>::method_const<(&Class::Method)>::doit,              \
-        &char_ptr_redirect<Result (Class::*)(char *, size_t)                   \
-                               const>::method_const<(&Class::Method)>::doit,   \
-        #Result, #Class, #Method, "(char*, size_t");                           \
-  }
+  R.Register(&invoke<Result (Class::*)(char *, size_t)                         \
+                         const>::method_const<(&Class::Method)>::doit,         \
+             &char_ptr_redirect<Result (Class::*)(                             \
+                 char *, size_t) const>::method_const<(&Class::Method)>::doit, \
+             #Result, #Class, #Method, "(char*, size_t");
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
   lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
@@ -188,9 +185,11 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
                                           stringify_args(__VA_ARGS__));        \
   if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
-                     static_cast<Result(*) Signature>(&Class::Method),         \
-                     __VA_ARGS__);                                             \
+    _recorder.Record(                                                          \
+        _data.GetSerializer(), _data.GetRegistry(),                            \
+        lldb_private::repro::invoke<Result(*) Signature>::method_static<(      \
+            &Class::Method)>::doit,                                            \
+        __VA_ARGS__);                                                          \
   }
 
 #define LLDB_RECORD_STATIC_METHOD_NO_ARGS(Result, Class, Method)               \
@@ -198,7 +197,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
-                     static_cast<Result (*)()>(&Class::Method));               \
+                     lldb_private::repro::invoke<Result (*)()>::method_static< \
+                         (&Class::Method)>::doit);                             \
   }
 
 #define LLDB_RECORD_RESULT(Result) _recorder.RecordResult(Result, true);
@@ -254,6 +254,9 @@ public:
         idx, static_cast<void *>(
                  const_cast<typename std::remove_const<T>::type *>(&object)));
   }
+
+  /// Get all objects sorted by their index.
+  std::vector<void *> GetAllObjects() const;
 
 private:
   /// Helper method that does the actual lookup. The void* result is later cast
@@ -343,6 +346,10 @@ public:
     unsigned result = Deserialize<unsigned>();
     assert(result == 0);
     (void)result;
+  }
+
+  std::vector<void *> GetAllObjects() const {
+    return m_index_to_object.GetAllObjects();
   }
 
 private:
@@ -512,6 +519,9 @@ public:
   /// Replay functions from a buffer.
   bool Replay(llvm::StringRef buffer);
 
+  /// Replay functions from a deserializer.
+  bool Replay(Deserializer &deserializer);
+
   /// Returns the ID for a given function address.
   unsigned GetID(uintptr_t addr);
 
@@ -553,6 +563,19 @@ template <typename Result, typename Class, typename... Args>
 struct invoke<Result (Class::*)(Args...) const> {
   template <Result (Class::*m)(Args...) const> struct method_const {
     static Result doit(Class *c, Args... args) { return (c->*m)(args...); }
+  };
+};
+
+template <typename Result, typename... Args>
+struct invoke<Result (*)(Args...)> {
+  template <Result (*m)(Args...)> struct method_static {
+    static Result doit(Args... args) { return (*m)(args...); }
+  };
+};
+
+template <typename... Args> struct invoke<void (*)(Args...)> {
+  template <void (*m)(Args...)> struct method_static {
+    static void doit(Args... args) { return (*m)(args...); }
   };
 };
 
@@ -825,11 +848,14 @@ struct char_ptr_redirect<Result (Class::*)(char *, size_t)> {
 };
 
 template <typename Result>
-Result char_ptr_redirect_static(Result (*f)(char *, size_t), char *s,
-                                size_t l) {
-  char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
-  return f(buffer, l);
-}
+struct char_ptr_redirect<Result (*)(char *, size_t)> {
+  template <Result (*m)(char *, size_t)> struct method_static {
+    static Result doit(char *s, size_t l) {
+      char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
+      return (*m)(buffer, l);
+    }
+  };
+};
 
 } // namespace repro
 } // namespace lldb_private

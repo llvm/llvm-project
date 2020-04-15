@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic
+// RUN: %clang_cc1 %s -fsyntax-only -verify -verify=c2x -pedantic
+// RUN: %clang_cc1 %s -fsyntax-only -std=c2x -verify -pedantic
 
 // PR1892, PR11354
 void f(double a[restrict][5]) { __typeof(a) x = 10; } // expected-warning {{(aka 'double (*restrict)[5]')}}
@@ -30,7 +31,7 @@ void t10(){}
 void t11(){t10(1);} // expected-warning{{too many arguments}}
 
 // PR3208
-void t12(int) {}  // expected-error{{parameter name omitted}}
+void t12(int) {}  // c2x-warning{{omitting the parameter name in a function definition is a C2x extension}}
 
 // PR2790
 void t13() {
@@ -80,7 +81,8 @@ typedef void fn_t(void);
 fn_t t17;
 
 // PR4049
-unknown_type t18(void*) {   // expected-error {{unknown type name 'unknown_type'}} expected-error{{parameter name omitted}}
+unknown_type t18(void*) {   // expected-error {{unknown type name 'unknown_type'}} \
+                            // c2x-warning {{omitting the parameter name in a function definition is a C2x extension}}
 }
 
 unknown_type t19(int* P) {   // expected-error {{unknown type name 'unknown_type'}}

@@ -370,6 +370,28 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
     emitMaxValueFn(enumDef, os);
   }
 
+  // Generate a generic `stringifyEnum` function that forwards to the method
+  // specified by the user.
+  const char *const stringifyEnumStr = R"(
+inline {0} stringifyEnum({1} enumValue) {{
+  return {2}(enumValue);
+}
+)";
+  os << formatv(stringifyEnumStr, symToStrFnRetType, enumName, symToStrFnName);
+
+  // Generate a generic `symbolizeEnum` function that forwards to the method
+  // specified by the user.
+  const char *const symbolizeEnumStr = R"(
+template <typename EnumType>
+llvm::Optional<EnumType> symbolizeEnum(llvm::StringRef);
+
+template <>
+inline llvm::Optional<{0}> symbolizeEnum<{0}>(llvm::StringRef str) {
+  return {1}(str);
+}
+)";
+  os << formatv(symbolizeEnumStr, enumName, strToSymFnName);
+
   for (auto ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
 

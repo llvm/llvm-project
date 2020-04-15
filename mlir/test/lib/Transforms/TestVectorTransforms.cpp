@@ -21,28 +21,28 @@ namespace {
 #include "TestVectorTransformPatterns.h.inc"
 
 struct TestVectorToVectorConversion
-    : public FunctionPass<TestVectorToVectorConversion> {
+    : public PassWrapper<TestVectorToVectorConversion, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     auto *context = &getContext();
     populateWithGenerated(context, &patterns);
     populateVectorToVectorCanonicalizationPatterns(patterns, context);
     populateVectorToVectorTransformationPatterns(patterns, context);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 
 struct TestVectorSlicesConversion
-    : public FunctionPass<TestVectorSlicesConversion> {
+    : public PassWrapper<TestVectorSlicesConversion, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 
 struct TestVectorContractionConversion
-    : public FunctionPass<TestVectorContractionConversion> {
+    : public PassWrapper<TestVectorContractionConversion, FunctionPass> {
   TestVectorContractionConversion() = default;
   TestVectorContractionConversion(const TestVectorContractionConversion &pass) {
   }
@@ -57,7 +57,7 @@ struct TestVectorContractionConversion
     VectorTransformsOptions options{
         /*lowerToLLVMMatrixIntrinsics=*/lowerToLLVMMatrixIntrinsics};
     populateVectorContractLoweringPatterns(patterns, &getContext(), options);
-    applyPatternsGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
 

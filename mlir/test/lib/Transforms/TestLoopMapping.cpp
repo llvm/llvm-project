@@ -22,7 +22,8 @@
 using namespace mlir;
 
 namespace {
-class TestLoopMappingPass : public FunctionPass<TestLoopMappingPass> {
+class TestLoopMappingPass
+    : public PassWrapper<TestLoopMappingPass, FunctionPass> {
 public:
   explicit TestLoopMappingPass() {}
 

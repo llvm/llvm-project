@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -20,11 +21,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -351,6 +348,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   if (!permutation.empty())
     invPermutationMap = inversePermutation(
         AffineMap::getPermutationMap(permutation, ScopedContext::getContext()));
+  if (!invPermutationMap)
+    return llvm::None;
 
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
@@ -360,10 +359,11 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (asserted in the inverse calculation).
   auto mapsRange = op.indexing_maps().getAsRange<AffineMapAttr>();
-  auto maps =
-      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  auto maps = llvm::to_vector<8>(
+      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   auto viewSizesToLoopsMap = inversePermutation(concatAffineMaps(maps));
-  assert(viewSizesToLoopsMap && "expected invertible map");
+  if (!viewSizesToLoopsMap)
+    return llvm::None;
 
   SmallVector<SubViewOp::Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
@@ -507,16 +507,9 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
 }
 
 namespace {
-struct LinalgTilingPass : public FunctionPass<LinalgTilingPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgTiling
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass() = default;
-  LinalgTilingPass(const LinalgTilingPass &) {}
-  LinalgTilingPass(ArrayRef<int64_t> sizes) {
-    tileSizes->assign(sizes.begin(), sizes.end());
-  }
+  LinalgTilingPass(ArrayRef<int64_t> sizes) { tileSizes = sizes; }
 
   void runOnFunction() override {
     tileLinalgOps<loop::ForOp>(getFunction(), tileSizes);
@@ -524,15 +517,10 @@ struct LinalgTilingPass : public FunctionPass<LinalgTilingPass> {
 };
 
 struct LinalgTilingToParallelLoopsPass
-    : public FunctionPass<LinalgTilingToParallelLoopsPass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_LinalgTilingToParallelLoops
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-
+    : public LinalgTilingToParallelLoopsBase<LinalgTilingToParallelLoopsPass> {
   LinalgTilingToParallelLoopsPass() = default;
-  LinalgTilingToParallelLoopsPass(const LinalgTilingToParallelLoopsPass &) {}
   LinalgTilingToParallelLoopsPass(ArrayRef<int64_t> sizes) {
-    tileSizes->assign(sizes.begin(), sizes.end());
+    tileSizes = sizes;
   }
 
   void runOnFunction() override {
@@ -542,12 +530,12 @@ struct LinalgTilingToParallelLoopsPass
 
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass>(tileSizes);
 }
 
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingToParallelLoopsPass>(tileSizes);
 }

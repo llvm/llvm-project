@@ -67,15 +67,15 @@ private:
 /// getITInstrPredicate - Valid only in Thumb2 mode. This function is identical
 /// to llvm::getInstrPredicate except it returns AL for conditional branch
 /// instructions which are "predicated", but are not in IT blocks.
-ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
+ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, Register &PredReg);
 
 // getVPTInstrPredicate: VPT analogue of that, plus a helper function
 // corresponding to MachineInstr::findFirstPredOperandIdx.
 int findFirstVPTPredOperandIdx(const MachineInstr &MI);
 ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI,
-                                      unsigned &PredReg);
+                                      Register &PredReg);
 inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
-  unsigned PredReg;
+  Register PredReg;
   return getVPTInstrPredicate(MI, PredReg);
 }
 } // namespace llvm

@@ -15,10 +15,11 @@ namespace mlir {
 namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
-template <typename OpT> class OpPassBase;
+template <typename OpT> class OperationPass;
 
 /// Creates a pass that lowers GPU dialect operations to ROCDL counterparts.
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>> createLowerGpuOpsToROCDLOpsPass();
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
+createLowerGpuOpsToROCDLOpsPass();
 
 } // namespace mlir
 

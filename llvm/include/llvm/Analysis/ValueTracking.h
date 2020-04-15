@@ -592,6 +592,15 @@ class Value;
   /// the parent of I.
   bool programUndefinedIfFullPoison(const Instruction *PoisonI);
 
+  /// Return true if I can create poison from non-poison operands.
+  /// For vectors, canCreatePoison returns true if there is potential poison in
+  /// any element of the result when vectors without poison are given as
+  /// operands.
+  /// For example, given `I = shl <2 x i32> %x, <0, 32>`, this function returns
+  /// true. If I raises immediate UB but never creates poison (e.g. sdiv I, 0),
+  /// canCreatePoison returns false.
+  bool canCreatePoison(const Instruction *I);
+
   /// Return true if this function can prove that V is never undef value
   /// or poison value.
   //

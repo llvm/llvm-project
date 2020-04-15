@@ -25,7 +25,7 @@ public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         IgnoreBaseInCopyConstructors(
-            Options.get("IgnoreBaseInCopyConstructors", 0)) {}
+            Options.get("IgnoreBaseInCopyConstructors", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

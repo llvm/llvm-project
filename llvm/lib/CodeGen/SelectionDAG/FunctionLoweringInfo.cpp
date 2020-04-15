@@ -161,7 +161,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
           // Scalable vectors may need a special StackID to distinguish
           // them from other (fixed size) stack objects.
-          if (Ty->isVectorTy() && Ty->getVectorIsScalable())
+          if (Ty->isVectorTy() && cast<VectorType>(Ty)->isScalable())
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
@@ -182,13 +182,13 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       }
 
       // Look for inline asm that clobbers the SP register.
-      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        ImmutableCallSite CS(&I);
-        if (isa<InlineAsm>(CS.getCalledValue())) {
+      if (auto *Call = dyn_cast<CallBase>(&I)) {
+        if (isa<InlineAsm>(Call->getCalledValue())) {
           unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
-              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI, CS);
+              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,
+                                    *Call);
           for (TargetLowering::AsmOperandInfo &Op : Ops) {
             if (Op.Type == InlineAsm::isClobber) {
               // Clobbers don't have SDValue operands, hence SDValue().
@@ -352,7 +352,7 @@ void FunctionLoweringInfo::clear() {
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
-unsigned FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
+Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
   return RegInfo->createVirtualRegister(
       MF->getSubtarget().getTargetLowering()->getRegClassFor(VT, isDivergent));
 }
@@ -364,27 +364,27 @@ unsigned FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
 /// In the case that the given value has struct or array type, this function
 /// will assign registers for each member or element.
 ///
-unsigned FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
+Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
 
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
-  unsigned FirstReg = 0;
+  Register FirstReg;
   for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
     EVT ValueVT = ValueVTs[Value];
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
-      unsigned R = CreateReg(RegisterVT, isDivergent);
+      Register R = CreateReg(RegisterVT, isDivergent);
       if (!FirstReg) FirstReg = R;
     }
   }
   return FirstReg;
 }
 
-unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
+Register FunctionLoweringInfo::CreateRegs(const Value *V) {
   return CreateRegs(V->getType(), DA && DA->isDivergent(V) &&
                     !TLI->requiresUniformRegister(*MF, V));
 }
@@ -395,7 +395,7 @@ unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
 /// the larger bit width by zero extension. The bit width must be no smaller
 /// than the LiveOutInfo's existing bit width.
 const FunctionLoweringInfo::LiveOutInfo *
-FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
+FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
   if (!LiveOutRegInfo.inBounds(Reg))
     return nullptr;
 
@@ -429,7 +429,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
-  unsigned DestReg = ValueMap[PN];
+  Register DestReg = ValueMap[PN];
   if (!Register::isVirtualRegister(DestReg))
     return;
   LiveOutRegInfo.grow(DestReg);
@@ -450,7 +450,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   } else {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
-    unsigned SrcReg = ValueMap[V];
+    Register SrcReg = ValueMap[V];
     if (!Register::isVirtualRegister(SrcReg)) {
       DestLOI.IsValid = false;
       return;
@@ -485,8 +485,8 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
 
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
                                 "its CopyToReg node was created.");
-    unsigned SrcReg = ValueMap[V];
-    if (!Register::isVirtualRegister(SrcReg)) {
+    Register SrcReg = ValueMap[V];
+    if (!SrcReg.isVirtual()) {
       DestLOI.IsValid = false;
       return;
     }
@@ -520,11 +520,11 @@ int FunctionLoweringInfo::getArgumentFrameIndex(const Argument *A) {
   return INT_MAX;
 }
 
-unsigned FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
+Register FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
     const Value *CPI, const TargetRegisterClass *RC) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   auto I = CatchPadExceptionPointers.insert({CPI, 0});
-  unsigned &VReg = I.first->second;
+  Register &VReg = I.first->second;
   if (I.second)
     VReg = MRI.createVirtualRegister(RC);
   assert(VReg && "null vreg in exception pointer table!");
@@ -532,7 +532,7 @@ unsigned FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
 }
 
 const Value *
-FunctionLoweringInfo::getValueFromVirtualReg(unsigned Vreg) {
+FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
   if (VirtReg2Value.empty()) {
     SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {

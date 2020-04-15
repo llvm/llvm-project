@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -109,9 +108,11 @@ private:
   // calling native C++ code.
   std::string handleReplaceWithNativeCodeCall(DagNode resultTree);
 
-  // Returns the C++ expression referencing the old value serving as the
-  // replacement.
-  std::string handleReplaceWithValue(DagNode tree);
+  // Returns the symbol of the old value serving as the replacement.
+  StringRef handleReplaceWithValue(DagNode tree);
+
+  // Returns the location value to use.
+  std::string handleLocationDirective(DagNode tree);
 
   // Emits the C++ statement to build a new op out of the given DAG `tree` and
   // returns the variable name that this op is assigned to. If the root op in
@@ -241,7 +242,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
-        if (operand->isVariadic()) {
+        if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
                                op.getOperationName(), i);
@@ -294,7 +295,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
     // of op definition.
     Constraint constraint = matcher.getAsConstraint();
     if (operand->constraint != constraint) {
-      if (operand->isVariadic()) {
+      if (operand->isVariableLength()) {
         auto error = formatv(
             "further constrain op {0}'s variadic operand #{1} unsupported now",
             op.getOperationName(), argIndex);
@@ -498,7 +499,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   llvm::sort(sortedResultOps, [&](const Operator *lhs, const Operator *rhs) {
     return lhs->getOperationName() < rhs->getOperationName();
   });
-  interleaveComma(sortedResultOps, os, [&](const Operator *op) {
+  llvm::interleaveComma(sortedResultOps, os, [&](const Operator *op) {
     os << '"' << op->getOperationName() << '"';
   });
   os << formatv(R"(}, {0}, context) {{})", pattern.getBenefit()) << "\n";
@@ -580,11 +581,11 @@ void PatternEmitter::emitRewriteLogic() {
     PrintFatalError(loc, error);
   }
 
-  os.indent(4) << "auto loc = rewriter.getFusedLoc({";
+  os.indent(4) << "auto odsLoc = rewriter.getFusedLoc({";
   for (int i = 0, e = pattern.getSourcePattern().getNumOps(); i != e; ++i) {
     os << (i ? ", " : "") << "tblgen_ops[" << i << "]->getLoc()";
   }
-  os << "}); (void)loc;\n";
+  os << "}); (void)odsLoc;\n";
 
   // Process auxiliary result patterns.
   for (int i = 0; i < replStartIndex; ++i) {
@@ -640,15 +641,19 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
   LLVM_DEBUG(resultTree.print(llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << '\n');
 
+  if (resultTree.isLocationDirective()) {
+    PrintFatalError(loc,
+                    "location directive can only be used with op creation");
+  }
+
   if (resultTree.isNativeCodeCall()) {
     auto symbol = handleReplaceWithNativeCodeCall(resultTree);
     symbolInfoMap.bindValue(symbol);
     return symbol;
   }
 
-  if (resultTree.isReplaceWithValue()) {
-    return handleReplaceWithValue(resultTree);
-  }
+  if (resultTree.isReplaceWithValue())
+    return handleReplaceWithValue(resultTree).str();
 
   // Normal op creation.
   auto symbol = handleOpCreation(resultTree, resultIndex, depth);
@@ -660,7 +665,7 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
   return symbol;
 }
 
-std::string PatternEmitter::handleReplaceWithValue(DagNode tree) {
+StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
   assert(tree.isReplaceWithValue());
 
   if (tree.getNumArgs() != 1) {
@@ -672,7 +677,56 @@ std::string PatternEmitter::handleReplaceWithValue(DagNode tree) {
     PrintFatalError(loc, "cannot bind symbol to replaceWithValue");
   }
 
-  return std::string(tree.getArgName(0));
+  return tree.getArgName(0);
+}
+
+std::string PatternEmitter::handleLocationDirective(DagNode tree) {
+  assert(tree.isLocationDirective());
+  auto lookUpArgLoc = [this, &tree](int idx) {
+    const auto *const lookupFmt = "(*{0}.begin()).getLoc()";
+    return symbolInfoMap.getAllRangeUse(tree.getArgName(idx), lookupFmt);
+  };
+
+  if (tree.getNumArgs() == 0)
+    llvm::PrintFatalError(
+        "At least one argument to location directive required");
+
+  if (!tree.getSymbol().empty())
+    PrintFatalError(loc, "cannot bind symbol to location");
+
+  if (tree.getNumArgs() == 1) {
+    DagLeaf leaf = tree.getArgAsLeaf(0);
+    if (leaf.isStringAttr())
+      return formatv("mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"), "
+                     "rewriter.getContext())",
+                     leaf.getStringAttr())
+          .str();
+    return lookUpArgLoc(0);
+  }
+
+  std::string ret;
+  llvm::raw_string_ostream os(ret);
+  std::string strAttr;
+  os << "rewriter.getFusedLoc({";
+  bool first = true;
+  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+    DagLeaf leaf = tree.getArgAsLeaf(i);
+    // Handle the optional string value.
+    if (leaf.isStringAttr()) {
+      if (!strAttr.empty())
+        llvm::PrintFatalError("Only one string attribute may be specified");
+      strAttr = leaf.getStringAttr();
+      continue;
+    }
+    os << (first ? "" : ", ") << lookUpArgLoc(i);
+    first = false;
+  }
+  os << "}";
+  if (!strAttr.empty()) {
+    os << ", rewriter.getStringAttr(\"" << strAttr << "\")";
+  }
+  os << ")";
+  return os.str();
 }
 
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
@@ -753,13 +807,27 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
   Operator &resultOp = tree.getDialectOp(opMap);
   auto numOpArgs = resultOp.getNumArgs();
+  auto numPatArgs = tree.getNumArgs();
 
-  if (numOpArgs != tree.getNumArgs()) {
-    PrintFatalError(loc, formatv("resultant op '{0}' argument number mismatch: "
-                                 "{1} in pattern vs. {2} in definition",
-                                 resultOp.getOperationName(), tree.getNumArgs(),
-                                 numOpArgs));
+  // Get the location for this operation if explicitly provided.
+  std::string locToUse;
+  if (numPatArgs != 0) {
+    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
+      if (lastArg.isLocationDirective())
+        locToUse = handleLocationDirective(lastArg);
   }
+
+  auto inPattern = numPatArgs - !locToUse.empty();
+  if (numOpArgs != inPattern) {
+    PrintFatalError(loc,
+                    formatv("resultant op '{0}' argument number mismatch: "
+                            "{1} in pattern vs. {2} in definition",
+                            resultOp.getOperationName(), inPattern, numOpArgs));
+  }
+
+  // If no explicit location is given, use the default, all fused, location.
+  if (locToUse.empty())
+    locToUse = "odsLoc";
 
   // A map to collect all nested DAG child nodes' names, with operand index as
   // the key. This includes both bound and unbound child nodes.
@@ -769,9 +837,8 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
   for (int i = 0, e = resultOp.getNumOperands(); i != e; ++i) {
-    if (auto child = tree.getArgAsNestedDag(i)) {
+    if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
-    }
   }
 
   // The name of the local variable holding this op.
@@ -811,25 +878,18 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
     // First prepare local variables for op arguments used in builder call.
     createAggregateLocalVarsForOpArgs(tree, childNodeNames);
+
     // Then create the op.
     os.indent(6) << formatv(
-        "{0} = rewriter.create<{1}>(loc, tblgen_values, tblgen_attrs);\n",
-        valuePackName, resultOp.getQualCppClassName());
+        "{0} = rewriter.create<{1}>({2}, tblgen_values, tblgen_attrs);\n",
+        valuePackName, resultOp.getQualCppClassName(), locToUse);
     os.indent(4) << "}\n";
     return resultValue;
   }
 
-  // TODO: Remove once broadcastable has been updated. This query here is not
-  // really about broadcastable or not, it is about which build method to invoke
-  // and that requires knowledge of whether ODS generated a builder that need
-  // not take return types. That knowledge should be captured in one place
-  // rather than duplicated.
-  bool isResultsBroadcastableShape =
-      resultOp.getTrait("OpTrait::ResultsBroadcastableShape");
   bool usePartialResults = valuePackName != resultValue;
 
-  if (isResultsBroadcastableShape || usePartialResults || depth > 0 ||
-      resultIndex < 0) {
+  if (usePartialResults || depth > 0 || resultIndex < 0) {
     // For these cases (broadcastable ops, op results used both as auxiliary
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
@@ -839,8 +899,9 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     // here given that it's easier for developers to write compared to
     // aggregate-parameter builders.
     createSeparateLocalVarsForOpArgs(tree, childNodeNames);
-    os.indent(6) << formatv("{0} = rewriter.create<{1}>(loc", valuePackName,
-                            resultOp.getQualCppClassName());
+
+    os.indent(6) << formatv("{0} = rewriter.create<{1}>({2}", valuePackName,
+                            resultOp.getQualCppClassName(), locToUse);
     supplyValuesForOpArgs(tree, childNodeNames);
     os << "\n      );\n";
     os.indent(4) << "}\n";
@@ -866,9 +927,10 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
                               "tblgen_types.push_back(v.getType()); }\n",
                               resultIndex + i);
   }
-  os.indent(6) << formatv("{0} = rewriter.create<{1}>(loc, tblgen_types, "
+  os.indent(6) << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
                           "tblgen_values, tblgen_attrs);\n",
-                          valuePackName, resultOp.getQualCppClassName());
+                          valuePackName, resultOp.getQualCppClassName(),
+                          locToUse);
   os.indent(4) << "}\n";
   return resultValue;
 }

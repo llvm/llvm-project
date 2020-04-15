@@ -185,12 +185,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
             is_declaration = form_value.Unsigned() != 0;
           break;
 
-        //                case DW_AT_artificial:
-        //                    if (attributes.ExtractFormValueAtIndex(i,
-        //                    form_value))
-        //                        is_artificial = form_value.Unsigned() != 0;
-        //                    break;
-
         case DW_AT_MIPS_linkage_name:
         case DW_AT_linkage_name:
           if (attributes.ExtractFormValueAtIndex(i, form_value))
@@ -210,49 +204,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         case DW_AT_location:
         case DW_AT_const_value:
           has_location_or_const_value = true;
-          if (tag == DW_TAG_variable) {
-            const DWARFDebugInfoEntry *parent_die = die.GetParent();
-            while (parent_die != nullptr) {
-              switch (parent_die->Tag()) {
-              case DW_TAG_subprogram:
-              case DW_TAG_lexical_block:
-              case DW_TAG_inlined_subroutine:
-                // Even if this is a function level static, we don't add it. We
-                // could theoretically add these if we wanted to by
-                // introspecting into the DW_AT_location and seeing if the
-                // location describes a hard coded address, but we don't want
-                // the performance penalty of that right now.
-                is_global_or_static_variable = false;
-                // if (attributes.ExtractFormValueAtIndex(dwarf, i,
-                //                                        form_value)) {
-                //   // If we have valid block data, then we have location
-                //   // expression bytesthat are fixed (not a location list).
-                //   const uint8_t *block_data = form_value.BlockData();
-                //   if (block_data) {
-                //     uint32_t block_length = form_value.Unsigned();
-                //     if (block_length == 1 +
-                //     attributes.UnitAtIndex(i)->GetAddressByteSize()) {
-                //       if (block_data[0] == DW_OP_addr)
-                //         add_die = true;
-                //     }
-                //   }
-                // }
-                parent_die = nullptr; // Terminate the while loop.
-                break;
+          is_global_or_static_variable = die.IsGlobalOrStaticVariable();
 
-              case DW_TAG_compile_unit:
-              case DW_TAG_partial_unit:
-                is_global_or_static_variable = true;
-                parent_die = nullptr; // Terminate the while loop.
-                break;
-
-              default:
-                parent_die =
-                    parent_die->GetParent(); // Keep going in the while loop.
-                break;
-              }
-            }
-          }
           break;
 
         case DW_AT_specification:

@@ -450,8 +450,7 @@ void CallEvent::dump(raw_ostream &Out) const {
     return;
   }
 
-  // FIXME: a string representation of the kind would be nice.
-  Out << "Unknown call (type " << getKind() << ")";
+  Out << "Unknown call (type " << getKindAsString() << ")";
 }
 
 bool CallEvent::isCallStmt(const Stmt *S) {

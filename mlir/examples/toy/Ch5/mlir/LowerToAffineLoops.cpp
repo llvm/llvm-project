@@ -260,7 +260,8 @@ struct TransposeOpLowering : public ConversionPattern {
 /// computationally intensive (like matmul for example...) while keeping the
 /// rest of the code in the Toy dialect.
 namespace {
-struct ToyToAffineLoweringPass : public FunctionPass<ToyToAffineLoweringPass> {
+struct ToyToAffineLoweringPass
+    : public PassWrapper<ToyToAffineLoweringPass, FunctionPass> {
   void runOnFunction() final;
 };
 } // end anonymous namespace.

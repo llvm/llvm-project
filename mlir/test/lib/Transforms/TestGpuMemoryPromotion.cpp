@@ -24,7 +24,8 @@ namespace {
 /// does not check whether the promotion is legal (e.g., amount of memory used)
 /// or beneficial (e.g., makes previously uncoalesced loads coalesced).
 class TestGpuMemoryPromotionPass
-    : public OperationPass<TestGpuMemoryPromotionPass, gpu::GPUFuncOp> {
+    : public PassWrapper<TestGpuMemoryPromotionPass,
+                         OperationPass<gpu::GPUFuncOp>> {
   void runOnOperation() override {
     gpu::GPUFuncOp op = getOperation();
     for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i) {

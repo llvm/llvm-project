@@ -1,4 +1,4 @@
-# Introduction and Usage Guide to MLIR's Diagnostics Infrastructure
+# Diagnostic Infrastructure
 
 [TOC]
 
@@ -200,7 +200,9 @@ destroyed.
 ## Diagnostic Configuration Options
 
 Several options are provided to help control and enhance the behavior of
-diagnostics. These options are listed below:
+diagnostics. These options can be configured via the MLIRContext, and registered
+to the command line with the `registerMLIRContextCLOptions` method. These
+options are listed below:
 
 ### Print Operation On Diagnostic
 

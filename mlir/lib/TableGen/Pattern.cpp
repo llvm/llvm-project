@@ -56,6 +56,10 @@ bool tblgen::DagLeaf::isEnumAttrCase() const {
   return isSubClassOf("EnumAttrCaseInfo");
 }
 
+bool tblgen::DagLeaf::isStringAttr() const {
+  return isa<llvm::StringInit>(def) || isa<llvm::CodeInit>(def);
+}
+
 tblgen::Constraint tblgen::DagLeaf::getAsConstraint() const {
   assert((isOperandMatcher() || isAttrMatcher()) &&
          "the DAG leaf must be operand or attribute");
@@ -81,6 +85,10 @@ llvm::StringRef tblgen::DagLeaf::getNativeCodeTemplate() const {
   return cast<llvm::DefInit>(def)->getDef()->getValueAsString("expression");
 }
 
+std::string tblgen::DagLeaf::getStringAttr() const {
+  assert(isStringAttr() && "the DAG leaf must be string attribute");
+  return def->getAsUnquotedString();
+}
 bool tblgen::DagLeaf::isSubClassOf(StringRef superclass) const {
   if (auto *defInit = dyn_cast_or_null<llvm::DefInit>(def))
     return defInit->getDef()->isSubClassOf(superclass);
@@ -103,7 +111,7 @@ bool tblgen::DagNode::isNativeCodeCall() const {
 }
 
 bool tblgen::DagNode::isOperation() const {
-  return !(isNativeCodeCall() || isReplaceWithValue());
+  return !isNativeCodeCall() && !isReplaceWithValue() && !isLocationDirective();
 }
 
 llvm::StringRef tblgen::DagNode::getNativeCodeTemplate() const {
@@ -157,6 +165,11 @@ StringRef tblgen::DagNode::getArgName(unsigned index) const {
 bool tblgen::DagNode::isReplaceWithValue() const {
   auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
   return dagOpDef->getName() == "replaceWithValue";
+}
+
+bool tblgen::DagNode::isLocationDirective() const {
+  auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
+  return dagOpDef->getName() == "location";
 }
 
 void tblgen::DagNode::print(raw_ostream &os) const {
@@ -242,7 +255,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     auto *operand = op->getArg(*argIndex).get<NamedTypeConstraint *>();
     // If this operand is variadic, then return a range. Otherwise, return the
     // value itself.
-    if (operand->isVariadic()) {
+    if (operand->isVariableLength()) {
       auto repl = formatv(fmt, name);
       LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicOperand)\n");
       return std::string(repl);
@@ -533,7 +546,14 @@ void tblgen::Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
   auto numOpArgs = op.getNumArgs();
   auto numTreeArgs = tree.getNumArgs();
 
-  if (numOpArgs != numTreeArgs) {
+  // The pattern might have the last argument specifying the location.
+  bool hasLocDirective = false;
+  if (numTreeArgs != 0) {
+    if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
+      hasLocDirective = lastArg.isLocationDirective();
+  }
+
+  if (numOpArgs != numTreeArgs - hasLocDirective) {
     auto err = formatv("op '{0}' argument number mismatch: "
                        "{1} in pattern vs. {2} in definition",
                        op.getOperationName(), numTreeArgs, numOpArgs);

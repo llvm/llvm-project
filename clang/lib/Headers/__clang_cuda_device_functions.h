@@ -21,7 +21,7 @@
 // functions and __forceinline__ helps inlining these wrappers at -O1.
 #pragma push_macro("__DEVICE__")
 #ifdef _OPENMP
-#define __DEVICE__ static __attribute__((always_inline))
+#define __DEVICE__ static __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE__ static __device__ __forceinline__
 #endif

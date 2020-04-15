@@ -16,7 +16,6 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -42,12 +41,18 @@ private:
     /// Return the argument string of this option.
     StringRef getArgStr() const { return getOption()->ArgStr; }
 
+    /// Returns true if this option has any value assigned to it.
+    bool hasValue() const { return optHasValue; }
+
   protected:
     /// Return the main option instance.
     virtual const llvm::cl::Option *getOption() const = 0;
 
     /// Copy the value from the given option into this one.
     virtual void copyValueFrom(const OptionBase &other) = 0;
+
+    /// Flag indicating if this option has a value.
+    bool optHasValue = false;
 
     /// Allow access to private methods.
     friend PassOptions;
@@ -113,10 +118,17 @@ public:
       assert(!this->isPositional() && !this->isSink() &&
              "sink and positional options are not supported");
       parent.options.push_back(this);
+
+      // Set a callback to track if this option has a value.
+      this->setCallback([this](const auto &) { this->optHasValue = true; });
     }
+    ~Option() override = default;
     using llvm::cl::opt<DataType, /*ExternalStorage=*/false,
                         OptionParser>::operator=;
-    ~Option() override = default;
+    Option &operator=(const Option &other) {
+      *this = other.getValue();
+      return *this;
+    }
 
   private:
     /// Return the main option instance.
@@ -132,6 +144,7 @@ public:
     void copyValueFrom(const OptionBase &other) final {
       this->setValue(static_cast<const Option<DataType, OptionParser> &>(other)
                          .getValue());
+      optHasValue = other.optHasValue;
     }
   };
 
@@ -149,16 +162,26 @@ public:
       assert(!this->isPositional() && !this->isSink() &&
              "sink and positional options are not supported");
       parent.options.push_back(this);
+
+      // Set a callback to track if this option has a value.
+      this->setCallback([this](const auto &) { this->optHasValue = true; });
     }
     ~ListOption() override = default;
-
-    /// Allow assigning from an ArrayRef.
-    ListOption<DataType, OptionParser> &operator=(ArrayRef<DataType> values) {
-      (*this)->assign(values.begin(), values.end());
+    ListOption<DataType, OptionParser> &
+    operator=(const ListOption<DataType, OptionParser> &other) {
+      *this = ArrayRef<DataType>(other);
+      this->optHasValue = other.optHasValue;
       return *this;
     }
 
-    std::vector<DataType> *operator->() { return &*this; }
+    /// Allow assigning from an ArrayRef.
+    ListOption<DataType, OptionParser> &operator=(ArrayRef<DataType> values) {
+      ((std::vector<DataType> &)*this).assign(values.begin(), values.end());
+      optHasValue = true;
+      return *this;
+    }
+
+    MutableArrayRef<DataType> operator->() const { return &*this; }
 
   private:
     /// Return the main option instance.
@@ -170,14 +193,12 @@ public:
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
       };
-      interleave(*this, os, printElementFn, ",");
+      llvm::interleave(*this, os, printElementFn, ",");
     }
 
     /// Copy the value from the given option into this one.
     void copyValueFrom(const OptionBase &other) final {
-      (*this) = ArrayRef<DataType>(
-          (ListOption<DataType, OptionParser> &)(const_cast<OptionBase &>(
-              other)));
+      *this = static_cast<const ListOption<DataType, OptionParser> &>(other);
     }
   };
 

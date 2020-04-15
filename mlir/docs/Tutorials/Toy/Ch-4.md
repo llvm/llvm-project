@@ -318,7 +318,8 @@ Implementing such a pass is done by creating a class inheriting from
 `mlir::FunctionPass` and overriding the `runOnFunction()` method.
 
 ```c++
-class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
+class ShapeInferencePass
+    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
   void runOnFunction() override {
     FuncOp function = getFunction();
     ...

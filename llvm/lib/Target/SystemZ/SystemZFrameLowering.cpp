@@ -347,9 +347,8 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
 
 // Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
 static void emitIncrement(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &MBBI,
-                          const DebugLoc &DL,
-                          unsigned Reg, int64_t NumBytes,
+                          MachineBasicBlock::iterator &MBBI, const DebugLoc &DL,
+                          Register Reg, int64_t NumBytes,
                           const TargetInstrInfo *TII) {
   while (NumBytes) {
     unsigned Opcode;
@@ -521,7 +520,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the this save.
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-    unsigned IgnoredFrameReg;
+    Register IgnoredFrameReg;
     int64_t Offset =
         getFrameIndexReference(MF, Save.getFrameIdx(), IgnoredFrameReg);
 
@@ -600,7 +599,7 @@ SystemZFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 
 int SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                  int FI,
-                                                 unsigned &FrameReg) const {
+                                                 Register &FrameReg) const {
   // Our incoming SP is actually SystemZMC::CallFrameSize below the CFA, so
   // add that difference here.
   int64_t Offset =
@@ -626,7 +625,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF,
 }
 
 unsigned SystemZFrameLowering::getRegSpillOffset(MachineFunction &MF,
-                                                 unsigned Reg) const {
+                                                 Register Reg) const {
   bool IsVarArg = MF.getFunction().isVarArg();
   bool BackChain = MF.getFunction().hasFnAttribute("backchain");
   bool SoftFloat = MF.getSubtarget<SystemZSubtarget>().hasSoftFloat();

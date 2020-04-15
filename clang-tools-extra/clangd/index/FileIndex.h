@@ -15,14 +15,24 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
+#include "Headers.h"
 #include "Index.h"
 #include "MemIndex.h"
 #include "Merge.h"
 #include "Path.h"
 #include "index/CanonicalIncludes.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <vector>
 
 namespace clang {
 class ASTContext;
@@ -109,17 +119,15 @@ public:
 private:
   bool UseDex; // FIXME: this should be always on.
 
-  // Contains information from each file's preamble only.
-  // These are large, but update fairly infrequently (preambles are stable).
+  // Contains information from each file's preamble only. Symbols and relations
+  // are sharded per declaration file to deduplicate multiple symbols and reduce
+  // memory usage.
   // Missing information:
   //  - symbol refs (these are always "from the main file")
   //  - definition locations in the main file
   //
-  // FIXME: Because the preambles for different TUs have large overlap and
-  // FileIndex doesn't deduplicate, this uses lots of extra RAM.
-  // The biggest obstacle in fixing this: the obvious approach of partitioning
-  // by declaring file (rather than main file) fails if headers provide
-  // different symbols based on preprocessor state.
+  // Note that we store only one version of a header, hence symbols appearing in
+  // different PP states will be missing.
   FileSymbols PreambleSymbols;
   SwapIndex PreambleIndex;
 
@@ -145,6 +153,43 @@ SlabTuple indexMainDecls(ParsedAST &AST);
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                              std::shared_ptr<Preprocessor> PP,
                              const CanonicalIncludes &Includes);
+
+/// Takes slabs coming from a TU (multiple files) and shards them per
+/// declaration location.
+struct FileShardedIndex {
+  /// \p HintPath is used to convert file URIs stored in symbols into absolute
+  /// paths.
+  explicit FileShardedIndex(IndexFileIn Input, PathRef HintPath);
+
+  /// Returns absolute paths for all files that has a shard.
+  std::vector<PathRef> getAllFiles() const;
+
+  /// Generates index shard for the \p File. Note that this function results in
+  /// a copy of all the relevant data.
+  /// Returned index will always have Symbol/Refs/Relation Slabs set, even if
+  /// they are empty.
+  IndexFileIn getShard(PathRef File) const;
+
+private:
+  // Contains all the information that belongs to a single file.
+  struct FileShard {
+    // Either declared or defined in the file.
+    llvm::DenseSet<const Symbol *> Symbols;
+    // Reference occurs in the file.
+    llvm::DenseSet<const Ref *> Refs;
+    // Subject is declared in the file.
+    llvm::DenseSet<const Relation *> Relations;
+    // Contains edges for only the direct includes.
+    IncludeGraph IG;
+  };
+
+  // Keeps all the information alive.
+  const IndexFileIn Index;
+  // Mapping from absolute paths to slab information.
+  llvm::StringMap<FileShard> Shards;
+  // Used to build RefSlabs.
+  llvm::DenseMap<const Ref *, SymbolID> RefToSymID;
+};
 
 } // namespace clangd
 } // namespace clang

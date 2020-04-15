@@ -23,6 +23,24 @@
 
 namespace llvm {
 
+namespace detail {
+
+/// Simplistic combination of 32-bit hash values into 32-bit hash values.
+static inline unsigned combineHashValue(unsigned a, unsigned b) {
+  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
+  key += ~(key << 32);
+  key ^= (key >> 22);
+  key += ~(key << 13);
+  key ^= (key >> 8);
+  key += (key << 3);
+  key ^= (key >> 15);
+  key += ~(key << 27);
+  key ^= (key >> 31);
+  return (unsigned)key;
+}
+
+} // end namespace detail
+
 template<typename T>
 struct DenseMapInfo {
   //static inline T getEmptyKey();
@@ -206,22 +224,63 @@ struct DenseMapInfo<std::pair<T, U>> {
   }
 
   static unsigned getHashValue(const Pair& PairVal) {
-    uint64_t key = (uint64_t)FirstInfo::getHashValue(PairVal.first) << 32
-          | (uint64_t)SecondInfo::getHashValue(PairVal.second);
-    key += ~(key << 32);
-    key ^= (key >> 22);
-    key += ~(key << 13);
-    key ^= (key >> 8);
-    key += (key << 3);
-    key ^= (key >> 15);
-    key += ~(key << 27);
-    key ^= (key >> 31);
-    return (unsigned)key;
+    return detail::combineHashValue(FirstInfo::getHashValue(PairVal.first),
+                                    SecondInfo::getHashValue(PairVal.second));
   }
 
   static bool isEqual(const Pair &LHS, const Pair &RHS) {
     return FirstInfo::isEqual(LHS.first, RHS.first) &&
            SecondInfo::isEqual(LHS.second, RHS.second);
+  }
+};
+
+// Provide DenseMapInfo for all tuples whose members have info.
+template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
+  using Tuple = std::tuple<Ts...>;
+
+  static inline Tuple getEmptyKey() {
+    return Tuple(DenseMapInfo<Ts>::getEmptyKey()...);
+  }
+
+  static inline Tuple getTombstoneKey() {
+    return Tuple(DenseMapInfo<Ts>::getTombstoneKey()...);
+  }
+
+  template <unsigned I>
+  static unsigned getHashValueImpl(const Tuple &values, std::false_type) {
+    using EltType = typename std::tuple_element<I, Tuple>::type;
+    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
+    return detail::combineHashValue(
+        DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
+        getHashValueImpl<I + 1>(values, atEnd));
+  }
+
+  template <unsigned I>
+  static unsigned getHashValueImpl(const Tuple &values, std::true_type) {
+    return 0;
+  }
+
+  static unsigned getHashValue(const std::tuple<Ts...> &values) {
+    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
+    return getHashValueImpl<0>(values, atEnd);
+  }
+
+  template <unsigned I>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::false_type) {
+    using EltType = typename std::tuple_element<I, Tuple>::type;
+    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
+    return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs), std::get<I>(rhs)) &&
+           isEqualImpl<I + 1>(lhs, rhs, atEnd);
+  }
+
+  template <unsigned I>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::true_type) {
+    return true;
+  }
+
+  static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
+    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
+    return isEqualImpl<0>(lhs, rhs, atEnd);
   }
 };
 

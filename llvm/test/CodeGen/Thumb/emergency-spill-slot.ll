@@ -9,8 +9,8 @@ define void @vla_emergency_spill(i32 %n) {
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    .setfp r7, sp, #12
 ; CHECK-NEXT:    add r7, sp, #12
-; CHECK-NEXT:    .pad #4100
 ; CHECK-NEXT:    ldr r6, .LCPI0_0
+; CHECK-NEXT:    .pad #4100
 ; CHECK-NEXT:    add sp, r6
 ; CHECK-NEXT:    mov r6, sp
 ; CHECK-NEXT:    adds r0, r0, #7
@@ -59,8 +59,8 @@ define void @simple_emergency_spill(i32 %n) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    ldr r7, .LCPI1_0
+; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    add sp, r7
 ; CHECK-NEXT:    add r0, sp, #4
 ; CHECK-NEXT:    ldr r1, .LCPI1_2
@@ -119,8 +119,8 @@ define void @simple_emergency_spill_nor7(i32 %n) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    ldr r6, .LCPI2_0
+; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    add sp, r6
 ; CHECK-NEXT:    add r0, sp, #4
 ; CHECK-NEXT:    ldr r1, .LCPI2_2

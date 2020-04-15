@@ -583,7 +583,7 @@ private:
       } while (true);
     }
     if (lexer.getCurToken() != ')')
-      return parseError<PrototypeAST>("}", "to end function prototype");
+      return parseError<PrototypeAST>(")", "to end function prototype");
 
     // success.
     lexer.consume(Token(')'));

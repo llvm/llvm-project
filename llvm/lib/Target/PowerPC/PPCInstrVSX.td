@@ -3311,19 +3311,19 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
       def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 xoaddr:$src)))),
                 (v2i64 (XXPERMDIs
-                (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSFRC), 2))>;
 
       def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 xoaddr:$src)))),
                 (v2i64 (XXPERMDIs
-                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
 
       def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
                 (v4i32 (XXPERMDIs
-                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
 
       def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
                 (v4f32 (XXPERMDIs
-                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
     }
 
     let Predicates = [IsBigEndian] in {
@@ -3369,6 +3369,16 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (v4i32 (XXSPLTWs (VEXTSH2Ws (LXSIHZX xoaddr:$src)), 1))>;
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi16i64)),
             (v2i64 (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0))>;
+
+  // Load/convert and convert/store patterns for f16.
+  def : Pat<(f64 (extloadf16 xoaddr:$src)),
+            (f64 (XSCVHPDP (LXSIHZX xoaddr:$src)))>;
+  def : Pat<(truncstoref16 f64:$src, xoaddr:$dst),
+            (STXSIHX (XSCVDPHP $src), xoaddr:$dst)>;
+  def : Pat<(f32 (extloadf16 xoaddr:$src)),
+            (f32 (COPY_TO_REGCLASS (XSCVHPDP (LXSIHZX xoaddr:$src)), VSSRC))>;
+  def : Pat<(truncstoref16 f32:$src, xoaddr:$dst),
+            (STXSIHX (XSCVDPHP (COPY_TO_REGCLASS $src, VSFRC)), xoaddr:$dst)>;
 
   let Predicates = [IsBigEndian, HasP9Vector] in {
   // Scalar stores of i8
@@ -3514,17 +3524,17 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     let Predicates = [IsLittleEndian, HasP9Vector] in {
       def : Pat<(v2i64 (scalar_to_vector (i64 (load iaddrX4:$src)))),
                 (v2i64 (XXPERMDIs
-                (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2))>;
       def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddrX4:$src)))),
                 (v2i64 (XXPERMDIs
-		(COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC), 2))>;
+		(COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2))>;
 
       def : Pat<(v2f64 (scalar_to_vector (f64 (load iaddrX4:$src)))),
                 (v2f64 (XXPERMDIs
-                (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2))>;
       def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddrX4:$src)))),
                 (v2f64 (XXPERMDIs
-                (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC), 2))>;
+                (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2))>;
       def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddrX4:$src),
                 (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
                              sub_64), xaddrX4:$src)>;

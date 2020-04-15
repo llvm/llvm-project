@@ -41,11 +41,11 @@ t3_ff8_ldr:
 // CHECK: 0000000000010ff8 <t3_ff8_ldr>:
 // CHECK-NEXT: adrp    x0, #134217728
 // CHECK-NEXT: ldr     x1, [x1]
-// CHECK-NEXT: b       #8
+// CHECK-NEXT: b       0x11008
 // CHECK-NEXT: ret
 // CHECK: 0000000000011008 <__CortexA53843419_11000>:
 // CHECK-NEXT: ldr     x0, [x0, #8]
-// CHECK-NEXT: b       #-8
+// CHECK-NEXT: b       0x11004
         .section .text.04, "ax", %progbits
         .globl far_away
         .type far_away, function

@@ -297,7 +297,7 @@ void GCMachineCodeAnalysis::FindStackOffsets(MachineFunction &MF) {
     if (MF.getFrameInfo().isDeadObjectIndex(RI->Num)) {
       RI = FI->removeStackRoot(RI);
     } else {
-      unsigned FrameReg; // FIXME: surely GCRoot ought to store the
+      Register FrameReg; // FIXME: surely GCRoot ought to store the
                          // register that the offset is from?
       RI->StackOffset = TFI->getFrameIndexReference(MF, RI->Num, FrameReg);
       ++RI;

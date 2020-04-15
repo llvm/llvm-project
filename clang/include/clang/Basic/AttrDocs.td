@@ -3394,6 +3394,20 @@ where clause is one of the following:
 and where `variant-func-id` is the name of a function variant that is either a
 base language identifier or, for C++, a template-id.
 
+Clang provides the following context selector extensions, used via `implementation={extension(EXTENSION)}`:
+
+  .. code-block:: none
+
+    match_all
+    match_any
+    match_none
+
+The match extensions change when the *entire* context selector is considered a
+match for an OpenMP context. The default is `all`, with `none` no trait in the
+selector is allowed to be in the OpenMP context, with `any` a single trait in
+both the selector and OpenMP context is sufficient. Only a single match
+extension trait is allowed per context selector.
+
   }];
 }
 
@@ -4611,18 +4625,6 @@ only call one function.
 
 `Control Flow Guard documentation <https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>`
 }];
-}
-
-def HIPPinnedShadowDocs : Documentation {
-  let Category = DocCatType;
-  let Content = [{
-The GNU style attribute __attribute__((hip_pinned_shadow)) or MSVC style attribute
-__declspec(hip_pinned_shadow) can be added to the definition of a global variable
-to indicate it is a HIP pinned shadow variable. A HIP pinned shadow variable can
-be accessed on both device side and host side. It has external linkage and is
-not initialized on device side. It has internal linkage and is initialized by
-the initializer on host side.
-  }];
 }
 
 def CUDADeviceBuiltinSurfaceTypeDocs : Documentation {

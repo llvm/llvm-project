@@ -9,7 +9,6 @@
 #include "DwarfLinkerForBinary.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "DwarfStreamer.h"
 #include "MachOUtils.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -84,6 +83,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -101,6 +101,9 @@
 #include <vector>
 
 namespace llvm {
+
+static mc::RegisterMCTargetOptionsFlags MOF;
+
 namespace dsymutil {
 
 static Error copySwiftInterfaces(
@@ -163,7 +166,14 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
   if (Options.NoOutput)
     return true;
 
-  Streamer = std::make_unique<DwarfStreamer>(OutFile, Options);
+  Streamer = std::make_unique<DwarfStreamer>(
+      Options.FileType, OutFile, Options.Translator, Options.Minimize,
+      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
+        error(Error, Context);
+      },
+      [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
+        warn(Warning, Context);
+      });
   return Streamer->init(TheTriple);
 }
 
@@ -318,7 +328,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
         reportWarning(Warning, Context, DIE);
       });
   GeneralLinker.setErrorHandler(
-      [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
+      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
         error(Error, Context);
       });
   GeneralLinker.setObjFileLoader(
@@ -442,7 +452,14 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       return error(toString(std::move(E)));
   }
 
-  return Streamer->finish(Map, Options.Translator);
+  if (Map.getTriple().isOSDarwin() && !Map.getBinaryPath().empty() &&
+      Options.FileType == OutputFileType::Object)
+    return MachOUtils::generateDsymCompanion(
+        Map, Options.Translator, *Streamer->getAsmPrinter().OutStreamer,
+        OutFile);
+
+  Streamer->finish();
+  return true;
 }
 
 static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {

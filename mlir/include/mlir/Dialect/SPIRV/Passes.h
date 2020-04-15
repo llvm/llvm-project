@@ -23,7 +23,7 @@ class ModuleOp;
 /// StorageBuffer, PhysicalStorageBuffer, Uniform, and PushConstant storage
 /// classes with layout information.
 /// Right now this pass only supports Vulkan layout rules.
-std::unique_ptr<OpPassBase<mlir::ModuleOp>>
+std::unique_ptr<OperationPass<mlir::ModuleOp>>
 createDecorateSPIRVCompositeTypeLayoutPass();
 
 /// Creates an operation pass that deduces and attaches the minimal version/
@@ -34,7 +34,7 @@ createDecorateSPIRVCompositeTypeLayoutPass();
 /// to know which one to pick. `spv.target_env` gives the hard limit as for
 /// what the target environment can support; this pass deduces what are
 /// actually needed for a specific spv.module op.
-std::unique_ptr<OpPassBase<spirv::ModuleOp>>
+std::unique_ptr<OperationPass<spirv::ModuleOp>>
 createUpdateVersionCapabilityExtensionPass();
 
 /// Creates an operation pass that lowers the ABI attributes specified during
@@ -44,7 +44,7 @@ createUpdateVersionCapabilityExtensionPass();
 ///    argument.
 /// 2. Inserts the EntryPointOp and the ExecutionModeOp for entry point
 ///    functions using the specification in the `spv.entry_point_abi` attribute.
-std::unique_ptr<OpPassBase<spirv::ModuleOp>> createLowerABIAttributesPass();
+std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 
 } // namespace spirv
 } // namespace mlir

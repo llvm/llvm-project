@@ -14,7 +14,6 @@
 #define MLIR_IR_DIAGNOSTICS_H
 
 #include "mlir/IR/Location.h"
-#include "mlir/Support/STLExtras.h"
 #include <functional>
 
 namespace llvm {
@@ -57,7 +56,6 @@ public:
     Attribute,
     Double,
     Integer,
-    Operation,
     String,
     Type,
     Unsigned,
@@ -82,12 +80,6 @@ public:
   int64_t getAsInteger() const {
     assert(getKind() == DiagnosticArgumentKind::Integer);
     return static_cast<int64_t>(opaqueVal);
-  }
-
-  /// Returns this argument as an operation.
-  Operation &getAsOperation() const {
-    assert(getKind() == DiagnosticArgumentKind::Operation);
-    return *reinterpret_cast<Operation *>(opaqueVal);
   }
 
   /// Returns this argument as a string.
@@ -131,14 +123,6 @@ private:
                                      std::numeric_limits<T>::is_integer &&
                                      sizeof(T) <= sizeof(uint64_t)>::type * = 0)
       : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
-
-  // Construct from an operation reference.
-  explicit DiagnosticArgument(Operation &val) : DiagnosticArgument(&val) {}
-  explicit DiagnosticArgument(Operation *val)
-      : kind(DiagnosticArgumentKind::Operation),
-        opaqueVal(reinterpret_cast<intptr_t>(val)) {
-    assert(val && "expected valid operation");
-  }
 
   // Construct from a string reference.
   explicit DiagnosticArgument(StringRef val)
@@ -229,6 +213,12 @@ public:
   /// Stream in an OperationName.
   Diagnostic &operator<<(OperationName val);
 
+  /// Stream in an Operation.
+  Diagnostic &operator<<(Operation &val);
+  Diagnostic &operator<<(Operation *val) {
+    return *this << *val;
+  }
+
   /// Stream in a range.
   template <typename T> Diagnostic &operator<<(iterator_range<T> range) {
     return appendRange(range);
@@ -241,9 +231,8 @@ public:
   /// is ','.
   template <typename T, template <typename> class Container>
   Diagnostic &appendRange(const Container<T> &c, const char *delim = ", ") {
-    interleave(
-        c, [&](const detail::ValueOfRange<Container<T>> &a) { *this << a; },
-        [&]() { *this << delim; });
+    llvm::interleave(
+        c, [this](const auto &a) { *this << a; }, [&]() { *this << delim; });
     return *this;
   }
 

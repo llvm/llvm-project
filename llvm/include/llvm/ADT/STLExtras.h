@@ -50,6 +50,10 @@ namespace detail {
 template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
 
+template <typename RangeT>
+using ValueOfRange = typename std::remove_reference<decltype(
+    *std::begin(std::declval<RangeT &>()))>::type;
+
 } // end namespace detail
 
 //===----------------------------------------------------------------------===//
@@ -74,6 +78,79 @@ template <typename T> struct make_const_ref {
   using type = typename std::add_lvalue_reference<
       typename std::add_const<T>::type>::type;
 };
+
+/// Utilities for detecting if a given trait holds for some set of arguments
+/// 'Args'. For example, the given trait could be used to detect if a given type
+/// has a copy assignment operator:
+///   template<class T>
+///   using has_copy_assign_t = decltype(std::declval<T&>()
+///                                                 = std::declval<const T&>());
+///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
+namespace detail {
+template <typename...> using void_t = void;
+template <class, template <class...> class Op, class... Args> struct detector {
+  using value_t = std::false_type;
+};
+template <template <class...> class Op, class... Args>
+struct detector<void_t<Op<Args...>>, Op, Args...> {
+  using value_t = std::true_type;
+};
+} // end namespace detail
+
+template <template <class...> class Op, class... Args>
+using is_detected = typename detail::detector<void, Op, Args...>::value_t;
+
+/// Check if a Callable type can be invoked with the given set of arg types.
+namespace detail {
+template <typename Callable, typename... Args>
+using is_invocable =
+    decltype(std::declval<Callable &>()(std::declval<Args>()...));
+} // namespace detail
+
+template <typename Callable, typename... Args>
+using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
+
+/// This class provides various trait information about a callable object.
+///   * To access the number of arguments: Traits::num_args
+///   * To access the type of an argument: Traits::arg_t<i>
+///   * To access the type of the result:  Traits::result_t
+template <typename T, bool isClass = std::is_class<T>::value>
+struct function_traits : public function_traits<decltype(&T::operator())> {};
+
+/// Overload for class function types.
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
+  /// The number of arguments to this function.
+  enum { num_args = sizeof...(Args) };
+
+  /// The result type of this function.
+  using result_t = ReturnType;
+
+  /// The type of an argument to this function.
+  template <size_t i>
+  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+};
+/// Overload for class function types.
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType (ClassType::*)(Args...), false>
+    : function_traits<ReturnType (ClassType::*)(Args...) const> {};
+/// Overload for non-class function types.
+template <typename ReturnType, typename... Args>
+struct function_traits<ReturnType (*)(Args...), false> {
+  /// The number of arguments to this function.
+  enum { num_args = sizeof...(Args) };
+
+  /// The result type of this function.
+  using result_t = ReturnType;
+
+  /// The type of an argument to this function.
+  template <size_t i>
+  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+};
+/// Overload for non-class function type references.
+template <typename ReturnType, typename... Args>
+struct function_traits<ReturnType (&)(Args...), false>
+    : public function_traits<ReturnType (*)(Args...)> {};
 
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
@@ -190,6 +267,12 @@ constexpr bool empty(const T &RangeOrContainer) {
   return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
 }
 
+/// Returns true of the given range only contains a single element.
+template <typename ContainerTy> bool hasSingleElement(ContainerTy &&c) {
+  auto it = std::begin(c), e = std::end(c);
+  return it != e && std::next(it) == e;
+}
+
 /// Return a range covering \p RangeOrContainer with the first N elements
 /// excluded.
 template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N) {
@@ -214,7 +297,7 @@ public:
 
   ItTy getCurrent() { return this->I; }
 
-  FuncReturnTy operator*() { return F(*this->I); }
+  FuncReturnTy operator*() const { return F(*this->I); }
 
 private:
   FuncTy F;
@@ -944,6 +1027,213 @@ detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
       std::forward<RangeTs>(Ranges)...);
 }
 
+/// A utility class used to implement an iterator that contains some base object
+/// and an index. The iterator moves the index but keeps the base constant.
+template <typename DerivedT, typename BaseT, typename T,
+          typename PointerT = T *, typename ReferenceT = T &>
+class indexed_accessor_iterator
+    : public llvm::iterator_facade_base<DerivedT,
+                                        std::random_access_iterator_tag, T,
+                                        std::ptrdiff_t, PointerT, ReferenceT> {
+public:
+  ptrdiff_t operator-(const indexed_accessor_iterator &rhs) const {
+    assert(base == rhs.base && "incompatible iterators");
+    return index - rhs.index;
+  }
+  bool operator==(const indexed_accessor_iterator &rhs) const {
+    return base == rhs.base && index == rhs.index;
+  }
+  bool operator<(const indexed_accessor_iterator &rhs) const {
+    assert(base == rhs.base && "incompatible iterators");
+    return index < rhs.index;
+  }
+
+  DerivedT &operator+=(ptrdiff_t offset) {
+    this->index += offset;
+    return static_cast<DerivedT &>(*this);
+  }
+  DerivedT &operator-=(ptrdiff_t offset) {
+    this->index -= offset;
+    return static_cast<DerivedT &>(*this);
+  }
+
+  /// Returns the current index of the iterator.
+  ptrdiff_t getIndex() const { return index; }
+
+  /// Returns the current base of the iterator.
+  const BaseT &getBase() const { return base; }
+
+protected:
+  indexed_accessor_iterator(BaseT base, ptrdiff_t index)
+      : base(base), index(index) {}
+  BaseT base;
+  ptrdiff_t index;
+};
+
+namespace detail {
+/// The class represents the base of a range of indexed_accessor_iterators. It
+/// provides support for many different range functionalities, e.g.
+/// drop_front/slice/etc.. Derived range classes must implement the following
+/// static methods:
+///   * ReferenceT dereference_iterator(const BaseT &base, ptrdiff_t index)
+///     - Dereference an iterator pointing to the base object at the given
+///       index.
+///   * BaseT offset_base(const BaseT &base, ptrdiff_t index)
+///     - Return a new base that is offset from the provide base by 'index'
+///       elements.
+template <typename DerivedT, typename BaseT, typename T,
+          typename PointerT = T *, typename ReferenceT = T &>
+class indexed_accessor_range_base {
+public:
+  using RangeBaseT =
+      indexed_accessor_range_base<DerivedT, BaseT, T, PointerT, ReferenceT>;
+
+  /// An iterator element of this range.
+  class iterator : public indexed_accessor_iterator<iterator, BaseT, T,
+                                                    PointerT, ReferenceT> {
+  public:
+    // Index into this iterator, invoking a static method on the derived type.
+    ReferenceT operator*() const {
+      return DerivedT::dereference_iterator(this->getBase(), this->getIndex());
+    }
+
+  private:
+    iterator(BaseT owner, ptrdiff_t curIndex)
+        : indexed_accessor_iterator<iterator, BaseT, T, PointerT, ReferenceT>(
+              owner, curIndex) {}
+
+    /// Allow access to the constructor.
+    friend indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                       ReferenceT>;
+  };
+
+  indexed_accessor_range_base(iterator begin, iterator end)
+      : base(DerivedT::offset_base(begin.getBase(), begin.getIndex())),
+        count(end.getIndex() - begin.getIndex()) {}
+  indexed_accessor_range_base(const iterator_range<iterator> &range)
+      : indexed_accessor_range_base(range.begin(), range.end()) {}
+  indexed_accessor_range_base(BaseT base, ptrdiff_t count)
+      : base(base), count(count) {}
+
+  iterator begin() const { return iterator(base, 0); }
+  iterator end() const { return iterator(base, count); }
+  ReferenceT operator[](unsigned index) const {
+    assert(index < size() && "invalid index for value range");
+    return DerivedT::dereference_iterator(base, index);
+  }
+
+  /// Compare this range with another.
+  template <typename OtherT> bool operator==(const OtherT &other) {
+    return size() == std::distance(other.begin(), other.end()) &&
+           std::equal(begin(), end(), other.begin());
+  }
+
+  /// Return the size of this range.
+  size_t size() const { return count; }
+
+  /// Return if the range is empty.
+  bool empty() const { return size() == 0; }
+
+  /// Drop the first N elements, and keep M elements.
+  DerivedT slice(size_t n, size_t m) const {
+    assert(n + m <= size() && "invalid size specifiers");
+    return DerivedT(DerivedT::offset_base(base, n), m);
+  }
+
+  /// Drop the first n elements.
+  DerivedT drop_front(size_t n = 1) const {
+    assert(size() >= n && "Dropping more elements than exist");
+    return slice(n, size() - n);
+  }
+  /// Drop the last n elements.
+  DerivedT drop_back(size_t n = 1) const {
+    assert(size() >= n && "Dropping more elements than exist");
+    return DerivedT(base, size() - n);
+  }
+
+  /// Take the first n elements.
+  DerivedT take_front(size_t n = 1) const {
+    return n < size() ? drop_back(size() - n)
+                      : static_cast<const DerivedT &>(*this);
+  }
+
+  /// Take the last n elements.
+  DerivedT take_back(size_t n = 1) const {
+    return n < size() ? drop_front(size() - n)
+                      : static_cast<const DerivedT &>(*this);
+  }
+
+  /// Allow conversion to any type accepting an iterator_range.
+  template <typename RangeT, typename = std::enable_if_t<std::is_constructible<
+                                 RangeT, iterator_range<iterator>>::value>>
+  operator RangeT() const {
+    return RangeT(iterator_range<iterator>(*this));
+  }
+
+protected:
+  indexed_accessor_range_base(const indexed_accessor_range_base &) = default;
+  indexed_accessor_range_base(indexed_accessor_range_base &&) = default;
+  indexed_accessor_range_base &
+  operator=(const indexed_accessor_range_base &) = default;
+
+  /// The base that owns the provided range of values.
+  BaseT base;
+  /// The size from the owning range.
+  ptrdiff_t count;
+};
+} // end namespace detail
+
+/// This class provides an implementation of a range of
+/// indexed_accessor_iterators where the base is not indexable. Ranges with
+/// bases that are offsetable should derive from indexed_accessor_range_base
+/// instead. Derived range classes are expected to implement the following
+/// static method:
+///   * ReferenceT dereference(const BaseT &base, ptrdiff_t index)
+///     - Dereference an iterator pointing to a parent base at the given index.
+template <typename DerivedT, typename BaseT, typename T,
+          typename PointerT = T *, typename ReferenceT = T &>
+class indexed_accessor_range
+    : public detail::indexed_accessor_range_base<
+          DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT> {
+public:
+  indexed_accessor_range(BaseT base, ptrdiff_t startIndex, ptrdiff_t count)
+      : detail::indexed_accessor_range_base<
+            DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT>(
+            std::make_pair(base, startIndex), count) {}
+  using detail::indexed_accessor_range_base<
+      DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT,
+      ReferenceT>::indexed_accessor_range_base;
+
+  /// Returns the current base of the range.
+  const BaseT &getBase() const { return this->base.first; }
+
+  /// Returns the current start index of the range.
+  ptrdiff_t getStartIndex() const { return this->base.second; }
+
+  /// See `detail::indexed_accessor_range_base` for details.
+  static std::pair<BaseT, ptrdiff_t>
+  offset_base(const std::pair<BaseT, ptrdiff_t> &base, ptrdiff_t index) {
+    // We encode the internal base as a pair of the derived base and a start
+    // index into the derived base.
+    return std::make_pair(base.first, base.second + index);
+  }
+  /// See `detail::indexed_accessor_range_base` for details.
+  static ReferenceT
+  dereference_iterator(const std::pair<BaseT, ptrdiff_t> &base,
+                       ptrdiff_t index) {
+    return DerivedT::dereference(base.first, base.second + index);
+  }
+};
+
+/// Given a container of pairs, return a range over the second elements.
+template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
+  return llvm::map_range(
+      std::forward<ContainerTy>(c),
+      [](decltype((*std::begin(c))) elt) -> decltype((elt.second)) {
+        return elt.second;
+      });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
@@ -1257,6 +1547,18 @@ bool is_contained(R &&Range, const E &Element) {
   return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
 }
 
+/// Wrapper function around std::is_sorted to check if elements in a range \p R
+/// are sorted with respect to a comparator \p C.
+template <typename R, typename Compare> bool is_sorted(R &&Range, Compare C) {
+  return std::is_sorted(adl_begin(Range), adl_end(Range), C);
+}
+
+/// Wrapper function around std::is_sorted to check if elements in a range \p R
+/// are sorted in non-descending order.
+template <typename R> bool is_sorted(R &&Range) {
+  return std::is_sorted(adl_begin(Range), adl_end(Range));
+}
+
 /// Wrapper function around std::count to count the number of times an element
 /// \p Element occurs in the given range \p Range.
 template <typename R, typename E> auto count(R &&Range, const E &Element) {
@@ -1374,6 +1676,69 @@ template<typename Container, typename Range = std::initializer_list<
 void replace(Container &Cont, typename Container::iterator ContIt,
              typename Container::iterator ContEnd, Range R) {
   replace(Cont, ContIt, ContEnd, R.begin(), R.end());
+}
+
+/// An STL-style algorithm similar to std::for_each that applies a second
+/// functor between every pair of elements.
+///
+/// This provides the control flow logic to, for example, print a
+/// comma-separated list:
+/// \code
+///   interleave(names.begin(), names.end(),
+///              [&](StringRef name) { os << name; },
+///              [&] { os << ", "; });
+/// \endcode
+template <typename ForwardIterator, typename UnaryFunctor,
+          typename NullaryFunctor,
+          typename = typename std::enable_if<
+              !std::is_constructible<StringRef, UnaryFunctor>::value &&
+              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+inline void interleave(ForwardIterator begin, ForwardIterator end,
+                       UnaryFunctor each_fn, NullaryFunctor between_fn) {
+  if (begin == end)
+    return;
+  each_fn(*begin);
+  ++begin;
+  for (; begin != end; ++begin) {
+    between_fn();
+    each_fn(*begin);
+  }
+}
+
+template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
+          typename = typename std::enable_if<
+              !std::is_constructible<StringRef, UnaryFunctor>::value &&
+              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+inline void interleave(const Container &c, UnaryFunctor each_fn,
+                       NullaryFunctor between_fn) {
+  interleave(c.begin(), c.end(), each_fn, between_fn);
+}
+
+/// Overload of interleave for the common case of string separator.
+template <typename Container, typename UnaryFunctor, typename StreamT,
+          typename T = detail::ValueOfRange<Container>>
+inline void interleave(const Container &c, StreamT &os, UnaryFunctor each_fn,
+                       const StringRef &separator) {
+  interleave(c.begin(), c.end(), each_fn, [&] { os << separator; });
+}
+template <typename Container, typename StreamT,
+          typename T = detail::ValueOfRange<Container>>
+inline void interleave(const Container &c, StreamT &os,
+                       const StringRef &separator) {
+  interleave(
+      c, os, [&](const T &a) { os << a; }, separator);
+}
+
+template <typename Container, typename UnaryFunctor, typename StreamT,
+          typename T = detail::ValueOfRange<Container>>
+inline void interleaveComma(const Container &c, StreamT &os,
+                            UnaryFunctor each_fn) {
+  interleave(c, os, each_fn, ", ");
+}
+template <typename Container, typename StreamT,
+          typename T = detail::ValueOfRange<Container>>
+inline void interleaveComma(const Container &c, StreamT &os) {
+  interleaveComma(c, os, [&](const T &a) { os << a; });
 }
 
 //===----------------------------------------------------------------------===//

@@ -110,11 +110,6 @@ action("check-lld") {
   }
   args = [
     "-sv",
-    "--param",
-    "lld_site_config=" + rebase_path(lld_lit_site_cfg_file, root_out_dir),
-    "--param",
-    "lld_unit_site_config=" +
-        rebase_path(lld_lit_unit_site_cfg_file, root_out_dir),
     rebase_path(".", root_out_dir),
   ]
   outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it

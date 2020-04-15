@@ -100,6 +100,16 @@ private:
   MLIRContext(const MLIRContext &) = delete;
   void operator=(const MLIRContext &) = delete;
 };
+
+//===----------------------------------------------------------------------===//
+// MLIRContext CommandLine Options
+//===----------------------------------------------------------------------===//
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the MLIRContext. These flags are used when constructing
+/// an MLIR context for initialization.
+void registerMLIRContextCLOptions();
+
 } // end namespace mlir
 
 #endif // MLIR_IR_MLIRCONTEXT_H

@@ -60,7 +60,7 @@ static bool CC_X86_32_RegCall_Assign2Regs(unsigned &ValNo, MVT &ValVT,
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   }
 
-  // Successful in allocating regsiters - stop scanning next rules.
+  // Successful in allocating registers - stop scanning next rules.
   return true;
 }
 

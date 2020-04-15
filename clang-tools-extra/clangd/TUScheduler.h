@@ -197,9 +197,14 @@ public:
               std::unique_ptr<ParsingCallbacks> ASTCallbacks = nullptr);
   ~TUScheduler();
 
-  /// Returns estimated memory usage for each of the currently open files.
-  /// The order of results is unspecified.
-  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+  struct FileStats {
+    std::size_t UsedBytes = 0;
+    unsigned PreambleBuilds = 0;
+    unsigned ASTBuilds = 0;
+  };
+  /// Returns resources used for each of the currently open files.
+  /// Results are inherently racy as they measure activity of other threads.
+  llvm::StringMap<FileStats> fileStats() const;
 
   /// Returns a list of files with ASTs currently stored in memory. This method
   /// is not very reliable and is only used for test. E.g., the results will not

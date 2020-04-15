@@ -43,7 +43,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -4542,8 +4541,7 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
                                     const TargetRegisterInfo &TRI) {
   const Function *F = CI->getFunction();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI.ParseConstraints(F->getParent()->getDataLayout(), &TRI,
-                            ImmutableCallSite(CI));
+      TLI.ParseConstraints(F->getParent()->getDataLayout(), &TRI, *CI);
 
   for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
     TargetLowering::AsmOperandInfo &OpInfo = TargetConstraints[i];
@@ -5192,7 +5190,7 @@ bool CodeGenPrepare::optimizeInlineAsmInst(CallInst *CS) {
   const TargetRegisterInfo *TRI =
       TM->getSubtargetImpl(*CS->getFunction())->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI->ParseConstraints(*DL, TRI, CS);
+      TLI->ParseConstraints(*DL, TRI, *CS);
   unsigned ArgNo = 0;
   for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
     TargetLowering::AsmOperandInfo &OpInfo = TargetConstraints[i];
@@ -6577,7 +6575,7 @@ class VectorPromoteHelper {
         UseSplat = true;
     }
 
-    ElementCount EC = getTransitionType()->getVectorElementCount();
+    ElementCount EC = cast<VectorType>(getTransitionType())->getElementCount();
     if (UseSplat)
       return ConstantVector::getSplat(EC, Val);
 
@@ -6840,7 +6838,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   // whereas scalable vectors would have to be shifted by
   // <2log(vscale) + number of bits> in order to store the
   // low/high parts. Bailing out for now.
-  if (StoreType->isVectorTy() && StoreType->getVectorIsScalable())
+  if (StoreType->isVectorTy() && cast<VectorType>(StoreType)->isScalable())
     return false;
 
   if (!DL.typeSizeEqualsStoreSize(StoreType) ||

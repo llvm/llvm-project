@@ -49,6 +49,7 @@
 #include <compare>
 #include <complex>
 #include <complex.h>
+#include <concepts>
 #include <condition_variable>
 #include <csetjmp>
 #include <csignal>

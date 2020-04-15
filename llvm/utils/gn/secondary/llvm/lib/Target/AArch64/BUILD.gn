@@ -118,6 +118,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64TargetMachine.cpp",
     "AArch64TargetObjectFile.cpp",
     "AArch64TargetTransformInfo.cpp",
+    "SVEIntrinsicOpts.cpp",
   ]
 }
 

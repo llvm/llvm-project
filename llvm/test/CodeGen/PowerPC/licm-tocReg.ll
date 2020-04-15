@@ -36,7 +36,7 @@
 ;    %x3 = COPY %21
 ;    %x12 = COPY %4
 ;    MTCTR8 %4, implicit-def %ctr8
-;    BCTRL8_LDinto_toc 24, %x1, csr_svr464_altivec, implicit-def dead %lr8, implicit-def dead %x2, implicit %ctr8, implicit %rm, implicit %x3, implicit %x12, implicit %x2, implicit-def %r1, implicit-def %x3
+;    BCTRL8_LDinto_toc 24, %x1, csr_ppc64_altivec, implicit-def dead %lr8, implicit-def dead %x2, implicit %ctr8, implicit %rm, implicit %x3, implicit %x12, implicit %x2, implicit-def %r1, implicit-def %x3
 ;    ADJCALLSTACKUP 32, 0, implicit-def dead %r1, implicit %r1
 ;    %22 = COPY %x3
 ;    %x3 = COPY %22

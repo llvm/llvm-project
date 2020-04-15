@@ -22,6 +22,7 @@
 
 namespace llvm {
 class IntrinsicInst;
+class AssumptionCache;
 
 /// Build a call to llvm.assume to preserve informations that can be derived
 /// from the given instruction.
@@ -32,7 +33,7 @@ IntrinsicInst *buildAssumeFromInst(Instruction *I);
 /// Calls BuildAssumeFromInst and if the resulting llvm.assume is valid insert
 /// if before I. This is usually what need to be done to salvage the knowledge
 /// contained in the instruction I.
-void salvageKnowledge(Instruction *I);
+void salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr);
 
 /// This pass will try to build an llvm.assume for every instruction in the
 /// function. Its main purpose is testing.

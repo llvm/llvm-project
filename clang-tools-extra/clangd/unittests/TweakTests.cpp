@@ -2142,6 +2142,28 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             };)cpp",
           "void B::foo()   {}\n",
       },
+      {
+          R"cpp(
+            struct A {
+              static void fo^o() {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              static void foo() ;
+            };)cpp",
+          " void A::foo() {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              static static void fo^o() {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              static static void foo() ;
+            };)cpp",
+          "  void A::foo() {}\n",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
@@ -2232,6 +2254,24 @@ TEST_F(DefineOutlineTest, HandleMacros) {
             STUPID_MACRO(sizeof sizeof int) void f^oo() {}
           };)cpp",
        R"cpp(#define STUPID_MACRO(X) virtual
+          struct A {
+            STUPID_MACRO(sizeof sizeof int) void foo() ;
+          };)cpp",
+       " void A::foo() {}\n"},
+      {R"cpp(#define STAT static
+          struct A {
+            STAT void f^oo() {}
+          };)cpp",
+       R"cpp(#define STAT static
+          struct A {
+            STAT void foo() ;
+          };)cpp",
+       " void A::foo() {}\n"},
+      {R"cpp(#define STUPID_MACRO(X) static
+          struct A {
+            STUPID_MACRO(sizeof sizeof int) void f^oo() {}
+          };)cpp",
+       R"cpp(#define STUPID_MACRO(X) static
           struct A {
             STUPID_MACRO(sizeof sizeof int) void foo() ;
           };)cpp",
@@ -2360,8 +2400,7 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
           struct A {
             VIRT fo^o() {}
           };)cpp",
-          "fail: define outline: Can't move out of line as function has a "
-          "macro `virtual` specifier."},
+          "fail: define outline: couldn't remove `virtual` keyword."},
       {
           R"cpp(
           #define OVERFINAL final override
@@ -2397,6 +2436,7 @@ TEST_F(AddUsingTest, Prepare) {
 #define NS(name) one::two::name
 namespace one {
 void oo() {}
+template<typename TT> class tt {};
 namespace two {
 enum ee {};
 void ff() {}
@@ -2419,6 +2459,10 @@ public:
   EXPECT_UNAVAILABLE(Header +
                      "void fun() { o^n^e^:^:^t^w^o^:^:^c^c^:^:^s^t inst; }");
   EXPECT_UNAVAILABLE(Header + "void fun() { N^S(c^c) inst; }");
+  // This used to crash. Ideally we would support this case, but for now we just
+  // test that we don't crash.
+  EXPECT_UNAVAILABLE(Header +
+                     "template<typename TT> using foo = one::tt<T^T>;");
 }
 
 TEST_F(AddUsingTest, Apply) {

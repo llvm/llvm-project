@@ -13,8 +13,8 @@ transformations: `Affine`. This dialect is tailored to the computation-heavy
 part of the program and is limited: it doesn't support representing our
 `toy.print` builtin, for instance, neither should it! Instead, we can target
 `Affine` for the computation heavy part of Toy, and in the
-[next chapter](Ch-6.md) directly the `LLVM IR` dialect for lowering `print`. As
-part of this lowering, we will be lowering from the
+[next chapter](Ch-6.md) directly target the `LLVM IR` dialect for lowering
+`print`. As part of this lowering, we will be lowering from the
 [TensorType](../../LangRef.md#tensor-type) that `Toy` operates on to the
 [MemRefType](../../LangRef.md#memref-type) that is indexed via an affine
 loop-nest. Tensors represent an abstract value-typed sequence of data, meaning

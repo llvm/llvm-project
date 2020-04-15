@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
+#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -22,7 +23,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -221,13 +221,13 @@ Optional<SmallVector<Value, 8>> mlir::expandAffineMap(OpBuilder &builder,
                                                       AffineMap affineMap,
                                                       ValueRange operands) {
   auto numDims = affineMap.getNumDims();
-  auto expanded = functional::map(
-      [numDims, &builder, loc, operands](AffineExpr expr) {
-        return expandAffineExpr(builder, loc, expr,
-                                operands.take_front(numDims),
-                                operands.drop_front(numDims));
-      },
-      affineMap.getResults());
+  auto expanded = llvm::to_vector<8>(
+      llvm::map_range(affineMap.getResults(),
+                      [numDims, &builder, loc, operands](AffineExpr expr) {
+                        return expandAffineExpr(builder, loc, expr,
+                                                operands.take_front(numDims),
+                                                operands.drop_front(numDims));
+                      }));
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
   return None;
@@ -577,11 +577,7 @@ void mlir::populateAffineToStdConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass : public FunctionPass<LowerAffinePass> {
-/// Include the generated pass utilities.
-#define GEN_PASS_ConvertAffineToStandard
-#include "mlir/Conversion/Passes.h.inc"
-
+class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateAffineToStdConversionPatterns(patterns, &getContext());
@@ -595,6 +591,6 @@ class LowerAffinePass : public FunctionPass<LowerAffinePass> {
 
 /// Lowers If and For operations within a function into their lower level CFG
 /// equivalent blocks.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLowerAffinePass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLowerAffinePass() {
   return std::make_unique<LowerAffinePass>();
 }

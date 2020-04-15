@@ -109,7 +109,7 @@ if (LLVM_ENABLE_SPHINX)
       # Copy rst files to build directory before generating the html
       # documentation.  Some of the rst files are generated, so they
       # only exist in the build directory.  Sphinx needs all files in
-      # the same directory in order to genrate the html, so we need to
+      # the same directory in order to generate the html, so we need to
       # copy all the non-gnerated rst files from the source to the build
       # directory before we run sphinx.
       add_custom_target(copy-clang-rst-docs

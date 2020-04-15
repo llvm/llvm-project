@@ -256,7 +256,7 @@ def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
 ///   OptionalAttr<I64ArrayAttr>:$strides
 ///   OptionalAttr<I64ArrayAttr>:$dilations
 ///   OptionalAttr<I64ElementsAttr>:$padding
-/// `strides` denotes the step of each window along the dimension.
+/// `stirdes` denotes the step of each window along the dimension.
 class PoolingBase_Op<string mnemonic, list<OpTrait> props>
   : LinalgStructured_Op<mnemonic, props> {
   let description = [{
@@ -819,6 +819,20 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Named Linalg ops, implemented as a declarative configurations of generic ops.
+//===----------------------------------------------------------------------===//
+
+def NamedStructuredOpTraits : NativeOpTrait<"linalg::NamedStructuredOpTraits">;
+
+class LinalgNamedStructured_Op<string mnemonic, list<OpTrait> props>
+  : Op<Linalg_Dialect, mnemonic,
+       !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
+  string spec = ?;
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+    "functional-type(operands, results)";
 }
 
 #endif // LINALG_STRUCTURED_OPS

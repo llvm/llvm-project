@@ -71,10 +71,8 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
 static bool isFullExecCopy(const MachineInstr& MI, const GCNSubtarget& ST) {
   unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
-  if (MI.isCopy() && MI.getOperand(1).getReg() == Exec) {
-    assert(MI.isFullCopy());
+  if (MI.isFullCopy() && MI.getOperand(1).getReg() == Exec)
     return true;
-  }
 
   return false;
 }

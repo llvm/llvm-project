@@ -23,18 +23,6 @@
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
 
-// For arguments that eventually map to spv.globalVariable for the
-// shader interface, this attribute specifies the information regarding
-// the global variable:
-// 1) Descriptor Set.
-// 2) Binding number.
-// 3) Storage class.
-def SPV_InterfaceVarABIAttr : StructAttr<"InterfaceVarABIAttr", SPIRV_Dialect, [
-    StructFieldAttr<"descriptor_set", I32Attr>,
-    StructFieldAttr<"binding", I32Attr>,
-    StructFieldAttr<"storage_class", OptionalAttr<SPV_StorageClassAttr>>
-]>;
-
 // For entry functions, this attribute specifies information related to entry
 // points in the generated SPIR-V module:
 // 1) WorkGroup Size.

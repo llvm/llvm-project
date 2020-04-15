@@ -1,12 +1,11 @@
-; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -S | FileCheck %s
+; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -force-vector-width=4 -S | FileCheck %s
 
-; Check that when we can't predicate this loop that it is still vectorised (with
-; an epilogue).
-; TODO: the reason this can't be predicated is because a primary induction
-; variable can't be found (not yet) for this counting down loop. But with that
-; fixed, this should be able to be predicated.
+; Check that a counting-down loop which has no primary induction variable
+; is vectorized with preferred predication.
 
 ; CHECK-LABEL: vector.body:
+; CHECK-LABEL: middle.block:
+; CHECK-NEXT:    br i1 true,
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 

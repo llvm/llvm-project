@@ -49,10 +49,10 @@ bool isProducedByOpOfType(Operation *consumerOp, Value consumedView) {
 // success.
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Tiles `op` by `sizes` permuting the loops according to `permutation`
-/// and sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
-/// The permutation is expressed as a list of integers that specify
-/// the new ordering of the loop nest. The length of `permutation`
+/// Tiles `op` by `sizes` permuting the loops according to `permutation` and
+/// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.  The
+/// permutation is expressed as a list of integers that specify the new ordering
+/// of the loop nest (using loop.for operations). The length of `permutation`
 /// must be equal to the length of `tileSizes`.
 /// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
 /// `permutation = [1,2,0]`. All values in `permutation` must be
@@ -64,11 +64,30 @@ LogicalResult tileLinalgOpAndSetMarker(PatternRewriter &rewriter, Operation *op,
                                        StringRef linalgMarker,
                                        ArrayRef<unsigned> permutation);
 
+/// Tiles ops similar to `tileLinalgOpAndSetMarker` but generates loop.parallel
+/// operations instead.
+LogicalResult tileLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    StringRef linalgMarker, ArrayRef<unsigned> permutation);
+
 /// Tiles `op` by `sizes`, fuses the producers of `operandIndicesToFuse` and
 /// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
 LogicalResult tileAndFuseLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
     ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
+
+/// Tiles ops similar to `tileAndFuseLinalgOpAndSetMarker` but generates
+/// loop.parallel operations instead.
+LogicalResult tileAndFuseLinalgOpToParallelLoopsAndSetMarker(
+    PatternRewriter &rewriter, Operation *op, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> operandIndicesToFuse, StringRef linalgMarker);
+
+using LinalgLoops = SmallVector<Operation *, 4>;
+
+/// Emits a loop nest of with the proper body for `op`.
+template <typename LoopTy, typename ConcreteOp>
+Optional<LinalgLoops> linalgLowerOpToLoops(PatternRewriter &rewriter,
+                                           Operation *op);
 
 /// Emits a loop nest of `loop.for` with the proper body for `op`.
 template <typename ConcreteOp>

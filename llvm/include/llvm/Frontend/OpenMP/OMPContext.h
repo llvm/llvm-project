@@ -154,9 +154,12 @@ struct OMPContext {
 };
 
 /// Return true if \p VMI is applicable in \p Ctx, that is, all traits required
-/// by \p VMI are available in the OpenMP context \p Ctx.
+/// by \p VMI are available in the OpenMP context \p Ctx. If \p DeviceSetOnly is
+/// true, only the device selector set, if present, are checked. Note that we
+/// still honor extension traits provided by the user.
 bool isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                  const OMPContext &Ctx);
+                                  const OMPContext &Ctx,
+                                  bool DeviceSetOnly = false);
 
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicble in \p Ctx. See llvm::isVariantApplicableInContext.

@@ -75,6 +75,10 @@ StringRef Pass::getArgument() const {
   return def->getValueAsString("argument");
 }
 
+StringRef Pass::getBaseClass() const {
+  return def->getValueAsString("baseClass");
+}
+
 StringRef Pass::getSummary() const { return def->getValueAsString("summary"); }
 
 StringRef Pass::getDescription() const {

@@ -100,7 +100,7 @@ spirv::getRecursiveImpliedCapabilities(Capability cap) {
 //===----------------------------------------------------------------------===//
 
 struct spirv::detail::ArrayTypeStorage : public TypeStorage {
-  using KeyTy = std::tuple<Type, unsigned, ArrayType::LayoutInfo>;
+  using KeyTy = std::tuple<Type, unsigned, unsigned>;
 
   static ArrayTypeStorage *construct(TypeStorageAllocator &allocator,
                                      const KeyTy &key) {
@@ -108,28 +108,28 @@ struct spirv::detail::ArrayTypeStorage : public TypeStorage {
   }
 
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(elementType, getSubclassData(), layoutInfo);
+    return key == KeyTy(elementType, getSubclassData(), stride);
   }
 
   ArrayTypeStorage(const KeyTy &key)
       : TypeStorage(std::get<1>(key)), elementType(std::get<0>(key)),
-        layoutInfo(std::get<2>(key)) {}
+        stride(std::get<2>(key)) {}
 
   Type elementType;
-  ArrayType::LayoutInfo layoutInfo;
+  unsigned stride;
 };
 
 ArrayType ArrayType::get(Type elementType, unsigned elementCount) {
   assert(elementCount && "ArrayType needs at least one element");
   return Base::get(elementType.getContext(), TypeKind::Array, elementType,
-                   elementCount, 0);
+                   elementCount, /*stride=*/0);
 }
 
 ArrayType ArrayType::get(Type elementType, unsigned elementCount,
-                         ArrayType::LayoutInfo layoutInfo) {
+                         unsigned stride) {
   assert(elementCount && "ArrayType needs at least one element");
   return Base::get(elementType.getContext(), TypeKind::Array, elementType,
-                   elementCount, layoutInfo);
+                   elementCount, stride);
 }
 
 unsigned ArrayType::getNumElements() const {
@@ -138,10 +138,7 @@ unsigned ArrayType::getNumElements() const {
 
 Type ArrayType::getElementType() const { return getImpl()->elementType; }
 
-// ArrayStride must be greater than zero
-bool ArrayType::hasLayout() const { return getImpl()->layoutInfo; }
-
-uint64_t ArrayType::getArrayStride() const { return getImpl()->layoutInfo; }
+unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
 
 void ArrayType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                               Optional<StorageClass> storage) {
@@ -215,7 +212,7 @@ void CompositeType::getExtensions(
     cast<ArrayType>().getExtensions(extensions, storage);
     break;
   case spirv::TypeKind::RuntimeArray:
-    cast<ArrayType>().getExtensions(extensions, storage);
+    cast<RuntimeArrayType>().getExtensions(extensions, storage);
     break;
   case spirv::TypeKind::Struct:
     cast<StructType>().getExtensions(extensions, storage);
@@ -237,7 +234,7 @@ void CompositeType::getCapabilities(
     cast<ArrayType>().getCapabilities(capabilities, storage);
     break;
   case spirv::TypeKind::RuntimeArray:
-    cast<ArrayType>().getCapabilities(capabilities, storage);
+    cast<RuntimeArrayType>().getCapabilities(capabilities, storage);
     break;
   case spirv::TypeKind::Struct:
     cast<StructType>().getCapabilities(capabilities, storage);
@@ -523,7 +520,7 @@ void PointerType::getCapabilities(
 //===----------------------------------------------------------------------===//
 
 struct spirv::detail::RuntimeArrayTypeStorage : public TypeStorage {
-  using KeyTy = Type;
+  using KeyTy = std::pair<Type, unsigned>;
 
   static RuntimeArrayTypeStorage *construct(TypeStorageAllocator &allocator,
                                             const KeyTy &key) {
@@ -531,19 +528,31 @@ struct spirv::detail::RuntimeArrayTypeStorage : public TypeStorage {
         RuntimeArrayTypeStorage(key);
   }
 
-  bool operator==(const KeyTy &key) const { return elementType == key; }
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(elementType, getSubclassData());
+  }
 
-  RuntimeArrayTypeStorage(const KeyTy &key) : elementType(key) {}
+  RuntimeArrayTypeStorage(const KeyTy &key)
+      : TypeStorage(key.second), elementType(key.first) {}
 
   Type elementType;
 };
 
 RuntimeArrayType RuntimeArrayType::get(Type elementType) {
   return Base::get(elementType.getContext(), TypeKind::RuntimeArray,
-                   elementType);
+                   elementType, /*stride=*/0);
+}
+
+RuntimeArrayType RuntimeArrayType::get(Type elementType, unsigned stride) {
+  return Base::get(elementType.getContext(), TypeKind::RuntimeArray,
+                   elementType, stride);
 }
 
 Type RuntimeArrayType::getElementType() const { return getImpl()->elementType; }
+
+unsigned RuntimeArrayType::getArrayStride() const {
+  return getImpl()->getSubclassData();
+}
 
 void RuntimeArrayType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,

@@ -266,8 +266,8 @@ class VSCodeTestCaseBase(TestBase):
                stopOnEntry=False, disableASLR=True,
                disableSTDIO=False, shellExpandArguments=False,
                trace=False, initCommands=None, preRunCommands=None,
-               stopCommands=None, exitCommands=None,sourcePath= None,
-               debuggerRoot=None, launchCommands=None):
+               stopCommands=None, exitCommands=None,sourcePath=None,
+               debuggerRoot=None, launchCommands=None, sourceMap=None):
         '''Sending launch request to vscode
         '''
 
@@ -298,7 +298,8 @@ class VSCodeTestCaseBase(TestBase):
             exitCommands=exitCommands,
             sourcePath=sourcePath,
             debuggerRoot=debuggerRoot,
-            launchCommands=launchCommands)
+            launchCommands=launchCommands,
+            sourceMap=sourceMap)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))

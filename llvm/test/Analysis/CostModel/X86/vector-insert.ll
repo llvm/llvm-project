@@ -689,14 +689,14 @@ define i32 @insert_i16(i32 %arg) {
 define i32 @insert_i8(i32 %arg) {
 ; SSE2-LABEL: 'insert_i8'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i8_3 = insertelement <4 x i8> undef, i8 undef, i32 3
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_3 = insertelement <4 x i8> undef, i8 undef, i32 3
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = insertelement <8 x i8> undef, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v8i8_7 = insertelement <8 x i8> undef, i8 undef, i32 7
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_7 = insertelement <8 x i8> undef, i8 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = insertelement <16 x i8> undef, i8 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_0 = insertelement <16 x i8> undef, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_8 = insertelement <16 x i8> undef, i8 undef, i32 8
@@ -722,14 +722,14 @@ define i32 @insert_i8(i32 %arg) {
 ;
 ; SSE3-LABEL: 'insert_i8'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v4i8_3 = insertelement <4 x i8> undef, i8 undef, i32 3
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_3 = insertelement <4 x i8> undef, i8 undef, i32 3
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = insertelement <8 x i8> undef, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v8i8_7 = insertelement <8 x i8> undef, i8 undef, i32 7
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_7 = insertelement <8 x i8> undef, i8 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = insertelement <16 x i8> undef, i8 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_0 = insertelement <16 x i8> undef, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_8 = insertelement <16 x i8> undef, i8 undef, i32 8

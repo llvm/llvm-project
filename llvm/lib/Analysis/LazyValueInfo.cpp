@@ -747,7 +747,7 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(ValueLatticeElement &BBLV,
       // Explore that input, then return here
       return false;
 
-    Result.mergeIn(EdgeResult, DL);
+    Result.mergeIn(EdgeResult);
 
     // If we hit overdefined, exit early.  The BlockVals entry is already set
     // to overdefined.
@@ -791,7 +791,7 @@ bool LazyValueInfoImpl::solveBlockValuePHINode(ValueLatticeElement &BBLV,
       // Explore that input, then return here
       return false;
 
-    Result.mergeIn(EdgeResult, DL);
+    Result.mergeIn(EdgeResult);
 
     // If we hit overdefined, exit early.  The BlockVals entry is already set
     // to overdefined.
@@ -989,8 +989,8 @@ bool LazyValueInfoImpl::solveBlockValueSelect(ValueLatticeElement &BBLV,
   }
 
   ValueLatticeElement Result;  // Start Undefined.
-  Result.mergeIn(TrueVal, DL);
-  Result.mergeIn(FalseVal, DL);
+  Result.mergeIn(TrueVal);
+  Result.mergeIn(FalseVal);
   BBLV = Result;
   return true;
 }

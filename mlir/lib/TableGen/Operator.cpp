@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Operator.h"
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -81,10 +81,6 @@ StringRef tblgen::Operator::getExtraClassDeclaration() const {
 
 const llvm::Record &tblgen::Operator::getDef() const { return def; }
 
-bool tblgen::Operator::isVariadic() const {
-  return getNumVariadicOperands() != 0 || getNumVariadicResults() != 0;
-}
-
 bool tblgen::Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
 }
@@ -119,16 +115,16 @@ auto tblgen::Operator::getResultDecorators(int index) const
   return *result->getValueAsListInit("decorators");
 }
 
-unsigned tblgen::Operator::getNumVariadicResults() const {
-  return std::count_if(
-      results.begin(), results.end(),
-      [](const NamedTypeConstraint &c) { return c.constraint.isVariadic(); });
+unsigned tblgen::Operator::getNumVariableLengthResults() const {
+  return llvm::count_if(results, [](const NamedTypeConstraint &c) {
+    return c.constraint.isVariableLength();
+  });
 }
 
-unsigned tblgen::Operator::getNumVariadicOperands() const {
-  return std::count_if(
-      operands.begin(), operands.end(),
-      [](const NamedTypeConstraint &c) { return c.constraint.isVariadic(); });
+unsigned tblgen::Operator::getNumVariableLengthOperands() const {
+  return llvm::count_if(operands, [](const NamedTypeConstraint &c) {
+    return c.constraint.isVariableLength();
+  });
 }
 
 tblgen::Operator::arg_iterator tblgen::Operator::arg_begin() const {

@@ -59,6 +59,7 @@ public:
   virtual void setProfileSymbolList(ProfileSymbolList *PSL) {}
   virtual void setToCompressAllSections() {}
   virtual void setUseMD5() {}
+  virtual void setPartialProfile() {}
 
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
@@ -215,6 +216,13 @@ public:
   virtual void setUseMD5() override {
     UseMD5 = true;
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
+  }
+
+  // Set the profile to be partial. It means the profile is for
+  // common/shared code. The common profile is usually merged from
+  // profiles collected from running other targets.
+  virtual void setPartialProfile() override {
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagPartial);
   }
 
 private:

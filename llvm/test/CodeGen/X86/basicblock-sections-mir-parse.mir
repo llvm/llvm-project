@@ -87,7 +87,7 @@ callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
-  bb.0 (%ir-block.1, bbsections Entry):
+  bb.0 (%ir-block.1, align 4, bbsections 0):
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $edi
   
@@ -102,19 +102,19 @@ body:             |
     JCC_1 %bb.2, 4, implicit killed $eflags
     JMP_1 %bb.1
   
-  bb.1 (%ir-block.7, bbsections Unique):
+  bb.1 (%ir-block.7, bbsections 1):
     successors: %bb.3(0x80000000)
   
     MOV32mi $rbp, 1, $noreg, -8, $noreg, 1 :: (store 4 into %ir.2)
     JMP_1 %bb.3
   
-  bb.2 (%ir-block.8, bbsections Unique):
+  bb.2 (%ir-block.8, bbsections 2):
     successors: %bb.3(0x80000000)
   
     MOV32mi $rbp, 1, $noreg, -8, $noreg, 0 :: (store 4 into %ir.2)
     JMP_1 %bb.3
   
-  bb.3 (%ir-block.9, bbsections Unique):
+  bb.3 (%ir-block.9, bbsections 3):
     renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load 4 from %ir.2)
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa $rsp, 8

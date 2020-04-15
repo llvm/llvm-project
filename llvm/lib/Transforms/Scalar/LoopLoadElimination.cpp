@@ -432,12 +432,12 @@ public:
     Value *Ptr = Cand.Load->getPointerOperand();
     auto *PtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
     auto *PH = L->getLoopPreheader();
+    assert(PH && "Preheader should exist!");
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
     Value *Initial = new LoadInst(
         Cand.Load->getType(), InitialPtr, "load_initial",
-        /* isVolatile */ false, MaybeAlign(Cand.Load->getAlignment()),
-        PH->getTerminator());
+        /* isVolatile */ false, Cand.Load->getAlign(), PH->getTerminator());
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());
@@ -535,6 +535,11 @@ public:
       return false;
     }
 
+    if (!L->isLoopSimplifyForm()) {
+      LLVM_DEBUG(dbgs() << "Loop is not is loop-simplify form");
+      return false;
+    }
+
     if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
       if (LAI.hasConvergentOp()) {
         LLVM_DEBUG(dbgs() << "Versioning is needed but not allowed with "
@@ -551,11 +556,6 @@ public:
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");
-        return false;
-      }
-
-      if (!L->isLoopSimplifyForm()) {
-        LLVM_DEBUG(dbgs() << "Loop is not is loop-simplify form");
         return false;
       }
 

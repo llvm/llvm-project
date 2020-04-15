@@ -45,7 +45,7 @@ public:
   AddClangModuleCompilationOptions(lldb_private::Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, PlatformDarwin::SDKType::iPhoneOS);
+        target, options, lldb_private::XcodeSDK::Type::iPhoneOS);
   }
 
 protected:

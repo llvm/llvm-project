@@ -60,12 +60,17 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
   return module;
 }
 
-static TranslateToMLIRRegistration fromBinary(
-    "deserialize-spirv", [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
-      assert(sourceMgr.getNumBuffers() == 1 && "expected one buffer");
-      return deserializeModule(
-          sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), context);
-    });
+namespace mlir {
+void registerToSPIRVTranslation() {
+  TranslateToMLIRRegistration fromBinary(
+      "deserialize-spirv",
+      [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
+        assert(sourceMgr.getNumBuffers() == 1 && "expected one buffer");
+        return deserializeModule(
+            sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), context);
+      });
+}
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Serialization registration
@@ -95,10 +100,14 @@ static LogicalResult serializeModule(ModuleOp module, raw_ostream &output) {
   return mlir::success();
 }
 
-static TranslateFromMLIRRegistration
-    toBinary("serialize-spirv", [](ModuleOp module, raw_ostream &output) {
-      return serializeModule(module, output);
-    });
+namespace mlir {
+void registerFromSPIRVTranslation() {
+  TranslateFromMLIRRegistration toBinary(
+      "serialize-spirv", [](ModuleOp module, raw_ostream &output) {
+        return serializeModule(module, output);
+      });
+}
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Round-trip registration
@@ -139,8 +148,12 @@ static LogicalResult roundTripModule(llvm::SourceMgr &sourceMgr,
   return mlir::success();
 }
 
-static TranslateRegistration roundtrip(
-    "test-spirv-roundtrip",
-    [](llvm::SourceMgr &sourceMgr, raw_ostream &output, MLIRContext *context) {
-      return roundTripModule(sourceMgr, output, context);
-    });
+namespace mlir {
+void registerTestRoundtripSPIRV() {
+  TranslateRegistration roundtrip(
+      "test-spirv-roundtrip", [](llvm::SourceMgr &sourceMgr,
+                                 raw_ostream &output, MLIRContext *context) {
+        return roundTripModule(sourceMgr, output, context);
+      });
+}
+} // namespace mlir

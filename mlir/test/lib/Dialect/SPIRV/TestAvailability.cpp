@@ -20,7 +20,8 @@ using namespace mlir;
 
 namespace {
 /// A pass for testing SPIR-V op availability.
-struct PrintOpAvailability : public FunctionPass<PrintOpAvailability> {
+struct PrintOpAvailability
+    : public PassWrapper<PrintOpAvailability, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
@@ -50,7 +51,7 @@ void PrintOpAvailability::runOnFunction() {
       os << opName << " extensions: [";
       for (const auto &exts : extension.getExtensions()) {
         os << " [";
-        interleaveComma(exts, os, [&](spirv::Extension ext) {
+        llvm::interleaveComma(exts, os, [&](spirv::Extension ext) {
           os << spirv::stringifyExtension(ext);
         });
         os << "]";
@@ -62,7 +63,7 @@ void PrintOpAvailability::runOnFunction() {
       os << opName << " capabilities: [";
       for (const auto &caps : capability.getCapabilities()) {
         os << " [";
-        interleaveComma(caps, os, [&](spirv::Capability cap) {
+        llvm::interleaveComma(caps, os, [&](spirv::Capability cap) {
           os << spirv::stringifyCapability(cap);
         });
         os << "]";
@@ -88,7 +89,8 @@ void registerPrintOpAvailabilityPass() {
 
 namespace {
 /// A pass for testing SPIR-V op availability.
-struct ConvertToTargetEnv : public FunctionPass<ConvertToTargetEnv> {
+struct ConvertToTargetEnv
+    : public PassWrapper<ConvertToTargetEnv, FunctionPass> {
   void runOnFunction() override;
 };
 

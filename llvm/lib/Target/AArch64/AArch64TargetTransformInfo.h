@@ -153,7 +153,7 @@ public:
     if (!isa<VectorType>(DataType) || !ST->hasSVE())
       return false;
 
-    Type *Ty = DataType->getVectorElementType();
+    Type *Ty = cast<VectorType>(DataType)->getElementType();
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
@@ -180,10 +180,9 @@ public:
     // can be halved so that each half fits into a register. That's the case if
     // the element type fits into a register and the number of elements is a
     // power of 2 > 1.
-    if (isa<VectorType>(DataType)) {
-      unsigned NumElements = DataType->getVectorNumElements();
-      unsigned EltSize =
-          DataType->getVectorElementType()->getScalarSizeInBits();
+    if (auto *DataTypeVTy = dyn_cast<VectorType>(DataType)) {
+      unsigned NumElements = DataTypeVTy->getNumElements();
+      unsigned EltSize = DataTypeVTy->getElementType()->getScalarSizeInBits();
       return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
              EltSize <= 128 && isPowerOf2_64(EltSize);
     }

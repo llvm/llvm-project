@@ -27,7 +27,8 @@ namespace {
 } // end namespace mlir
 
 namespace {
-struct TestLinalgTransforms : public FunctionPass<TestLinalgTransforms> {
+struct TestLinalgTransforms
+    : public PassWrapper<TestLinalgTransforms, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
@@ -39,7 +40,7 @@ void TestLinalgTransforms::runOnFunction() {
 
   // Add the generated patterns to the list.
   linalg::populateWithGenerated(&getContext(), &patterns);
-  applyPatternsGreedily(funcOp, patterns);
+  applyPatternsAndFoldGreedily(funcOp, patterns);
 
   // Drop the marker.
   funcOp.walk([](LinalgOp op) {

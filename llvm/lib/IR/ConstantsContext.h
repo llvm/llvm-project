@@ -150,7 +150,8 @@ public:
   ShuffleVectorConstantExpr(Constant *C1, Constant *C2, ArrayRef<int> Mask)
       : ConstantExpr(
             VectorType::get(cast<VectorType>(C1->getType())->getElementType(),
-                            Mask.size(), C1->getType()->getVectorIsScalable()),
+                            Mask.size(),
+                            cast<VectorType>(C1->getType())->isScalable()),
             Instruction::ShuffleVector, &Op<0>(), 2) {
     assert(ShuffleVectorInst::isValidOperands(C1, C2, Mask) &&
            "Invalid shuffle vector instruction operands!");

@@ -138,7 +138,7 @@ size_t InputSectionBase::getSize() const {
     return s->getSize();
   if (uncompressedSize >= 0)
     return uncompressedSize;
-  return rawData.size();
+  return rawData.size() - bytesDropped;
 }
 
 void InputSectionBase::uncompress() const {
@@ -659,8 +659,9 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   }
 }
 
-static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
-                                 uint64_t p, const Symbol &sym, RelExpr expr) {
+uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
+                                            int64_t a, uint64_t p,
+                                            const Symbol &sym, RelExpr expr) {
   switch (expr) {
   case R_ABS:
   case R_DTPREL:
@@ -871,6 +872,12 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
+    if (expr == R_SIZE) {
+      target->relocateNoSym(bufLoc, type,
+                            SignExtend64<bits>(sym.getSize() + addend));
+      continue;
+    }
+
     if (expr != R_ABS && expr != R_DTPREL && expr != R_RISCV_ADD) {
       std::string msg = getLocation<ELFT>(offset) +
                         ": has non-ABS relocation " + toString(type) +
@@ -942,6 +949,8 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   const unsigned bits = config->wordsize * 8;
 
   for (const Relocation &rel : relocations) {
+    if (rel.expr == R_NONE)
+      continue;
     uint64_t offset = rel.offset;
     if (auto *sec = dyn_cast<InputSection>(this))
       offset += sec->outSecOff;
@@ -1009,6 +1018,18 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     default:
       target->relocate(bufLoc, rel, targetVA);
       break;
+    }
+  }
+
+  // Apply jumpInstrMods.  jumpInstrMods are created when the opcode of
+  // a jmp insn must be modified to shrink the jmp insn or to flip the jmp
+  // insn.  This is primarily used to relax and optimize jumps created with
+  // basic block sections.
+  if (auto *sec = dyn_cast<InputSection>(this)) {
+    for (const JumpInstrMod &jumpMod : jumpInstrMods) {
+      uint64_t offset = jumpMod.offset + sec->outSecOff;
+      uint8_t *bufLoc = buf + offset;
+      target->applyJumpInstrMod(bufLoc, jumpMod.original, jumpMod.size);
     }
   }
 }

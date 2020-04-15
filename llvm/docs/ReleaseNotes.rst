@@ -134,6 +134,24 @@ Changes to the Go bindings
 Changes to the DAG infrastructure
 ---------------------------------
 
+
+Changes to the Debug Info
+---------------------------------
+
+* LLVM now supports the debug entry values (DW_OP_entry_value) production for
+  the x86, ARM, and AArch64 targets by default. Other targets can use
+  the utility by using the experimental option ("-debug-entry-values").
+  This is a debug info feature that allows debuggers to recover the value of
+  optimized-out parameters by going up a stack frame and interpreting the values
+  passed to the callee. The feature improves the debugging user experience when
+  debugging optimized code.
+
+Changes to the LLVM tools
+---------------------------------
+
+* Added an option (--show-section-sizes) to llvm-dwarfdump to show the sizes
+  of all debug sections within a file.
+
 Changes to LLDB
 ===============
 

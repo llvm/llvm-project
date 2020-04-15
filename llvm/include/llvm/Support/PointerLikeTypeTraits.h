@@ -15,7 +15,7 @@
 #define LLVM_SUPPORT_POINTERLIKETYPETRAITS_H
 
 #include "llvm/Support/DataTypes.h"
-#include <assert.h>
+#include <cassert>
 #include <type_traits>
 
 namespace llvm {
@@ -37,8 +37,9 @@ template <typename T, typename U = void> struct HasPointerLikeTypeTraits {
 };
 
 // sizeof(T) is valid only for a complete T.
-template <typename T> struct HasPointerLikeTypeTraits<
-  T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
+template <typename T>
+struct HasPointerLikeTypeTraits<
+    T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
   static const bool value = true;
 };
 

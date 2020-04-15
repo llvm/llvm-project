@@ -28,14 +28,12 @@
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Affine/Passes.h"
-#include "mlir/Dialect/FxpMathOps/Passes.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
-#include "mlir/Quantizer/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/ViewOpGraph.h"
@@ -65,10 +63,6 @@ inline void registerAllPasses() {
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Affine/Passes.h.inc"
 
-  // FxpMath
-#define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/FxpMathOps/Passes.h.inc"
-
   // GPU
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Passes.h.inc"
@@ -88,8 +82,6 @@ inline void registerAllPasses() {
   // Quant
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Quant/Passes.h.inc"
-#define GEN_PASS_REGISTRATION
-#include "mlir/Quantizer/Transforms/Passes.h.inc"
 
   // SPIR-V
 #define GEN_PASS_REGISTRATION

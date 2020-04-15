@@ -9,8 +9,8 @@
 // Test that defining _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES correctly defines
 // _LIBCPP_ENABLE_CXX17_REMOVED_FOO for each individual component macro.
 
-// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
-#define _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
+
 #include <__config>
 
 #include "test_macros.h"

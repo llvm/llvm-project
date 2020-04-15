@@ -22,6 +22,7 @@ configure_file(
 set(LLVM_LINK_COMPONENTS
   Support
   AllTargetsInfos
+  FrontendOpenMP
   )
 
 if(CLANG_BUILT_STANDALONE)

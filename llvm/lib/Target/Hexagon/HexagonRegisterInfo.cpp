@@ -203,7 +203,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   auto &HII = *HST.getInstrInfo();
   auto &HFI = *HST.getFrameLowering();
 
-  unsigned BP = 0;
+  Register BP;
   int FI = MI.getOperand(FIOp).getIndex();
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.

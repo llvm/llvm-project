@@ -3,7 +3,7 @@ add_libc_fuzzer(
   SRCS
     strcpy_fuzz.cpp
   DEPENDS
-    strcpy
-    strlen
-    memcpy
+    libc.src.string.memcpy
+    libc.src.string.strcpy
+    libc.src.string.strlen
 )

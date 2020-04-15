@@ -23,7 +23,6 @@
 
 namespace llvm {
 class Constant;
-class Function;
 class StoreInst;
 class LoadInst;
 class MemIntrinsic;

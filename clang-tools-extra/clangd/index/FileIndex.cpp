@@ -10,11 +10,17 @@
 #include "CollectMacros.h"
 #include "Logger.h"
 #include "ParsedAST.h"
+#include "Path.h"
 #include "SymbolCollector.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Serialization.h"
+#include "index/Symbol.h"
+#include "index/SymbolID.h"
 #include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
 #include "clang/AST/ASTContext.h"
@@ -23,19 +29,24 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <memory>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
+namespace {
 
-static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                              llvm::ArrayRef<Decl *> DeclsToIndex,
-                              const MainFileMacros *MacroRefsToIndex,
-                              const CanonicalIncludes &Includes,
-                              bool IsIndexMainAST, llvm::StringRef Version) {
+SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                       llvm::ArrayRef<Decl *> DeclsToIndex,
+                       const MainFileMacros *MacroRefsToIndex,
+                       const CanonicalIncludes &Includes, bool IsIndexMainAST,
+                       llvm::StringRef Version) {
   SymbolCollector::Options CollectorOpts;
   CollectorOpts.CollectIncludePath = true;
   CollectorOpts.Includes = &Includes;
@@ -83,6 +94,137 @@ static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
        Relations.size(), Relations.bytes());
   return std::make_tuple(std::move(Syms), std::move(Refs),
                          std::move(Relations));
+}
+
+// Resolves URI to file paths with cache.
+class URIToFileCache {
+public:
+  URIToFileCache(PathRef HintPath) : HintPath(HintPath) {}
+
+  llvm::StringRef operator[](llvm::StringRef FileURI) {
+    if (FileURI.empty())
+      return "";
+    auto I = URIToPathCache.try_emplace(FileURI);
+    if (I.second) {
+      I.first->second = llvm::cantFail(URI::resolve(FileURI, HintPath),
+                                       "Failed to resolve URI");
+    }
+    return I.first->second;
+  }
+
+private:
+  PathRef HintPath;
+  llvm::StringMap<std::string> URIToPathCache;
+};
+
+// We keep only the node "U" and its edges. Any node other than "U" will be
+// empty in the resultant graph.
+IncludeGraph getSubGraph(llvm::StringRef URI, const IncludeGraph &FullGraph) {
+  IncludeGraph IG;
+
+  auto Entry = IG.try_emplace(URI).first;
+  auto &Node = Entry->getValue();
+  Node = FullGraph.lookup(Entry->getKey());
+  Node.URI = Entry->getKey();
+
+  // URIs inside nodes must point into the keys of the same IncludeGraph.
+  for (auto &Include : Node.DirectIncludes) {
+    auto I = IG.try_emplace(Include).first;
+    I->getValue().URI = I->getKey();
+    Include = I->getKey();
+  }
+  return IG;
+}
+} // namespace
+
+FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
+    : Index(std::move(Input)) {
+  URIToFileCache UriToFile(HintPath);
+  // Used to build RelationSlabs.
+  llvm::DenseMap<SymbolID, FileShard *> SymbolIDToFile;
+
+  // Attribute each Symbol to both their declaration and definition locations.
+  if (Index.Symbols) {
+    for (const auto &S : *Index.Symbols) {
+      auto File = UriToFile[S.CanonicalDeclaration.FileURI];
+      auto It = Shards.try_emplace(File);
+      It.first->getValue().Symbols.insert(&S);
+      SymbolIDToFile[S.ID] = &It.first->getValue();
+      // Only bother if definition file is different than declaration file.
+      if (S.Definition &&
+          S.Definition.FileURI != S.CanonicalDeclaration.FileURI) {
+        auto File = UriToFile[S.Definition.FileURI];
+        auto It = Shards.try_emplace(File);
+        It.first->getValue().Symbols.insert(&S);
+      }
+    }
+  }
+  // Attribute references into each file they occured in.
+  if (Index.Refs) {
+    for (const auto &SymRefs : *Index.Refs) {
+      for (const auto &R : SymRefs.second) {
+        auto File = UriToFile[R.Location.FileURI];
+        const auto It = Shards.try_emplace(File);
+        It.first->getValue().Refs.insert(&R);
+        RefToSymID[&R] = SymRefs.first;
+      }
+    }
+  }
+  // Attribute relations to the file declaraing their Subject as Object might
+  // not have been indexed, see SymbolCollector::processRelations for details.
+  if (Index.Relations) {
+    for (const auto &R : *Index.Relations) {
+      auto *File = SymbolIDToFile.lookup(R.Subject);
+      assert(File && "unknown subject in relation");
+      File->Relations.insert(&R);
+    }
+  }
+  // Store only the direct includes of a file in a shard.
+  if (Index.Sources) {
+    const auto &FullGraph = *Index.Sources;
+    for (const auto &It : FullGraph) {
+      auto File = UriToFile[It.first()];
+      auto ShardIt = Shards.try_emplace(File);
+      ShardIt.first->getValue().IG = getSubGraph(It.first(), FullGraph);
+    }
+  }
+}
+std::vector<PathRef> FileShardedIndex::getAllFiles() const {
+  // It should be enough to construct a vector with {Shards.keys().begin(),
+  // Shards.keys().end()} but MSVC fails to compile that.
+  std::vector<PathRef> Result;
+  Result.reserve(Shards.size());
+  for (PathRef Key : Shards.keys())
+    Result.push_back(Key);
+  return Result;
+}
+
+IndexFileIn FileShardedIndex::getShard(PathRef File) const {
+  auto It = Shards.find(File);
+  assert(It != Shards.end() && "received unknown file");
+
+  IndexFileIn IF;
+  IF.Sources = It->getValue().IG;
+  IF.Cmd = Index.Cmd;
+
+  SymbolSlab::Builder SymB;
+  for (const auto *S : It->getValue().Symbols)
+    SymB.insert(*S);
+  IF.Symbols = std::move(SymB).build();
+
+  RefSlab::Builder RefB;
+  for (const auto *Ref : It->getValue().Refs) {
+    auto SID = RefToSymID.lookup(Ref);
+    RefB.insert(SID, *Ref);
+  }
+  IF.Refs = std::move(RefB).build();
+
+  RelationSlab::Builder RelB;
+  for (const auto *Rel : It->getValue().Relations) {
+    RelB.insert(*Rel);
+  }
+  IF.Relations = std::move(RelB).build();
+  return IF;
 }
 
 SlabTuple indexMainDecls(ParsedAST &AST) {
@@ -254,15 +396,24 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
                                ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP,
                                const CanonicalIncludes &Includes) {
-  auto Slabs = indexHeaderSymbols(Version, AST, std::move(PP), Includes);
-  PreambleSymbols.update(
-      Path, std::make_unique<SymbolSlab>(std::move(std::get<0>(Slabs))),
-      std::make_unique<RefSlab>(),
-      std::make_unique<RelationSlab>(std::move(std::get<2>(Slabs))),
-      /*CountReferences=*/false);
+  IndexFileIn IF;
+  std::tie(IF.Symbols, std::ignore, IF.Relations) =
+      indexHeaderSymbols(Version, AST, std::move(PP), Includes);
+  FileShardedIndex ShardedIndex(std::move(IF), Path);
+  for (PathRef File : ShardedIndex.getAllFiles()) {
+    auto IF = ShardedIndex.getShard(File);
+    PreambleSymbols.update(
+        File, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
+        std::make_unique<RefSlab>(),
+        std::make_unique<RelationSlab>(std::move(*IF.Relations)),
+        /*CountReferences=*/false);
+  }
   PreambleIndex.reset(
       PreambleSymbols.buildIndex(UseDex ? IndexType::Heavy : IndexType::Light,
                                  DuplicateHandling::PickOne));
+  vlog("Build dynamic index for header symbols with estimated memory usage of "
+       "{0} bytes",
+       PreambleIndex.estimateMemoryUsage());
 }
 
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
@@ -274,6 +425,9 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
       /*CountReferences=*/true);
   MainFileIndex.reset(
       MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
+  vlog("Build dynamic index for main-file symbols with estimated memory usage "
+       "of {0} bytes",
+       MainFileIndex.estimateMemoryUsage());
 }
 
 } // namespace clangd

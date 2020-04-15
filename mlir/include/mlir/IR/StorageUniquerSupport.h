@@ -14,8 +14,8 @@
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "mlir/Support/TypeID.h"
 
 namespace mlir {
 class AttributeStorage;
@@ -41,7 +41,7 @@ public:
   using ImplType = StorageT;
 
   /// Return a unique identifier for the concrete type.
-  static ClassID *getClassID() { return ClassID::getID<ConcreteT>(); }
+  static TypeID getTypeID() { return TypeID::get<ConcreteT>(); }
 
   /// Provide a default implementation of 'classof' that invokes a 'kindof'
   /// method on the concrete type.

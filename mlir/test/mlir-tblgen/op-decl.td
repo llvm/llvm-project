@@ -112,6 +112,16 @@ def NS_DOp : NS_Op<"op_with_two_operands", []> {
 // CHECK-LABEL: NS::DOp declarations
 // CHECK: OpTrait::NOperands<2>::Impl
 
+def NS_EOp : NS_Op<"op_with_optionals", []> {
+  let arguments = (ins Optional<I32>:$a);
+  let results = (outs Optional<F32>:$b);
+}
+
+// CHECK-LABEL: NS::EOp declarations
+// CHECK:   Value a();
+// CHECK:   Value b();
+// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+
 // Check that default builders can be suppressed.
 // ---
 

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,CHECK
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefixes=ALL-DEBUG,CHECK-DEBUG %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefixes=ALL-DEBUG,IRBUILDER-DEBUG %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -DIRBUILDER -x c++ -emit-llvm %s -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -DIRBUILDER -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -DIRBUILDER -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefixes=ALL-DEBUG,IRBUILDER-DEBUG %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm %s -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
@@ -21,10 +21,10 @@
 // CHECK-DEBUG-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DEBUG-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CHECK-DEBUG-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CHECK-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+22]];1;;\00"
+// CHECK-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+23]];1;;\00"
 // CHECK-DEBUG-DAG: [[LOC2:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;tmain;[[@LINE+11]];1;;\00"
 // IRBUILDER-DEBUG-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
-// IRBUILDER-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+19]];0;;\00"
+// IRBUILDER-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+20]];0;;\00"
 // IRBUILDER-DEBUG-DAG: [[LOC2:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;tmain<char **>;[[@LINE+8]];0;;\00"
 
 template <class T>
@@ -41,10 +41,22 @@ int tmain(T argc) {
   return 0;
 }
 
+int global;
 int main (int argc, char **argv) {
   int a[argc];
-#pragma omp parallel
-  foo(a[1]);
+#pragma omp parallel shared(global, a) default(none)
+  foo(a[1]), a[1] = global;
+#ifndef IRBUILDER
+// TODO: Support for privates in IRBuilder.
+#pragma omp parallel private(global, a) default(none)
+#pragma omp parallel shared(global, a) default(none)
+  foo(a[1]), a[1] = global;
+// FIXME: IRBuilder crashes in void llvm::OpenMPIRBuilder::finalize()
+// Assertion `Extractor.isEligible() && "Expected OpenMP outlining to be possible!"' failed.
+#pragma omp parallel shared(global, a) default(none)
+#pragma omp parallel shared(global, a) default(none)
+  foo(a[1]), a[1] = global;
+#endif // IRBUILDER
   return tmain(argv);
 }
 
@@ -52,6 +64,8 @@ int main (int argc, char **argv) {
 // ALL: store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // ALL: [[VLA:%.+]] = alloca i32, i{{[0-9]+}} [[VLA_SIZE:%[^,]+]],
 // CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
+// CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}})* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]])
+// CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
 // IRBUILDER:   call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* [[VLA]])
 // ALL:  [[ARGV:%.+]] = load i8**, i8*** {{%[a-z0-9.]+}}
 // ALL-NEXT:  [[RET:%.+]] = call {{[a-z\_\b]*[ ]?i32}} [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
@@ -72,7 +86,7 @@ int main (int argc, char **argv) {
 // ALL-DEBUG:        ret i32
 // ALL-DEBUG-NEXT:  }
 
-// CHECK:           define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
+// CHECK:           define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
 // CHECK-SAME:      #[[FN_ATTRS:[0-9]+]]
 // IRBUILDER:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i32* [[VLA_REF:%[^)]+]])
 // IRBUILDER-SAME:  #[[FN_ATTRS:[0-9]+]]
@@ -82,11 +96,12 @@ int main (int argc, char **argv) {
 // ALL-NEXT:  [[VLA_ELEM:%.+]] = load i32, i32* [[VLA_ELEM_REF]]
 // CHECK-NEXT:  invoke {{.*}}void [[FOO:@.+foo.+]](i32{{[ ]?[a-z]*}} [[VLA_ELEM]])
 // IRBUILDER: call {{.*}}void [[FOO:@.+foo.+]](i32{{[ ]?[a-z]*}} [[VLA_ELEM]])
+// ALL:         load i32, i32* @
 // CHECK:       ret void
 // CHECK:       call {{.*}}void @{{.+terminate.*|abort}}(
 // CHECK-NEXT:  unreachable
 // CHECK-NEXT:  }
-// CHECK-DEBUG:           define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i64 [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
+// CHECK-DEBUG:           define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i64 [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
 // CHECK-DEBUG-SAME:      #[[FN_ATTRS:[0-9]+]]
 // IRBUILDER-DEBUG:       define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i32* [[VLA_REF:%[^)]+]])
 // IRBUILDER-DEBUG-SAME:  #[[FN_ATTRS:[0-9]+]]
@@ -104,6 +119,20 @@ int main (int argc, char **argv) {
 // ALL-DAG: define linkonce_odr {{.*}}void [[FOO]]({{i32[ ]?[a-z]*}} %argc)
 // ALL-DAG: declare !callback ![[cbid:[0-9]+]] {{.*}}void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // ALL-DEBUG-DAG: define linkonce_odr void [[FOO]](i32 %argc)
+
+// CHECK:           define internal {{.*}}void [[OMP_OUTLINED1]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]])
+// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*, i32*)* [[OMP_OUTLINED11:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} %{{.+}}, i32* %{{.+}}, i32* %{{.+}})
+
+// CHECK:           define internal {{.*}}void [[OMP_OUTLINED11]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]], i32* {{.+}} %{{.+}})
+// CHECK-NOT:       load i32, i32* @
+
+// CHECK:           define internal {{.*}}void [[OMP_OUTLINED2]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
+// CHECK:           call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED21:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} %{{.+}}, i32* %{{.+}})
+
+
+// CHECK:           define internal {{.*}}void [[OMP_OUTLINED21]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}}{{.*}} [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
+// CHECK:           load i32, i32* @
+
 // ALL-DEBUG-DAG: declare !callback ![[cbid:[0-9]+]] void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // CHECK-DEBUG-DAG:       define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i64 [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
 // CHECK-DEBUG-DAG:       call void [[OMP_OUTLINED_DEBUG]]

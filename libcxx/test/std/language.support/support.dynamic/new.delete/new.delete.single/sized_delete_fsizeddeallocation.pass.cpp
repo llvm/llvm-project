@@ -15,8 +15,6 @@
 // XFAIL: availability=macosx10.11
 // XFAIL: availability=macosx10.10
 // XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
 
 // NOTE: Only clang-3.7 and GCC 5.1 and greater support -fsized-deallocation.
 // REQUIRES: -fsized-deallocation

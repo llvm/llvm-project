@@ -61,15 +61,16 @@ void MachOLayoutBuilder::updateDySymTab(MachO::macho_load_command &MLC) {
   assert(MLC.load_command_data.cmd == MachO::LC_DYSYMTAB);
   // Make sure that nlist entries in the symbol table are sorted by the those
   // types. The order is: local < defined external < undefined external.
-  assert(std::is_sorted(O.SymTable.Symbols.begin(), O.SymTable.Symbols.end(),
-                        [](const std::unique_ptr<SymbolEntry> &A,
-                           const std::unique_ptr<SymbolEntry> &B) {
-                          bool AL = A->isLocalSymbol(), BL = B->isLocalSymbol();
-                          if (AL != BL)
-                            return AL;
-                          return !AL && !A->isUndefinedSymbol() &&
-                                         B->isUndefinedSymbol();
-                        }) &&
+  assert(llvm::is_sorted(O.SymTable.Symbols,
+                         [](const std::unique_ptr<SymbolEntry> &A,
+                            const std::unique_ptr<SymbolEntry> &B) {
+                           bool AL = A->isLocalSymbol(),
+                                BL = B->isLocalSymbol();
+                           if (AL != BL)
+                             return AL;
+                           return !AL && !A->isUndefinedSymbol() &&
+                                  B->isUndefinedSymbol();
+                         }) &&
          "Symbols are not sorted by their types.");
 
   uint32_t NumLocalSymbols = 0;

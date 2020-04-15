@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/SPIRV/Serialization.h"
 
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
@@ -21,11 +20,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/StringExtras.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -75,16 +75,43 @@ static LogicalResult visitInPrettyBlockOrder(
   return success();
 }
 
-/// Returns the last structured control flow op's merge block if the given
-/// `block` contains any structured control flow op. Otherwise returns nullptr.
-static Block *getLastStructuredControlFlowOpMergeBlock(Block *block) {
-  for (Operation &op : llvm::reverse(block->getOperations())) {
-    if (auto selectionOp = dyn_cast<spirv::SelectionOp>(op))
-      return selectionOp.getMergeBlock();
-    if (auto loopOp = dyn_cast<spirv::LoopOp>(op))
-      return loopOp.getMergeBlock();
-  }
+/// Returns the merge block if the given `op` is a structured control flow op.
+/// Otherwise returns nullptr.
+static Block *getStructuredControlFlowOpMergeBlock(Operation *op) {
+  if (auto selectionOp = dyn_cast<spirv::SelectionOp>(op))
+    return selectionOp.getMergeBlock();
+  if (auto loopOp = dyn_cast<spirv::LoopOp>(op))
+    return loopOp.getMergeBlock();
   return nullptr;
+}
+
+/// Given a predecessor `block` for a block with arguments, returns the block
+/// that should be used as the parent block for SPIR-V OpPhi instructions
+/// corresponding to the block arguments.
+static Block *getPhiIncomingBlock(Block *block) {
+  // If the predecessor block in question is the entry block for a spv.loop,
+  // we jump to this spv.loop from its enclosing block.
+  if (block->isEntryBlock()) {
+    if (auto loopOp = dyn_cast<spirv::LoopOp>(block->getParentOp())) {
+      // Then the incoming parent block for OpPhi should be the merge block of
+      // the structured control flow op before this loop.
+      Operation *op = loopOp.getOperation();
+      while ((op = op->getPrevNode()) != nullptr)
+        if (Block *incomingBlock = getStructuredControlFlowOpMergeBlock(op))
+          return incomingBlock;
+      // Or the enclosing block itself if no structured control flow ops
+      // exists before this loop.
+      return loopOp.getOperation()->getBlock();
+    }
+  }
+
+  // Otherwise, we jump from the given predecessor block. Try to see if there is
+  // a structured control flow op inside it.
+  for (Operation &op : llvm::reverse(block->getOperations())) {
+    if (Block *incomingBlock = getStructuredControlFlowOpMergeBlock(&op))
+      return incomingBlock;
+  }
+  return block;
 }
 
 namespace {
@@ -212,8 +239,8 @@ private:
 
   bool isVoidType(Type type) const { return type.isa<NoneType>(); }
 
-  /// Returns true if the given type is a pointer type to a struct in Uniform or
-  /// StorageBuffer storage class.
+  /// Returns true if the given type is a pointer type to a struct in some
+  /// interface storage class.
   bool isInterfaceStructPtrType(Type type) const;
 
   /// Main dispatch method for serializing a type. The result <id> of the
@@ -600,7 +627,7 @@ LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
   auto attrName = attr.first.strref();
-  auto decorationName = mlir::convertToCamelCase(attrName, true);
+  auto decorationName = llvm::convertToCamelFromSnakeCase(attrName, true);
   auto decoration = spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
     return emitError(
@@ -649,10 +676,19 @@ namespace {
 template <>
 LogicalResult Serializer::processTypeDecoration<spirv::ArrayType>(
     Location loc, spirv::ArrayType type, uint32_t resultID) {
-  if (type.hasLayout()) {
+  if (unsigned stride = type.getArrayStride()) {
     // OpDecorate %arrayTypeSSA ArrayStride strideLiteral
-    return emitDecoration(resultID, spirv::Decoration::ArrayStride,
-                          {static_cast<uint32_t>(type.getArrayStride())});
+    return emitDecoration(resultID, spirv::Decoration::ArrayStride, {stride});
+  }
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processTypeDecoration<spirv::RuntimeArrayType>(
+    Location Loc, spirv::RuntimeArrayType type, uint32_t resultID) {
+  if (unsigned stride = type.getArrayStride()) {
+    // OpDecorate %arrayTypeSSA ArrayStride strideLiteral
+    return emitDecoration(resultID, spirv::Decoration::ArrayStride, {stride});
   }
   return success();
 }
@@ -791,7 +827,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
                         operands);
   for (auto attr : op.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
-                     [&](StringRef elided) { return attr.first.is(elided); })) {
+                     [&](StringRef elided) { return attr.first == elided; })) {
       continue;
     }
     if (failed(processDecoration(op.getLoc(), resultID, attr))) {
@@ -859,7 +895,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   // Encode decorations.
   for (auto attr : varOp.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
-                     [&](StringRef elided) { return attr.first.is(elided); })) {
+                     [&](StringRef elided) { return attr.first == elided; })) {
       continue;
     }
     if (failed(processDecoration(varOp.getLoc(), resultID, attr))) {
@@ -873,12 +909,19 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 // Type
 //===----------------------------------------------------------------------===//
 
+// According to the SPIR-V spec "Validation Rules for Shader Capabilities":
+// "Composite objects in the StorageBuffer, PhysicalStorageBuffer, Uniform, and
+// PushConstant Storage Classes must be explicitly laid out."
 bool Serializer::isInterfaceStructPtrType(Type type) const {
   if (auto ptrType = type.dyn_cast<spirv::PointerType>()) {
-    auto storageClass = ptrType.getStorageClass();
-    if (storageClass == spirv::StorageClass::Uniform ||
-        storageClass == spirv::StorageClass::StorageBuffer) {
+    switch (ptrType.getStorageClass()) {
+    case spirv::StorageClass::PhysicalStorageBuffer:
+    case spirv::StorageClass::PushConstant:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::Uniform:
       return ptrType.getPointeeType().isa<spirv::StructType>();
+    default:
+      break;
     }
   }
   return false;
@@ -977,9 +1020,9 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
                            elementTypeID))) {
       return failure();
     }
-    operands.push_back(elementTypeID);
     typeEnum = spirv::Opcode::OpTypeRuntimeArray;
-    return success();
+    operands.push_back(elementTypeID);
+    return processTypeDecoration(loc, runtimeArrayType, resultID);
   }
 
   if (auto structType = type.dyn_cast<spirv::StructType>()) {
@@ -1374,12 +1417,14 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
   SmallVector<std::pair<Block *, Operation::operand_iterator>, 4> predecessors;
   for (Block *predecessor : block->getPredecessors()) {
     auto *terminator = predecessor->getTerminator();
-    // Check whether this predecessor block contains a structured control flow
-    // op. If so, the structured control flow op will be serialized to multiple
-    // SPIR-V blocks. The branch op jumping to the OpPhi's block then resides in
-    // the last structured control flow op's merge block.
-    if (auto *merge = getLastStructuredControlFlowOpMergeBlock(predecessor))
-      predecessor = merge;
+    // The predecessor here is the immediate one according to MLIR's IR
+    // structure. It does not directly map to the incoming parent block for the
+    // OpPhi instructions at SPIR-V binary level. This is because structured
+    // control flow ops are serialized to multiple SPIR-V blocks. If there is a
+    // spv.selection/spv.loop op in the MLIR predecessor block, the branch op
+    // jumping to the OpPhi's block then resides in the previous structured
+    // control flow op's merge block.
+    predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
       predecessors.emplace_back(predecessor, branchOp.operand_begin());
     } else {
@@ -1400,6 +1445,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     LLVM_DEBUG(llvm::dbgs() << "[phi] for block argument #" << argIndex << ' '
                             << arg << " (id = " << phiID << ")\n");
 
+    // Prepare the (value <id>, parent block <id>) pairs.
     SmallVector<uint32_t, 8> phiArgs;
     phiArgs.push_back(phiTypeID);
     phiArgs.push_back(phiID);
@@ -1499,16 +1545,9 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // afterwards.
   encodeInstructionInto(functionBody, spirv::Opcode::OpBranch, {headerID});
 
-  // We omit the LoopOp's entry block and start serialization from the loop
-  // header block. The entry block should not contain any additional ops other
-  // than a single spv.Branch that jumps to the loop header block. However,
-  // the spv.Branch can contain additional block arguments. Those block
-  // arguments must come from out of the loop using implicit capture. We will
-  // need to query the <id> for the value sent and the <id> for the incoming
-  // parent block. For the latter, we need to make sure this block is
-  // registered. The value sent should come from the block this loop resides in.
-  blockIDMap[loopOp.getEntryBlock()] =
-      getBlockID(loopOp.getOperation()->getBlock());
+  // LoopOp's entry block is just there for satisfying MLIR's structural
+  // requirements so we omit it and start serialization from the loop header
+  // block.
 
   // Emit the loop header block, which dominates all other blocks, first. We
   // need to emit an OpLoopMerge instruction before the loop header block's

@@ -245,6 +245,7 @@ public:
   }
 
   DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
+  DenseMap<unsigned, unsigned> EHPrologueOffsetInRegs;
 
   void setPreservesR0() { PreservesR0 = true; }
   bool getPreservesR0() const { return PreservesR0; }

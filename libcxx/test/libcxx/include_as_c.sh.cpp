@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// We're building as C, so this test doesn't work when building with modules.
+// UNSUPPORTED: -fmodules
+
 // Test that the C wrapper headers can be included when compiling them as C.
 
 // NOTE: It's not common or recommended to have libc++ in the header search

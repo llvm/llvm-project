@@ -71,20 +71,24 @@ using Canceler = std::function<void()>;
 
 /// Defines a new task whose cancellation may be requested.
 /// The returned Context defines the scope of the task.
-/// When the context is active, isCancelled() is false until the Canceler is
-/// invoked, and true afterwards.
-std::pair<Context, Canceler> cancelableTask();
+/// When the context is active, isCancelled() is 0 until the Canceler is
+/// invoked, and equal to Reason afterwards.
+/// Conventionally, Reason may be the LSP error code to return.
+std::pair<Context, Canceler> cancelableTask(int Reason = 1);
 
-/// True if the current context is within a cancelable task which was cancelled.
+/// If the current context is within a cancelled task, returns the reason.
 /// (If the context is within multiple nested tasks, true if any are cancelled).
-/// Always false if there is no active cancelable task.
+/// Always zero if there is no active cancelable task.
 /// This isn't free (context lookup) - don't call it in a tight loop.
-bool isCancelled(const Context &Ctx = Context::current());
+int isCancelled(const Context &Ctx = Context::current());
 
 /// Conventional error when no result is returned due to cancellation.
 class CancelledError : public llvm::ErrorInfo<CancelledError> {
 public:
   static char ID;
+  const int Reason;
+
+  CancelledError(int Reason) : Reason(Reason) {}
 
   void log(llvm::raw_ostream &OS) const override {
     OS << "Task was cancelled.";

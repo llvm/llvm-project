@@ -505,7 +505,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       case eEncodingIsTypedefUID:
         m_compiler_type = encoding_type->GetForwardCompilerType().CreateTypedef(
             m_name.AsCString("__lldb_invalid_typedef_name"),
-            GetSymbolFile()->GetDeclContextContainingUID(GetID()));
+            GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
         m_name.Clear();
         break;
 
@@ -563,7 +563,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsTypedefUID:
           m_compiler_type = void_compiler_type.CreateTypedef(
               m_name.AsCString("__lldb_invalid_typedef_name"),
-              GetSymbolFile()->GetDeclContextContainingUID(GetID()));
+              GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
           break;
 
         case eEncodingIsPointerUID:

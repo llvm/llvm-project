@@ -1636,7 +1636,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   if (match(&Inst, m_c_BinOp(m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(),
                                                       m_Mask(Mask))),
                              m_Constant(C))) &&
-      V1->getType()->getVectorNumElements() <= NumElts) {
+      cast<VectorType>(V1->getType())->getNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
 
@@ -1647,7 +1647,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
     ArrayRef<int> ShMask = Mask;
-    unsigned SrcVecNumElts = V1->getType()->getVectorNumElements();
+    unsigned SrcVecNumElts = cast<VectorType>(V1->getType())->getNumElements();
     UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
     SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
     bool MayChange = true;
@@ -1854,12 +1854,16 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
+  bool IsGEPSrcEleScalable =
+      GEPEltType->isVectorTy() && cast<VectorType>(GEPEltType)->isScalable();
   if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.
-  if (GEP.getType()->isVectorTy()) {
-    auto VWidth = GEP.getType()->getVectorNumElements();
+  // Skip if GEP return type is scalable. The number of elements is unknown at
+  // compile-time.
+  if (GEPType->isVectorTy() && !cast<VectorType>(GEPType)->isScalable()) {
+    auto VWidth = cast<VectorType>(GEPType)->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
@@ -1871,7 +1875,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
     // TODO: 1) Scalarize splat operands, 2) scalarize entire instruction if
     // possible (decide on canonical form for pointer broadcast), 3) exploit
-    // undef elements to decrease demanded bits  
+    // undef elements to decrease demanded bits
   }
 
   Value *PtrOp = GEP.getOperand(0);
@@ -1895,13 +1899,14 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *IndexTy = (*I)->getType();
     Type *NewIndexType =
         IndexTy->isVectorTy()
-            ? VectorType::get(NewScalarIndexTy, IndexTy->getVectorNumElements())
+            ? VectorType::get(NewScalarIndexTy,
+                              cast<VectorType>(IndexTy)->getElementCount())
             : NewScalarIndexTy;
 
     // If the element type has zero size then any index over it is equivalent
     // to an index of zero, so replace it with zero if it is not zero already.
     Type *EltTy = GTI.getIndexedType();
-    if (EltTy->isSized() && DL.getTypeAllocSize(EltTy) == 0)
+    if (EltTy->isSized() && DL.getTypeAllocSize(EltTy).isZero())
       if (!isa<Constant>(*I) || !match(I->get(), m_Zero())) {
         *I = Constant::getNullValue(NewIndexType);
         MadeChange = true;
@@ -2145,11 +2150,13 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                              GEP.getName());
   }
 
-  if (GEP.getNumIndices() == 1) {
+  // Skip if GEP source element type is scalable. The type alloc size is unknown
+  // at compile-time.
+  if (GEP.getNumIndices() == 1 && !IsGEPSrcEleScalable) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType);
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
 
       bool Matched = false;
       uint64_t C;
@@ -2262,10 +2269,12 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
         }
       }
-    } else if (GEP.getNumOperands() == 2) {
-      // Transform things like:
-      // %t = getelementptr i32* bitcast ([2 x i32]* %str to i32*), i32 %V
-      // into:  %t1 = getelementptr [2 x i32]* %str, i32 0, i32 %V; bitcast
+    } else if (GEP.getNumOperands() == 2 && !IsGEPSrcEleScalable) {
+      // Skip if GEP source element type is scalable. The type alloc size is
+      // unknown at compile-time.
+      // Transform things like: %t = getelementptr i32*
+      // bitcast ([2 x i32]* %str to i32*), i32 %V into:  %t1 = getelementptr [2
+      // x i32]* %str, i32 0, i32 %V; bitcast
       if (StrippedPtrEltTy->isArrayTy() &&
           DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType()) ==
               DL.getTypeAllocSize(GEPEltType)) {
@@ -2289,8 +2298,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
-        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy).getFixedSize();
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2329,9 +2338,10 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           StrippedPtrEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
         uint64_t ArrayEltSize =
-            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType());
+            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
+                .getFixedSize();
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2390,8 +2400,9 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
     auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy,
                                           const DataLayout &DL) {
-      return ArrTy->getArrayElementType() == VecTy->getVectorElementType() &&
-             ArrTy->getArrayNumElements() == VecTy->getVectorNumElements() &&
+      auto *VecVTy = cast<VectorType>(VecTy);
+      return ArrTy->getArrayElementType() == VecVTy->getElementType() &&
+             ArrTy->getArrayNumElements() == VecVTy->getNumElements() &&
              DL.getTypeAllocSize(ArrTy) == DL.getTypeAllocSize(VecTy);
     };
     if (GEP.getNumOperands() == 3 &&
@@ -2478,7 +2489,9 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (auto *AI = dyn_cast<AllocaInst>(UnderlyingPtrOp)) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
-        APInt AllocSize(IdxWidth, DL.getTypeAllocSize(AI->getAllocatedType()));
+        APInt AllocSize(
+            IdxWidth,
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, makeArrayRef(Ops).slice(1),
@@ -2707,7 +2720,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : *FreeInstrBB) {
+    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
       if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);

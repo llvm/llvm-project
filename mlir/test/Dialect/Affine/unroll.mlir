@@ -1,7 +1,7 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-full | FileCheck %s --check-prefix UNROLL-FULL
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-full -unroll-full-threshold=2 | FileCheck %s --check-prefix SHORT
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-factor=4 | FileCheck %s --check-prefix UNROLL-BY-4
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll -unroll-factor=1 | FileCheck %s --check-prefix UNROLL-BY-1
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full" | FileCheck %s --check-prefix UNROLL-FULL
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full unroll-full-threshold=2" | FileCheck %s --check-prefix SHORT
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=4" | FileCheck %s --check-prefix UNROLL-BY-4
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=1" | FileCheck %s --check-prefix UNROLL-BY-1
 
 // UNROLL-FULL-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
@@ -501,7 +501,7 @@ func @loop_nest_symbolic_bound(%N : index) {
     // A cleanup loop will be be generated here.
     // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]+}}()[%arg0] to %arg0 {
     // UNROLL-BY-4-NEXT: %0 = "foo"() : () -> i32
-    // UNROLL-BY-4_NEXT: }
+    // UNROLL-BY-4-NEXT: }
     affine.for %j = 0 to %N {
       %x = "foo"() : () -> i32
     }
@@ -526,7 +526,7 @@ func @loop_nest_symbolic_bound_with_step(%N : index) {
 // A cleanup loop will be be generated here.
 // UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]+}}()[%[[N]]] to %[[N]] step 3 {
 // UNROLL-BY-4-NEXT:   "foo"()
-// UNROLL-BY-4_NEXT: }
+// UNROLL-BY-4-NEXT: }
   }
   return
 }

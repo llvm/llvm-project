@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify | FileCheck %s
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify=false | FileCheck %s --check-prefix INLINE_SIMPLIFY
+// RUN: mlir-opt %s -inline="disable-simplify" | FileCheck %s
+// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
+// RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
 func @func_with_arg(%c : i32) -> i32 {

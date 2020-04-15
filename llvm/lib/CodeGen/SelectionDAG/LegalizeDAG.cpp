@@ -933,7 +933,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                              Result.getValueType(),
                              Result, DAG.getValueType(SrcVT));
       else
-        ValRes = DAG.getZeroExtendInReg(Result, dl, SrcVT.getScalarType());
+        ValRes = DAG.getZeroExtendInReg(Result, dl, SrcVT);
       Value = ValRes;
       Chain = Result.getValue(1);
       break;
@@ -3531,8 +3531,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Overflow = DAG.getSetCC(dl, SetCCType, Sum, LHS, CC);
 
     // Add of the sum and the carry.
+    SDValue One = DAG.getConstant(1, dl, VT);
     SDValue CarryExt =
-        DAG.getZeroExtendInReg(DAG.getZExtOrTrunc(Carry, dl, VT), dl, MVT::i1);
+        DAG.getNode(ISD::AND, dl, VT, DAG.getZExtOrTrunc(Carry, dl, VT), One);
     SDValue Sum2 = DAG.getNode(Op, dl, VT, Sum, CarryExt);
 
     // Second check for overflow. If we are adding, we can only overflow if the
