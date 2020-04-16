@@ -240,26 +240,6 @@ bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {
   return BeginFID.isValid() && BeginFID == EndFID && BeginOffset <= EndOffset;
 }
 
-bool halfOpenRangeContains(const SourceManager &Mgr, SourceRange R,
-                           SourceLocation L) {
-  assert(isValidFileRange(Mgr, R));
-
-  FileID BeginFID;
-  size_t BeginOffset = 0;
-  std::tie(BeginFID, BeginOffset) = Mgr.getDecomposedLoc(R.getBegin());
-  size_t EndOffset = Mgr.getFileOffset(R.getEnd());
-
-  FileID LFid;
-  size_t LOffset;
-  std::tie(LFid, LOffset) = Mgr.getDecomposedLoc(L);
-  return BeginFID == LFid && BeginOffset <= LOffset && LOffset < EndOffset;
-}
-
-bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
-                          SourceLocation L) {
-  return L == R.getEnd() || halfOpenRangeContains(Mgr, R, L);
-}
-
 SourceLocation includeHashLoc(FileID IncludedFile, const SourceManager &SM) {
   assert(SM.getLocForEndOfFile(IncludedFile).isFileID());
   FileID IncludingFile;
@@ -556,11 +536,6 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
       halfOpenToRange(M, Lexer::makeFileCharRange(FixIt.RemoveRange, M, L));
   Result.newText = FixIt.CodeToInsert;
   return Result;
-}
-
-bool isRangeConsecutive(const Range &Left, const Range &Right) {
-  return Left.end.line == Right.start.line &&
-         Left.end.character == Right.start.character;
 }
 
 FileDigest digest(llvm::StringRef Content) {
