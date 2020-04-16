@@ -20,6 +20,8 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
@@ -1682,6 +1684,9 @@ LLVMDialect::~LLVMDialect() {}
 
 llvm::LLVMContext &LLVMDialect::getLLVMContext() { return impl->llvmContext; }
 llvm::Module &LLVMDialect::getLLVMModule() { return impl->module; }
+llvm::sys::SmartMutex<true> &LLVMDialect::getLLVMContextMutex() {
+  return impl->mutex;
+}
 
 /// Parse a type registered to this dialect.
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {
@@ -1970,4 +1975,17 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
+}
+
+std::unique_ptr<llvm::Module>
+mlir::LLVM::cloneModuleIntoNewContext(llvm::LLVMContext *context,
+                                      llvm::Module *module) {
+  SmallVector<char, 1> buffer;
+  {
+    llvm::raw_svector_ostream os(buffer);
+    WriteBitcodeToFile(*module, os);
+  }
+  llvm::MemoryBufferRef bufferRef(StringRef(buffer.data(), buffer.size()),
+                                  "cloned module buffer");
+  return cantFail(parseBitcodeFile(bufferRef, *context));
 }
