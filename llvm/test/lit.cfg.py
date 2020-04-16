@@ -146,10 +146,10 @@ tools = [
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
 tools.extend([
     'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as',
-    'llvm-bcanalyzer', 'llvm-config', 'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres',
-    'llvm-diff', 'llvm-dis', 'llvm-dwarfdump', 'llvm-exegesis', 'llvm-extract',
-    'llvm-isel-fuzzer', 'llvm-ifs', 'llvm-install-name-tool',
-    'llvm-jitlink', 'llvm-opt-fuzzer', 'llvm-lib',
+    'llvm-addr2line', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
+    'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis', 'llvm-dwarfdump',
+    'llvm-exegesis', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-ifs',
+    'llvm-install-name-tool', 'llvm-jitlink', 'llvm-opt-fuzzer', 'llvm-lib',
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
