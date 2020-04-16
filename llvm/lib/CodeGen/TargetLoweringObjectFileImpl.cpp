@@ -1966,6 +1966,40 @@ MCSection *TargetLoweringObjectFileWasm::getStaticDtorSection(
 //===----------------------------------------------------------------------===//
 //                                  XCOFF
 //===----------------------------------------------------------------------===//
+MCSymbol *
+TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
+                                               const TargetMachine &TM) const {
+  if (TM.getDataSections())
+    report_fatal_error("XCOFF unique data sections not yet implemented");
+
+  // We always use a qualname symbol for a GV that represents
+  // a declaration, a function descriptor, or a common symbol.
+  // It is inherently ambiguous when the GO represents the address of a
+  // function, as the GO could either represent a function descriptor or a
+  // function entry point. We choose to always return a function descriptor
+  // here.
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(GV)) {
+    if (GO->isDeclaration())
+      return cast<MCSectionXCOFF>(getSectionForExternalReference(GO, TM))
+          ->getQualNameSymbol();
+
+    SectionKind GOKind = getKindForGlobal(GO, TM);
+    if (GOKind.isText())
+      return cast<MCSectionXCOFF>(
+                 getSectionForFunctionDescriptor(cast<Function>(GO), TM))
+          ->getQualNameSymbol();
+    if (GOKind.isCommon() || GOKind.isBSSLocal())
+      return cast<MCSectionXCOFF>(SectionForGlobal(GO, GOKind, TM))
+          ->getQualNameSymbol();
+  }
+
+  // For all other cases, fall back to getSymbol to return the unqualified name.
+  // This could change for a GV that is a GlobalVariable when we decide to
+  // support -fdata-sections since we could avoid having label symbols if the
+  // linkage name is applied to the csect symbol.
+  return nullptr;
+}
+
 MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   report_fatal_error("XCOFF explicit sections not yet implemented.");
