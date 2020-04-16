@@ -2,7 +2,6 @@
 # variable `b`, which is `local` and not `static`.
 
 # REQUIRES: x86
-# UNSUPPORTED: lldb-repro
 
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.15.0 -filetype=obj %s > %t.o
 # RUN: lldb-test symbols %t.o | FileCheck %s
