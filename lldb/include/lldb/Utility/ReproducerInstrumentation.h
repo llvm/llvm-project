@@ -33,6 +33,11 @@ inline void stringify_append(llvm::raw_string_ostream &ss, const T &t) {
 }
 
 template <typename T>
+inline void stringify_append(llvm::raw_string_ostream &ss, T *t) {
+  ss << reinterpret_cast<void *>(t);
+}
+
+template <typename T>
 inline void stringify_append(llvm::raw_string_ostream &ss, const T *t) {
   ss << reinterpret_cast<const void *>(t);
 }
@@ -115,7 +120,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 
 #define LLDB_CONSTRUCT_(T, ...)                                                \
   lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
-                                          stringify_args(__VA_ARGS__));        \
+                                          stringify_args(this, __VA_ARGS__));  \
   if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
