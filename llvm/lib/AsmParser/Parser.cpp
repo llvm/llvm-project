@@ -17,9 +17,9 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <system_error>
+
 using namespace llvm;
 
 bool llvm::parseAssemblyInto(MemoryBufferRef F, Module *M,
