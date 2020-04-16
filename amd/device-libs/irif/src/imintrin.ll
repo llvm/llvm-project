@@ -645,6 +645,16 @@ bb:
 declare void @llvm.amdgcn.image.store.mip.2darray.f32.i32(float, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #3
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_1d_v4f32_f32(float %arg1, <8 x i32> %arg2, <4 x i32> %arg3) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %arg1, <8 x i32> %arg2, <4 x i32> %arg3, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_1d_v4f32_f32(float %arg1, <8 x i32> %arg2, <4 x i32> %arg3) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32(i32 15, float %arg1, <8 x i32> %arg2, <4 x i32> %arg3, i1 false, i32 0, i32 0) #1
@@ -673,6 +683,16 @@ bb:
 
 ; Function Attrs: nounwind readonly
 declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_2d_v4f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_2d_v4f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
@@ -705,6 +725,16 @@ bb:
 declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_3d_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_3d_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.lz.3d.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
@@ -735,6 +765,16 @@ bb:
 declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_cube_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_cube_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.lz.cube.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
@@ -756,6 +796,16 @@ declare <4 x float> @llvm.amdgcn.image.sample.l.cube.v4f32.f32(i32, float, float
 
 ; Function Attrs: nounwind readonly
 declare <4 x float> @llvm.amdgcn.image.sample.d.cube.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_1darray_v4f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_1darray_v4f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
@@ -788,6 +838,16 @@ bb:
 declare <4 x float> @llvm.amdgcn.image.sample.d.1darray.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x float> @__llvm_amdgcn_image_sample_2darray_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x float> @__llvm_amdgcn_image_sample_lz_2darray_v4f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x float> @llvm.amdgcn.image.sample.lz.2darray.v4f32.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
@@ -816,6 +876,16 @@ bb:
 
 ; Function Attrs: nounwind readonly
 declare <4 x float> @llvm.amdgcn.image.sample.d.2darray.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_1d_v4f16_f32(float %arg1, <8 x i32> %arg2, <4 x i32> %arg3) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.1d.v4f16.f32(i32 15, float %arg1, <8 x i32> %arg2, <4 x i32> %arg3, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.1d.v4f16.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_1d_v4f16_f32(float %arg1, <8 x i32> %arg2, <4 x i32> %arg3) local_unnamed_addr #0 {
@@ -848,6 +918,16 @@ bb:
 declare <4 x half> @llvm.amdgcn.image.sample.d.1d.v4f16.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_2d_v4f16_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.2d.v4f16.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.2d.v4f16.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_2d_v4f16_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.lz.2d.v4f16.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
@@ -876,6 +956,16 @@ bb:
 
 ; Function Attrs: nounwind readonly
 declare <4 x half> @llvm.amdgcn.image.sample.d.2d.v4f16.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_3d_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.3d.v4f16.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.3d.v4f16.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_3d_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
@@ -908,6 +998,16 @@ bb:
 declare <4 x half> @llvm.amdgcn.image.sample.d.3d.v4f16.f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_cube_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.cube.v4f16.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.cube.v4f16.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_cube_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
 bb:
   %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.lz.cube.v4f16.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
@@ -929,6 +1029,16 @@ declare <4 x half> @llvm.amdgcn.image.sample.l.cube.v4f16.f32(i32, float, float,
 
 ; Function Attrs: nounwind readonly
 declare <4 x half> @llvm.amdgcn.image.sample.d.cube.v4f16.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_1darray_v4f16_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.1darray.v4f16.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.1darray.v4f16.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_1darray_v4f16_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
@@ -959,6 +1069,16 @@ bb:
 
 ; Function Attrs: nounwind readonly
 declare <4 x half> @llvm.amdgcn.image.sample.d.1darray.v4f16.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected <4 x half> @__llvm_amdgcn_image_sample_2darray_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.2darray.v4f16.f32(i32 15, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret <4 x half> %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare <4 x half> @llvm.amdgcn.image.sample.2darray.v4f16.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_lz_2darray_v4f16_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
@@ -998,6 +1118,16 @@ declare float @llvm.amdgcn.image.sample.l.1d.f32.f32(i32, float, float, <8 x i32
 
 ; Function Attrs: nounwind readonly
 declare float @llvm.amdgcn.image.sample.d.1d.f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected float @__llvm_amdgcn_image_sample_2d_f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret float %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected float @__llvm_amdgcn_image_sample_lz_2d_f32_f32(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
@@ -1055,6 +1185,16 @@ declare float @llvm.amdgcn.image.sample.l.1darray.f32.f32(i32, float, float, flo
 
 ; Function Attrs: nounwind readonly
 declare float @llvm.amdgcn.image.sample.d.1darray.f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
+; Function Attrs: alwaysinline nounwind readonly
+define protected float @__llvm_amdgcn_image_sample_2darray_f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call float @llvm.amdgcn.image.sample.2darray.f32.f32(i32 1, float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5, i1 false, i32 0, i32 0) #1
+  ret float %tmp
+}
+
+; Function Attrs: nounwind readonly
+declare float @llvm.amdgcn.image.sample.2darray.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define protected float @__llvm_amdgcn_image_sample_lz_2darray_f32_f32(float %arg1, float %arg2, float %arg3, <8 x i32> %arg4, <4 x i32> %arg5) local_unnamed_addr #0 {
