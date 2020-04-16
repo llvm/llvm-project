@@ -185,7 +185,7 @@ declare void @llvm.assume(i1)
 define i8* @test10(i8* %a, i64 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@test10
 ; CHECK-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]])
-; CHECK-NEXT:    call void @llvm.assume(i1 undef)
+; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; CHECK-NEXT:    ret i8* [[B]]
 ;
