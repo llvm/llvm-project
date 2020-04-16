@@ -757,7 +757,7 @@ public:
     /// For direct/indirect calls the parameter encoding is empty. If it is not,
     /// the abstract call site represents a callback. In that case, the first
     /// element of the encoding vector represents which argument of the call
-    /// site CS is the callback callee. The remaining elements map parameters
+    /// site CB is the callback callee. The remaining elements map parameters
     /// (identified by their position) to the arguments that will be passed
     /// through (also identified by position but in the call site instruction).
     ///
@@ -774,7 +774,7 @@ private:
   /// The underlying call site:
   ///   caller -> callee,             if this is a direct or indirect call site
   ///   caller -> broker function,    if this is a callback call site
-  CallSite CS;
+  CallBase *CB;
 
   /// The encoding of a callback with regards to the underlying instruction.
   CallbackInfo CI;
@@ -802,26 +802,23 @@ public:
   ///
   /// All uses added to \p CBUses can be used to create abstract call sites for
   /// which AbstractCallSite::isCallbackCall() will return true.
-  static void getCallbackUses(ImmutableCallSite ICS,
-                              SmallVectorImpl<const Use *> &CBUses);
+  static void getCallbackUses(const CallBase &CB,
+                              SmallVectorImpl<const Use *> &CallbackUses);
 
   /// Conversion operator to conveniently check for a valid/initialized ACS.
-  explicit operator bool() const { return (bool)CS; }
+  explicit operator bool() const { return CB != nullptr; }
 
   /// Return the underlying instruction.
-  Instruction *getInstruction() const { return CS.getInstruction(); }
-
-  /// Return the call site abstraction for the underlying instruction.
-  CallSite getCallSite() const { return CS; }
+  CallBase *getInstruction() const { return CB; }
 
   /// Return true if this ACS represents a direct call.
   bool isDirectCall() const {
-    return !isCallbackCall() && !CS.isIndirectCall();
+    return !isCallbackCall() && !CB->isIndirectCall();
   }
 
   /// Return true if this ACS represents an indirect call.
   bool isIndirectCall() const {
-    return !isCallbackCall() && CS.isIndirectCall();
+    return !isCallbackCall() && CB->isIndirectCall();
   }
 
   /// Return true if this ACS represents a callback call.
@@ -839,18 +836,18 @@ public:
   /// Return true if @p U is the use that defines the callee of this ACS.
   bool isCallee(const Use *U) const {
     if (isDirectCall())
-      return CS.isCallee(U);
+      return CB->isCallee(U);
 
     assert(!CI.ParameterEncoding.empty() &&
            "Callback without parameter encoding!");
 
-    return (int)CS.getArgumentNo(U) == CI.ParameterEncoding[0];
+    return (int)CB->getArgOperandNo(U) == CI.ParameterEncoding[0];
   }
 
   /// Return the number of parameters of the callee.
   unsigned getNumArgOperands() const {
     if (isDirectCall())
-      return CS.getNumArgOperands();
+      return CB->getNumArgOperands();
     // Subtract 1 for the callee encoding.
     return CI.ParameterEncoding.size() - 1;
   }
@@ -879,10 +876,10 @@ public:
   /// function parameter number @p ArgNo or nullptr if there is none.
   Value *getCallArgOperand(unsigned ArgNo) const {
     if (isDirectCall())
-      return CS.getArgOperand(ArgNo);
+      return CB->getArgOperand(ArgNo);
     // Add 1 for the callee encoding.
     return CI.ParameterEncoding[ArgNo + 1] >= 0
-               ? CS.getArgOperand(CI.ParameterEncoding[ArgNo + 1])
+               ? CB->getArgOperand(CI.ParameterEncoding[ArgNo + 1])
                : nullptr;
   }
 
@@ -906,8 +903,8 @@ public:
   /// Return the pointer to function that is being called.
   Value *getCalledValue() const {
     if (isDirectCall())
-      return CS.getCalledValue();
-    return CS.getArgOperand(getCallArgOperandNoForCallee());
+      return CB->getCalledValue();
+    return CB->getArgOperand(getCallArgOperandNoForCallee());
   }
 
   /// Return the function being called if this is a direct call, otherwise
