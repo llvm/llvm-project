@@ -134,7 +134,7 @@ body: |
 # instructions to fix vccz.
 
 # CHECK-LABEL: name: inlineasm_def_vcc_lo
-# CHECK: INLINEASM &"; def vcc_lo", 1, 10, implicit-def $vcc_lo
+# CHECK: INLINEASM &"; def vcc_lo", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vcc_lo
 # SI:    $vcc = S_MOV_B64 $vcc
 # GFX9:  $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
@@ -152,7 +152,7 @@ body: |
 # inserted to fix vccz.
 
 # CHECK-LABEL: name: inlineasm_def_vcc
-# CHECK: INLINEASM &"; def vcc", 1, 10, implicit-def $vcc
+# CHECK: INLINEASM &"; def vcc", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vcc
 # CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
 
 name: inlineasm_def_vcc

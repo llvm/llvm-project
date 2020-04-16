@@ -1669,15 +1669,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       // Pretty print the inline asm operand descriptor.
       OS << '$' << AsmOpCount++;
       unsigned Flag = MO.getImm();
-      switch (InlineAsm::getKind(Flag)) {
-      case InlineAsm::Kind_RegUse:             OS << ":[reguse"; break;
-      case InlineAsm::Kind_RegDef:             OS << ":[regdef"; break;
-      case InlineAsm::Kind_RegDefEarlyClobber: OS << ":[regdef-ec"; break;
-      case InlineAsm::Kind_Clobber:            OS << ":[clobber"; break;
-      case InlineAsm::Kind_Imm:                OS << ":[imm"; break;
-      case InlineAsm::Kind_Mem:                OS << ":[mem"; break;
-      default: OS << ":[??" << InlineAsm::getKind(Flag); break;
-      }
+      OS << ":[";
+      OS << InlineAsm::getKindName(InlineAsm::getKind(Flag));
 
       unsigned RCID = 0;
       if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
@@ -1690,29 +1683,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       if (InlineAsm::isMemKind(Flag)) {
         unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
-        switch (MCID) {
-        case InlineAsm::Constraint_es: OS << ":es"; break;
-        case InlineAsm::Constraint_i:  OS << ":i"; break;
-        case InlineAsm::Constraint_m:  OS << ":m"; break;
-        case InlineAsm::Constraint_o:  OS << ":o"; break;
-        case InlineAsm::Constraint_v:  OS << ":v"; break;
-        case InlineAsm::Constraint_Q:  OS << ":Q"; break;
-        case InlineAsm::Constraint_R:  OS << ":R"; break;
-        case InlineAsm::Constraint_S:  OS << ":S"; break;
-        case InlineAsm::Constraint_T:  OS << ":T"; break;
-        case InlineAsm::Constraint_Um: OS << ":Um"; break;
-        case InlineAsm::Constraint_Un: OS << ":Un"; break;
-        case InlineAsm::Constraint_Uq: OS << ":Uq"; break;
-        case InlineAsm::Constraint_Us: OS << ":Us"; break;
-        case InlineAsm::Constraint_Ut: OS << ":Ut"; break;
-        case InlineAsm::Constraint_Uv: OS << ":Uv"; break;
-        case InlineAsm::Constraint_Uy: OS << ":Uy"; break;
-        case InlineAsm::Constraint_X:  OS << ":X"; break;
-        case InlineAsm::Constraint_Z:  OS << ":Z"; break;
-        case InlineAsm::Constraint_ZC: OS << ":ZC"; break;
-        case InlineAsm::Constraint_Zy: OS << ":Zy"; break;
-        default: OS << ":?"; break;
-        }
+        OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }
 
       unsigned TiedTo = 0;

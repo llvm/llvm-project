@@ -152,9 +152,10 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string createMIROperandComment(const MachineInstr &MI,
-                                      const MachineOperand &Op,
-                                      unsigned OpIdx) const override;
+  std::string
+  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
+                          unsigned OpIdx,
+                          const TargetRegisterInfo *TRI) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
