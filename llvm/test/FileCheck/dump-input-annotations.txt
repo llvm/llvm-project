@@ -494,3 +494,64 @@
 ; LAB-NEXT:    label:3'0     ~~~
 ; LAB-NEXT:    >>>>>>
 ; LAB-NOT:     {{.}}
+
+;--------------------------------------------------
+; --implicit-check-not
+;
+; The first two --implicit-check-not patterns have no match (success).  The
+; third has an unexpected match (error).  To check per-input-line annotation
+; sorting, all of those plus the CHECK directives have annotations on the same
+; input line.
+;--------------------------------------------------
+
+; RUN: echo 'hello world again!' > %t.in
+
+; RUN: echo 'CHECK: hel' > %t.chk
+; RUN: echo 'CHECK: wor' >> %t.chk
+; RUN: echo 'CHECK: !' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=IMPNOT \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -v 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=IMPNOT,IMPNOT-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -vv 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s \
+; RUN:             -check-prefixes=IMPNOT,IMPNOT-V,IMPNOT-VV \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; IMPNOT:{{.*}}error:{{.*}}
+
+; FIXME: All occurrences of imp1, imp2, and imp3 are sorting after the first
+; directive.  They should instead be sorted by when they execute.
+
+;         IMPNOT:<<<<<<
+;    IMPNOT-NEXT:          1: hello world again!
+;  IMPNOT-V-NEXT:check:1      ^~~
+; IMPNOT-VV-NEXT:not:imp1     X
+; IMPNOT-VV-NEXT:not:imp2     X
+; IMPNOT-VV-NEXT:not:imp3     X
+; IMPNOT-VV-NEXT:not:imp1        X~~
+; IMPNOT-VV-NEXT:not:imp2        X~~
+; IMPNOT-VV-NEXT:not:imp3        X~~
+; IMPNOT-VV-NEXT:not:imp1              X~~~~~~~
+; IMPNOT-VV-NEXT:not:imp2              X~~~~~~~
+;    IMPNOT-NEXT:not:imp3                 !~~~~  error: no match expected
+;  IMPNOT-V-NEXT:check:2            ^~~
+;  IMPNOT-V-NEXT:check:3                       ^
+;    IMPNOT-NEXT:>>>>>>
+;     IMPNOT-NOT:{{.}}

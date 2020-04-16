@@ -1069,16 +1069,13 @@ FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
                              const Check::FileCheckType &CheckTy,
                              SMLoc CheckLoc, MatchType MatchTy,
                              SMRange InputRange)
-    : CheckTy(CheckTy), MatchTy(MatchTy) {
+    : CheckTy(CheckTy), CheckLoc(CheckLoc), MatchTy(MatchTy) {
   auto Start = SM.getLineAndColumn(InputRange.Start);
   auto End = SM.getLineAndColumn(InputRange.End);
   InputStartLine = Start.first;
   InputStartCol = Start.second;
   InputEndLine = End.first;
   InputEndCol = End.second;
-  Start = SM.getLineAndColumn(CheckLoc);
-  CheckLine = Start.first;
-  CheckCol = Start.second;
 }
 
 static bool IsPartOfWord(char c) {
@@ -1269,8 +1266,12 @@ FileCheck::FileCheck(FileCheckRequest Req)
 
 FileCheck::~FileCheck() = default;
 
-bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
-                              Regex &PrefixRE) {
+bool FileCheck::readCheckFile(
+    SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+    std::pair<unsigned, unsigned> *ImpPatBufferIDRange) {
+  if (ImpPatBufferIDRange)
+    ImpPatBufferIDRange->first = ImpPatBufferIDRange->second = 0;
+
   Error DefineError =
       PatternContext->defineCmdlineVariables(Req.GlobalDefines, SM);
   if (DefineError) {
@@ -1291,7 +1292,17 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
 
     StringRef PatternInBuffer =
         CmdLine->getBuffer().substr(Prefix.size(), PatternString.size());
-    SM.AddNewSourceBuffer(std::move(CmdLine), SMLoc());
+    unsigned BufferID = SM.AddNewSourceBuffer(std::move(CmdLine), SMLoc());
+    if (ImpPatBufferIDRange) {
+      if (ImpPatBufferIDRange->first == ImpPatBufferIDRange->second) {
+        ImpPatBufferIDRange->first = BufferID;
+        ImpPatBufferIDRange->second = BufferID + 1;
+      } else {
+        assert(BufferID == ImpPatBufferIDRange->second &&
+               "expected consecutive source buffer IDs");
+        ++ImpPatBufferIDRange->second;
+      }
+    }
 
     ImplicitNegativeChecks.push_back(
         Pattern(Check::CheckNot, PatternContext.get()));
