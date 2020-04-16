@@ -1775,6 +1775,10 @@ private:
     if (Tok.Next->is(tok::question))
       return false;
 
+    // `foreach((A a, B b) in someList)` should not be seen as a cast.
+    if (Tok.Next->is(Keywords.kw_in) && Style.isCSharp())
+      return false;
+
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
     if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
