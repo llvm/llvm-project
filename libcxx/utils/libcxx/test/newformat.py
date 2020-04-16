@@ -9,6 +9,7 @@
 import lit
 import os
 import pipes
+import re
 
 class CxxStandardLibraryTest(lit.formats.TestFormat):
     """
@@ -29,8 +30,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
     FOO.link.pass.cpp       - Compiles and links successfully, run not attempted
     FOO.link.fail.cpp       - Compiles successfully, but fails to link
 
-    FOO.sh.cpp              - A builtin lit Shell test
-    FOO.sh.s                - A builtin lit Shell test
+    FOO.sh.<anything>       - A builtin Lit Shell test
 
     FOO.verify.cpp          - Compiles with clang-verify
 
@@ -87,12 +87,12 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         - It is unknown how well it works on Windows yet.
     """
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
-        SUPPORTED_SUFFIXES = ['.pass.cpp', '.pass.mm', '.run.fail.cpp',
-                              '.compile.pass.cpp', '.compile.fail.cpp',
-                              '.link.pass.cpp', '.link.fail.cpp',
-                              '.sh.cpp', '.sh.s',
-                              '.verify.cpp',
-                              '.fail.cpp']
+        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$', '[.]run[.]fail[.]cpp$',
+                              '[.]compile[.]pass[.]cpp$', '[.]compile[.]fail[.]cpp$',
+                              '[.]link[.]pass[.]cpp$', '[.]link[.]fail[.]cpp$',
+                              '[.]sh[.][^.]+$',
+                              '[.]verify[.]cpp$',
+                              '[.]fail[.]cpp$']
         sourcePath = testSuite.getSourcePath(pathInSuite)
         for filename in os.listdir(sourcePath):
             # Ignore dot files and excluded tests.
@@ -101,7 +101,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
             filepath = os.path.join(sourcePath, filename)
             if not os.path.isdir(filepath):
-                if any([filename.endswith(ext) for ext in SUPPORTED_SUFFIXES]):
+                if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
                     yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
 
     def _checkSubstitutions(self, substitutions):
@@ -136,7 +136,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         if '-fmodules' in test.config.available_features and self._disableWithModules(test, litConfig):
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
-        if filename.endswith('.sh.cpp') or filename.endswith('.sh.s'):
+        if re.search('[.]sh[.][^.]+$', filename):
             steps = [ ] # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.pass.cpp'):
