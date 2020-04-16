@@ -518,7 +518,8 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
 
     // We also won't apply canonicalizations for nodes that are not
     // isolated. This avoids potentially mutating the regions of nodes defined
-    // above, this is also a stipulation of the 'applyPatternsGreedily' driver.
+    // above, this is also a stipulation of the 'applyPatternsAndFoldGreedily'
+    // driver.
     auto *region = node->getCallableRegion();
     if (!region->getParentOp()->isKnownIsolatedFromAbove())
       continue;
