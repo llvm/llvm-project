@@ -13,12 +13,14 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/StringRef.h"
+#include <memory>
 
 namespace llvm {
 
 class Constant;
 class LLVMContext;
+class MemoryBufferRef;
 class Module;
 class ModuleSummaryIndex;
 struct SlotMapping;
