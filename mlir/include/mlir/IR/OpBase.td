@@ -1419,13 +1419,29 @@ def SymbolRefArrayAttr :
 // Note: All derived attributes should be materializable as an Attribute. E.g.,
 // do not use DerivedAttr for things that could not have been stored as
 // Attribute.
-class DerivedAttr<code ret, code b> : Attr<CPred<"true">, "derived attribute"> {
+//
+class DerivedAttr<code ret, code b, code convert = ""> :
+    Attr<CPred<"true">, "derived attribute"> {
   let returnType = ret;
   code body = b;
+
+  // Specify how to convert from the derived attribute to an attibute.
+  //
+  // ## Special placeholders
+  //
+  // Special placeholders can be used to refer to entities during conversion:
+  //
+  // * `$_builder` will be replaced by a mlir::Builder instance.
+  // * `$_ctx` will be replaced by the MLIRContext* instance.
+  // * `$_self` will be replaced with the derived attribute (value produces
+  //    `returnType`).
+  let convertFromStorage = convert;
 }
 
 // Derived attribute that returns a mlir::Type.
-class DerivedTypeAttr<code body> : DerivedAttr<"Type", body>;
+class DerivedTypeAttr<code body> : DerivedAttr<"Type", body> {
+  let convertFromStorage = "TypeAttr::get($_self)";
+}
 
 //===----------------------------------------------------------------------===//
 // Constant attribute kinds
