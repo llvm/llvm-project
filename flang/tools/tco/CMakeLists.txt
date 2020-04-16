@@ -19,6 +19,5 @@ set(LIBS
   MLIRVectorToLLVM
 )
 
-add_llvm_tool(tco tco.cpp)
-llvm_update_compile_flags(tco)
+add_flang_tool(tco tco.cpp)
 target_link_libraries(tco PRIVATE ${LIBS})
