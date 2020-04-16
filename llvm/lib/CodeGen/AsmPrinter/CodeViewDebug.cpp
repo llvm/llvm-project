@@ -310,12 +310,19 @@ static StringRef getPrettyScopeName(const DIScope *Scope) {
   return StringRef();
 }
 
-static const DISubprogram *getQualifiedNameComponents(
+const DISubprogram *CodeViewDebug::collectParentScopeNames(
     const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
   const DISubprogram *ClosestSubprogram = nullptr;
   while (Scope != nullptr) {
     if (ClosestSubprogram == nullptr)
       ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
+
+    // If a type appears in a scope chain, make sure it gets emitted. The
+    // frontend will be responsible for deciding if this should be a forward
+    // declaration or a complete type.
+    if (const auto *Ty = dyn_cast<DICompositeType>(Scope))
+      DeferredCompleteTypes.push_back(Ty);
+
     StringRef ScopeName = getPrettyScopeName(Scope);
     if (!ScopeName.empty())
       QualifiedNameComponents.push_back(ScopeName);
@@ -324,7 +331,7 @@ static const DISubprogram *getQualifiedNameComponents(
   return ClosestSubprogram;
 }
 
-static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
+static std::string formatNestedName(ArrayRef<StringRef> QualifiedNameComponents,
                                     StringRef TypeName) {
   std::string FullyQualifiedName;
   for (StringRef QualifiedNameComponent :
@@ -336,10 +343,16 @@ static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
   return FullyQualifiedName;
 }
 
-static std::string getFullyQualifiedName(const DIScope *Scope, StringRef Name) {
+std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Scope,
+                                                 StringRef Name) {
   SmallVector<StringRef, 5> QualifiedNameComponents;
-  getQualifiedNameComponents(Scope, QualifiedNameComponents);
-  return getQualifiedName(QualifiedNameComponents, Name);
+  collectParentScopeNames(Scope, QualifiedNameComponents);
+  return formatNestedName(QualifiedNameComponents, Name);
+}
+
+std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Ty) {
+  const DIScope *Scope = Ty->getScope();
+  return getFullyQualifiedName(Scope, getPrettyScopeName(Ty));
 }
 
 struct CodeViewDebug::TypeLoweringScope {
@@ -353,11 +366,6 @@ struct CodeViewDebug::TypeLoweringScope {
   }
   CodeViewDebug &CVD;
 };
-
-static std::string getFullyQualifiedName(const DIScope *Ty) {
-  const DIScope *Scope = Ty->getScope();
-  return getFullyQualifiedName(Scope, getPrettyScopeName(Ty));
-}
 
 TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   // No scope means global scope and that uses the zero index.
@@ -1477,12 +1485,12 @@ void CodeViewDebug::addToUDTs(const DIType *Ty) {
   if (!shouldEmitUdt(Ty))
     return;
 
-  SmallVector<StringRef, 5> QualifiedNameComponents;
+  SmallVector<StringRef, 5> ParentScopeNames;
   const DISubprogram *ClosestSubprogram =
-      getQualifiedNameComponents(Ty->getScope(), QualifiedNameComponents);
+      collectParentScopeNames(Ty->getScope(), ParentScopeNames);
 
   std::string FullyQualifiedName =
-      getQualifiedName(QualifiedNameComponents, getPrettyScopeName(Ty));
+      formatNestedName(ParentScopeNames, getPrettyScopeName(Ty));
 
   if (ClosestSubprogram == nullptr) {
     GlobalUDTs.emplace_back(std::move(FullyQualifiedName), Ty);
