@@ -8,6 +8,12 @@
 // AArch64 fails with:
 // void f801(S<801>): Assertion `__msan_test_shadow(&s, sizeof(s)) == -1' failed
 // XFAIL: aarch64
+// When passing huge structs by value, SystemZ uses pointers, therefore this
+// test in its present form is unfortunately not applicable.
+// ABI says: "A struct or union of any other size <snip>. Replace such an
+// argument by a pointer to the object, or to a copy where necessary to enforce
+// call-by-value semantics."
+// XFAIL: s390x
 
 #include <sanitizer/msan_interface.h>
 #include <assert.h>
