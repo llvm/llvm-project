@@ -24,6 +24,9 @@ bool AddrIsApp(void *p) {
          addr >= 0xe200000000ULL;
 #elif defined(__powerpc64__)
   return addr < 0x000100000000ULL || addr >= 0x300000000000ULL;
+#elif defined(__s390x__)
+  return addr < 0x040000000000ULL ||
+         (addr >= 0x440000000000ULL && addr < 0x500000000000);
 #elif defined(__aarch64__)
 
   struct AddrMapping {
