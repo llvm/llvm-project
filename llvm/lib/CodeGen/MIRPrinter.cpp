@@ -860,7 +860,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
                       bool ShouldPrintRegisterTies, LLT TypeToPrint,
                       bool PrintDef) {
   const MachineOperand &Op = MI.getOperand(OpIdx);
-  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx);
+  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx, TRI);
 
   switch (Op.getType()) {
   case MachineOperand::MO_Immediate:
