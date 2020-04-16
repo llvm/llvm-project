@@ -117,10 +117,10 @@ void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {
   ReplacedFunctions.insert(&OldFn);
   if (CG) {
     // Update the call graph for the newly promoted function.
-    // CG->spliceFunction(&OldFn, &NewFn);
     CallGraphNode *OldCGN = (*CG)[&OldFn];
     CallGraphNode *NewCGN = CG->getOrInsertFunction(&NewFn);
     NewCGN->stealCalledFunctionsFrom(OldCGN);
+    CG->ReplaceExternalCallEdge(OldCGN, NewCGN);
 
     // And update the SCC we're iterating as well.
     CGSCC->ReplaceNode(OldCGN, NewCGN);

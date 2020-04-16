@@ -459,7 +459,7 @@ namespace llvm {
 
       Function* func_test3 = Function::Create(
         /*Type=*/FuncTy_0,
-        /*Linkage=*/GlobalValue::ExternalLinkage,
+        /*Linkage=*/GlobalValue::InternalLinkage,
         /*Name=*/"test3", mod);
       func_test3->setCallingConv(CallingConv::C);
       AttributeList func_test3_PAL;
@@ -546,6 +546,9 @@ namespace llvm {
             BasicBlock::Create(Context, "return", func_test4, nullptr);
 
         // Block entry (label_entry_11)
+        auto *AI = new AllocaInst(func_test3->getType(), 0, "func3ptr",
+                                  label_entry_11);
+        new StoreInst(func_test3, AI, label_entry_11);
         BranchInst::Create(label_bb, label_entry_11);
 
         // Block bb (label_bb)
@@ -579,6 +582,8 @@ namespace llvm {
       unsigned NumSCCs = 0;
       unsigned NumFns = 0;
       bool SetupWorked = true;
+      unsigned NumExtCalledBefore = 0;
+      unsigned NumExtCalledAfter = 0;
 
       CallGraphUpdater CGU;
 
@@ -590,6 +595,10 @@ namespace llvm {
 
         CGPass::run();
 
+        CallGraph &CG = const_cast<CallGraph &>(SCMM.getCallGraph());
+        CallGraphNode *ExtCallingNode = CG.getExternalCallingNode();
+        NumExtCalledBefore = ExtCallingNode->size();
+
         if (SCMM.size() <= 1)
           return false;
 
@@ -600,6 +609,7 @@ namespace llvm {
         Function *Test2aF = M->getFunction("test2a");
         Function *Test2bF = M->getFunction("test2b");
         Function *Test3F = M->getFunction("test3");
+
         auto InSCC = [&](Function *Fn) {
           return llvm::any_of(SCMM, [Fn](CallGraphNode *CGN) {
             return CGN->getFunction() == Fn;
@@ -614,16 +624,41 @@ namespace llvm {
         if (!CI || CI->getCalledFunction() != Test2aF)
           return SetupWorked = false;
 
-        CI->setCalledFunction(Test3F);
+        // Create a replica of test3 and just move the blocks there.
+        Function *Test3FRepl = Function::Create(
+            /*Type=*/Test3F->getFunctionType(),
+            /*Linkage=*/GlobalValue::InternalLinkage,
+            /*Name=*/"test3repl", Test3F->getParent());
+        while (!Test3F->empty()) {
+          BasicBlock &BB = Test3F->front();
+          BB.removeFromParent();
+          BB.insertInto(Test3FRepl);
+        }
 
-        CGU.initialize(const_cast<CallGraph &>(SCMM.getCallGraph()), SCMM);
+        CGU.initialize(CG, SCMM);
+
+        // Replace test3 with the replica. This is legal as it is actually
+        // internal and the "capturing use" is not really capturing anything.
+        CGU.replaceFunctionWith(*Test3F, *Test3FRepl);
+        Test3F->replaceAllUsesWith(Test3FRepl);
+
+        // Rewrite the call in test1 to point to the replica of 3 not test2.
+        CI->setCalledFunction(Test3FRepl);
+
+        // Delete test2a and test2b and reanalyze 1 as we changed calls inside.
         CGU.removeFunction(*Test2aF);
         CGU.removeFunction(*Test2bF);
         CGU.reanalyzeFunction(*Test1F);
+
         return true;
       }
 
-      bool doFinalization(CallGraph &CG) override { return CGU.finalize(); }
+      bool doFinalization(CallGraph &CG) override {
+        CGU.finalize();
+        // We removed test2 and replaced the internal test3.
+        NumExtCalledAfter = CG.getExternalCallingNode()->size();
+        return true;
+      }
     };
 
     TEST(PassManager, CallGraphUpdater0) {
@@ -646,6 +681,8 @@ namespace llvm {
       ASSERT_EQ(P->NumSCCs, 3U);
       ASSERT_EQ(P->NumFns, 5U);
       ASSERT_EQ(M->getFunctionList().size(), 3U);
+      ASSERT_EQ(P->NumExtCalledBefore, /* test1, 2a, 2b, 3, 4 */ 5U);
+      ASSERT_EQ(P->NumExtCalledAfter, /* test1, 3repl, 4 */ 3U);
     }
   }
 }
