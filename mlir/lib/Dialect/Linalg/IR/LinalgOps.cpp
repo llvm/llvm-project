@@ -133,10 +133,11 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
       attrs.push_back(attr);
 
   auto dictAttr = DictionaryAttr::get(attrs, op.getContext());
-  p << op.getOperationName() << " " << dictAttr << " " << op.getOperands();
+  p << op.getOperationName() << " " << dictAttr;
+  p.printOptionalAttrDict(op.getAttrs(), attrNames);
+  p << " " << op.getOperands();
   if (!op.region().empty())
     p.printRegion(op.region());
-  p.printOptionalAttrDict(op.getAttrs(), attrNames);
   p << ": " << op.getOperandTypes();
   auto outputTensorTypes = op.getResultTypes();
   if (!outputTensorTypes.empty())
@@ -156,21 +157,21 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
   // The name is unimportant as we will overwrite result.attributes.
   // The core linalg traits must contain the information necessary to pass the
   // verifier.
-  if (parser.parseAttribute(dictAttr, "_", result.attributes) ||
-      parser.parseOperandList(operandsInfo))
+  if (parser.parseAttribute(dictAttr, "_", result.attributes))
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
 
+  // Optional attributes may be added.
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseOperandList(operandsInfo))
+    return failure();
+
   Region &region = *result.addRegion();
   SmallVector<Type, 8> operandTypes, regionTypes;
-  // Optional attributes may be added.
-  // Either Optional getFunAttrName() attribute or region must be specified.
-  if (!dictAttr.get(getFunAttrName()) &&
-      parser.parseOptionalRegion(region, regionOperandsInfo, regionTypes))
+  if (parser.parseRegion(region, regionOperandsInfo, regionTypes))
     return failure();
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(operandTypes))
+  if (parser.parseColonTypeList(operandTypes))
     return failure();
   // Generic ops may specify that a subset of its outputs are tensors. Such
   // outputs are specified in the result type.
@@ -183,10 +184,7 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-template <typename GenericOpType>
-static LogicalResult verifyBlockArgs(GenericOpType op, Block &block);
-
-template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
+LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   auto nOperands = op.getNumOperands();
   if (block.getNumArguments() != nOperands)
     return op.emitOpError("expected number of block arguments to match number "
@@ -205,7 +203,7 @@ template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   return success();
 }
 
-template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
+LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
   auto nOperands = op.getNumOperands();
@@ -235,81 +233,6 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
 }
 
 template <typename GenericOpType>
-static LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
-
-template <typename GenericOpType>
-static LogicalResult verifyFuncArgsGeneric(GenericOpType op,
-                                           FunctionType funType) {
-  auto res = verifyFuncArgs(op, funType);
-  if (failed(res))
-    return res;
-
-  auto nInputs = op.getNumInputs();
-  auto nOutputs = op.getNumOutputs();
-  // linalg.generic output element types are exactly the function results.
-  for (unsigned idx = 0; idx < nOutputs; ++idx) {
-    ShapedType shapedType = op.getShapedType(nInputs + idx);
-    if (funType.getResult(idx) != shapedType.getElementType())
-      return op.emitOpError("expected function result ")
-             << (idx + 1) << " of the same type as elemental type "
-             << shapedType.getElementType() << " of output " << (idx + 1);
-  }
-  return success();
-}
-
-template <> LogicalResult verifyFuncArgs(GenericOp op, FunctionType funType) {
-  auto nOperands = op.getNumOperands();
-  if (funType.getNumInputs() != nOperands)
-    return op.emitOpError(
-        "expected function arguments to match number of operands");
-  if (funType.getNumResults() != op.getNumOutputs())
-    return op.emitOpError("expected function results(")
-           << funType.getNumResults() << ") to match number of outputs("
-           << op.getNumOutputs() << ")";
-
-  // linalg.generic operands element types are exactly the first function
-  // arguments.
-  for (unsigned idx = 0; idx < nOperands; ++idx) {
-    ShapedType shapedType = op.getShapedType(idx);
-    if (funType.getInput(idx) != shapedType.getElementType())
-      return op.emitOpError("expected function argument ")
-             << (idx + 1) << " of the same type as elemental type "
-             << shapedType.getElementType() << " of operand " << (idx + 1);
-  }
-
-  return success();
-}
-
-template <>
-LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
-  auto nLoops = op.getNumLoops();
-  auto nOutputs = op.getNumOutputs();
-  auto nOperands = op.getNumOperands();
-  if (funType.getNumInputs() != nOperands + nLoops)
-    return op.emitOpError("expected function arguments to match number of "
-                          "loops + number of operands");
-  if (funType.getNumResults() != nOutputs)
-    return op.emitOpError(
-        "expected function results to match number of outputs");
-  for (unsigned i = 0; i < nLoops; ++i)
-    if (!funType.getInput(i).isIndex())
-      return op.emitOpError("expected function argument ")
-             << (i + 1) << " to be an index";
-
-  // linalg.generic operands element types are exactly the first function
-  // arguments.
-  for (unsigned idx = 0; idx < nOperands; ++idx) {
-    ShapedType shapedType = op.getShapedType(idx);
-    if (funType.getInput(idx + nLoops) != shapedType.getElementType())
-      return op.emitOpError("expected function argument ")
-             << (idx + nLoops + 1) << " of the same type as elemental type "
-             << shapedType.getElementType() << " of input " << (idx + 1);
-  }
-
-  return success();
-}
-
-template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
@@ -320,20 +243,10 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
            << " inputs (tensor or buffer) and output buffer operands";
 
   auto &region = op.region();
-  auto funOp = op.getFunction();
-  auto funType = funOp ? funOp.getType() : FunctionType();
-  if (!region.empty()) {
-    if (region.getBlocks().size() != 1)
-      return op.emitOpError("expected region with 1 block");
-    if (failed(verifyBlockArgs(op, region.getBlocks().front())))
-      return failure();
-  } else {
-    if (!funOp || !funOp.getType())
-      return op.emitOpError(
-          "expected function attribute to refer to a defined symbol");
-    if (failed(verifyFuncArgsGeneric(op, funType)))
-      return failure();
-  }
+  if (region.getBlocks().size() != 1)
+    return op.emitOpError("expected region with 1 block");
+  if (failed(verifyBlockArgs(op, region.getBlocks().front())))
+    return failure();
 
   SmallVector<AffineMap, 4> indexingMaps;
   indexingMaps.reserve(op.indexing_maps().size());

@@ -533,51 +533,11 @@ func @pooling_sum(%arg0: memref<?x?xf32>,
 //       CHECKPARALLEL:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 
-func @foo(%0: f32, %1: f32, %2: f32) -> (f32, f32) {
-  %f0 = constant 0.0 : f32
-  return %f0, %f0 : f32, f32
-}
 #accesses = [
   affine_map<(i, j, k) -> (i, j)>,
   affine_map<(i, j, k) -> (i, j, k)>,
   affine_map<(i, j, k) -> (i, k, j)>
 ]
-#trait = {
-  args_in = 1,
-  args_out = 2,
-  iterator_types = ["parallel", "parallel", "parallel"],
-  indexing_maps = #accesses,
-  fun = @foo,
-  library_call = "some_external_function_name_1",
-  doc = "B(i,j,k), C(i,k,j) = foo(A(i, j), B(i,j,k), C(i,k,j))"
-}
-func @generic_function(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.generic #trait %arg0, %arg1, %arg2:
-    memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECKLOOP-LABEL: @foo
-// CHECKLOOP-LABEL: @generic_function
-//       CHECKLOOP: loop.for %[[i:.*]] = {{.*}}
-//       CHECKLOOP:   loop.for %[[j:.*]] = {{.*}}
-//       CHECKLOOP:     loop.for %[[k:.*]] = {{.*}}
-//       CHECKLOOP:       %[[a:.*]] = load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32, #[[strided2D]]>
-//       CHECKLOOP:       %[[b:.*]] = load %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       %[[c:.*]] = load %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       %[[res:.*]]:2 = call @foo(%[[a]], %[[b]], %[[c]]) : (f32, f32, f32) -> (f32, f32)
-//       CHECKLOOP:       store %[[res]]#0, %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-
-// CHECKPARALLEL-LABEL: @foo
-// CHECKPARALLEL-LABEL: @generic_function
-//       CHECKPARALLEL: loop.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]], %[[k:[a-zA-Z0-9_]*]])
-//       CHECKPARALLEL:   %[[a:.*]] = load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32, #[[strided2D]]>
-//       CHECKPARALLEL:   %[[b:.*]] = load %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   %[[c:.*]] = load %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   %[[res:.*]]:2 = call @foo(%[[a]], %[[b]], %[[c]]) : (f32, f32, f32) -> (f32, f32)
-//       CHECKPARALLEL:   store %[[res]]#0, %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-
 #trait2 = {
   args_in = 1,
   args_out = 2,
@@ -616,52 +576,6 @@ func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: 
 //       CHECKPARALLEL:   %[[e:.*]] = addf %[[c]], %[[d]] : f32
 //       CHECKPARALLEL:   store %[[d]], %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
 //       CHECKPARALLEL:   store %[[e]], %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-
-func @indexed_foo(%i: index, %j: index, %k: index, %0: f32, %1: f32, %2: f32) -> (f32, f32) {
-  %i_int = index_cast %i: index to i32
-  %i_float = sitofp %i_int : i32 to f32
-  return %i_float, %i_float : f32, f32
-}
-#trait3 = {
-  args_in = 1,
-  args_out = 2,
-  iterator_types = ["parallel", "parallel", "parallel"],
-  indexing_maps = #accesses,
-  fun = @indexed_foo,
-  library_call = "some_external_function_name_1",
-  doc = "b(i,j,k), c(i,k,j) = foo(a(i, j), b(i,j,k), c(i,k,j))"
-}
-func @indexed_generic_function(
-         %arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-         %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-         %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.indexed_generic #trait3 %arg0, %arg1, %arg2:
-    memref<?x?xf32, offset: ?, strides: [?, 1]>,
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECKLOOP-LABEL: @indexed_foo
-// CHECKLOOP-LABEL: @indexed_generic_function
-//       CHECKLOOP: loop.for %[[i:.*]] = {{.*}}
-//       CHECKLOOP:   loop.for %[[j:.*]] = {{.*}}
-//       CHECKLOOP:     loop.for %[[k:.*]] = {{.*}}
-//       CHECKLOOP:       %[[a:.*]] = load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32, #[[strided2D]]>
-//       CHECKLOOP:       %[[b:.*]] = load %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       %[[c:.*]] = load %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       %[[res:.*]]:2 = call @indexed_foo(%[[i]], %[[j]], %[[k]], %[[a]], %[[b]], %[[c]]) : (index, index, index, f32, f32, f32) -> (f32, f32)
-//       CHECKLOOP:       store %[[res]]#0, %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKLOOP:       store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-
-// CHECKPARALLEL-LABEL: @indexed_foo
-// CHECKPARALLEL-LABEL: @indexed_generic_function
-//       CHECKPARALLEL: loop.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]], %[[k:[a-zA-Z0-9_]*]])
-//       CHECKPARALLEL:   %[[a:.*]] = load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32, #[[strided2D]]>
-//       CHECKPARALLEL:   %[[b:.*]] = load %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   %[[c:.*]] = load %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   %[[res:.*]]:2 = call @indexed_foo(%[[i]], %[[j]], %[[k]], %[[a]], %[[b]], %[[c]]) : (index, index, index, f32, f32, f32) -> (f32, f32)
-//       CHECKPARALLEL:   store %[[res]]#0, %{{.*}}[%[[i]], %[[j]], %[[k]]] : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECKPARALLEL:   store %[[res]]#1, %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, #[[strided3D]]>
 
 #trait4 = {
   args_in = 1,
