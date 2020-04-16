@@ -463,11 +463,7 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
                                           Value *OffsSecondOperand,
                                           unsigned StartIndex) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising add instruction\n");
-  Instruction *InsertionPoint;
-  if (isa<Instruction>(OffsSecondOperand))
-    InsertionPoint = &cast<Instruction>(OffsSecondOperand)->getParent()->back();
-  else
-    InsertionPoint =
+  Instruction *InsertionPoint =
         &cast<Instruction>(Phi->getIncomingBlock(StartIndex)->back());
   // Initialize the phi with a vector that contains a sum of the constants
   Instruction *NewIndex = BinaryOperator::Create(
@@ -492,11 +488,7 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
 
   // Create a new scalar add outside of the loop and transform it to a splat
   // by which loop variable can be incremented
-  Instruction *InsertionPoint;
-  if (isa<Instruction>(OffsSecondOperand))
-    InsertionPoint = &cast<Instruction>(OffsSecondOperand)->getParent()->back();
-  else
-    InsertionPoint = &cast<Instruction>(
+  Instruction *InsertionPoint = &cast<Instruction>(
         Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back());
 
   // Create a new index
