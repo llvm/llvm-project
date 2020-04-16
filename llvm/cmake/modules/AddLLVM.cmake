@@ -883,7 +883,7 @@ function(add_llvm_pass_plugin name)
     list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
     # process_llvm_pass_plugins takes care of the actual linking, just create an
     # object library as of now
-    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_component_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
     target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
     set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
     if (TARGET intrinsics_gen)
