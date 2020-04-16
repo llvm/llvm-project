@@ -298,8 +298,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
 void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
-  COFFSection *Section = createSection(MCSec.getSectionName());
-  COFFSymbol *Symbol = createSymbol(MCSec.getSectionName());
+  COFFSection *Section = createSection(MCSec.getName());
+  COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
   Symbol->Section = Section;
   Symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
@@ -1063,7 +1063,7 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
     // without a section.
     if (!AssocMCSym->isInSection()) {
       Asm.getContext().reportError(
-          SMLoc(), Twine("cannot make section ") + MCSec.getSectionName() +
+          SMLoc(), Twine("cannot make section ") + MCSec.getName() +
                        Twine(" associative with sectionless symbol ") +
                        AssocMCSym->getName());
       continue;

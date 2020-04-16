@@ -58,7 +58,7 @@ public:
     return S->getVariant() == SV_XCOFF;
   }
 
-  StringRef getSectionName() const { return Name; }
+  StringRef getName() const { return Name; }
   XCOFF::StorageMappingClass getMappingClass() const { return MappingClass; }
   XCOFF::StorageClass getStorageClass() const { return StorageClass; }
   XCOFF::SymbolType getCSectType() const { return Type; }

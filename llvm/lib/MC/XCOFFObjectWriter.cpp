@@ -80,7 +80,7 @@ struct ControlSection {
 
   SmallVector<Symbol, 1> Syms;
   SmallVector<XCOFFRelocation, 1> Relocations;
-  StringRef getName() const { return MCCsect->getSectionName(); }
+  StringRef getName() const { return MCCsect->getName(); }
   ControlSection(const MCSectionXCOFF *MCSec)
       : MCCsect(MCSec), SymbolTableIndex(-1), Address(-1), Size(0) {}
 };
@@ -333,8 +333,8 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.
-    if (nameShouldBeInStringTable(MCSec->getSectionName()))
-      Strings.add(MCSec->getSectionName());
+    if (nameShouldBeInStringTable(MCSec->getName()))
+      Strings.add(MCSec->getName());
 
     CsectGroup &Group = getCsectGroup(MCSec);
     Group.emplace_back(MCSec);

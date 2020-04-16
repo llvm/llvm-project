@@ -140,7 +140,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
     return false;
 
   if (RefSec.getSegmentName() == "__DATA" &&
-      RefSec.getSectionName() == "__objc_classrefs")
+      RefSec.getName() == "__objc_classrefs")
     return false;
 
   // FIXME: ld64 currently handles internal pointer-sized relocations

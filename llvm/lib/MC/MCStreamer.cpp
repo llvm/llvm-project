@@ -779,10 +779,9 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
     // GCC does, which is to make plain comdat selectany section named like
     // ".[px]data$_Z3foov".
     if (!Context.getAsmInfo()->hasCOFFAssociativeComdats()) {
-      std::string SectionName =
-          (MainCFISecCOFF->getSectionName() + "$" +
-           TextSecCOFF->getSectionName().split('$').second)
-              .str();
+      std::string SectionName = (MainCFISecCOFF->getName() + "$" +
+                                 TextSecCOFF->getName().split('$').second)
+                                    .str();
       return Context.getCOFFSection(
           SectionName,
           MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
