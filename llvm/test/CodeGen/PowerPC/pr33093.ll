@@ -115,8 +115,8 @@ define i64 @ReverseBits64(i64 %n) {
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    or 3, 3, 5
 ; CHECK-NEXT:    rldicl 4, 3, 32, 32
-; CHECK-NEXT:    rlwinm 5, 3, 24, 0, 31
-; CHECK-NEXT:    rlwinm 6, 4, 24, 0, 31
+; CHECK-NEXT:    rotlwi 5, 3, 24
+; CHECK-NEXT:    rotlwi 6, 4, 24
 ; CHECK-NEXT:    rlwimi 5, 3, 8, 8, 15
 ; CHECK-NEXT:    rlwimi 5, 3, 8, 24, 31
 ; CHECK-NEXT:    rlwimi 6, 4, 8, 8, 15

@@ -130,7 +130,7 @@ define <16 x i8> @adjusted_lxvwsx(i64* %s, i64* %t) {
 ; P8-LABEL: adjusted_lxvwsx:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    ld r3, 0(r3)
-; P8-NEXT:    mtvsrd f0, r3
+; P8-NEXT:    mtfprd f0, r3
 ; P8-NEXT:    xxswapd v2, vs0
 ; P8-NEXT:    xxspltw v2, v2, 2
 ; P8-NEXT:    blr
