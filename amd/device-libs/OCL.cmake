@@ -89,7 +89,7 @@ macro(opencl_bc_lib)
         # so as an overly-conservatively workaround to cover all generators
         # we just assume all .cl sources require irif.h. If all the generators
         # we care about begin to support IMPLICIT_DEPENDS we won't need this.
-        "${CMAKE_SOURCE_DIR}/irif/inc/irif.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc/irif.h"
         IMPLICIT_DEPENDS C "${file}")
       list(APPEND deps "${output}")
       list(APPEND clean_files "${output}")
