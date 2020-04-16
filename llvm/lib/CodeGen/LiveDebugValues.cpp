@@ -968,9 +968,11 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   } else if (MI.hasOneMemOperand()) {
     llvm_unreachable("DBG_VALUE with mem operand encountered after regalloc?");
   } else {
-    // This must be an undefined location. We should leave OpenRanges closed.
+    // This must be an undefined location. If it has an open range, erase it.
     assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
            "Unexpected non-undef DBG_VALUE encountered");
+    VarLoc VL(MI, LS);
+    OpenRanges.erase(VL);
   }
 }
 
