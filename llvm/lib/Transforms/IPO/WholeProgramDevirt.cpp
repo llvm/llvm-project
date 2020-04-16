@@ -500,6 +500,10 @@ struct DevirtModule {
   IntegerType *Int32Ty;
   IntegerType *Int64Ty;
   IntegerType *IntPtrTy;
+  /// Sizeless array type, used for imported vtables. This provides a signal
+  /// to analyzers that these imports may alias, as they do for example
+  /// when multiple unique return values occur in the same vtable.
+  ArrayType *Int8Arr0Ty;
 
   bool RemarksEnabled;
   function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
@@ -529,6 +533,7 @@ struct DevirtModule {
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
         IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
+        Int8Arr0Ty(ArrayType::get(Type::getInt8Ty(M.getContext()), 0)),
         RemarksEnabled(areRemarksEnabled()), OREGetter(OREGetter) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
@@ -1415,7 +1420,8 @@ void DevirtModule::exportConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
 
 Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
                                      StringRef Name) {
-  Constant *C = M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Ty);
+  Constant *C =
+      M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Arr0Ty);
   auto *GV = dyn_cast<GlobalVariable>(C);
   if (GV)
     GV->setVisibility(GlobalValue::HiddenVisibility);
@@ -1457,8 +1463,8 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
   for (auto &&Call : CSInfo.CallSites) {
     IRBuilder<> B(Call.CS.getInstruction());
     Value *Cmp =
-        B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
-                     B.CreateBitCast(Call.VTable, Int8PtrTy), UniqueMemberAddr);
+        B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE, Call.VTable,
+                     B.CreateBitCast(UniqueMemberAddr, Call.VTable->getType()));
     Cmp = B.CreateZExt(Cmp, Call.CS->getType());
     Call.replaceAndErase("unique-ret-val", FnName, RemarksEnabled, OREGetter,
                          Cmp);
