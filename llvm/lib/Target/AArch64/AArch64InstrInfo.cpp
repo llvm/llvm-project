@@ -3173,6 +3173,17 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   MI.addMemOperand(MMO);
 }
 
+bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
+                                           const MachineInstr &UseMI,
+                                           const TargetRegisterInfo *TRI) {
+  return any_of(instructionsWithoutDebug(std::next(DefMI.getIterator()),
+                                         UseMI.getIterator()),
+                [TRI](const MachineInstr &I) {
+                  return I.modifiesRegister(AArch64::NZCV, TRI) ||
+                         I.readsRegister(AArch64::NZCV, TRI);
+                });
+}
+
 // Helper function to emit a frame offset adjustment from a given
 // pointer (SrcReg), stored into DestReg. This function is explicit
 // in that it requires the opcode.
