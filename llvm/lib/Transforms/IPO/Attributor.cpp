@@ -151,10 +151,10 @@ Argument *IRPosition::getAssociatedArgument() const {
   // of the underlying call site operand, we want the corresponding callback
   // callee argument and not the direct callee argument.
   Optional<Argument *> CBCandidateArg;
-  SmallVector<const Use *, 4> CBUses;
-  ImmutableCallSite ICS(&getAnchorValue());
-  AbstractCallSite::getCallbackUses(ICS, CBUses);
-  for (const Use *U : CBUses) {
+  SmallVector<const Use *, 4> CallbackUses;
+  const auto &CB = cast<CallBase>(getAnchorValue());
+  AbstractCallSite::getCallbackUses(CB, CallbackUses);
+  for (const Use *U : CallbackUses) {
     AbstractCallSite ACS(U);
     assert(ACS && ACS.isCallbackCall());
     if (!ACS.getCalledFunction())
@@ -183,7 +183,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
-  const Function *Callee = ICS.getCalledFunction();
+  const Function *Callee = CB.getCalledFunction();
   if (Callee && Callee->arg_size() > unsigned(ArgNo))
     return Callee->getArg(ArgNo);
 
@@ -1328,7 +1328,7 @@ bool Attributor::isValidFunctionSignatureRewrite(
 
   auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
     // Forbid must-tail calls for now.
-    return !ACS.isCallbackCall() && !ACS.getCallSite().isMustTailCall();
+    return !ACS.isCallbackCall() && !ACS.getInstruction()->isMustTailCall();
   };
 
   Function *Fn = Arg.getParent();
