@@ -583,21 +583,25 @@ struct InformationCache {
             }),
         AG(AG), CGSCC(CGSCC) {}
 
+  ~InformationCache() {
+    DeleteContainerSeconds(FuncInfoMap);
+  }
+
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
   OpcodeInstMapTy &getOpcodeInstMapForFunction(const Function &F) {
-    return FuncInstOpcodeMap[&F];
+    return getFunctionInfo(F).OpcodeInstMap;
   }
 
   /// A vector type to hold instructions.
-  using InstructionVectorTy = std::vector<Instruction *>;
+  using InstructionVectorTy = SmallVector<Instruction *, 4>;
 
   /// Return the instructions in \p F that may read or write memory.
   InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
-    return FuncRWInstsMap[&F];
+    return getFunctionInfo(F).RWInsts;
   }
 
   /// Return MustBeExecutedContextExplorer
@@ -617,9 +621,9 @@ struct InformationCache {
 
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
-  bool isInvolvedInMustTailCall(const Argument &Arg) const {
-    return FunctionsCalledViaMustTail.count(Arg.getParent()) ||
-           FunctionsWithMustTailCall.count(Arg.getParent());
+  bool isInvolvedInMustTailCall(const Argument &Arg) {
+    FunctionInfo &FI = getFunctionInfo(*Arg.getParent());
+    return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
   /// Return the analysis result from a pass \p AP for function \p F.
@@ -642,24 +646,40 @@ struct InformationCache {
   const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
 
 private:
-  /// A map type from functions to opcode to instruction maps.
-  using FuncInstOpcodeMapTy = DenseMap<const Function *, OpcodeInstMapTy>;
+  struct FunctionInfo {
+    /// A nested map that remembers all instructions in a function with a
+    /// certain instruction opcode (Instruction::getOpcode()).
+    OpcodeInstMapTy OpcodeInstMap;
 
-  /// A map type from functions to their read or write instructions.
-  using FuncRWInstsMapTy = DenseMap<const Function *, InstructionVectorTy>;
+    /// A map from functions to their instructions that may read or write
+    /// memory.
+    InstructionVectorTy RWInsts;
 
-  /// A nested map that remembers all instructions in a function with a certain
-  /// instruction opcode (Instruction::getOpcode()).
-  FuncInstOpcodeMapTy FuncInstOpcodeMap;
+    /// Function is called by a `musttail` call.
+    bool CalledViaMustTail;
 
-  /// A map from functions to their instructions that may read or write memory.
-  FuncRWInstsMapTy FuncRWInstsMap;
+    /// Function contains a `musttail` call.
+    bool ContainsMustTailCall;
+  };
 
-  /// Functions called by a `musttail` call.
-  SmallPtrSet<Function *, 8> FunctionsCalledViaMustTail;
+  /// A map type from functions to informatio about it.
+  DenseMap<const Function *, FunctionInfo *> FuncInfoMap;
 
-  /// Functions containing a `musttail` call.
-  SmallPtrSet<Function *, 8> FunctionsWithMustTailCall;
+  /// Return information about the function \p F, potentially by creating it.
+  FunctionInfo &getFunctionInfo(const Function &F) {
+    FunctionInfo *&FI = FuncInfoMap[&F];
+    if (!FI) {
+      FI = new FunctionInfo();
+      initializeInformationCache(F, *FI);
+    }
+    return *FI;
+  }
+
+  /// Initialize the function information cache \p FI for the function \p F.
+  ///
+  /// This method needs to be called for all function that might be looked at
+  /// through the information cache interface *prior* to looking at them.
+  void initializeInformationCache(const Function &F, FunctionInfo &FI);
 
   /// The datalayout used in the module.
   const DataLayout &DL;
@@ -821,12 +841,6 @@ struct Attributor {
   /// instance, which can be queried without the need to look at the IR in
   /// various places.
   void identifyDefaultAbstractAttributes(Function &F);
-
-  /// Initialize the information cache for queries regarding function \p F.
-  ///
-  /// This method needs to be called for all function that might be looked at
-  /// through the information cache interface *prior* to looking at them.
-  void initializeInformationCache(Function &F);
 
   /// Determine whether the function \p F is IPO amendable
   ///
