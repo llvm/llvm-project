@@ -8,6 +8,8 @@ func @int_attrs_pass() {
   "test.int_attrs"() {
     // CHECK: any_i32_attr = 5 : ui32
     any_i32_attr = 5 : ui32,
+    // CHECK-SAME: index_attr = 8 : index
+    index_attr = 8 : index,
     // CHECK-SAME: si32_attr = 7 : si32
     si32_attr = 7 : si32,
     // CHECK-SAME: ui32_attr = 6 : ui32
