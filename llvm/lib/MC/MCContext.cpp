@@ -302,23 +302,25 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
   // diagnosed by the client as an error.
 
   // Form the name to look up.
-  SmallString<64> Name;
-  Name += Segment;
-  Name.push_back(',');
-  Name += Section;
+  assert(Section.size() <= 16 && "section name is too long");
+  assert(!memchr(Section.data(), '\0', Section.size()) &&
+         "section name cannot contain NUL");
 
   // Do the lookup, if we have a hit, return it.
-  MCSectionMachO *&Entry = MachOUniquingMap[Name];
-  if (Entry)
-    return Entry;
+  auto R = MachOUniquingMap.try_emplace((Segment + Twine(',') + Section).str());
+  if (!R.second)
+    return R.first->second;
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
     Begin = createTempSymbol(BeginSymName, false);
 
   // Otherwise, return a new section.
-  return Entry = new (MachOAllocator.Allocate()) MCSectionMachO(
-             Segment, Section, TypeAndAttributes, Reserved2, Kind, Begin);
+  StringRef Name = R.first->first();
+  R.first->second = new (MachOAllocator.Allocate())
+      MCSectionMachO(Segment, Name.substr(Name.size() - Section.size()),
+                     TypeAndAttributes, Reserved2, Kind, Begin);
+  return R.first->second;
 }
 
 void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {

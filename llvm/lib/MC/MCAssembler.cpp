@@ -686,11 +686,8 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
           report_fatal_error("cannot have fixups in virtual section!");
         for (unsigned i = 0, e = DF.getContents().size(); i != e; ++i)
           if (DF.getContents()[i]) {
-            if (auto *ELFSec = dyn_cast<const MCSectionELF>(Sec))
-              report_fatal_error("non-zero initializer found in section '" +
-                                 ELFSec->getName() + "'");
-            else
-              report_fatal_error("non-zero initializer found in virtual section");
+            report_fatal_error("non-zero initializer found in section '" +
+                               Sec->getName() + "'");
           }
         break;
       }

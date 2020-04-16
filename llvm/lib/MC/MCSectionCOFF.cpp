@@ -38,7 +38,7 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
   // standard sections don't require the '.section'
-  if (ShouldOmitSectionDirective(SectionName, MAI)) {
+  if (ShouldOmitSectionDirective(getName(), MAI)) {
     OS << '\t' << getName() << '\n';
     return;
   }
@@ -61,7 +61,7 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)
     OS << 's';
   if ((getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE) &&
-      !isImplicitlyDiscardable(SectionName))
+      !isImplicitlyDiscardable(getName()))
     OS << 'D';
   OS << '"';
 
