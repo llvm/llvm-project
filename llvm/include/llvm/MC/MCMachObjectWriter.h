@@ -16,6 +16,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/EndianStream.h"
 #include <cstdint>
 #include <memory>
 #include <string>

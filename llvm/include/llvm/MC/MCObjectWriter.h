@@ -10,9 +10,6 @@
 #define LLVM_MC_MCOBJECTWRITER_H
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/EndianStream.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
 namespace llvm {
