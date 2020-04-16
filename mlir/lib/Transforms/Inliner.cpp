@@ -455,7 +455,7 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   // here as more calls may be added during inlining.
   bool inlinedAnyCalls = false;
   for (unsigned i = 0; i != calls.size(); ++i) {
-    ResolvedCall &it = calls[i];
+    ResolvedCall it = calls[i];
     LLVM_DEBUG({
       llvm::dbgs() << "* Considering inlining call: ";
       it.call.dump();
