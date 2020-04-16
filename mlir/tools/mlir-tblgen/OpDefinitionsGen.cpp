@@ -685,6 +685,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
     auto &m =
         opClass.newMethod("void", "build", paramList, OpMethod::MP_Static);
     auto &body = m.body();
+
     genCodeForAddingArgAndRegionForBuilder(
         body, /*isRawValueAttr=*/attrType == AttrParamKind::UnwrappedValue);
 
@@ -762,7 +763,9 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   auto &body = m.body();
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -843,7 +846,10 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   }
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
+
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
 
@@ -929,7 +935,9 @@ void OpEmitter::genCollectiveParamBuilder() {
          << (numVariadicOperands != 0 ? " >= " : " == ")
          << numNonVariadicOperands
          << "u && \"mismatched number of parameters\");\n";
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -1099,6 +1107,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
       body << "  if (" << argName << ")\n  ";
     body << "  " << builderOpState << ".addOperands(" << argName << ");\n";
   }
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n", builderOpState);
 
   // If the operation has the operand segment size attribute, add it here.
   if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
