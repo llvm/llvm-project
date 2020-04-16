@@ -34,12 +34,17 @@ inline void stringify_append(llvm::raw_string_ostream &ss, const T &t) {
 
 template <typename T>
 inline void stringify_append(llvm::raw_string_ostream &ss, T *t) {
-  ss << reinterpret_cast<void *>(t);
+  ss << static_cast<void *>(t);
 }
 
 template <typename T>
 inline void stringify_append(llvm::raw_string_ostream &ss, const T *t) {
-  ss << reinterpret_cast<const void *>(t);
+  ss << static_cast<const void *>(t);
+}
+
+template <typename T, typename... Args>
+inline void stringify_append(llvm::raw_string_ostream &ss, T (*t)(Args...)) {
+  ss << "function pointer";
 }
 
 template <>
