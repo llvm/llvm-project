@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR.h"
 
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
@@ -211,17 +210,8 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   // Clone module in a new LLVMContext since translateModuleToLLVMIR buries
   // ownership too deeply.
   // TODO(zinenko): Reevaluate model of ownership of LLVMContext in LLVMDialect.
-  SmallVector<char, 1> buffer;
-  {
-    llvm::raw_svector_ostream os(buffer);
-    WriteBitcodeToFile(*llvmModule, os);
-  }
-  llvm::MemoryBufferRef bufferRef(StringRef(buffer.data(), buffer.size()),
-                                  "cloned module buffer");
-  auto expectedModule = parseBitcodeFile(bufferRef, *ctx);
-  if (!expectedModule)
-    return expectedModule.takeError();
-  std::unique_ptr<Module> deserModule = std::move(*expectedModule);
+  std::unique_ptr<Module> deserModule =
+      LLVM::cloneModuleIntoNewContext(ctx.get(), llvmModule.get());
   auto dataLayout = deserModule->getDataLayout();
 
   // Callback to create the object layer with symbol resolution to current
