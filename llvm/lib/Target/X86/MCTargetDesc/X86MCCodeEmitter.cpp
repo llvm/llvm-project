@@ -55,56 +55,25 @@ public:
                          const MCSubtargetInfo &STI) const override;
 
 private:
-  unsigned getX86RegNum(const MCOperand &MO) const {
-    return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg()) & 0x7;
-  }
+  unsigned getX86RegNum(const MCOperand &MO) const;
 
-  unsigned getX86RegEncoding(const MCInst &MI, unsigned OpNum) const {
-    return Ctx.getRegisterInfo()->getEncodingValue(
-        MI.getOperand(OpNum).getReg());
-  }
+  unsigned getX86RegEncoding(const MCInst &MI, unsigned OpNum) const;
 
   /// \param MI a single low-level machine instruction.
   /// \param OpNum the operand #.
   /// \returns true if the OpNumth operand of MI  require a bit to be set in
   /// REX prefix.
-  bool isREXExtendedReg(const MCInst &MI, unsigned OpNum) const {
-    return (getX86RegEncoding(MI, OpNum) >> 3) & 1;
-  }
-
-  void emitByte(uint8_t C, unsigned &CurByte, raw_ostream &OS) const {
-    OS << (char)C;
-    ++CurByte;
-  }
-
-  void emitConstant(uint64_t Val, unsigned Size, unsigned &CurByte,
-                    raw_ostream &OS) const {
-    // Output the constant in little endian byte order.
-    for (unsigned i = 0; i != Size; ++i) {
-      emitByte(Val & 255, CurByte, OS);
-      Val >>= 8;
-    }
-  }
+  bool isREXExtendedReg(const MCInst &MI, unsigned OpNum) const;
 
   void emitImmediate(const MCOperand &Disp, SMLoc Loc, unsigned ImmSize,
                      MCFixupKind FixupKind, unsigned &CurByte, raw_ostream &OS,
                      SmallVectorImpl<MCFixup> &Fixups, int ImmOffset = 0) const;
 
-  static uint8_t modRMByte(unsigned Mod, unsigned RegOpcode, unsigned RM) {
-    assert(Mod < 4 && RegOpcode < 8 && RM < 8 && "ModRM Fields out of range!");
-    return RM | (RegOpcode << 3) | (Mod << 6);
-  }
-
   void emitRegModRMByte(const MCOperand &ModRMReg, unsigned RegOpcodeFld,
-                        unsigned &CurByte, raw_ostream &OS) const {
-    emitByte(modRMByte(3, RegOpcodeFld, getX86RegNum(ModRMReg)), CurByte, OS);
-  }
+                        unsigned &CurByte, raw_ostream &OS) const;
 
   void emitSIBByte(unsigned SS, unsigned Index, unsigned Base,
-                   unsigned &CurByte, raw_ostream &OS) const {
-    // SIB byte is in the same format as the modRMByte.
-    emitByte(modRMByte(SS, Index, Base), CurByte, OS);
-  }
+                   unsigned &CurByte, raw_ostream &OS) const;
 
   void emitMemModRMByte(const MCInst &MI, unsigned Op, unsigned RegOpcodeField,
                         uint64_t TSFlags, bool Rex, unsigned &CurByte,
@@ -128,6 +97,25 @@ private:
 };
 
 } // end anonymous namespace
+
+static uint8_t modRMByte(unsigned Mod, unsigned RegOpcode, unsigned RM) {
+  assert(Mod < 4 && RegOpcode < 8 && RM < 8 && "ModRM Fields out of range!");
+  return RM | (RegOpcode << 3) | (Mod << 6);
+}
+
+static void emitByte(uint8_t C, unsigned &CurByte, raw_ostream &OS) {
+  OS << static_cast<char>(C);
+  ++CurByte;
+}
+
+static void emitConstant(uint64_t Val, unsigned Size, unsigned &CurByte,
+                         raw_ostream &OS) {
+  // Output the constant in little endian byte order.
+  for (unsigned i = 0; i != Size; ++i) {
+    emitByte(Val & 255, CurByte, OS);
+    Val >>= 8;
+  }
+}
 
 /// \returns true if this signed displacement fits in a 8-bit sign-extended
 /// field.
@@ -286,6 +274,24 @@ static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
   return Ref && Ref->getKind() == MCSymbolRefExpr::VK_None;
 }
 
+unsigned X86MCCodeEmitter::getX86RegNum(const MCOperand &MO) const {
+  return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg()) & 0x7;
+}
+
+unsigned X86MCCodeEmitter::getX86RegEncoding(const MCInst &MI,
+                                             unsigned OpNum) const {
+  return Ctx.getRegisterInfo()->getEncodingValue(MI.getOperand(OpNum).getReg());
+}
+
+/// \param MI a single low-level machine instruction.
+/// \param OpNum the operand #.
+/// \returns true if the OpNumth operand of MI  require a bit to be set in
+/// REX prefix.
+bool X86MCCodeEmitter::isREXExtendedReg(const MCInst &MI,
+                                        unsigned OpNum) const {
+  return (getX86RegEncoding(MI, OpNum) >> 3) & 1;
+}
+
 void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
                                      unsigned Size, MCFixupKind FixupKind,
                                      unsigned &CurByte, raw_ostream &OS,
@@ -361,6 +367,19 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
   // Emit a symbolic constant as a fixup and 4 zeros.
   Fixups.push_back(MCFixup::create(CurByte, Expr, FixupKind, Loc));
   emitConstant(0, Size, CurByte, OS);
+}
+
+void X86MCCodeEmitter::emitRegModRMByte(const MCOperand &ModRMReg,
+                                        unsigned RegOpcodeFld,
+                                        unsigned &CurByte,
+                                        raw_ostream &OS) const {
+  emitByte(modRMByte(3, RegOpcodeFld, getX86RegNum(ModRMReg)), CurByte, OS);
+}
+
+void X86MCCodeEmitter::emitSIBByte(unsigned SS, unsigned Index, unsigned Base,
+                                   unsigned &CurByte, raw_ostream &OS) const {
+  // SIB byte is in the same format as the modRMByte.
+  emitByte(modRMByte(SS, Index, Base), CurByte, OS);
 }
 
 void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
