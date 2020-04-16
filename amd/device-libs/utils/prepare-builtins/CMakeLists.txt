@@ -21,6 +21,10 @@ if (ROCM_DEVICELIB_STANDALONE_BUILD)
 endif()
 
 add_executable(prepare-builtins prepare-builtins.cpp)
+set_target_properties(prepare-builtins PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED Yes
+  CXX_EXTENSIONS No)
 llvm_update_compile_flags(prepare-builtins)
 llvm_map_components_to_libnames(llvm_libs support core bitreader bitwriter)
 target_link_libraries(prepare-builtins ${llvm_libs})
