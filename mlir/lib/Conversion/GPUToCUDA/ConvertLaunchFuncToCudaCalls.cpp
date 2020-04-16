@@ -116,8 +116,8 @@ private:
   void addParamToList(OpBuilder &builder, Location loc, Value param, Value list,
                       unsigned pos, Value one);
   Value setupParamsArray(gpu::LaunchFuncOp launchOp, OpBuilder &builder);
-  Value generateKernelNameConstant(StringRef name, Location loc,
-                                   OpBuilder &builder);
+  Value generateKernelNameConstant(StringRef moduleName, StringRef name,
+                                   Location loc, OpBuilder &builder);
   void translateGpuLaunchCalls(mlir::gpu::LaunchFuncOp launchOp);
 
 public:
@@ -345,12 +345,13 @@ Value GpuLaunchFuncToCudaCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
 //   %2 = llvm.getelementptr %0[%1, %1] : !llvm<"i8*">
 // }
 Value GpuLaunchFuncToCudaCallsPass::generateKernelNameConstant(
-    StringRef name, Location loc, OpBuilder &builder) {
+    StringRef moduleName, StringRef name, Location loc, OpBuilder &builder) {
   // Make sure the trailing zero is included in the constant.
   std::vector<char> kernelName(name.begin(), name.end());
   kernelName.push_back('\0');
 
-  std::string globalName = std::string(llvm::formatv("{0}_kernel_name", name));
+  std::string globalName =
+      std::string(llvm::formatv("{0}_{1}_kernel_name", moduleName, name));
   return LLVM::createGlobalString(
       loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
       LLVM::Linkage::Internal, llvmDialect);
@@ -415,7 +416,8 @@ void GpuLaunchFuncToCudaCallsPass::translateGpuLaunchCalls(
   // the kernel function.
   auto cuOwningModuleRef =
       builder.create<LLVM::LoadOp>(loc, getPointerType(), cuModule);
-  auto kernelName = generateKernelNameConstant(launchOp.kernel(), loc, builder);
+  auto kernelName = generateKernelNameConstant(launchOp.getKernelModuleName(),
+                                               launchOp.kernel(), loc, builder);
   auto cuFunction = allocatePointer(builder, loc);
   auto cuModuleGetFunction =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleGetFunctionName);

@@ -17,8 +17,6 @@ target_link_libraries(MLIRExecutionEngine
   PUBLIC
   MLIRLLVMIR
   MLIRTargetLLVMIR
-  LLVMBitReader
-  LLVMBitWriter
   LLVMExecutionEngine
   LLVMObject
   LLVMOrcJIT
