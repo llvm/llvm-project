@@ -11,6 +11,7 @@ compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
+lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -25,6 +26,8 @@ if __name__ == '__main__':
     cmd.extend(['--dsymutil', dsymutil])
     cmd.extend(['--filecheck', filecheck])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
+    if lldb_build_intel_pt == "1":
+        cmd.extend(['--enable-plugin', 'intel-pt'])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))
