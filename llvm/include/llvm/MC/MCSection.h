@@ -189,6 +189,8 @@ public:
   /// file contents.
   virtual bool isVirtualSection() const = 0;
 
+  virtual StringRef getVirtualSectionKind() const;
+
   /// Add a pending label for the requested subsection. This label will be
   /// associated with a fragment in flushPendingLabels()
   void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);

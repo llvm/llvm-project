@@ -87,7 +87,9 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
   return IP;
 }
 
-void MCSection::addPendingLabel(MCSymbol* label, unsigned Subsection) {
+StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
+
+void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
   PendingLabels.push_back(PendingLabel(label, Subsection));
 }
 
