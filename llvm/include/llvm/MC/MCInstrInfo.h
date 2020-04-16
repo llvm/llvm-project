@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class MCSubtargetInfo;
+
 //---------------------------------------------------------------------------
 /// Interface to description of machine instruction set.
 class MCInstrInfo {

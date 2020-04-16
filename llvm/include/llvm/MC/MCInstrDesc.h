@@ -19,9 +19,8 @@
 #include <string>
 
 namespace llvm {
-  class MCInst;
-  class MCSubtargetInfo;
-  class FeatureBitset;
+
+class MCInst;
 
 //===----------------------------------------------------------------------===//
 // Machine Operand Flags and Description
