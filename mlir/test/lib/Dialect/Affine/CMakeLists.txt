@@ -15,4 +15,5 @@ target_link_libraries(MLIRAffineTransformsTestPasses PRIVATE
   MLIRPass
   MLIRAffineTransforms
   MLIRSupport
+  MLIRAffineUtils
   )
