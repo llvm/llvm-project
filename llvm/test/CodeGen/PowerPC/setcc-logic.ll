@@ -138,7 +138,7 @@ define i32 @all_sign_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, 0
+; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    blt 0, .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
@@ -163,7 +163,7 @@ define i32 @all_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    bne 0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
@@ -188,7 +188,7 @@ define i32 @all_sign_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    bgt 0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
@@ -238,7 +238,7 @@ define i32 @any_sign_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    bgt 0, .LBB13_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
@@ -263,7 +263,7 @@ define i32 @any_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    beq 0, .LBB14_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
@@ -288,7 +288,7 @@ define i32 @any_sign_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    cmpwi 0, 3, 0
+; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    blt 0, .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4

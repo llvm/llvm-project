@@ -46,7 +46,7 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_tval_bigger:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 41
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    li 3, 42
 ; CHECK-NEXT:    isel 3, 3, 4, 1
 ; CHECK-NEXT:    blr
@@ -98,7 +98,7 @@ define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_fval_bigger:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 42
-; CHECK-NEXT:    cmpwi 0, 3, -1
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    li 3, 41
 ; CHECK-NEXT:    isel 3, 3, 4, 1
 ; CHECK-NEXT:    blr
@@ -135,7 +135,7 @@ define i32 @sel_ifneg_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_tval_bigger:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 41
-; CHECK-NEXT:    cmpwi 0, 3, 0
+; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 42
 ; CHECK-NEXT:    isel 3, 3, 4, 0
 ; CHECK-NEXT:    blr
@@ -170,7 +170,7 @@ define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_fval_bigger:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 42
-; CHECK-NEXT:    cmpwi 0, 3, 0
+; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 41
 ; CHECK-NEXT:    isel 3, 3, 4, 0
 ; CHECK-NEXT:    blr

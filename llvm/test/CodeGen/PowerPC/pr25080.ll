@@ -18,30 +18,30 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    xxsldwi 1, 34, 34, 1
 ; LE-NEXT:    mfvsrwz 4, 35
 ; LE-NEXT:    xxsldwi 4, 34, 34, 3
-; LE-NEXT:    mtvsrd 2, 3
-; LE-NEXT:    mfvsrwz 3, 0
+; LE-NEXT:    mtfprd 2, 3
+; LE-NEXT:    mffprwz 3, 0
 ; LE-NEXT:    xxswapd 0, 35
-; LE-NEXT:    mtvsrd 3, 4
+; LE-NEXT:    mtfprd 3, 4
 ; LE-NEXT:    xxsldwi 5, 35, 35, 1
-; LE-NEXT:    mfvsrwz 4, 1
+; LE-NEXT:    mffprwz 4, 1
 ; LE-NEXT:    xxsldwi 7, 35, 35, 3
-; LE-NEXT:    mtvsrd 1, 3
+; LE-NEXT:    mtfprd 1, 3
 ; LE-NEXT:    xxswapd 33, 3
-; LE-NEXT:    mfvsrwz 3, 4
-; LE-NEXT:    mtvsrd 4, 4
+; LE-NEXT:    mffprwz 3, 4
+; LE-NEXT:    mtfprd 4, 4
 ; LE-NEXT:    xxswapd 34, 1
-; LE-NEXT:    mfvsrwz 4, 0
-; LE-NEXT:    mtvsrd 0, 3
+; LE-NEXT:    mffprwz 4, 0
+; LE-NEXT:    mtfprd 0, 3
 ; LE-NEXT:    xxswapd 35, 4
-; LE-NEXT:    mfvsrwz 3, 5
-; LE-NEXT:    mtvsrd 6, 4
+; LE-NEXT:    mffprwz 3, 5
+; LE-NEXT:    mtfprd 6, 4
 ; LE-NEXT:    xxswapd 36, 0
-; LE-NEXT:    mtvsrd 1, 3
-; LE-NEXT:    mfvsrwz 3, 7
+; LE-NEXT:    mtfprd 1, 3
+; LE-NEXT:    mffprwz 3, 7
 ; LE-NEXT:    xxswapd 37, 6
 ; LE-NEXT:    vmrglh 2, 3, 2
 ; LE-NEXT:    xxswapd 35, 2
-; LE-NEXT:    mtvsrd 2, 3
+; LE-NEXT:    mtfprd 2, 3
 ; LE-NEXT:    xxswapd 32, 1
 ; LE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; LE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
@@ -73,29 +73,29 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; BE-NEXT:    mfvsrwz 3, 35
 ; BE-NEXT:    xxsldwi 1, 35, 35, 1
 ; BE-NEXT:    sldi 3, 3, 48
-; BE-NEXT:    mfvsrwz 4, 0
+; BE-NEXT:    mffprwz 4, 0
 ; BE-NEXT:    xxsldwi 0, 35, 35, 3
 ; BE-NEXT:    mtvsrd 36, 3
-; BE-NEXT:    mfvsrwz 3, 1
+; BE-NEXT:    mffprwz 3, 1
 ; BE-NEXT:    sldi 4, 4, 48
 ; BE-NEXT:    xxswapd 1, 34
 ; BE-NEXT:    mtvsrd 35, 4
 ; BE-NEXT:    mfvsrwz 4, 34
 ; BE-NEXT:    sldi 3, 3, 48
 ; BE-NEXT:    mtvsrd 37, 3
-; BE-NEXT:    mfvsrwz 3, 0
+; BE-NEXT:    mffprwz 3, 0
 ; BE-NEXT:    sldi 4, 4, 48
 ; BE-NEXT:    xxsldwi 0, 34, 34, 1
 ; BE-NEXT:    vmrghh 3, 5, 3
 ; BE-NEXT:    mtvsrd 37, 4
 ; BE-NEXT:    sldi 3, 3, 48
-; BE-NEXT:    mfvsrwz 4, 1
+; BE-NEXT:    mffprwz 4, 1
 ; BE-NEXT:    xxsldwi 1, 34, 34, 3
 ; BE-NEXT:    mtvsrd 34, 3
-; BE-NEXT:    mfvsrwz 3, 0
+; BE-NEXT:    mffprwz 3, 0
 ; BE-NEXT:    sldi 4, 4, 48
 ; BE-NEXT:    mtvsrd 32, 4
-; BE-NEXT:    mfvsrwz 4, 1
+; BE-NEXT:    mffprwz 4, 1
 ; BE-NEXT:    sldi 3, 3, 48
 ; BE-NEXT:    mtvsrd 33, 3
 ; BE-NEXT:    sldi 3, 4, 48

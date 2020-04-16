@@ -72,8 +72,8 @@ entry:
 define signext i32 @testCompare2(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: testCompare2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwinm r3, r3, 0, 31, 31
-; CHECK-NEXT:    rlwinm r4, r4, 0, 31, 31
+; CHECK-NEXT:    clrlwi r3, r3, 31
+; CHECK-NEXT:    clrlwi r4, r4, 31
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    clrldi r4, r4, 32
 ; CHECK-NEXT:    sub r3, r3, r4

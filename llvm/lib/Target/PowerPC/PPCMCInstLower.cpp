@@ -147,6 +147,9 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     assert(MO.getReg() > PPC::NoRegister &&
            MO.getReg() < PPC::NUM_TARGET_REGS &&
            "Invalid register for this target!");
+    // Ignore all implicit register operands.
+    if (MO.isImplicit())
+      return false;
     OutMO = MCOperand::createReg(MO.getReg());
     return true;
   case MachineOperand::MO_Immediate:

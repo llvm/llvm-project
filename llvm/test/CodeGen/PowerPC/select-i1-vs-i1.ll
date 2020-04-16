@@ -18,7 +18,7 @@ entry:
 
 ; CHECK-LABEL: @testi32slt
 ; CHECK-NO-ISEL-LABEL: @testi32slt
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -40,7 +40,7 @@ entry:
   ret i32 %cond
 
 ; CHECK-NO-ISEL-LABEL: @testi32ult
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -63,7 +63,7 @@ entry:
 
 ; CHECK-LABEL: @testi32sle
 ; CHECK-NO-ISEL-LABEL: @testi32sle
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -86,7 +86,7 @@ entry:
 
 ; CHECK-LABEL: @testi32ule
 ; CHECK-NO-ISEL-LABEL: @testi32ule
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -109,7 +109,7 @@ entry:
 
 ; CHECK-LABEL: @testi32eq
 ; CHECK-NO-ISEL-LABEL: @testi32eq
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: creqv [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -132,7 +132,7 @@ entry:
 
 ; CHECK-LABEL: @testi32sge
 ; CHECK-NO-ISEL-LABEL: @testi32sge
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -155,7 +155,7 @@ entry:
 
 ; CHECK-LABEL: @testi32uge
 ; CHECK-NO-ISEL-LABEL: @testi32uge
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -178,7 +178,7 @@ entry:
 
 ; CHECK-LABEL: @testi32sgt
 ; CHECK-NO-ISEL-LABEL: @testi32sgt
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -201,7 +201,7 @@ entry:
 
 ; CHECK-LABEL: @testi32ugt
 ; CHECK-NO-ISEL-LABEL: @testi32ugt
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
@@ -224,7 +224,7 @@ entry:
 
 ; CHECK-LABEL: @testi32ne
 ; CHECK-NO-ISEL-LABEL: @testi32ne
-; CHECK-DAG: cmpw {{[0-9]+}}, 5, 6
+; CHECK-DAG: cmpw 5, 6
 ; CHECK-DAG: cmpw {{[0-9]+}}, 3, 4
 ; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: isel 3, 7, 8, [[REG1]]
