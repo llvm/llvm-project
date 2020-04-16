@@ -400,21 +400,6 @@ public:
       indexedValues[nInputs + i] = std_load(output, indexing);
     }
 
-    auto funcOp = genericOp.getFunction();
-    if (funcOp) {
-      // 2. Emit call.
-      Operation *callOp = std_call(funcOp, indexedValues);
-      assert(callOp->getNumResults() == genericOp.getNumOutputs());
-
-      // 3. Emit std_store.
-      for (unsigned i = 0; i < nOutputs; ++i) {
-        Value output = genericOp.getOutputBuffer(i);
-        ValueHandleArray indexing(makeCanonicalAffineApplies(
-            b, loc, genericOp.getOutputIndexingMap(i), allIvs));
-        std_store(callOp->getResult(i), output, indexing);
-      }
-      return;
-    }
     // TODO(ntv): When a region inliner exists, use it.
     // 2. Inline region, currently only works for a single basic block.
     // 3. Emit std_store.
@@ -495,20 +480,6 @@ public:
       indexedValues[nLoops + nInputs + i] = std_load(output, indexing);
     }
 
-    if (auto funcOp = indexedGenericOp.getFunction()) {
-      // 2. Emit call.
-      Operation *callOp = std_call(funcOp, indexedValues);
-      assert(callOp->getNumResults() == indexedGenericOp.getNumOutputs());
-
-      // 3. Emit std_store.
-      for (unsigned i = 0; i < nOutputs; ++i) {
-        Value output = indexedGenericOp.getOutputBuffer(i);
-        ValueHandleArray indexing(makeCanonicalAffineApplies(
-            b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs));
-        std_store(callOp->getResult(i), output, indexing);
-      }
-      return;
-    }
     // TODO(ntv): When a region inliner exists, use it.
     // 2. Inline region, currently only works for a single basic block.
     // 3. Emit std_store.

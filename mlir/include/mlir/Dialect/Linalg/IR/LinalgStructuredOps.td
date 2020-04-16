@@ -523,7 +523,6 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
                    AffineMapArrayAttr:$indexing_maps,
                    ArrayAttr:$iterator_types,
                    OptionalAttr<StrAttr>:$doc,
-                   OptionalAttr<FlatSymbolRefAttr>:$fun,
                    OptionalAttr<StrAttr>:$library_call);
   let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
   let regions = (region AnyRegion:$region);
@@ -531,7 +530,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
     SmallVector<StringRef, 8> linalgTraitAttrNames() {
       return SmallVector<StringRef, 8>{
         getArgsInAttrName(), getArgsOutAttrName(), getDocAttrName(),
-        getFunAttrName(), getIndexingMapsAttrName(), getLibraryCallAttrName(),
+        getIndexingMapsAttrName(), getLibraryCallAttrName(),
         getIteratorTypesAttrName()
       };
     }
@@ -539,12 +538,6 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
     unsigned getNumInputs() { return args_in().getSExtValue(); }
 
     unsigned getNumOutputs() { return args_out().getSExtValue(); }
-
-    FuncOp getFunction() {
-      auto moduleOp = getParentOfType<ModuleOp>();
-      return fun().hasValue() ?
-        moduleOp.lookupSymbol<FuncOp>(fun().getValue()) : FuncOp();
-    }
 
     StringRef getLibraryCallName() {
       return library_call().hasValue() ? library_call().getValue() : "";
@@ -581,13 +574,6 @@ def GenericOp : GenericOpBase<"generic"> {
       - args_in: an I64Attr representing the number of input (readonly) views
       - args_out: an I64Attr representing the number of output (readwrite) views
       - doc [optional]: a documentation string
-      - fun: a FlatSymbolRefAttr that must resolve to an existing function
-        symbol. To support inplace updates in a generic fashion, the signature
-        of the function must be:
-        ```
-          fun([input views element types], [output views element types])
-            -> ([output views element types])
-        ```
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
         loops and the indexing within each view.
@@ -604,11 +590,6 @@ def GenericOp : GenericOpBase<"generic"> {
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
-      func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
-        %d = mulf %a, %b: f32
-        %e = addf %c, %d: f32
-        return %e: f32
-      }
       #matmul_accesses = [
         (m, n, k) -> (m, k),
         (m, n, k) -> (k, n),
@@ -616,7 +597,6 @@ def GenericOp : GenericOpBase<"generic"> {
       ]
       #matmul_trait = {
         doc = "C(m, n) += A(m, k) * B(k, n)",
-        fun = @fma,
         indexing_maps = #matmul_accesses,
         library_call = "linalg_matmul",
         n_views = [2, 1],
@@ -626,10 +606,14 @@ def GenericOp : GenericOpBase<"generic"> {
 
     And can be reused in multiple places as:
       ```mlir
-      linalg.generic #matmul_trait %A, %B, %C [other-attributes] :
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>
+      linalg.generic #matmul_trait %A, %B, %C [other-attributes] {
+        (%a: f32, %b: f32, %c: f32) :
+          %d = mulf %a, %b: f32
+          %e = addf %c, %d: f32
+          linalg_yield %e : f32
+      } : memref<?x?xf32, stride_specification>,
+          memref<?x?xf32, stride_specification>,
+          memref<?x?xf32, stride_specification>
       ```
 
     This may lower to either:
@@ -649,9 +633,9 @@ def GenericOp : GenericOpBase<"generic"> {
           %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
           %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
           %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
-          %d = call @func_of_elements(%a, %b, %c)
-                 : (f32, f32, f32) -> (f32)
-          store %d, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
+          %d = mulf %a, %b: f32
+          %e = addf %c, %d: f32
+          store %e, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
         }
       }
     }
@@ -662,7 +646,7 @@ def GenericOp : GenericOpBase<"generic"> {
     mixing input and output ranked tensor values with input and output memrefs.
 
     ```mlir
-    %C = linalg.generic #trait_attribute %A, %B {other-attributes} :
+    %C = linalg.generic #trait_attribute %A, %B {other-attributes} {region} :
       tensor<?x?xf32>,
       memref<?x?xf32, stride_specification>
       -> (tensor<?x?xf32>)
@@ -708,13 +692,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       - args_in: an I64Attr representing the number of input (readonly) views
       - args_out: an I64Attr representing the number of output (readwrite) views
       - doc [optional]: a documentation string
-      - fun: a FlatSymbolRefAttr that must resolve to an existing function
-        symbol. To support inplace updates in a generic fashion, the signature
-        of the function must be:
-        ```
-          fun([index types of induction variables], [input views element types],
-              [output views element types]) -> ([output views element types])
-        ```
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
         loops and the indexing within each view.
@@ -732,15 +709,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     Defining a #matmul_trait attribute in MLIR can be done as follows:
 
     ```mlir
-    func @fma(%offset_m: index, %offset_n: index, %offset_k: index,
-              %a: f32, %b: f32, %c: f32)
-      -> f32
-    {
-      "some_optional_condition"(%offset_m, %offset_n, %offset_k)
-      %d = mulf %a, %b: f32
-      %e = addf %c, %d: f32
-      return %e: f32
-    }
     #matmul_accesses = [
       (m, n, k) -> (m, k),
       (m, n, k) -> (k, n),
@@ -748,7 +716,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     ]
     #matmul_trait = {
       doc = "C(m, n) += A(m, k) * B(k, n)",
-      fun = @fma,
       indexing_maps = #matmul_accesses,
       library_call = "linalg_matmul",
       n_views = [2, 1],
@@ -759,10 +726,16 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     And can be reused in multiple places as:
 
     ```mlir
-    linalg.indexed_generic #matmul_trait %A, %B, %C [other-attributes] :
-      memref<?x?xf32, stride_specification>,
-      memref<?x?xf32, stride_specification>,
-      memref<?x?xf32, stride_specification>
+    linalg.indexed_generic #matmul_trait %A, %B, %C [other-attributes] {
+      (%offset_m: index, %offset_n: index, %offset_k: index,
+       %a: f32, %b: f32, %c: f32) :
+        "some_optional_computation"(%offset_m, %offset_n, %offset_k)
+        %d = mulf %a, %b: f32
+        %e = addf %c, %d: f32
+        linalg_yield %e : f32
+    } : memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>,
+        memref<?x?xf32, stride_specification>
     ```
 
     This may lower to either:
@@ -784,8 +757,9 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
           %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
           %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
           %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
-          %d = call @func_of_elements_and_indices(%m, %n, %k, %a, %b, %c)
-                 : (index, index, index, f32, f32, f32) -> (f32)
+          "some_optional_computation"(%m, %n, %k)
+          %d = mulf %a, %b: f32
+          %e = addf %c, %d: f32
           store %d, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
         }
       }
