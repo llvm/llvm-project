@@ -1836,7 +1836,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // is mainly to help LSP clients again, so that changes do not effect each
   // other.
   for (const auto &FixIt : FixIts) {
-    if (isRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
+    if (FixIt.range.end == LSP.textEdit->range.start) {
       LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
       LSP.textEdit->range.start = FixIt.range.start;
     } else {
