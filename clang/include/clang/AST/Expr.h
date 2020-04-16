@@ -3494,19 +3494,7 @@ protected:
   /// allocated for the trailing objects when needed.
   BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs, Opcode opc,
                  QualType ResTy, ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, FPOptions FPFeatures)
-      : Expr(BinaryOperatorClass, ResTy, VK, OK) {
-    BinaryOperatorBits.Opc = opc;
-    assert(!isCompoundAssignmentOp() &&
-           "Use CompoundAssignOperator for compound assignments");
-    BinaryOperatorBits.OpLoc = opLoc;
-    SubExprs[LHS] = lhs;
-    SubExprs[RHS] = rhs;
-    BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage(Ctx);
-    if (BinaryOperatorBits.HasFPFeatures)
-      *getTrailingFPFeatures() = FPFeatures;
-    setDependence(computeDependence(this));
-  }
+                 SourceLocation opLoc, FPOptions FPFeatures);
 
   /// Construct an empty binary operator.
   explicit BinaryOperator(EmptyShell Empty) : Expr(BinaryOperatorClass, Empty) {
@@ -3678,40 +3666,28 @@ public:
 
   // Get the FP features status of this operator. Only meaningful for
   // operations on floating point types.
-  FPOptions getFPFeatures(const ASTContext &C) const {
+  FPOptions getFPFeatures(const LangOptions &LO) const {
     if (BinaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures();
-    return FPOptions::defaultWithoutTrailingStorage(C);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
   }
 
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
-  bool isFPContractableWithinStatement(const ASTContext &C) const {
-    return getFPFeatures(C).allowFPContractWithinStatement();
+  bool isFPContractableWithinStatement(const LangOptions &LO) const {
+    return getFPFeatures(LO).allowFPContractWithinStatement();
   }
 
   // Get the FENV_ACCESS status of this operator. Only meaningful for
   // operations on floating point types.
-  bool isFEnvAccessOn(const ASTContext &C) const {
-    return getFPFeatures(C).allowFEnvAccess();
+  bool isFEnvAccessOn(const LangOptions &LO) const {
+    return getFPFeatures(LO).allowFEnvAccess();
   }
 
 protected:
   BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs, Opcode opc,
                  QualType ResTy, ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, FPOptions FPFeatures, bool dead2)
-      : Expr(CompoundAssignOperatorClass, ResTy, VK, OK) {
-    BinaryOperatorBits.Opc = opc;
-    assert(isCompoundAssignmentOp() &&
-           "Use CompoundAssignOperator for compound assignments");
-    BinaryOperatorBits.OpLoc = opLoc;
-    SubExprs[LHS] = lhs;
-    SubExprs[RHS] = rhs;
-    BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage(Ctx);
-    if (BinaryOperatorBits.HasFPFeatures)
-      *getTrailingFPFeatures() = FPFeatures;
-    setDependence(computeDependence(this));
-  }
+                 SourceLocation opLoc, FPOptions FPFeatures, bool dead2);
 
   /// Construct an empty BinaryOperator, SC is CompoundAssignOperator.
   BinaryOperator(StmtClass SC, EmptyShell Empty) : Expr(SC, Empty) {

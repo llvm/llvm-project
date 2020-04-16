@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
-#include "clang/AST/ASTContext.h"
 
 using namespace clang;
 
@@ -49,11 +48,11 @@ VersionTuple LangOptions::getOpenCLVersionTuple() const {
   return VersionTuple(Ver / 100, (Ver % 100) / 10);
 }
 
-FPOptions FPOptions::defaultWithoutTrailingStorage(const ASTContext &C) {
-  FPOptions result(C.getLangOpts());
+FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
+  FPOptions result(LO);
   return result;
 }
 
-bool FPOptions::requiresTrailingStorage(const ASTContext &C) {
-  return getAsOpaqueInt() != defaultWithoutTrailingStorage(C).getAsOpaqueInt();
+bool FPOptions::requiresTrailingStorage(const LangOptions &LO) {
+  return getAsOpaqueInt() != defaultWithoutTrailingStorage(LO).getAsOpaqueInt();
 }

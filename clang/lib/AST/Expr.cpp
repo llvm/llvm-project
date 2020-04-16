@@ -4347,6 +4347,42 @@ ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
+BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                               Opcode opc, QualType ResTy, ExprValueKind VK,
+                               ExprObjectKind OK, SourceLocation opLoc,
+                               FPOptions FPFeatures)
+    : Expr(BinaryOperatorClass, ResTy, VK, OK) {
+  BinaryOperatorBits.Opc = opc;
+  assert(!isCompoundAssignmentOp() &&
+         "Use CompoundAssignOperator for compound assignments");
+  BinaryOperatorBits.OpLoc = opLoc;
+  SubExprs[LHS] = lhs;
+  SubExprs[RHS] = rhs;
+  BinaryOperatorBits.HasFPFeatures =
+      FPFeatures.requiresTrailingStorage(Ctx.getLangOpts());
+  if (BinaryOperatorBits.HasFPFeatures)
+    *getTrailingFPFeatures() = FPFeatures;
+  setDependence(computeDependence(this));
+}
+
+BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                               Opcode opc, QualType ResTy, ExprValueKind VK,
+                               ExprObjectKind OK, SourceLocation opLoc,
+                               FPOptions FPFeatures, bool dead2)
+    : Expr(CompoundAssignOperatorClass, ResTy, VK, OK) {
+  BinaryOperatorBits.Opc = opc;
+  assert(isCompoundAssignmentOp() &&
+         "Use CompoundAssignOperator for compound assignments");
+  BinaryOperatorBits.OpLoc = opLoc;
+  SubExprs[LHS] = lhs;
+  SubExprs[RHS] = rhs;
+  BinaryOperatorBits.HasFPFeatures =
+      FPFeatures.requiresTrailingStorage(Ctx.getLangOpts());
+  if (BinaryOperatorBits.HasFPFeatures)
+    *getTrailingFPFeatures() = FPFeatures;
+  setDependence(computeDependence(this));
+}
+
 BinaryOperator *BinaryOperator::CreateEmpty(const ASTContext &C,
                                             bool HasFPFeatures) {
   unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
@@ -4360,7 +4396,7 @@ BinaryOperator *BinaryOperator::Create(const ASTContext &C, Expr *lhs,
                                        ExprValueKind VK, ExprObjectKind OK,
                                        SourceLocation opLoc,
                                        FPOptions FPFeatures) {
-  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C);
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C.getLangOpts());
   unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
   void *Mem =
       C.Allocate(sizeof(BinaryOperator) + Extra, alignof(BinaryOperator));
@@ -4380,7 +4416,7 @@ CompoundAssignOperator *CompoundAssignOperator::Create(
     const ASTContext &C, Expr *lhs, Expr *rhs, Opcode opc, QualType ResTy,
     ExprValueKind VK, ExprObjectKind OK, SourceLocation opLoc,
     FPOptions FPFeatures, QualType CompLHSType, QualType CompResultType) {
-  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C);
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C.getLangOpts());
   unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
   void *Mem = C.Allocate(sizeof(CompoundAssignOperator) + Extra,
                          alignof(CompoundAssignOperator));

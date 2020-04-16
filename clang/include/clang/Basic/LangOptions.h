@@ -27,8 +27,6 @@
 
 namespace clang {
 
-class ASTContext;
-
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
@@ -403,11 +401,11 @@ public:
 
   /// Return the default value of FPOptions that's used when trailing
   /// storage isn't required.
-  static FPOptions defaultWithoutTrailingStorage(const ASTContext &C);
+  static FPOptions defaultWithoutTrailingStorage(const LangOptions &LO);
 
   /// Does this FPOptions require trailing storage when stored in various
   /// AST nodes, or can it be recreated using `defaultWithoutTrailingStorage`?
-  bool requiresTrailingStorage(const ASTContext &C);
+  bool requiresTrailingStorage(const LangOptions &LO);
 
   bool allowFPContractWithinStatement() const {
     return fp_contract == LangOptions::FPC_On;
