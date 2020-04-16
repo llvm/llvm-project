@@ -845,6 +845,16 @@ def BoolAttr : Attr<CPred<"$_self.isa<BoolAttr>()">, "bool attribute"> {
   let constBuilderCall = "$_builder.getBoolAttr($0)";
 }
 
+// Index attribute.
+def IndexAttr :
+    TypedAttrBase<
+      Index, "IntegerAttr",
+      And<[CPred<"$_self.isa<IntegerAttr>()">,
+           CPred<"$_self.cast<IntegerAttr>().getType().isa<IndexType>()">]>,
+      "index attribute"> {
+  let returnType = [{ APInt }];
+}
+
 // Base class for any integer (regardless of signedness semantics) attributes
 // of fixed width.
 class AnyIntegerAttrBase<AnyI attrValType, string descr> :
