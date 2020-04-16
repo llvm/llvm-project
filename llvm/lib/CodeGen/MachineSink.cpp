@@ -279,7 +279,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   //
   // %bb.2:
   //     %p = PHI %y, %bb.0, %def, %bb.1
-  if (llvm::all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
+  if (all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
         MachineInstr *UseInst = MO.getParent();
         unsigned OpNo = UseInst->getOperandNo(&MO);
         MachineBasicBlock *UseBlock = UseInst->getParent();
