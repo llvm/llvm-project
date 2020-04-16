@@ -2588,17 +2588,19 @@ bool PPCTargetLowering::SelectAddressRegRegOnly(SDValue N, SDValue &Base,
 }
 
 /// Returns true if this address is a PC Relative address.
-/// PC Relative addresses are marked with the flag PPCII::MO_PCREL_FLAG.
+/// PC Relative addresses are marked with the flag PPCII::MO_PCREL_FLAG
+/// or if the node opcode is PPCISD::MAT_PCREL_ADDR.
 bool PPCTargetLowering::SelectAddressPCRel(SDValue N, SDValue &Base) const {
-  ConstantPoolSDNode *ConstPoolNode =
-      dyn_cast<ConstantPoolSDNode>(N.getNode());
-  bool HasFlag = ConstPoolNode &&
-                 ConstPoolNode->getTargetFlags() == PPCII::MO_PCREL_FLAG;
-  bool HasNode = N.getOpcode() == PPCISD::MAT_PCREL_ADDR;
-  if (HasFlag || HasNode) {
-    Base = N;
+  // This is a materialize PC Relative node. Always select this as PC Relative.
+  Base = N;
+  if (N.getOpcode() == PPCISD::MAT_PCREL_ADDR)
     return true;
-  }
+  if (ConstantPoolSDNode *CPN = dyn_cast<ConstantPoolSDNode>(N))
+    if (CPN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
+      return true;
+  if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(N))
+    if (GAN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
+      return true;
   return false;
 }
 
@@ -3049,6 +3051,12 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
   // 64-bit SVR4 ABI & AIX ABI code is always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
   if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
+    if (!isAccessedAsGotIndirect(Op) && Subtarget.isUsingPCRelativeCalls()) {
+      EVT Ty = getPointerTy(DAG.getDataLayout());
+      SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty, GSDN->getOffset(),
+                                              PPCII::MO_PCREL_FLAG);
+      return DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
+    }
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, PtrVT, GSDN->getOffset());
     return getTOCEntry(DAG, DL, GA);
