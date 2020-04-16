@@ -165,6 +165,9 @@ public:
   // requiring the raw MLIR trait here.
   const OpTrait *getTrait(llvm::StringRef trait) const;
 
+  // Returns "true" if Op has a ResizableOperandList trait.
+  bool hasResizableOperandList() const;
+
   // Regions.
   using const_region_iterator = const NamedRegion *;
   const_region_iterator region_begin() const;
