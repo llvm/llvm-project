@@ -1,5 +1,6 @@
 include "config/public_api.td"
 
+include "spec/gnu_ext.td"
 include "spec/linux.td"
 include "spec/posix.td"
 include "spec/stdc.td"
@@ -123,7 +124,10 @@ def MathAPI : PublicAPI<"math.h"> {
     IsNanMacro,
   ];
   let Functions = [
+   "cosf",
    "round",
+   "sincosf",
+   "sinf",
   ];
 }
 
