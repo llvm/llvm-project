@@ -4652,7 +4652,7 @@ RecoveryExpr *RecoveryExpr::Create(ASTContext &Ctx, SourceLocation BeginLoc,
 RecoveryExpr *RecoveryExpr::CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumSubExprs),
                            alignof(RecoveryExpr));
-  return new (Mem) RecoveryExpr(EmptyShell());
+  return new (Mem) RecoveryExpr(EmptyShell(), NumSubExprs);
 }
 
 void OMPArrayShapingExpr::setDimensions(ArrayRef<Expr *> Dims) {
