@@ -41,7 +41,7 @@ namespace serialization {
     /// Version 4 of AST files also requires that the version control branch and
     /// revision match exactly, since there is no backward compatibility of
     /// AST files at this time.
-    const unsigned VERSION_MAJOR = 9;
+    const unsigned VERSION_MAJOR = 10;
 
     /// AST file minor version number supported by this version of
     /// Clang.
@@ -181,7 +181,7 @@ namespace serialization {
       /// Raw source location of end of range.
       unsigned End;
 
-      /// Offset in the AST file.
+      /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
       uint32_t BitOffset;
 
       PPEntityOffset(SourceRange R, uint32_t BitOffset)
@@ -216,17 +216,41 @@ namespace serialization {
       }
     };
 
-    /// Source range/offset of a preprocessed entity.
+    /// Offset in the AST file. Use splitted 64-bit integer into low/high
+    /// parts to keep structure alignment 32-bit (it is important because
+    /// blobs in bitstream are 32-bit aligned). This structure is serialized
+    /// "as is" to the AST file.
+    struct UnderalignedInt64 {
+      uint32_t BitOffsetLow = 0;
+      uint32_t BitOffsetHigh = 0;
+
+      UnderalignedInt64() = default;
+      UnderalignedInt64(uint64_t BitOffset) { setBitOffset(BitOffset); }
+
+      void setBitOffset(uint64_t Offset) {
+        BitOffsetLow = Offset;
+        BitOffsetHigh = Offset >> 32;
+      }
+
+      uint64_t getBitOffset() const {
+        return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
+      }
+    };
+
+    /// Source location and bit offset of a declaration.
     struct DeclOffset {
       /// Raw source location.
       unsigned Loc = 0;
 
-      /// Offset in the AST file.
-      uint32_t BitOffset = 0;
+      /// Offset in the AST file. Keep structure alignment 32-bit and avoid
+      /// padding gap because undefined value in the padding affects AST hash.
+      UnderalignedInt64 BitOffset;
 
       DeclOffset() = default;
-      DeclOffset(SourceLocation Loc, uint32_t BitOffset)
-        : Loc(Loc.getRawEncoding()), BitOffset(BitOffset) {}
+      DeclOffset(SourceLocation Loc, uint64_t BitOffset) {
+        setLocation(Loc);
+        setBitOffset(BitOffset);
+      }
 
       void setLocation(SourceLocation L) {
         Loc = L.getRawEncoding();
@@ -234,6 +258,14 @@ namespace serialization {
 
       SourceLocation getLocation() const {
         return SourceLocation::getFromRawEncoding(Loc);
+      }
+
+      void setBitOffset(uint64_t Offset) {
+        BitOffset.setBitOffset(Offset);
+      }
+
+      uint64_t getBitOffset() const {
+        return BitOffset.getBitOffset();
       }
     };
 
