@@ -361,7 +361,7 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-NEXT:    lxsihzx v2, r6, r7
 ; CHECK-NEXT:    lxsihzx v4, r3, r4
 ; CHECK-NEXT:    li r6, 0
-; CHECK-NEXT:    mtvsrd f0, r6
+; CHECK-NEXT:    mtfprd f0, r6
 ; CHECK-NEXT:    vsplth v4, v4, 3
 ; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vsplth v2, v2, 3
@@ -377,7 +377,7 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-NEXT:    xxspltw v3, v2, 2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    vextuwrx r3, r3, v2
-; CHECK-NEXT:    cmpw cr0, r3, r5
+; CHECK-NEXT:    cmpw r3, r5
 ; CHECK-NEXT:    bgelr+ cr0
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ;
@@ -405,7 +405,7 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; P9BE-NEXT:    xxspltw v3, v2, 1
 ; P9BE-NEXT:    vadduwm v2, v2, v3
 ; P9BE-NEXT:    vextuwlx r3, r3, v2
-; P9BE-NEXT:    cmpw cr0, r3, r5
+; P9BE-NEXT:    cmpw r3, r5
 ; P9BE-NEXT:    bgelr+ cr0
 ; P9BE-NEXT:  # %bb.1: # %if.then
 entry:
@@ -446,7 +446,7 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; CHECK-NEXT:    add r6, r3, r4
 ; CHECK-NEXT:    lxsibzx v2, r3, r4
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    li r3, 8
 ; CHECK-NEXT:    lxsibzx v5, r6, r3
 ; CHECK-NEXT:    xxswapd v3, vs0
@@ -467,7 +467,7 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; CHECK-NEXT:    xxspltw v3, v2, 2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    vextuwrx r3, r3, v2
-; CHECK-NEXT:    cmpw cr0, r3, r5
+; CHECK-NEXT:    cmpw r3, r5
 ; CHECK-NEXT:    bgelr+ cr0
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ;
@@ -496,7 +496,7 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; P9BE-NEXT:    xxspltw v3, v2, 1
 ; P9BE-NEXT:    vadduwm v2, v2, v3
 ; P9BE-NEXT:    vextuwlx r3, r3, v2
-; P9BE-NEXT:    cmpw cr0, r3, r5
+; P9BE-NEXT:    cmpw r3, r5
 ; P9BE-NEXT:    bgelr+ cr0
 ; P9BE-NEXT:  # %bb.1: # %if.then
 entry:

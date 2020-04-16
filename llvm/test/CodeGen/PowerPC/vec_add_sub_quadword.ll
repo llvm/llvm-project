@@ -45,8 +45,8 @@ define <1 x i128> @increment_by_one(<1 x i128> %x) nounwind {
 define <1 x i128> @increment_by_val(<1 x i128> %x, i128 %val) nounwind {
 ; VSX-LABEL: increment_by_val:
 ; VSX:       # %bb.0:
-; VSX-NEXT:    mtvsrd 0, 6
-; VSX-NEXT:    mtvsrd 1, 5
+; VSX-NEXT:    mtfprd 0, 6
+; VSX-NEXT:    mtfprd 1, 5
 ; VSX-NEXT:    xxmrghd 35, 1, 0
 ; VSX-NEXT:    vadduqm 2, 2, 3
 ; VSX-NEXT:    blr
@@ -96,8 +96,8 @@ define <1 x i128> @decrement_by_one(<1 x i128> %x) nounwind {
 define <1 x i128> @decrement_by_val(<1 x i128> %x, i128 %val) nounwind {
 ; VSX-LABEL: decrement_by_val:
 ; VSX:       # %bb.0:
-; VSX-NEXT:    mtvsrd 0, 6
-; VSX-NEXT:    mtvsrd 1, 5
+; VSX-NEXT:    mtfprd 0, 6
+; VSX-NEXT:    mtfprd 1, 5
 ; VSX-NEXT:    xxmrghd 35, 1, 0
 ; VSX-NEXT:    vsubuqm 2, 2, 3
 ; VSX-NEXT:    blr
