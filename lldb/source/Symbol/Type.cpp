@@ -234,7 +234,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 }
 
-void Type::Dump(Stream *s, bool show_context) {
+void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
   s->Printf("%p: ", static_cast<void *>(this));
   s->Indent();
   *s << "Type" << static_cast<const UserID &>(*this) << ' ';
@@ -255,7 +255,7 @@ void Type::Dump(Stream *s, bool show_context) {
 
   if (m_compiler_type.IsValid()) {
     *s << ", compiler_type = " << m_compiler_type.GetOpaqueQualType() << ' ';
-    GetForwardCompilerType().DumpTypeDescription(s);
+    GetForwardCompilerType().DumpTypeDescription(s, level);
   } else if (m_encoding_uid != LLDB_INVALID_UID) {
     s->Format(", type_data = {0:x-16}", m_encoding_uid);
     switch (m_encoding_uid_type) {
