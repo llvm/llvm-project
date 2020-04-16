@@ -13698,7 +13698,7 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
   Expr *Comparison = BinaryOperator::Create(
       S.Context, IterationVarRefRVal.build(S, Loc),
       IntegerLiteral::Create(S.Context, Upper, SizeType, Loc), BO_NE,
-      S.Context.BoolTy, VK_RValue, OK_Ordinary, Loc, S.FPFeatures);
+      S.Context.BoolTy, VK_RValue, OK_Ordinary, Loc, S.CurFPFeatures);
 
   // Create the pre-increment of the iteration variable. We can determine
   // whether the increment will overflow based on the value of the array

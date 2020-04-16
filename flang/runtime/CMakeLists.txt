@@ -26,7 +26,7 @@ endif()
 
 configure_file(config.h.cmake config.h)
 
-add_library(FortranRuntime
+add_flang_library(FortranRuntime
   ISO_Fortran_binding.cpp
   allocatable.cpp
   buffer.cpp
@@ -53,12 +53,7 @@ add_library(FortranRuntime
   type-code.cpp
   unit.cpp
   unit-map.cpp
-)
 
-target_include_directories(FortranRuntime
-  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-target_link_libraries(FortranRuntime
+  LINK_LIBS
   FortranDecimal
 )

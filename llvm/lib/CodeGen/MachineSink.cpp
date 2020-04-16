@@ -269,30 +269,26 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   // into and they are all PHI nodes. In this case, machine-sink must break
   // the critical edge first. e.g.
   //
-  // %bb.1: derived from LLVM BB %bb4.preheader
+  // %bb.1:
   //   Predecessors according to CFG: %bb.0
   //     ...
-  //     %reg16385 = DEC64_32r %reg16437, implicit-def dead %eflags
+  //     %def = DEC64_32r %x, implicit-def dead %eflags
   //     ...
   //     JE_4 <%bb.37>, implicit %eflags
   //   Successors according to CFG: %bb.37 %bb.2
   //
-  // %bb.2: derived from LLVM BB %bb.nph
-  //   Predecessors according to CFG: %bb.0 %bb.1
-  //     %reg16386 = PHI %reg16434, %bb.0, %reg16385, %bb.1
-  BreakPHIEdge = true;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-    MachineInstr *UseInst = MO.getParent();
-    unsigned OpNo = &MO - &UseInst->getOperand(0);
-    MachineBasicBlock *UseBlock = UseInst->getParent();
-    if (!(UseBlock == MBB && UseInst->isPHI() &&
-          UseInst->getOperand(OpNo+1).getMBB() == DefMBB)) {
-      BreakPHIEdge = false;
-      break;
-    }
-  }
-  if (BreakPHIEdge)
+  // %bb.2:
+  //     %p = PHI %y, %bb.0, %def, %bb.1
+  if (llvm::all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
+        MachineInstr *UseInst = MO.getParent();
+        unsigned OpNo = UseInst->getOperandNo(&MO);
+        MachineBasicBlock *UseBlock = UseInst->getParent();
+        return UseBlock == MBB && UseInst->isPHI() &&
+               UseInst->getOperand(OpNo + 1).getMBB() == DefMBB;
+      })) {
+    BreakPHIEdge = true;
     return true;
+  }
 
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
     // Determine the block of the use.

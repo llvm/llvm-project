@@ -624,6 +624,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   Style.SpaceBeforeCpp11BracedList = true;
   Style.Cpp11BracedListStyle = false;
   Style.SpacesInContainerLiterals = false;
+  Style.SpaceAfterCStyleCast = false;
 
   verifyFormat(R"(new Car { "Door", 0.1 })", Style);
   verifyFormat(R"(new Car { 0.1, "Door" })", Style);
@@ -641,6 +642,12 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
 
   verifyFormat(R"(char[,,] rawCharArray = MakeCharacterGrid();)", Style);
+
+  // Not seen as a C-style cast.
+  verifyFormat(R"(//
+foreach ((A a, B b) in someList) {
+})",
+               Style);
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);

@@ -177,7 +177,6 @@ Operation *mlir::edsc::makeGenericLinalgOp(
               builder.getAffineMapArrayAttr(maps),
               builder.getStrArrayAttr(iteratorStrTypes),
               StringAttr() /*doc*/,
-              FlatSymbolRefAttr() /*fun*/,
               StringAttr() /*library_call*/
               /* TODO: other attributes in op */
               )
