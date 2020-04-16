@@ -1443,10 +1443,9 @@ static bool canInstrSubstituteCmpInstr(MachineInstr *MI, MachineInstr *CmpInstr,
     return false;
 
   UsedNZCV NZCVUsedAfterCmp;
-  for (auto I = std::next(CmpInstr->getIterator()),
-            E = CmpInstr->getParent()->instr_end();
-       I != E; ++I) {
-    const MachineInstr &Instr = *I;
+  for (const MachineInstr &Instr :
+       instructionsWithoutDebug(std::next(CmpInstr->getIterator()),
+                                CmpInstr->getParent()->instr_end())) {
     if (Instr.readsRegister(AArch64::NZCV, TRI)) {
       AArch64CC::CondCode CC = findCondCodeUsedByInstr(Instr);
       if (CC == AArch64CC::Invalid) // Unsupported conditional instruction
