@@ -120,17 +120,6 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
 /// FIXME: introduce a type for source range with this invariant.
 bool isValidFileRange(const SourceManager &Mgr, SourceRange R);
 
-/// Returns true iff \p L is contained in \p R.
-/// EXPECTS: isValidFileRange(R) == true, L is a file location.
-bool halfOpenRangeContains(const SourceManager &Mgr, SourceRange R,
-                           SourceLocation L);
-
-/// Returns true iff \p L is contained in \p R or \p L is equal to the end point
-/// of \p R.
-/// EXPECTS: isValidFileRange(R) == true, L is a file location.
-bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
-                          SourceLocation L);
-
 /// Returns the source code covered by the source range.
 /// EXPECTS: isValidFileRange(R) == true.
 llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R);
@@ -170,8 +159,6 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// possible.
 llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
                                              const SourceManager &SourceMgr);
-
-bool isRangeConsecutive(const Range &Left, const Range &Right);
 
 /// Choose the clang-format style we should apply to a certain file.
 /// This will usually use FS to look for .clang-format directories.
