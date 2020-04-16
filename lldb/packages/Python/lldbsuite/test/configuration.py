@@ -137,9 +137,6 @@ all_tests = set()
 # LLDB library directory.
 lldb_libs_dir = None
 
-# A plugin whose tests will be enabled, like intel-pt.
-enabled_plugins = []
-
 
 def shouldSkipBecauseOfCategories(test_categories):
     if use_categories:
