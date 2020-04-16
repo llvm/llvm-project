@@ -13,6 +13,7 @@ on:
   pull_request:
     paths:
       - 'llvm/**'
+      - '.github/workflows/llvm-tests.yml'
 
 jobs:
   build_llvm:
@@ -61,7 +62,15 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@master
     - name: Install abi-compliance-checker
-      run: sudo apt-get install abi-dumper
+      run: |
+        sudo apt-get install abi-dumper autoconf pkg-config
+    - name: Install universal-ctags
+      run: |
+        git clone https://github.com/universal-ctags/ctags.git
+        cd ctags
+        ./autogen.sh
+        ./configure
+        sudo make install
     - name: Download source code
       uses: llvm/actions/get-llvm-project-src@master
       with:
@@ -71,7 +80,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON ../llvm
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g -Og" ../llvm
     - name: Build
       run: ninja -C build libLLVM-${{ env.release_major }}.so
     - name: Dump ABI
