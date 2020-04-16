@@ -68,7 +68,7 @@ public:
   /// section name
   bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
-  StringRef getSectionName() const { return SectionName; }
+  StringRef getName() const { return SectionName; }
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }

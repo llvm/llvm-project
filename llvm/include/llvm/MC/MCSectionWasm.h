@@ -56,7 +56,7 @@ public:
   /// section name
   bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
-  StringRef getSectionName() const { return SectionName; }
+  StringRef getName() const { return SectionName; }
   const MCSymbolWasm *getGroup() const { return Group; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

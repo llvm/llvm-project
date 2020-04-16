@@ -39,11 +39,11 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          const MCExpr *Subsection) const {
   // standard sections don't require the '.section'
   if (ShouldOmitSectionDirective(SectionName, MAI)) {
-    OS << '\t' << getSectionName() << '\n';
+    OS << '\t' << getName() << '\n';
     return;
   }
 
-  OS << "\t.section\t" << getSectionName() << ",\"";
+  OS << "\t.section\t" << getName() << ",\"";
   if (getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
     OS << 'd';
   if (getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)

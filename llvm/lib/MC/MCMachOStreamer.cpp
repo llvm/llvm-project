@@ -123,7 +123,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   // These sections are created by the assembler itself after the end of
   // the .s file.
   StringRef SegName = MSec.getSegmentName();
-  StringRef SecName = MSec.getSectionName();
+  StringRef SecName = MSec.getName();
 
   if (SegName == "__LD" && SecName == "__compact_unwind")
     return true;

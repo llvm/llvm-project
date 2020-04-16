@@ -103,7 +103,7 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
 void MCSectionMachO::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
-  OS << "\t.section\t" << getSegmentName() << ',' << getSectionName();
+  OS << "\t.section\t" << getSegmentName() << ',' << getName();
 
   // Get the section type and attributes.
   unsigned TAA = getTypeAndAttributes();
