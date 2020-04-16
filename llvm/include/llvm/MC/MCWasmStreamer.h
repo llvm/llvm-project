@@ -11,18 +11,14 @@
 
 #include "MCAsmBackend.h"
 #include "MCCodeEmitter.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
-class MCAssembler;
 class MCExpr;
 class MCInst;
-class raw_ostream;
 
 class MCWasmStreamer : public MCObjectStreamer {
 public:
