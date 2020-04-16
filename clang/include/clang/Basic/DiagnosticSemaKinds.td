@@ -802,7 +802,7 @@ def err_ptrauth_qualifier_arg_not_ice : Error<
 def err_ptrauth_qualifier_address_discrimination_invalid : Error<
   "address discrimination flag for __ptrauth must be 0 or 1; value is %0">;
 def err_ptrauth_qualifier_extra_discriminator_invalid : Error<
-  "extra discriminator for __ptrauth must between 0 and %1; value is %0">;
+  "extra discriminator for __ptrauth must be between 0 and %1; value is %0">;
 
 /// main()
 // static main() is not an error in C, just in C++.
