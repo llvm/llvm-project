@@ -253,10 +253,23 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
 foreach Index = 0-105 in {
-  def SGPR#Index :
-    SIReg <"s"#Index, Index>,
+  def SGPR#Index#_LO16 : SIReg <"s"#Index#".l", Index>,
     DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
                  !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+
+  // This is a placeholder to fill high lane in mask.
+  def SGPR#Index#_HI16 : SIReg <"", Index> {
+    let isArtificial = 1;
+  }
+
+  def SGPR#Index :
+    SIRegWithSubRegs <"s"#Index, [!cast<Register>("SGPR"#Index#"_LO16"),
+                                  !cast<Register>("SGPR"#Index#"_HI16")],
+                      Index>,
+    DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                 !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]> {
+    let SubRegIndices = [lo16, hi16];
+  }
 }
 
 // VGPR registers
@@ -316,6 +329,20 @@ def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
 }
 
 // TODO: Do we need to set DwarfRegAlias on register tuples?
+
+def SGPR_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+                              (add (sequence "SGPR%u_LO16", 0, 105))> {
+  let AllocationPriority = 1;
+  let Size = 16;
+  let GeneratePressureSet = 0;
+}
+
+def SGPR_HI16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+                              (add (sequence "SGPR%u_HI16", 0, 105))> {
+  let isAllocatable = 0;
+  let Size = 16;
+  let GeneratePressureSet = 0;
+}
 
 // SGPR 32-bit registers
 def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
