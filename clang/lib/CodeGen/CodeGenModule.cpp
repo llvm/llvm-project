@@ -1909,9 +1909,15 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
      F->setSection(SA->getName());
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
-  if (FD->isInlineBuiltinDeclaration() && shouldEmitFunction(FD)) {
-    F->addAttribute(llvm::AttributeList::FunctionIndex,
-                    llvm::Attribute::NoBuiltin);
+  if (FD->isInlineBuiltinDeclaration()) {
+    const FunctionDecl *FDBody;
+    bool HasBody = FD->hasBody(FDBody);
+    (void)HasBody;
+    assert(HasBody && "Inline builtin declarations should always have an "
+                      "available body!");
+    if (shouldEmitFunction(FDBody))
+      F->addAttribute(llvm::AttributeList::FunctionIndex,
+                      llvm::Attribute::NoBuiltin);
   }
 
   if (FD->isReplaceableGlobalAllocationFunction()) {
