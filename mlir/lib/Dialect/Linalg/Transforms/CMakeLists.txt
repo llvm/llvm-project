@@ -15,7 +15,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   )
 target_link_libraries(MLIRLinalgTransforms
   PUBLIC
-  MLIRAffine
+  MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
   MLIRIR

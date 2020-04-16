@@ -10,7 +10,7 @@ add_mlir_conversion_library(MLIRAffineToStandard
 target_link_libraries(
   MLIRAffineToStandard
   PUBLIC
-  MLIRAffine
+  MLIRAffineOps
   MLIRLoopOps
   MLIRPass
   MLIRStandardOps
