@@ -6,6 +6,7 @@ add_mlir_conversion_library(MLIRVectorToLoops
 )
 set(LIBS
   MLIREDSC
+  MLIRAffineEDSC
   MLIRLLVMIR
   MLIRTransforms
   LLVMCore
