@@ -43,7 +43,7 @@ macro(add_comgr_test name)
     amd_comgr)
   add_dependencies("${name}"
     ${TEST_INPUT_BINARIES})
-  add_test(NAME "${name}"
+  add_test(NAME "comgr_${name}"
     COMMAND "${name}")
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
