@@ -41,7 +41,7 @@ namespace serialization {
     /// Version 4 of AST files also requires that the version control branch and
     /// revision match exactly, since there is no backward compatibility of
     /// AST files at this time.
-    const unsigned VERSION_MAJOR = 10;
+    const unsigned VERSION_MAJOR = 9;
 
     /// AST file minor version number supported by this version of
     /// Clang.
@@ -181,7 +181,7 @@ namespace serialization {
       /// Raw source location of end of range.
       unsigned End;
 
-      /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
+      /// Offset in the AST file.
       uint32_t BitOffset;
 
       PPEntityOffset(SourceRange R, uint32_t BitOffset)
@@ -221,18 +221,12 @@ namespace serialization {
       /// Raw source location.
       unsigned Loc = 0;
 
-      /// Offset in the AST file. Split 64-bit integer into low/high parts
-      /// to keep structure alignment 32-bit and don't have padding gap.
-      /// This structure is serialized "as is" to the AST file and undefined
-      /// value in the padding affects AST hash.
-      uint32_t BitOffsetLow = 0;
-      uint32_t BitOffsetHigh = 0;
+      /// Offset in the AST file.
+      uint32_t BitOffset = 0;
 
       DeclOffset() = default;
-      DeclOffset(SourceLocation Loc, uint64_t BitOffset) {
-        setLocation(Loc);
-        setBitOffset(BitOffset);
-      }
+      DeclOffset(SourceLocation Loc, uint32_t BitOffset)
+        : Loc(Loc.getRawEncoding()), BitOffset(BitOffset) {}
 
       void setLocation(SourceLocation L) {
         Loc = L.getRawEncoding();
@@ -240,15 +234,6 @@ namespace serialization {
 
       SourceLocation getLocation() const {
         return SourceLocation::getFromRawEncoding(Loc);
-      }
-
-      void setBitOffset(uint64_t Offset) {
-        BitOffsetLow = Offset;
-        BitOffsetHigh = Offset >> 32;
-      }
-
-      uint64_t getBitOffset() const {
-        return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
       }
     };
 
