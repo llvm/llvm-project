@@ -1016,7 +1016,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
   return nullptr;
 }
 
-bool DWARFDebugInfoEntry::IsGlobalOrStaticVariable() const {
+bool DWARFDebugInfoEntry::IsGlobalOrStaticScopeVariable() const {
   if (Tag() != DW_TAG_variable)
     return false;
   const DWARFDebugInfoEntry *parent_die = GetParent();

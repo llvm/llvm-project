@@ -3462,7 +3462,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data && die.GetDIE()->IsGlobalOrStaticVariable())
+          if (location_is_const_value_data &&
+              die.GetDIE()->IsGlobalOrStaticScopeVariable())
             scope = eValueTypeVariableStatic;
           else {
             scope = eValueTypeVariableLocal;
