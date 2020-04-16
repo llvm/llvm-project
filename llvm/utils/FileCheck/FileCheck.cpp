@@ -193,14 +193,15 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   // Labels for annotation lines.
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "T:L";
-  OS << "    labels the only match result for a pattern of type T from "
-     << "line L of\n"
-     << "           the check file\n";
+  OS << "    labels the only match result for either (1) a pattern of type T"
+     << " from\n"
+     << "           line L of the check file if L is an integer or (2) the"
+     << " I-th implicit\n"
+     << "           pattern if L is \"imp\" followed by an integer "
+     << "I (index origin one)\n";
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "T:L'N";
-  OS << "  labels the Nth match result for a pattern of type T from line "
-     << "L of\n"
-     << "           the check file\n";
+  OS << "  labels the Nth match result for such a pattern\n";
 
   // Markers on annotation lines.
   OS << "  - ";
@@ -293,9 +294,12 @@ std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   llvm_unreachable("unknown FileCheckType");
 }
 
-static void BuildInputAnnotations(const std::vector<FileCheckDiag> &Diags,
-                                  std::vector<InputAnnotation> &Annotations,
-                                  unsigned &LabelWidth) {
+static void
+BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
+                      const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
+                      const std::vector<FileCheckDiag> &Diags,
+                      std::vector<InputAnnotation> &Annotations,
+                      unsigned &LabelWidth) {
   // How many diagnostics has the current check seen so far?
   unsigned CheckDiagCount = 0;
   // What's the widest label?
@@ -305,14 +309,24 @@ static void BuildInputAnnotations(const std::vector<FileCheckDiag> &Diags,
     InputAnnotation A;
 
     // Build label, which uniquely identifies this check result.
-    A.CheckLine = DiagItr->CheckLine;
+    unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
+    auto CheckLineAndCol =
+        SM.getLineAndColumn(DiagItr->CheckLoc, CheckBufferID);
+    A.CheckLine = CheckLineAndCol.first;
     llvm::raw_string_ostream Label(A.Label);
-    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":"
-          << DiagItr->CheckLine;
+    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":";
+    if (CheckBufferID == CheckFileBufferID)
+      Label << CheckLineAndCol.first;
+    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
+             CheckBufferID < ImpPatBufferIDRange.second)
+      Label << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
+    else
+      llvm_unreachable("expected diagnostic's check location to be either in "
+                       "the check file or for an implicit pattern");
     A.CheckDiagIndex = UINT_MAX;
     auto DiagNext = std::next(DiagItr);
     if (DiagNext != DiagEnd && DiagItr->CheckTy == DiagNext->CheckTy &&
-        DiagItr->CheckLine == DiagNext->CheckLine)
+        DiagItr->CheckLoc == DiagNext->CheckLoc)
       A.CheckDiagIndex = CheckDiagCount++;
     else if (CheckDiagCount) {
       A.CheckDiagIndex = CheckDiagCount;
@@ -606,11 +620,13 @@ int main(int argc, char **argv) {
   SmallString<4096> CheckFileBuffer;
   StringRef CheckFileText = FC.CanonicalizeFile(CheckFile, CheckFileBuffer);
 
-  SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
-                            CheckFileText, CheckFile.getBufferIdentifier()),
-                        SMLoc());
+  unsigned CheckFileBufferID =
+      SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
+                                CheckFileText, CheckFile.getBufferIdentifier()),
+                            SMLoc());
 
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
+  std::pair<unsigned, unsigned> ImpPatBufferIDRange;
+  if (FC.readCheckFile(SM, CheckFileText, PrefixRE, &ImpPatBufferIDRange))
     return 2;
 
   // Open the file to check and add it to SourceMgr.
@@ -658,7 +674,8 @@ int main(int argc, char **argv) {
            << "\n";
     std::vector<InputAnnotation> Annotations;
     unsigned LabelWidth;
-    BuildInputAnnotations(Diags, Annotations, LabelWidth);
+    BuildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
+                          Annotations, LabelWidth);
     DumpAnnotatedInput(errs(), Req, InputFileText, Annotations, LabelWidth);
   }
 
