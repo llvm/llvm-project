@@ -3246,6 +3246,9 @@ APValue &MSGuidDecl::getAsAPValue() const {
       Arr.getArrayInitializedElt(I) =
           APValue(APSInt(APInt(8, PartVal.Part4And5[I]), true));
     }
+    // Register this APValue to be destroyed if necessary. (Note that the
+    // MSGuidDecl destructor is never run.)
+    getASTContext().addDestruction(&APVal);
   }
 
   return APVal;
