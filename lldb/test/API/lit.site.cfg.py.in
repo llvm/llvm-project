@@ -32,11 +32,6 @@ config.filecheck = '@LLDB_TEST_FILECHECK@'
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
 
-# Plugins
-lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
-if lldb_build_intel_pt == '1':
-    config.enabled_plugins = ['intel-pt']
-
 # Additional dotest arguments can be passed to lit by providing a
 # semicolon-separates list: --param dotest-args="arg;arg".
 dotest_lit_args_str = lit_config.params.get('dotest-args', None)
