@@ -28,7 +28,7 @@ add_mlir_library(MLIRTransforms
 
 target_link_libraries(MLIRTransforms
   PUBLIC
-  MLIRAffine
+  MLIRAffineOps
   MLIRAnalysis
   MLIRLoopLikeInterface
   MLIRLoopOps
