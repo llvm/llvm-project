@@ -324,14 +324,11 @@ static LogicalResult verify(AllocLikeOp op) {
     return success();
 
   // An alloca op needs to have an ancestor with an allocation scope trait.
-  auto *parentOp = op.getParentOp();
-  while (parentOp) {
-    if (parentOp->template hasTrait<OpTrait::AutomaticAllocationScope>())
-      return success();
-    parentOp = parentOp->getParentOp();
-  }
-  return op.emitOpError(
-      "requires an ancestor op with AutomaticAllocationScope trait");
+  if (!op.template getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return op.emitOpError(
+        "requires an ancestor op with AutomaticAllocationScope trait");
+
+  return success();
 }
 
 namespace {
