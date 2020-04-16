@@ -114,6 +114,9 @@ void MCContext::reset() {
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
 
+  ELFEntrySizeMap.clear();
+  ELFSeenGenericMergeableSections.clear();
+
   NextID.clear();
   AllowTemporaryLabels = true;
   DwarfLocSeen = false;
@@ -441,6 +444,10 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
                            UniqueID, LinkedToSym);
   Entry.second = Result;
+
+  recordELFMergeableSectionInfo(Result->getName(), Result->getFlags(),
+                                Result->getUniqueID(), Result->getEntrySize());
+
   return Result;
 }
 
@@ -448,6 +455,40 @@ MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group) {
   return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
                               SectionKind::getReadOnly(), 4, Group,
                               MCSection::NonUniqueID, nullptr);
+}
+
+void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
+                                              unsigned Flags, unsigned UniqueID,
+                                              unsigned EntrySize) {
+  bool IsMergeable = Flags & ELF::SHF_MERGE;
+  if (IsMergeable && (UniqueID == GenericSectionID))
+    ELFSeenGenericMergeableSections.insert(SectionName);
+
+  // For mergeable sections or non-mergeable sections with a generic mergeable
+  // section name we enter their Unique ID into the ELFEntrySizeMap so that
+  // compatible globals can be assigned to the same section.
+  if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
+    ELFEntrySizeMap.insert(std::make_pair(
+        ELFEntrySizeKey{SectionName, Flags, EntrySize}, UniqueID));
+  }
+}
+
+bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
+  return SectionName.startswith(".rodata.str") ||
+         SectionName.startswith(".rodata.cst");
+}
+
+bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
+  return isELFImplicitMergeableSectionNamePrefix(SectionName) ||
+         ELFSeenGenericMergeableSections.count(SectionName);
+}
+
+Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
+                                                       unsigned Flags,
+                                                       unsigned EntrySize) {
+  auto I = ELFEntrySizeMap.find(
+      MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
+  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

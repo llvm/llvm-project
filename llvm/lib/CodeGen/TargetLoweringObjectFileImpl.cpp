@@ -29,6 +29,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -568,6 +570,71 @@ static unsigned getEntrySizeForKind(SectionKind Kind) {
   }
 }
 
+/// Return the section prefix name used by options FunctionsSections and
+/// DataSections.
+static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
+  if (Kind.isText())
+    return ".text";
+  if (Kind.isReadOnly())
+    return ".rodata";
+  if (Kind.isBSS())
+    return ".bss";
+  if (Kind.isThreadData())
+    return ".tdata";
+  if (Kind.isThreadBSS())
+    return ".tbss";
+  if (Kind.isData())
+    return ".data";
+  if (Kind.isReadOnlyWithRel())
+    return ".data.rel.ro";
+  llvm_unreachable("Unknown section kind");
+}
+
+static SmallString<128>
+getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
+                           Mangler &Mang, const TargetMachine &TM,
+                           unsigned EntrySize, bool UniqueSectionName) {
+  SmallString<128> Name;
+  if (Kind.isMergeableCString()) {
+    // We also need alignment here.
+    // FIXME: this is getting the alignment of the character, not the
+    // alignment of the global!
+    unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
+        cast<GlobalVariable>(GO));
+
+    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
+    Name = SizeSpec + utostr(Align);
+  } else if (Kind.isMergeableConst()) {
+    Name = ".rodata.cst";
+    Name += utostr(EntrySize);
+  } else {
+    Name = getSectionPrefixForGlobal(Kind);
+  }
+
+  if (const auto *F = dyn_cast<Function>(GO)) {
+    if (Optional<StringRef> Prefix = F->getSectionPrefix())
+      Name += *Prefix;
+  }
+
+  if (UniqueSectionName) {
+    Name.push_back('.');
+    TM.getNameWithPrefix(Name, GO, Mang, /*MayAlwaysUsePrivate*/true);
+  }
+  return Name;
+}
+
+namespace {
+class LoweringDiagnosticInfo : public DiagnosticInfo {
+  const Twine &Msg;
+
+public:
+  LoweringDiagnosticInfo(const Twine &DiagMsg,
+                         DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Lowering, Severity), Msg(DiagMsg) {}
+  void print(DiagnosticPrinter &DP) const override { DP << Msg; }
+};
+}
+
 MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
@@ -603,6 +670,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     Flags |= ELF::SHF_GROUP;
   }
 
+  unsigned EntrySize = getEntrySizeForKind(Kind);
+
   // A section can have at most one associated section. Put each global with
   // MD_associated in a unique section.
   unsigned UniqueID = MCContext::GenericSectionID;
@@ -610,35 +679,75 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   if (LinkedToSym) {
     UniqueID = NextUniqueID++;
     Flags |= ELF::SHF_LINK_ORDER;
+  } else {
+    if (getContext().getAsmInfo()->useIntegratedAssembler()) {
+      // Symbols must be placed into sections with compatible entry
+      // sizes. Generate unique sections for symbols that have not
+      // been assigned to compatible sections.
+      if (Flags & ELF::SHF_MERGE) {
+        auto maybeID = getContext().getELFUniqueIDForEntsize(SectionName, Flags,
+                                                             EntrySize);
+        if (maybeID)
+          UniqueID = *maybeID;
+        else {
+          // If the user has specified the same section name as would be created
+          // implicitly for this symbol e.g. .rodata.str1.1, then we don't need
+          // to unique the section as the entry size for this symbol will be
+          // compatible with implicitly created sections.
+          SmallString<128> ImplicitSectionNameStem = getELFSectionNameForGlobal(
+              GO, Kind, getMangler(), TM, EntrySize, false);
+          if (!(getContext().isELFImplicitMergeableSectionNamePrefix(
+                    SectionName) &&
+                SectionName.startswith(ImplicitSectionNameStem)))
+            UniqueID = NextUniqueID++;
+        }
+      } else {
+        // We need to unique the section if the user has explicity
+        // assigned a non-mergeable symbol to a section name for
+        // a generic mergeable section.
+        if (getContext().isELFGenericMergeableSection(SectionName)) {
+          auto maybeID = getContext().getELFUniqueIDForEntsize(
+              SectionName, Flags, EntrySize);
+          UniqueID = maybeID ? *maybeID : NextUniqueID++;
+        }
+      }
+    } else {
+      // If two symbols with differing sizes end up in the same mergeable
+      // section that section can be assigned an incorrect entry size. To avoid
+      // this we usually put symbols of the same size into distinct mergeable
+      // sections with the same name. Doing so relies on the ",unique ,"
+      // assembly feature. This feature is not avalible until bintuils
+      // version 2.35 (https://sourceware.org/bugzilla/show_bug.cgi?id=25380).
+      Flags &= ~ELF::SHF_MERGE;
+      EntrySize = 0;
+    }
   }
 
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags,
-      getEntrySizeForKind(Kind), Group, UniqueID, LinkedToSym);
+      EntrySize, Group, UniqueID, LinkedToSym);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
-  return Section;
-}
 
-/// Return the section prefix name used by options FunctionsSections and
-/// DataSections.
-static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
-  if (Kind.isText())
-    return ".text";
-  if (Kind.isReadOnly())
-    return ".rodata";
-  if (Kind.isBSS())
-    return ".bss";
-  if (Kind.isThreadData())
-    return ".tdata";
-  if (Kind.isThreadBSS())
-    return ".tbss";
-  if (Kind.isData())
-    return ".data";
-  assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return ".data.rel.ro";
+  if (!getContext().getAsmInfo()->useIntegratedAssembler()) {
+    // If we are not using the integrated assembler then this symbol might have
+    // been placed in an incompatible mergeable section. Emit an error if this
+    // is the case to avoid creating broken output.
+    if ((Section->getFlags() & ELF::SHF_MERGE) &&
+        (Section->getEntrySize() != getEntrySizeForKind(Kind)))
+      GO->getContext().diagnose(LoweringDiagnosticInfo(
+          "Symbol '" + GO->getName() + "' from module '" +
+          (GO->getParent() ? GO->getParent()->getSourceFileName() : "unknown") +
+          "' required a section with entry-size=" +
+          Twine(getEntrySizeForKind(Kind)) + " but was placed in section '" +
+          SectionName + "' with entry-size=" + Twine(Section->getEntrySize()) +
+          ": Explicit assignment by pragma or attribute of an incompatible "
+          "symbol to this section?"));
+  }
+
+  return Section;
 }
 
 static MCSectionELF *selectELFSectionForGlobal(
@@ -655,39 +764,19 @@ static MCSectionELF *selectELFSectionForGlobal(
   // Get the section entry size based on the kind.
   unsigned EntrySize = getEntrySizeForKind(Kind);
 
-  SmallString<128> Name;
-  if (Kind.isMergeableCString()) {
-    // We also need alignment here.
-    // FIXME: this is getting the alignment of the character, not the
-    // alignment of the global!
-    unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
-        cast<GlobalVariable>(GO));
-
-    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    Name = SizeSpec + utostr(Align);
-  } else if (Kind.isMergeableConst()) {
-    Name = ".rodata.cst";
-    Name += utostr(EntrySize);
-  } else {
-    Name = getSectionPrefixForGlobal(Kind);
-  }
-
-  if (const auto *F = dyn_cast<Function>(GO)) {
-    const auto &OptionalPrefix = F->getSectionPrefix();
-    if (OptionalPrefix)
-      Name += *OptionalPrefix;
-  }
-
+  bool UniqueSectionName = false;
   unsigned UniqueID = MCContext::GenericSectionID;
   if (EmitUniqueSection) {
     if (TM.getUniqueSectionNames()) {
-      Name.push_back('.');
-      TM.getNameWithPrefix(Name, GO, Mang, true /*MayAlwaysUsePrivate*/);
+      UniqueSectionName = true;
     } else {
       UniqueID = *NextUniqueID;
       (*NextUniqueID)++;
     }
   }
+  SmallString<128> Name = getELFSectionNameForGlobal(
+      GO, Kind, Mang, TM, EntrySize, UniqueSectionName);
+
   // Use 0 as the unique ID for execute-only text.
   if (Kind.isExecuteOnly())
     UniqueID = 0;

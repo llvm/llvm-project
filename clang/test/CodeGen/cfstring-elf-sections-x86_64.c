@@ -7,12 +7,12 @@ const CFStringRef one = (CFStringRef)__builtin___CFStringMakeConstantString("one
 const CFStringRef two = (CFStringRef)__builtin___CFStringMakeConstantString("\xef\xbf\xbd\x74\xef\xbf\xbd\x77\xef\xbf\xbd\x6f");
 
 // CHECK-ELF-DATA-SECTION: .type .L.str,@object
-// CHECK-ELF-DATA-SECTION: .section .rodata,"a",@progbits
+// CHECK-ELF-DATA-SECTION: .section .rodata,"aMS",@progbits,1,unique,1
 // CHECK-ELF-DATA-SECTION: .L.str:
 // CHECK-ELF-DATA-SECTION: .asciz "one"
 
 // CHECK-ELF-DATA-SECTION: .type .L.str.1,@object
-// CHECK-ELF-DATA-SECTION: .section .rodata,"a",@progbits
+// CHECK-ELF-DATA-SECTION: .section .rodata,"aMS",@progbits,2,unique,2
 // CHECK-ELF-DATA-SECTION: .L.str.1:
 // CHECK-ELF-DATA-SECTION: .short 65533
 // CHECK-ELF-DATA-SECTION: .short 116
