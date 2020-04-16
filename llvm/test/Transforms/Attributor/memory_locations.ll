@@ -397,3 +397,47 @@ define void @callerE(i8* %arg) {
   ret void
 }
 
+@G = external dso_local global i32, align 4
+
+; CHECK: Function Attrs:
+; CHECK-SAME: writeonly
+define void @write_global() {
+; CHECK-LABEL: define {{[^@]+}}@write_global()
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* @G, align 4
+  ret void
+}
+; CHECK: Function Attrs: argmemonly
+; CHECK-SAME: writeonly
+define void @write_global_via_arg(i32* %GPtr) {
+; CHECK-LABEL: define {{[^@]+}}@write_global_via_arg
+; CHECK-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]])
+; CHECK-NEXT:    store i32 0, i32* [[GPTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %GPtr, align 4
+  ret void
+}
+
+; CHECK: Function Attrs:
+; CHECK-SAME: writeonly
+define void @writeonly_global() {
+; CHECK-LABEL: define {{[^@]+}}@writeonly_global()
+; CHECK-NEXT:    call void @write_global()
+; CHECK-NEXT:    ret void
+;
+  call void @write_global()
+  ret void
+}
+; CHECK: Function Attrs:
+; CHECK-SAME: writeonly
+define void @writeonly_global_via_arg() {
+; CHECK-LABEL: define {{[^@]+}}@writeonly_global_via_arg()
+; CHECK-NEXT:    call void @write_global_via_arg(i32* nofree nonnull writeonly align 4 dereferenceable(4) @G)
+; CHECK-NEXT:    ret void
+;
+  call void @write_global_via_arg(i32* @G)
+  ret void
+}
