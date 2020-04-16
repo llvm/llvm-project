@@ -4,7 +4,9 @@ add_mlir_conversion_library(MLIRVectorToLoops
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToLoops
 )
-set(LIBS
+
+target_link_libraries(MLIRVectorToLoops
+  PUBLIC
   MLIREDSC
   MLIRAffineEDSC
   MLIRLLVMIR
@@ -12,8 +14,3 @@ set(LIBS
   LLVMCore
   LLVMSupport
   )
-
-add_dependencies(MLIRVectorToLoops ${LIBS})
-target_link_libraries(MLIRVectorToLoops
-  PUBLIC
-  ${LIBS})
