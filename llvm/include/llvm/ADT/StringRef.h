@@ -54,7 +54,7 @@ namespace llvm {
   /// situations where the character data resides in some other buffer, whose
   /// lifetime extends past that of the StringRef. For this reason, it is not in
   /// general safe to store a StringRef.
-  class [[gsl::Pointer]] StringRef {
+  class StringRef {
   public:
     static const size_t npos = ~size_t(0);
 
