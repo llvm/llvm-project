@@ -6818,8 +6818,7 @@ ASTNodeImporter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
       Importer.getToContext(), ToLHS, ToRHS, E->getOpcode(), ToType,
       E->getValueKind(), E->getObjectKind(), ToOperatorLoc,
       E->getFPFeatures(Importer.getFromContext().getLangOpts()),
-      importChecked(Err, ToComputationLHSType),
-      importChecked(Err, ToComputationResultType));
+      ToComputationLHSType, ToComputationResultType);
 }
 
 Expected<CXXCastPath>
