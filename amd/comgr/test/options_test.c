@@ -230,7 +230,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
                                dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
 
   status = amd_comgr_destroy_data_set(dataSetBC);
   checkError(status, "amd_comgr_destroy_data_set");
@@ -244,7 +244,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
                                dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
 
   status = amd_comgr_destroy_data_set(dataSetBC);
   checkError(status, "amd_comgr_destroy_data_set");
@@ -259,7 +259,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
                                dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
 
   // Confirm we get comma-delimited for the device-libs action
 
@@ -272,7 +272,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
                                dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_add_device_libraries 0");
 
   status = amd_comgr_destroy_data_set(dataSetDevLibs);
   checkError(status, "amd_comgr_destroy_data_set");
@@ -286,7 +286,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
                                dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_add_device_libraries 1");
 
   status = amd_comgr_destroy_data_set(dataSetDevLibs);
   checkError(status, "amd_comgr_destroy_data_set");
@@ -301,7 +301,7 @@ void testFlatSplitting() {
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
                                dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action");
+  checkError(status, "amd_comgr_do_action_add_device_libraries 2");
 
   status = amd_comgr_release_data(dataSource);
   checkError(status, "amd_comgr_release_data");

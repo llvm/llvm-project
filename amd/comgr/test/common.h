@@ -86,7 +86,7 @@ int setBuf(const char *infile, char **buf) {
   return size;
 }
 
-void checkError(amd_comgr_status_t status, char *str) {
+void checkError(amd_comgr_status_t status, const char *str) {
   if (status != AMD_COMGR_STATUS_SUCCESS) {
     const char *statusStr;
     printf("FAILED: %s\n", str);
