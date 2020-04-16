@@ -1807,54 +1807,58 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // users. The return value might be dead if there are no live users.
     getOrCreateAAFor<AAIsDead>(CSRetPos);
 
-    if (Function *Callee = CS.getCalledFunction()) {
-      // Skip declerations except if annotations on their call sites were
-      // explicitly requested.
-      if (!AnnotateDeclarationCallSites && Callee->isDeclaration() &&
-          !Callee->hasMetadata(LLVMContext::MD_callback))
-        return true;
+    Function *Callee = CS.getCalledFunction();
+    // TODO: Even if the callee is not known now we might be able to simplify
+    //       the call/callee.
+    if (!Callee)
+      return true;
 
-      if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
+    // Skip declarations except if annotations on their call sites were
+    // explicitly requested.
+    if (!AnnotateDeclarationCallSites && Callee->isDeclaration() &&
+        !Callee->hasMetadata(LLVMContext::MD_callback))
+      return true;
 
-        IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+    if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
 
-        // Call site return integer values might be limited by a constant range.
-        if (Callee->getReturnType()->isIntegerTy())
-          getOrCreateAAFor<AAValueConstantRange>(CSRetPos);
-      }
+      IRPosition CSRetPos = IRPosition::callsite_returned(CS);
 
-      for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
+      // Call site return integer values might be limited by a constant range.
+      if (Callee->getReturnType()->isIntegerTy())
+        getOrCreateAAFor<AAValueConstantRange>(CSRetPos);
+    }
 
-        IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
+    for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
 
-        // Every call site argument might be dead.
-        getOrCreateAAFor<AAIsDead>(CSArgPos);
+      IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
 
-        // Call site argument might be simplified.
-        getOrCreateAAFor<AAValueSimplify>(CSArgPos);
+      // Every call site argument might be dead.
+      getOrCreateAAFor<AAIsDead>(CSArgPos);
 
-        if (!CS.getArgument(i)->getType()->isPointerTy())
-          continue;
+      // Call site argument might be simplified.
+      getOrCreateAAFor<AAValueSimplify>(CSArgPos);
 
-        // Call site argument attribute "non-null".
-        getOrCreateAAFor<AANonNull>(CSArgPos);
+      if (!CS.getArgument(i)->getType()->isPointerTy())
+        continue;
 
-        // Call site argument attribute "no-alias".
-        getOrCreateAAFor<AANoAlias>(CSArgPos);
+      // Call site argument attribute "non-null".
+      getOrCreateAAFor<AANonNull>(CSArgPos);
 
-        // Call site argument attribute "dereferenceable".
-        getOrCreateAAFor<AADereferenceable>(CSArgPos);
+      // Call site argument attribute "no-alias".
+      getOrCreateAAFor<AANoAlias>(CSArgPos);
 
-        // Call site argument attribute "align".
-        getOrCreateAAFor<AAAlign>(CSArgPos);
+      // Call site argument attribute "dereferenceable".
+      getOrCreateAAFor<AADereferenceable>(CSArgPos);
 
-        // Call site argument attribute
-        // "readnone/readonly/writeonly/..."
-        getOrCreateAAFor<AAMemoryBehavior>(CSArgPos);
+      // Call site argument attribute "align".
+      getOrCreateAAFor<AAAlign>(CSArgPos);
 
-        // Call site argument attribute "nofree".
-        getOrCreateAAFor<AANoFree>(CSArgPos);
-      }
+      // Call site argument attribute
+      // "readnone/readonly/writeonly/..."
+      getOrCreateAAFor<AAMemoryBehavior>(CSArgPos);
+
+      // Call site argument attribute "nofree".
+      getOrCreateAAFor<AANoFree>(CSArgPos);
     }
     return true;
   };
