@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -479,20 +478,17 @@ public:
       return;
 
     // Scan the loop: don't unroll loops with calls.
-    for (Loop::block_iterator I = L->block_begin(), E = L->block_end(); I != E;
-         ++I) {
-      BasicBlock *BB = *I;
-
-      for (BasicBlock::iterator J = BB->begin(), JE = BB->end(); J != JE; ++J)
-        if (isa<CallInst>(J) || isa<InvokeInst>(J)) {
-          ImmutableCallSite CS(&*J);
-          if (const Function *F = CS.getCalledFunction()) {
+    for (BasicBlock *BB : L->blocks()) {
+      for (Instruction &I : *BB) {
+        if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+          if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
             if (!static_cast<T *>(this)->isLoweredToCall(F))
               continue;
           }
 
           return;
         }
+      }
     }
 
     // Enable runtime and partial unrolling up to the specified size.
