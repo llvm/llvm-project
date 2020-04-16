@@ -824,7 +824,7 @@ bool ExpandMemCmpPass::runOnBlock(
       continue;
     }
     LibFunc Func;
-    if (TLI->getLibFunc(ImmutableCallSite(CI), Func) &&
+    if (TLI->getLibFunc(*CI, Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
         expandMemCmp(CI, TTI, TL, &DL, PSI, BFI)) {
       return true;
