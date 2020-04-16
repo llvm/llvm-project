@@ -228,7 +228,7 @@ template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
 } // namespace
 
 PreambleBounds clang::ComputePreambleBounds(const LangOptions &LangOpts,
-                                            llvm::MemoryBuffer *Buffer,
+                                            const llvm::MemoryBuffer *Buffer,
                                             unsigned MaxLines) {
   return Lexer::ComputePreamble(Buffer->getBuffer(), LangOpts, MaxLines);
 }
