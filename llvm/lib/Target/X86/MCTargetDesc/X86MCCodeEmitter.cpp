@@ -637,13 +637,12 @@ void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
   uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
   // Determine where the memory operand starts, if present.
   int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
-  if (MemoryOperand != -1)
-    MemoryOperand += CurOp;
-
   // Emit segment override opcode prefix as needed.
-  if (MemoryOperand >= 0)
+  if (MemoryOperand != -1) {
+    MemoryOperand += CurOp;
     emitSegmentOverridePrefix(CurByte, MemoryOperand + X86::AddrSegmentReg, MI,
                               OS);
+  }
 
   // Emit the repeat opcode prefix as needed.
   unsigned Flags = MI.getFlags();
@@ -653,27 +652,27 @@ void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
     emitByte(0xF2, CurByte, OS);
 
   // Emit the address size opcode prefix as needed.
-  bool need_address_override;
+  bool NeedAddressOverride;
   uint64_t AdSize = TSFlags & X86II::AdSizeMask;
   if ((STI.hasFeature(X86::Mode16Bit) && AdSize == X86II::AdSize32) ||
       (STI.hasFeature(X86::Mode32Bit) && AdSize == X86II::AdSize16) ||
       (STI.hasFeature(X86::Mode64Bit) && AdSize == X86II::AdSize32)) {
-    need_address_override = true;
+    NeedAddressOverride = true;
   } else if (MemoryOperand < 0) {
-    need_address_override = false;
+    NeedAddressOverride = false;
   } else if (STI.hasFeature(X86::Mode64Bit)) {
     assert(!is16BitMemOperand(MI, MemoryOperand, STI));
-    need_address_override = is32BitMemOperand(MI, MemoryOperand);
+    NeedAddressOverride = is32BitMemOperand(MI, MemoryOperand);
   } else if (STI.hasFeature(X86::Mode32Bit)) {
     assert(!is64BitMemOperand(MI, MemoryOperand));
-    need_address_override = is16BitMemOperand(MI, MemoryOperand, STI);
+    NeedAddressOverride = is16BitMemOperand(MI, MemoryOperand, STI);
   } else {
     assert(STI.hasFeature(X86::Mode16Bit));
     assert(!is64BitMemOperand(MI, MemoryOperand));
-    need_address_override = !is16BitMemOperand(MI, MemoryOperand, STI);
+    NeedAddressOverride = !is16BitMemOperand(MI, MemoryOperand, STI);
   }
 
-  if (need_address_override)
+  if (NeedAddressOverride)
     emitByte(0x67, CurByte, OS);
 
   // Encoding type for this instruction.
@@ -732,8 +731,7 @@ void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
   }
 }
 
-/// emitVEXOpcodePrefix - AVX instructions are encoded using a opcode prefix
-/// called VEX.
+/// AVX instructions are encoded using a opcode prefix called VEX.
 void X86MCCodeEmitter::emitVEXOpcodePrefix(unsigned &CurByte, int MemOperand,
                                            const MCInst &MI,
                                            raw_ostream &OS) const {
