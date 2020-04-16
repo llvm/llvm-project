@@ -14,12 +14,10 @@ ______________
   Lowering globals in general
   . UNREACHABLE executed at Lower/Bridge.cpp:1294!
 
-[Unassigned]
+[Jean]
 
-  Intrinsics lowering problems (3)
-  . bbc: Lower/Intrinsics.cpp:474: Assertion `!bestMatchDistance.isLoosingPrecision() && "runtime selection looses precision"' failed.
-  . bbc: Lower/Intrinsics.cpp:504: Assertion `arg != nullptr' failed.
-  . bbc: Lower/Intrinsics.cpp:628: Assertion `false && "no runtime found for this intrinsics"' failed.
+  Intrinsics lowering problems
+  . bbc: Lower/Intrinsics.cpp:763: Assertion `false && "LEN_TRIM TODO"' failed.
 
 
 FIXED
@@ -41,4 +39,11 @@ UNREACHABLE executed at Lower/ConvertExpr.cpp:848!  temps on call?
 Block.cpp:200: mlir::Operation *mlir::Block::getTerminator(): Assertion `!empty() && !back().isKnownNonTerminator()' failed.
 
 error: 'std.return' op must be the last operation in the parent block
+
+bbc: Lower/Intrinsics.cpp:504: Assertion `arg != nullptr' failed.
+  . optional argument in ichar
+bbc: Lower/Intrinsics.cpp:628: Assertion `false && "no runtime found for this intrinsics"' failed.
+  . sign, mod, dble, ichar intrinsic lowering missing
+bbc: Lower/Intrinsics.cpp:474: Assertion `!bestMatchDistance.isLoosingPrecision() && "runtime selection looses precision"' failed.
+  . missing complex abs
 

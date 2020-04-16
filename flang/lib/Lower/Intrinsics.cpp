@@ -135,6 +135,11 @@ public:
                             llvm::ArrayRef<mlir::Value> args);
 
 private:
+  static inline mlir::Value genval(mlir::Location loc,
+                                   Fortran::lower::FirOpBuilder &builder,
+                                   llvm::StringRef name, mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Value> args,
+                                   MathRuntimeLibrary &);
   // Info needed by Generators is passed in Context struct to keep Generator
   // signatures modification easy.
   struct Context {
@@ -179,10 +184,21 @@ private:
     return genWrapperCall<&I::genRuntimeCall>(c, r);
   }
 
+  /// Implement all conversion functions like DBLE, the first argument is
+  /// the value to convert. There may be an additional KIND arguments that
+  /// is ignored because this is already reflected in the result type.
+  static mlir::Value genConversion(Context &, MathRuntimeLibrary &);
+
+  static mlir::Value genAbs(Context &, MathRuntimeLibrary &);
+  static mlir::Value genAimag(Context &, MathRuntimeLibrary &);
   static mlir::Value genConjg(Context &, MathRuntimeLibrary &);
   template <Extremum, ExtremumBehavior>
   static mlir::Value genExtremum(Context &, MathRuntimeLibrary &);
+  static mlir::Value genIchar(Context &, MathRuntimeLibrary &);
+  static mlir::Value genLenTrim(Context &, MathRuntimeLibrary &);
   static mlir::Value genMerge(Context &, MathRuntimeLibrary &);
+  static mlir::Value genMod(Context &, MathRuntimeLibrary &);
+  static mlir::Value genSign(Context &, MathRuntimeLibrary &);
 
   struct IntrinsicHanlder {
     const char *name;
@@ -194,10 +210,17 @@ private:
   /// defined here for a generic intrinsic, the defaultGenerator will
   /// be attempted.
   static constexpr IntrinsicHanlder handlers[]{
+      {"abs", &I::genAbs},
+      {"aimag", &I::genAimag},
       {"conjg", &I::genConjg},
+      {"dble", &I::genConversion},
+      {"ichar", &I::genIchar},
+      {"len_trim", &I::genLenTrim},
       {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
       {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
       {"merge", &I::genMerge},
+      {"mod", &I::genMod},
+      {"sign", &I::genSign},
   };
 
   // helpers
@@ -249,6 +272,12 @@ static constexpr MathsRuntimeStaticDescription llvmRuntime[] = {
 static constexpr MathsRuntimeStaticDescription pgmathPreciseRuntime[] = {
     {"acos", "__pc_acos_1", RType::c32, Args::create<RType::c32>()},
     {"acos", "__pz_acos_1", RType::c64, Args::create<RType::c64>()},
+    {"hypot", "__mth_i_hypot", RType::f32,
+     Args::create<RType::f32, RType::f32>()},
+    {"hypot", "__mth_i_dhypot", RType::f64,
+     Args::create<RType::f64, RType::f64>()},
+    {"mod", "__ps_mod_1", RType::f32, Args::create<RType::f32, RType::f32>()},
+    {"mod", "__pd_mod_1", RType::f64, Args::create<RType::f64, RType::f64>()},
     {"pow", "__pc_pow_1", RType::c32, Args::create<RType::c32, RType::c32>()},
     {"pow", "__pc_powi_1", RType::c32, Args::create<RType::c32, RType::i32>()},
     {"pow", "__pc_powk_1", RType::c32, Args::create<RType::c32, RType::i64>()},
@@ -347,7 +376,7 @@ public:
                              conversions.begin(), conversions.end(),
                              d.conversions.begin(), d.conversions.end()));
   }
-  bool isLoosingPrecision() const {
+  bool isLosingPrecision() const {
     return conversions[narrowingArg] != 0 || conversions[extendingResult] != 0;
   }
   bool isInfinite() const { return infinite; }
@@ -396,11 +425,7 @@ private:
       return r.getFKind() * 4;
     if (auto cplx{t.dyn_cast<fir::CplxType>()})
       return cplx.getFKind() * 4;
-    assert(false && "not a floating-point type");
-    return 0;
-  }
-  static bool isFloatingPointType(mlir::Type t) {
-    return t.isa<mlir::FloatType>() || t.isa<fir::RealType>();
+    llvm_unreachable("not a floating-point type");
   }
   static Conversion conversionBetweenTypes(mlir::Type from, mlir::Type to) {
     if (from == to) {
@@ -412,7 +437,7 @@ private:
                                                          : Conversion::Extend;
       }
     }
-    if (isFloatingPointType(from) && isFloatingPointType(to)) {
+    if (fir::isa_real(from) && fir::isa_real(to)) {
       return getFloatingPointWidth(from) > getFloatingPointWidth(to)
                  ? Conversion::Narrow
                  : Conversion::Extend;
@@ -470,8 +495,8 @@ MathRuntimeLibrary::getFunction(Fortran::lower::FirOpBuilder &builder,
     }
   }
   if (bestNearMatch != nullptr) {
-    assert(!bestMatchDistance.isLoosingPrecision() &&
-           "runtime selection looses precision");
+    assert(!bestMatchDistance.isLosingPrecision() &&
+           "runtime selection loses precision");
     return getFuncOp(builder, *bestNearMatch);
   }
   return {};
@@ -483,6 +508,13 @@ mlir::Value IntrinsicLibrary::Implementation::genval(
     mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
     llvm::StringRef name, mlir::Type resultType,
     llvm::ArrayRef<mlir::Value> args) {
+  return genval(loc, builder, name, resultType, args, runtime);
+}
+
+mlir::Value IntrinsicLibrary::Implementation::genval(
+    mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
+    llvm::StringRef name, mlir::Type resultType,
+    llvm::ArrayRef<mlir::Value> args, MathRuntimeLibrary &runtime) {
   Context context{loc, &builder, name, args,
                   getFunctionType(resultType, args, builder)};
   for (auto &handler : handlers) {
@@ -501,8 +533,8 @@ getFunctionType(mlir::Type resultType, llvm::ArrayRef<mlir::Value> arguments,
                 Fortran::lower::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type, 2> argumentTypes;
   for (auto &arg : arguments) {
-    assert(arg != nullptr); // TODO think about optionals
-    argumentTypes.push_back(arg.getType());
+    if (arg)
+      argumentTypes.push_back(arg.getType());
   }
   return mlir::FunctionType::get(argumentTypes, resultType,
                                  builder.getModule().getContext());
@@ -529,8 +561,7 @@ static std::string typeToString(mlir::Type t) {
   if (auto character{t.dyn_cast<fir::CharacterType>()}) {
     return "c" + std::to_string(character.getFKind());
   }
-  assert(false && "no mangling for type");
-  return ""s;
+  llvm_unreachable("no mangling for type");
 }
 
 static std::string getIntrinsicWrapperName(const llvm::StringRef &intrinsic,
@@ -596,8 +627,7 @@ IntrinsicLibrary::Implementation::genRuntimeCall(Context &context,
         actualFuncType.getNumInputs() != soughtFuncType.getNumInputs() ||
         actualFuncType.getNumInputs() != context.arguments.size() ||
         actualFuncType.getNumResults() != 1) {
-      assert(false); // TODO better error handling
-      return nullptr;
+      llvm_unreachable("Bad intrinsic match"); // TODO better error handling
     }
     llvm::SmallVector<mlir::Value, 2> convertedArguments;
     int i = 0;
@@ -625,11 +655,61 @@ IntrinsicLibrary::Implementation::genRuntimeCall(Context &context,
     }
   } else {
     // could not find runtime function
-    assert(false && "no runtime found for this intrinsics");
+    llvm::errs() << "missing intrinsic: " << context.name << "\n";
+    llvm_unreachable("no runtime found for this intrinsics");
     // TODO: better error handling ?
     //  - Try to have compile time check of runtime compltness ?
   }
   return {}; // gets rid of warnings
+}
+
+mlir::Value
+IntrinsicLibrary::Implementation::genConversion(Context &genCtxt,
+                                                MathRuntimeLibrary &) {
+  // There can be an optional kind in second argument.
+  assert(genCtxt.arguments.size() >= 1);
+  return genCtxt.builder->create<fir::ConvertOp>(
+      genCtxt.loc, genCtxt.getResultType(), genCtxt.arguments[0]);
+}
+
+// ABS
+mlir::Value
+IntrinsicLibrary::Implementation::genAbs(Context &genCtxt,
+                                         MathRuntimeLibrary &runtime) {
+  assert(genCtxt.arguments.size() == 1);
+  auto arg = genCtxt.arguments[0];
+  auto type = arg.getType();
+  if (fir::isa_real(type)) {
+    // Runtime call to fp abs. An alternative would be to use mlir AbsFOp
+    // but it does not support all fir floating point types.
+    return genRuntimeCall(genCtxt, runtime);
+  }
+  if (auto intType = type.dyn_cast<mlir::IntegerType>()) {
+    // At the time of this implementation there is no abs op in mlir.
+    // So, implement abs here without branching.
+    auto shift =
+        genCtxt.builder->createIntegerConstant(intType, intType.getWidth() - 1);
+    auto mask = genCtxt.builder->create<mlir::SignedShiftRightOp>(genCtxt.loc,
+                                                                  arg, shift);
+    auto xored = genCtxt.builder->create<mlir::XOrOp>(genCtxt.loc, arg, mask);
+    return genCtxt.builder->create<mlir::SubIOp>(genCtxt.loc, xored, mask);
+  }
+  if (fir::isa_complex(type)) {
+    // Use HYPOT to fulfill the no underflow/overflow requirement.
+    auto parts = genCtxt.builder->extractParts(arg);
+    llvm::SmallVector<mlir::Value, 2> args = {parts.first, parts.second};
+    return genval(genCtxt.loc, *genCtxt.builder, "hypot",
+                  genCtxt.getResultType(), args, runtime);
+  }
+  llvm_unreachable("unexpected type in ABS argument");
+}
+
+// AIMAG
+mlir::Value IntrinsicLibrary::Implementation::genAimag(Context &genCtxt,
+                                                       MathRuntimeLibrary &) {
+  assert(genCtxt.arguments.size() == 1);
+  return genCtxt.builder->extractComplexPart(genCtxt.arguments[0],
+                                             true /* isImagPart */);
 }
 
 // CONJG
@@ -648,19 +728,88 @@ mlir::Value IntrinsicLibrary::Implementation::genConjg(Context &genCtxt,
   return builder.insertComplexPart(cplx, negImag, /*isImagPart=*/true);
 }
 
+// ICHAR
+mlir::Value IntrinsicLibrary::Implementation::genIchar(Context &genCtxt,
+                                                       MathRuntimeLibrary &) {
+  // There can be an optional kind in second argument.
+  assert(genCtxt.arguments.size() >= 1);
+  auto &builder = *genCtxt.builder;
+
+  auto arg = genCtxt.arguments[0];
+  auto dataAndLen = builder.createUnboxChar(arg);
+  auto charType = fir::CharacterType::get(
+      builder.getContext(), builder.getCharacterKind(arg.getType()));
+  auto refType = fir::ReferenceType::get(charType);
+  auto charAddr =
+      builder.create<fir::ConvertOp>(genCtxt.loc, refType, dataAndLen.first);
+  auto charVal = builder.create<fir::LoadOp>(genCtxt.loc, charType, charAddr);
+  return builder.create<fir::ConvertOp>(genCtxt.loc, genCtxt.getResultType(),
+                                        charVal);
+}
+
+// LEN_TRIM
+mlir::Value IntrinsicLibrary::Implementation::genLenTrim(Context &genCtxt,
+                                                         MathRuntimeLibrary &) {
+  // Optional KIND argument reflected in result type.
+  assert(genCtxt.arguments.size() >= 1);
+  // FIXME: LEN_TRIM needs actual runtime and to be define in CharRT.h
+  llvm_unreachable("LEN_TRIM TODO");
+  // Fake implementation for debugging:
+  // return genCtxt.builder->createIntegerConstant(genCtxt.getResultType(), 0);
+}
+
 // MERGE
 mlir::Value IntrinsicLibrary::Implementation::genMerge(Context &genCtxt,
                                                        MathRuntimeLibrary &) {
   assert(genCtxt.arguments.size() == 3);
-  [[maybe_unused]] auto resType = genCtxt.getResultType();
   Fortran::lower::FirOpBuilder &builder = *genCtxt.builder;
 
-  auto &trueVal = genCtxt.arguments[0];
-  auto &falseVal = genCtxt.arguments[1];
-  auto &mask = genCtxt.arguments[2];
+  auto trueVal = genCtxt.arguments[0];
+  auto falseVal = genCtxt.arguments[1];
+  auto mask = genCtxt.arguments[2];
   auto i1Type = mlir::IntegerType::get(1, builder.getContext());
   auto msk = builder.create<fir::ConvertOp>(genCtxt.loc, i1Type, mask);
   return builder.create<mlir::SelectOp>(genCtxt.loc, msk, trueVal, falseVal);
+}
+
+// MOD
+mlir::Value
+IntrinsicLibrary::Implementation::genMod(Context &genCtxt,
+                                         MathRuntimeLibrary &runtime) {
+  assert(genCtxt.arguments.size() == 2);
+  auto type = genCtxt.getResultType();
+  if (type.isa<mlir::IntegerType>()) {
+    return genCtxt.builder->create<mlir::SignedRemIOp>(
+        genCtxt.loc, genCtxt.arguments[0], genCtxt.arguments[1]);
+  }
+  // Use runtime. Note that mlir::RemFOp alos implement floating point
+  // remainder, but it does not work with fir::Real type.
+  return genRuntimeCall(genCtxt, runtime);
+}
+
+// SIGN
+mlir::Value
+IntrinsicLibrary::Implementation::genSign(Context &genCtxt,
+                                          MathRuntimeLibrary &runtime) {
+  assert(genCtxt.arguments.size() == 2);
+  auto &builder = *genCtxt.builder;
+  auto type = genCtxt.getResultType();
+  auto abs = genval(genCtxt.loc, *genCtxt.builder, "abs", type,
+                    {genCtxt.arguments[0]}, runtime);
+  if (type.isa<mlir::IntegerType>()) {
+    auto zero = builder.createIntegerConstant(type, 0);
+    auto neg = builder.create<mlir::SubIOp>(genCtxt.loc, zero, abs);
+    auto cmp = builder.create<mlir::CmpIOp>(
+        genCtxt.loc, mlir::CmpIPredicate::slt, genCtxt.arguments[1], zero);
+    return builder.create<mlir::SelectOp>(genCtxt.loc, cmp, neg, abs);
+  }
+  // TODO: Requirements when second argument is +0./0.
+  auto zeroAttr = builder.getZeroAttr(type);
+  auto zero = builder.create<mlir::ConstantOp>(genCtxt.loc, type, zeroAttr);
+  auto neg = builder.create<fir::NegfOp>(genCtxt.loc, abs);
+  auto cmp = builder.create<fir::CmpfOp>(genCtxt.loc, mlir::CmpFPredicate::OLT,
+                                         genCtxt.arguments[1], zero);
+  return builder.create<mlir::SelectOp>(genCtxt.loc, cmp, neg, abs);
 }
 
 // Compare two FIR values and return boolean result as i1.
