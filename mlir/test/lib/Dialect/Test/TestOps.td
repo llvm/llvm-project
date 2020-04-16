@@ -199,7 +199,6 @@ def I64EnumAttrOp : TEST_Op<"i64_enum_attr"> {
 def IntAttrOp : TEST_Op<"int_attrs"> {
   let arguments = (ins
     AnyI32Attr:$any_i32_attr,
-    IndexAttr:$index_attr,
     UI32Attr:$ui32_attr,
     SI32Attr:$si32_attr
   );
