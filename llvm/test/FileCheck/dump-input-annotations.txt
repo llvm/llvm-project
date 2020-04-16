@@ -280,8 +280,8 @@
 ; EMP-NEXT:            3: world
 ; EMP-NEXT:   empty:3     X~~~~ error: no match found
 ; EMP-NEXT:            4: label
-; EMP-NEXT:   empty:3     ~~~~~
 ; EMP-V-NEXT: label:4     ^~~~~
+; EMP-NEXT:   empty:3     ~~~~~
 ; EMP-NEXT:   >>>>>>
 ; EMP-NOT:    {{.}}
 
@@ -387,8 +387,8 @@
 ; NOT2-VV-NEXT: not:1       ~~~~~
 ; NOT2-NEXT:    not:2       !~~~~ error: no match expected
 ; NOT2-NEXT:             3: again
-; NOT2-VV-NEXT: not:1       ~~
 ; NOT2-V-NEXT:  check:3       ^~~
+; NOT2-VV-NEXT: not:1       ~~
 ; NOT2-NEXT:    >>>>>>
 ; NOT2-NOT:     {{.}}
 
@@ -445,6 +445,53 @@
 ; DAG-VV-NEXT: dag:4'1     X~~ error: no match found
 ; DAG-NEXT:    >>>>>>
 ; DAG-NOT:     {{.}}
+
+; Check sorting of annotations when the order of diagnostics across an input
+; line is different than the order of the associated directives in the check
+; file.  Try cases when diagnostics' input ranges overlap but are not
+; identical to check how that affects sorting.
+
+; RUN: echo 'abc def abc def' > %t.in
+
+; RUN: echo 'CHECK-DAG: def' > %t.chk
+; RUN: echo 'CHECK-DAG: bc' >> %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: de' >> %t.chk
+; RUN: echo 'CHECK-DAG: def' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-Q \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-V,DAG1L-VQ \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-V,DAG1L-VV \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; DAG1L:{{.*}}error:{{.*}}
+
+;         DAG1L:<<<<<<
+;    DAG1L-NEXT:         1: abc def abc def
+;  DAG1L-V-NEXT:dag:1           ^~~
+;  DAG1L-V-NEXT:dag:2        ^~
+; DAG1L-VV-NEXT:dag:3'0     !~~             discard: overlaps earlier match
+; DAG1L-VQ-NEXT:dag:3               ^~~
+; DAG1L-VV-NEXT:dag:3'1             ^~~
+; DAG1L-VV-NEXT:dag:4'0         !~          discard: overlaps earlier match
+; DAG1L-VQ-NEXT:dag:4                   ^~
+; DAG1L-VV-NEXT:dag:4'1                 ^~
+; DAG1L-VV-NEXT:dag:5'0         !~~         discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:5'1                 !~~ discard: overlaps earlier match
+;  DAG1L-Q-NEXT:dag:5                     X error: no match found
+; DAG1L-VQ-NEXT:dag:5                     X error: no match found
+; DAG1L-VV-NEXT:dag:5'2                   X error: no match found
+;    DAG1L-NEXT:>>>>>>
+;     DAG1L-NOT:{{.}}
 
 ;--------------------------------------------------
 ; CHECK-LABEL
@@ -536,22 +583,19 @@
 ; Verbose diagnostics are suppressed but not errors.
 ; IMPNOT:{{.*}}error:{{.*}}
 
-; FIXME: All occurrences of imp1, imp2, and imp3 are sorting after the first
-; directive.  They should instead be sorted by when they execute.
-
 ;         IMPNOT:<<<<<<
 ;    IMPNOT-NEXT:          1: hello world again!
 ;  IMPNOT-V-NEXT:check:1      ^~~
 ; IMPNOT-VV-NEXT:not:imp1     X
 ; IMPNOT-VV-NEXT:not:imp2     X
 ; IMPNOT-VV-NEXT:not:imp3     X
+;  IMPNOT-V-NEXT:check:2            ^~~
 ; IMPNOT-VV-NEXT:not:imp1        X~~
 ; IMPNOT-VV-NEXT:not:imp2        X~~
 ; IMPNOT-VV-NEXT:not:imp3        X~~
+;  IMPNOT-V-NEXT:check:3                       ^
 ; IMPNOT-VV-NEXT:not:imp1              X~~~~~~~
 ; IMPNOT-VV-NEXT:not:imp2              X~~~~~~~
 ;    IMPNOT-NEXT:not:imp3                 !~~~~  error: no match expected
-;  IMPNOT-V-NEXT:check:2            ^~~
-;  IMPNOT-V-NEXT:check:3                       ^
 ;    IMPNOT-NEXT:>>>>>>
 ;     IMPNOT-NOT:{{.}}
