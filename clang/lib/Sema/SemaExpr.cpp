@@ -13693,9 +13693,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   if (CompResultTy.isNull()) {
     if (ConvertHalfVec)
       return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, false,
-                                 OpLoc, FPFeatures);
+                                 OpLoc, CurFPFeatures);
     return BinaryOperator::Create(Context, LHS.get(), RHS.get(), Opc, ResultTy,
-                                  VK, OK, OpLoc, FPFeatures);
+                                  VK, OK, OpLoc, CurFPFeatures);
   }
 
   // Handle compound assignments.
@@ -13707,10 +13707,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   if (ConvertHalfVec)
     return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, true,
-                               OpLoc, FPFeatures);
+                               OpLoc, CurFPFeatures);
 
   return CompoundAssignOperator::Create(Context, LHS.get(), RHS.get(), Opc,
-                                        ResultTy, VK, OK, OpLoc, FPFeatures,
+                                        ResultTy, VK, OK, OpLoc, CurFPFeatures,
                                         CompLHSTy, CompResultTy);
 }
 
