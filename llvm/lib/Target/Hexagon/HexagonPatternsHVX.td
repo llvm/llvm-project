@@ -736,6 +736,12 @@ let Predicates = [UseHVX] in {
   def: HvxSel_pat<PS_wselect, HWI32>;
 }
 
+def V2Q: OutPatFrag<(ops node:$Vs), (V6_vandvrt $Vs, (A2_tfrsi -1))>;
+
+let Predicates = [UseHVX] in
+  def: Pat<(select I1:$Pu, VecI1:$Qs, VecI1:$Qt),
+           (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+
 let Predicates = [UseHVX] in {
   def: Pat<(VecQ8   (qtrue)), (PS_qtrue)>;
   def: Pat<(VecQ16  (qtrue)), (PS_qtrue)>;
