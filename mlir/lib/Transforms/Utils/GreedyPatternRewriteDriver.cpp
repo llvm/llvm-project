@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements mlir::applyPatternsGreedily.
+// This file implements mlir::applyPatternsAndFoldGreedily.
 //
 //===----------------------------------------------------------------------===//
 
