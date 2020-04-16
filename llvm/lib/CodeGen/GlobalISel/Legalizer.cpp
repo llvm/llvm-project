@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -41,6 +42,27 @@ static cl::opt<bool>
     EnableCSEInLegalizer("enable-cse-in-legalizer",
                          cl::desc("Should enable CSE in Legalizer"),
                          cl::Optional, cl::init(false));
+
+enum class DebugLocVerifyLevel {
+  None,
+  Legalizations,
+  LegalizationsAndArtifactCombiners,
+};
+#ifndef NDEBUG
+static cl::opt<DebugLocVerifyLevel> VerifyDebugLocs(
+    "verify-legalizer-debug-locs",
+    cl::desc("Verify that debug locations are handled"),
+    cl::values(clEnumVal(DebugLocVerifyLevel::None, "No verification"),
+               clEnumVal(DebugLocVerifyLevel::Legalizations,
+                         "Verify legalizations"),
+               clEnumVal(DebugLocVerifyLevel::LegalizationsAndArtifactCombiners,
+                         "Verify legalizations and artifact combines")),
+    cl::init(DebugLocVerifyLevel::Legalizations));
+#else
+// Always disable it for release builds by preventing the observer from being
+// installed.
+static const DebugLocVerifyLevel VerifyDebugLocs = DebugLocVerifyLevel::None;
+#endif
 
 char Legalizer::ID = 0;
 INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
@@ -144,6 +166,7 @@ public:
 Legalizer::MFResult
 Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                                    ArrayRef<GISelChangeObserver *> AuxObservers,
+                                   LostDebugLocObserver &LocObserver,
                                    MachineIRBuilder &MIRBuilder) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -200,6 +223,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        LocObserver.checkpoint();
         continue;
       }
 
@@ -225,6 +249,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         return {Changed, &MI};
       }
       WorkListObserver.printNewInstrs();
+      LocObserver.checkpoint();
       Changed |= Res == LegalizerHelper::Legalized;
     }
     // Try to combine the instructions in RetryList again if there
@@ -239,6 +264,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         return {Changed, RetryList.front()};
       }
     }
+    LocObserver.checkpoint();
     while (!ArtifactList.empty()) {
       MachineInstr &MI = *ArtifactList.pop_back_val();
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
@@ -247,6 +273,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         LLVM_DEBUG(dbgs() << MI << "Is dead\n");
         RemoveDeadInstFromLists(&MI);
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        LocObserver.checkpoint();
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
@@ -254,11 +281,15 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
+        LocObserver.checkpoint(
+            VerifyDebugLocs ==
+            DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);
         for (auto *DeadMI : DeadInstructions) {
           LLVM_DEBUG(dbgs() << *DeadMI << "Is dead\n");
           RemoveDeadInstFromLists(DeadMI);
           DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
         }
+        LocObserver.checkpoint();
         Changed = true;
         continue;
       }
@@ -307,9 +338,13 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     AuxObservers.push_back(CSEInfo);
   }
   assert(!CSEInfo || !errorToBool(CSEInfo->verify()));
+  LostDebugLocObserver LocObserver(DEBUG_TYPE);
+  if (VerifyDebugLocs > DebugLocVerifyLevel::None)
+    AuxObservers.push_back(&LocObserver);
 
   const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
-  MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, *MIRBuilder);
+  MFResult Result =
+      legalizeMachineFunction(MF, LI, AuxObservers, LocObserver, *MIRBuilder);
 
   if (Result.FailedOn) {
     reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
@@ -326,6 +361,28 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
+
+  if (LocObserver.getNumLostDebugLocs()) {
+    MachineOptimizationRemarkMissed R("gisel-legalize", "LostDebugLoc",
+                                      MF.getFunction().getSubprogram(),
+                                      /*MBB=*/&*MF.begin());
+    R << "lost "
+      << ore::NV("NumLostDebugLocs", LocObserver.getNumLostDebugLocs())
+      << " debug locations during pass";
+    reportGISelWarning(MF, TPC, MORE, R);
+    // Example remark:
+    // --- !Missed
+    // Pass:            gisel-legalize
+    // Name:            GISelFailure
+    // DebugLoc:        { File: '.../legalize-urem.mir', Line: 1, Column: 0 }
+    // Function:        test_urem_s32
+    // Args:
+    //   - String:          'lost '
+    //   - NumLostDebugLocs: '1'
+    //   - String:          ' debug locations during pass'
+    // ...
+  }
+
   // If for some reason CSE was not enabled, make sure that we invalidate the
   // CSEInfo object (as we currently declare that the analysis is preserved).
   // The next time get on the wrapper is called, it will force it to recompute
