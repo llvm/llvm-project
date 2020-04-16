@@ -34,6 +34,7 @@
 # Check process_name entry field
 # CHECK: "name": "ld.lld{{(.exe)?}}"
 # CHECK: "name": "process_name"
+# CHECK: "name": "thread_name"
 
 .globl _start
 _start:
