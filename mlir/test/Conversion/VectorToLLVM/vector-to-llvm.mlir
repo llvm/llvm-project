@@ -4,201 +4,199 @@ func @broadcast_vec1d_from_scalar(%arg0: f32) -> vector<2xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<2xf32>
   return %0 : vector<2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec1d_from_scalar
-//       CHECK:   llvm.mlir.undef : !llvm<"<2 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}}[0 : i32, 0 : i32] : !llvm<"<2 x float>">, !llvm<"<2 x float>">
-//       CHECK:   llvm.return {{.*}} : !llvm<"<2 x float>">
+// CHECK-LABEL: llvm.func @broadcast_vec1d_from_scalar(
+// CHECK-SAME:  %[[A:.*]]: !llvm.float)
+// CHECK:       %[[T0:.*]] = llvm.mlir.undef : !llvm<"<2 x float>">
+// CHECK:       %[[T1:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T2:.*]] = llvm.insertelement %[[A]], %[[T0]][%[[T1]] : !llvm.i32] : !llvm<"<2 x float>">
+// CHECK:       %[[T3:.*]] = llvm.shufflevector %[[T2]], %[[T0]] [0 : i32, 0 : i32] : !llvm<"<2 x float>">, !llvm<"<2 x float>">
+// CHECK:       llvm.return %[[T3]] : !llvm<"<2 x float>">
 
 func @broadcast_vec2d_from_scalar(%arg0: f32) -> vector<2x3xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec2d_from_scalar
-//       CHECK:   llvm.mlir.undef : !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<3 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}}[0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.undef : !llvm<"[2 x <3 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[2 x <3 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[2 x <3 x float>]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[2 x <3 x float>]">
+// CHECK-LABEL: llvm.func @broadcast_vec2d_from_scalar(
+// CHECK-SAME:  %[[A:.*]]: !llvm.float)
+// CHECK:       %[[T0:.*]] = llvm.mlir.undef : !llvm<"[2 x <3 x float>]">
+// CHECK:       %[[T1:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
+// CHECK:       %[[T2:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T3:.*]] = llvm.insertelement %[[A]], %[[T1]][%[[T2]] : !llvm.i32] : !llvm<"<3 x float>">
+// CHECK:       %[[T4:.*]] = llvm.shufflevector %[[T3]], %[[T3]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
+// CHECK:       %[[T5:.*]] = llvm.insertvalue %[[T4]], %[[T0]][0] : !llvm<"[2 x <3 x float>]">
+// CHECK:       %[[T6:.*]] = llvm.insertvalue %[[T4]], %[[T5]][1] : !llvm<"[2 x <3 x float>]">
+// CHECK:       llvm.return %[[T6]] : !llvm<"[2 x <3 x float>]">
 
 func @broadcast_vec3d_from_scalar(%arg0: f32) -> vector<2x3x4xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<2x3x4xf32>
   return %0 : vector<2x3x4xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec3d_from_scalar
-//       CHECK:   llvm.mlir.undef : !llvm<"<4 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<4 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[2 x [3 x <4 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[2 x [3 x <4 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[2 x [3 x <4 x float>]]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK-LABEL: llvm.func @broadcast_vec3d_from_scalar(
+// CHECK-SAME:  %[[A:.*]]: !llvm.float)
+// CHECK:       %[[T0:.*]] = llvm.mlir.undef : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T1:.*]] = llvm.mlir.undef : !llvm<"<4 x float>">
+// CHECK:       %[[T2:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T3:.*]] = llvm.insertelement %[[A]], %[[T1]][%[[T2]] : !llvm.i32] : !llvm<"<4 x float>">
+// CHECK:       %[[T4:.*]] = llvm.shufflevector %[[T3]], %[[T3]] [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
+// CHECK:       %[[T5:.*]] = llvm.insertvalue %[[T4]], %[[T0]][0, 0] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T6:.*]] = llvm.insertvalue %[[T4]], %[[T5]][0, 1] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T7:.*]] = llvm.insertvalue %[[T4]], %[[T6]][0, 2] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T8:.*]] = llvm.insertvalue %[[T4]], %[[T7]][1, 0] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T9:.*]] = llvm.insertvalue %[[T4]], %[[T8]][1, 1] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       %[[T10:.*]] = llvm.insertvalue %[[T4]], %[[T9]][1, 2] : !llvm<"[2 x [3 x <4 x float>]]">
+// CHECK:       llvm.return %[[T10]] : !llvm<"[2 x [3 x <4 x float>]]">
 
 func @broadcast_vec1d_from_vec1d(%arg0: vector<2xf32>) -> vector<2xf32> {
   %0 = vector.broadcast %arg0 : vector<2xf32> to vector<2xf32>
   return %0 : vector<2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec1d_from_vec1d
-//       CHECK:   llvm.return {{.*}} : !llvm<"<2 x float>">
+// CHECK-LABEL: llvm.func @broadcast_vec1d_from_vec1d(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"<2 x float>">)
+// CHECK:       llvm.return %[[A]] : !llvm<"<2 x float>">
 
 func @broadcast_vec2d_from_vec1d(%arg0: vector<2xf32>) -> vector<3x2xf32> {
   %0 = vector.broadcast %arg0 : vector<2xf32> to vector<3x2xf32>
   return %0 : vector<3x2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec2d_from_vec1d
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[3 x <2 x float>]">
+// CHECK-LABEL: llvm.func @broadcast_vec2d_from_vec1d(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"<2 x float>">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<3x2xf32>) : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T1:.*]] = llvm.insertvalue %[[A]], %[[T0]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T2:.*]] = llvm.insertvalue %[[A]], %[[T1]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T3:.*]] = llvm.insertvalue %[[A]], %[[T2]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       llvm.return %[[T3]] : !llvm<"[3 x <2 x float>]">
 
 func @broadcast_vec3d_from_vec1d(%arg0: vector<2xf32>) -> vector<4x3x2xf32> {
   %0 = vector.broadcast %arg0 : vector<2xf32> to vector<4x3x2xf32>
   return %0 : vector<4x3x2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec3d_from_vec1d
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK-LABEL: llvm.func @broadcast_vec3d_from_vec1d(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"<2 x float>">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<3x2xf32>) : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T1:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<4x3x2xf32>) : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T2:.*]] = llvm.insertvalue %[[A]], %[[T0]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T3:.*]] = llvm.insertvalue %[[A]], %[[T2]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T4:.*]] = llvm.insertvalue %[[A]], %[[T3]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T5:.*]] = llvm.insertvalue %[[T4]], %[[T1]][0] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T6:.*]] = llvm.insertvalue %[[T4]], %[[T5]][1] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T7:.*]] = llvm.insertvalue %[[T4]], %[[T6]][2] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T8:.*]] = llvm.insertvalue %[[T4]], %[[T7]][3] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       llvm.return %[[T8]] : !llvm<"[4 x [3 x <2 x float>]]">
 
 func @broadcast_vec3d_from_vec2d(%arg0: vector<3x2xf32>) -> vector<4x3x2xf32> {
   %0 = vector.broadcast %arg0 : vector<3x2xf32> to vector<4x3x2xf32>
   return %0 : vector<4x3x2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_vec3d_from_vec2d
-//       CHECK:   llvm.mlir.undef : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK-LABEL: llvm.func @broadcast_vec3d_from_vec2d(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"[3 x <2 x float>]">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<4x3x2xf32>) : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T1:.*]] = llvm.insertvalue %[[A]], %[[T0]][0] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T2:.*]] = llvm.insertvalue %[[A]], %[[T1]][1] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T3:.*]] = llvm.insertvalue %[[A]], %[[T2]][2] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T4:.*]] = llvm.insertvalue %[[A]], %[[T3]][3] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       llvm.return %[[T4]] : !llvm<"[4 x [3 x <2 x float>]]">
 
 func @broadcast_stretch(%arg0: vector<1xf32>) -> vector<4xf32> {
   %0 = vector.broadcast %arg0 : vector<1xf32> to vector<4xf32>
   return %0 : vector<4xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_stretch
-//       CHECK:   llvm.mlir.undef : !llvm<"<4 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<1 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<4 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
-//       CHECK:   llvm.return {{.*}} : !llvm<"<4 x float>">
+// CHECK-LABEL: llvm.func @broadcast_stretch(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"<1 x float>">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
+// CHECK:       %[[T1:.*]] = llvm.extractelement %[[A]][%[[T0]] : !llvm.i64] : !llvm<"<1 x float>">
+// CHECK:       %[[T2:.*]] = llvm.mlir.undef : !llvm<"<4 x float>">
+// CHECK:       %[[T3:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T4:.*]] = llvm.insertelement %[[T1]], %[[T2]][%3 : !llvm.i32] : !llvm<"<4 x float>">
+// CHECK:       %[[T5:.*]] = llvm.shufflevector %[[T4]], %[[T2]] [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !llvm<"<4 x float>">, !llvm<"<4 x float>">
+// CHECK:       llvm.return %[[T5]] : !llvm<"<4 x float>">
 
 func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32> {
   %0 = vector.broadcast %arg0 : vector<1x4xf32> to vector<3x4xf32>
   return %0 : vector<3x4xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_stretch_at_start
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <4 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <4 x float>]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[3 x <4 x float>]">
+// CHECK-LABEL: llvm.func @broadcast_stretch_at_start(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"[1 x <4 x float>]">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<3x4xf32>) : !llvm<"[3 x <4 x float>]">
+// CHECK:       %[[T1:.*]] = llvm.extractvalue %[[A]][0] : !llvm<"[1 x <4 x float>]">
+// CHECK:       %[[T2:.*]] = llvm.insertvalue %[[T1]], %[[T0]][0] : !llvm<"[3 x <4 x float>]">
+// CHECK:       %[[T3:.*]] = llvm.insertvalue %[[T1]], %[[T2]][1] : !llvm<"[3 x <4 x float>]">
+// CHECK:       %[[T4:.*]] = llvm.insertvalue %[[T1]], %[[T3]][2] : !llvm<"[3 x <4 x float>]">
+// CHECK:       llvm.return %[[T4]] : !llvm<"[3 x <4 x float>]">
 
 func @broadcast_stretch_at_end(%arg0: vector<4x1xf32>) -> vector<4x3xf32> {
   %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<4x3xf32>
   return %0 : vector<4x3xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_stretch_at_end
-//       CHECK:   llvm.mlir.undef : !llvm<"[4 x <3 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[4 x <1 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<1 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<3 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[4 x <3 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[1] : !llvm<"[4 x <1 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<1 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<3 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[4 x <3 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[2] : !llvm<"[4 x <1 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<1 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<3 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[4 x <3 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[3] : !llvm<"[4 x <1 x float>]">
-//       CHECK:   llvm.mlir.undef : !llvm<"<3 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<1 x float>">
-//       CHECK:   llvm.mlir.constant(0 : index) : !llvm.i64
-//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<3 x float>">
-//       CHECK:   llvm.shufflevector {{.*}}, {{.*}} [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x <3 x float>]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[4 x <3 x float>]">
+// CHECK-LABEL: llvm.func @broadcast_stretch_at_end(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"[4 x <1 x float>]">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<4x3xf32>) : !llvm<"[4 x <3 x float>]">
+// CHECK:       %[[T1:.*]] = llvm.extractvalue %[[A]][0] : !llvm<"[4 x <1 x float>]">
+// CHECK:       %[[T2:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
+// CHECK:       %[[T3:.*]] = llvm.extractelement %[[T1]][%[[T2]] : !llvm.i64] : !llvm<"<1 x float>">
+// CHECK:       %[[T4:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
+// CHECK:       %[[T5:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T6:.*]] = llvm.insertelement %[[T3]], %[[T4]][%[[T5]] : !llvm.i32] : !llvm<"<3 x float>">
+// CHECK:       %[[T7:.*]] = llvm.shufflevector %[[T6]], %[[T4]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
+// CHECK:       %[[T8:.*]] = llvm.insertvalue %[[T7]], %[[T0]][0] : !llvm<"[4 x <3 x float>]">
+// CHECK:       %[[T9:.*]] = llvm.extractvalue %[[A]][1] : !llvm<"[4 x <1 x float>]">
+// CHECK:       %[[T10:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
+// CHECK:       %[[T11:.*]] = llvm.extractelement %[[T9]][%[[T10]] : !llvm.i64] : !llvm<"<1 x float>">
+// CHECK:       %[[T12:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
+// CHECK:       %[[T13:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T14:.*]] = llvm.insertelement %[[T11]], %[[T12]][%[[T13]] : !llvm.i32] : !llvm<"<3 x float>">
+// CHECK:       %[[T15:.*]] = llvm.shufflevector %[[T14]], %[[T12]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
+// CHECK:       %[[T16:.*]] = llvm.insertvalue %[[T15]], %[[T8]][1] : !llvm<"[4 x <3 x float>]">
+// CHECK:       %[[T17:.*]] = llvm.extractvalue %[[A]][2] : !llvm<"[4 x <1 x float>]">
+// CHECK:       %[[T18:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
+// CHECK:       %[[T19:.*]] = llvm.extractelement %[[T17]][%[[T18]] : !llvm.i64] : !llvm<"<1 x float>">
+// CHECK:       %[[T20:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
+// CHECK:       %[[T21:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T22:.*]] = llvm.insertelement %[[T19]], %[[T20]][%[[T21]] : !llvm.i32] : !llvm<"<3 x float>">
+// CHECK:       %[[T23:.*]] = llvm.shufflevector %[[T22]], %[[T20]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
+// CHECK:       %[[T24:.*]] = llvm.insertvalue %[[T23]], %[[T16]][2] : !llvm<"[4 x <3 x float>]">
+// CHECK:       %[[T25:.*]] = llvm.extractvalue %[[A]][3] : !llvm<"[4 x <1 x float>]">
+// CHECK:       %[[T26:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
+// CHECK:       %[[T27:.*]] = llvm.extractelement %[[T25]][%[[T26]] : !llvm.i64] : !llvm<"<1 x float>">
+// CHECK:       %[[T28:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
+// CHECK:       %[[T29:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK:       %[[T30:.*]] = llvm.insertelement %[[T27]], %[[T28]][%[[T29]] : !llvm.i32] : !llvm<"<3 x float>">
+// CHECK:       %[[T31:.*]] = llvm.shufflevector %[[T30]], %[[T28]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
+// CHECK:       %[[T32:.*]] = llvm.insertvalue %[[T31]], %[[T24]][3] : !llvm<"[4 x <3 x float>]">
+// CHECK:       llvm.return %[[T32]] : !llvm<"[4 x <3 x float>]">
 
 func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2xf32> {
   %0 = vector.broadcast %arg0 : vector<4x1x2xf32> to vector<4x3x2xf32>
   return %0 : vector<4x3x2xf32>
 }
-// CHECK-LABEL: llvm.func @broadcast_stretch_in_middle
-//       CHECK:   llvm.mlir.undef : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[4 x [1 x <2 x float>]]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.extractvalue {{.*}}[1] : !llvm<"[4 x [1 x <2 x float>]]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.extractvalue {{.*}}[2] : !llvm<"[4 x [1 x <2 x float>]]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.extractvalue {{.*}}[3] : !llvm<"[4 x [1 x <2 x float>]]">
-//       CHECK:   llvm.mlir.undef : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm<"[1 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"[3 x <2 x float>]">
-//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm<"[4 x [3 x <2 x float>]]">
-//       CHECK:   llvm.return {{.*}} : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK-LABEL: llvm.func @broadcast_stretch_in_middle(
+// CHECK-SAME:  %[[A:.*]]: !llvm<"[4 x [1 x <2 x float>]]">)
+// CHECK:       %[[T0:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<4x3x2xf32>) : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T1:.*]] = llvm.mlir.constant(dense<0.000000e+00> : vector<3x2xf32>) : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T2:.*]] = llvm.extractvalue %[[A]][0] : !llvm<"[4 x [1 x <2 x float>]]">
+// CHECK:       %[[T3:.*]] = llvm.extractvalue %[[T2]][0] : !llvm<"[1 x <2 x float>]">
+// CHECK:       %[[T4:.*]] = llvm.insertvalue %[[T3]], %[[T1]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T5:.*]] = llvm.insertvalue %[[T3]], %[[T4]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T6:.*]] = llvm.insertvalue %[[T3]], %[[T5]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T7:.*]] = llvm.insertvalue %[[T6]], %[[T0]][0] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T8:.*]] = llvm.extractvalue %[[A]][1] : !llvm<"[4 x [1 x <2 x float>]]">
+// CHECK:       %[[T9:.*]] = llvm.extractvalue %[[T8]][0] : !llvm<"[1 x <2 x float>]">
+// CHECK:       %[[T10:.*]] = llvm.insertvalue %[[T9]], %[[T1]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T11:.*]] = llvm.insertvalue %[[T9]], %[[T10]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T12:.*]] = llvm.insertvalue %[[T9]], %[[T11]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T13:.*]] = llvm.insertvalue %[[T12]], %[[T7]][1] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T14:.*]] = llvm.extractvalue %[[A]][2] : !llvm<"[4 x [1 x <2 x float>]]">
+// CHECK:       %[[T15:.*]] = llvm.extractvalue %[[T14]][0] : !llvm<"[1 x <2 x float>]">
+// CHECK:       %[[T16:.*]] = llvm.insertvalue %[[T15]], %[[T1]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T17:.*]] = llvm.insertvalue %[[T15]], %[[T16]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T18:.*]] = llvm.insertvalue %[[T15]], %[[T17]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T19:.*]] = llvm.insertvalue %[[T18]], %[[T13]][2] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       %[[T20:.*]] = llvm.extractvalue %[[A]][3] : !llvm<"[4 x [1 x <2 x float>]]">
+// CHECK:       %[[T21:.*]] = llvm.extractvalue %[[T20]][0] : !llvm<"[1 x <2 x float>]">
+// CHECK:       %[[T22:.*]] = llvm.insertvalue %[[T21]], %[[T1]][0] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T23:.*]] = llvm.insertvalue %[[T21]], %[[T22]][1] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T24:.*]] = llvm.insertvalue %[[T21]], %[[T23]][2] : !llvm<"[3 x <2 x float>]">
+// CHECK:       %[[T25:.*]] = llvm.insertvalue %[[T24]], %[[T19]][3] : !llvm<"[4 x [3 x <2 x float>]]">
+// CHECK:       llvm.return %[[T25]] : !llvm<"[4 x [3 x <2 x float>]]">
 
 func @outerproduct(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<2x3xf32> {
   %2 = vector.outerproduct %arg0, %arg1 : vector<2xf32>, vector<3xf32>
@@ -211,16 +209,16 @@ func @outerproduct(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<2x3xf32
 //      CHECK: %[[T1:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
 //      CHECK: %[[T2:.*]] = llvm.extractelement %[[A]][%[[T1]] : !llvm.i64] : !llvm<"<2 x float>">
 //      CHECK: %[[T3:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
-//      CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-//      CHECK: %[[T5:.*]] = llvm.insertelement %[[T2]], %[[T3]][%4 : !llvm.i64] : !llvm<"<3 x float>">
+//      CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//      CHECK: %[[T5:.*]] = llvm.insertelement %[[T2]], %[[T3]][%4 : !llvm.i32] : !llvm<"<3 x float>">
 //      CHECK: %[[T6:.*]] = llvm.shufflevector %[[T5]], %[[T3]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
 //      CHECK: %[[T7:.*]] = llvm.fmul %[[T6]], %[[B]] : !llvm<"<3 x float>">
 //      CHECK: %[[T8:.*]] = llvm.insertvalue %[[T7]], %[[T0]][0] : !llvm<"[2 x <3 x float>]">
 //      CHECK: %[[T9:.*]] = llvm.mlir.constant(1 : i64) : !llvm.i64
 //      CHECK: %[[T10:.*]] = llvm.extractelement %[[A]][%9 : !llvm.i64] : !llvm<"<2 x float>">
 //      CHECK: %[[T11:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
-//      CHECK: %[[T12:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-//      CHECK: %[[T13:.*]] = llvm.insertelement %[[T10]], %[[T11]][%12 : !llvm.i64] : !llvm<"<3 x float>">
+//      CHECK: %[[T12:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//      CHECK: %[[T13:.*]] = llvm.insertelement %[[T10]], %[[T11]][%12 : !llvm.i32] : !llvm<"<3 x float>">
 //      CHECK: %[[T14:.*]] = llvm.shufflevector %[[T13]], %[[T11]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
 //      CHECK: %[[T15:.*]] = llvm.fmul %[[T14]], %[[B]] : !llvm<"<3 x float>">
 //      CHECK: %[[T16:.*]] = llvm.insertvalue %[[T15]], %[[T8]][1] : !llvm<"[2 x <3 x float>]">
@@ -238,8 +236,8 @@ func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: vector
 //      CHECK: %[[T1:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
 //      CHECK: %[[T2:.*]] = llvm.extractelement %[[A]][%[[T1]] : !llvm.i64] : !llvm<"<2 x float>">
 //      CHECK: %[[T3:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
-//      CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-//      CHECK: %[[T5:.*]] = llvm.insertelement %[[T2]], %[[T3]][%[[T4]] : !llvm.i64] : !llvm<"<3 x float>">
+//      CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//      CHECK: %[[T5:.*]] = llvm.insertelement %[[T2]], %[[T3]][%[[T4]] : !llvm.i32] : !llvm<"<3 x float>">
 //      CHECK: %[[T6:.*]] = llvm.shufflevector %[[T5]], %[[T3]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
 //      CHECK: %[[T7:.*]] = llvm.extractvalue %[[C]][0] : !llvm<"[2 x <3 x float>]">
 //      CHECK: %[[T8:.*]] = "llvm.intr.fma"(%[[T6]], %[[B]], %[[T7]]) : (!llvm<"<3 x float>">, !llvm<"<3 x float>">, !llvm<"<3 x float>">)
@@ -247,8 +245,8 @@ func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: vector
 //      CHECK: %[[T10:.*]] = llvm.mlir.constant(1 : i64) : !llvm.i64
 //      CHECK: %[[T11:.*]] = llvm.extractelement %[[A]][%[[T10]] : !llvm.i64] : !llvm<"<2 x float>">
 //      CHECK: %[[T12:.*]] = llvm.mlir.undef : !llvm<"<3 x float>">
-//      CHECK: %[[T13:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-//      CHECK: %[[T14:.*]] = llvm.insertelement %[[T11]], %[[T12]][%[[T13]] : !llvm.i64] : !llvm<"<3 x float>">
+//      CHECK: %[[T13:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//      CHECK: %[[T14:.*]] = llvm.insertelement %[[T11]], %[[T12]][%[[T13]] : !llvm.i32] : !llvm<"<3 x float>">
 //      CHECK: %[[T15:.*]] = llvm.shufflevector %[[T14]], %[[T12]] [0 : i32, 0 : i32, 0 : i32] : !llvm<"<3 x float>">, !llvm<"<3 x float>">
 //      CHECK: %[[T16:.*]] = llvm.extractvalue %[[C]][1] : !llvm<"[2 x <3 x float>]">
 //      CHECK: %[[T17:.*]] = "llvm.intr.fma"(%[[T15]], %[[B]], %[[T16]]) : (!llvm<"<3 x float>">, !llvm<"<3 x float>">, !llvm<"<3 x float>">)
