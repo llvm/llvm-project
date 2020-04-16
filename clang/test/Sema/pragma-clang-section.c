@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple arm-none-eabi
-#pragma clang section bss="mybss.1" data="mydata.1" rodata="myrodata.1" text="mytext.1"
+#pragma clang section bss = "mybss.1" data = "mydata.1" rodata = "myrodata.1" text = "mytext.1" // expected-note 2 {{#pragma entered here}}
 #pragma clang section bss="" data="" rodata="" text=""
 #pragma clang section
 
@@ -16,4 +16,10 @@
 #pragma clang section text "text.2"   // expected-error {{expected '=' following '#pragma clang section text'}}
 #pragma clang section relro "relro.2"   // expected-error {{expected '=' following '#pragma clang section relro'}}
 #pragma clang section bss="" data="" rodata="" text="" more //expected-error {{expected one of [bss|data|rodata|text|relro] section kind in '#pragma clang section'}}
+
+#pragma clang section bss = "mybss.3" data = "mybss.3" // expected-error {{this causes a section type conflict with a prior #pragma section}} expected-note {{#pragma entered here}} expected-note {{#pragma entered here}}
+#pragma clang section rodata = "mydata.1"              // expected-error {{this causes a section type conflict with a prior #pragma section}}
+#pragma clang section bss = "myrodata.1"               // expected-error {{this causes a section type conflict with a prior #pragma section}}
+#pragma clang section text = "mybss.3"                 // expected-error {{this causes a section type conflict with a prior #pragma section}}
+
 int a;
