@@ -112,7 +112,7 @@ using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
 
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
-///   * To access the type of an argument: Traits::arg_t<i>
+///   * To access the type of an argument: Traits::arg_t<Index>
 ///   * To access the type of the result:  Traits::result_t
 template <typename T, bool isClass = std::is_class<T>::value>
 struct function_traits : public function_traits<decltype(&T::operator())> {};
@@ -127,8 +127,8 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
   using result_t = ReturnType;
 
   /// The type of an argument to this function.
-  template <size_t i>
-  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+  template <size_t Index>
+  using arg_t = typename std::tuple_element<Index, std::tuple<Args...>>::type;
 };
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
