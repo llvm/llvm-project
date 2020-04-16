@@ -14,12 +14,10 @@
 #define LLVM_MC_MCVALUE_H
 
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
 namespace llvm {
-class MCAsmInfo;
 class raw_ostream;
 
 /// This represents an "assembler immediate".
