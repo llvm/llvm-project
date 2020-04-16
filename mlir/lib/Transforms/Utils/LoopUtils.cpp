@@ -1158,17 +1158,6 @@ TileLoops mlir::extractFixedOuterLoops(loop::ForOp rootForOp,
   return tileLoops;
 }
 
-// Replaces all uses of `orig` with `replacement` except if the user is listed
-// in `exceptions`.
-static void
-replaceAllUsesExcept(Value orig, Value replacement,
-                     const SmallPtrSetImpl<Operation *> &exceptions) {
-  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
-    if (exceptions.count(use.getOwner()) == 0)
-      use.set(replacement);
-  }
-}
-
 /// Return the new lower bound, upper bound, and step in that order. Insert any
 /// additional bounds calculations before the given builder and any additional
 /// conversion back to the original loop induction value inside the given Block.
@@ -2381,4 +2370,13 @@ mlir::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
     *fullTileNest = std::move(fullTileLoops);
 
   return success();
+}
+
+void mlir::replaceAllUsesExcept(
+    Value orig, Value replacement,
+    const SmallPtrSetImpl<Operation *> &exceptions) {
+  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
+    if (exceptions.count(use.getOwner()) == 0)
+      use.set(replacement);
+  }
 }
