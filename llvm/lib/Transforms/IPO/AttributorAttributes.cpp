@@ -4993,9 +4993,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // Helper to check if for the given call site the associated argument is
     // passed to a callback where the privatization would be different.
     auto IsCompatiblePrivArgOfCallback = [&](CallSite CS) {
-      SmallVector<const Use *, 4> CBUses;
-      AbstractCallSite::getCallbackUses(CS, CBUses);
-      for (const Use *U : CBUses) {
+      SmallVector<const Use *, 4> CallbackUses;
+      AbstractCallSite::getCallbackUses(cast<CallBase>(*CS.getInstruction()),
+                                        CallbackUses);
+      for (const Use *U : CallbackUses) {
         AbstractCallSite CBACS(U);
         assert(CBACS && CBACS.isCallbackCall());
         for (Argument &CBArg : CBACS.getCalledFunction()->args()) {
@@ -5081,7 +5082,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                << Arg->getParent()->getName()
                << ")\n[AAPrivatizablePtr] because it is an argument in a "
                   "direct call of ("
-               << ACS.getCallSite().getCalledFunction()->getName()
+               << ACS.getInstruction()->getCalledFunction()->getName()
                << ").\n[AAPrivatizablePtr] for which the argument "
                   "privatization is not compatible.\n";
       });
@@ -5093,7 +5094,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // here.
     auto IsCompatiblePrivArgOfOtherCallSite = [&](AbstractCallSite ACS) {
       if (ACS.isDirectCall())
-        return IsCompatiblePrivArgOfCallback(ACS.getCallSite());
+        return IsCompatiblePrivArgOfCallback(CallSite(ACS.getInstruction()));
       if (ACS.isCallbackCall())
         return IsCompatiblePrivArgOfDirectCS(ACS);
       return false;
