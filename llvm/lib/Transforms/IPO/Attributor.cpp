@@ -1569,9 +1569,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     for (auto &CallSitePair : CallSitePairs) {
       CallBase &OldCB = *CallSitePair.first;
       CallBase &NewCB = *CallSitePair.second;
-      // We do not modify the call graph here but simply reanalyze the old
-      // function. This should be revisited once the old PM is gone.
       ModifiedFns.insert(OldCB.getFunction());
+      CGUpdater.replaceCallSite(OldCB, NewCB);
       OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
