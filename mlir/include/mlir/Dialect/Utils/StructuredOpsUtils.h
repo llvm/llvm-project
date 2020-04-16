@@ -66,10 +66,6 @@ constexpr StringRef getArgsOutAttrName() { return "args_out"; }
 /// string of the structured op.
 constexpr StringRef getDocAttrName() { return "doc"; }
 
-/// Attribute name for the StrArrayAttr which encodes the SymbolAttr for the
-/// MLIR function that implements the body of the structured op.
-constexpr StringRef getFunAttrName() { return "fun"; }
-
 /// Attribute name for the StrArrayAttr which encodes the external library
 /// function that implements the structured op.
 constexpr StringRef getLibraryCallAttrName() { return "library_call"; }

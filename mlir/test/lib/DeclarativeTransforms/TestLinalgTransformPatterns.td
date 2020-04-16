@@ -111,7 +111,7 @@ def : Pattern<(FillOp:$op $_, $_),
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
-def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               [(VectorizeLinalgOp)],
               [(Constraint<And<[
                 HasLinalgTransformMarker<"VECTORIZE">,
@@ -122,7 +122,7 @@ def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
               [(Constraint<And<[
                 HasNoLinalgTransformMarker,
@@ -130,7 +130,7 @@ def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
                 PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
               ]>>)]>;
 
-def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
               [(Constraint<And<[
                 HasNoLinalgTransformMarker,

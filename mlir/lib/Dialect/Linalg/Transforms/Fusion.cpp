@@ -382,8 +382,7 @@ static bool areTensorOpsFusible(LinalgOp producer, LinalgOp consumer,
   // - only handle ops that use regions for specifying the scalar operations.
   if (!producerOp || !consumerOp || producerOp.getNumOutputs() != 1 ||
       producerOp.getResult(0) != consumerOp.getOperand(consumerIdx) ||
-      producerOp.getNumParallelLoops() != producerOp.getNumLoops() ||
-      producerOp.fun() || consumerOp.fun())
+      producerOp.getNumParallelLoops() != producerOp.getNumLoops())
     return false;
 
   // Get the consumer index map. The number of results of the consumer index map
@@ -472,7 +471,6 @@ Optional<LinalgOp> mlir::linalg::fuseTensorOps(OpBuilder &b, LinalgOp producer,
       b.getI64IntegerAttr(fusedArgsIn), b.getI64IntegerAttr(fusedArgsOut),
       b.getArrayAttr(fusedIndexingMapAttrs), consumerOp.iterator_types(),
       /*doc=*/nullptr,
-      /*fun=*/nullptr,
       /*library_call=*/nullptr);
 
   // Build the region of the fused op.
