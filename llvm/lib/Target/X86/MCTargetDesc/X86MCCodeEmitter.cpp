@@ -111,23 +111,20 @@ private:
                         raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
-  void emitPrefixImpl(uint64_t TSFlags, unsigned &CurOp, unsigned &CurByte,
-                  bool &Rex, const MCInst &MI, const MCInstrDesc &Desc,
-                  const MCSubtargetInfo &STI, raw_ostream &OS) const;
+  void emitPrefixImpl(unsigned &CurOp, unsigned &CurByte, bool &Rex,
+                      const MCInst &MI, const MCSubtargetInfo &STI,
+                      raw_ostream &OS) const;
 
-  void emitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte, int MemOperand,
-                           const MCInst &MI, const MCInstrDesc &Desc,
+  void emitVEXOpcodePrefix(unsigned &CurByte, int MemOperand, const MCInst &MI,
                            raw_ostream &OS) const;
 
   void emitSegmentOverridePrefix(unsigned &CurByte, unsigned SegOperand,
                                  const MCInst &MI, raw_ostream &OS) const;
 
-  bool emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte, int MemOperand,
-                        const MCInst &MI, const MCInstrDesc &Desc,
+  bool emitOpcodePrefix(unsigned &CurByte, int MemOperand, const MCInst &MI,
                         const MCSubtargetInfo &STI, raw_ostream &OS) const;
 
-  uint8_t determineREXPrefix(const MCInst &MI, uint64_t TSFlags, int MemOperand,
-                             const MCInstrDesc &Desc) const;
+  uint8_t determineREXPrefix(const MCInst &MI, int MemOperand) const;
 };
 
 } // end anonymous namespace
@@ -633,11 +630,11 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
                   CurByte, OS, Fixups);
 }
 
-void X86MCCodeEmitter::emitPrefixImpl(uint64_t TSFlags, unsigned &CurOp,
-                                  unsigned &CurByte, bool &Rex,
-                                  const MCInst &MI, const MCInstrDesc &Desc,
-                                  const MCSubtargetInfo &STI,
-                                  raw_ostream &OS) const {
+void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
+                                      bool &Rex, const MCInst &MI,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &OS) const {
+  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
   // Determine where the memory operand starts, if present.
   int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
   if (MemoryOperand != -1)
@@ -682,9 +679,9 @@ void X86MCCodeEmitter::emitPrefixImpl(uint64_t TSFlags, unsigned &CurOp,
   // Encoding type for this instruction.
   uint64_t Encoding = TSFlags & X86II::EncodingMask;
   if (Encoding == 0)
-    Rex = emitOpcodePrefix(TSFlags, CurByte, MemoryOperand, MI, Desc, STI, OS);
+    Rex = emitOpcodePrefix(CurByte, MemoryOperand, MI, STI, OS);
   else
-    emitVEXOpcodePrefix(TSFlags, CurByte, MemoryOperand, MI, Desc, OS);
+    emitVEXOpcodePrefix(CurByte, MemoryOperand, MI, OS);
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
@@ -737,10 +734,12 @@ void X86MCCodeEmitter::emitPrefixImpl(uint64_t TSFlags, unsigned &CurOp,
 
 /// emitVEXOpcodePrefix - AVX instructions are encoded using a opcode prefix
 /// called VEX.
-void X86MCCodeEmitter::emitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
-                                           int MemOperand, const MCInst &MI,
-                                           const MCInstrDesc &Desc,
+void X86MCCodeEmitter::emitVEXOpcodePrefix(unsigned &CurByte, int MemOperand,
+                                           const MCInst &MI,
                                            raw_ostream &OS) const {
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
+
   assert(!(TSFlags & X86II::LOCK) && "Can't have LOCK VEX.");
 
   uint64_t Encoding = TSFlags & X86II::EncodingMask;
@@ -1168,11 +1167,13 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
 /// Determine if the MCInst has to be encoded with a X86-64 REX prefix which
 /// specifies 1) 64-bit instructions, 2) non-default operand size, and 3) use
 /// of X86-64 extended registers.
-uint8_t X86MCCodeEmitter::determineREXPrefix(const MCInst &MI, uint64_t TSFlags,
-                                             int MemOperand,
-                                             const MCInstrDesc &Desc) const {
+uint8_t X86MCCodeEmitter::determineREXPrefix(const MCInst &MI,
+                                             int MemOperand) const {
   uint8_t REX = 0;
   bool UsesHighByteReg = false;
+
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags & X86II::REX_W)
     REX |= 1 << 3; // set REX.W
@@ -1272,11 +1273,13 @@ void X86MCCodeEmitter::emitSegmentOverridePrefix(unsigned &CurByte,
 /// If not present, it is -1.
 ///
 /// \returns true if a REX prefix was used.
-bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
-                                        int MemOperand, const MCInst &MI,
-                                        const MCInstrDesc &Desc,
+bool X86MCCodeEmitter::emitOpcodePrefix(unsigned &CurByte, int MemOperand,
+                                        const MCInst &MI,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &OS) const {
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
+
   bool Ret = false;
   // Emit the operand size opcode prefix as needed.
   if ((TSFlags & X86II::OpSizeMask) ==
@@ -1306,7 +1309,7 @@ bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
   // Handle REX prefix.
   // FIXME: Can this come before F2 etc to simplify emission?
   if (STI.hasFeature(X86::Mode64Bit)) {
-    if (uint8_t REX = determineREXPrefix(MI, TSFlags, MemOperand, Desc)) {
+    if (uint8_t REX = determineREXPrefix(MI, MemOperand)) {
       emitByte(0x40 | REX, CurByte, OS);
       Ret = true;
     }
@@ -1351,7 +1354,7 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, raw_ostream &OS,
   unsigned CurByte = 0;
 
   bool Rex = false;
-  emitPrefixImpl(TSFlags, CurOp, CurByte, Rex, MI, Desc, STI, OS);
+  emitPrefixImpl(CurOp, CurByte, Rex, MI, STI, OS);
 }
 
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -1372,7 +1375,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   unsigned CurByte = 0;
 
   bool Rex = false;
-  emitPrefixImpl(TSFlags, CurOp, CurByte, Rex, MI, Desc, STI, OS);
+  emitPrefixImpl(CurOp, CurByte, Rex, MI, STI, OS);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
