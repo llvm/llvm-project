@@ -1362,7 +1362,7 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, raw_ostream &OS,
   uint64_t TSFlags = Desc.TSFlags;
 
   // Pseudo instructions don't get encoded.
-  if ((TSFlags & X86II::FormMask) == X86II::Pseudo)
+  if (X86II::isPseudo(TSFlags))
     return;
 
   unsigned CurOp = X86II::getOperandBias(Desc);
@@ -1382,7 +1382,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   uint64_t TSFlags = Desc.TSFlags;
 
   // Pseudo instructions don't get encoded.
-  if ((TSFlags & X86II::FormMask) == X86II::Pseudo)
+  if (X86II::isPseudo(TSFlags))
     return;
 
   unsigned NumOps = Desc.getNumOperands();

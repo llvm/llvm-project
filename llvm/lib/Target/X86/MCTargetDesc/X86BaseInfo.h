@@ -942,6 +942,11 @@ namespace X86II {
     return (TSFlags & X86II::FormMask) == PrefixByte;
   }
 
+  /// \returns true if the instruction with given opcode is a pseudo.
+  inline bool isPseudo(uint64_t TSFlags) {
+    return (TSFlags & X86II::FormMask) == Pseudo;
+  }
+
   /// \returns the "base" X86 opcode for the specified machine
   /// instruction.
   inline uint8_t getBaseOpcodeFor(uint64_t TSFlags) {
