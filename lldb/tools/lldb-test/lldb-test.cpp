@@ -169,10 +169,13 @@ static FunctionNameType getFunctionNameFlags() {
 static cl::opt<bool> DumpAST("dump-ast",
                              cl::desc("Dump AST restored from symbols."),
                              cl::sub(SymbolsSubcommand));
-static cl::opt<bool>
-    DumpClangAST("dump-clang-ast",
-                 cl::desc("Dump clang AST restored from symbols."),
-                 cl::sub(SymbolsSubcommand));
+static cl::opt<bool> DumpClangAST(
+    "dump-clang-ast",
+    cl::desc("Dump clang AST restored from symbols. When used on its own this "
+             "will dump the entire AST of all loaded symbols. When combined "
+             "with -find, it changes the presentation of the search results "
+             "from pretty-printing the types to an AST dump."),
+    cl::sub(SymbolsSubcommand));
 
 static cl::opt<bool> Verify("verify", cl::desc("Verify symbol information."),
                             cl::sub(SymbolsSubcommand));
@@ -192,7 +195,7 @@ static Error findTypes(lldb_private::Module &Module);
 static Error findVariables(lldb_private::Module &Module);
 static Error dumpModule(lldb_private::Module &Module);
 static Error dumpAST(lldb_private::Module &Module);
-static Error dumpClangAST(lldb_private::Module &Module);
+static Error dumpEntireClangAST(lldb_private::Module &Module);
 static Error verify(lldb_private::Module &Module);
 
 static Expected<Error (*)(lldb_private::Module &)> getAction();
@@ -404,6 +407,10 @@ opts::symbols::getDeclContext(SymbolFile &Symfile) {
   return List.GetVariableAtIndex(0)->GetDeclContext();
 }
 
+static lldb::DescriptionLevel GetDescriptionLevel() {
+  return opts::symbols::DumpClangAST ? eDescriptionLevelVerbose : eDescriptionLevelFull;
+}
+
 Error opts::symbols::findFunctions(lldb_private::Module &Module) {
   SymbolFile &Symfile = *Module.GetSymbolFile();
   SymbolContextList List;
@@ -534,7 +541,12 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;
-  Map.Dump(&Stream, false);
+  // Resolve types to force-materialize typedef types.
+  Map.ForEach([&](TypeSP &type) {
+    type->GetFullCompilerType();
+    return false;
+  });
+  Map.Dump(&Stream, false, GetDescriptionLevel());
   outs() << Stream.GetData() << "\n";
   return Error::success();
 }
@@ -615,7 +627,7 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   return Error::success();
 }
 
-Error opts::symbols::dumpClangAST(lldb_private::Module &Module) {
+Error opts::symbols::dumpEntireClangAST(lldb_private::Module &Module) {
   Module.ParseAllDebugSymbols();
 
   SymbolFile *symfile = Module.GetSymbolFile();
@@ -719,13 +731,17 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
   }
 
   if (DumpClangAST) {
-    if (Find != FindType::None)
-      return make_string_error("Cannot both search and dump clang AST.");
-    if (Regex || !Context.empty() || !File.empty() || Line != 0)
-      return make_string_error(
-          "-regex, -context, -name, -file and -line options are not "
-          "applicable for dumping clang AST.");
-    return dumpClangAST;
+    if (Find == FindType::None) {
+      if (Regex || !Context.empty() || !File.empty() || Line != 0)
+        return make_string_error(
+            "-regex, -context, -name, -file and -line options are not "
+            "applicable for dumping the entire clang AST. Either combine with "
+            "-find, or use -dump-clang-ast as a standalone option.");
+      return dumpEntireClangAST;
+    }
+    if (Find != FindType::Type)
+      return make_string_error("This combination of -dump-clang-ast and -find "
+                               "<kind> is not yet implemented.");
   }
 
   if (Regex && !Context.empty())
