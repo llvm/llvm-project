@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -358,6 +359,96 @@ public:
       return false;
     RC = High - 1;
     return true;
+  }
+
+  static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
+    std::vector<StringRef> Result;
+    if (ExtraInfo & InlineAsm::Extra_HasSideEffects)
+      Result.push_back("sideeffect");
+    if (ExtraInfo & InlineAsm::Extra_MayLoad)
+      Result.push_back("mayload");
+    if (ExtraInfo & InlineAsm::Extra_MayStore)
+      Result.push_back("maystore");
+    if (ExtraInfo & InlineAsm::Extra_IsConvergent)
+      Result.push_back("isconvergent");
+    if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
+      Result.push_back("alignstack");
+
+    AsmDialect Dialect =
+        InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));
+
+    if (Dialect == InlineAsm::AD_ATT)
+      Result.push_back("attdialect");
+    if (Dialect == InlineAsm::AD_Intel)
+      Result.push_back("inteldialect");
+
+    return Result;
+  }
+
+  static StringRef getKindName(unsigned Kind) {
+    switch (Kind) {
+    case InlineAsm::Kind_RegUse:
+      return "reguse";
+    case InlineAsm::Kind_RegDef:
+      return "regdef";
+    case InlineAsm::Kind_RegDefEarlyClobber:
+      return "regdef-ec";
+    case InlineAsm::Kind_Clobber:
+      return "clobber";
+    case InlineAsm::Kind_Imm:
+      return "imm";
+    case InlineAsm::Kind_Mem:
+      return "mem";
+    default:
+      llvm_unreachable("Unknown operand kind");
+    }
+  }
+
+  static StringRef getMemConstraintName(unsigned Constraint) {
+    switch (Constraint) {
+    case InlineAsm::Constraint_es:
+      return "es";
+    case InlineAsm::Constraint_i:
+      return "i";
+    case InlineAsm::Constraint_m:
+      return "m";
+    case InlineAsm::Constraint_o:
+      return "o";
+    case InlineAsm::Constraint_v:
+      return "v";
+    case InlineAsm::Constraint_Q:
+      return "Q";
+    case InlineAsm::Constraint_R:
+      return "R";
+    case InlineAsm::Constraint_S:
+      return "S";
+    case InlineAsm::Constraint_T:
+      return "T";
+    case InlineAsm::Constraint_Um:
+      return "Um";
+    case InlineAsm::Constraint_Un:
+      return "Un";
+    case InlineAsm::Constraint_Uq:
+      return "Uq";
+    case InlineAsm::Constraint_Us:
+      return "Us";
+    case InlineAsm::Constraint_Ut:
+      return "Ut";
+    case InlineAsm::Constraint_Uv:
+      return "Uv";
+    case InlineAsm::Constraint_Uy:
+      return "Uy";
+    case InlineAsm::Constraint_X:
+      return "X";
+    case InlineAsm::Constraint_Z:
+      return "Z";
+    case InlineAsm::Constraint_ZC:
+      return "ZC";
+    case InlineAsm::Constraint_Zy:
+      return "Zy";
+    default:
+      llvm_unreachable("Unknown memory constraint");
+    }
   }
 };
 

@@ -28,18 +28,50 @@ static StringRef bufferize(SourceMgr &SM, StringRef Str) {
   return StrBufferRef;
 }
 
+static std::string toString(const std::unordered_set<std::string> &Set) {
+  bool First = true;
+  std::string Str;
+  for (StringRef S : Set) {
+    Str += Twine(First ? "{" + S : ", " + S).str();
+    First = false;
+  }
+  Str += '}';
+  return Str;
+}
+
+template <typename ErrorT>
+static void expectSameErrors(std::unordered_set<std::string> ExpectedMsgs,
+                             Error Err) {
+  auto AnyErrorMsgMatch = [&ExpectedMsgs](std::string &&ErrorMsg) -> bool {
+    for (auto ExpectedMsgItr = ExpectedMsgs.begin(),
+              ExpectedMsgEnd = ExpectedMsgs.end();
+         ExpectedMsgItr != ExpectedMsgEnd; ++ExpectedMsgItr) {
+      if (ErrorMsg.find(*ExpectedMsgItr) != std::string::npos) {
+        ExpectedMsgs.erase(ExpectedMsgItr);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  Error RemainingErrors = std::move(Err);
+  do {
+    RemainingErrors =
+        handleErrors(std::move(RemainingErrors), [&](const ErrorT &E) {
+          EXPECT_TRUE(AnyErrorMsgMatch(E.message()))
+              << "Unexpected error message:" << std::endl
+              << E.message();
+        });
+  } while (RemainingErrors && !ExpectedMsgs.empty());
+  EXPECT_THAT_ERROR(std::move(RemainingErrors), Succeeded());
+  EXPECT_TRUE(ExpectedMsgs.empty())
+      << "Error message(s) not found:" << std::endl
+      << toString(ExpectedMsgs);
+}
+
 template <typename ErrorT>
 static void expectError(StringRef ExpectedMsg, Error Err) {
-  bool ErrorHandled = false;
-  EXPECT_THAT_ERROR(handleErrors(std::move(Err),
-                                 [&](const ErrorT &E) {
-                                   EXPECT_NE(
-                                       E.message().find(ExpectedMsg.str()),
-                                       std::string::npos);
-                                   ErrorHandled = true;
-                                 }),
-                    Succeeded());
-  EXPECT_TRUE(ErrorHandled);
+  expectSameErrors<ErrorT>({ExpectedMsg.str()}, std::move(Err));
 }
 
 static void expectDiagnosticError(StringRef ExpectedMsg, Error Err) {
@@ -179,15 +211,6 @@ TEST_F(FileCheckTest, NoFormatProperties) {
   EXPECT_FALSE(bool(NoFormat));
 }
 
-TEST_F(FileCheckTest, ConflictFormatProperties) {
-  ExpressionFormat ConflictFormat(ExpressionFormat::Kind::Conflict);
-  expectError<StringError>("trying to match value with invalid format",
-                           ConflictFormat.getWildcardRegex().takeError());
-  expectError<StringError>("trying to match value with invalid format",
-                           ConflictFormat.getMatchingString(18).takeError());
-  EXPECT_FALSE(bool(ConflictFormat));
-}
-
 TEST_F(FileCheckTest, FormatEqualityOperators) {
   ExpressionFormat UnsignedFormat(ExpressionFormat::Kind::Unsigned);
   ExpressionFormat UnsignedFormat2(ExpressionFormat::Kind::Unsigned);
@@ -202,11 +225,6 @@ TEST_F(FileCheckTest, FormatEqualityOperators) {
   ExpressionFormat NoFormat2(ExpressionFormat::Kind::NoFormat);
   EXPECT_FALSE(NoFormat == NoFormat2);
   EXPECT_TRUE(NoFormat != NoFormat2);
-
-  ExpressionFormat ConflictFormat(ExpressionFormat::Kind::Conflict);
-  ExpressionFormat ConflictFormat2(ExpressionFormat::Kind::Conflict);
-  EXPECT_TRUE(ConflictFormat == ConflictFormat2);
-  EXPECT_FALSE(ConflictFormat != ConflictFormat2);
 }
 
 TEST_F(FileCheckTest, FormatKindEqualityOperators) {
@@ -215,43 +233,36 @@ TEST_F(FileCheckTest, FormatKindEqualityOperators) {
   EXPECT_FALSE(UnsignedFormat != ExpressionFormat::Kind::Unsigned);
   EXPECT_FALSE(UnsignedFormat == ExpressionFormat::Kind::HexLower);
   EXPECT_TRUE(UnsignedFormat != ExpressionFormat::Kind::HexLower);
-  ExpressionFormat ConflictFormat(ExpressionFormat::Kind::Conflict);
-  EXPECT_TRUE(ConflictFormat == ExpressionFormat::Kind::Conflict);
-  EXPECT_FALSE(ConflictFormat != ExpressionFormat::Kind::Conflict);
   ExpressionFormat NoFormat(ExpressionFormat::Kind::NoFormat);
   EXPECT_TRUE(NoFormat == ExpressionFormat::Kind::NoFormat);
   EXPECT_FALSE(NoFormat != ExpressionFormat::Kind::NoFormat);
 }
 
 TEST_F(FileCheckTest, Literal) {
+  SourceMgr SM;
+
   // Eval returns the literal's value.
-  ExpressionLiteral Ten(10);
+  ExpressionLiteral Ten(bufferize(SM, "10"), 10);
   Expected<uint64_t> Value = Ten.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(10U, *Value);
-  EXPECT_EQ(Ten.getImplicitFormat(), ExpressionFormat::Kind::NoFormat);
+  Expected<ExpressionFormat> ImplicitFormat = Ten.getImplicitFormat(SM);
+  ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
+  EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::NoFormat);
 
   // Max value can be correctly represented.
-  ExpressionLiteral Max(std::numeric_limits<uint64_t>::max());
+  uint64_t MaxUint64 = std::numeric_limits<uint64_t>::max();
+  ExpressionLiteral Max(bufferize(SM, std::to_string(MaxUint64)), MaxUint64);
   Value = Max.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(std::numeric_limits<uint64_t>::max(), *Value);
 }
 
-static std::string toString(const std::unordered_set<std::string> &Set) {
-  bool First = true;
-  std::string Str;
-  for (StringRef S : Set) {
-    Str += Twine(First ? "{" + S : ", " + S).str();
-    First = false;
-  }
-  Str += '}';
-  return Str;
-}
-
 TEST_F(FileCheckTest, Expression) {
+  SourceMgr SM;
+
   std::unique_ptr<ExpressionLiteral> Ten =
-      std::make_unique<ExpressionLiteral>(10);
+      std::make_unique<ExpressionLiteral>(bufferize(SM, "10"), 10);
   ExpressionLiteral *TenPtr = Ten.get();
   Expression Expr(std::move(Ten),
                   ExpressionFormat(ExpressionFormat::Kind::HexLower));
@@ -275,6 +286,8 @@ expectUndefErrors(std::unordered_set<std::string> ExpectedUndefVarNames,
 uint64_t doAdd(uint64_t OpL, uint64_t OpR) { return OpL + OpR; }
 
 TEST_F(FileCheckTest, NumericVariable) {
+  SourceMgr SM;
+
   // Undefined variable: getValue and eval fail, error returned by eval holds
   // the name of the undefined variable.
   NumericVariable FooVar("FOO",
@@ -282,7 +295,9 @@ TEST_F(FileCheckTest, NumericVariable) {
   EXPECT_EQ("FOO", FooVar.getName());
   EXPECT_EQ(FooVar.getImplicitFormat(), ExpressionFormat::Kind::Unsigned);
   NumericVariableUse FooVarUse("FOO", &FooVar);
-  EXPECT_EQ(FooVarUse.getImplicitFormat(), ExpressionFormat::Kind::Unsigned);
+  Expected<ExpressionFormat> ImplicitFormat = FooVarUse.getImplicitFormat(SM);
+  ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
+  EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
   EXPECT_FALSE(FooVar.getValue());
   Expected<uint64_t> EvalResult = FooVarUse.eval();
   expectUndefErrors({"FOO"}, EvalResult.takeError());
@@ -306,24 +321,32 @@ TEST_F(FileCheckTest, NumericVariable) {
 }
 
 TEST_F(FileCheckTest, Binop) {
-  NumericVariable FooVar("FOO",
+  SourceMgr SM;
+
+  StringRef ExprStr = bufferize(SM, "FOO+BAR");
+  StringRef FooStr = ExprStr.take_front(3);
+  NumericVariable FooVar(FooStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 1);
   FooVar.setValue(42);
   std::unique_ptr<NumericVariableUse> FooVarUse =
-      std::make_unique<NumericVariableUse>("FOO", &FooVar);
-  NumericVariable BarVar("BAR",
+      std::make_unique<NumericVariableUse>(FooStr, &FooVar);
+  StringRef BarStr = ExprStr.take_back(3);
+  NumericVariable BarVar(BarStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 2);
   BarVar.setValue(18);
   std::unique_ptr<NumericVariableUse> BarVarUse =
-      std::make_unique<NumericVariableUse>("BAR", &BarVar);
-  BinaryOperation Binop(doAdd, std::move(FooVarUse), std::move(BarVarUse));
+      std::make_unique<NumericVariableUse>(BarStr, &BarVar);
+  BinaryOperation Binop(ExprStr, doAdd, std::move(FooVarUse),
+                        std::move(BarVarUse));
 
   // Defined variables: eval returns right value; implicit format is as
   // expected.
   Expected<uint64_t> Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(60U, *Value);
-  EXPECT_EQ(Binop.getImplicitFormat(), ExpressionFormat::Kind::Unsigned);
+  Expected<ExpressionFormat> ImplicitFormat = Binop.getImplicitFormat(SM);
+  ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
+  EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
 
   // 1 undefined variable: eval fails, error contains name of undefined
   // variable.
@@ -338,24 +361,76 @@ TEST_F(FileCheckTest, Binop) {
   expectUndefErrors({"FOO", "BAR"}, Value.takeError());
 
   // Literal + Variable has format of variable.
-  FooVarUse = std::make_unique<NumericVariableUse>("FOO", &FooVar);
+  ExprStr = bufferize(SM, "FOO+18");
+  FooStr = ExprStr.take_front(3);
+  StringRef EighteenStr = ExprStr.take_back(2);
+  FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   std::unique_ptr<ExpressionLiteral> Eighteen =
-      std::make_unique<ExpressionLiteral>(18);
-  Binop = BinaryOperation(doAdd, std::move(FooVarUse), std::move(Eighteen));
-  EXPECT_EQ(Binop.getImplicitFormat(), ExpressionFormat::Kind::Unsigned);
-  FooVarUse = std::make_unique<NumericVariableUse>("FOO", &FooVar);
-  Eighteen = std::make_unique<ExpressionLiteral>(18);
-  Binop = BinaryOperation(doAdd, std::move(Eighteen), std::move(FooVarUse));
-  EXPECT_EQ(Binop.getImplicitFormat(), ExpressionFormat::Kind::Unsigned);
+      std::make_unique<ExpressionLiteral>(EighteenStr, 18);
+  Binop = BinaryOperation(ExprStr, doAdd, std::move(FooVarUse),
+                          std::move(Eighteen));
+  ImplicitFormat = Binop.getImplicitFormat(SM);
+  ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
+  EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
+  ExprStr = bufferize(SM, "18+FOO");
+  FooStr = ExprStr.take_back(3);
+  EighteenStr = ExprStr.take_front(2);
+  FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
+  Eighteen = std::make_unique<ExpressionLiteral>(EighteenStr, 18);
+  Binop = BinaryOperation(ExprStr, doAdd, std::move(Eighteen),
+                          std::move(FooVarUse));
+  ImplicitFormat = Binop.getImplicitFormat(SM);
+  ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
+  EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
 
   // Variables with different implicit format conflict.
-  NumericVariable BazVar("BAZ",
+  ExprStr = bufferize(SM, "FOO+BAZ");
+  FooStr = ExprStr.take_front(3);
+  StringRef BazStr = ExprStr.take_back(3);
+  NumericVariable BazVar(BazStr,
                          ExpressionFormat(ExpressionFormat::Kind::HexLower), 3);
-  FooVarUse = std::make_unique<NumericVariableUse>("BAZ", &FooVar);
+  FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   std::unique_ptr<NumericVariableUse> BazVarUse =
-      std::make_unique<NumericVariableUse>("BAZ", &BazVar);
-  Binop = BinaryOperation(doAdd, std::move(FooVarUse), std::move(BazVarUse));
-  EXPECT_EQ(Binop.getImplicitFormat(), ExpressionFormat::Kind::Conflict);
+      std::make_unique<NumericVariableUse>(BazStr, &BazVar);
+  Binop = BinaryOperation(ExprStr, doAdd, std::move(FooVarUse),
+                          std::move(BazVarUse));
+  ImplicitFormat = Binop.getImplicitFormat(SM);
+  expectDiagnosticError(
+      "implicit format conflict between 'FOO' (%u) and 'BAZ' (%x), "
+      "need an explicit format specifier",
+      ImplicitFormat.takeError());
+
+  // All variable conflicts are reported.
+  ExprStr = bufferize(SM, "(FOO+BAZ)+(FOO+QUUX)");
+  StringRef Paren1ExprStr = ExprStr.substr(1, 7);
+  FooStr = Paren1ExprStr.take_front(3);
+  BazStr = Paren1ExprStr.take_back(3);
+  StringRef Paren2ExprStr = ExprStr.substr(ExprStr.rfind('(') + 1, 8);
+  StringRef FooStr2 = Paren2ExprStr.take_front(3);
+  StringRef QuuxStr = Paren2ExprStr.take_back(4);
+  FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
+  BazVarUse = std::make_unique<NumericVariableUse>(BazStr, &BazVar);
+  std::unique_ptr<NumericVariableUse> FooVarUse2 =
+      std::make_unique<NumericVariableUse>(FooStr2, &FooVar);
+  NumericVariable QuuxVar(
+      QuuxStr, ExpressionFormat(ExpressionFormat::Kind::HexLower), 4);
+  std::unique_ptr<NumericVariableUse> QuuxVarUse =
+      std::make_unique<NumericVariableUse>(QuuxStr, &QuuxVar);
+  std::unique_ptr<BinaryOperation> Binop1 = std::make_unique<BinaryOperation>(
+      ExprStr.take_front(9), doAdd, std::move(FooVarUse), std::move(BazVarUse));
+  std::unique_ptr<BinaryOperation> Binop2 = std::make_unique<BinaryOperation>(
+      ExprStr.take_back(10), doAdd, std::move(FooVarUse2),
+      std::move(QuuxVarUse));
+  std::unique_ptr<BinaryOperation> OuterBinop =
+      std::make_unique<BinaryOperation>(ExprStr, doAdd, std::move(Binop1),
+                                        std::move(Binop2));
+  ImplicitFormat = OuterBinop->getImplicitFormat(SM);
+  expectSameErrors<ErrorDiagnostic>(
+      {"implicit format conflict between 'FOO' (%u) and 'BAZ' (%x), "
+       "need an explicit format specifier",
+       "implicit format conflict between 'FOO' (%u) and 'QUUX' (%x), "
+       "need an explicit format specifier"},
+      ImplicitFormat.takeError());
 }
 
 TEST_F(FileCheckTest, ValidVarNameStart) {
@@ -648,7 +723,8 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
 
   // Implicit format conflict.
   expectDiagnosticError(
-      "variables with conflicting format specifier: need an explicit one",
+      "implicit format conflict between 'FOO' (%u) and "
+      "'VAR_LOWER_HEX' (%x), need an explicit format specifier",
       Tester.parseSubst("FOO+VAR_LOWER_HEX").takeError());
 }
 

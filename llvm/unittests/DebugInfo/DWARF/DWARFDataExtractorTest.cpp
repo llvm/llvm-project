@@ -7,12 +7,63 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
+
+TEST(DWARFDataExtractorTest, getRelocatedValue) {
+  StringRef Yaml = R"(
+!ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_386
+Sections:
+  - Name:     .text
+    Type:     SHT_PROGBITS
+    Size:     0x80
+  - Name:     .debug_line
+    Type:     SHT_PROGBITS
+    Content:  '000000000000'
+  - Name:     .rel.debug_line
+    Type:     SHT_REL
+    Info:     .debug_line
+    Relocations:
+      - Offset:   0
+        Symbol:   f
+        Type:     R_386_32
+      - Offset:   4
+        Symbol:   f
+        Type:     R_386_32
+Symbols:
+  - Name:     f
+    Type:     STT_SECTION
+    Section:  .text
+    Value:    0x42
+)";
+  SmallString<0> Storage;
+  std::unique_ptr<object::ObjectFile> Obj = yaml::yaml2ObjectFile(
+      Storage, Yaml, [](const Twine &Err) { errs() << Err; });
+  ASSERT_TRUE(Obj);
+  std::unique_ptr<DWARFContext> Ctx = DWARFContext::create(*Obj);
+  const DWARFObject &DObj = Ctx->getDWARFObj();
+  ASSERT_EQ(6u, DObj.getLineSection().Data.size());
+
+  DWARFDataExtractor Data(DObj, DObj.getLineSection(), Obj->isLittleEndian(),
+                          Obj->getBytesInAddress());
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(0x42u, Data.getRelocatedAddress(C));
+  EXPECT_EQ(0u, Data.getRelocatedAddress(C));
+  EXPECT_THAT_ERROR(C.takeError(),
+                    FailedWithMessage("unexpected end of data at offset 0x4"));
+}
 
 TEST(DWARFDataExtractorTest, getInitialLength) {
   auto GetWithError = [](ArrayRef<uint8_t> Bytes)

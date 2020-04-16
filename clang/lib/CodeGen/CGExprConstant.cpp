@@ -1766,7 +1766,6 @@ private:
   ConstantLValue VisitCallExpr(const CallExpr *E);
   ConstantLValue VisitBlockExpr(const BlockExpr *E);
   ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *E);
-  ConstantLValue VisitCXXUuidofExpr(const CXXUuidofExpr *E);
   ConstantLValue VisitMaterializeTemporaryExpr(
                                          const MaterializeTemporaryExpr *E);
 
@@ -1881,6 +1880,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
+    if (auto *GD = dyn_cast<MSGuidDecl>(D))
+      return CGM.GetAddrOfMSGuidDecl(GD);
+
     return nullptr;
   }
 
@@ -1988,11 +1990,6 @@ ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
   else
     T = E->getExprOperand()->getType();
   return CGM.GetAddrOfRTTIDescriptor(T);
-}
-
-ConstantLValue
-ConstantLValueEmitter::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
-  return CGM.GetAddrOfUuidDescriptor(E);
 }
 
 ConstantLValue

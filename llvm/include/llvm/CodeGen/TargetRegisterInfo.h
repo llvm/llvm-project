@@ -489,6 +489,12 @@ public:
     return true;
   }
 
+  /// Returns true if PhysReg cannot be written to in inline asm statements.
+  virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
+                                      unsigned PhysReg) const {
+    return false;
+  }
+
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
   virtual bool isConstantPhysReg(MCRegister PhysReg) const { return false; }

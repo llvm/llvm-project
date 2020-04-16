@@ -892,6 +892,10 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     if (!TD->getAnonDeclWithTypedefName(/*AnyRedecl*/true))
       return LinkageInfo::none();
 
+  } else if (isa<MSGuidDecl>(D)) {
+    // A GUID behaves like an inline variable with external linkage. Fall
+    // through.
+
   // Everything not covered here has no linkage.
   } else {
     return LinkageInfo::none();

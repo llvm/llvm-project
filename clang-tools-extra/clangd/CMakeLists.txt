@@ -153,3 +153,12 @@ if(CLANG_INCLUDE_TESTS)
 add_subdirectory(test)
 add_subdirectory(unittests)
 endif()
+
+# FIXME(kirillbobyrev): Document this in the LLVM docs once remote index is stable.
+option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for Clangd" OFF)
+set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
+
+if (CLANGD_ENABLE_REMOTE)
+  include(FindGRPC)
+  add_subdirectory(index/remote)
+endif()

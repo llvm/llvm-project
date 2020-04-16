@@ -1051,12 +1051,16 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
 }
 
 void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
+  bool hasFP_Features;
+  BinaryOperator::Opcode opc;
   VisitExpr(E);
+  E->setHasStoredFPFeatures(hasFP_Features = Record.readInt());
+  E->setOpcode(opc = (BinaryOperator::Opcode)Record.readInt());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
-  E->setOpcode((BinaryOperator::Opcode)Record.readInt());
   E->setOperatorLoc(readSourceLocation());
-  E->setFPFeatures(FPOptions(Record.readInt()));
+  if (hasFP_Features)
+    E->setStoredFPFeatures(FPOptions(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
@@ -2156,8 +2160,7 @@ void ASTStmtReader::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *E) {
 void ASTStmtReader::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   VisitExpr(E);
   E->setSourceRange(readSourceRange());
-  std::string UuidStr = readString();
-  E->setUuidStr(StringRef(UuidStr).copy(Record.getContext()));
+  E->Guid = readDeclAs<MSGuidDecl>();
   if (E->isTypeOperand())
     E->Operand = readTypeSourceInfo();
   else
@@ -2934,11 +2937,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_BINARY_OPERATOR:
-      S = new (Context) BinaryOperator(Empty);
+      S = BinaryOperator::CreateEmpty(Context,
+                                      Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_COMPOUND_ASSIGN_OPERATOR:
-      S = new (Context) CompoundAssignOperator(Empty);
+      S = CompoundAssignOperator::CreateEmpty(
+          Context, Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_CONDITIONAL_OPERATOR:

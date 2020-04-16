@@ -2103,6 +2103,21 @@ bool IRTranslator::translateFence(const User &U,
   return true;
 }
 
+bool IRTranslator::translateFreeze(const User &U,
+                                   MachineIRBuilder &MIRBuilder) {
+  const ArrayRef<Register> DstRegs = getOrCreateVRegs(U);
+  const ArrayRef<Register> SrcRegs = getOrCreateVRegs(*U.getOperand(0));
+
+  assert(DstRegs.size() == SrcRegs.size() &&
+         "Freeze with different source and destination type?");
+
+  for (unsigned I = 0; I < DstRegs.size(); ++I) {
+    MIRBuilder.buildFreeze(DstRegs[I], SrcRegs[I]);
+  }
+
+  return true;
+}
+
 void IRTranslator::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;

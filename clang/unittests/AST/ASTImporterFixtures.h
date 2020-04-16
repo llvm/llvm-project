@@ -66,10 +66,13 @@ protected:
   }
 };
 
-const auto DefaultTestValuesForRunOptions = ::testing::Values(
-    ArgVector(), ArgVector{"-fdelayed-template-parsing"},
-    ArgVector{"-fms-compatibility"},
-    ArgVector{"-fdelayed-template-parsing", "-fms-compatibility"});
+const auto DefaultTestArrayForRunOptions = std::array<ArgVector, 4>{
+    {ArgVector(), ArgVector{"-fdelayed-template-parsing"},
+     ArgVector{"-fms-compatibility"},
+     ArgVector{"-fdelayed-template-parsing", "-fms-compatibility"}}};
+
+const auto DefaultTestValuesForRunOptions =
+    ::testing::ValuesIn(DefaultTestArrayForRunOptions);
 
 // This class provides generic methods to write tests which can check internal
 // attributes of AST nodes like getPreviousDecl(), isVirtual(), etc. Also,

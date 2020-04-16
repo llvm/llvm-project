@@ -1546,6 +1546,13 @@ public:
   static const DILocation *getMergedLocation(const DILocation *LocA,
                                              const DILocation *LocB);
 
+  /// Try to combine the vector of locations passed as input in a single one.
+  /// This function applies getMergedLocation() repeatedly left-to-right.
+  ///
+  /// \p Locs: The locations to be merged.
+  static
+  const DILocation *getMergedLocations(ArrayRef<const DILocation *> Locs);
+
   /// Returns the base discriminator for a given encoded discriminator \p D.
   static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {
     return getUnsignedFromPrefixEncoding(D);

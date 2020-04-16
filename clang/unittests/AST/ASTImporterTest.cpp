@@ -255,6 +255,7 @@ static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
 struct ImportExpr : TestImportBase {};
 struct ImportType : TestImportBase {};
 struct ImportDecl : TestImportBase {};
+struct ImportFixedPointExpr : ImportExpr {};
 
 struct CanonicalRedeclChain : ASTImporterOptionSpecificTestBase {};
 
@@ -525,6 +526,14 @@ TEST_P(ImportExpr, ImportFloatinglLiteralExpr) {
       Lang_C, "", Lang_C, Verifier,
       functionDecl(hasDescendant(
           floatLiteral(equals(1.0e-5f), hasType(asString("float"))))));
+}
+
+TEST_P(ImportFixedPointExpr, ImportFixedPointerLiteralExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("void declToImport() { (void)1.0k; }", Lang_C, "", Lang_C,
+             Verifier, functionDecl(hasDescendant(fixedPointLiteral())));
+  testImport("void declToImport() { (void)0.75r; }", Lang_C, "", Lang_C,
+             Verifier, functionDecl(hasDescendant(fixedPointLiteral())));
 }
 
 TEST_P(ImportExpr, ImportImaginaryLiteralExpr) {
@@ -5922,6 +5931,17 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
   EXPECT_TRUE(ToA);
 }
 
+template <typename T>
+auto ExtendWithOptions(const T &Values, const ArgVector &Args) {
+  auto Copy = Values;
+  for (ArgVector &ArgV : Copy) {
+    for (const std::string &Arg : Args) {
+      ArgV.push_back(Arg);
+    }
+  }
+  return ::testing::ValuesIn(Copy);
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
@@ -5930,6 +5950,10 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportPath,
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportExpr,
                         DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFixedPointExpr,
+                        ExtendWithOptions(DefaultTestArrayForRunOptions,
+                                          ArgVector{"-ffixed-point"}), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportType,
                         DefaultTestValuesForRunOptions, );

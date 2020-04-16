@@ -320,113 +320,116 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
   }
 }
 
-void ManualDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    ConstString basename, llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.globals.Find(basename, offsets);
+  m_set.globals.Find(basename, callback);
 }
 
-void ManualDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
-                                          DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.globals.Find(regex, offsets);
+  m_set.globals.Find(regex, callback);
 }
 
-void ManualDWARFIndex::GetGlobalVariables(const DWARFUnit &unit,
-                                          DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    const DWARFUnit &unit, llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.globals.FindAllEntriesForUnit(unit, offsets);
+  m_set.globals.FindAllEntriesForUnit(unit, callback);
 }
 
-void ManualDWARFIndex::GetObjCMethods(ConstString class_name,
-                                      DIEArray &offsets) {
+void ManualDWARFIndex::GetObjCMethods(
+    ConstString class_name, llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.objc_class_selectors.Find(class_name, offsets);
+  m_set.objc_class_selectors.Find(class_name, callback);
 }
 
-void ManualDWARFIndex::GetCompleteObjCClass(ConstString class_name,
-                                            bool must_be_implementation,
-                                            DIEArray &offsets) {
+void ManualDWARFIndex::GetCompleteObjCClass(
+    ConstString class_name, bool must_be_implementation,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.types.Find(class_name, offsets);
+  m_set.types.Find(class_name, callback);
 }
 
-void ManualDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetTypes(ConstString name,
+                                llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.types.Find(name, offsets);
+  m_set.types.Find(name, callback);
 }
 
 void ManualDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                                DIEArray &offsets) {
+                                llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.types.Find(ConstString(context[0].name), offsets);
+  m_set.types.Find(ConstString(context[0].name), callback);
 }
 
-void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetNamespaces(
+    ConstString name, llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
-  m_set.namespaces.Find(name, offsets);
+  m_set.namespaces.Find(name, callback);
 }
 
-void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
-                                    const CompilerDeclContext &parent_decl_ctx,
-                                    uint32_t name_type_mask,
-                                    std::vector<DWARFDIE> &dies) {
+void ManualDWARFIndex::GetFunctions(
+    ConstString name, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
-    DIEArray offsets;
-    m_set.function_fullnames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        continue;
-      dies.push_back(die);
-    }
+    if (!m_set.function_fullnames.Find(name, [&](DIERef die_ref) {
+          DWARFDIE die = dwarf.GetDIE(die_ref);
+          if (!die)
+            return true;
+          if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+            return true;
+          return callback(die);
+        }))
+      return;
   }
   if (name_type_mask & eFunctionNameTypeBase) {
-    DIEArray offsets;
-    m_set.function_basenames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        continue;
-      dies.push_back(die);
-    }
+    if (!m_set.function_basenames.Find(name, [&](DIERef die_ref) {
+          DWARFDIE die = dwarf.GetDIE(die_ref);
+          if (!die)
+            return true;
+          if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+            return true;
+          return callback(die);
+        }))
+      return;
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
-    m_set.function_methods.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      dies.push_back(die);
-    }
+    if (!m_set.function_methods.Find(name, [&](DIERef die_ref) {
+          DWARFDIE die = dwarf.GetDIE(die_ref);
+          if (!die)
+            return true;
+          return callback(die);
+        }))
+      return;
   }
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
-    m_set.function_selectors.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      dies.push_back(die);
-    }
+    if (!m_set.function_selectors.Find(name, [&](DIERef die_ref) {
+          DWARFDIE die = dwarf.GetDIE(die_ref);
+          if (!die)
+            return true;
+          return callback(die);
+        }))
+      return;
   }
 }
 
-void ManualDWARFIndex::GetFunctions(const RegularExpression &regex,
-                                    DIEArray &offsets) {
+void ManualDWARFIndex::GetFunctions(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   Index();
 
-  m_set.function_basenames.Find(regex, offsets);
-  m_set.function_fullnames.Find(regex, offsets);
+  if (!m_set.function_basenames.Find(regex, callback))
+    return;
+  if (!m_set.function_fullnames.Find(regex, callback))
+    return;
 }
 
 void ManualDWARFIndex::Dump(Stream &s) {

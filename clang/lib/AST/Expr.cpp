@@ -4347,6 +4347,84 @@ ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
+BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                               Opcode opc, QualType ResTy, ExprValueKind VK,
+                               ExprObjectKind OK, SourceLocation opLoc,
+                               FPOptions FPFeatures)
+    : Expr(BinaryOperatorClass, ResTy, VK, OK) {
+  BinaryOperatorBits.Opc = opc;
+  assert(!isCompoundAssignmentOp() &&
+         "Use CompoundAssignOperator for compound assignments");
+  BinaryOperatorBits.OpLoc = opLoc;
+  SubExprs[LHS] = lhs;
+  SubExprs[RHS] = rhs;
+  BinaryOperatorBits.HasFPFeatures =
+      FPFeatures.requiresTrailingStorage(Ctx.getLangOpts());
+  if (BinaryOperatorBits.HasFPFeatures)
+    *getTrailingFPFeatures() = FPFeatures;
+  setDependence(computeDependence(this));
+}
+
+BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                               Opcode opc, QualType ResTy, ExprValueKind VK,
+                               ExprObjectKind OK, SourceLocation opLoc,
+                               FPOptions FPFeatures, bool dead2)
+    : Expr(CompoundAssignOperatorClass, ResTy, VK, OK) {
+  BinaryOperatorBits.Opc = opc;
+  assert(isCompoundAssignmentOp() &&
+         "Use CompoundAssignOperator for compound assignments");
+  BinaryOperatorBits.OpLoc = opLoc;
+  SubExprs[LHS] = lhs;
+  SubExprs[RHS] = rhs;
+  BinaryOperatorBits.HasFPFeatures =
+      FPFeatures.requiresTrailingStorage(Ctx.getLangOpts());
+  if (BinaryOperatorBits.HasFPFeatures)
+    *getTrailingFPFeatures() = FPFeatures;
+  setDependence(computeDependence(this));
+}
+
+BinaryOperator *BinaryOperator::CreateEmpty(const ASTContext &C,
+                                            bool HasFPFeatures) {
+  unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
+  void *Mem =
+      C.Allocate(sizeof(BinaryOperator) + Extra, alignof(BinaryOperator));
+  return new (Mem) BinaryOperator(EmptyShell());
+}
+
+BinaryOperator *BinaryOperator::Create(const ASTContext &C, Expr *lhs,
+                                       Expr *rhs, Opcode opc, QualType ResTy,
+                                       ExprValueKind VK, ExprObjectKind OK,
+                                       SourceLocation opLoc,
+                                       FPOptions FPFeatures) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C.getLangOpts());
+  unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
+  void *Mem =
+      C.Allocate(sizeof(BinaryOperator) + Extra, alignof(BinaryOperator));
+  return new (Mem)
+      BinaryOperator(C, lhs, rhs, opc, ResTy, VK, OK, opLoc, FPFeatures);
+}
+
+CompoundAssignOperator *
+CompoundAssignOperator::CreateEmpty(const ASTContext &C, bool HasFPFeatures) {
+  unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
+  void *Mem = C.Allocate(sizeof(CompoundAssignOperator) + Extra,
+                         alignof(CompoundAssignOperator));
+  return new (Mem) CompoundAssignOperator(C, EmptyShell(), HasFPFeatures);
+}
+
+CompoundAssignOperator *CompoundAssignOperator::Create(
+    const ASTContext &C, Expr *lhs, Expr *rhs, Opcode opc, QualType ResTy,
+    ExprValueKind VK, ExprObjectKind OK, SourceLocation opLoc,
+    FPOptions FPFeatures, QualType CompLHSType, QualType CompResultType) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C.getLangOpts());
+  unsigned Extra = sizeOfTrailingObjects(HasFPFeatures);
+  void *Mem = C.Allocate(sizeof(CompoundAssignOperator) + Extra,
+                         alignof(CompoundAssignOperator));
+  return new (Mem)
+      CompoundAssignOperator(C, lhs, rhs, opc, ResTy, VK, OK, opLoc, FPFeatures,
+                             CompLHSType, CompResultType);
+}
+
 const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
   if (const ExprWithCleanups *ewc = dyn_cast<ExprWithCleanups>(e))
     e = ewc->getSubExpr();
@@ -4574,7 +4652,7 @@ RecoveryExpr *RecoveryExpr::Create(ASTContext &Ctx, SourceLocation BeginLoc,
 RecoveryExpr *RecoveryExpr::CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumSubExprs),
                            alignof(RecoveryExpr));
-  return new (Mem) RecoveryExpr(EmptyShell());
+  return new (Mem) RecoveryExpr(EmptyShell(), NumSubExprs);
 }
 
 void OMPArrayShapingExpr::setDimensions(ArrayRef<Expr *> Dims) {

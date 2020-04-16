@@ -12975,7 +12975,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
         /*ADL*/ true, IsOverloaded(Fns), Fns.begin(), Fns.end());
     return CXXOperatorCallExpr::Create(Context, Op, Fn, ArgsArray,
                                        Context.DependentTy, VK_RValue, OpLoc,
-                                       FPOptions());
+                                       FPFeatures);
   }
 
   // Build an empty overload set.
@@ -13048,8 +13048,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
       Args[0] = Input;
       CallExpr *TheCall = CXXOperatorCallExpr::Create(
-          Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
-          FPOptions(), Best->IsADLCandidate);
+          Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc, FPFeatures,
+          Best->IsADLCandidate);
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -13218,14 +13218,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       // If there are no functions to store, just build a dependent
       // BinaryOperator or CompoundAssignment.
       if (Opc <= BO_Assign || Opc > BO_OrAssign)
-        return new (Context) BinaryOperator(
-            Args[0], Args[1], Opc, Context.DependentTy, VK_RValue, OK_Ordinary,
-            OpLoc, FPFeatures);
-
-      return new (Context) CompoundAssignOperator(
-          Args[0], Args[1], Opc, Context.DependentTy, VK_LValue, OK_Ordinary,
-          Context.DependentTy, Context.DependentTy, OpLoc,
-          FPFeatures);
+        return BinaryOperator::Create(Context, Args[0], Args[1], Opc,
+                                      Context.DependentTy, VK_RValue,
+                                      OK_Ordinary, OpLoc, FPFeatures);
+      return CompoundAssignOperator::Create(
+          Context, Args[0], Args[1], Opc, Context.DependentTy, VK_LValue,
+          OK_Ordinary, OpLoc, FPFeatures, Context.DependentTy,
+          Context.DependentTy);
     }
 
     // FIXME: save results of ADL from here?
@@ -13672,10 +13671,10 @@ ExprResult Sema::BuildSynthesizedThreeWayComparison(
 
   // Build a PseudoObjectExpr to model the rewriting of an <=> operator, and to
   // bind the OpaqueValueExprs before they're (repeatedly) used.
-  Expr *SyntacticForm = new (Context)
-      BinaryOperator(OrigLHS, OrigRHS, BO_Cmp, Result.get()->getType(),
-                     Result.get()->getValueKind(),
-                     Result.get()->getObjectKind(), OpLoc, FPFeatures);
+  Expr *SyntacticForm = BinaryOperator::Create(
+      Context, OrigLHS, OrigRHS, BO_Cmp, Result.get()->getType(),
+      Result.get()->getValueKind(), Result.get()->getObjectKind(), OpLoc,
+      FPFeatures);
   Expr *SemanticForm[] = {LHS, RHS, Result.get()};
   return PseudoObjectExpr::Create(Context, SyntacticForm, SemanticForm, 2);
 }
@@ -13706,7 +13705,7 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
     return CXXOperatorCallExpr::Create(Context, OO_Subscript, Fn, Args,
                                        Context.DependentTy, VK_RValue, RLoc,
-                                       FPOptions());
+                                       FPFeatures);
   }
 
   // Handle placeholders on both operands.
@@ -13781,8 +13780,7 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
         CXXOperatorCallExpr *TheCall =
             CXXOperatorCallExpr::Create(Context, OO_Subscript, FnExpr.get(),
-                                        Args, ResultTy, VK, RLoc, FPOptions());
-
+                                        Args, ResultTy, VK, RLoc, FPFeatures);
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
 
@@ -14405,7 +14403,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   CXXOperatorCallExpr *TheCall =
       CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(), MethodArgs,
-                                  ResultTy, VK, RParenLoc, FPOptions());
+                                  ResultTy, VK, RParenLoc, FPFeatures);
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;
@@ -14522,7 +14520,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
   ResultTy = ResultTy.getNonLValueExprType(Context);
   CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
-      Context, OO_Arrow, FnExpr.get(), Base, ResultTy, VK, OpLoc, FPOptions());
+      Context, OO_Arrow, FnExpr.get(), Base, ResultTy, VK, OpLoc, FPFeatures);
 
   if (CheckCallReturnType(Method->getReturnType(), OpLoc, TheCall, Method))
     return ExprError();

@@ -193,9 +193,9 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc), Kind(Kind),
-      UseParensForSymbolVariant(MAI->useParensForSymbolVariant()),
-      HasSubsectionsViaSymbols(MAI->hasSubsectionsViaSymbols()),
+    : MCExpr(MCExpr::SymbolRef, Loc,
+             encodeSubclassData(Kind, MAI->useParensForSymbolVariant(),
+                                MAI->hasSubsectionsViaSymbols())),
       Symbol(Symbol) {
   assert(Symbol);
 }
@@ -464,7 +464,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
 }
 
 void MCSymbolRefExpr::printVariantKind(raw_ostream &OS) const {
-  if (UseParensForSymbolVariant)
+  if (useParensForSymbolVariant())
     OS << '(' << MCSymbolRefExpr::getVariantKindName(getKind()) << ')';
   else
     OS << '@' << MCSymbolRefExpr::getVariantKindName(getKind());

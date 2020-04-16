@@ -34,10 +34,10 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     FOO.verify.cpp          - Compiles with clang-verify
 
-    FOO.fail.cpp            - Does not compile successfully -- run with clang-verify
-                              if any expected-meow appears in the file, otherwise
-                              just test that compilation fails. This is supported
-                              only for backwards compatibility with the test suite
+    FOO.fail.cpp            - Compiled with clang-verify if clang-verify is
+                              supported, and equivalent to a .compile.fail.cpp
+                              test otherwise. This is supported only for backwards
+                              compatibility with the test suite.
 
     The test format operates by assuming that each test's configuration provides
     the following substitutions, which it will reuse in the shell scripts it
@@ -109,25 +109,14 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
             assert s in substitutions, "Required substitution {} was not provided".format(s)
 
-    # Determine whether -verify should be used for a given test. We use -verify
-    # if the compiler supports it and there's at least one -verify tag in the
-    # source file.
-    #
-    # This is only supported for backwards compatibility with .fail.cpp tests.
-    def _useVerify(self, test, litConfig):
-        VERIFY_TAGS = (b'expected-note', b'expected-remark',
-                       b'expected-warning', b'expected-error',
-                       b'expected-no-diagnostics')
-        with open(test.getSourcePath(), 'rb') as f:
-            contents = f.read()
-        testContainsTags = any(tag in contents for tag in VERIFY_TAGS)
-
+    # Determine whether clang-verify is supported.
+    def _supportsVerify(self, test, litConfig):
         command = "echo | %{cxx} -xc++ - -Werror -fsyntax-only -Xclang -verify-ignore-unexpected"
         result = lit.TestRunner.executeShTest(test, litConfig,
                                               useExternalSh=True,
                                               preamble_commands=[command])
         compilerSupportsVerify = result.code != lit.Test.FAIL
-        return compilerSupportsVerify and testContainsTags
+        return compilerSupportsVerify
 
     def _disableWithModules(self, test, litConfig):
         with open(test.getSourcePath(), 'rb') as f:
@@ -194,7 +183,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
         elif filename.endswith('.fail.cpp'):
-            if self._useVerify(test, litConfig):
+            if self._supportsVerify(test, litConfig):
                 steps = [
                     "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only " + VERIFY_FLAGS
                 ]

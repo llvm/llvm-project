@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -2457,6 +2458,8 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   if (MadeChange) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
+    PA.preserve<AAManager>();
+    PA.preserve<BasicAA>();
     PA.preserve<GlobalsAA>();
     return PA;
   }
@@ -2487,6 +2490,8 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
+      AU.addPreserved<AAResultsWrapperPass>();
+      AU.addPreserved<BasicAAWrapperPass>();
       AU.addPreserved<GlobalsAAWrapperPass>();
     }
   };

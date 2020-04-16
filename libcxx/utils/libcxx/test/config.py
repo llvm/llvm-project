@@ -76,7 +76,6 @@ class Configuration(object):
         self.use_system_cxx_lib = False
         self.use_clang_verify = False
         self.long_tests = None
-        self.execute_external = False
 
     def get_lit_conf(self, name, default=None):
         val = self.lit_config.params.get(name, None)
@@ -133,7 +132,6 @@ class Configuration(object):
         self.configure_cxx_library_root()
         self.configure_use_clang_verify()
         self.configure_use_thread_safety()
-        self.configure_execute_external()
         self.configure_ccache()
         self.configure_compile_flags()
         self.configure_link_flags()
@@ -177,7 +175,6 @@ class Configuration(object):
         return LibcxxTestFormat(
             self.cxx,
             self.use_clang_verify,
-            self.execute_external,
             self.executor,
             exec_env=self.exec_env)
 
@@ -345,21 +342,6 @@ class Configuration(object):
             self.cxx.compile_flags += ['-Werror=thread-safety']
             self.config.available_features.add('thread-safety')
             self.lit_config.note("enabling thread-safety annotations")
-
-    def configure_execute_external(self):
-        # Choose between lit's internal shell pipeline runner and a real shell.
-        # If LIT_USE_INTERNAL_SHELL is in the environment, we use that as the
-        # default value. Otherwise we ask the target_info.
-        use_lit_shell_default = os.environ.get('LIT_USE_INTERNAL_SHELL')
-        if use_lit_shell_default is not None:
-            use_lit_shell_default = use_lit_shell_default != '0'
-        else:
-            use_lit_shell_default = self.target_info.use_lit_shell_default()
-        # Check for the command line parameter using the default value if it is
-        # not present.
-        use_lit_shell = self.get_lit_bool('use_lit_shell',
-                                          use_lit_shell_default)
-        self.execute_external = not use_lit_shell
 
     def configure_ccache(self):
         use_ccache_default = os.environ.get('LIBCXX_USE_CCACHE') is not None
@@ -1008,13 +990,7 @@ class Configuration(object):
         sub.append(('%{link_libcxxabi}', pipes.quote(self.cxx.link_libcxxabi_flag)))
         if self.cxx.isVerifySupported():
             sub.append(('%{verify}', ' '.join(self.cxx.verify_flags)))
-        # Add compile and build shortcuts
-        sub.append(('%{compile}', '%{cxx} -o %t.o %s -c %{flags} %{compile_flags}'))
         sub.append(('%{build}',   '%{cxx} -o %t.exe %s %{flags} %{compile_flags} %{link_flags}'))
-        if self.cxx.use_modules:
-            sub.append(('%{build_module}', '%{build}'))
-        elif self.cxx.modules_flags is not None:
-            sub.append(('%{build_module}', '%{{build}} {}'.format(' '.join(self.cxx.modules_flags))))
 
         # Configure exec prefix substitutions.
         # Configure run env substitution.

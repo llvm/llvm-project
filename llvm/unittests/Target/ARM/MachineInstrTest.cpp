@@ -368,7 +368,7 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
 // descriptions. Currently we, conservatively, disallow:
 // - cross beat carries.
 // - complex operations.
-// - horizontal operations.
+// - horizontal operations with exchange.
 // - byte swapping.
 // - interleaved memory instructions.
 // TODO: Add to this list once we can handle them safely.
@@ -531,6 +531,42 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMINu16:
     case MVE_VMINu32:
     case MVE_VMINu8:
+    case MVE_VMLADAVas16:
+    case MVE_VMLADAVas32:
+    case MVE_VMLADAVas8:
+    case MVE_VMLADAVau16:
+    case MVE_VMLADAVau32:
+    case MVE_VMLADAVau8:
+    case MVE_VMLADAVs16:
+    case MVE_VMLADAVs32:
+    case MVE_VMLADAVs8:
+    case MVE_VMLADAVu16:
+    case MVE_VMLADAVu32:
+    case MVE_VMLADAVu8:
+    case MVE_VMLALDAVs16:
+    case MVE_VMLALDAVs32:
+    case MVE_VMLALDAVu16:
+    case MVE_VMLALDAVu32:
+    case MVE_VMLALDAVas16:
+    case MVE_VMLALDAVas32:
+    case MVE_VMLALDAVau16:
+    case MVE_VMLALDAVau32:
+    case MVE_VMLSDAVas16:
+    case MVE_VMLSDAVas32:
+    case MVE_VMLSDAVas8:
+    case MVE_VMLSDAVs16:
+    case MVE_VMLSDAVs32:
+    case MVE_VMLSDAVs8:
+    case MVE_VMLSLDAVas16:
+    case MVE_VMLSLDAVas32:
+    case MVE_VMLSLDAVs16:
+    case MVE_VMLSLDAVs32:
+    case MVE_VRMLALDAVHas32:
+    case MVE_VRMLALDAVHau32:
+    case MVE_VRMLALDAVHs32:
+    case MVE_VRMLALDAVHu32:
+    case MVE_VRMLSLDAVHas32:
+    case MVE_VRMLSLDAVHs32:
     case MVE_VMLAS_qr_s16:
     case MVE_VMLAS_qr_s32:
     case MVE_VMLAS_qr_s8:

@@ -771,8 +771,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     const TargetMachine &TM) const {
   assert(MBB.isBeginSection() && "Basic block does not start a section!");
   SmallString<128> Name;
-  Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
-             ->getSectionName();
+  Name =
+      (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))->getName();
   unsigned UniqueID = MCContext::GenericSectionID;
 
   switch (MBB.getSectionID().Type) {
@@ -1758,7 +1758,7 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   // Certain data sections we treat as named custom sections rather than
   // segments within the data section.
   // This could be avoided if all data segements (the wasm sense) were
-  // represented as thier own sections (in the llvm sense).
+  // represented as their own sections (in the llvm sense).
   // TODO(sbc): https://github.com/WebAssembly/tool-conventions/issues/138
   if (Name == ".llvmcmd" || Name == ".llvmbc")
     Kind = SectionKind::getMetadata();

@@ -143,8 +143,9 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
       boundExprs.push_back(dim + tileSizes[i]);
       boundExprs.append(origUbMap.getResults().begin(),
                         origUbMap.getResults().end());
-      auto ubMap = AffineMap::get(origUbMap.getNumDims() + 1,
-                                  origUbMap.getNumSymbols(), boundExprs);
+      auto ubMap =
+          AffineMap::get(origUbMap.getNumDims() + 1, origUbMap.getNumSymbols(),
+                         boundExprs, b.getContext());
       newLoops[width + i].setUpperBound(/*operands=*/ubOperands, ubMap);
     } else {
       // No need of the min expression.

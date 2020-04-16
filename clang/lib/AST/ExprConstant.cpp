@@ -1895,7 +1895,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
     // ... the address of a function,
-    return isa<FunctionDecl>(D);
+    // ... the address of a GUID [MS extension],
+    return isa<FunctionDecl>(D) || isa<MSGuidDecl>(D);
   }
 
   if (B.is<TypeInfoLValue>() || B.is<DynamicAllocLValue>())
@@ -1918,7 +1919,6 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::PredefinedExprClass:
   case Expr::ObjCStringLiteralClass:
   case Expr::ObjCEncodeExprClass:
-  case Expr::CXXUuidofExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
@@ -3615,6 +3615,22 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     (void)CE;
     BaseVal = Info.EvaluatingDeclValue;
   } else if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl *>()) {
+    // Allow reading from a GUID declaration.
+    if (auto *GD = dyn_cast<MSGuidDecl>(D)) {
+      if (isModification(AK)) {
+        // All the remaining cases do not permit modification of the object.
+        Info.FFDiag(E, diag::note_constexpr_modify_global);
+        return CompleteObject();
+      }
+      APValue &V = GD->getAsAPValue();
+      if (V.isAbsent()) {
+        Info.FFDiag(E, diag::note_constexpr_unsupported_layout)
+            << GD->getType();
+        return CompleteObject();
+      }
+      return CompleteObject(LVal.Base, &V, GD->getType());
+    }
+
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
     // In C++11, constexpr, non-volatile variables initialized with constant
     // expressions are constant expressions too. Inside constexpr functions,
@@ -7540,6 +7556,8 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
     return VisitVarDecl(E, VD);
   if (const BindingDecl *BD = dyn_cast<BindingDecl>(E->getDecl()))
     return Visit(BD->getBinding());
+  if (const MSGuidDecl *GD = dyn_cast<MSGuidDecl>(E->getDecl()))
+    return Success(GD);
   return Error(E);
 }
 
@@ -7718,7 +7736,7 @@ bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
 }
 
 bool LValueExprEvaluator::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
-  return Success(E);
+  return Success(E->getGuidDecl());
 }
 
 bool LValueExprEvaluator::VisitMemberExpr(const MemberExpr *E) {
@@ -9320,24 +9338,30 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   // Get a pointer to the first element of the array.
   Array.addArray(Info, E, ArrayType);
 
+  auto InvalidType = [&] {
+    Info.FFDiag(E, diag::note_constexpr_unsupported_layout)
+      << E->getType();
+    return false;
+  };
+
   // FIXME: Perform the checks on the field types in SemaInit.
   RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   if (Field == Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   // Start pointer.
   if (!Field->getType()->isPointerType() ||
       !Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
                             ArrayType->getElementType()))
-    return Error(E);
+    return InvalidType();
 
   // FIXME: What if the initializer_list type has base classes, etc?
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
   if (++Field == Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   if (Field->getType()->isPointerType() &&
       Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -9352,10 +9376,10 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
     // Length.
     Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
   else
-    return Error(E);
+    return InvalidType();
 
   if (++Field != Record->field_end())
-    return Error(E);
+    return InvalidType();
 
   return true;
 }

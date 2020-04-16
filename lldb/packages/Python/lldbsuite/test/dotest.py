@@ -467,6 +467,9 @@ def parseOptionsAndInitTestdirs():
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
 
+    if args.enabled_plugins:
+        configuration.enabled_plugins = args.enabled_plugins
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]

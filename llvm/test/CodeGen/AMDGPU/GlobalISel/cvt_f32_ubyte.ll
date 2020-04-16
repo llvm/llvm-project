@@ -191,40 +191,6 @@ define <2 x float> @v_uitofp_v2i8_to_v2f32(i16 %arg0) nounwind {
   ret <2 x float> %cvt
 }
 
-define <3 x float> @v_uitofp_v3i8_to_v3f32(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_v3i8_to_v3f32:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SI-NEXT:    s_movk_i32 s4, 0xff
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; SI-NEXT:    v_and_b32_e32 v0, s4, v0
-; SI-NEXT:    v_and_b32_e32 v1, s4, v1
-; SI-NEXT:    v_and_b32_e32 v2, s4, v2
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_v3i8_to_v3f32:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_movk_i32 s4, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_and_b32_sdwa v1, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; VI-NEXT:    v_mov_b32_e32 v0, v3
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %trunc = trunc i32 %arg0 to i24
-  %val = bitcast i24 %trunc to <3 x i8>
-  %cvt = uitofp <3 x i8> %val to <3 x float>
-  ret <3 x float> %cvt
-}
-
 define <4 x float> @v_uitofp_v4i8_to_v4f32(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_v4i8_to_v4f32:
 ; SI:       ; %bb.0:

@@ -109,10 +109,14 @@ if (LIBCXX_INCLUDE_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 
+  add_custom_target(check-cxx-deps
+    DEPENDS cxx ${LIBCXX_TEST_DEPS}
+    COMMENT "Builds dependencies required to run the test suite.")
+
   add_lit_testsuite(check-cxx
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS cxx ${LIBCXX_TEST_DEPS})
+    DEPENDS check-cxx-deps)
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)

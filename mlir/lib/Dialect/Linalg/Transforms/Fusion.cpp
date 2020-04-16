@@ -24,6 +24,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
+#include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -97,7 +98,26 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
   }
   auto operands = getAssumedNonViewOperands(op);
   clonedViews.append(operands.begin(), operands.end());
-  return op.clone(b, loc, clonedViews);
+
+  Operation *clonedOp = op.clone(b, loc, clonedViews);
+  // When the producer is an IndexedGenercOp, we have to transform its block
+  // IV arguments according to the tiling of the consumer, i.e. offset them by
+  // the values computed in `loopRanges`.
+  if (auto indexedGenericOp = dyn_cast<IndexedGenericOp>(clonedOp)) {
+    auto &block = indexedGenericOp.region().front();
+
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPointToStart(&block);
+    for (unsigned i = 0, e = indexedGenericOp.getNumLoops(); i < e; ++i) {
+      Value oldIndex = block.getArgument(i);
+      Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
+                                        loopRanges[i].offset);
+      replaceAllUsesExcept(
+          oldIndex, newIndex,
+          SmallPtrSet<Operation *, 1>{newIndex.getDefiningOp()});
+    }
+  }
+  return clonedOp;
 }
 
 struct ViewDimension {
@@ -284,10 +304,6 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
     LLVM_DEBUG(dbgs() << "\n***Consider producer:\t"
                       << *dependence.dependentOpView.op << "\n");
     auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
-    if (isa<linalg::IndexedGenericOp>(dependence.dependentOpView.op)) {
-      LLVM_DEBUG(dbgs() << "Not fusing indexed_generic producer");
-      continue;
-    }
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;

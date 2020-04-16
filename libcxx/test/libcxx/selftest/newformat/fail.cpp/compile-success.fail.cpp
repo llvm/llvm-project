@@ -8,6 +8,9 @@
 
 // XFAIL: *
 
-// Make sure the test DOES NOT pass if it succeeds at compile-time
+// Make sure the test DOES NOT pass if we don't have clang-verify support and
+// the test compiles successfully.
+
+// UNSUPPORTED: verify-support
 
 int main() { }

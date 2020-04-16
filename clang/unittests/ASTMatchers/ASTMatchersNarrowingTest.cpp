@@ -453,6 +453,20 @@ TEST(DeclarationMatcher, ClassIsDerived) {
   EXPECT_TRUE(notMatches("class X;", IsDerivedFromX));
   EXPECT_TRUE(notMatches("class Y;", IsDerivedFromX));
   EXPECT_TRUE(notMatches("", IsDerivedFromX));
+  EXPECT_TRUE(matches("class X {}; template<int N> class Y : Y<N-1>, X {};",
+    IsDerivedFromX));
+  EXPECT_TRUE(matches("class X {}; template<int N> class Y : X, Y<N-1> {};",
+    IsDerivedFromX));
+
+  DeclarationMatcher IsZDerivedFromX = cxxRecordDecl(hasName("Z"),
+    isDerivedFrom("X"));
+  EXPECT_TRUE(
+    matches(
+      "class X {};"
+      "template<int N> class Y : Y<N-1> {};"
+      "template<> class Y<0> : X {};"
+      "class Z : Y<1> {};",
+      IsZDerivedFromX));
 
   DeclarationMatcher IsDirectlyDerivedFromX =
       cxxRecordDecl(isDirectlyDerivedFrom("X"));

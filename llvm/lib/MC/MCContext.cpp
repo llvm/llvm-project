@@ -302,23 +302,25 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
   // diagnosed by the client as an error.
 
   // Form the name to look up.
-  SmallString<64> Name;
-  Name += Segment;
-  Name.push_back(',');
-  Name += Section;
+  assert(Section.size() <= 16 && "section name is too long");
+  assert(!memchr(Section.data(), '\0', Section.size()) &&
+         "section name cannot contain NUL");
 
   // Do the lookup, if we have a hit, return it.
-  MCSectionMachO *&Entry = MachOUniquingMap[Name];
-  if (Entry)
-    return Entry;
+  auto R = MachOUniquingMap.try_emplace((Segment + Twine(',') + Section).str());
+  if (!R.second)
+    return R.first->second;
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
     Begin = createTempSymbol(BeginSymName, false);
 
   // Otherwise, return a new section.
-  return Entry = new (MachOAllocator.Allocate()) MCSectionMachO(
-             Segment, Section, TypeAndAttributes, Reserved2, Kind, Begin);
+  StringRef Name = R.first->first();
+  R.first->second = new (MachOAllocator.Allocate())
+      MCSectionMachO(Segment, Name.substr(Name.size() - Section.size()),
+                     TypeAndAttributes, Reserved2, Kind, Begin);
+  return R.first->second;
 }
 
 void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
@@ -330,7 +332,7 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   // SHF_LINK_ORDER flag.
   unsigned UniqueID = Section->getUniqueID();
   ELFUniquingMap.erase(
-      ELFSectionKey{Section->getSectionName(), GroupName, "", UniqueID});
+      ELFSectionKey{Section->getName(), GroupName, "", UniqueID});
   auto I = ELFUniquingMap
                .insert(std::make_pair(
                    ELFSectionKey{Name, GroupName, "", UniqueID}, Section))
@@ -500,13 +502,13 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   unsigned Characteristics = Sec->getCharacteristics();
   if (KeySym) {
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    return getCOFFSection(Sec->getSectionName(), Characteristics,
-                          Sec->getKind(), KeySym->getName(),
+    return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(),
+                          KeySym->getName(),
                           COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
   }
 
-  return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
-                        "", 0, UniqueID);
+  return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(), "", 0,
+                        UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,

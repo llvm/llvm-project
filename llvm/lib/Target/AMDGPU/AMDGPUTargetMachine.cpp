@@ -871,6 +871,7 @@ bool GCNPassConfig::addPreISel() {
   addPass(&AMDGPUUnifyDivergentExitNodesID);
   if (!LateCFGStructurize) {
     if (EnableStructurizerWorkarounds) {
+      addPass(createFixIrreduciblePass());
       addPass(createUnifyLoopExitsPass());
     }
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions

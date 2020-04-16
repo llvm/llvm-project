@@ -26,8 +26,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::cl::opt<std::string> IndexPath("index-path",
-                                     llvm::cl::desc("Path to the index"),
+llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
                                      llvm::cl::Positional, llvm::cl::Required);
 
 llvm::cl::opt<std::string>

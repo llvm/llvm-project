@@ -1745,12 +1745,9 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
       // Handle vec3 special.
       if (VecTy && VecTy->getNumElements() == 3) {
         // Our source is a vec3, do a shuffle vector to make it a vec4.
-        llvm::Constant *Mask[] = {Builder.getInt32(0), Builder.getInt32(1),
-                                  Builder.getInt32(2),
-                                  llvm::UndefValue::get(Builder.getInt32Ty())};
-        llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
         Value = Builder.CreateShuffleVector(Value, llvm::UndefValue::get(VecTy),
-                                            MaskV, "extractVec");
+                                            ArrayRef<int>{0, 1, 2, -1},
+                                            "extractVec");
         SrcTy = llvm::VectorType::get(VecTy->getElementType(), 4);
       }
       if (Addr.getElementType() != SrcTy) {
@@ -1886,13 +1883,12 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   // Always use shuffle vector to try to retain the original program structure
   unsigned NumResultElts = ExprVT->getNumElements();
 
-  SmallVector<llvm::Constant*, 4> Mask;
+  SmallVector<int, 4> Mask;
   for (unsigned i = 0; i != NumResultElts; ++i)
-    Mask.push_back(Builder.getInt32(getAccessedFieldNo(i, Elts)));
+    Mask.push_back(getAccessedFieldNo(i, Elts));
 
-  llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
   Vec = Builder.CreateShuffleVector(Vec, llvm::UndefValue::get(Vec->getType()),
-                                    MaskV);
+                                    Mask);
   return RValue::get(Vec);
 }
 
@@ -2133,32 +2129,27 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be
       // stored.
-      SmallVector<llvm::Constant*, 4> Mask(NumDstElts);
+      SmallVector<int, 4> Mask(NumDstElts);
       for (unsigned i = 0; i != NumSrcElts; ++i)
-        Mask[getAccessedFieldNo(i, Elts)] = Builder.getInt32(i);
+        Mask[getAccessedFieldNo(i, Elts)] = i;
 
-      llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
-      Vec = Builder.CreateShuffleVector(SrcVal,
-                                        llvm::UndefValue::get(Vec->getType()),
-                                        MaskV);
+      Vec = Builder.CreateShuffleVector(
+          SrcVal, llvm::UndefValue::get(Vec->getType()), Mask);
     } else if (NumDstElts > NumSrcElts) {
       // Extended the source vector to the same length and then shuffle it
       // into the destination.
       // FIXME: since we're shuffling with undef, can we just use the indices
       //        into that?  This could be simpler.
-      SmallVector<llvm::Constant*, 4> ExtMask;
+      SmallVector<int, 4> ExtMask;
       for (unsigned i = 0; i != NumSrcElts; ++i)
-        ExtMask.push_back(Builder.getInt32(i));
-      ExtMask.resize(NumDstElts, llvm::UndefValue::get(Int32Ty));
-      llvm::Value *ExtMaskV = llvm::ConstantVector::get(ExtMask);
-      llvm::Value *ExtSrcVal =
-        Builder.CreateShuffleVector(SrcVal,
-                                    llvm::UndefValue::get(SrcVal->getType()),
-                                    ExtMaskV);
+        ExtMask.push_back(i);
+      ExtMask.resize(NumDstElts, -1);
+      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(
+          SrcVal, llvm::UndefValue::get(SrcVal->getType()), ExtMask);
       // build identity
-      SmallVector<llvm::Constant*, 4> Mask;
+      SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
-        Mask.push_back(Builder.getInt32(i));
+        Mask.push_back(i);
 
       // When the vector size is odd and .odd or .hi is used, the last element
       // of the Elts constant array will be one past the size of the vector.
@@ -2168,9 +2159,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
 
       // modify when what gets shuffled in
       for (unsigned i = 0; i != NumSrcElts; ++i)
-        Mask[getAccessedFieldNo(i, Elts)] = Builder.getInt32(i+NumDstElts);
-      llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
-      Vec = Builder.CreateShuffleVector(Vec, ExtSrcVal, MaskV);
+        Mask[getAccessedFieldNo(i, Elts)] = i + NumDstElts;
+      Vec = Builder.CreateShuffleVector(Vec, ExtSrcVal, Mask);
     } else {
       // We should never shorten the vector
       llvm_unreachable("unexpected shorten vector length");
@@ -2715,6 +2705,12 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND))
     return EmitLValue(BD->getBinding());
+
+  // We can form DeclRefExprs naming GUID declarations when reconstituting
+  // non-type template parameters into expressions.
+  if (const auto *GD = dyn_cast<MSGuidDecl>(ND))
+    return MakeAddrLValue(CGM.GetAddrOfMSGuidDecl(GD), T,
+                          AlignmentSource::Decl);
 
   llvm_unreachable("Unhandled DeclRefExpr");
 }
@@ -4822,7 +4818,7 @@ CodeGenFunction::EmitCXXTypeidLValue(const CXXTypeidExpr *E) {
 }
 
 Address CodeGenFunction::EmitCXXUuidofExpr(const CXXUuidofExpr *E) {
-  return Builder.CreateElementBitCast(CGM.GetAddrOfUuidDescriptor(E),
+  return Builder.CreateElementBitCast(CGM.GetAddrOfMSGuidDecl(E->getGuidDecl()),
                                       ConvertType(E->getType()));
 }
 
@@ -5067,7 +5063,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // to the function type.
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
     llvm::Type *CalleeTy = getTypes().GetFunctionType(FnInfo);
-    CalleeTy = CalleeTy->getPointerTo();
+    int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
+    CalleeTy = CalleeTy->getPointerTo(AS);
 
     llvm::Value *CalleePtr = Callee.getFunctionPointer();
     CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");

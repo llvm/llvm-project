@@ -962,6 +962,12 @@ public:
     return L && L->getHeader() == BB;
   }
 
+  /// Return the top-level loops.
+  const std::vector<LoopT *> &getTopLevelLoops() const { return TopLevelLoops; }
+
+  /// Return the top-level loops.
+  std::vector<LoopT *> &getTopLevelLoopsVector() { return TopLevelLoops; }
+
   /// This removes the specified top-level loop from this loop info object.
   /// The loop is not deleted, as it will presumably be inserted into
   /// another loop.

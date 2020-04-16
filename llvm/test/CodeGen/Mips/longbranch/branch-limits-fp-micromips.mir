@@ -81,7 +81,7 @@ body:             |
   ; MM:     NOP
   ; MM:   }
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit killed $v0
   ; MM: bb.3.return:
@@ -110,7 +110,7 @@ body:             |
   ; PIC:     $sp = ADDiu $sp, 8
   ; PIC:   }
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit killed $v0
   ; PIC: bb.4.return:
@@ -179,7 +179,7 @@ body:             |
   ; MM:   $v0 = LI16_MM 1
   ; MM:   JRC16_MM undef $ra, implicit killed $v0
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit killed $v0
   ; PIC-LABEL: name: b
@@ -193,7 +193,7 @@ body:             |
   ; PIC:   $v0 = LI16_MM 1
   ; PIC:   JRC16_MM undef $ra, implicit killed $v0
   ; PIC: bb.2.if.then:
-  ; PIC:   INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit killed $v0
   bb.0.entry:

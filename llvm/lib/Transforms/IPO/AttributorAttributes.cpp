@@ -2675,8 +2675,11 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     if (C.hasValue() && C.getValue())
       return ChangeStatus::UNCHANGED;
 
+    // Replace the value with undef as it is dead but keep droppable uses around
+    // as they provide information we don't want to give up on just yet.
     UndefValue &UV = *UndefValue::get(V.getType());
-    bool AnyChange = A.changeValueAfterManifest(V, UV);
+    bool AnyChange =
+        A.changeValueAfterManifest(V, UV, /* ChangeDropppable */ false);
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -2703,8 +2706,10 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
       if (A.registerFunctionSignatureRewrite(
               Arg, /* ReplacementTypes */ {},
               Attributor::ArgumentReplacementInfo::CalleeRepairCBTy{},
-              Attributor::ArgumentReplacementInfo::ACSRepairCBTy{}))
+              Attributor::ArgumentReplacementInfo::ACSRepairCBTy{})) {
+        Arg.dropDroppableUses();
         return ChangeStatus::CHANGED;
+      }
     return Changed;
   }
 
@@ -6251,8 +6256,9 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                                 nullptr, Changed);
     }
 
-    // Now handle global memory if it might be accessed.
-    bool HasGlobalAccesses = !(ICSAssumedNotAccessedLocs & NO_GLOBAL_MEM);
+    // Now handle global memory if it might be accessed. This is slightly tricky
+    // as NO_GLOBAL_MEM has multiple bits set.
+    bool HasGlobalAccesses = ((~ICSAssumedNotAccessedLocs) & NO_GLOBAL_MEM);
     if (HasGlobalAccesses) {
       auto AccessPred = [&](const Instruction *, const Value *Ptr,
                             AccessKind Kind, MemoryLocationsKind MLK) {
@@ -6270,7 +6276,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                << getMemoryLocationsAsStr(AccessedLocs.getAssumed()) << "\n");
 
     // Now handle argument memory if it might be accessed.
-    bool HasArgAccesses = !(ICSAssumedNotAccessedLocs & NO_ARGUMENT_MEM);
+    bool HasArgAccesses = ((~ICSAssumedNotAccessedLocs) & NO_ARGUMENT_MEM);
     if (HasArgAccesses) {
       for (unsigned ArgNo = 0, e = ICS.getNumArgOperands(); ArgNo < e;
            ++ArgNo) {

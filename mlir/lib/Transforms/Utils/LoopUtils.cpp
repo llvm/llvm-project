@@ -23,6 +23,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -102,7 +103,8 @@ static void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
   operands.clear();
   operands.push_back(lb);
   operands.append(bumpValues.begin(), bumpValues.end());
-  map = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs);
+  map = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs,
+                       b.getContext());
   // Simplify the map + operands.
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
@@ -312,9 +314,19 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
                                   opGroupQueue, /*offset=*/0, forOp, b);
         lbShift = d * step;
       }
-      if (!prologue && res)
-        prologue = res;
-      epilogue = res;
+
+      if (res) {
+        // Simplify/canonicalize the affine.for.
+        OwningRewritePatternList patterns;
+        AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
+        bool erased;
+        applyOpPatternsAndFold(res, std::move(patterns), &erased);
+
+        if (!erased && !prologue)
+          prologue = res;
+        if (!erased)
+          epilogue = res;
+      }
     } else {
       // Start of first interval.
       lbShift = d * step;
@@ -474,7 +486,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
     if (!forOpIV.use_empty()) {
       // iv' = iv + 1/2/3...unrollFactor-1;
       auto d0 = builder.getAffineDimExpr(0);
-      auto bumpMap = AffineMap::get(1, 0, {d0 + i * step});
+      auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
       auto ivUnroll =
           builder.create<AffineApplyOp>(forOp.getLoc(), bumpMap, forOpIV);
       operandMap.map(forOpIV, ivUnroll);
@@ -605,7 +617,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
       if (!forOpIV.use_empty()) {
         // iv' = iv + i, i = 1 to unrollJamFactor-1.
         auto d0 = builder.getAffineDimExpr(0);
-        auto bumpMap = AffineMap::get(1, 0, {d0 + i * step});
+        auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
         auto ivUnroll =
             builder.create<AffineApplyOp>(forOp.getLoc(), bumpMap, forOpIV);
         operandMap.map(forOpIV, ivUnroll);
@@ -694,7 +706,8 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 }
 
 /// Return true if `loops` is a perfect nest.
-static bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+static bool LLVM_ATTRIBUTE_UNUSED
+isPerfectlyNested(ArrayRef<AffineForOp> loops) {
   auto outerLoop = loops.front();
   for (auto loop : loops.drop_front()) {
     auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
@@ -847,7 +860,8 @@ static void augmentMapAndBounds(OpBuilder &b, Value iv, AffineMap *map,
   auto bounds = llvm::to_vector<4>(map->getResults());
   bounds.push_back(b.getAffineDimExpr(map->getNumDims()) + offset);
   operands->insert(operands->begin() + map->getNumDims(), iv);
-  *map = AffineMap::get(map->getNumDims() + 1, map->getNumSymbols(), bounds);
+  *map = AffineMap::get(map->getNumDims() + 1, map->getNumSymbols(), bounds,
+                        b.getContext());
   canonicalizeMapAndOperands(map, operands);
 }
 
@@ -1142,17 +1156,6 @@ TileLoops mlir::extractFixedOuterLoops(loop::ForOp rootForOp,
   tryIsolateBands(tileLoops);
 
   return tileLoops;
-}
-
-// Replaces all uses of `orig` with `replacement` except if the user is listed
-// in `exceptions`.
-static void
-replaceAllUsesExcept(Value orig, Value replacement,
-                     const SmallPtrSetImpl<Operation *> &exceptions) {
-  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
-    if (exceptions.count(use.getOwner()) == 0)
-      use.set(replacement);
-  }
 }
 
 /// Return the new lower bound, upper bound, and step in that order. Insert any
@@ -1502,7 +1505,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
     b = forOp.getBodyBuilder();
 
     auto fastBufOffsetMap =
-        AffineMap::get(lbOperands.size(), 0, {fastBufOffsets[d]});
+        AffineMap::get(lbOperands.size(), 0, fastBufOffsets[d]);
     auto offset = b.create<AffineApplyOp>(loc, fastBufOffsetMap, lbOperands);
 
     // Construct the subscript for the fast memref being copied into/from:
@@ -1517,7 +1520,8 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
     memIndices.push_back(forOp.getInductionVar());
   }
 
-  auto fastBufMap = AffineMap::get(2 * rank, /*symbolCount=*/0, fastBufExprs);
+  auto fastBufMap =
+      AffineMap::get(2 * rank, /*symbolCount=*/0, fastBufExprs, b.getContext());
   fullyComposeAffineMapAndOperands(&fastBufMap, &fastBufMapOperands);
   fastBufMap = simplifyAffineMap(fastBufMap);
   canonicalizeMapAndOperands(&fastBufMap, &fastBufMapOperands);
@@ -1825,7 +1829,8 @@ static LogicalResult generateCopy(
     auto dimExpr = b.getAffineDimExpr(regionSymbols.size() + i);
     remapExprs.push_back(dimExpr - fastBufOffsets[i]);
   }
-  auto indexRemap = AffineMap::get(regionSymbols.size() + rank, 0, remapExprs);
+  auto indexRemap = AffineMap::get(regionSymbols.size() + rank, 0, remapExprs,
+                                   b.getContext());
 
   // Record the begin since it may be invalidated by memref replacement.
   Block::iterator prevOfBegin;
@@ -2365,4 +2370,13 @@ mlir::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
     *fullTileNest = std::move(fullTileLoops);
 
   return success();
+}
+
+void mlir::replaceAllUsesExcept(
+    Value orig, Value replacement,
+    const SmallPtrSetImpl<Operation *> &exceptions) {
+  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
+    if (exceptions.count(use.getOwner()) == 0)
+      use.set(replacement);
+  }
 }

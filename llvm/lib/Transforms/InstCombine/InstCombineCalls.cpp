@@ -416,7 +416,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
         Amt, DemandedUpper, II.getModule()->getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
-      SmallVector<uint32_t, 16> ZeroSplat(VWidth, 0);
+      SmallVector<int, 16> ZeroSplat(VWidth, 0);
       Amt = Builder.CreateShuffleVector(Amt, Amt, ZeroSplat);
       return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                         : Builder.CreateLShr(Vec, Amt))
@@ -663,7 +663,7 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   Arg1 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg1, MaxC), MaxC, Arg1);
 
   // Shuffle clamped args together at the lane level.
-  SmallVector<unsigned, 32> PackMask;
+  SmallVector<int, 32> PackMask;
   for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
       PackMask.push_back(Elt + (Lane * NumSrcEltsPerLane));
@@ -760,7 +760,7 @@ static Value *simplifyX86insertps(const IntrinsicInst &II,
     return ZeroVector;
 
   // Initialize by passing all of the first source bits through.
-  uint32_t ShuffleMask[4] = { 0, 1, 2, 3 };
+  int ShuffleMask[4] = {0, 1, 2, 3};
 
   // We may replace the second operand with the zero vector.
   Value *V1 = II.getArgOperand(1);
@@ -4654,8 +4654,13 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
   }
 
   if (!Call.use_empty() && !Call.isMustTailCall())
-    if (Value *ReturnedArg = Call.getReturnedArgOperand())
-      return replaceInstUsesWith(Call, ReturnedArg);
+    if (Value *ReturnedArg = Call.getReturnedArgOperand()) {
+      Type *CallTy = Call.getType();
+      Type *RetArgTy = ReturnedArg->getType();
+      if (RetArgTy->canLosslesslyBitCastTo(CallTy))
+        return replaceInstUsesWith(
+            Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
+    }
 
   if (isAllocLikeFn(&Call, &TLI))
     return visitAllocSite(Call);

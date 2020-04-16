@@ -35,11 +35,10 @@ class LibcxxTestFormat(object):
       FOO.sh.cpp   - A test that uses LIT's ShTest format.
     """
 
-    def __init__(self, cxx, use_verify_for_fail, execute_external,
+    def __init__(self, cxx, use_verify_for_fail,
                  executor, exec_env):
         self.cxx = copy.deepcopy(cxx)
         self.use_verify_for_fail = use_verify_for_fail
-        self.execute_external = execute_external
         self.executor = executor
         self.exec_env = dict(exec_env)
 
@@ -126,7 +125,7 @@ class LibcxxTestFormat(object):
 
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
         substitutions = lit.TestRunner.getDefaultSubstitutions(
-            test, tmpDir, tmpBase, normalize_slashes=self.execute_external)
+            test, tmpDir, tmpBase, normalize_slashes=True)
 
         # Apply substitutions in FILE_DEPENDENCIES markup
         data_files = lit.TestRunner.applySubstitutions(test.file_dependencies, substitutions,
@@ -172,7 +171,7 @@ class LibcxxTestFormat(object):
                 return lit.Test.UNSUPPORTED, 'ShTest format not yet supported'
             test.config.environment = self.executor.merge_environments(os.environ, self.exec_env)
             return lit.TestRunner._runShTest(test, lit_config,
-                                             self.execute_external, script,
+                                             True, script,
                                              tmpBase)
         elif is_fail_test:
             return self._evaluate_fail_test(test, test_cxx, parsers)

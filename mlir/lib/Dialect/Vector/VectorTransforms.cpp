@@ -1348,9 +1348,7 @@ private:
       auto targetExpr = getAffineDimExpr(idx < index ? idx : idx - 1, ctx);
       results.push_back(targetExpr);
     }
-    // The (...) -> () affine map has its own factory method.
-    return results.empty() ? AffineMap::get(map.getNumDims() - 1, 0, ctx)
-                           : AffineMap::get(map.getNumDims() - 1, 0, results);
+    return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
   }
 
   // Helper to drop dimension from vector type.

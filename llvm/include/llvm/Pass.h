@@ -34,7 +34,6 @@ namespace llvm {
 
 class AnalysisResolver;
 class AnalysisUsage;
-class BasicBlock;
 class Function;
 class ImmutablePass;
 class Module;

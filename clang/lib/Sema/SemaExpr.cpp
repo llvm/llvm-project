@@ -3274,6 +3274,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
       llvm_unreachable("building reference to deduction guide");
 
     case Decl::MSProperty:
+    case Decl::MSGuid:
+      // FIXME: Should MSGuidDecl be subject to capture in OpenMP,
+      // or duplicated between host and device?
       valueKind = VK_LValue;
       break;
 
@@ -12816,6 +12819,9 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
 ///  - *(x + 1) -> x, if x is an array
 ///  - &"123"[2] -> 0
 ///  - & __real__ x -> x
+///
+/// FIXME: We don't recurse to the RHS of a comma, nor handle pointers to
+/// members.
 static ValueDecl *getPrimaryDecl(Expr *E) {
   switch (E->getStmtClass()) {
   case Stmt::DeclRefExprClass:
@@ -12856,6 +12862,8 @@ static ValueDecl *getPrimaryDecl(Expr *E) {
     // If the result of an implicit cast is an l-value, we care about
     // the sub-expression; otherwise, the result here doesn't matter.
     return getPrimaryDecl(cast<ImplicitCastExpr>(E)->getSubExpr());
+  case Stmt::CXXUuidofExprClass:
+    return cast<CXXUuidofExpr>(E)->getGuidDecl();
   default:
     return nullptr;
   }
@@ -13076,7 +13084,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
         }
       }
     } else if (!isa<FunctionDecl>(dcl) && !isa<NonTypeTemplateParmDecl>(dcl) &&
-               !isa<BindingDecl>(dcl))
+               !isa<BindingDecl>(dcl) && !isa<MSGuidDecl>(dcl))
       llvm_unreachable("Unknown/unexpected decl type");
   }
 
@@ -13358,13 +13366,13 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
     BinOpResTy = S.GetSignedVectorType(BinOpResTy);
 
   if (IsCompAssign)
-    return new (Context) CompoundAssignOperator(
-        LHS.get(), RHS.get(), Opc, ResultTy, VK, OK, BinOpResTy, BinOpResTy,
-        OpLoc, FPFeatures);
+    return CompoundAssignOperator::Create(Context, LHS.get(), RHS.get(), Opc,
+                                          ResultTy, VK, OK, OpLoc, FPFeatures,
+                                          BinOpResTy, BinOpResTy);
 
   LHS = convertVector(LHS.get(), Context.FloatTy, S);
-  auto *BO = new (Context) BinaryOperator(LHS.get(), RHS.get(), Opc, BinOpResTy,
-                                          VK, OK, OpLoc, FPFeatures);
+  auto *BO = BinaryOperator::Create(Context, LHS.get(), RHS.get(), Opc,
+                                    BinOpResTy, VK, OK, OpLoc, FPFeatures);
   return convertVector(BO, ResultTy->castAs<VectorType>()->getElementType(), S);
 }
 
@@ -13686,8 +13694,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     if (ConvertHalfVec)
       return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, false,
                                  OpLoc, FPFeatures);
-    return new (Context) BinaryOperator(LHS.get(), RHS.get(), Opc, ResultTy, VK,
-                                        OK, OpLoc, FPFeatures);
+    return BinaryOperator::Create(Context, LHS.get(), RHS.get(), Opc, ResultTy,
+                                  VK, OK, OpLoc, FPFeatures);
   }
 
   // Handle compound assignments.
@@ -13701,9 +13709,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, true,
                                OpLoc, FPFeatures);
 
-  return new (Context) CompoundAssignOperator(
-      LHS.get(), RHS.get(), Opc, ResultTy, VK, OK, CompLHSTy, CompResultTy,
-      OpLoc, FPFeatures);
+  return CompoundAssignOperator::Create(Context, LHS.get(), RHS.get(), Opc,
+                                        ResultTy, VK, OK, OpLoc, FPFeatures,
+                                        CompLHSTy, CompResultTy);
 }
 
 /// DiagnoseBitwisePrecedence - Emit a warning when bitwise and comparison
