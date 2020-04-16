@@ -79,6 +79,9 @@ static cl::opt<bool> SimplifyMIR(
     "simplify-mir", cl::Hidden,
     cl::desc("Leave out unnecessary information when printing MIR"));
 
+static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
+                                    cl::desc("Print MIR debug-locations"));
+
 namespace {
 
 /// This structure describes how to print out stack object references.
@@ -792,11 +795,13 @@ void MIPrinter::print(const MachineInstr &MI) {
     NeedComma = true;
   }
 
-  if (const DebugLoc &DL = MI.getDebugLoc()) {
-    if (NeedComma)
-      OS << ',';
-    OS << " debug-location ";
-    DL->printAsOperand(OS, MST);
+  if (PrintLocations) {
+    if (const DebugLoc &DL = MI.getDebugLoc()) {
+      if (NeedComma)
+        OS << ',';
+      OS << " debug-location ";
+      DL->printAsOperand(OS, MST);
+    }
   }
 
   if (!MI.memoperands_empty()) {

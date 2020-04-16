@@ -52,16 +52,19 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
 
 class AtosSymbolizerProcess : public SymbolizerProcess {
  public:
-  explicit AtosSymbolizerProcess(const char *path, pid_t parent_pid)
+  explicit AtosSymbolizerProcess(const char *path)
       : SymbolizerProcess(path, /*use_posix_spawn*/ true) {
-    // Put the string command line argument in the object so that it outlives
-    // the call to GetArgV.
-    internal_snprintf(pid_str_, sizeof(pid_str_), "%d", parent_pid);
+    pid_str_[0] = '\0';
   }
 
  private:
   bool StartSymbolizerSubprocess() override {
     // Configure sandbox before starting atos process.
+
+    // Put the string command line argument in the object so that it outlives
+    // the call to GetArgV.
+    internal_snprintf(pid_str_, sizeof(pid_str_), "%d", internal_getpid());
+
     return SymbolizerProcess::StartSymbolizerSubprocess();
   }
 
@@ -138,7 +141,7 @@ static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
 }
 
 AtosSymbolizer::AtosSymbolizer(const char *path, LowLevelAllocator *allocator)
-    : process_(new(*allocator) AtosSymbolizerProcess(path, getpid())) {}
+    : process_(new (*allocator) AtosSymbolizerProcess(path)) {}
 
 bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   if (!process_) return false;
