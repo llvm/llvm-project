@@ -549,8 +549,8 @@ private:
 /// instance down in the abstract attributes.
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
-                   SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()),
+                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC)
+      : DL(M.getDataLayout()), Allocator(Allocator),
         Explorer(
             /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
             /* ExploreCFGBackward */ true,
@@ -567,7 +567,10 @@ struct InformationCache {
         AG(AG), CGSCC(CGSCC) {}
 
   ~InformationCache() {
-    DeleteContainerSeconds(FuncInfoMap);
+    // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
+    // the destructor manually.
+    for (auto &It : FuncInfoMap)
+      It.getSecond()->~FunctionInfo();
   }
 
   /// A map type from opcodes to instructions with this opcode.
@@ -652,7 +655,7 @@ private:
   FunctionInfo &getFunctionInfo(const Function &F) {
     FunctionInfo *&FI = FuncInfoMap[&F];
     if (!FI) {
-      FI = new FunctionInfo();
+      FI = new (Allocator) FunctionInfo();
       initializeInformationCache(F, *FI);
     }
     return *FI;
@@ -666,6 +669,9 @@ private:
 
   /// The datalayout used in the module.
   const DataLayout &DL;
+
+  /// The allocator used to allocate memory, e.g. for `FunctionInfo`s.
+  BumpPtrAllocator &Allocator;
 
   /// MustBeExecutedContextExplorer
   MustBeExecutedContextExplorer Explorer;
@@ -727,7 +733,8 @@ struct Attributor {
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater, unsigned DepRecomputeInterval,
              DenseSet<const char *> *Whitelist = nullptr)
-      : Functions(Functions), InfoCache(InfoCache), CGUpdater(CGUpdater),
+      : Allocator(InfoCache.Allocator), Functions(Functions),
+        InfoCache(InfoCache), CGUpdater(CGUpdater),
         DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
 
   ~Attributor();
@@ -1100,7 +1107,7 @@ struct Attributor {
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
-  BumpPtrAllocator Allocator;
+  BumpPtrAllocator &Allocator;
 
 private:
   /// Check \p Pred on all call sites of \p Fn.
