@@ -109,7 +109,11 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     return Status;
   if (!Ident.Processor.consume_front("gfx"))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_isa_version(Ident.Processor)))
+  auto IsaVersion = get_oclc_isa_version(Ident.Processor);
+  if (!std::get<0>(IsaVersion))
+    report_fatal_error(Twine("Missing device library for gfx") +
+                       Ident.Processor);
+  if (auto Status = addOCLCObject(ResultSet, IsaVersion))
     return Status;
 
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
