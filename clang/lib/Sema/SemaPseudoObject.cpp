@@ -450,7 +450,7 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
     result = semanticRHS;
     syntactic = BinaryOperator::Create(
         S.Context, syntacticLHS, capturedRHS, opcode, capturedRHS->getType(),
-        capturedRHS->getValueKind(), OK_Ordinary, opcLoc, S.FPFeatures);
+        capturedRHS->getValueKind(), OK_Ordinary, opcLoc, S.CurFPFeatures);
 
   } else {
     ExprResult opLHS = buildGet();
@@ -464,7 +464,7 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
 
     syntactic = CompoundAssignOperator::Create(
         S.Context, syntacticLHS, capturedRHS, opcode, result.get()->getType(),
-        result.get()->getValueKind(), OK_Ordinary, opcLoc, S.FPFeatures,
+        result.get()->getValueKind(), OK_Ordinary, opcLoc, S.CurFPFeatures,
         opLHS.get()->getType(), result.get()->getType());
   }
 
@@ -1583,7 +1583,7 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
   if (LHS->isTypeDependent() || RHS->isTypeDependent())
     return BinaryOperator::Create(Context, LHS, RHS, opcode,
                                   Context.DependentTy, VK_RValue, OK_Ordinary,
-                                  opcLoc, FPFeatures);
+                                  opcLoc, CurFPFeatures);
 
   // Filter out non-overload placeholder types in the RHS.
   if (RHS->getType()->isNonOverloadPlaceholderType()) {
@@ -1646,7 +1646,7 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
     return CompoundAssignOperator::Create(
         Context, lhs, rhs, cop->getOpcode(), cop->getType(),
         cop->getValueKind(), cop->getObjectKind(), cop->getOperatorLoc(),
-        FPFeatures, cop->getComputationLHSType(),
+        CurFPFeatures, cop->getComputationLHSType(),
         cop->getComputationResultType());
 
   } else if (BinaryOperator *bop = dyn_cast<BinaryOperator>(syntax)) {
@@ -1655,7 +1655,7 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
     return BinaryOperator::Create(Context, lhs, rhs, bop->getOpcode(),
                                   bop->getType(), bop->getValueKind(),
                                   bop->getObjectKind(), bop->getOperatorLoc(),
-                                  FPFeatures);
+                                  CurFPFeatures);
 
   } else if (isa<CallExpr>(syntax)) {
     return syntax;
