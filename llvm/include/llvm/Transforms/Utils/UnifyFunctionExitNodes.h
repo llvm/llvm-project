@@ -22,6 +22,8 @@
 
 namespace llvm {
 
+class BasicBlock;
+
 struct UnifyFunctionExitNodes : public FunctionPass {
   BasicBlock *ReturnBlock = nullptr;
   BasicBlock *UnwindBlock = nullptr;
