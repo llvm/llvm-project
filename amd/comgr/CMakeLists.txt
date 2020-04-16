@@ -22,32 +22,44 @@ if (ROCM_FOUND)
   rocm_setup_version(VERSION "${amd_comgr_VERSION}")
 endif()
 
-find_package(Clang REQUIRED CONFIG)
-add_definitions(${LLVM_DEFINITIONS})
-include_directories(${LLVM_INCLUDE_DIRS})
-link_directories(${LLVM_LIBRARY_DIRS})
-include_directories(${CLANG_INCLUDE_DIRS})
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  find_package(AMDDeviceLibs)
 
-# FIXME: There is no way to directly determine the include paths for LLD when
-# working with an LLVM build tree, but we want to avoid having to install LLVM
-# to build Comgr. This should eventually be fixed in usptream LLD so this can
-# be removed.
-if(DEFINED LLVM_BUILD_MAIN_SRC_DIR)
-  set(INTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/tools/lld/include")
-  set(EXTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/../lld/include")
-  if (EXISTS "${INTERNAL_LLD_INCLUDE_DIRS}"
-      AND IS_DIRECTORY "${INTERNAL_LLD_INCLUDE_DIRS}")
-    set(LLD_INCLUDE_DIRS "${INTERNAL_LLD_INCLUDE_DIRS}")
-  elseif (EXISTS "${EXTERNAL_LLD_INCLUDE_DIRS}"
-      AND IS_DIRECTORY "${EXTERNAL_LLD_INCLUDE_DIRS}")
-    set(LLD_INCLUDE_DIRS "${EXTERNAL_LLD_INCLUDE_DIRS}")
-  else()
-    message(FATAL_ERROR "You are attempting to compile using an LLVM build tree, but the LLD include directory could not be located. The paths '${INTERNAL_LLD_INCLUDE_DIRS}' and '${EXTERNAL_LLD_INCLUDE_DIRS}' were tried.")
+  find_package(Clang REQUIRED)
+  add_definitions(${LLVM_DEFINITIONS})
+  include_directories(${LLVM_INCLUDE_DIRS})
+  link_directories(${LLVM_LIBRARY_DIRS})
+  include_directories(${CLANG_INCLUDE_DIRS})
+
+  # FIXME: There is no way to directly determine the include paths for LLD when
+  # working with an LLVM build tree, but we want to avoid having to install LLVM
+  # to build Comgr. This should eventually be fixed in usptream LLD so this can
+  # be removed.
+  if(DEFINED LLVM_BUILD_MAIN_SRC_DIR)
+    set(INTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/tools/lld/include")
+    set(EXTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/../lld/include")
+    if (EXISTS "${INTERNAL_LLD_INCLUDE_DIRS}"
+        AND IS_DIRECTORY "${INTERNAL_LLD_INCLUDE_DIRS}")
+      set(LLD_INCLUDE_DIRS "${INTERNAL_LLD_INCLUDE_DIRS}")
+    elseif (EXISTS "${EXTERNAL_LLD_INCLUDE_DIRS}"
+        AND IS_DIRECTORY "${EXTERNAL_LLD_INCLUDE_DIRS}")
+      set(LLD_INCLUDE_DIRS "${EXTERNAL_LLD_INCLUDE_DIRS}")
+    else()
+      message(FATAL_ERROR "You are attempting to compile using an LLVM build tree, but the LLD include directory could not be located. The paths '${INTERNAL_LLD_INCLUDE_DIRS}' and '${EXTERNAL_LLD_INCLUDE_DIRS}' were tried.")
+    endif()
+    include_directories(${LLD_INCLUDE_DIRS})
   endif()
-  include_directories(${LLD_INCLUDE_DIRS})
+else()
+  # If building with LLVM_EXTERNAL_PROJECTS, we've already picked up
+  # the include directories for LLVM, but not clang.
+  #
+  # FIXME: Do we need to include a binary include directory? lldb gets
+  # away without it.
+  if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
+    include_directories(${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include)
+  endif ()
 endif()
 
-find_package(AMDDeviceLibs CONFIG)
 
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
@@ -175,16 +187,19 @@ write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
 
 install(TARGETS amd_comgr
   EXPORT amd_comgr_export
+  COMPONENT amd-comgr
   DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
+  COMPONENT amd-comgr
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(FILES
   "README.md"
   "LICENSE.txt"
   "NOTICES.txt"
+  COMPONENT amd-comgr
   DESTINATION ${CMAKE_INSTALL_DATADIR}/amd_comgr)
 
 # Generate the install-tree package.
@@ -245,27 +260,27 @@ endif()
 enable_testing()
 add_subdirectory(test)
 
-# Add packaging directives for amd_comgr
-set(CPACK_PACKAGE_NAME comgr)
-set(CPACK_PACKAGE_VENDOR "AMD")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
-set(CPACK_PACKAGE_VERSION "${amd_comgr_VERSION}")
-set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  # Add packaging directives for amd_comgr
+  set(CPACK_PACKAGE_NAME comgr)
+  set(CPACK_PACKAGE_VENDOR "AMD")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
+  set(CPACK_PACKAGE_VERSION "${amd_comgr_VERSION}")
+  set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
+  set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
+  set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
+  set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
+  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
-# Debian package specific variables
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE
-  "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
+  # Debian package specific variables
+  set(CPACK_DEBIAN_PACKAGE_HOMEPAGE
+    "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
 
-# RPM package specific variables
-if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
-  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
-    "${CPACK_PACKAGING_INSTALL_PREFIX}")
-endif()
+  # RPM package specific variables
+  if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+      "${CPACK_PACKAGING_INSTALL_PREFIX}")
+  endif()
 
-if (NOT CPack_CMake_INCLUDED)
   include(CPack)
 endif()
