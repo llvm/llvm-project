@@ -13,7 +13,6 @@
 #ifndef LLVM_MC_MCSECTIONXCOFF_H
 #define LLVM_MC_MCSECTIONXCOFF_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
