@@ -2555,7 +2555,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
   LibFunc LF;
-  if (TLI.getLibFunc(ImmutableCallSite(Call), LF)) {
+  if (TLI.getLibFunc(*Call, LF)) {
     return TLI.has(LF);
   }
 
