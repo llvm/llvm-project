@@ -88,7 +88,7 @@ struct FileCheckDiag {
   /// What is the FileCheck directive for this diagnostic?
   Check::FileCheckType CheckTy;
   /// Where is the FileCheck directive for this diagnostic?
-  unsigned CheckLine, CheckCol;
+  SMLoc CheckLoc;
   /// What type of match result does this diagnostic describe?
   ///
   /// A directive's supplied pattern is said to be either expected or excluded
@@ -160,7 +160,13 @@ public:
   ///
   /// Only expected strings whose prefix is one of those listed in \p PrefixRE
   /// are recorded. \returns true in case of an error, false otherwise.
-  bool readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE);
+  ///
+  /// If \p ImpPatBufferIDRange, then the range (inclusive start, exclusive end)
+  /// of IDs for source buffers added to \p SM for implicit patterns are
+  /// recorded in it.  The range is empty if there are none.
+  bool
+  readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+                std::pair<unsigned, unsigned> *ImpPatBufferIDRange = nullptr);
 
   bool ValidateCheckPrefixes();
 
