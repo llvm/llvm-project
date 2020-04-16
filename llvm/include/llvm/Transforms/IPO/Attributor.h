@@ -875,11 +875,14 @@ struct Attributor {
   }
 
   /// Helper function to replace all uses of \p V with \p NV. Return true if
-  /// there is any change.
-  bool changeValueAfterManifest(Value &V, Value &NV) {
+  /// there is any change. The flag \p ChangeDroppable indicates if dropppable
+  /// uses should be changed too.
+  bool changeValueAfterManifest(Value &V, Value &NV,
+                                bool ChangeDroppable = true) {
     bool Changed = false;
     for (auto &U : V.uses())
-      Changed |= changeUseAfterManifest(U, NV);
+      if (ChangeDroppable || !U.getUser()->isDroppable())
+        Changed |= changeUseAfterManifest(U, NV);
 
     return Changed;
   }
