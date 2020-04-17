@@ -760,11 +760,6 @@ public:
                                                   llvm::Value *Zero,bool isDiv);
   // Common helper for getting how wide LHS of shift is.
   static Value *GetWidthMinusOneValue(Value* LHS,Value* RHS);
-
-  // Used for shifting constraints for OpenCL, do mask for powers of 2, URem for
-  // non powers of two.
-  Value *ConstrainShiftValue(Value *LHS, Value *RHS, const Twine &Name);
-
   Value *EmitDiv(const BinOpInfo &Ops);
   Value *EmitRem(const BinOpInfo &Ops);
   Value *EmitAdd(const BinOpInfo &Ops);
@@ -1780,22 +1775,18 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   return Builder.CreateExtractElement(Base, Idx, "vecext");
 }
 
-static llvm::Constant *getMaskElt(llvm::ShuffleVectorInst *SVI, unsigned Idx,
-                                  unsigned Off, llvm::Type *I32Ty) {
+static int getMaskElt(llvm::ShuffleVectorInst *SVI, unsigned Idx,
+                      unsigned Off) {
   int MV = SVI->getMaskValue(Idx);
   if (MV == -1)
-    return llvm::UndefValue::get(I32Ty);
-  return llvm::ConstantInt::get(I32Ty, Off+MV);
+    return -1;
+  return Off + MV;
 }
 
-static llvm::Constant *getAsInt32(llvm::ConstantInt *C, llvm::Type *I32Ty) {
-  if (C->getBitWidth() != 32) {
-      assert(llvm::ConstantInt::isValueValidForType(I32Ty,
-                                                    C->getZExtValue()) &&
-             "Index operand too large for shufflevector mask!");
-      return llvm::ConstantInt::get(I32Ty, C->getZExtValue());
-  }
-  return C;
+static int getAsInt32(llvm::ConstantInt *C, llvm::Type *I32Ty) {
+  assert(llvm::ConstantInt::isValueValidForType(I32Ty, C->getZExtValue()) &&
+         "Index operand too large for shufflevector mask!");
+  return C->getZExtValue();
 }
 
 Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
@@ -1832,7 +1823,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   for (unsigned i = 0; i != NumInitElements; ++i) {
     Expr *IE = E->getInit(i);
     Value *Init = Visit(IE);
-    SmallVector<llvm::Constant*, 16> Args;
+    SmallVector<int, 16> Args;
 
     llvm::VectorType *VVT = dyn_cast<llvm::VectorType>(Init->getType());
 
@@ -1850,7 +1841,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
             // insert into undef -> shuffle (src, undef)
             // shufflemask must use an i32
             Args.push_back(getAsInt32(C, CGF.Int32Ty));
-            Args.resize(ResElts, llvm::UndefValue::get(CGF.Int32Ty));
+            Args.resize(ResElts, -1);
 
             LHS = EI->getVectorOperand();
             RHS = V;
@@ -1859,17 +1850,16 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
             // insert into undefshuffle && size match -> shuffle (v, src)
             llvm::ShuffleVectorInst *SVV = cast<llvm::ShuffleVectorInst>(V);
             for (unsigned j = 0; j != CurIdx; ++j)
-              Args.push_back(getMaskElt(SVV, j, 0, CGF.Int32Ty));
-            Args.push_back(Builder.getInt32(ResElts + C->getZExtValue()));
-            Args.resize(ResElts, llvm::UndefValue::get(CGF.Int32Ty));
+              Args.push_back(getMaskElt(SVV, j, 0));
+            Args.push_back(ResElts + C->getZExtValue());
+            Args.resize(ResElts, -1);
 
             LHS = cast<llvm::ShuffleVectorInst>(V)->getOperand(0);
             RHS = EI->getVectorOperand();
             VIsUndefShuffle = false;
           }
           if (!Args.empty()) {
-            llvm::Constant *Mask = llvm::ConstantVector::get(Args);
-            V = Builder.CreateShuffleVector(LHS, RHS, Mask);
+            V = Builder.CreateShuffleVector(LHS, RHS, Args);
             ++CurIdx;
             continue;
           }
@@ -1898,15 +1888,14 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           // If the current vector initializer is a shuffle with undef, merge
           // this shuffle directly into it.
           if (VIsUndefShuffle) {
-            Args.push_back(getMaskElt(cast<llvm::ShuffleVectorInst>(V), j, 0,
-                                      CGF.Int32Ty));
+            Args.push_back(getMaskElt(cast<llvm::ShuffleVectorInst>(V), j, 0));
           } else {
-            Args.push_back(Builder.getInt32(j));
+            Args.push_back(j);
           }
         }
         for (unsigned j = 0, je = InitElts; j != je; ++j)
-          Args.push_back(getMaskElt(SVI, j, Offset, CGF.Int32Ty));
-        Args.resize(ResElts, llvm::UndefValue::get(CGF.Int32Ty));
+          Args.push_back(getMaskElt(SVI, j, Offset));
+        Args.resize(ResElts, -1);
 
         if (VIsUndefShuffle)
           V = cast<llvm::ShuffleVectorInst>(V)->getOperand(0);
@@ -1919,26 +1908,24 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     // to the vector initializer into V.
     if (Args.empty()) {
       for (unsigned j = 0; j != InitElts; ++j)
-        Args.push_back(Builder.getInt32(j));
-      Args.resize(ResElts, llvm::UndefValue::get(CGF.Int32Ty));
-      llvm::Constant *Mask = llvm::ConstantVector::get(Args);
-      Init = Builder.CreateShuffleVector(Init, llvm::UndefValue::get(VVT),
-                                         Mask, "vext");
+        Args.push_back(j);
+      Args.resize(ResElts, -1);
+      Init = Builder.CreateShuffleVector(Init, llvm::UndefValue::get(VVT), Args,
+                                         "vext");
 
       Args.clear();
       for (unsigned j = 0; j != CurIdx; ++j)
-        Args.push_back(Builder.getInt32(j));
+        Args.push_back(j);
       for (unsigned j = 0; j != InitElts; ++j)
-        Args.push_back(Builder.getInt32(j+Offset));
-      Args.resize(ResElts, llvm::UndefValue::get(CGF.Int32Ty));
+        Args.push_back(j + Offset);
+      Args.resize(ResElts, -1);
     }
 
     // If V is undef, make sure it ends up on the RHS of the shuffle to aid
     // merging subsequent shuffles into this one.
     if (CurIdx == 0)
       std::swap(V, Init);
-    llvm::Constant *Mask = llvm::ConstantVector::get(Args);
-    V = Builder.CreateShuffleVector(V, Init, Mask, "vecinit");
+    V = Builder.CreateShuffleVector(V, Init, Args, "vecinit");
     VIsUndefShuffle = isa<llvm::UndefValue>(Init);
     CurIdx += InitElts;
   }
@@ -3827,21 +3814,6 @@ Value *ScalarExprEmitter::GetWidthMinusOneValue(Value* LHS,Value* RHS) {
   return llvm::ConstantInt::get(RHS->getType(), Ty->getBitWidth() - 1);
 }
 
-Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
-                                              const Twine &Name) {
-  llvm::IntegerType *Ty;
-  if (auto *VT = dyn_cast<llvm::VectorType>(LHS->getType()))
-    Ty = cast<llvm::IntegerType>(VT->getElementType());
-  else
-    Ty = cast<llvm::IntegerType>(LHS->getType());
-
-  if (llvm::isPowerOf2_64(Ty->getBitWidth()))
-        return Builder.CreateAnd(RHS, GetWidthMinusOneValue(LHS, RHS), Name);
-
-  return Builder.CreateURem(
-      RHS, llvm::ConstantInt::get(RHS->getType(), Ty->getBitWidth()), Name);
-}
-
 Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   // LLVM requires the LHS and RHS to be the same type: promote or truncate the
   // RHS to the same size as the LHS.
@@ -3856,7 +3828,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (CGF.getLangOpts().OpenCL)
-    RHS = ConstrainShiftValue(Ops.LHS, RHS, "shl.mask");
+    RHS =
+        Builder.CreateAnd(RHS, GetWidthMinusOneValue(Ops.LHS, RHS), "shl.mask");
   else if ((SanitizeBase || SanitizeExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
@@ -3918,7 +3891,8 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (CGF.getLangOpts().OpenCL)
-    RHS = ConstrainShiftValue(Ops.LHS, RHS, "shr.mask");
+    RHS =
+        Builder.CreateAnd(RHS, GetWidthMinusOneValue(Ops.LHS, RHS), "shr.mask");
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);

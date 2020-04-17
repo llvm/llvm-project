@@ -91,6 +91,14 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
+add_gen_header(
+  unistd
+  DEF_FILE unistd.h.def
+  GEN_HDR unistd.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.

@@ -1795,7 +1795,7 @@ static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
 
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   Mangler.mangleNumber(PLoc.getLine());
-  Out << "->";
+  Out << "_";
   Mangler.mangleNumber(PLoc.getColumn());
 
   while(Loc.isMacroID()) {
@@ -1804,9 +1804,9 @@ static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
       SLToPrint = SM.getImmediateExpansionRange(Loc).getBegin();
 
     PLoc = SM.getPresumedLoc(SM.getSpellingLoc(SLToPrint));
-    Out << "~";
+    Out << "m";
     Mangler.mangleNumber(PLoc.getLine());
-    Out << "->";
+    Out << "_";
     Mangler.mangleNumber(PLoc.getColumn());
 
     Loc = SM.getImmediateMacroCallerLoc(Loc);
@@ -2093,8 +2093,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Atomic:
   case Type::Pipe:
   case Type::MacroQualified:
-  case Type::ExtInt:
-  case Type::DependentExtInt:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -3554,28 +3552,6 @@ void CXXNameMangler::mangleType(const PipeType *T) {
   // A.1 Data types and A.3 Summary of changes
   // <type> ::= 8ocl_pipe
   Out << "8ocl_pipe";
-}
-
-void CXXNameMangler::mangleType(const ExtIntType *T) {
-  Out << "U7_ExtInt";
-  llvm::APSInt BW(32, true);
-  BW = T->getNumBits();
-  TemplateArgument TA(Context.getASTContext(), BW, getASTContext().IntTy);
-  mangleTemplateArgs(&TA, 1);
-  if (T->isUnsigned())
-    Out << "j";
-  else
-    Out << "i";
-}
-
-void CXXNameMangler::mangleType(const DependentExtIntType *T) {
-  Out << "U7_ExtInt";
-  TemplateArgument TA(T->getNumBitsExpr());
-  mangleTemplateArgs(&TA, 1);
-  if (T->isUnsigned())
-    Out << "j";
-  else
-    Out << "i";
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,

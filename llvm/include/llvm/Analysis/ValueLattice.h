@@ -75,7 +75,9 @@ class ValueLatticeElement {
     overdefined,
   };
 
-  ValueLatticeElementTy Tag;
+  ValueLatticeElementTy Tag : 6;
+  /// Number of times a constant range has been extended with widening enabled.
+  unsigned NumRangeExtensions : 8;
 
   /// The union either stores a pointer to a constant or a constant range,
   /// associated to the lattice element. We have to ensure that Range is
@@ -133,6 +135,7 @@ public:
         new (&Range) ConstantRange(Other.Range);
       else
         Range = Other.Range;
+      NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
     case notconstant:
@@ -287,7 +290,8 @@ public:
   /// range or the object must be undef. The tag is set to
   /// constant_range_including_undef if either the existing value or the new
   /// range may include undef.
-  bool markConstantRange(ConstantRange NewR, bool MayIncludeUndef = false) {
+  bool markConstantRange(ConstantRange NewR, bool MayIncludeUndef = false,
+                         bool CheckWiden = false) {
     if (NewR.isFullSet())
       return markOverdefined();
 
@@ -304,6 +308,11 @@ public:
       if (getConstantRange() == NewR)
         return Tag != OldTag;
 
+      // Simple form of widening. If a range is extended multiple times, go to
+      // overdefined.
+      if (CheckWiden && ++NumRangeExtensions == 1)
+        return markOverdefined();
+
       assert(NewR.contains(getConstantRange()) &&
              "Existing range must be a subset of NewR");
       Range = std::move(NewR);
@@ -314,6 +323,7 @@ public:
     if (NewR.isEmptySet())
       return markOverdefined();
 
+    NumRangeExtensions = 0;
     Tag = NewTag;
     new (&Range) ConstantRange(std::move(NewR));
     return true;
@@ -321,7 +331,7 @@ public:
 
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
-  bool mergeIn(const ValueLatticeElement &RHS) {
+  bool mergeIn(const ValueLatticeElement &RHS, bool CheckWiden = false) {
     if (RHS.isUnknown() || isOverdefined())
       return false;
     if (RHS.isOverdefined()) {
@@ -337,7 +347,7 @@ public:
         return markConstant(RHS.getConstant(), /*MayIncludeUndef=*/true);
       if (RHS.isConstantRange())
         return markConstantRange(RHS.getConstantRange(true),
-                                 /*MayIncludeUndef=*/true);
+                                 /*MayIncludeUndef=*/true, CheckWiden);
       return markOverdefined();
     }
 
@@ -380,7 +390,7 @@ public:
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
     return markConstantRange(
         std::move(NewR),
-        /*MayIncludeUndef=*/RHS.isConstantRangeIncludingUndef());
+        /*MayIncludeUndef=*/RHS.isConstantRangeIncludingUndef(), CheckWiden);
   }
 
   // Compares this symbolic value with Other using Pred and returns either
@@ -412,7 +422,9 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+static_assert(sizeof(ValueLatticeElement) <= 40,
+              "size of ValueLatticeElement changed unexpectedly");
 
+raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif

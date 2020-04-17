@@ -1,4 +1,16 @@
-#define clz(a) (sizeof(a) == 8 ? __builtin_clzll(a) : __builtin_clz(a))
+//===-- int_div_impl.inc - Integer division ---------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Helpers used by __udivsi3, __umodsi3, __udivdi3, and __umodsi3.
+//
+//===----------------------------------------------------------------------===//
+
+#define clz(a) (sizeof(a) == sizeof(unsigned long long) ? __builtin_clzll(a) : __builtin_clz(a))
 
 // Adapted from Figure 3-40 of The PowerPC Compiler Writer's Guide
 static __inline fixuint_t __udivXi3(fixuint_t n, fixuint_t d) {
