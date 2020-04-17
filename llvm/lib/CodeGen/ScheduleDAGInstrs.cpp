@@ -294,6 +294,8 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   if (MRI.isConstantPhysReg(Reg))
     return;
 
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+
   // Optionally add output and anti dependencies. For anti
   // dependencies we use a latency of 0 because for a multi-issue
   // target we want to allow the defining instruction to issue
@@ -311,14 +313,12 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
       if (DefSU != SU &&
           (Kind != SDep::Output || !MO.isDead() ||
            !DefSU->getInstr()->registerDefIsDead(*Alias))) {
-        if (Kind == SDep::Anti)
-          DefSU->addPred(SDep(SU, Kind, /*Reg=*/*Alias));
-        else {
-          SDep Dep(SU, Kind, /*Reg=*/*Alias);
+        SDep Dep(SU, Kind, /*Reg=*/*Alias);
+        if (Kind != SDep::Anti)
           Dep.setLatency(
             SchedModel.computeOutputLatency(MI, OperIdx, DefSU->getInstr()));
-          DefSU->addPred(Dep);
-        }
+        ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep);
+        DefSU->addPred(Dep);
       }
     }
   }
