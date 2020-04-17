@@ -2173,7 +2173,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
       return false;
     // Return the scalar if it is a <1 x Ty> vector.
     if (CAZ->getNumElements() == 1)
-      return translate(*CAZ->getElementValue(0u), Reg);
+      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder.get());
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CAZ->getNumElements(); ++i) {
       Constant &Elt = *CAZ->getElementValue(i);
@@ -2183,7 +2183,8 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
-      return translate(*CV->getElementAsConstant(0), Reg);
+      return translateCopy(C, *CV->getElementAsConstant(0),
+                           *EntryBuilder.get());
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumElements(); ++i) {
       Constant &Elt = *CV->getElementAsConstant(i);
@@ -2201,7 +2202,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     }
   } else if (auto CV = dyn_cast<ConstantVector>(&C)) {
     if (CV->getNumOperands() == 1)
-      return translate(*CV->getOperand(0), Reg);
+      return translateCopy(C, *CV->getOperand(0), *EntryBuilder.get());
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumOperands(); ++i) {
       Ops.push_back(getOrCreateVReg(*CV->getOperand(i)));
