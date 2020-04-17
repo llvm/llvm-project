@@ -76,13 +76,12 @@ private:
                    unsigned &CurByte, raw_ostream &OS) const;
 
   void emitMemModRMByte(const MCInst &MI, unsigned Op, unsigned RegOpcodeField,
-                        uint64_t TSFlags, bool Rex, unsigned &CurByte,
+                        uint64_t TSFlags, bool HasREX, unsigned &CurByte,
                         raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
-  void emitPrefixImpl(unsigned &CurOp, unsigned &CurByte, bool &Rex,
-                      const MCInst &MI, const MCSubtargetInfo &STI,
-                      raw_ostream &OS) const;
+  bool emitPrefixImpl(unsigned &CurOp, unsigned &CurByte, const MCInst &MI,
+                      const MCSubtargetInfo &STI, raw_ostream &OS) const;
 
   void emitVEXOpcodePrefix(unsigned &CurByte, int MemOperand, const MCInst &MI,
                            raw_ostream &OS) const;
@@ -93,7 +92,8 @@ private:
   bool emitOpcodePrefix(unsigned &CurByte, int MemOperand, const MCInst &MI,
                         const MCSubtargetInfo &STI, raw_ostream &OS) const;
 
-  uint8_t determineREXPrefix(const MCInst &MI, int MemOperand) const;
+  bool emitREXPrefix(unsigned &CurByte, int MemOperand, const MCInst &MI,
+                     raw_ostream &OS) const;
 };
 
 } // end anonymous namespace
@@ -384,7 +384,7 @@ void X86MCCodeEmitter::emitSIBByte(unsigned SS, unsigned Index, unsigned Base,
 
 void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
                                         unsigned RegOpcodeField,
-                                        uint64_t TSFlags, bool Rex,
+                                        uint64_t TSFlags, bool HasREX,
                                         unsigned &CurByte, raw_ostream &OS,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
@@ -412,7 +412,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       default:
         return X86::reloc_riprel_4byte;
       case X86::MOV64rm:
-        assert(Rex);
+        assert(HasREX);
         return X86::reloc_riprel_4byte_movq_load;
       case X86::CALL64m:
       case X86::JMP64m:
@@ -426,8 +426,8 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm:
-        return Rex ? X86::reloc_riprel_4byte_relax_rex
-                   : X86::reloc_riprel_4byte_relax;
+        return HasREX ? X86::reloc_riprel_4byte_relax_rex
+                      : X86::reloc_riprel_4byte_relax;
       }
     }();
 
@@ -649,8 +649,11 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
                   CurByte, OS, Fixups);
 }
 
-void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
-                                      bool &Rex, const MCInst &MI,
+/// Emit all instruction prefixes.
+///
+/// \returns true if REX prefix is used, otherwise returns false.
+bool X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
+                                      const MCInst &MI,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &OS) const {
   uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
@@ -696,10 +699,11 @@ void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
 
   // Encoding type for this instruction.
   uint64_t Encoding = TSFlags & X86II::EncodingMask;
-  if (Encoding == 0)
-    Rex = emitOpcodePrefix(CurByte, MemoryOperand, MI, STI, OS);
-  else
+  bool HasREX = false;
+  if (Encoding)
     emitVEXOpcodePrefix(CurByte, MemoryOperand, MI, OS);
+  else
+    HasREX = emitOpcodePrefix(CurByte, MemoryOperand, MI, STI, OS);
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
@@ -748,6 +752,8 @@ void X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, unsigned &CurByte,
     break;
   }
   }
+
+  return HasREX;
 }
 
 /// AVX instructions are encoded using a opcode prefix called VEX.
@@ -1181,97 +1187,107 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(unsigned &CurByte, int MemOperand,
   }
 }
 
-/// Determine if the MCInst has to be encoded with a X86-64 REX prefix which
-/// specifies 1) 64-bit instructions, 2) non-default operand size, and 3) use
-/// of X86-64 extended registers.
-uint8_t X86MCCodeEmitter::determineREXPrefix(const MCInst &MI,
-                                             int MemOperand) const {
-  uint8_t REX = 0;
-  bool UsesHighByteReg = false;
+/// Emit REX prefix which specifies
+///   1) 64-bit instructions,
+///   2) non-default operand size, and
+///   3) use of X86-64 extended registers.
+///
+/// \returns true if REX prefix is used, otherwise returns false.
+bool X86MCCodeEmitter::emitREXPrefix(unsigned &CurByte, int MemOperand,
+                                     const MCInst &MI, raw_ostream &OS) const {
+  uint8_t REX = [&, MemOperand]() {
+    uint8_t REX = 0;
+    bool UsesHighByteReg = false;
 
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  uint64_t TSFlags = Desc.TSFlags;
+    const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+    uint64_t TSFlags = Desc.TSFlags;
 
-  if (TSFlags & X86II::REX_W)
-    REX |= 1 << 3; // set REX.W
+    if (TSFlags & X86II::REX_W)
+      REX |= 1 << 3; // set REX.W
 
-  if (MI.getNumOperands() == 0)
+    if (MI.getNumOperands() == 0)
+      return REX;
+
+    unsigned NumOps = MI.getNumOperands();
+    unsigned CurOp = X86II::getOperandBias(Desc);
+
+    // If it accesses SPL, BPL, SIL, or DIL, then it requires a 0x40 REX prefix.
+    for (unsigned i = CurOp; i != NumOps; ++i) {
+      const MCOperand &MO = MI.getOperand(i);
+      if (!MO.isReg())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
+        UsesHighByteReg = true;
+      if (X86II::isX86_64NonExtLowByteReg(Reg))
+        // FIXME: The caller of determineREXPrefix slaps this prefix onto
+        // anything that returns non-zero.
+        REX |= 0x40; // REX fixed encoding prefix
+    }
+
+    switch (TSFlags & X86II::FormMask) {
+    case X86II::AddRegFrm:
+      REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
+      break;
+    case X86II::MRMSrcReg:
+    case X86II::MRMSrcRegCC:
+      REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
+      REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
+      break;
+    case X86II::MRMSrcMem:
+    case X86II::MRMSrcMemCC:
+      REX |= isREXExtendedReg(MI, CurOp++) << 2;                        // REX.R
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
+      CurOp += X86::AddrNumOperands;
+      break;
+    case X86II::MRMDestReg:
+      REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
+      REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
+      break;
+    case X86II::MRMDestMem:
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
+      CurOp += X86::AddrNumOperands;
+      REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
+      break;
+    case X86II::MRMXmCC:
+    case X86II::MRMXm:
+    case X86II::MRM0m:
+    case X86II::MRM1m:
+    case X86II::MRM2m:
+    case X86II::MRM3m:
+    case X86II::MRM4m:
+    case X86II::MRM5m:
+    case X86II::MRM6m:
+    case X86II::MRM7m:
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
+      REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
+      break;
+    case X86II::MRMXrCC:
+    case X86II::MRMXr:
+    case X86II::MRM0r:
+    case X86II::MRM1r:
+    case X86II::MRM2r:
+    case X86II::MRM3r:
+    case X86II::MRM4r:
+    case X86II::MRM5r:
+    case X86II::MRM6r:
+    case X86II::MRM7r:
+      REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
+      break;
+    }
+    if (REX && UsesHighByteReg)
+      report_fatal_error(
+          "Cannot encode high byte register in REX-prefixed instruction");
     return REX;
+  }();
 
-  unsigned NumOps = MI.getNumOperands();
-  unsigned CurOp = X86II::getOperandBias(Desc);
+  if (!REX)
+    return false;
 
-  // If it accesses SPL, BPL, SIL, or DIL, then it requires a 0x40 REX prefix.
-  for (unsigned i = CurOp; i != NumOps; ++i) {
-    const MCOperand &MO = MI.getOperand(i);
-    if (!MO.isReg())
-      continue;
-    unsigned Reg = MO.getReg();
-    if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
-      UsesHighByteReg = true;
-    if (X86II::isX86_64NonExtLowByteReg(Reg))
-      // FIXME: The caller of determineREXPrefix slaps this prefix onto anything
-      // that returns non-zero.
-      REX |= 0x40; // REX fixed encoding prefix
-  }
-
-  switch (TSFlags & X86II::FormMask) {
-  case X86II::AddRegFrm:
-    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
-    break;
-  case X86II::MRMSrcReg:
-  case X86II::MRMSrcRegCC:
-    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
-    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
-    break;
-  case X86II::MRMSrcMem:
-  case X86II::MRMSrcMemCC:
-    REX |= isREXExtendedReg(MI, CurOp++) << 2;                        // REX.R
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
-    CurOp += X86::AddrNumOperands;
-    break;
-  case X86II::MRMDestReg:
-    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
-    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
-    break;
-  case X86II::MRMDestMem:
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
-    CurOp += X86::AddrNumOperands;
-    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
-    break;
-  case X86II::MRMXmCC:
-  case X86II::MRMXm:
-  case X86II::MRM0m:
-  case X86II::MRM1m:
-  case X86II::MRM2m:
-  case X86II::MRM3m:
-  case X86II::MRM4m:
-  case X86II::MRM5m:
-  case X86II::MRM6m:
-  case X86II::MRM7m:
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrBaseReg) << 0;  // REX.B
-    REX |= isREXExtendedReg(MI, MemOperand + X86::AddrIndexReg) << 1; // REX.X
-    break;
-  case X86II::MRMXrCC:
-  case X86II::MRMXr:
-  case X86II::MRM0r:
-  case X86II::MRM1r:
-  case X86II::MRM2r:
-  case X86II::MRM3r:
-  case X86II::MRM4r:
-  case X86II::MRM5r:
-  case X86II::MRM6r:
-  case X86II::MRM7r:
-    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
-    break;
-  }
-  if (REX && UsesHighByteReg)
-    report_fatal_error(
-        "Cannot encode high byte register in REX-prefixed instruction");
-
-  return REX;
+  emitByte(0x40 | REX, CurByte, OS);
+  return true;
 }
 
 /// Emit segment override opcode prefix as needed.
@@ -1289,7 +1305,7 @@ void X86MCCodeEmitter::emitSegmentOverridePrefix(unsigned &CurByte,
 /// \param MemOperand the operand # of the start of a memory operand if present.
 /// If not present, it is -1.
 ///
-/// \returns true if a REX prefix was used.
+/// \returns true if REX prefix is used, otherwise returns false.
 bool X86MCCodeEmitter::emitOpcodePrefix(unsigned &CurByte, int MemOperand,
                                         const MCInst &MI,
                                         const MCSubtargetInfo &STI,
@@ -1297,7 +1313,6 @@ bool X86MCCodeEmitter::emitOpcodePrefix(unsigned &CurByte, int MemOperand,
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
 
-  bool Ret = false;
   // Emit the operand size opcode prefix as needed.
   if ((TSFlags & X86II::OpSizeMask) ==
       (STI.hasFeature(X86::Mode16Bit) ? X86II::OpSize32 : X86II::OpSize16))
@@ -1324,15 +1339,11 @@ bool X86MCCodeEmitter::emitOpcodePrefix(unsigned &CurByte, int MemOperand,
   }
 
   // Handle REX prefix.
-  // FIXME: Can this come before F2 etc to simplify emission?
-  if (STI.hasFeature(X86::Mode64Bit)) {
-    if (uint8_t REX = determineREXPrefix(MI, MemOperand)) {
-      emitByte(0x40 | REX, CurByte, OS);
-      Ret = true;
-    }
-  } else {
-    assert(!(TSFlags & X86II::REX_W) && "REX.W requires 64bit mode.");
-  }
+  assert((STI.hasFeature(X86::Mode64Bit) || !(TSFlags & X86II::REX_W)) &&
+         "REX.W requires 64bit mode.");
+  bool HasREX = STI.hasFeature(X86::Mode64Bit)
+                    ? emitREXPrefix(CurByte, MemOperand, MI, OS)
+                    : false;
 
   // 0x0F escape code must be emitted just before the opcode.
   switch (TSFlags & X86II::OpMapMask) {
@@ -1352,7 +1363,8 @@ bool X86MCCodeEmitter::emitOpcodePrefix(unsigned &CurByte, int MemOperand,
     emitByte(0x3A, CurByte, OS);
     break;
   }
-  return Ret;
+
+  return HasREX;
 }
 
 void X86MCCodeEmitter::emitPrefix(const MCInst &MI, raw_ostream &OS,
@@ -1370,8 +1382,7 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, raw_ostream &OS,
   // Keep track of the current byte being emitted.
   unsigned CurByte = 0;
 
-  bool Rex = false;
-  emitPrefixImpl(CurOp, CurByte, Rex, MI, STI, OS);
+  emitPrefixImpl(CurOp, CurByte, MI, STI, OS);
 }
 
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -1391,8 +1402,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Keep track of the current byte being emitted.
   unsigned CurByte = 0;
 
-  bool Rex = false;
-  emitPrefixImpl(CurOp, CurByte, Rex, MI, STI, OS);
+  bool HasREX = emitPrefixImpl(CurOp, CurByte, MI, STI, OS);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
@@ -1497,7 +1507,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       ++SrcRegNum;
 
     emitMemModRMByte(MI, CurOp, getX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
-                     Rex, CurByte, OS, Fixups, STI);
+                     HasREX, CurByte, OS, Fixups, STI);
     CurOp = SrcRegNum + 1;
     break;
   }
@@ -1570,7 +1580,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitByte(BaseOpcode, CurByte, OS);
 
     emitMemModRMByte(MI, FirstMemOp, getX86RegNum(MI.getOperand(CurOp)),
-                     TSFlags, Rex, CurByte, OS, Fixups, STI);
+                     TSFlags, HasREX, CurByte, OS, Fixups, STI);
     CurOp = FirstMemOp + X86::AddrNumOperands;
     if (HasVEX_I8Reg)
       I8RegNum = getX86RegEncoding(MI, CurOp++);
@@ -1582,7 +1592,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitByte(BaseOpcode, CurByte, OS);
 
     emitMemModRMByte(MI, FirstMemOp, getX86RegNum(MI.getOperand(CurOp)),
-                     TSFlags, Rex, CurByte, OS, Fixups, STI);
+                     TSFlags, HasREX, CurByte, OS, Fixups, STI);
     CurOp = FirstMemOp + X86::AddrNumOperands;
     ++CurOp; // Encoded in VEX.VVVV.
     break;
@@ -1599,7 +1609,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitByte(BaseOpcode, CurByte, OS);
 
     emitMemModRMByte(MI, FirstMemOp, getX86RegNum(MI.getOperand(CurOp)),
-                     TSFlags, Rex, CurByte, OS, Fixups, STI);
+                     TSFlags, HasREX, CurByte, OS, Fixups, STI);
     CurOp = FirstMemOp + X86::AddrNumOperands;
     break;
   }
@@ -1612,7 +1622,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitByte(BaseOpcode + CC, CurByte, OS);
 
     emitMemModRMByte(MI, FirstMemOp, getX86RegNum(MI.getOperand(RegOp)),
-                     TSFlags, Rex, CurByte, OS, Fixups, STI);
+                     TSFlags, HasREX, CurByte, OS, Fixups, STI);
     break;
   }
 
@@ -1651,7 +1661,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     unsigned CC = MI.getOperand(CurOp++).getImm();
     emitByte(BaseOpcode + CC, CurByte, OS);
 
-    emitMemModRMByte(MI, FirstMemOp, 0, TSFlags, Rex, CurByte, OS, Fixups, STI);
+    emitMemModRMByte(MI, FirstMemOp, 0, TSFlags, HasREX, CurByte, OS, Fixups,
+                     STI);
     break;
   }
 
@@ -1671,7 +1682,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitByte(BaseOpcode, CurByte, OS);
     emitMemModRMByte(MI, CurOp,
                      (Form == X86II::MRMXm) ? 0 : Form - X86II::MRM0m, TSFlags,
-                     Rex, CurByte, OS, Fixups, STI);
+                     HasREX, CurByte, OS, Fixups, STI);
     CurOp += X86::AddrNumOperands;
     break;
 
