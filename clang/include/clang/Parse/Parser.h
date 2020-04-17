@@ -2729,7 +2729,6 @@ private:
                                 SourceLocation &EllipsisLoc);
   void ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                                SourceLocation *endLoc = nullptr);
-  ExprResult ParseExtIntegerArgument();
 
   void ParsePtrauthQualifier(ParsedAttributes &Attrs);
 
