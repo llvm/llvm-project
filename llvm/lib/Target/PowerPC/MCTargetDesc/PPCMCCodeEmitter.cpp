@@ -193,8 +193,9 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCExpr *Expr = MO.getExpr();
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
     (void)SRE;
-    assert(SRE->getKind() == MCSymbolRefExpr::VK_PCREL &&
-           "VariantKind must be VK_PCREL");
+    assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
+            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL) &&
+           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
     Fixups.push_back(
         MCFixup::create(IsLittleEndian ? 0 : 1, Expr,
                         static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
