@@ -1169,7 +1169,7 @@ static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
   return Valid;
 }
 
-static void AddReturnAttributes(CallSite CS, ValueToValueMapTy &VMap) {
+static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
   if (!UpdateReturnAttributes)
     return;
 
