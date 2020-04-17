@@ -329,18 +329,19 @@ protected:
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
-  const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
+  const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
   mutable DenseMap<const DILocation *, const FunctionSamples *> DILocation2SampleMap;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
-  bool inlineCallInstruction(Instruction *I);
+  bool inlineCallInstruction(CallBase &CB);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   // Inline cold/small functions in addition to hot ones
-  bool shouldInlineColdCallee(Instruction &CallInst);
+  bool shouldInlineColdCallee(CallBase &CallInst);
   void emitOptimizationRemarksForInlineCandidates(
-    const SmallVector<Instruction *, 10> &Candidates, const Function &F, bool Hot);
+      const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
+      bool Hot);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -718,9 +719,9 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
   // it means that the inlined callsite has no sample, thus the call
   // instruction should have 0 count.
-  if ((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
-      !cast<CallBase>(Inst).isIndirectCall() && findCalleeFunctionSamples(Inst))
-    return 0;
+  if (auto *CB = dyn_cast<CallBase>(&Inst))
+    if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
+      return 0;
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = FunctionSamples::getOffset(DIL);
@@ -808,7 +809,7 @@ bool SampleProfileLoader::computeBlockWeights(Function &F) {
 ///
 /// \returns The FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
-SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
+SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL) {
     return nullptr;
@@ -892,15 +893,11 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
-// FIXME(CallSite): Parameter should be CallBase&, as it's assumed to be that,
-// and non-null.
-bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
-  assert(isa<CallInst>(I) || isa<InvokeInst>(I));
-  CallBase &CS = *cast<CallBase>(I);
-  Function *CalledFunction = CS.getCalledFunction();
+bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
+  Function *CalledFunction = CB.getCalledFunction();
   assert(CalledFunction);
-  DebugLoc DLoc = I->getDebugLoc();
-  BasicBlock *BB = I->getParent();
+  DebugLoc DLoc = CB.getDebugLoc();
+  BasicBlock *BB = CB.getParent();
   InlineParams Params = getInlineParams();
   Params.ComputeFullInlineCost = true;
   // Checks if there is anything in the reachable portion of the callee at
@@ -909,16 +906,15 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   // when cost exceeds threshold without checking all IRs in the callee.
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
-  InlineCost Cost =
-      getInlineCost(cast<CallBase>(*I), Params, GetTTI(*CalledFunction), GetAC,
-                    None, GetTLI, nullptr, nullptr);
+  InlineCost Cost = getInlineCost(CB, Params, GetTTI(*CalledFunction), GetAC,
+                                  None, GetTLI, nullptr, nullptr);
   if (Cost.isNever()) {
     ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineFail", DLoc, BB)
               << "incompatible inlining");
     return false;
   }
   InlineFunctionInfo IFI(nullptr, &GetAC);
-  if (InlineFunction(CS, IFI).isSuccess()) {
+  if (InlineFunction(CB, IFI).isSuccess()) {
     // The call to InlineFunction erases I, so we can't pass it here.
     ORE->emit(OptimizationRemark(CSINLINE_DEBUG, "InlineSuccess", DLoc, BB)
               << "inlined callee '" << ore::NV("Callee", CalledFunction)
@@ -928,26 +924,25 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   return false;
 }
 
-bool SampleProfileLoader::shouldInlineColdCallee(Instruction &CallInst) {
+bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (!ProfileSizeInline)
     return false;
 
-  Function *Callee = cast<CallBase>(CallInst).getCalledFunction();
+  Function *Callee = CallInst.getCalledFunction();
   if (Callee == nullptr)
     return false;
 
-  InlineCost Cost =
-      getInlineCost(cast<CallBase>(CallInst), getInlineParams(),
-                    GetTTI(*Callee), GetAC, None, GetTLI, nullptr, nullptr);
+  InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
+                                  GetAC, None, GetTLI, nullptr, nullptr);
 
   return Cost.getCost() <= SampleColdCallSiteThreshold;
 }
 
 void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
-    const SmallVector<Instruction *, 10> &Candidates, const Function &F,
+    const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
     bool Hot) {
   for (auto I : Candidates) {
-    Function *CalledFunction = cast<CallBase>(I)->getCalledFunction();
+    Function *CalledFunction = I->getCalledFunction();
     if (CalledFunction) {
       ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineAttempt", 
                                            I->getDebugLoc(), I->getParent())
@@ -984,45 +979,43 @@ bool SampleProfileLoader::inlineHotFunctions(
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
 
-  // FIXME(CallSite): refactor the vectors here, as they operate with CallBase
-  // values
-  DenseMap<Instruction *, const FunctionSamples *> localNotInlinedCallSites;
+  DenseMap<CallBase *, const FunctionSamples *> localNotInlinedCallSites;
   bool Changed = false;
   while (true) {
     bool LocalChanged = false;
-    SmallVector<Instruction *, 10> CIS;
+    SmallVector<CallBase *, 10> CIS;
     for (auto &BB : F) {
       bool Hot = false;
-      SmallVector<Instruction *, 10> AllCandidates;
-      SmallVector<Instruction *, 10> ColdCandidates;
+      SmallVector<CallBase *, 10> AllCandidates;
+      SmallVector<CallBase *, 10> ColdCandidates;
       for (auto &I : BB.getInstList()) {
         const FunctionSamples *FS = nullptr;
-        if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
-            !isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(I))) {
-          AllCandidates.push_back(&I);
-          if (FS->getEntrySamples() > 0)
-            localNotInlinedCallSites.try_emplace(&I, FS);
-          if (callsiteIsHot(FS, PSI))
-            Hot = true;
-          else if (shouldInlineColdCallee(I))
-            ColdCandidates.push_back(&I);
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(*CB))) {
+            AllCandidates.push_back(CB);
+            if (FS->getEntrySamples() > 0)
+              localNotInlinedCallSites.try_emplace(CB, FS);
+            if (callsiteIsHot(FS, PSI))
+              Hot = true;
+            else if (shouldInlineColdCallee(*CB))
+              ColdCandidates.push_back(CB);
+          }
         }
       }
       if (Hot) {
         CIS.insert(CIS.begin(), AllCandidates.begin(), AllCandidates.end());
         emitOptimizationRemarksForInlineCandidates(AllCandidates, F, true);
-      }
-      else {
+      } else {
         CIS.insert(CIS.begin(), ColdCandidates.begin(), ColdCandidates.end());
         emitOptimizationRemarksForInlineCandidates(ColdCandidates, F, false);
       }
     }
-    for (auto I : CIS) {
-      Function *CalledFunction = cast<CallBase>(I)->getCalledFunction();
+    for (CallBase *I : CIS) {
+      Function *CalledFunction = I->getCalledFunction();
       // Do not inline recursive calls.
       if (CalledFunction == &F)
         continue;
-      if (cast<CallBase>(I)->isIndirectCall()) {
+      if (I->isIndirectCall()) {
         if (PromotedInsns.count(I))
           continue;
         uint64_t Sum;
@@ -1049,7 +1042,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (R != SymbolMap.end() && R->getValue() &&
               !R->getValue()->isDeclaration() &&
               R->getValue()->getSubprogram() &&
-              isLegalToPromote(*cast<CallBase>(I), R->getValue(), &Reason)) {
+              isLegalToPromote(*I, R->getValue(), &Reason)) {
             uint64_t C = FS->getEntrySamples();
             Instruction *DI =
                 pgo::promoteIndirectCall(I, R->getValue(), C, Sum, false, ORE);
@@ -1057,7 +1050,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             PromotedInsns.insert(I);
             // If profile mismatches, we should not attempt to inline DI.
             if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
-                inlineCallInstruction(DI)) {
+                inlineCallInstruction(*cast<CallBase>(DI))) {
               localNotInlinedCallSites.erase(I);
               LocalChanged = true;
               ++NumCSInlined;
@@ -1070,7 +1063,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         }
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
-        if (inlineCallInstruction(I)) {
+        if (inlineCallInstruction(*I)) {
           localNotInlinedCallSites.erase(I);
           LocalChanged = true;
           ++NumCSInlined;
@@ -1089,8 +1082,8 @@ bool SampleProfileLoader::inlineHotFunctions(
 
   // Accumulate not inlined callsite information into notInlinedSamples
   for (const auto &Pair : localNotInlinedCallSites) {
-    Instruction *I = Pair.getFirst();
-    Function *Callee = cast<CallBase>(I)->getCalledFunction();
+    CallBase *I = Pair.getFirst();
+    Function *Callee = I->getCalledFunction();
     if (!Callee || Callee->isDeclaration())
       continue;
 
