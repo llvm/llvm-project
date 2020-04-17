@@ -107,7 +107,7 @@ if (GPU_CODEGEN)
   llvm_map_components_to_libnames(nvptx_libs NVPTX)
 endif ()
 
-if (LLVM_LINK_LLVM_DYLIB)
+if (LLVM_LINK_LLVM_DYLIB AND NOT LLVM_POLLY_LINK_INTO_TOOLS)
   # The shlib/dylib contains all the LLVM components
   # (including NVPTX is enabled) already. Adding them to target_link_libraries
   # would cause them being twice in the address space
