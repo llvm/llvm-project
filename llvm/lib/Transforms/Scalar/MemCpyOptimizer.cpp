@@ -1242,15 +1242,15 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
 }
 
 /// This is called on every byval argument in call sites.
-bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
-  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
+  const DataLayout &DL = CS.getCaller()->getParent()->getDataLayout();
   // Find out what feeds this byval argument.
-  Value *ByValArg = CB.getArgOperand(ArgNo);
+  Value *ByValArg = CS.getArgument(ArgNo);
   Type *ByValTy = cast<PointerType>(ByValArg->getType())->getElementType();
   uint64_t ByValSize = DL.getTypeAllocSize(ByValTy);
   MemDepResult DepInfo = MD->getPointerDependencyFrom(
       MemoryLocation(ByValArg, LocationSize::precise(ByValSize)), true,
-      CB.getIterator(), CB.getParent());
+      CS.getInstruction()->getIterator(), CS.getInstruction()->getParent());
   if (!DepInfo.isClobber())
     return false;
 
@@ -1269,16 +1269,16 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
   // then it is some target specific value that we can't know.
-  MaybeAlign ByValAlign = CB.getParamAlign(ArgNo);
-  if (!ByValAlign) return false;
+  unsigned ByValAlign = CS.getParamAlignment(ArgNo);
+  if (ByValAlign == 0) return false;
 
   // If it is greater than the memcpy, then we check to see if we can force the
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
-  if (MDep->getSourceAlign() < ByValAlign &&
-      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign->value(), DL,
-                                 &CB, &AC, &DT) < ByValAlign->value())
+  if (MDep->getSourceAlignment() < ByValAlign &&
+      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL,
+                                 CS.getInstruction(), &AC, &DT) < ByValAlign)
     return false;
 
   // The address space of the memcpy source must match the byval argument
@@ -1297,14 +1297,14 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // not just the defining memcpy.
   MemDepResult SourceDep = MD->getPointerDependencyFrom(
       MemoryLocation::getForSource(MDep), false,
-      CB.getIterator(), MDep->getParent());
+      CS.getInstruction()->getIterator(), MDep->getParent());
   if (!SourceDep.isClobber() || SourceDep.getInst() != MDep)
     return false;
 
   Value *TmpCast = MDep->getSource();
   if (MDep->getSource()->getType() != ByValArg->getType()) {
     BitCastInst *TmpBitCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
-                                              "tmpcast", &CB);
+                                              "tmpcast", CS.getInstruction());
     // Set the tmpcast's DebugLoc to MDep's
     TmpBitCast->setDebugLoc(MDep->getDebugLoc());
     TmpCast = TmpBitCast;
@@ -1312,10 +1312,10 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
                     << "  " << *MDep << "\n"
-                    << "  " << CB << "\n");
+                    << "  " << *CS.getInstruction() << "\n");
 
   // Otherwise we're good!  Update the byval argument.
-  CB.setArgOperand(ArgNo, TmpCast);
+  CS.setArgument(ArgNo, TmpCast);
   ++NumMemCpyInstr;
   return true;
 }
@@ -1349,10 +1349,10 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
         RepeatInstruction = processMemCpy(M);
       else if (MemMoveInst *M = dyn_cast<MemMoveInst>(I))
         RepeatInstruction = processMemMove(M);
-      else if (auto *CB = dyn_cast<CallBase>(I)) {
-        for (unsigned I = 0, E = CB->arg_size(); I != E; ++I)
-          if (CB->isByValArgument(I))
-            MadeChange |= processByValArgument(*CB, I);
+      else if (auto CS = CallSite(I)) {
+        for (unsigned i = 0, e = CS.arg_size(); i != e; ++i)
+          if (CS.isByValArgument(i))
+            MadeChange |= processByValArgument(CS, i);
       }
 
       // Reprocess the instruction if desired.

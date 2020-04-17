@@ -217,6 +217,23 @@ struct IRPosition {
     return IRPosition(const_cast<CallBase &>(CB), Kind(ArgNo));
   }
 
+  /// Create a position describing the function scope of \p ICS.
+  static const IRPosition callsite_function(ImmutableCallSite ICS) {
+    return IRPosition::callsite_function(cast<CallBase>(*ICS.getInstruction()));
+  }
+
+  /// Create a position describing the returned value of \p ICS.
+  static const IRPosition callsite_returned(ImmutableCallSite ICS) {
+    return IRPosition::callsite_returned(cast<CallBase>(*ICS.getInstruction()));
+  }
+
+  /// Create a position describing the argument of \p ICS at position \p ArgNo.
+  static const IRPosition callsite_argument(ImmutableCallSite ICS,
+                                            unsigned ArgNo) {
+    return IRPosition::callsite_argument(cast<CallBase>(*ICS.getInstruction()),
+                                         ArgNo);
+  }
+
   /// Create a position describing the argument of \p ACS at position \p ArgNo.
   static const IRPosition callsite_argument(AbstractCallSite ACS,
                                             unsigned ArgNo) {
@@ -401,9 +418,9 @@ struct IRPosition {
       return;
 
     AttributeList AttrList;
-    auto *CB = dyn_cast<CallBase>(&getAnchorValue());
-    if (CB)
-      AttrList = CB->getAttributes();
+    CallSite CS = CallSite(&getAnchorValue());
+    if (CS)
+      AttrList = CS.getAttributes();
     else
       AttrList = getAssociatedFunction()->getAttributes();
 
@@ -411,8 +428,8 @@ struct IRPosition {
     for (Attribute::AttrKind AK : AKs)
       AttrList = AttrList.removeAttribute(Ctx, getAttrIdx(), AK);
 
-    if (CB)
-      CB->setAttributes(AttrList);
+    if (CS)
+      CS.setAttributes(AttrList);
     else
       getAssociatedFunction()->setAttributes(AttrList);
   }
