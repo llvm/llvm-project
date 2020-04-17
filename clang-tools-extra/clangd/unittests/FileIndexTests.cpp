@@ -532,7 +532,7 @@ TEST(FileShardedIndexTest, Sharding) {
   }
   {
     // Should be stored in b.cc
-    IF.Refs = std::move(*refSlab(Sym1.ID, BSourceUri.c_str()).release());
+    IF.Refs = std::move(*refSlab(Sym1.ID, BSourceUri.c_str()));
   }
   {
     RelationSlab::Builder B;
