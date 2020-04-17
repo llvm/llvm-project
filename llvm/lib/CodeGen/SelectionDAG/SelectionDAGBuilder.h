@@ -518,7 +518,6 @@ public:
   void resolveOrClearDbgInfo();
 
   SDValue getValue(const Value *V);
-  bool findValue(const Value *V) const;
 
   /// Return the SDNode for the specified IR value if it exists.
   SDNode *getNodeForIRValue(const Value *V) {
