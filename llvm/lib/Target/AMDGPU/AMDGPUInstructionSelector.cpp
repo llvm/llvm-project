@@ -2330,6 +2330,8 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
                                                                   *MRI);
   const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(DstTy, *DstRB,
                                                                   *MRI);
+  if (!SrcRC || !DstRC)
+    return false;
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
       !RBI.constrainGenericRegister(IdxReg, AMDGPU::SReg_32RegClass, *MRI))
