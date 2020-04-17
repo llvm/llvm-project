@@ -2400,7 +2400,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     TargetIndexLocation Loc = Value.getTargetIndexLocation();
     // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
     // encoding is supported.
-    DwarfExpr.addWasmLocation(Loc.Index, Loc.Offset);
+    DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.addUnsignedConstant(RawBytes);

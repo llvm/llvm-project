@@ -42,6 +42,7 @@ public:
       SizeRefAddr = 6,
       SizeBlock = 7, ///< Preceding operand contains block size
       BaseTypeRef = 8,
+      WasmLocationArg = 30,
       SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
       SignedSize2 = SignBit | Size2,

@@ -798,6 +798,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         return make_error<GenericBinaryError>("Bad relocation global index",
                                               object_error::parse_failed);
       break;
+    case wasm::R_WASM_GLOBAL_INDEX_I32:
+      if (!isValidGlobalSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation global index",
+                                              object_error::parse_failed);
+      break;
     case wasm::R_WASM_EVENT_INDEX_LEB:
       if (!isValidEventSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation event index",
@@ -837,7 +842,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I32 ||
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I32 ||
         Reloc.Type == wasm::R_WASM_SECTION_OFFSET_I32 ||
-        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32)
+        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
+        Reloc.Type == wasm::R_WASM_GLOBAL_INDEX_I32)
       Size = 4;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
