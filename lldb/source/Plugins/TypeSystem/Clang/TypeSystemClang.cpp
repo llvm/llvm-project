@@ -3987,6 +3987,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Vector:
     return lldb::eTypeClassVector;
   case clang::Type::Builtin:
+  // Ext-Int is just an integer type.
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
     return lldb::eTypeClassBuiltin;
   case clang::Type::ObjCObjectPointer:
     return lldb::eTypeClassObjCObjectPointer;
@@ -4661,6 +4664,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // TODO: Set this to more than one???
     break;
 
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
+    return qual_type->isUnsignedIntegerType() ? lldb::eEncodingUint
+                                              : lldb::eEncodingSint;
+
   case clang::Type::Builtin:
     switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {
     case clang::BuiltinType::Void:
@@ -4914,6 +4922,11 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::ExtVector:
   case clang::Type::Vector:
     break;
+
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
+    return qual_type->isUnsignedIntegerType() ? lldb::eFormatUnsigned
+                                              : lldb::eFormatDecimal;
 
   case clang::Type::Builtin:
     switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {
@@ -7358,7 +7371,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
                     function_type->getReturnType())));
         cxx_conversion_decl->setType(method_qual_type);
         cxx_conversion_decl->setInlineSpecified(is_inline);
-        cxx_conversion_decl->setExplicitSpecifier(explicit_spec);        
+        cxx_conversion_decl->setExplicitSpecifier(explicit_spec);
         cxx_conversion_decl->setConstexprKind(CSK_unspecified);
         cxx_method_decl = cxx_conversion_decl;
       }

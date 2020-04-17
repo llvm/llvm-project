@@ -209,6 +209,15 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return createScalarTypeNode(OutName, getChar(), Size);
   }
 
+  if (const auto *EIT = dyn_cast<ExtIntType>(Ty)) {
+    SmallString<256> OutName;
+    llvm::raw_svector_ostream Out(OutName);
+    // Don't specify signed/unsigned since integer types can alias despite sign
+    // differences.
+    Out << "_ExtInt(" << EIT->getNumBits() << ')';
+    return createScalarTypeNode(OutName, getChar(), Size);
+  }
+
   // For now, handle any other kind of type conservatively.
   return getChar();
 }
