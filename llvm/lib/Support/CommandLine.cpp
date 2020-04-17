@@ -1581,9 +1581,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else {
     assert(ConsumeAfterOpt && NumPositionalRequired <= PositionalVals.size());
     unsigned ValNo = 0;
-    for (size_t j = 1, e = PositionalOpts.size(); j != e; ++j)
-      if (RequiresValue(PositionalOpts[j])) {
-        ErrorParsing |= ProvidePositionalOption(PositionalOpts[j],
+    for (size_t J = 0, E = PositionalOpts.size(); J != E; ++J)
+      if (RequiresValue(PositionalOpts[J])) {
+        ErrorParsing |= ProvidePositionalOption(PositionalOpts[J],
                                                 PositionalVals[ValNo].first,
                                                 PositionalVals[ValNo].second);
         ValNo++;
