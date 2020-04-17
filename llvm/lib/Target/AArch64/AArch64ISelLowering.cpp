@@ -8913,6 +8913,30 @@ SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,
                             DL, VT);
 }
 
+/// Set the IntrinsicInfo for the `aarch64_sve_st<N>` intrinsics.
+template <unsigned NumVecs>
+static bool setInfoSVEStN(AArch64TargetLowering::IntrinsicInfo &Info,
+                          const CallInst &CI) {
+  Info.opc = ISD::INTRINSIC_VOID;
+  // Retrieve EC from first vector argument.
+  const EVT VT = EVT::getEVT(CI.getArgOperand(0)->getType());
+  ElementCount EC = VT.getVectorElementCount();
+#ifndef NDEBUG
+  // Check the assumption that all input vectors are the same type.
+  for (unsigned I = 0; I < NumVecs; ++I)
+    assert(VT == EVT::getEVT(CI.getArgOperand(I)->getType()) &&
+           "Invalid type.");
+#endif
+  // memVT is `NumVecs * VT`.
+  Info.memVT = EVT::getVectorVT(CI.getType()->getContext(), VT.getScalarType(),
+                                EC * NumVecs);
+  Info.ptrVal = CI.getArgOperand(CI.getNumArgOperands() - 1);
+  Info.offset = 0;
+  Info.align.reset();
+  Info.flags = MachineMemOperand::MOStore;
+  return true;
+}
+
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
@@ -8922,6 +8946,12 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                unsigned Intrinsic) const {
   auto &DL = I.getModule()->getDataLayout();
   switch (Intrinsic) {
+  case Intrinsic::aarch64_sve_st2:
+    return setInfoSVEStN<2>(Info, I);
+  case Intrinsic::aarch64_sve_st3:
+    return setInfoSVEStN<3>(Info, I);
+  case Intrinsic::aarch64_sve_st4:
+    return setInfoSVEStN<4>(Info, I);
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
