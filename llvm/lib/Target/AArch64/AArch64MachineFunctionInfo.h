@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Function.h"
@@ -25,6 +26,10 @@
 #include <cassert>
 
 namespace llvm {
+
+namespace yaml {
+struct AArch64FunctionInfo;
+} // end namespace yaml
 
 class MachineInstr;
 
@@ -137,6 +142,7 @@ public:
     if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone))
       HasRedZone = false;
   }
+  void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
   unsigned getBytesInStackArgArea() const { return BytesInStackArgArea; }
   void setBytesInStackArgArea(unsigned bytes) { BytesInStackArgArea = bytes; }
@@ -332,6 +338,25 @@ private:
 
   DenseMap<int, std::pair<unsigned, MCSymbol *>> JumpTableEntryInfo;
 };
+
+namespace yaml {
+struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
+  Optional<bool> HasRedZone;
+
+  AArch64FunctionInfo() = default;
+  AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~AArch64FunctionInfo() = default;
+};
+
+template <> struct MappingTraits<AArch64FunctionInfo> {
+  static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
+    YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
+  }
+};
+
+} // end namespace yaml
 
 } // end namespace llvm
 

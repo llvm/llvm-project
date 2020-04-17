@@ -48,6 +48,7 @@ add_llvm_target(AArch64CodeGen
   AArch64InstructionSelector.cpp
   AArch64LegalizerInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64MachineFunctionInfo.cpp
   AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp
   AArch64PreLegalizerCombiner.cpp
