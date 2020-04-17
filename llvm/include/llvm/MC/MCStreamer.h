@@ -40,7 +40,6 @@ class AssemblerConstantPools;
 class formatted_raw_ostream;
 class MCAsmBackend;
 class MCCodeEmitter;
-struct MCCodePaddingContext;
 class MCContext;
 struct MCDwarfFrameInfo;
 class MCExpr;
