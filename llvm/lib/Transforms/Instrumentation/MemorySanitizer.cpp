@@ -3030,14 +3030,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  Constant *getPclmulMask(IRBuilder<> &IRB, unsigned Width, bool OddElements) {
-    SmallVector<Constant *, 8> Mask;
+  SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
+    SmallVector<int, 8> Mask;
     for (unsigned X = OddElements ? 1 : 0; X < Width; X += 2) {
-      Constant *C = ConstantInt::get(IRB.getInt32Ty(), X);
-      Mask.push_back(C);
-      Mask.push_back(C);
+      Mask.append(2, X);
     }
-    return ConstantVector::get(Mask);
+    return Mask;
   }
 
   // Instrument pclmul intrinsics.
@@ -3058,10 +3056,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     unsigned Imm = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
     Value *Shuf0 =
         IRB.CreateShuffleVector(getShadow(&I, 0), UndefValue::get(ShadowTy),
-                                getPclmulMask(IRB, Width, Imm & 0x01));
+                                getPclmulMask(Width, Imm & 0x01));
     Value *Shuf1 =
         IRB.CreateShuffleVector(getShadow(&I, 1), UndefValue::get(ShadowTy),
-                                getPclmulMask(IRB, Width, Imm & 0x10));
+                                getPclmulMask(Width, Imm & 0x10));
     ShadowAndOriginCombiner SOC(this, IRB);
     SOC.Add(Shuf0, getOrigin(&I, 0));
     SOC.Add(Shuf1, getOrigin(&I, 1));
