@@ -510,11 +510,10 @@ bool SIInstrInfo::shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1,
 static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, MCRegister DestReg,
-                              MCRegister SrcReg, bool KillSrc) {
+                              MCRegister SrcReg, bool KillSrc,
+                              const char *Msg = "illegal SGPR to VGPR copy") {
   MachineFunction *MF = MBB.getParent();
-  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(),
-                                        "illegal SGPR to VGPR copy",
-                                        DL, DS_Error);
+  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(), Msg, DL, DS_Error);
   LLVMContext &C = MF->getFunction().getContext();
   C.diagnose(IllegalCopy);
 
@@ -679,29 +678,61 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == &AMDGPU::VGPR_LO16RegClass || RC == &AMDGPU::VGPR_HI16RegClass) {
+  if (RC == &AMDGPU::VGPR_LO16RegClass || RC == &AMDGPU::VGPR_HI16RegClass ||
+      RC == &AMDGPU::SGPR_LO16RegClass) {
     assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-           AMDGPU::VGPR_HI16RegClass.contains(SrcReg));
+           AMDGPU::VGPR_HI16RegClass.contains(SrcReg) ||
+           AMDGPU::SGPR_LO16RegClass.contains(SrcReg));
 
-    bool DstLow = RC == &AMDGPU::VGPR_LO16RegClass;
-    bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg);
-    DestReg = RI.getMatchingSuperReg(DestReg,
-                                     DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                                     &AMDGPU::VGPR_32RegClass);
-    SrcReg = RI.getMatchingSuperReg(SrcReg,
-                                    SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                                    &AMDGPU::VGPR_32RegClass);
+    bool IsSGPRDst = AMDGPU::SGPR_LO16RegClass.contains(DestReg);
+    bool IsSGPRSrc = AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    bool DstLow = (RC == &AMDGPU::VGPR_LO16RegClass ||
+                   RC == &AMDGPU::SGPR_LO16RegClass);
+    bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
+                  AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    const TargetRegisterClass *DstRC = IsSGPRDst ? &AMDGPU::SGPR_32RegClass
+                                                 : &AMDGPU::VGPR_32RegClass;
+    const TargetRegisterClass *SrcRC = IsSGPRSrc ? &AMDGPU::SGPR_32RegClass
+                                                 : &AMDGPU::VGPR_32RegClass;
+    MCRegister NewDestReg =
+      RI.getMatchingSuperReg(DestReg, DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
+                             DstRC);
+    MCRegister NewSrcReg =
+      RI.getMatchingSuperReg(SrcReg, SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
+                             SrcRC);
 
-    auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), DestReg)
+    if (IsSGPRDst) {
+      if (!IsSGPRSrc) {
+        reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
+        return;
+      }
+
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), NewDestReg)
+        .addReg(NewSrcReg, getKillRegState(KillSrc));
+      return;
+    }
+
+    if (IsSGPRSrc && !ST.hasSDWAScalar()) {
+      if (!DstLow || !SrcLow) {
+        reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
+                          "Cannot use hi16 subreg on VI!");
+      }
+
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), NewDestReg)
+        .addReg(NewSrcReg, getKillRegState(KillSrc));
+      return;
+    }
+
+    auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
       .addImm(0) // src0_modifiers
-      .addReg(SrcReg)
+      .addReg(NewSrcReg)
       .addImm(0) // clamp
       .addImm(DstLow ? AMDGPU::SDWA::SdwaSel::WORD_0
                      : AMDGPU::SDWA::SdwaSel::WORD_1)
       .addImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
       .addImm(SrcLow ? AMDGPU::SDWA::SdwaSel::WORD_0
                      : AMDGPU::SDWA::SdwaSel::WORD_1)
-      .addReg(DestReg, RegState::Implicit | RegState::Undef);
+      .addReg(NewDestReg, RegState::Implicit | RegState::Undef);
     // First implicit operand is $exec.
     MIB->tieOperands(0, MIB->getNumOperands() - 1);
     return;
