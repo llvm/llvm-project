@@ -84,11 +84,17 @@ function(add_gen_header target_name)
 
   set(gen_hdr_script "${LIBC_BUILD_SCRIPTS_DIR}/gen_hdr.py")
 
+  file(GLOB td_includes ${LIBC_SOURCE_DIR}/spec/*.td)
+
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND $<TARGET_FILE:libc-hdrgen> -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+    COMMAND $<TARGET_FILE:libc-hdrgen> -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
+            --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
+            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${in_file} ${fq_data_files} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
+    DEPENDS ${in_file} ${fq_data_files} ${td_includes} 
+            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
   )
 
   get_fq_target_name(${target_name} fq_target_name)
