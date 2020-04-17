@@ -228,7 +228,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   case IRPosition::IRP_CALL_SITE:
   case IRPosition::IRP_CALL_SITE_RETURNED:
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    Attrs = ImmutableCallSite(&IRP.getAnchorValue()).getAttributes();
+    Attrs = cast<CallBase>(IRP.getAnchorValue()).getAttributes();
     break;
   }
 
@@ -253,7 +253,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   case IRPosition::IRP_CALL_SITE:
   case IRPosition::IRP_CALL_SITE_RETURNED:
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    CallSite(&IRP.getAnchorValue()).setAttributes(Attrs);
+    cast<CallBase>(IRP.getAnchorValue()).setAttributes(Attrs);
     break;
   case IRPosition::IRP_INVALID:
   case IRPosition::IRP_FLOAT:
@@ -269,7 +269,7 @@ const IRPosition IRPosition::TombstoneKey(256);
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
-  ImmutableCallSite ICS(&IRP.getAnchorValue());
+  const auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue());
   switch (IRP.getPositionKind()) {
   case IRPosition::IRP_INVALID:
   case IRPosition::IRP_FLOAT:
@@ -280,41 +280,40 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     IRPositions.emplace_back(IRPosition::function(*IRP.getAnchorScope()));
     return;
   case IRPosition::IRP_CALL_SITE:
-    assert(ICS && "Expected call site!");
+    assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles())
-      if (const Function *Callee = ICS.getCalledFunction())
+    if (!CB->hasOperandBundles())
+      if (const Function *Callee = CB->getCalledFunction())
         IRPositions.emplace_back(IRPosition::function(*Callee));
     return;
   case IRPosition::IRP_CALL_SITE_RETURNED:
-    assert(ICS && "Expected call site!");
+    assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles()) {
-      if (const Function *Callee = ICS.getCalledFunction()) {
+    if (!CB->hasOperandBundles()) {
+      if (const Function *Callee = CB->getCalledFunction()) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
           if (Arg.hasReturnedAttr()) {
             IRPositions.emplace_back(
-                IRPosition::callsite_argument(ICS, Arg.getArgNo()));
+                IRPosition::callsite_argument(*CB, Arg.getArgNo()));
             IRPositions.emplace_back(
-                IRPosition::value(*ICS.getArgOperand(Arg.getArgNo())));
+                IRPosition::value(*CB->getArgOperand(Arg.getArgNo())));
             IRPositions.emplace_back(IRPosition::argument(Arg));
           }
       }
     }
-    IRPositions.emplace_back(
-        IRPosition::callsite_function(cast<CallBase>(*ICS.getInstruction())));
+    IRPositions.emplace_back(IRPosition::callsite_function(*CB));
     return;
   case IRPosition::IRP_CALL_SITE_ARGUMENT: {
     int ArgNo = IRP.getArgNo();
-    assert(ICS && ArgNo >= 0 && "Expected call site!");
+    assert(CB && ArgNo >= 0 && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles()) {
-      const Function *Callee = ICS.getCalledFunction();
+    if (!CB->hasOperandBundles()) {
+      const Function *Callee = CB->getCalledFunction();
       if (Callee && Callee->arg_size() > unsigned(ArgNo))
         IRPositions.emplace_back(IRPosition::argument(*Callee->getArg(ArgNo)));
       if (Callee)
@@ -369,8 +368,8 @@ bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
     return false;
 
   AttributeList AttrList;
-  if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
-    AttrList = ICS.getAttributes();
+  if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+    AttrList = CB->getAttributes();
   else
     AttrList = getAssociatedFunction()->getAttributes();
 
@@ -510,12 +509,12 @@ bool Attributor::isAssumedDead(const Use &U,
     return isAssumedDead(IRPosition::value(*U.get()), QueryingAA, FnLivenessAA,
                          CheckBBLivenessOnly, DepClass);
 
-  if (CallSite CS = CallSite(UserI)) {
+  if (auto *CB = dyn_cast<CallBase>(UserI)) {
     // For call site argument uses we can check if the argument is
     // unused/dead.
-    if (CS.isArgOperand(&U)) {
+    if (CB->isArgOperand(&U)) {
       const IRPosition &CSArgPos =
-          IRPosition::callsite_argument(CS, CS.getArgumentNo(&U));
+          IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U));
       return isAssumedDead(CSArgPos, QueryingAA, FnLivenessAA,
                            CheckBBLivenessOnly, DepClass);
     }
@@ -1617,8 +1616,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     // Note: There are no concrete attributes now so this is initially empty.
     switch (I.getOpcode()) {
     default:
-      assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
-             "New call site/base instruction type needs to be known in the "
+      assert(!isa<CallBase>(&I) &&
+             "New call base instruction type needs to be known in the "
              "Attributor.");
       break;
     case Instruction::Call:
@@ -1687,8 +1686,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   InformationCache::FunctionInfo &FI = InfoCache.getFunctionInfo(F);
   if (!isModulePass() && !FI.CalledViaMustTail) {
     for (const Use &U : F.uses())
-      if (ImmutableCallSite ICS = ImmutableCallSite(U.getUser()))
-        if (ICS.isCallee(&U) && ICS.isMustTailCall())
+      if (const auto *CB = dyn_cast<CallBase>(U.getUser()))
+        if (CB->isCallee(&U) && CB->isMustTailCall())
           FI.CalledViaMustTail = true;
   }
 
@@ -1800,14 +1799,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   }
 
   auto CallSitePred = [&](Instruction &I) -> bool {
-    CallSite CS(&I);
-    IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+    auto *CB = dyn_cast<CallBase>(&I);
+    IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
 
     // Call sites might be dead if they do not have side effects and no live
     // users. The return value might be dead if there are no live users.
-    getOrCreateAAFor<AAIsDead>(CSRetPos);
+    getOrCreateAAFor<AAIsDead>(CBRetPos);
 
-    Function *Callee = CS.getCalledFunction();
+    Function *Callee = CB->getCalledFunction();
     // TODO: Even if the callee is not known now we might be able to simplify
     //       the call/callee.
     if (!Callee)
@@ -1819,46 +1818,46 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         !Callee->hasMetadata(LLVMContext::MD_callback))
       return true;
 
-    if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
+    if (!Callee->getReturnType()->isVoidTy() && !CB->use_empty()) {
 
-      IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+      IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
 
       // Call site return integer values might be limited by a constant range.
       if (Callee->getReturnType()->isIntegerTy())
-        getOrCreateAAFor<AAValueConstantRange>(CSRetPos);
+        getOrCreateAAFor<AAValueConstantRange>(CBRetPos);
     }
 
-    for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
+    for (int i = 0, e = CB->getNumArgOperands(); i < e; i++) {
 
-      IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
+      IRPosition CBArgPos = IRPosition::callsite_argument(*CB, i);
 
       // Every call site argument might be dead.
-      getOrCreateAAFor<AAIsDead>(CSArgPos);
+      getOrCreateAAFor<AAIsDead>(CBArgPos);
 
       // Call site argument might be simplified.
-      getOrCreateAAFor<AAValueSimplify>(CSArgPos);
+      getOrCreateAAFor<AAValueSimplify>(CBArgPos);
 
-      if (!CS.getArgument(i)->getType()->isPointerTy())
+      if (!CB->getArgOperand(i)->getType()->isPointerTy())
         continue;
 
       // Call site argument attribute "non-null".
-      getOrCreateAAFor<AANonNull>(CSArgPos);
+      getOrCreateAAFor<AANonNull>(CBArgPos);
 
       // Call site argument attribute "no-alias".
-      getOrCreateAAFor<AANoAlias>(CSArgPos);
+      getOrCreateAAFor<AANoAlias>(CBArgPos);
 
       // Call site argument attribute "dereferenceable".
-      getOrCreateAAFor<AADereferenceable>(CSArgPos);
+      getOrCreateAAFor<AADereferenceable>(CBArgPos);
 
       // Call site argument attribute "align".
-      getOrCreateAAFor<AAAlign>(CSArgPos);
+      getOrCreateAAFor<AAAlign>(CBArgPos);
 
       // Call site argument attribute
       // "readnone/readonly/writeonly/..."
-      getOrCreateAAFor<AAMemoryBehavior>(CSArgPos);
+      getOrCreateAAFor<AAMemoryBehavior>(CBArgPos);
 
       // Call site argument attribute "nofree".
-      getOrCreateAAFor<AANoFree>(CSArgPos);
+      getOrCreateAAFor<AANoFree>(CBArgPos);
     }
     return true;
   };
@@ -1983,9 +1982,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     // do it eagerly.
     if (F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
-            ImmutableCallSite ICS(U.getUser());
-            return ICS && ICS.isCallee(&U) &&
-                   Functions.count(const_cast<Function *>(ICS.getCaller()));
+            const auto *CB = dyn_cast<CallBase>(U.getUser());
+            return CB && CB->isCallee(&U) &&
+                   Functions.count(const_cast<Function *>(CB->getCaller()));
           }))
         continue;
     }
