@@ -19183,9 +19183,9 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
 
   // See if we have a 128-bit vector cast op for this type of cast.
   unsigned NumEltsInXMM = 128 / VT.getScalarSizeInBits();
-  MVT Vec128VT = MVT::getVectorVT(VT, NumEltsInXMM);
-  MVT Int128VT = MVT::getVectorVT(IntVT, NumEltsInXMM);
-  if (!useVectorCast(CastToFP.getOpcode(), Int128VT, Vec128VT, Subtarget))
+  MVT VecFPVT = MVT::getVectorVT(VT, NumEltsInXMM);
+  MVT VecIntVT = MVT::getVectorVT(IntVT, NumEltsInXMM);
+  if (!useVectorCast(CastToFP.getOpcode(), VecIntVT, VecFPVT, Subtarget))
     return SDValue();
 
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
@@ -19196,9 +19196,9 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   // penalties) with cast ops.
   SDLoc DL(CastToFP);
   SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
-  SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, Vec128VT, X);
-  SDValue VCastToInt = DAG.getNode(ISD::FP_TO_SINT, DL, Int128VT, VecX);
-  SDValue VCastToFP = DAG.getNode(ISD::SINT_TO_FP, DL, Vec128VT, VCastToInt);
+  SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecFPVT, X);
+  SDValue VCastToInt = DAG.getNode(ISD::FP_TO_SINT, DL, VecIntVT, VecX);
+  SDValue VCastToFP = DAG.getNode(ISD::SINT_TO_FP, DL, VecFPVT, VCastToInt);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VCastToFP, ZeroIdx);
 }
 
