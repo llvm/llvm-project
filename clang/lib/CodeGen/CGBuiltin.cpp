@@ -7573,8 +7573,7 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   // The vector type that is stored may be different from the
   // eventual type stored to memory.
   auto VectorTy = cast<llvm::VectorType>(Ops.back()->getType());
-  auto MemoryTy =
-      llvm::VectorType::get(MemEltTy, VectorTy->getVectorElementCount());
+  auto MemoryTy = llvm::VectorType::get(MemEltTy, VectorTy->getElementCount());
 
   Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
   Value *BasePtr = Builder.CreateBitCast(Ops[1], MemoryTy->getPointerTo());
