@@ -12,6 +12,13 @@ def SizeT : TypeDecl<"size_t"> {
   }];
 }
 
+def SSizeT : TypeDecl<"ssize_t"> {
+  let Decl = [{
+    #define __need_ssize_t
+    #include <__posix-types.h>
+  }];
+}
+
 def OffT : TypeDecl<"off_t"> {
   let Decl = [{
     #define __need_off_t
@@ -306,5 +313,16 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
     "mtx_unlock",
     "thrd_create",
     "thrd_join",
+  ];
+}
+
+def UniStdAPI : PublicAPI<"unistd.h"> {
+  let TypeDeclarations = [
+    SSizeT,
+    SizeT,
+  ];
+
+  let Functions = [
+    "write",
   ];
 }
