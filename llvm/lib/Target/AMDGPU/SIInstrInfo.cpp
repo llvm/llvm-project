@@ -683,16 +683,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
            AMDGPU::VGPR_HI16RegClass.contains(SrcReg));
 
-    //          d          s
-    // l -> l : hhhhxxxx : xxxxllll -> v_alignbyte_b32 d, s, d, 2
-    //          llllhhhh : xxxxllll -> v_alignbyte_b32 d, d, d, 2
-    // l -> h : xxxxllll : xxxxhhhh -> v_lshlrev_b32 d, 16, d
-    //          llll0000 : xxxxhhhh -> v_alignbyte_b32 d, s, d, 2
-    // h -> l : hhhhxxxx : llllxxxx -> v_lshrrev_b32 d, 16, d
-    //          0000hhhh : llllxxxx -> v_alignbyte_b32 d, d, s, 2
-    // h -> h : xxxxllll : hhhhxxxx -> v_alignbyte_b32 d, d, s, 2
-    //          llllhhhh : hhhhxxxx -> v_alignbyte_b32 d, d, d, 2
-
     bool DstLow = RC == &AMDGPU::VGPR_LO16RegClass;
     bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg);
     DestReg = RI.getMatchingSuperReg(DestReg,
@@ -702,49 +692,18 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                     SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
                                     &AMDGPU::VGPR_32RegClass);
 
-    if (DestReg == SrcReg) {
-      // l -> h : v_pk_add_u16 v1, v1, 0 op_sel_hi:[0,0]
-      // h -> l : v_pk_add_u16 v1, v1, 0 op_sel:[1,0] op_sel_hi:[1,0]
-      if (DstLow == SrcLow)
-        return;
-      BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_ADD_U16), DestReg)
-        .addImm(DstLow ? SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1 : 0)
-        .addReg(DestReg, RegState::Undef)
-        .addImm(0) // src1_mod
-        .addImm(0) // src1
-        .addImm(0)
-        .addImm(0)
-        .addImm(0)
-        .addImm(0)
-        .addImm(0);
-
-      return;
-    }
-
-    // Last instruction first:
-    auto Last = BuildMI(MBB, MI, DL, get(AMDGPU::V_ALIGNBYTE_B32), DestReg)
-      .addReg((SrcLow && !DstLow) ? SrcReg : DestReg,
-              (SrcLow && !DstLow) ? getKillRegState(KillSrc) : 0)
-      .addReg((!SrcLow && DstLow) ? SrcReg : DestReg,
-              (!SrcLow && DstLow) ? getKillRegState(KillSrc) : 0)
-      .addImm(2);
-
-    unsigned OpcFirst = (DstLow == SrcLow) ? AMDGPU::V_ALIGNBYTE_B32
-                                           : SrcLow ? AMDGPU::V_LSHRREV_B32_e32
-                                                    : AMDGPU::V_LSHLREV_B32_e32;
-    auto First = BuildMI(MBB, &*Last, DL, get(OpcFirst), DestReg);
-    if (DstLow == SrcLow) { // alignbyte
-      First
-          .addReg(SrcLow ? SrcReg : DestReg,
-                  SrcLow ? getKillRegState(KillSrc) : unsigned(RegState::Undef))
-          .addReg(SrcLow ? DestReg : SrcReg,
-                  SrcLow ? unsigned(RegState::Undef) : getKillRegState(KillSrc))
-          .addImm(2);
-    } else {
-      First.addImm(16)
-           .addReg(DestReg, RegState::Undef);
-    }
-
+    auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), DestReg)
+      .addImm(0) // src0_modifiers
+      .addReg(SrcReg)
+      .addImm(0) // clamp
+      .addImm(DstLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                     : AMDGPU::SDWA::SdwaSel::WORD_1)
+      .addImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+      .addImm(SrcLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                     : AMDGPU::SDWA::SdwaSel::WORD_1)
+      .addReg(DestReg, RegState::Implicit | RegState::Undef);
+    // First implicit operand is $exec.
+    MIB->tieOperands(0, MIB->getNumOperands() - 1);
     return;
   }
 
