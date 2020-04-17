@@ -540,6 +540,8 @@ TEST(FileShardedIndexTest, Sharding) {
     B.insert(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID});
     // Should be stored in b.h
     B.insert(Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID});
+    // Dangling relation should be dropped.
+    B.insert(Relation{symbol("3").ID, RelationKind::BaseOf, Sym1.ID});
     IF.Relations = std::move(B).build();
   }
 
