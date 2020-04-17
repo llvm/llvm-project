@@ -975,10 +975,12 @@ public:
                    lldb::offset_t data_offset, size_t data_byte_size) override;
 
   void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type) override; // Dump to stdout
+      lldb::opaque_compiler_type_t type,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  void DumpTypeDescription(lldb::opaque_compiler_type_t type,
-                           Stream *s) override;
+  void DumpTypeDescription(
+      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   static void DumpTypeName(const CompilerType &type);
 
