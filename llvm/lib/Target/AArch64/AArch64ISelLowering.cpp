@@ -13032,13 +13032,12 @@ static SDValue legalizeSVEGatherPrefetchOffsVec(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::Other), Ops);
 }
 
-/// Combines a node carrying the intrinsic `aarch64_sve_prf<T>_gather` into a
-/// node that uses `aarch64_sve_prf<T>_gather_scaled_uxtw` when the scalar
-/// offset passed to `aarch64_sve_prf<T>_gather` is not a valid immediate for
-/// the sve gather prefetch instruction with vector plus immediate addressing
-/// mode.
+/// Combines a node carrying the intrinsic
+/// `aarch64_sve_prf<T>_gather_scalar_offset` into a node that uses
+/// `aarch64_sve_prfb_gather_uxtw_index` when the scalar offset passed to
+/// `aarch64_sve_prf<T>_gather_scalar_offset` is not a valid immediate for the
+/// sve gather prefetch instruction with vector plus immediate addressing mode.
 static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
-                                               unsigned NewIID,
                                                unsigned ScalarSizeInBytes) {
   const unsigned ImmPos = 4, OffsetPos = 3;
   // No need to combine the node if the immediate is valid...
@@ -13048,10 +13047,11 @@ static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
   // ...otherwise swap the offset base with the offset...
   SmallVector<SDValue, 5> Ops(N->op_begin(), N->op_end());
   std::swap(Ops[ImmPos], Ops[OffsetPos]);
-  // ...and remap the intrinsic `aarch64_sve_prf_gather<T>` to
-  // `aarch64_sve_prf_gather<T>_scaled_uxtw`.
+  // ...and remap the intrinsic `aarch64_sve_prf<T>_gather_scalar_offset` to
+  // `aarch64_sve_prfb_gather_uxtw_index`.
   SDLoc DL(N);
-  Ops[1] = DAG.getConstant(NewIID, DL, MVT::i64);
+  Ops[1] = DAG.getConstant(Intrinsic::aarch64_sve_prfb_gather_uxtw_index, DL,
+                           MVT::i64);
 
   return DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::Other), Ops);
 }
@@ -13121,21 +13121,13 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
     case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
-      return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_prfb_gather_uxtw_index,
-          1 /*=ScalarSizeInBytes*/);
+      return combineSVEPrefetchVecBaseImmOff(N, DAG, 1 /*=ScalarSizeInBytes*/);
     case Intrinsic::aarch64_sve_prfh_gather_scalar_offset:
-      return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_prfh_gather_uxtw_index,
-          2 /*=ScalarSizeInBytes*/);
+      return combineSVEPrefetchVecBaseImmOff(N, DAG, 2 /*=ScalarSizeInBytes*/);
     case Intrinsic::aarch64_sve_prfw_gather_scalar_offset:
-      return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_prfw_gather_uxtw_index,
-          4 /*=ScalarSizeInBytes*/);
+      return combineSVEPrefetchVecBaseImmOff(N, DAG, 4 /*=ScalarSizeInBytes*/);
     case Intrinsic::aarch64_sve_prfd_gather_scalar_offset:
-      return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_prfd_gather_uxtw_index,
-          8 /*=ScalarSizeInBytes*/);
+      return combineSVEPrefetchVecBaseImmOff(N, DAG, 8 /*=ScalarSizeInBytes*/);
     case Intrinsic::aarch64_sve_prfb_gather_uxtw_index:
     case Intrinsic::aarch64_sve_prfb_gather_sxtw_index:
     case Intrinsic::aarch64_sve_prfh_gather_uxtw_index:
