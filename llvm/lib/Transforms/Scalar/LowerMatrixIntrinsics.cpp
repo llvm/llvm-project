@@ -328,9 +328,9 @@ class LowerMatrixIntrinsics {
                          IRBuilder<> &Builder) const {
       Value *Vec = isColumnMajor() ? getColumn(J) : getRow(I);
       Value *Undef = UndefValue::get(Vec->getType());
-      Constant *Mask =
-          createSequentialMask(Builder, isColumnMajor() ? I : J, NumElts, 0);
-      return Builder.CreateShuffleVector(Vec, Undef, Mask, "block");
+      return Builder.CreateShuffleVector(
+          Vec, Undef, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
+          "block");
     }
   };
 
@@ -442,9 +442,9 @@ public:
     Value *Undef = UndefValue::get(VType);
     for (unsigned MaskStart = 0; MaskStart < VType->getNumElements();
          MaskStart += SI.getStride()) {
-      Constant *Mask =
-          createSequentialMask(Builder, MaskStart, SI.getStride(), 0);
-      Value *V = Builder.CreateShuffleVector(MatrixVal, Undef, Mask, "split");
+      Value *V = Builder.CreateShuffleVector(
+          MatrixVal, Undef, createSequentialMask(MaskStart, SI.getStride(), 0),
+          "split");
       SplitVecs.push_back(V);
     }
 
@@ -909,10 +909,10 @@ public:
     unsigned NumElts = cast<VectorType>(Col->getType())->getNumElements();
     assert(NumElts >= BlockNumElts && "Too few elements for current block");
 
-    Value *ExtendMask =
-        createSequentialMask(Builder, 0, BlockNumElts, NumElts - BlockNumElts);
     Value *Undef = UndefValue::get(Block->getType());
-    Block = Builder.CreateShuffleVector(Block, Undef, ExtendMask);
+    Block = Builder.CreateShuffleVector(
+        Block, Undef,
+        createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
 
     // If Col is 7 long and I is 2 and BlockNumElts is 2 the mask is: 0, 1, 7,
     // 8, 4, 5, 6
