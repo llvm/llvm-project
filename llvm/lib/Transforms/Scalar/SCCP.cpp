@@ -401,15 +401,7 @@ private:
 
   bool mergeInValue(ValueLatticeElement &IV, Value *V,
                     ValueLatticeElement MergeWithV, bool Widen = true) {
-    // Do a simple form of widening, to avoid extending a range repeatedly in a
-    // loop. If IV is a constant range, it means we already set it once. If
-    // MergeWithV would extend IV, mark V as overdefined.
-    if (Widen && IV.isConstantRange() && MergeWithV.isConstantRange() &&
-        !IV.getConstantRange().contains(MergeWithV.getConstantRange())) {
-      markOverdefined(IV, V);
-      return true;
-    }
-    if (IV.mergeIn(MergeWithV)) {
+    if (IV.mergeIn(MergeWithV, Widen)) {
       pushToWorkList(IV, V);
       LLVM_DEBUG(dbgs() << "Merged " << MergeWithV << " into " << *V << " : "
                         << IV << "\n");
