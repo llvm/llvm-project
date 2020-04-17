@@ -2953,6 +2953,30 @@ void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
   return Mangler.mangle(D);
 }
 
+void MicrosoftCXXNameMangler::mangleType(const ExtIntType *T, Qualifiers,
+                                         SourceRange Range) {
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  if (T->isUnsigned())
+    Extra.mangleSourceName("_UExtInt");
+  else
+    Extra.mangleSourceName("_ExtInt");
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumBits()),
+                             /*IsBoolean=*/false);
+
+  mangleArtificialTagType(TTK_Struct, TemplateMangling, {"__clang"});
+}
+
+void MicrosoftCXXNameMangler::mangleType(const DependentExtIntType *T,
+                                         Qualifiers, SourceRange Range) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "cannot mangle this DependentExtInt type yet");
+  Diags.Report(Range.getBegin(), DiagID) << Range;
+}
+
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
 //                       <virtual-adjustment>
 // <no-adjustment>      ::= A # private near

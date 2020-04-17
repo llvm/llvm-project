@@ -5947,10 +5947,12 @@ def err_block_return_missing_expr : Error<
   "non-void block should return a value">;
 def err_func_def_incomplete_result : Error<
   "incomplete result type %0 in function definition">;
-def err_atomic_specifier_bad_type : Error<
-  "_Atomic cannot be applied to "
-  "%select{incomplete |array |function |reference |atomic |qualified |sizeless |}0type "
-  "%1 %select{|||||||which is not trivially copyable}0">;
+def err_atomic_specifier_bad_type
+    : Error<"_Atomic cannot be applied to "
+            "%select{incomplete |array |function |reference |atomic |qualified "
+            "|sizeless ||integer |integer }0type "
+            "%1 %select{|||||||which is not trivially copyable|with less than "
+            "1 byte of precision|with a non power of 2 precision}0">;
 
 // Expressions.
 def select_unary_expr_or_type_trait_kind : TextSubstitution<
@@ -10711,4 +10713,8 @@ def warn_sycl_kernel_return_type : Warning<
   "function template with 'sycl_kernel' attribute must have a 'void' return type">,
   InGroup<IgnoredAttributes>;
 
+def err_ext_int_bad_size : Error<"%select{signed|unsigned}0 _ExtInt must "
+                                 "have a bit size of at least %select{2|1}0">;
+def err_ext_int_max_size : Error<"%select{signed|unsigned}0 _ExtInt of bit "
+                                 "sizes greater than %1 not supported">;
 } // end of sema component.
