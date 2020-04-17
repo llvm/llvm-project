@@ -6007,7 +6007,14 @@ std::string AAMemoryLocation::getMemoryLocationsAsStr(
 struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   AAMemoryLocationImpl(const IRPosition &IRP, Attributor &A)
-      : AAMemoryLocation(IRP, A) {}
+      : AAMemoryLocation(IRP, A), Allocator(A.Allocator) {}
+
+  ~AAMemoryLocationImpl() {
+    // The AccessSets are allocated via a BumpPtrAllocator, we call
+    // the destructor manually.
+    for (auto &It : AccessKind2Accesses)
+      It.getSecond()->~AccessSet();
+  }
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
@@ -6100,11 +6107,10 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       if (CurMLK & RequestedMLK)
         continue;
 
-      const auto &Accesses = AccessKindAccessesMap.lookup(CurMLK);
-      for (const AccessInfo &AI : Accesses) {
-        if (!Pred(AI.I, AI.Ptr, AI.Kind, CurMLK))
-          return false;
-      }
+      if (const AccessSet *Accesses = AccessKind2Accesses.lookup(CurMLK))
+        for (const AccessInfo &AI : *Accesses)
+          if (!Pred(AI.I, AI.Ptr, AI.Kind, CurMLK))
+            return false;
     }
 
     return true;
@@ -6120,8 +6126,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2)
       if (!(CurMLK & KnownMLK))
-        updateStateAndAccessesMap(getState(), AccessKindAccessesMap, CurMLK, I,
-                                  nullptr, Changed);
+        updateStateAndAccessesMap(getState(), CurMLK, I, nullptr, Changed);
     return AAMemoryLocation::indicatePessimisticFixpoint();
   }
 
@@ -6155,21 +6160,19 @@ protected:
 
   /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
   /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
-  using AccessKindAccessesMapTy =
-      DenseMap<unsigned, SmallSet<AccessInfo, 8, AccessInfo>>;
-  AccessKindAccessesMapTy AccessKindAccessesMap;
+  using AccessSet = SmallSet<AccessInfo, 8, AccessInfo>;
+  using AccessKind2AccessSetTy = DenseMap<unsigned, AccessSet *>;
+  AccessKind2AccessSetTy AccessKind2Accesses;
 
   /// Return the kind(s) of location that may be accessed by \p V.
   AAMemoryLocation::MemoryLocationsKind
   categorizeAccessedLocations(Attributor &A, Instruction &I, bool &Changed);
 
-  /// Update the state \p State and the AccessKindAccessesMap given that \p I is
+  /// Update the state \p State and the AccessKind2Accesses given that \p I is
   /// an access to a \p MLK memory location with the access pointer \p Ptr.
-  static void updateStateAndAccessesMap(AAMemoryLocation::StateType &State,
-                                        AccessKindAccessesMapTy &AccessMap,
-                                        MemoryLocationsKind MLK,
-                                        const Instruction *I, const Value *Ptr,
-                                        bool &Changed) {
+  void updateStateAndAccessesMap(AAMemoryLocation::StateType &State,
+                                 MemoryLocationsKind MLK, const Instruction *I,
+                                 const Value *Ptr, bool &Changed) {
     // TODO: The kind should be determined at the call sites based on the
     // information we have there.
     AccessKind Kind = READ_WRITE;
@@ -6179,7 +6182,10 @@ protected:
     }
 
     assert(isPowerOf2_32(MLK) && "Expected a single location set!");
-    Changed |= AccessMap[MLK].insert(AccessInfo{I, Ptr, Kind}).second;
+    auto *&Accesses = AccessKind2Accesses[MLK];
+    if (!Accesses)
+      Accesses = new (Allocator) AccessSet();
+    Changed |= Accesses->insert(AccessInfo{I, Ptr, Kind}).second;
     State.removeAssumedBits(MLK);
   }
 
@@ -6187,6 +6193,9 @@ protected:
   /// arguments, and update the state and access map accordingly.
   void categorizePtrValue(Attributor &A, const Instruction &I, const Value &Ptr,
                           AAMemoryLocation::StateType &State, bool &Changed);
+
+  /// Used to allocate access sets.
+  BumpPtrAllocator &Allocator;
 
   /// The set of IR attributes AAMemoryLocation deals with.
   static const Attribute::AttrKind AttrKinds[4];
@@ -6220,39 +6229,32 @@ void AAMemoryLocationImpl::categorizePtrValue(
       return true;
     if (auto *Arg = dyn_cast<Argument>(&V)) {
       if (Arg->hasByValAttr())
-        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_LOCAL_MEM, &I,
-                                  &V, Changed);
+        updateStateAndAccessesMap(T, NO_LOCAL_MEM, &I, &V, Changed);
       else
-        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_ARGUMENT_MEM, &I,
-                                  &V, Changed);
+        updateStateAndAccessesMap(T, NO_ARGUMENT_MEM, &I, &V, Changed);
       return true;
     }
     if (auto *GV = dyn_cast<GlobalValue>(&V)) {
       if (GV->hasLocalLinkage())
-        updateStateAndAccessesMap(T, AccessKindAccessesMap,
-                                  NO_GLOBAL_INTERNAL_MEM, &I, &V, Changed);
+        updateStateAndAccessesMap(T, NO_GLOBAL_INTERNAL_MEM, &I, &V, Changed);
       else
-        updateStateAndAccessesMap(T, AccessKindAccessesMap,
-                                  NO_GLOBAL_EXTERNAL_MEM, &I, &V, Changed);
+        updateStateAndAccessesMap(T, NO_GLOBAL_EXTERNAL_MEM, &I, &V, Changed);
       return true;
     }
     if (isa<AllocaInst>(V)) {
-      updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_LOCAL_MEM, &I, &V,
-                                Changed);
+      updateStateAndAccessesMap(T, NO_LOCAL_MEM, &I, &V, Changed);
       return true;
     }
     if (const auto *CB = dyn_cast<CallBase>(&V)) {
       const auto &NoAliasAA =
           A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(*CB));
       if (NoAliasAA.isAssumedNoAlias()) {
-        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_MALLOCED_MEM, &I,
-                                  &V, Changed);
+        updateStateAndAccessesMap(T, NO_MALLOCED_MEM, &I, &V, Changed);
         return true;
       }
     }
 
-    updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_UNKOWN_MEM, &I, &V,
-                              Changed);
+    updateStateAndAccessesMap(T, NO_UNKOWN_MEM, &I, &V, Changed);
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value cannot be categorized: "
                       << V << " -> " << getMemoryLocationsAsStr(T.getAssumed())
                       << "\n");
@@ -6264,8 +6266,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
           /* MaxValues */ 32, StripGEPCB)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
-    updateStateAndAccessesMap(State, AccessKindAccessesMap, NO_UNKOWN_MEM, &I,
-                              nullptr, Changed);
+    updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed);
   } else {
     LLVM_DEBUG(
         dbgs()
@@ -6295,8 +6296,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
       return NO_LOCATIONS;
 
     if (CBMemLocationAA.isAssumedInaccessibleMemOnly()) {
-      updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap,
-                                NO_INACCESSIBLE_MEM, &I, nullptr, Changed);
+      updateStateAndAccessesMap(AccessedLocs, NO_INACCESSIBLE_MEM, &I, nullptr,
+                                Changed);
       return AccessedLocs.getAssumed();
     }
 
@@ -6310,8 +6311,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
     for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
       if (CBAssumedNotAccessedLocsNoArgMem & CurMLK)
         continue;
-      updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, CurMLK, &I,
-                                nullptr, Changed);
+      updateStateAndAccessesMap(AccessedLocs, CurMLK, &I, nullptr, Changed);
     }
 
     // Now handle global memory if it might be accessed. This is slightly tricky
@@ -6320,8 +6320,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
     if (HasGlobalAccesses) {
       auto AccessPred = [&](const Instruction *, const Value *Ptr,
                             AccessKind Kind, MemoryLocationsKind MLK) {
-        updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, MLK, &I,
-                                  Ptr, Changed);
+        updateStateAndAccessesMap(AccessedLocs, MLK, &I, Ptr, Changed);
         return true;
       };
       if (!CBMemLocationAA.checkForAllAccessesToMemoryKind(
@@ -6375,8 +6374,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
   LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Failed to categorize instruction: "
                     << I << "\n");
-  updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, NO_UNKOWN_MEM,
-                            &I, nullptr, Changed);
+  updateStateAndAccessesMap(AccessedLocs, NO_UNKOWN_MEM, &I, nullptr, Changed);
   return AccessedLocs.getAssumed();
 }
 
@@ -6456,8 +6454,7 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
     bool Changed = false;
     auto AccessPred = [&](const Instruction *I, const Value *Ptr,
                           AccessKind Kind, MemoryLocationsKind MLK) {
-      updateStateAndAccessesMap(getState(), AccessKindAccessesMap, MLK, I, Ptr,
-                                Changed);
+      updateStateAndAccessesMap(getState(), MLK, I, Ptr, Changed);
       return true;
     };
     if (!FnAA.checkForAllAccessesToMemoryKind(AccessPred, ALL_LOCATIONS))
