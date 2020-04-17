@@ -26,7 +26,8 @@ public:
 
   void Clear();
 
-  void Dump(Stream *s, bool show_context);
+  void Dump(Stream *s, bool show_context,
+            lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
 
   TypeMap FindTypes(ConstString name);
 

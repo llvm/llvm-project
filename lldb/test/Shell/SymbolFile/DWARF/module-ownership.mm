@@ -1,17 +1,22 @@
 // RUN: %clang --target=x86_64-apple-macosx -g -gmodules \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
-// RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck %s
 // Verify that the owning module information from DWARF is preserved in the AST.
 
 @import A;
 
 Typedef t1;
-// CHECK-DAG: TypedefDecl {{.*}} imported in A Typedef
+// RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
+// RUN:   -compiler-context 'Module:A,Typedef:Typedef' %t.o \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TYPEDEF
+// CHECK-TYPEDEF: TypedefDecl {{.*}} imported in A Typedef
 
 TopLevelStruct s1;
-// CHECK-DAG: CXXRecordDecl {{.*}} imported in A struct TopLevelStruct
-// CHECK-DAG: -FieldDecl {{.*}} in A a 'int'
+// RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
+// RUN:   -compiler-context 'Module:A,Struct:TopLevelStruct' %t.o \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TOPLEVELSTRUCT
+// CHECK-TOPLEVELSTRUCT: CXXRecordDecl {{.*}} imported in A struct TopLevelStruct
+// CHECK-TOPLEVELSTRUCT: -FieldDecl {{.*}} in A a 'int'
 
 Struct s2;
 // CHECK-DAG: CXXRecordDecl {{.*}} imported in A struct
@@ -29,7 +34,13 @@ Enum e1;
 // FIXME: -EnumConstantDecl {{.*}} imported in A a
 
 SomeClass *obj1;
-// CHECK-DAG: ObjCInterfaceDecl {{.*}} imported in A {{.*}} SomeClass
+// RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
+// RUN:   -compiler-context 'Module:A,Struct:SomeClass' %t.o \
+// RUN:   | FileCheck %s --check-prefix=CHECK-OBJC
+// CHECK-OBJC: ObjCInterfaceDecl {{.*}} imported in A SomeClass
+// CHECK-OBJC: |-ObjCPropertyDecl {{.*}} imported in A number 'int' readonly
+// CHECK-OBJC: | `-getter ObjCMethod {{.*}} 'number'
+// CHECK-OBJC: `-ObjCMethodDecl {{.*}} imported in A implicit - number 'int'
 
 // Template specializations are not yet supported, so they lack the ownership info:
 Template<int> t2;
