@@ -2101,7 +2101,6 @@ public:
   bool isOCLExtOpaqueType() const;              // Any OpenCL extension type
 
   bool isPipeType() const;                      // OpenCL pipe type
-  bool isExtIntType() const;                    // Extended Int Type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
   /// Determines if this type, which must satisfy
@@ -6128,64 +6127,6 @@ public:
   bool isReadOnly() const { return isRead; }
 };
 
-/// A fixed int type of a specified bitwidth.
-class ExtIntType final : public Type, public llvm::FoldingSetNode {
-  friend class ASTContext;
-  unsigned IsUnsigned : 1;
-  unsigned NumBits : 24;
-
-protected:
-  ExtIntType(bool isUnsigned, unsigned NumBits);
-
-public:
-  bool isUnsigned() const { return IsUnsigned; }
-  bool isSigned() const { return !IsUnsigned; }
-  unsigned getNumBits() const { return NumBits; }
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, isUnsigned(), getNumBits());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, bool IsUnsigned,
-                      unsigned NumBits) {
-    ID.AddBoolean(IsUnsigned);
-    ID.AddInteger(NumBits);
-  }
-
-  static bool classof(const Type *T) { return T->getTypeClass() == ExtInt; }
-};
-
-class DependentExtIntType final : public Type, public llvm::FoldingSetNode {
-  friend class ASTContext;
-  const ASTContext &Context;
-  llvm::PointerIntPair<Expr*, 1, bool> ExprAndUnsigned;
-
-protected:
-  DependentExtIntType(const ASTContext &Context, bool IsUnsigned,
-                      Expr *NumBits);
-
-public:
-  bool isUnsigned() const;
-  bool isSigned() const { return !isUnsigned(); }
-  Expr *getNumBitsExpr() const;
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, Context, isUnsigned(), getNumBitsExpr());
-  }
-  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      bool IsUnsigned, Expr *NumBitsExpr);
-
-  static bool classof(const Type *T) {
-    return T->getTypeClass() == DependentExtInt;
-  }
-};
-
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:
@@ -6705,10 +6646,6 @@ inline bool Type::isPipeType() const {
   return isa<PipeType>(CanonicalType);
 }
 
-inline bool Type::isExtIntType() const {
-  return isa<ExtIntType>(CanonicalType);
-}
-
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   inline bool Type::is##Id##Type() const { \
     return isSpecificBuiltinType(BuiltinType::Id); \
@@ -6804,7 +6741,7 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
       !IsEnumDeclScoped(ET->getDecl());
   }
-  return isExtIntType();
+  return false;
 }
 
 inline bool Type::isFixedPointType() const {
@@ -6861,8 +6798,7 @@ inline bool Type::isScalarType() const {
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
-         isa<ObjCObjectPointerType>(CanonicalType) ||
-         isExtIntType();
+         isa<ObjCObjectPointerType>(CanonicalType);
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -6875,7 +6811,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
 
-  return isExtIntType();
+  return false;
 }
 
 inline bool Type::isBooleanType() const {

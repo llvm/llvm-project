@@ -476,14 +476,6 @@ void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
 }
 
-void TypeLocWriter::VisitExtIntTypeLoc(clang::ExtIntTypeLoc TL) {
-  Record.AddSourceLocation(TL.getNameLoc());
-}
-void TypeLocWriter::VisitDependentExtIntTypeLoc(
-    clang::DependentExtIntTypeLoc TL) {
-  Record.AddSourceLocation(TL.getNameLoc());
-}
-
 void ASTWriter::WriteTypeAbbrevs() {
   using namespace llvm;
 
