@@ -7999,6 +7999,10 @@ def err_ref_bad_target : Error<
 def err_ref_bad_target_global_initializer : Error<
   "reference to %select{__device__|__global__|__host__|__host__ __device__}0 "
   "function %1 in global initializer">;
+def err_capture_bad_target : Error<
+  "capture host variable %0 by reference in device or host device lambda function">;
+def err_capture_bad_target_this_ptr : Error<
+  "capture host side class data member by this pointer in device or host device lambda function">;
 def warn_kern_is_method : Extension<
   "kernel function %0 is a member function; this may not be accepted by nvcc">,
   InGroup<CudaCompat>;
