@@ -650,6 +650,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
 
     // Variant 2.
   case EM_HEXAGON:
+  case EM_SPARCV9:
   case EM_386:
   case EM_X86_64:
     return s.getVA(0) - tls->p_memsz -

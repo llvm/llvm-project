@@ -4573,24 +4573,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // each vector operation.
       ValueList OpScalars, AltScalars;
       unsigned e = E->Scalars.size();
-      SmallVector<Constant *, 8> Mask(e);
+      SmallVector<int, 8> Mask(e);
       for (unsigned i = 0; i < e; ++i) {
         auto *OpInst = cast<Instruction>(E->Scalars[i]);
         assert(E->isOpcodeOrAlt(OpInst) && "Unexpected main/alternate opcode");
         if (OpInst->getOpcode() == E->getAltOpcode()) {
-          Mask[i] = Builder.getInt32(e + i);
+          Mask[i] = e + i;
           AltScalars.push_back(E->Scalars[i]);
         } else {
-          Mask[i] = Builder.getInt32(i);
+          Mask[i] = i;
           OpScalars.push_back(E->Scalars[i]);
         }
       }
 
-      Value *ShuffleMask = ConstantVector::get(Mask);
       propagateIRFlags(V0, OpScalars);
       propagateIRFlags(V1, AltScalars);
 
-      Value *V = Builder.CreateShuffleVector(V0, V1, ShuffleMask);
+      Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (Instruction *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
       if (NeedToShuffleReuses) {
@@ -6083,24 +6082,23 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
 ///        <0,2,...> or <1,3,..> while a splitting reduction will generate
 ///        <2,3, undef,undef> for a vector of 4 and NumElts = 2.
 /// \param IsLeft True will generate a mask of even elements, odd otherwise.
-static Value *createRdxShuffleMask(unsigned VecLen, unsigned NumEltsToRdx,
-                                   bool IsPairwise, bool IsLeft,
-                                   IRBuilder<> &Builder) {
+static SmallVector<int, 32> createRdxShuffleMask(unsigned VecLen,
+                                                 unsigned NumEltsToRdx,
+                                                 bool IsPairwise, bool IsLeft) {
   assert((IsPairwise || !IsLeft) && "Don't support a <0,1,undef,...> mask");
 
-  SmallVector<Constant *, 32> ShuffleMask(
-      VecLen, UndefValue::get(Builder.getInt32Ty()));
+  SmallVector<int, 32> ShuffleMask(VecLen, -1);
 
   if (IsPairwise)
     // Build a mask of 0, 2, ... (left) or 1, 3, ... (right).
     for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = Builder.getInt32(2 * i + !IsLeft);
+      ShuffleMask[i] = 2 * i + !IsLeft;
   else
     // Move the upper half of the vector to the lower half.
     for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = Builder.getInt32(NumEltsToRdx + i);
+      ShuffleMask[i] = NumEltsToRdx + i;
 
-  return ConstantVector::get(ShuffleMask);
+  return ShuffleMask;
 }
 
 namespace {
@@ -6974,10 +6972,8 @@ private:
 
     Value *TmpVec = VectorizedValue;
     for (unsigned i = ReduxWidth / 2; i != 0; i >>= 1) {
-      Value *LeftMask =
-          createRdxShuffleMask(ReduxWidth, i, true, true, Builder);
-      Value *RightMask =
-          createRdxShuffleMask(ReduxWidth, i, true, false, Builder);
+      auto LeftMask = createRdxShuffleMask(ReduxWidth, i, true, true);
+      auto RightMask = createRdxShuffleMask(ReduxWidth, i, true, false);
 
       Value *LeftShuf = Builder.CreateShuffleVector(
           TmpVec, UndefValue::get(TmpVec->getType()), LeftMask, "rdx.shuf.l");

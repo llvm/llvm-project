@@ -29,6 +29,7 @@
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Host.inc"
+#include <sched.h>
 #endif
 #ifdef _WIN32
 #include "Windows/Host.inc"
@@ -1277,11 +1278,18 @@ StringRef sys::getHostCPUName() {
 StringRef sys::getHostCPUName() { return "generic"; }
 #endif
 
-#if defined(__linux__) && defined(__x86_64__)
+#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.
 int computeHostNumPhysicalCores() {
+  // Enabled represents the number of physical id/core id pairs with at least
+  // one processor id enabled by the CPU affinity mask.
+  cpu_set_t Affinity, Enabled;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) != 0)
+    return -1;
+  CPU_ZERO(&Enabled);
+
   // Read /proc/cpuinfo as a stream (until EOF reached). It cannot be
   // mmapped because it appears to have 0 size.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -1294,33 +1302,29 @@ int computeHostNumPhysicalCores() {
   SmallVector<StringRef, 8> strs;
   (*Text)->getBuffer().split(strs, "\n", /*MaxSplit=*/-1,
                              /*KeepEmpty=*/false);
+  int CurProcessor = -1;
   int CurPhysicalId = -1;
+  int CurSiblings = -1;
   int CurCoreId = -1;
-  SmallSet<std::pair<int, int>, 32> UniqueItems;
-  for (auto &Line : strs) {
-    Line = Line.trim();
-    if (!Line.startswith("physical id") && !Line.startswith("core id"))
-      continue;
+  for (StringRef Line : strs) {
     std::pair<StringRef, StringRef> Data = Line.split(':');
     auto Name = Data.first.trim();
     auto Val = Data.second.trim();
-    if (Name == "physical id") {
-      assert(CurPhysicalId == -1 &&
-             "Expected a core id before seeing another physical id");
+    // These fields are available if the kernel is configured with CONFIG_SMP.
+    if (Name == "processor")
+      Val.getAsInteger(10, CurProcessor);
+    else if (Name == "physical id")
       Val.getAsInteger(10, CurPhysicalId);
-    }
-    if (Name == "core id") {
-      assert(CurCoreId == -1 &&
-             "Expected a physical id before seeing another core id");
+    else if (Name == "siblings")
+      Val.getAsInteger(10, CurSiblings);
+    else if (Name == "core id") {
       Val.getAsInteger(10, CurCoreId);
-    }
-    if (CurPhysicalId != -1 && CurCoreId != -1) {
-      UniqueItems.insert(std::make_pair(CurPhysicalId, CurCoreId));
-      CurPhysicalId = -1;
-      CurCoreId = -1;
+      // The processor id corresponds to an index into cpu_set_t.
+      if (CPU_ISSET(CurProcessor, &Affinity))
+        CPU_SET(CurPhysicalId * CurSiblings + CurCoreId, &Enabled);
     }
   }
-  return UniqueItems.size();
+  return CPU_COUNT(&Enabled);
 }
 #elif defined(__APPLE__) && defined(__x86_64__)
 #include <sys/param.h>
