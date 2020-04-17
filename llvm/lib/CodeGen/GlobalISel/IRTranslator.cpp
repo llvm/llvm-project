@@ -1022,23 +1022,28 @@ bool IRTranslator::translateSelect(const User &U,
   return true;
 }
 
+bool IRTranslator::translateCopy(const User &U, const Value &V,
+                                 MachineIRBuilder &MIRBuilder) {
+  Register Src = getOrCreateVReg(V);
+  auto &Regs = *VMap.getVRegs(U);
+  if (Regs.empty()) {
+    Regs.push_back(Src);
+    VMap.getOffsets(U)->push_back(0);
+  } else {
+    // If we already assigned a vreg for this instruction, we can't change that.
+    // Emit a copy to satisfy the users we already emitted.
+    MIRBuilder.buildCopy(Regs[0], Src);
+  }
+  return true;
+}
+
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   // If we're bitcasting to the source type, we can reuse the source vreg.
   if (getLLTForType(*U.getOperand(0)->getType(), *DL) ==
-      getLLTForType(*U.getType(), *DL)) {
-    Register SrcReg = getOrCreateVReg(*U.getOperand(0));
-    auto &Regs = *VMap.getVRegs(U);
-    // If we already assigned a vreg for this bitcast, we can't change that.
-    // Emit a copy to satisfy the users we already emitted.
-    if (!Regs.empty())
-      MIRBuilder.buildCopy(Regs[0], SrcReg);
-    else {
-      Regs.push_back(SrcReg);
-      VMap.getOffsets(U)->push_back(0);
-    }
-    return true;
-  }
+      getLLTForType(*U.getType(), *DL))
+    return translateCopy(U, *U.getOperand(0), MIRBuilder);
+
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }
 
@@ -1897,17 +1902,8 @@ bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<VectorType>(U.getType())->getNumElements() == 1) {
-    Register Elt = getOrCreateVReg(*U.getOperand(1));
-    auto &Regs = *VMap.getVRegs(U);
-    if (Regs.empty()) {
-      Regs.push_back(Elt);
-      VMap.getOffsets(U)->push_back(0);
-    } else {
-      MIRBuilder.buildCopy(Regs[0], Elt);
-    }
-    return true;
-  }
+  if (cast<VectorType>(U.getType())->getNumElements() == 1)
+    return translateCopy(U, *U.getOperand(1), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
@@ -1921,17 +1917,9 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<VectorType>(U.getOperand(0)->getType())->getNumElements() == 1) {
-    Register Elt = getOrCreateVReg(*U.getOperand(0));
-    auto &Regs = *VMap.getVRegs(U);
-    if (Regs.empty()) {
-      Regs.push_back(Elt);
-      VMap.getOffsets(U)->push_back(0);
-    } else {
-      MIRBuilder.buildCopy(Regs[0], Elt);
-    }
-    return true;
-  }
+  if (cast<VectorType>(U.getOperand(0)->getType())->getNumElements() == 1)
+    return translateCopy(U, *U.getOperand(0), MIRBuilder);
+
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
