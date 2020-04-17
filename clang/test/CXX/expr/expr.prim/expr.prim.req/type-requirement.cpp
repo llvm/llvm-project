@@ -109,9 +109,9 @@ static_assert(!requires { typename ::F<int>; });
 struct G { template<typename T> static T temp; };
 
 template<typename T> requires requires { typename T::template temp<int>; }
-// expected-note@-1{{because 'typename T::temp<int>' would be invalid: type 'int' cannot be used prior to '::' because it has no members}}
-// expected-note@-2{{because 'typename T::temp<int>' would be invalid: no member named 'temp' in 'D'}}
-// expected-note@-3{{because 'typename T::temp<int>' would be invalid: template name refers to non-type template 'G::template temp'}}
+// expected-note@-1{{because 'typename T::template temp<int>' would be invalid: type 'int' cannot be used prior to '::' because it has no members}}
+// expected-note@-2{{because 'typename T::template temp<int>' would be invalid: no member named 'temp' in 'D'}}
+// expected-note@-3{{because 'typename T::template temp<int>' would be invalid: template name refers to non-type template 'G::template temp'}}
 struct r7 {};
 
 using r7i1 = r7<int>; // expected-error{{constraints not satisfied for class template 'r7' [with T = int]}}
