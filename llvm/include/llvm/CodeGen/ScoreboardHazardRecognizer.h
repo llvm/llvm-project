@@ -23,7 +23,6 @@
 
 namespace llvm {
 
-class InstrItineraryData;
 class ScheduleDAG;
 class SUnit;
 
