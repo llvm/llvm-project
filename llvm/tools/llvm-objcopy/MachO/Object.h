@@ -161,6 +161,20 @@ struct RelocationInfo {
   // True if Info is a scattered_relocation_info.
   bool Scattered;
   MachO::any_relocation_info Info;
+
+  unsigned getPlainRelocationSymbolNum(bool IsLittleEndian) {
+    if (IsLittleEndian)
+      return Info.r_word1 & 0xffffff;
+    return Info.r_word1 >> 8;
+  }
+
+  void setPlainRelocationSymbolNum(unsigned SymbolNum, bool IsLittleEndian) {
+    assert(SymbolNum < (1 << 24) && "SymbolNum out of range");
+    if (IsLittleEndian)
+      Info.r_word1 = (Info.r_word1 & ~0x00ffffff) | SymbolNum;
+    else
+      Info.r_word1 = (Info.r_word1 & ~0xffffff00) | (SymbolNum << 8);
+  }
 };
 
 /// The location of the rebase info inside the binary is described by
@@ -299,6 +313,11 @@ struct Object {
   /// to the newly created load command. The caller should verify that SegName
   /// is not too long (SegName.size() should be less than or equal to 16).
   LoadCommand &addSegment(StringRef SegName);
+
+  bool isLittleEndian() const {
+    StringRef Magic(reinterpret_cast<const char *>(&Header.Magic), 4);
+    return Magic == "\xCE\xFA\xED\xFE" || Magic == "\xCF\xFA\xED\xFE";
+  }
 
   bool is64Bit() const {
     return Header.Magic == MachO::MH_MAGIC_64 ||

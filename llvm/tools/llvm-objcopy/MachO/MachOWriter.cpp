@@ -240,11 +240,9 @@ void MachOWriter::writeSections() {
              Sec->Content.size());
       for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
         auto RelocInfo = Sec->Relocations[Index];
-        if (!RelocInfo.Scattered) {
-          auto *Info =
-              reinterpret_cast<MachO::relocation_info *>(&RelocInfo.Info);
-          Info->r_symbolnum = RelocInfo.Symbol->Index;
-        }
+        if (!RelocInfo.Scattered)
+          RelocInfo.setPlainRelocationSymbolNum(RelocInfo.Symbol->Index,
+                                                O.isLittleEndian());
 
         if (IsLittleEndian != sys::IsLittleEndianHost)
           MachO::swapStruct(
