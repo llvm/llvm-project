@@ -204,10 +204,9 @@ void MachOReader::setSymbolInRelocationInfo(Object &O) const {
   for (LoadCommand &LC : O.LoadCommands)
     for (std::unique_ptr<Section> &Sec : LC.Sections)
       for (auto &Reloc : Sec->Relocations)
-        if (!Reloc.Scattered) {
-          auto *Info = reinterpret_cast<MachO::relocation_info *>(&Reloc.Info);
-          Reloc.Symbol = O.SymTable.getSymbolByIndex(Info->r_symbolnum);
-        }
+        if (!Reloc.Scattered)
+          Reloc.Symbol = O.SymTable.getSymbolByIndex(
+              Reloc.getPlainRelocationSymbolNum(O.isLittleEndian()));
 }
 
 void MachOReader::readRebaseInfo(Object &O) const {
