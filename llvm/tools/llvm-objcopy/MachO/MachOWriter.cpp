@@ -242,7 +242,7 @@ void MachOWriter::writeSections() {
         auto RelocInfo = Sec->Relocations[Index];
         if (!RelocInfo.Scattered)
           RelocInfo.setPlainRelocationSymbolNum(RelocInfo.Symbol->Index,
-                                                O.isLittleEndian());
+                                                IsLittleEndian);
 
         if (IsLittleEndian != sys::IsLittleEndianHost)
           MachO::swapStruct(

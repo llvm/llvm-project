@@ -314,11 +314,6 @@ struct Object {
   /// is not too long (SegName.size() should be less than or equal to 16).
   LoadCommand &addSegment(StringRef SegName);
 
-  bool isLittleEndian() const {
-    StringRef Magic(reinterpret_cast<const char *>(&Header.Magic), 4);
-    return Magic == "\xCE\xFA\xED\xFE" || Magic == "\xCF\xFA\xED\xFE";
-  }
-
   bool is64Bit() const {
     return Header.Magic == MachO::MH_MAGIC_64 ||
            Header.Magic == MachO::MH_CIGAM_64;
