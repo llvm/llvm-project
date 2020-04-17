@@ -199,21 +199,41 @@ else()
       PARENT_TARGET ubsan)
 
     if (FUCHSIA OR UNIX)
-      add_compiler_rt_runtime(clang_rt.ubsan_standalone
-        SHARED
+      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
+      add_compiler_rt_object_libraries(RTUbsan_dynamic_version_script_dummy
         ARCHS ${UBSAN_SUPPORTED_ARCH}
-        OBJECT_LIBS RTSanitizerCommon
-              RTSanitizerCommonLibc
-              RTSanitizerCommonCoverage
-              RTSanitizerCommonSymbolizer
-              RTUbsan
-              RTUbsan_cxx
-              RTUbsan_standalone
-              RTInterception
-        CFLAGS ${UBSAN_CFLAGS}
-        LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
-        LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
-        PARENT_TARGET ubsan)
+        SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
+        CFLAGS ${UBSAN_CFLAGS})
+
+      foreach(arch ${UBSAN_SUPPORTED_ARCH})
+        add_sanitizer_rt_version_list(clang_rt.ubsan_standalone-dynamic-${arch}
+                                      LIBS clang_rt.ubsan_standalone-${arch}
+                                           clang_rt.ubsan_standalone_cxx-${arch}
+                                      EXTRA ubsan.syms.extra)
+        set(VERSION_SCRIPT_FLAG
+            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.ubsan_standalone-dynamic-${arch}.vers)
+        set_property(SOURCE
+          ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
+          APPEND PROPERTY
+          OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.ubsan_standalone-dynamic-${arch}.vers)
+
+        add_compiler_rt_runtime(clang_rt.ubsan_standalone
+          SHARED
+          ARCHS ${arch}
+          OBJECT_LIBS RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
+                RTUbsan
+                RTUbsan_cxx
+                RTUbsan_standalone
+                RTInterception
+                RTUbsan_dynamic_version_script_dummy
+          CFLAGS ${UBSAN_CFLAGS}
+          LINK_FLAGS ${UBSAN_LINK_FLAGS} ${VERSION_SCRIPT_FLAG}
+          LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
+          PARENT_TARGET ubsan)
+      endforeach()
 
       set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
       list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386)
