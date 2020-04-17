@@ -87,6 +87,22 @@ class ValueLatticeElement {
     ConstantRange Range;
   };
 
+  /// Destroy contents of lattice value, without destructing the object.
+  void destroy() {
+    switch (Tag) {
+    case overdefined:
+    case unknown:
+    case undef:
+    case constant:
+    case notconstant:
+      break;
+    case constantrange_including_undef:
+    case constantrange:
+      Range.~ConstantRange();
+      break;
+    };
+  }
+
 public:
   /// Struct to control some aspects related to merging constant ranges.
   struct MergeOptions {
@@ -113,47 +129,16 @@ public:
     }
   };
 
-  // Const and Range are initialized on-demand.
+  // ConstVal and Range are initialized on-demand.
   ValueLatticeElement() : Tag(unknown) {}
 
-  /// Custom destructor to ensure Range is properly destroyed, when the object
-  /// is deallocated.
-  ~ValueLatticeElement() {
-    switch (Tag) {
-    case overdefined:
-    case unknown:
-    case undef:
-    case constant:
-    case notconstant:
-      break;
-    case constantrange_including_undef:
-    case constantrange:
-      Range.~ConstantRange();
-      break;
-    };
-  }
+  ~ValueLatticeElement() { destroy(); }
 
-  /// Custom copy constructor, to ensure Range gets initialized when
-  /// copying a constant range lattice element.
-  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(unknown) {
-    *this = Other;
-  }
-
-  /// Custom assignment operator, to ensure Range gets initialized when
-  /// assigning a constant range lattice element.
-  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
-    // If we change the state of this from constant range to non constant range,
-    // destroy Range.
-    if (isConstantRange() && !Other.isConstantRange())
-      Range.~ConstantRange();
-
+  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(Other.Tag) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
-      if (!isConstantRange())
-        new (&Range) ConstantRange(Other.Range);
-      else
-        Range = Other.Range;
+      new (&Range) ConstantRange(Other.Range);
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
@@ -165,7 +150,36 @@ public:
     case undef:
       break;
     }
-    Tag = Other.Tag;
+  }
+
+  ValueLatticeElement(ValueLatticeElement &&Other) : Tag(Other.Tag) {
+    switch (Other.Tag) {
+    case constantrange:
+    case constantrange_including_undef:
+      new (&Range) ConstantRange(std::move(Other.Range));
+      NumRangeExtensions = Other.NumRangeExtensions;
+      break;
+    case constant:
+    case notconstant:
+      ConstVal = Other.ConstVal;
+      break;
+    case overdefined:
+    case unknown:
+    case undef:
+      break;
+    }
+    Other.Tag = unknown;
+  }
+
+  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
+    destroy();
+    new (this) ValueLatticeElement(Other);
+    return *this;
+  }
+
+  ValueLatticeElement &operator=(ValueLatticeElement &&Other) {
+    destroy();
+    new (this) ValueLatticeElement(std::move(Other));
     return *this;
   }
 
@@ -249,8 +263,7 @@ public:
   bool markOverdefined() {
     if (isOverdefined())
       return false;
-    if (isConstantRange())
-      Range.~ConstantRange();
+    destroy();
     Tag = overdefined;
     return true;
   }
