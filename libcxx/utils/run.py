@@ -14,6 +14,7 @@ program's error code.
 
 import argparse
 import os
+import pipes
 import shutil
 import subprocess
 import sys
@@ -57,8 +58,9 @@ def main():
             else:
                 shutil.copy2(dep, args.execdir)
 
-        # Run the executable with the given environment in the execution directory.
-        return subprocess.call(' '.join(remaining), cwd=args.execdir, env=env, shell=True)
+        # Run the command line with the given environment in the execution directory.
+        commandLine = (pipes.quote(x) for x in remaining)
+        return subprocess.call(' '.join(commandLine), cwd=args.execdir, env=env, shell=True)
     finally:
         shutil.rmtree(args.execdir)
 
