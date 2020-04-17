@@ -352,8 +352,8 @@ entry:
 ; IS__CGSCC____: attributes #{{.*}} = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC____: attributes #{{.*}} = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #{{.*}} = { nofree nosync nounwind }
-; IS__CGSCC____: attributes #{{.*}} = { nounwind }
 ; IS__CGSCC____: attributes #{{.*}} = { nounwind willreturn }
+; IS__CGSCC____: attributes #{{.*}} = { nounwind }
 ; IS__CGSCC____-NOT: attributes #
 
 ; IS__TUNIT____-NOT: attributes #
