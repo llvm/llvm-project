@@ -136,7 +136,7 @@ double foo()
   double g = get(7);
   double h = get(8);
   try {
-    try1(true);    
+    try1(true);
   }
   catch (int e) {
   }
@@ -148,9 +148,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try2(true);    
+    try2(true);
   }
   catch (int e) {
   }
@@ -162,9 +162,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try3(true);    
+    try3(true);
   }
   catch (int e) {
   }
@@ -176,9 +176,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try4(true);    
+    try4(true);
   }
   catch (int e) {
   }
@@ -190,9 +190,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try5(true);    
+    try5(true);
   }
   catch (int e) {
   }
@@ -204,9 +204,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try6(true);    
+    try6(true);
   }
   catch (int e) {
   }
@@ -218,9 +218,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try7(true);    
+    try7(true);
   }
   catch (int e) {
   }
@@ -232,9 +232,9 @@ double foo()
   assert(f == get(6));
   assert(g == get(7));
   assert(h == get(8));
-  
+
   try {
-    try8(true);    
+    try8(true);
   }
   catch (int e) {
   }

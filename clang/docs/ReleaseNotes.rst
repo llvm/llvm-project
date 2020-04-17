@@ -62,6 +62,14 @@ Non-comprehensive list of changes in this release
   in the Arm C Language Extensions.
 
 
+* clang adds support for a set of  extended integer types (``_ExtInt(N)``) that
+  permit non-power of 2 integers, exposing the LLVM integer types. Since a major
+  motivating use case for these types is to limit 'bit' usage, these types don't
+  automatically promote to 'int' when operations are done between two ``ExtInt(N)``
+  types, instead math occurs at the size of the largest ``ExtInt(N)`` type.
+
+
+
 New Compiler Flags
 ------------------
 
