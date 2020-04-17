@@ -2950,6 +2950,25 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
                ParsedAttr::AS_Keyword);
 }
 
+ExprResult Parser::ParseExtIntegerArgument() {
+  assert(Tok.is(tok::kw__ExtInt) && "Not an extended int type");
+  ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  ExprResult ER = ParseConstantExpression();
+  if (ER.isInvalid()) {
+    T.skipToEnd();
+    return ExprError();
+  }
+
+  if(T.consumeClose())
+    return ExprError();
+  return ER;
+}
+
 /// Determine whether we're looking at something that might be a declarator
 /// in a simple-declaration. If it can't possibly be a declarator, maybe
 /// diagnose a missing semicolon after a prior tag definition in the decl
@@ -3882,6 +3901,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int, Loc, PrevSpec,
                                      DiagID, Policy);
       break;
+    case tok::kw__ExtInt: {
+      ExprResult ER = ParseExtIntegerArgument();
+      if (ER.isInvalid())
+        continue;
+      isInvalid = DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+      ConsumedEnd = PrevTokLocation;
+      break;
+    }
     case tok::kw___int128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int128, Loc, PrevSpec,
                                      DiagID, Policy);
@@ -4965,6 +4992,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
@@ -5044,6 +5072,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
@@ -5211,6 +5240,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_char32_t:
 
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
