@@ -58,6 +58,7 @@
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticConsumer.h"
 #include "swift/AST/IRGenOptions.h"
+#include "swift/AST/IRGenRequests.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/ModuleLoader.h"
 #include "swift/Demangling/Demangle.h"
@@ -1659,11 +1660,15 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
-    m_module = swift::performIRGeneration(
+    auto GenModule = swift::performIRGeneration(
         swift_ast_ctx->GetIRGenOptions(), &parsed_expr->module,
         std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
-        SwiftASTContext::GetGlobalLLVMContext(), llvm::ArrayRef<std::string>());
+        llvm::ArrayRef<std::string>());
+      
+    auto ContextAndModule = std::move(GenModule).release();
+    m_llvm_context.reset(ContextAndModule.first);
+    m_module.reset(ContextAndModule.second);
   }
 
   if (swift_ast_ctx->HasErrors()) {
@@ -1813,10 +1818,9 @@ Status SwiftExpressionParser::PrepareForExecution(
 
   std::vector<std::string> features;
 
-  std::unique_ptr<llvm::LLVMContext> llvm_context_up;
   // m_module is handed off here.
   m_execution_unit_sp.reset(
-      new IRExecutionUnit(llvm_context_up, m_module, function_name,
+      new IRExecutionUnit(m_llvm_context, m_module, function_name,
                           exe_ctx.GetTargetSP(), sc, features));
 
   // TODO: figure out some way to work ClangExpressionDeclMap into
