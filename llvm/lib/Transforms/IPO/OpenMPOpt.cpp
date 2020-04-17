@@ -248,7 +248,11 @@ private:
   /// \p ReplVal if given.
   bool deduplicateRuntimeCalls(Function &F, RuntimeFunctionInfo &RFI,
                                Value *ReplVal = nullptr) {
-    auto &Uses = RFI.UsesMap[&F];
+    auto UsesIt = RFI.UsesMap.find(&F);
+    if (UsesIt == RFI.UsesMap.end())
+      return false;
+
+    auto &Uses = UsesIt->getSecond();
     if (Uses.size() + (ReplVal != nullptr) < 2)
       return false;
 

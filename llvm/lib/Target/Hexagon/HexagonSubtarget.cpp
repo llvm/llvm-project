@@ -315,7 +315,8 @@ bool HexagonSubtarget::useAA() const {
 
 /// Perform target specific adjustments to the latency of a schedule
 /// dependency.
-void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
+void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
+                                             SUnit *Dst, int DstOpIdx,
                                              SDep &Dep) const {
   MachineInstr *SrcInst = Src->getInstr();
   MachineInstr *DstInst = Dst->getInstr();

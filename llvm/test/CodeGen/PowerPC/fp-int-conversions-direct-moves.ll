@@ -10,7 +10,7 @@ define zeroext i8 @_Z6testcff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -43,7 +43,7 @@ define zeroext i8 @_Z6testcdd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -76,7 +76,7 @@ define zeroext i8 @_Z7testucff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -109,7 +109,7 @@ define zeroext i8 @_Z7testucdd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -208,7 +208,7 @@ define zeroext i16 @_Z7testusff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -241,7 +241,7 @@ define zeroext i16 @_Z7testusdd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -340,7 +340,7 @@ define zeroext i32 @_Z7testuiff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -373,7 +373,7 @@ define zeroext i32 @_Z7testuidd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:

@@ -237,19 +237,21 @@ define float @trunc_signed_f32_no_fast_math(float %x) {
   ret float %r
 }
 
-define float @trunc_signed_f32(float %x) #0 {
-; SSE2-LABEL: trunc_signed_f32:
+; Without -0.0, it is ok to use roundss if it is available.
+
+define float @trunc_signed_f32_nsz(float %x) #0 {
+; SSE2-LABEL: trunc_signed_f32_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: trunc_signed_f32:
+; SSE41-LABEL: trunc_signed_f32_nsz:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    roundss $11, %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: trunc_signed_f32:
+; AVX1-LABEL: trunc_signed_f32_nsz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -258,20 +260,78 @@ define float @trunc_signed_f32(float %x) #0 {
   ret float %r
 }
 
-define double @trunc_signed_f64(double %x) #0 {
-; SSE2-LABEL: trunc_signed_f64:
+define double @trunc_signed32_f64_no_fast_math(double %x) {
+; SSE-LABEL: trunc_signed32_f64_no_fast_math:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvttsd2si %xmm0, %eax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: trunc_signed32_f64_no_fast_math:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %eax, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+  %i = fptosi double %x to i32
+  %r = sitofp i32 %i to double
+  ret double %r
+}
+
+define double @trunc_signed32_f64_nsz(double %x) #0 {
+; SSE2-LABEL: trunc_signed32_f64_nsz:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvttsd2si %xmm0, %eax
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    cvtsi2sd %eax, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: trunc_signed32_f64_nsz:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    roundsd $11, %xmm0, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: trunc_signed32_f64_nsz:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+  %i = fptosi double %x to i32
+  %r = sitofp i32 %i to double
+  ret double %r
+}
+
+define double @trunc_signed_f64_no_fast_math(double %x) {
+; SSE-LABEL: trunc_signed_f64_no_fast_math:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvttsd2si %xmm0, %rax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: trunc_signed_f64_no_fast_math:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+  %i = fptosi double %x to i64
+  %r = sitofp i64 %i to double
+  ret double %r
+}
+
+define double @trunc_signed_f64_nsz(double %x) #0 {
+; SSE2-LABEL: trunc_signed_f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: trunc_signed_f64:
+; SSE41-LABEL: trunc_signed_f64_nsz:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    roundsd $11, %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: trunc_signed_f64:
+; AVX1-LABEL: trunc_signed_f64_nsz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -280,19 +340,19 @@ define double @trunc_signed_f64(double %x) #0 {
   ret double %r
 }
 
-define <4 x float> @trunc_signed_v4f32(<4 x float> %x) #0 {
-; SSE2-LABEL: trunc_signed_v4f32:
+define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
+; SSE2-LABEL: trunc_signed_v4f32_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: trunc_signed_v4f32:
+; SSE41-LABEL: trunc_signed_v4f32_nsz:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    roundps $11, %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: trunc_signed_v4f32:
+; AVX1-LABEL: trunc_signed_v4f32_nsz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -301,8 +361,8 @@ define <4 x float> @trunc_signed_v4f32(<4 x float> %x) #0 {
   ret <4 x float> %r
 }
 
-define <2 x double> @trunc_signed_v2f64(<2 x double> %x) #0 {
-; SSE2-LABEL: trunc_signed_v2f64:
+define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
+; SSE2-LABEL: trunc_signed_v2f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
@@ -313,12 +373,12 @@ define <2 x double> @trunc_signed_v2f64(<2 x double> %x) #0 {
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: trunc_signed_v2f64:
+; SSE41-LABEL: trunc_signed_v2f64_nsz:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: trunc_signed_v2f64:
+; AVX1-LABEL: trunc_signed_v2f64_nsz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -327,8 +387,8 @@ define <2 x double> @trunc_signed_v2f64(<2 x double> %x) #0 {
   ret <2 x double> %r
 }
 
-define <4 x double> @trunc_signed_v4f64(<4 x double> %x) #0 {
-; SSE2-LABEL: trunc_signed_v4f64:
+define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
+; SSE2-LABEL: trunc_signed_v4f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
@@ -347,13 +407,13 @@ define <4 x double> @trunc_signed_v4f64(<4 x double> %x) #0 {
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: trunc_signed_v4f64:
+; SSE41-LABEL: trunc_signed_v4f64_nsz:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
 ; SSE41-NEXT:    roundpd $11, %xmm1, %xmm1
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: trunc_signed_v4f64:
+; AVX1-LABEL: trunc_signed_v4f64_nsz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX1-NEXT:    retq

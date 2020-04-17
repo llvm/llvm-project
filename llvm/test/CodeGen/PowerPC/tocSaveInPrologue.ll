@@ -22,7 +22,7 @@ define dso_local void @test(void (i32)* nocapture %fp, i32 signext %Arg, i32 sig
 ; CHECK-NEXT:    cmpwi r29, 1
 ; CHECK-NEXT:    bc 12, lt, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    cmpwi cr0, r4, 11
+; CHECK-NEXT:    cmpwi r4, 11
 ; CHECK-NEXT:    bc 12, lt, .LBB0_3
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %for.body.us

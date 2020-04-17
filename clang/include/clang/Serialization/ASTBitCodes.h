@@ -216,17 +216,35 @@ namespace serialization {
       }
     };
 
-    /// Source range/offset of a preprocessed entity.
+    /// Offset in the AST file. Use splitted 64-bit integer into low/high
+    /// parts to keep structure alignment 32-bit (it is important because
+    /// blobs in bitstream are 32-bit aligned). This structure is serialized
+    /// "as is" to the AST file.
+    struct UnderalignedInt64 {
+      uint32_t BitOffsetLow = 0;
+      uint32_t BitOffsetHigh = 0;
+
+      UnderalignedInt64() = default;
+      UnderalignedInt64(uint64_t BitOffset) { setBitOffset(BitOffset); }
+
+      void setBitOffset(uint64_t Offset) {
+        BitOffsetLow = Offset;
+        BitOffsetHigh = Offset >> 32;
+      }
+
+      uint64_t getBitOffset() const {
+        return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
+      }
+    };
+
+    /// Source location and bit offset of a declaration.
     struct DeclOffset {
       /// Raw source location.
       unsigned Loc = 0;
 
-      /// Offset in the AST file. Split 64-bit integer into low/high parts
-      /// to keep structure alignment 32-bit and don't have padding gap.
-      /// This structure is serialized "as is" to the AST file and undefined
-      /// value in the padding affects AST hash.
-      uint32_t BitOffsetLow = 0;
-      uint32_t BitOffsetHigh = 0;
+      /// Offset in the AST file. Keep structure alignment 32-bit and avoid
+      /// padding gap because undefined value in the padding affects AST hash.
+      UnderalignedInt64 BitOffset;
 
       DeclOffset() = default;
       DeclOffset(SourceLocation Loc, uint64_t BitOffset) {
@@ -243,12 +261,11 @@ namespace serialization {
       }
 
       void setBitOffset(uint64_t Offset) {
-        BitOffsetLow = Offset;
-        BitOffsetHigh = Offset >> 32;
+        BitOffset.setBitOffset(Offset);
       }
 
       uint64_t getBitOffset() const {
-        return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
+        return BitOffset.getBitOffset();
       }
     };
 

@@ -18,7 +18,6 @@
 #define LLVM_TRANSFORMS_UTILS_UNIFYFUNCTIONEXITNODES_H
 
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 namespace llvm {
 

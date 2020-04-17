@@ -68,6 +68,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
+    case R_WASM_GLOBAL_INDEX_I32:
       existingValue = static_cast<uint32_t>(read32le(loc));
       break;
     default:
@@ -77,7 +78,8 @@ void InputChunk::verifyRelocTargets() const {
     if (bytesRead && bytesRead != 5)
       warn("expected LEB at relocation site be 5-byte padded");
 
-    if (rel.Type != R_WASM_GLOBAL_INDEX_LEB) {
+    if (rel.Type != R_WASM_GLOBAL_INDEX_LEB &&
+        rel.Type != R_WASM_GLOBAL_INDEX_I32) {
       uint32_t expectedValue = file->calcExpectedValue(rel);
       if (expectedValue != existingValue)
         warn("unexpected existing value for " + relocTypeToString(rel.Type) +
@@ -132,6 +134,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
+    case R_WASM_GLOBAL_INDEX_I32:
       write32le(loc, value);
       break;
     default:

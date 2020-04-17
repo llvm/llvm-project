@@ -664,6 +664,7 @@ HANDLE_DW_OP(0xa9, reinterpret, 5, DWARF)
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, GNU)
 // Extensions for WebAssembly.
 HANDLE_DW_OP(0xed, WASM_location, 0, WASM)
+HANDLE_DW_OP(0xee, WASM_location_int, 0, WASM)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 // Extensions for Fission proposal.

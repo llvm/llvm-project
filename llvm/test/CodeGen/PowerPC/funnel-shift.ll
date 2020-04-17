@@ -44,7 +44,7 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-NEXT:    mulhdu 6, 5, 6
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    subf. 5, 6, 5
+; CHECK-NEXT:    sub. 5, 5, 6
 ; CHECK-NEXT:    subfic 6, 5, 37
 ; CHECK-NEXT:    sld 5, 3, 5
 ; CHECK-NEXT:    srd 4, 4, 6
@@ -72,7 +72,7 @@ define i7 @fshl_i7_const_fold() {
 define i32 @fshl_i32_const_shift(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_i32_const_shift:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 9, 0, 31
+; CHECK-NEXT:    rotlwi 4, 4, 9
 ; CHECK-NEXT:    rlwimi 4, 3, 9, 0, 22
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
@@ -85,7 +85,7 @@ define i32 @fshl_i32_const_shift(i32 %x, i32 %y) {
 define i32 @fshl_i32_const_overshift(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_i32_const_overshift:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 9, 0, 31
+; CHECK-NEXT:    rotlwi 4, 4, 9
 ; CHECK-NEXT:    rlwimi 4, 3, 9, 0, 22
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
@@ -149,7 +149,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-NEXT:    mulhdu 6, 5, 6
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    subf. 5, 6, 5
+; CHECK-NEXT:    sub. 5, 5, 6
 ; CHECK-NEXT:    clrldi 6, 4, 27
 ; CHECK-NEXT:    subfic 7, 5, 37
 ; CHECK-NEXT:    srd 5, 6, 5
@@ -178,7 +178,7 @@ define i7 @fshr_i7_const_fold() {
 define i32 @fshr_i32_const_shift(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshr_i32_const_shift:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 23, 0, 31
+; CHECK-NEXT:    rotlwi 4, 4, 23
 ; CHECK-NEXT:    rlwimi 4, 3, 23, 0, 8
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
@@ -191,7 +191,7 @@ define i32 @fshr_i32_const_shift(i32 %x, i32 %y) {
 define i32 @fshr_i32_const_overshift(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshr_i32_const_overshift:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 23, 0, 31
+; CHECK-NEXT:    rotlwi 4, 4, 23
 ; CHECK-NEXT:    rlwimi 4, 3, 23, 0, 8
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr

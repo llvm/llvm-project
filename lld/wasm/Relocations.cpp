@@ -84,6 +84,7 @@ void scanRelocations(InputChunk *chunk) {
       out.elemSec->addEntry(cast<FunctionSymbol>(sym));
       break;
     case R_WASM_GLOBAL_INDEX_LEB:
+    case R_WASM_GLOBAL_INDEX_I32:
       if (!isa<GlobalSymbol>(sym))
         addGOTEntry(sym);
       break;

@@ -18,18 +18,18 @@ void my_terminate () { exit ( 0 ); }
 //  Wrapper routines
 void *my_alloc2 ( size_t sz ) {
     void *p = std::malloc ( sz );
-//  std::printf ( "Allocated %ld bytes at %lx\n", sz, (unsigned long) p );  
+//  std::printf ( "Allocated %ld bytes at %lx\n", sz, (unsigned long) p );
     return p;
     }
-    
+
 void my_dealloc2 ( void *p ) {
-//  std::printf ( "Freeing %lx\n", (unsigned long) p ); 
-    std::free ( p ); 
+//  std::printf ( "Freeing %lx\n", (unsigned long) p );
+    std::free ( p );
     }
 
 void my_dealloc3 ( void *p, size_t ) {
-//  std::printf ( "Freeing %lx (size %ld)\n", (unsigned long) p, sz );  
-    std::free ( p ); 
+//  std::printf ( "Freeing %lx (size %ld)\n", (unsigned long) p, sz );
+    std::free ( p );
     }
 
 void my_construct ( void *) {
@@ -72,7 +72,7 @@ void test_exception_in_destructor ( ) {
         }
     catch ( int i ) {}
 
-    std::cerr << "should never get here" << std::endl;    
+    std::cerr << "should never get here" << std::endl;
     }
 
 

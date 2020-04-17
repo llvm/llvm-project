@@ -26,9 +26,7 @@ entry:
 
 define dso_local signext i32 @DirectCallLocal1(i32 signext %a, i32 signext %b) local_unnamed_addr {
 ; CHECK-ALL-LABEL: DirectCallLocal1:
-; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep1@ha
-; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep1@l
-; CHECK-S:         .localentry     DirectCallLocal1, .Lfunc_lep1-.Lfunc_gep1
+; CHECK-S:         .localentry     DirectCallLocal1
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    mflr r0
 ; CHECK-S-NEXT:    std r0, 16(r1)
@@ -37,10 +35,8 @@ define dso_local signext i32 @DirectCallLocal1(i32 signext %a, i32 signext %b) l
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
-; CHECK-S-NEXT:    bl localCall
-; CHECK-S-NEXT:    nop
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    bl localCall@notoc
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    addi r1, r1, 32
@@ -115,9 +111,7 @@ entry:
 
 define dso_local signext i32 @DirectCallExtern1(i32 signext %a, i32 signext %b) local_unnamed_addr {
 ; CHECK-ALL-LABEL: DirectCallExtern1:
-; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep4@ha
-; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep4@l
-; CHECK-S:         .localentry     DirectCallExtern1, .Lfunc_lep4-.Lfunc_gep4
+; CHECK-S:         .localentry     DirectCallExtern1
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    mflr r0
 ; CHECK-S-NEXT:    std r0, 16(r1)
@@ -126,10 +120,8 @@ define dso_local signext i32 @DirectCallExtern1(i32 signext %a, i32 signext %b) 
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
-; CHECK-S-NEXT:    bl externCall
-; CHECK-S-NEXT:    nop
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    bl externCall@notoc
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    addi r1, r1, 32
@@ -207,21 +199,17 @@ entry:
 
 define dso_local signext i32 @TailCallLocal1(i32 signext %a) local_unnamed_addr {
 ; CHECK-ALL-LABEL: TailCallLocal1:
-; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep7@ha
-; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep7@l
-; CHECK-S:         .localentry     TailCallLocal1, .Lfunc_lep7-.Lfunc_gep7
+; CHECK-S:         .localentry     TailCallLocal1
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    mflr r0
 ; CHECK-S-NEXT:    std r0, 16(r1)
 ; CHECK-S-NEXT:    stdu r1, -32(r1)
 ; CHECK-S-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
-; CHECK-S-NEXT:    bl localCall
-; CHECK-S-NEXT:    nop
+; CHECK-S-NEXT:    bl localCall@notoc
 ; CHECK-S-NEXT:    addi r1, r1, 32
 ; CHECK-S-NEXT:    ld r0, 16(r1)
 ; CHECK-S-NEXT:    mtlr r0
@@ -284,21 +272,17 @@ entry:
 
 define dso_local signext i32 @TailCallExtern1(i32 signext %a) local_unnamed_addr {
 ; CHECK-ALL-LABEL: TailCallExtern1:
-; CHECK-S:         addis r2, r12, .TOC.-.Lfunc_gep10@ha
-; CHECK-S-NEXT:    addi r2, r2, .TOC.-.Lfunc_gep10@l
-; CHECK-S:         .localentry     TailCallExtern1, .Lfunc_lep10-.Lfunc_gep10
+; CHECK-S:         .localentry     TailCallExtern1
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    mflr r0
 ; CHECK-S-NEXT:    std r0, 16(r1)
 ; CHECK-S-NEXT:    stdu r1, -32(r1)
 ; CHECK-S-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
-; CHECK-S-NEXT:    bl externCall
-; CHECK-S-NEXT:    nop
+; CHECK-S-NEXT:    bl externCall@notoc
 ; CHECK-S-NEXT:    addi r1, r1, 32
 ; CHECK-S-NEXT:    ld r0, 16(r1)
 ; CHECK-S-NEXT:    mtlr r0
@@ -370,15 +354,13 @@ define dso_local signext i32 @IndirectCall1(i32 signext %a, i32 signext %b) loca
 ; CHECK-S-NEXT:    std r2, 24(r1)
 ; CHECK-S-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
-; CHECK-S-NEXT:    addis r5, r2, indirectCall@toc@ha
-; CHECK-S-NEXT:    ld r12, indirectCall@toc@l(r5)
+; CHECK-S-NEXT:    pld r12, indirectCall@PCREL(0), 1
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    mtctr r12
 ; CHECK-S-NEXT:    bctrl
 ; CHECK-S-NEXT:    ld 2, 24(r1)
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    addi r1, r1, 32
@@ -406,8 +388,7 @@ define dso_local signext i32 @IndirectCall2(i32 signext %a, i32 signext %b) loca
 ; CHECK-S-NEXT:    std r2, 24(r1)
 ; CHECK-S-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-S-NEXT:    .cfi_offset lr, 16
-; CHECK-S-NEXT:    addis r5, r2, indirectCall@toc@ha
-; CHECK-S-NEXT:    ld r12, indirectCall@toc@l(r5)
+; CHECK-S-NEXT:    pld r12, indirectCall@PCREL(0), 1
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    mtctr r12
@@ -449,8 +430,7 @@ define dso_local signext i32 @IndirectCall3(i32 signext %a, i32 signext %b, i32 
 ; CHECK-S-NEXT:    mr r12, r5
 ; CHECK-S-NEXT:    bctrl
 ; CHECK-S-NEXT:    ld 2, 24(r1)
-; CHECK-S-NEXT:    addis r4, r2, globalVar@toc@ha
-; CHECK-S-NEXT:    lwz r4, globalVar@toc@l(r4)
+; CHECK-S-NEXT:    plwz r4, globalVar@PCREL(0), 1
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    addi r1, r1, 32

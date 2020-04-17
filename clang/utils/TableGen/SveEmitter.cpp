@@ -33,6 +33,7 @@
 #include <sstream>
 #include <set>
 #include <cctype>
+#include <tuple>
 
 using namespace llvm;
 
@@ -909,9 +910,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   std::stable_sort(
       Defs.begin(), Defs.end(), [](const std::unique_ptr<Intrinsic> &A,
                                    const std::unique_ptr<Intrinsic> &B) {
-        return A->getGuard() < B->getGuard() ||
-               (unsigned)A->getClassKind() < (unsigned)B->getClassKind() ||
-               A->getName() < B->getName();
+        auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+          return std::make_tuple(I->getGuard(), (unsigned)I->getClassKind(), I->getName());
+        };
+        return ToTuple(A) < ToTuple(B);
       });
 
   StringRef InGuard = "";

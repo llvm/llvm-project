@@ -169,6 +169,10 @@ const tblgen::OpTrait *tblgen::Operator::getTrait(StringRef trait) const {
   return nullptr;
 }
 
+bool tblgen::Operator::hasResizableOperandList() const {
+  return getTrait("OpTrait::ResizableOperandList") != nullptr;
+}
+
 auto tblgen::Operator::region_begin() const -> const_region_iterator {
   return regions.begin();
 }

@@ -706,6 +706,10 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   genParserSuccessorResolution(op, body);
   genParserVariadicSegmentResolution(op, body);
 
+  // Mark the operation as having resizable operand list if required.
+  if (op.hasResizableOperandList())
+    body << "  result.setOperandListToResizable();\n";
+
   body << "  return success();\n";
 }
 

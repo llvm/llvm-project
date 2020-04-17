@@ -42,13 +42,6 @@ Position position(int Line, int Character) {
   return Pos;
 }
 
-Range range(const std::pair<int, int> &P1, const std::pair<int, int> &P2) {
-  Range Range;
-  Range.start = position(P1.first, P1.second);
-  Range.end = position(P2.first, P2.second);
-  return Range;
-}
-
 TEST(SourceCodeTests, lspLength) {
   EXPECT_EQ(lspLength(""), 0UL);
   EXPECT_EQ(lspLength("ascii"), 5UL);
@@ -271,14 +264,6 @@ TEST(SourceCodeTests, OffsetToPosition) {
       EXPECT_THAT(offsetToPosition(File, L.Offset + I), Pos(L.Number, I));
   }
   EXPECT_THAT(offsetToPosition(File, 30), Pos(2, 11)) << "out of bounds";
-}
-
-TEST(SourceCodeTests, IsRangeConsecutive) {
-  EXPECT_TRUE(isRangeConsecutive(range({2, 2}, {2, 3}), range({2, 3}, {2, 4})));
-  EXPECT_FALSE(
-      isRangeConsecutive(range({0, 2}, {0, 3}), range({2, 3}, {2, 4})));
-  EXPECT_FALSE(
-      isRangeConsecutive(range({2, 2}, {2, 3}), range({2, 4}, {2, 5})));
 }
 
 TEST(SourceCodeTests, SourceLocationInMainFile) {

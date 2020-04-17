@@ -48,6 +48,6 @@ void WebAssemblyDebugValueManager::clone(MachineInstr *Insert,
 void WebAssemblyDebugValueManager::replaceWithLocal(unsigned LocalId) {
   for (auto *DBI : DbgValues) {
     MachineOperand &Op = DBI->getOperand(0);
-    Op.ChangeToTargetIndex(llvm::WebAssembly::TI_LOCAL_START, LocalId);
+    Op.ChangeToTargetIndex(llvm::WebAssembly::TI_LOCAL, LocalId);
   }
 }

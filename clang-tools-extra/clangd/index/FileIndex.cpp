@@ -174,9 +174,9 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
   // not have been indexed, see SymbolCollector::processRelations for details.
   if (Index.Relations) {
     for (const auto &R : *Index.Relations) {
-      auto *File = SymbolIDToFile.lookup(R.Subject);
-      assert(File && "unknown subject in relation");
-      File->Relations.insert(&R);
+      // FIXME: RelationSlab shouldn't contain dangling relations.
+      if (auto *File = SymbolIDToFile.lookup(R.Subject))
+        File->Relations.insert(&R);
     }
   }
   // Store only the direct includes of a file in a shard.

@@ -249,6 +249,17 @@ typedef TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b>>, S<(0 < 0), Q<b[0 < 0]>>>;
 
+template <typename a>
+class TemplateKeyword {
+  typedef typename a::template b<> d;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using d = typename a::template b<>;
+
+  typedef typename a::template b<>::c d2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using d2 = typename a::template b<>::c;
+};
+
 template <typename... Args>
 class Variadic {};
 

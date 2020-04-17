@@ -50,7 +50,7 @@ void test_map() {
 }
 
 int main(int, char**) {
-  // expected-no-disagnostics
+  // expected-no-diagnostics
   test_set<std::unordered_set>();
   test_set<std::unordered_multiset>();
   test_map<std::unordered_map>();
