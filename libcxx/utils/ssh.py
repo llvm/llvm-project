@@ -15,6 +15,7 @@ conformance test suite.
 
 import argparse
 import os
+import pipes
 import posixpath
 import subprocess
 import sys
@@ -97,10 +98,11 @@ def main():
         # host by transforming the path of test-executables to their path in the
         # temporary directory, where we know they have been copied when we handled
         # test dependencies above.
+        commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
         remoteCommands += [
             'cd {}'.format(tmp),
             'export {}'.format(' '.join(args.env)),
-            ' '.join(pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
+            ' '.join(pipes.quote(x) for x in commandLine)
         ]
 
         # Finally, SSH to the remote host and execute all the commands.
