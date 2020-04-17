@@ -93,8 +93,8 @@ public:
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override;
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
   void HandleAssemblerFlag(MCAssemblerFlag Flag) {}
@@ -467,9 +467,8 @@ bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return int64_t(Value) != int64_t(int8_t(Value));
 }
 
-void AArch64AsmBackend::relaxInstruction(const MCInst &Inst,
-                                         const MCSubtargetInfo &STI,
-                                         MCInst &Res) const {
+void AArch64AsmBackend::relaxInstruction(MCInst &Inst,
+                                         const MCSubtargetInfo &STI) const {
   llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
