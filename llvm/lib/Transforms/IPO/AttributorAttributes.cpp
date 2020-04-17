@@ -280,11 +280,11 @@ static bool genericValueTraversal(
     if (V->getType()->isPointerTy()) {
       NewV = V->stripPointerCasts();
     } else {
-      auto *CB = dyn_cast<CallBase>(V);
-      if (CB && CB->getCalledFunction()) {
-        for (Argument &Arg : CB->getCalledFunction()->args())
+      CallSite CS(V);
+      if (CS && CS.getCalledFunction()) {
+        for (Argument &Arg : CS.getCalledFunction()->args())
           if (Arg.hasReturnedAttr()) {
-            NewV = CB->getArgOperand(Arg.getArgNo());
+            NewV = CS.getArgOperand(Arg.getArgNo());
             break;
           }
       }
@@ -688,9 +688,9 @@ struct AANoUnwindImpl : AANoUnwind {
       if (!I.mayThrow())
         return true;
 
-      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
         const auto &NoUnwindAA =
-            A.getAAFor<AANoUnwind>(*this, IRPosition::callsite_function(*CB));
+            A.getAAFor<AANoUnwind>(*this, IRPosition::callsite_function(ICS));
         return NoUnwindAA.isAssumedNoUnwind();
       }
       return false;
@@ -1273,7 +1273,8 @@ bool AANoSyncImpl::isNoSyncIntrinsic(Instruction *I) {
 }
 
 bool AANoSyncImpl::isVolatile(Instruction *I) {
-  assert(!isa<CallBase>(I) && "Calls should not be checked here");
+  assert(!ImmutableCallSite(I) && !isa<CallBase>(I) &&
+         "Calls should not be checked here");
 
   switch (I->getOpcode()) {
   case Instruction::AtomicRMW:
@@ -1298,12 +1299,12 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
     if (isa<IntrinsicInst>(&I) && isNoSyncIntrinsic(&I))
       return true;
 
-    if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      if (CB->hasFnAttr(Attribute::NoSync))
+    if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
+      if (ICS.hasFnAttr(Attribute::NoSync))
         return true;
 
       const auto &NoSyncAA =
-          A.getAAFor<AANoSync>(*this, IRPosition::callsite_function(*CB));
+          A.getAAFor<AANoSync>(*this, IRPosition::callsite_function(ICS));
       if (NoSyncAA.isAssumedNoSync())
         return true;
       return false;
@@ -1322,7 +1323,7 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
       return true;
 
     // non-convergent and readnone imply nosync.
-    return !cast<CallBase>(I).isConvergent();
+    return !ImmutableCallSite(&I).isConvergent();
   };
 
   if (!A.checkForAllReadWriteInstructions(CheckRWInstForNoSync, *this) ||
@@ -1376,12 +1377,12 @@ struct AANoFreeImpl : public AANoFree {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoFree = [&](Instruction &I) {
-      const auto &CB = cast<CallBase>(I);
-      if (CB.hasFnAttr(Attribute::NoFree))
+      ImmutableCallSite ICS(&I);
+      if (ICS.hasFnAttr(Attribute::NoFree))
         return true;
 
       const auto &NoFreeAA =
-          A.getAAFor<AANoFree>(*this, IRPosition::callsite_function(CB));
+          A.getAAFor<AANoFree>(*this, IRPosition::callsite_function(ICS));
       return NoFreeAA.isAssumedNoFree();
     };
 
@@ -1558,17 +1559,17 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   bool NullPointerIsDefined =
       F ? llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()) : true;
   const DataLayout &DL = A.getInfoCache().getDL();
-  if (const auto *CB = dyn_cast<CallBase>(I)) {
-    if (CB->isBundleOperand(U))
+  if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
+    if (ICS.isBundleOperand(U))
       return 0;
 
-    if (CB->isCallee(U)) {
+    if (ICS.isCallee(U)) {
       IsNonNull |= !NullPointerIsDefined;
       return 0;
     }
 
-    unsigned ArgNo = CB->getArgOperandNo(U);
-    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    unsigned ArgNo = ICS.getArgumentNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(ICS, ArgNo);
     // As long as we only use known information there is no need to track
     // dependences here.
     auto &DerefAA = A.getAAFor<AADereferenceable>(QueryingAA, IRP,
@@ -1802,17 +1803,17 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
 
     // If the above check does not hold anymore we look at the calls.
     auto CheckForNoRecurse = [&](Instruction &I) {
-      const auto &CB = cast<CallBase>(I);
-      if (CB.hasFnAttr(Attribute::NoRecurse))
+      ImmutableCallSite ICS(&I);
+      if (ICS.hasFnAttr(Attribute::NoRecurse))
         return true;
 
       const auto &NoRecurseAA =
-          A.getAAFor<AANoRecurse>(*this, IRPosition::callsite_function(CB));
+          A.getAAFor<AANoRecurse>(*this, IRPosition::callsite_function(ICS));
       if (!NoRecurseAA.isAssumedNoRecurse())
         return false;
 
       // Recursion to the same function
-      if (CB.getCalledFunction() == getAnchorScope())
+      if (ICS.getCalledFunction() == getAnchorScope())
         return false;
 
       return true;
@@ -2113,7 +2114,7 @@ struct AAWillReturnImpl : public AAWillReturn {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForWillReturn = [&](Instruction &I) {
-      IRPosition IPos = IRPosition::callsite_function(cast<CallBase>(I));
+      IRPosition IPos = IRPosition::callsite_function(ImmutableCallSite(&I));
       const auto &WillReturnAA = A.getAAFor<AAWillReturn>(*this, IPos);
       if (WillReturnAA.isKnownWillReturn())
         return true;
@@ -2320,8 +2321,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // See callsite argument attribute and callee argument attribute.
-    const auto &CB = cast<CallBase>(getAnchorValue());
-    if (CB.paramHasAttr(getArgNo(), Attribute::NoAlias))
+    ImmutableCallSite ICS(&getAnchorValue());
+    if (ICS.paramHasAttr(getArgNo(), Attribute::NoAlias))
       indicateOptimisticFixpoint();
     Value &Val = getAssociatedValue();
     if (isa<ConstantPointerNull>(Val) &&
@@ -2334,32 +2335,32 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   /// \p OtherArgNo of \p ICS (= the underlying call site).
   bool mayAliasWithArgument(Attributor &A, AAResults *&AAR,
                             const AAMemoryBehavior &MemBehaviorAA,
-                            const CallBase &CB, unsigned OtherArgNo) {
+                            ImmutableCallSite ICS, unsigned OtherArgNo) {
     // We do not need to worry about aliasing with the underlying IRP.
     if (this->getArgNo() == (int)OtherArgNo)
       return false;
 
     // If it is not a pointer or pointer vector we do not alias.
-    const Value *ArgOp = CB.getArgOperand(OtherArgNo);
+    const Value *ArgOp = ICS.getArgOperand(OtherArgNo);
     if (!ArgOp->getType()->isPtrOrPtrVectorTy())
       return false;
 
-    auto &CBArgMemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
-        *this, IRPosition::callsite_argument(CB, OtherArgNo),
+    auto &ICSArgMemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+        *this, IRPosition::callsite_argument(ICS, OtherArgNo),
         /* TrackDependence */ false);
 
     // If the argument is readnone, there is no read-write aliasing.
-    if (CBArgMemBehaviorAA.isAssumedReadNone()) {
-      A.recordDependence(CBArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
+    if (ICSArgMemBehaviorAA.isAssumedReadNone()) {
+      A.recordDependence(ICSArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
       return false;
     }
 
     // If the argument is readonly and the underlying value is readonly, there
     // is no read-write aliasing.
     bool IsReadOnly = MemBehaviorAA.isAssumedReadOnly();
-    if (CBArgMemBehaviorAA.isAssumedReadOnly() && IsReadOnly) {
+    if (ICSArgMemBehaviorAA.isAssumedReadOnly() && IsReadOnly) {
       A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
-      A.recordDependence(CBArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      A.recordDependence(ICSArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
       return false;
     }
 
@@ -2456,10 +2457,10 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // Check there is no other pointer argument which could alias with the
     // value passed at this call site.
     // TODO: AbstractCallSite
-    const auto &CB = cast<CallBase>(getAnchorValue());
-    for (unsigned OtherArgNo = 0; OtherArgNo < CB.getNumArgOperands();
+    ImmutableCallSite ICS(&getAnchorValue());
+    for (unsigned OtherArgNo = 0; OtherArgNo < ICS.getNumArgOperands();
          OtherArgNo++)
-      if (mayAliasWithArgument(A, AAR, MemBehaviorAA, CB, OtherArgNo))
+      if (mayAliasWithArgument(A, AAR, MemBehaviorAA, ICS, OtherArgNo))
         return false;
 
     return true;
@@ -2510,8 +2511,8 @@ struct AANoAliasReturned final : AANoAliasImpl {
 
       /// For now, we can only deduce noalias if we have call sites.
       /// FIXME: add more support.
-      const auto *CB = dyn_cast<CallBase>(&RV);
-      if (!CB)
+      ImmutableCallSite ICS(&RV);
+      if (!ICS)
         return false;
 
       const IRPosition &RVPos = IRPosition::value(RV);
@@ -2983,8 +2984,8 @@ struct AAIsDeadFunction : public AAIsDead {
     // is a performance optimization for blocks with calls to a lot of internal
     // functions. It can however cause dead functions to be treated as live.
     for (const Instruction &I : BB)
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (const Function *F = CB->getCalledFunction())
+      if (ImmutableCallSite ICS = ImmutableCallSite(&I))
+        if (const Function *F = ICS.getCalledFunction())
           if (F->hasLocalLinkage())
             A.markLiveInternalFunction(*F);
     return true;
@@ -3476,12 +3477,12 @@ static unsigned getKnownAlignForUse(Attributor &A,
   }
 
   MaybeAlign MA;
-  if (const auto *CB = dyn_cast<CallBase>(I)) {
-    if (CB->isBundleOperand(U) || CB->isCallee(U))
+  if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
+    if (ICS.isBundleOperand(U) || ICS.isCallee(U))
       return 0;
 
-    unsigned ArgNo = CB->getArgOperandNo(U);
-    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    unsigned ArgNo = ICS.getArgumentNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(ICS, ArgNo);
     // As long as we only use known information there is no need to track
     // dependences here.
     auto &AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRP,
@@ -3984,13 +3985,13 @@ struct AACaptureUseTracker final : public CaptureTracker {
 
     // For now we only use special logic for call sites. However, the tracker
     // itself knows about a lot of other non-capturing cases already.
-    auto *CB = dyn_cast<CallBase>(UInst);
-    if (!CB || !CB->isArgOperand(U))
+    CallSite CS(UInst);
+    if (!CS || !CS.isArgOperand(U))
       return isCapturedIn(/* Memory */ true, /* Integer */ true,
                           /* Return */ true);
 
-    unsigned ArgNo = CB->getArgOperandNo(U);
-    const IRPosition &CSArgPos = IRPosition::callsite_argument(*CB, ArgNo);
+    unsigned ArgNo = CS.getArgumentNo(U);
+    const IRPosition &CSArgPos = IRPosition::callsite_argument(CS, ArgNo);
     // If we have a abstract no-capture attribute for the argument we can use
     // it to justify a non-capture attribute here. This allows recursion!
     auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(NoCaptureAA, CSArgPos);
@@ -3998,7 +3999,7 @@ struct AACaptureUseTracker final : public CaptureTracker {
       return isCapturedIn(/* Memory */ false, /* Integer */ false,
                           /* Return */ false);
     if (ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
-      addPotentialCopy(*CB);
+      addPotentialCopy(CS);
       return isCapturedIn(/* Memory */ false, /* Integer */ false,
                           /* Return */ false);
     }
@@ -4009,7 +4010,9 @@ struct AACaptureUseTracker final : public CaptureTracker {
   }
 
   /// Register \p CS as potential copy of the value we are checking.
-  void addPotentialCopy(CallBase &CB) { PotentialCopies.push_back(&CB); }
+  void addPotentialCopy(CallSite CS) {
+    PotentialCopies.push_back(CS.getInstruction());
+  }
 
   /// See CaptureTracker::shouldExplore(...).
   bool shouldExplore(const Use *U) override {
@@ -4989,9 +4992,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
 
     // Helper to check if for the given call site the associated argument is
     // passed to a callback where the privatization would be different.
-    auto IsCompatiblePrivArgOfCallback = [&](CallBase &CB) {
+    auto IsCompatiblePrivArgOfCallback = [&](CallSite CS) {
       SmallVector<const Use *, 4> CallbackUses;
-      AbstractCallSite::getCallbackUses(CB, CallbackUses);
+      AbstractCallSite::getCallbackUses(cast<CallBase>(*CS.getInstruction()),
+                                        CallbackUses);
       for (const Use *U : CallbackUses) {
         AbstractCallSite CBACS(U);
         assert(CBACS && CBACS.isCallbackCall());
@@ -5008,7 +5012,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 << CBArgNo << "@" << CBACS.getCalledFunction()->getName()
                 << ")\n[AAPrivatizablePtr] " << CBArg << " : "
                 << CBACS.getCallArgOperand(CBArg) << " vs "
-                << CB.getArgOperand(ArgNo) << "\n"
+                << CS.getArgOperand(ArgNo) << "\n"
                 << "[AAPrivatizablePtr] " << CBArg << " : "
                 << CBACS.getCallArgOperandNo(CBArg) << " vs " << ArgNo << "\n";
           });
@@ -5090,7 +5094,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // here.
     auto IsCompatiblePrivArgOfOtherCallSite = [&](AbstractCallSite ACS) {
       if (ACS.isDirectCall())
-        return IsCompatiblePrivArgOfCallback(*ACS.getInstruction());
+        return IsCompatiblePrivArgOfCallback(CallSite(ACS.getInstruction()));
       if (ACS.isCallbackCall())
         return IsCompatiblePrivArgOfDirectCS(ACS);
       return false;
@@ -5723,9 +5727,9 @@ ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
     // If the instruction has an own memory behavior state, use it to restrict
     // the local state. No further analysis is required as the other memory
     // state is as optimistic as it gets.
-    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+    if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
       const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
-          *this, IRPosition::callsite_function(*CB));
+          *this, IRPosition::callsite_function(ICS));
       intersectAssumedBits(MemBehaviorAA.getAssumed());
       return !isAtFixpoint();
     }
@@ -5823,8 +5827,8 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
 
   // By default we follow all uses assuming UserI might leak information on U,
   // we have special handling for call sites operands though.
-  const auto *CB = dyn_cast<CallBase>(UserI);
-  if (!CB || !CB->isArgOperand(U))
+  ImmutableCallSite ICS(UserI);
+  if (!ICS || !ICS.isArgOperand(U))
     return true;
 
   // If the use is a call argument known not to be captured, the users of
@@ -5834,9 +5838,9 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
   // call might the argument "through return", which we allow and for which we
   // need to check call users.
   if (U->get()->getType()->isPointerTy()) {
-    unsigned ArgNo = CB->getArgOperandNo(U);
+    unsigned ArgNo = ICS.getArgumentNo(U);
     const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(
-        *this, IRPosition::callsite_argument(*CB, ArgNo),
+        *this, IRPosition::callsite_argument(ICS, ArgNo),
         /* TrackDependence */ true, DepClassTy::OPTIONAL);
     return !ArgNoCaptureAA.isAssumedNoCapture();
   }
@@ -5870,17 +5874,17 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
   case Instruction::Invoke: {
     // For call sites we look at the argument memory behavior attribute (this
     // could be recursive!) in order to restrict our own state.
-    const auto *CB = cast<CallBase>(UserI);
+    ImmutableCallSite ICS(UserI);
 
     // Give up on operand bundles.
-    if (CB->isBundleOperand(U)) {
+    if (ICS.isBundleOperand(U)) {
       indicatePessimisticFixpoint();
       return;
     }
 
     // Calling a function does read the function pointer, maybe write it if the
     // function is self-modifying.
-    if (CB->isCallee(U)) {
+    if (ICS.isCallee(U)) {
       removeAssumedBits(NO_READS);
       break;
     }
@@ -5889,9 +5893,9 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
     // argument.
     IRPosition Pos;
     if (U->get()->getType()->isPointerTy())
-      Pos = IRPosition::callsite_argument(*CB, CB->getArgOperandNo(U));
+      Pos = IRPosition::callsite_argument(ICS, ICS.getArgumentNo(U));
     else
-      Pos = IRPosition::callsite_function(*CB);
+      Pos = IRPosition::callsite_function(ICS);
     const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
         *this, Pos,
         /* TrackDependence */ true, DepClassTy::OPTIONAL);
@@ -6180,9 +6184,9 @@ void AAMemoryLocationImpl::categorizePtrValue(
                                 Changed);
       return true;
     }
-    if (const auto *CB = dyn_cast<CallBase>(&V)) {
+    if (ImmutableCallSite ICS = ImmutableCallSite(&V)) {
       const auto &NoAliasAA =
-          A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(*CB));
+          A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(ICS));
       if (NoAliasAA.isAssumedNoAlias()) {
         updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_MALLOCED_MEM, &I,
                                   &V, Changed);
@@ -6222,32 +6226,32 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
   AAMemoryLocation::StateType AccessedLocs;
   AccessedLocs.intersectAssumedBits(NO_LOCATIONS);
 
-  if (auto *CB = dyn_cast<CallBase>(&I)) {
+  if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
 
     // First check if we assume any memory is access is visible.
-    const auto &CBMemLocationAA =
-        A.getAAFor<AAMemoryLocation>(*this, IRPosition::callsite_function(*CB));
+    const auto &ICSMemLocationAA =
+        A.getAAFor<AAMemoryLocation>(*this, IRPosition::callsite_function(ICS));
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize call site: " << I
-                      << " [" << CBMemLocationAA << "]\n");
+                      << " [" << ICSMemLocationAA << "]\n");
 
-    if (CBMemLocationAA.isAssumedReadNone())
+    if (ICSMemLocationAA.isAssumedReadNone())
       return NO_LOCATIONS;
 
-    if (CBMemLocationAA.isAssumedInaccessibleMemOnly()) {
+    if (ICSMemLocationAA.isAssumedInaccessibleMemOnly()) {
       updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap,
                                 NO_INACCESSIBLE_MEM, &I, nullptr, Changed);
       return AccessedLocs.getAssumed();
     }
 
-    uint32_t CBAssumedNotAccessedLocs =
-        CBMemLocationAA.getAssumedNotAccessedLocation();
+    uint32_t ICSAssumedNotAccessedLocs =
+        ICSMemLocationAA.getAssumedNotAccessedLocation();
 
     // Set the argmemonly and global bit as we handle them separately below.
-    uint32_t CBAssumedNotAccessedLocsNoArgMem =
-        CBAssumedNotAccessedLocs | NO_ARGUMENT_MEM | NO_GLOBAL_MEM;
+    uint32_t ICSAssumedNotAccessedLocsNoArgMem =
+        ICSAssumedNotAccessedLocs | NO_ARGUMENT_MEM | NO_GLOBAL_MEM;
 
     for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
-      if (CBAssumedNotAccessedLocsNoArgMem & CurMLK)
+      if (ICSAssumedNotAccessedLocsNoArgMem & CurMLK)
         continue;
       updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, CurMLK, &I,
                                 nullptr, Changed);
@@ -6255,7 +6259,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
     // Now handle global memory if it might be accessed. This is slightly tricky
     // as NO_GLOBAL_MEM has multiple bits set.
-    bool HasGlobalAccesses = ((~CBAssumedNotAccessedLocs) & NO_GLOBAL_MEM);
+    bool HasGlobalAccesses = ((~ICSAssumedNotAccessedLocs) & NO_GLOBAL_MEM);
     if (HasGlobalAccesses) {
       auto AccessPred = [&](const Instruction *, const Value *Ptr,
                             AccessKind Kind, MemoryLocationsKind MLK) {
@@ -6263,7 +6267,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                                   Ptr, Changed);
         return true;
       };
-      if (!CBMemLocationAA.checkForAllAccessesToMemoryKind(
+      if (!ICSMemLocationAA.checkForAllAccessesToMemoryKind(
               AccessPred, inverseLocation(NO_GLOBAL_MEM, false, false)))
         return AccessedLocs.getWorstState();
     }
@@ -6273,18 +6277,18 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                << getMemoryLocationsAsStr(AccessedLocs.getAssumed()) << "\n");
 
     // Now handle argument memory if it might be accessed.
-    bool HasArgAccesses = ((~CBAssumedNotAccessedLocs) & NO_ARGUMENT_MEM);
+    bool HasArgAccesses = ((~ICSAssumedNotAccessedLocs) & NO_ARGUMENT_MEM);
     if (HasArgAccesses) {
-      for (unsigned ArgNo = 0, e = CB->getNumArgOperands(); ArgNo < e;
+      for (unsigned ArgNo = 0, e = ICS.getNumArgOperands(); ArgNo < e;
            ++ArgNo) {
 
         // Skip non-pointer arguments.
-        const Value *ArgOp = CB->getArgOperand(ArgNo);
+        const Value *ArgOp = ICS.getArgOperand(ArgNo);
         if (!ArgOp->getType()->isPtrOrPtrVectorTy())
           continue;
 
         // Skip readnone arguments.
-        const IRPosition &ArgOpIRP = IRPosition::callsite_argument(*CB, ArgNo);
+        const IRPosition &ArgOpIRP = IRPosition::callsite_argument(ICS, ArgNo);
         const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
             *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
 

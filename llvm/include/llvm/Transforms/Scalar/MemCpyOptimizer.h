@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/PassManager.h"
 #include <cstdint>
 #include <functional>
@@ -65,7 +66,7 @@ private:
   bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
   bool processMemSetMemCpyDependence(MemCpyInst *M, MemSetInst *MDep);
   bool performMemCpyToMemSetOptzn(MemCpyInst *M, MemSetInst *MDep);
-  bool processByValArgument(CallBase &CB, unsigned ArgNo);
+  bool processByValArgument(CallSite CS, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);
 
