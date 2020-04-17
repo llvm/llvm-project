@@ -88,10 +88,6 @@ static cl::opt<bool> UpdateReturnAttributes(
         "update-return-attrs", cl::init(true), cl::Hidden,
             cl::desc("Update return attributes on calls within inlined body"));
 
-static cl::opt<bool> UpdateLoadMetadataDuringInlining(
-        "update-load-metadata-during-inlining", cl::init(true), cl::Hidden,
-            cl::desc("Update metadata on loads within inlined body"));
-
 static cl::opt<unsigned> InlinerAttributeWindow(
     "max-inst-checked-for-throw-during-inlining", cl::Hidden,
     cl::desc("the maximum number of instructions analyzed for may throw during "
@@ -1173,8 +1169,8 @@ static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
   return Valid;
 }
 
-static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
-  if (!UpdateReturnAttributes && !UpdateLoadMetadataDuringInlining)
+static void AddReturnAttributes(CallSite CS, ValueToValueMapTy &VMap) {
+  if (!UpdateReturnAttributes)
     return;
 
   AttrBuilder Valid = IdentifyValidAttributes(CB);
@@ -1183,32 +1179,18 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
 
-  auto getExpectedRV = [&](Value *V) -> Instruction * {
-    if (UpdateReturnAttributes && isa<CallBase>(V))
-      return dyn_cast_or_null<CallBase>(VMap.lookup(V));
-    if (UpdateLoadMetadataDuringInlining && isa<LoadInst>(V))
-      return dyn_cast_or_null<LoadInst>(VMap.lookup(V));
-    return nullptr;
-  };
-
- MDBuilder MDB(Context);
-  auto CreateMDNode = [&](uint64_t Num) -> MDNode * {
-    auto *Int = ConstantInt::get(Type::getInt64Ty(Context), Num);
-    return MDNode::get(Context, MDB.createConstant(Int));
-  };
-
   for (auto &BB : *CalledFunction) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI)
+    if (!RI || !isa<CallBase>(RI->getOperand(0)))
       continue;
+    auto *RetVal = cast<CallBase>(RI->getOperand(0));
     // Sanity check that the cloned RetVal exists and is a call, otherwise we
     // cannot add the attributes on the cloned RetVal.
     // Simplification during inlining could have transformed the cloned
     // instruction.
-    auto *NewRetVal = getExpectedRV(RI->getOperand(0));
+    auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
     if (!NewRetVal)
       continue;
-    auto *RetVal = cast<Instruction>(RI->getOperand(0));
     // Backward propagation of attributes to the returned value may be incorrect
     // if it is control flow dependent.
     // Consider:
@@ -1236,26 +1218,10 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // with a differing value, the AttributeList's merge API honours the already
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
-    if (auto *NewRetValCB = dyn_cast<CallBase>(NewRetVal)) {
-      AttributeList AL = NewRetValCB->getAttributes();
-      AttributeList NewAL =
-          AL.addAttributes(Context, AttributeList::ReturnIndex, Valid);
-      NewRetValCB->setAttributes(NewAL);
-    } else {
-      auto *NewLI = cast<LoadInst>(NewRetVal);
-      if (CB.isReturnNonNull())
-        NewLI->setMetadata(LLVMContext::MD_nonnull, CreateMDNode(1));
-      // If the load already has a dereferenceable/dereferenceable_or_null
-      // metadata, we should honour it.
-      if (uint64_t DerefBytes = Valid.getDereferenceableBytes())
-       if(!NewLI->getMetadata(LLVMContext::MD_dereferenceable))
-         NewLI->setMetadata(LLVMContext::MD_dereferenceable,
-                            CreateMDNode(DerefBytes));
-      if (uint64_t DerefOrNullBytes = Valid.getDereferenceableOrNullBytes())
-       if (!NewLI->getMetadata(LLVMContext::MD_dereferenceable_or_null))
-         NewLI->setMetadata(LLVMContext::MD_dereferenceable_or_null,
-                            CreateMDNode(DerefOrNullBytes));
-    }
+    AttributeList AL = NewRetVal->getAttributes();
+    AttributeList NewAL =
+        AL.addAttributes(Context, AttributeList::ReturnIndex, Valid);
+    NewRetVal->setAttributes(NewAL);
   }
 }
 
