@@ -2069,7 +2069,8 @@ class MVE_VHSUB_<string suffix, bit U, bits<2> size,
   : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
 
 multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int> {
+                      SDNode unpred_op, Intrinsic pred_int, PatFrag add_op,
+                      SDNode shift_op> {
   def "" : MVE_VHADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
 
@@ -2077,6 +2078,9 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
     // Unpredicated add-and-divide-by-two
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    def : Pat<(VTI.Vec (shift_op (add_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)), (i32 1))),
+              (Inst MQPR:$Qm, MQPR:$Qn)>;
 
     // Predicated add-and-divide-by-two
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned),
@@ -2087,18 +2091,44 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
   }
 }
 
-multiclass MVE_VHADD<MVEVectorVTInfo VTI>
-  : MVE_VHADD_m<VTI, int_arm_mve_vhadd, int_arm_mve_hadd_predicated>;
+multiclass MVE_VHADD<MVEVectorVTInfo VTI, PatFrag add_op, SDNode shift_op>
+  : MVE_VHADD_m<VTI, int_arm_mve_vhadd, int_arm_mve_hadd_predicated, add_op,
+                shift_op>;
 
-defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8>;
-defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16>;
-defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32>;
-defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8>;
-defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16>;
-defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32>;
+def addnuw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (add node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoUnsignedWrap();
+}]>;
+
+def addnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (add node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
+def subnuw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (sub node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoUnsignedWrap();
+}]>;
+
+def subnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (sub node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
+// Halving add/sub perform the arithemtic operation with an extra bit of
+// precision, before performing the shift, to void clipping errors. We're not
+// modelling that here with these patterns, but we're using no wrap forms of
+// add/sub to ensure that the extra bit of information is not needed.
+defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, addnsw, ARMvshrsImm>;
+defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, addnsw, ARMvshrsImm>;
+defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, addnsw, ARMvshrsImm>;
+defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, addnuw, ARMvshruImm>;
+defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, addnuw, ARMvshruImm>;
+defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, addnuw, ARMvshruImm>;
 
 multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int> {
+                      SDNode unpred_op, Intrinsic pred_int, PatFrag sub_op,
+                      SDNode shift_op> {
   def "" : MVE_VHSUB_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
 
@@ -2107,6 +2137,10 @@ multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+
+    def : Pat<(VTI.Vec (shift_op (sub_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)), (i32 1))),
+              (Inst MQPR:$Qm, MQPR:$Qn)>;
+
 
     // Predicated subtract-and-divide-by-two
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
@@ -2118,15 +2152,16 @@ multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
   }
 }
 
-multiclass MVE_VHSUB<MVEVectorVTInfo VTI>
-  : MVE_VHSUB_m<VTI, int_arm_mve_vhsub, int_arm_mve_hsub_predicated>;
+multiclass MVE_VHSUB<MVEVectorVTInfo VTI, PatFrag sub_op, SDNode shift_op>
+  : MVE_VHSUB_m<VTI, int_arm_mve_vhsub, int_arm_mve_hsub_predicated, sub_op,
+                shift_op>;
 
-defm MVE_VHSUBs8  : MVE_VHSUB<MVE_v16s8>;
-defm MVE_VHSUBs16 : MVE_VHSUB<MVE_v8s16>;
-defm MVE_VHSUBs32 : MVE_VHSUB<MVE_v4s32>;
-defm MVE_VHSUBu8  : MVE_VHSUB<MVE_v16u8>;
-defm MVE_VHSUBu16 : MVE_VHSUB<MVE_v8u16>;
-defm MVE_VHSUBu32 : MVE_VHSUB<MVE_v4u32>;
+defm MVE_VHSUBs8  : MVE_VHSUB<MVE_v16s8, subnsw, ARMvshrsImm>;
+defm MVE_VHSUBs16 : MVE_VHSUB<MVE_v8s16, subnsw, ARMvshrsImm>;
+defm MVE_VHSUBs32 : MVE_VHSUB<MVE_v4s32, subnsw, ARMvshrsImm>;
+defm MVE_VHSUBu8  : MVE_VHSUB<MVE_v16u8, subnuw, ARMvshruImm>;
+defm MVE_VHSUBu16 : MVE_VHSUB<MVE_v8u16, subnuw, ARMvshruImm>;
+defm MVE_VHSUBu32 : MVE_VHSUB<MVE_v4u32, subnuw, ARMvshruImm>;
 
 class MVE_VDUP<string suffix, bit B, bit E, list<dag> pattern=[]>
   : MVE_p<(outs MQPR:$Qd), (ins rGPR:$Rt), NoItinerary,
