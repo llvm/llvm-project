@@ -3,16 +3,16 @@ Tests for weighted merge of instrumented profiles.
 1- Merge the foo and bar profiles with unity weight and verify the combined output
 RUN: llvm-profdata merge -instr -weighted-input=1,%p/Inputs/weight-instr-bar.profdata -weighted-input=1,%p/Inputs/weight-instr-foo.profdata -o %t
 RUN: llvm-profdata show -instr -all-functions %t > %t.out1
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-1 < %t.out1
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-2 < %t.out1
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-3 < %t.out1
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-4 < %t.out1
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-1 < %t.out1
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-2 < %t.out1
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-3 < %t.out1
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-4 < %t.out1
 RUN: llvm-profdata merge -instr -weighted-input=1,%p/Inputs/weight-instr-bar.profdata %p/Inputs/weight-instr-foo.profdata -o %t
 RUN: llvm-profdata show -instr -all-functions %t > %t.out2
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-1 < %t.out2
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-2 < %t.out2
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-3 < %t.out2
-RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-4 < %t.out2
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-1 < %t.out2
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-2 < %t.out2
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-3 < %t.out2
+RUN: FileCheck %s -check-prefixes=1X_1X_WEIGHT,1X_1X_WEIGHT-4 < %t.out2
 1X_1X_WEIGHT: Counters:
 1X_1X_WEIGHT-1:   usage:
 1X_1X_WEIGHT-1:     Hash: 0x0000000000000000
@@ -38,10 +38,10 @@ RUN: FileCheck %s -check-prefix=1X_1X_WEIGHT --check-prefix=1X_1X_WEIGHT-4 < %t.
 2- Merge the foo and bar profiles with weight 3x and 5x respectively and verify the combined output
 RUN: llvm-profdata merge -instr -weighted-input=3,%p/Inputs/weight-instr-bar.profdata -weighted-input=5,%p/Inputs/weight-instr-foo.profdata -o %t
 RUN: llvm-profdata show -instr -all-functions %t > %t.out3
-RUN: FileCheck %s -check-prefix=3X_5X_WEIGHT --check-prefix=3X_5X_WEIGHT-1 < %t.out3
-RUN: FileCheck %s -check-prefix=3X_5X_WEIGHT --check-prefix=3X_5X_WEIGHT-2 < %t.out3
-RUN: FileCheck %s -check-prefix=3X_5X_WEIGHT --check-prefix=3X_5X_WEIGHT-3 < %t.out3
-RUN: FileCheck %s -check-prefix=3X_5X_WEIGHT --check-prefix=3X_5X_WEIGHT-4 < %t.out3
+RUN: FileCheck %s -check-prefixes=3X_5X_WEIGHT,3X_5X_WEIGHT-1 < %t.out3
+RUN: FileCheck %s -check-prefixes=3X_5X_WEIGHT,3X_5X_WEIGHT-2 < %t.out3
+RUN: FileCheck %s -check-prefixes=3X_5X_WEIGHT,3X_5X_WEIGHT-3 < %t.out3
+RUN: FileCheck %s -check-prefixes=3X_5X_WEIGHT,3X_5X_WEIGHT-4 < %t.out3
 3X_5X_WEIGHT: Counters:
 3X_5X_WEIGHT-1:   usage:
 3X_5X_WEIGHT-1:     Hash: 0x0000000000000000
