@@ -80,7 +80,7 @@ add_gen_header(
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h
   DEPENDS
-    llvm_libc_common_h
+    .llvm_libc_common_h
 )
 
 add_gen_header(
