@@ -1193,7 +1193,8 @@ public:
     return AMDGPU::IsaInfo::getMinWavesPerEU(this);
   }
 
-  void adjustSchedDependency(SUnit *Src, SUnit *Dst, SDep &Dep) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep) const override;
 };
 
 class R600Subtarget final : public R600GenSubtargetInfo,
