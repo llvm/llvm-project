@@ -5539,9 +5539,9 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       // imported module file.
       CurrentModule->Requirements.clear();
       CurrentModule->MissingHeaders.clear();
-      CurrentModule->IsMissingRequirement =
-          ParentModule && ParentModule->IsMissingRequirement;
-      CurrentModule->IsAvailable = !CurrentModule->IsMissingRequirement;
+      CurrentModule->IsUnimportable =
+          ParentModule && ParentModule->IsUnimportable;
+      CurrentModule->IsAvailable = !CurrentModule->IsUnimportable;
       break;
     }
 

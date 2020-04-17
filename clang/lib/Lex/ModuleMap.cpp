@@ -282,7 +282,7 @@ void ModuleMap::resolveHeader(Module *Mod,
     // resolved. (Such a module still can't be built though, except from
     // preprocessed source.)
     if (!Header.Size && !Header.ModTime)
-      Mod->markUnavailable();
+      Mod->markUnavailable(/*Unimportable=*/false);
   }
 }
 
@@ -1094,7 +1094,7 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
       new Module(Name, SourceLocation(), /*Parent=*/nullptr, IsFramework,
                  /*IsExplicit=*/false, NumCreatedModules++);
   Result->ShadowingModule = ShadowingModule;
-  Result->IsAvailable = false;
+  Result->markUnavailable(/*Unimportable*/true);
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
   ShadowModules.push_back(Result);
 
@@ -2096,9 +2096,9 @@ void ModuleMapParser::parseModuleDecl() {
 
   // If the module meets all requirements but is still unavailable, mark the
   // whole tree as unavailable to prevent it from building.
-  if (!ActiveModule->IsAvailable && !ActiveModule->IsMissingRequirement &&
+  if (!ActiveModule->IsAvailable && !ActiveModule->IsUnimportable &&
       ActiveModule->Parent) {
-    ActiveModule->getTopLevelModule()->markUnavailable();
+    ActiveModule->getTopLevelModule()->markUnavailable(/*Unimportable=*/false);
     ActiveModule->getTopLevelModule()->MissingHeaders.append(
       ActiveModule->MissingHeaders.begin(), ActiveModule->MissingHeaders.end());
   }
