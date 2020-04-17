@@ -206,7 +206,7 @@ void MachOReader::setSymbolInRelocationInfo(Object &O) const {
       for (auto &Reloc : Sec->Relocations)
         if (!Reloc.Scattered)
           Reloc.Symbol = O.SymTable.getSymbolByIndex(
-              Reloc.getPlainRelocationSymbolNum(O.isLittleEndian()));
+              Reloc.getPlainRelocationSymbolNum(MachOObj.isLittleEndian()));
 }
 
 void MachOReader::readRebaseInfo(Object &O) const {
