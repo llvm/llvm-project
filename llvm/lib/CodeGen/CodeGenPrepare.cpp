@@ -5262,7 +5262,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
   if (!RewriteGEP && Ops.size() == 2)
     return false;
 
-  unsigned NumElts = Ptr->getType()->getVectorNumElements();
+  unsigned NumElts = cast<VectorType>(Ptr->getType())->getNumElements();
 
   IRBuilder<> Builder(MemoryInst);
 
