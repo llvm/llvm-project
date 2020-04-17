@@ -4957,7 +4957,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
             IRExecutionUnit::GetLLVMGlobalContextMutex());
         m_ir_gen_module_ap.reset(new swift::irgen::IRGenModule(
             ir_generator, ir_generator.createTargetMachine(), nullptr,
-            GetGlobalLLVMContext(), ir_gen_opts.ModuleName, PSPs.OutputFilename,
+            ir_gen_opts.ModuleName, PSPs.OutputFilename,
             PSPs.MainInputFilenameForDebugInfo, ""));
         llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
         llvm_module->setDataLayout(data_layout.getStringRepresentation());
