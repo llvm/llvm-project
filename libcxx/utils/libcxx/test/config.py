@@ -7,7 +7,6 @@
 #===----------------------------------------------------------------------===##
 
 import copy
-import locale
 import os
 import platform
 import pkgutil
@@ -283,7 +282,6 @@ class Configuration(object):
         if additional_features:
             for f in additional_features.split(','):
                 self.config.available_features.add(f.strip())
-        self.target_info.add_locale_features(self.config.available_features)
 
         # Write an "available feature" that combines the triple when
         # use_system_cxx_lib is enabled. This is so that we can easily write
