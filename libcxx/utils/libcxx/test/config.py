@@ -355,8 +355,6 @@ class Configuration(object):
                 self.config.available_features.add(f.strip())
         self.target_info.add_locale_features(self.config.available_features)
 
-        target_platform = self.target_info.platform()
-
         # Write an "available feature" that combines the triple when
         # use_system_cxx_lib is enabled. This is so that we can easily write
         # XFAIL markers for tests that are known to fail with versions of
@@ -379,8 +377,8 @@ class Configuration(object):
             self.config.available_features.add('availability=%s' % name)
             self.config.available_features.add('availability=%s%s' % (name, version))
 
-        # Insert the platform name into the available features as a lower case.
-        self.config.available_features.add(target_platform)
+        # Insert the platform name and version into the available features.
+        self.target_info.add_platform_features(self.config.available_features)
 
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
