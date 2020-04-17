@@ -5175,7 +5175,9 @@ bool SwiftASTContext::IsArrayType(void *type, CompilerType *element_type_ptr,
       swift_can_type->getAs<swift::BoundGenericStructType>();
   if (struct_type) {
     swift::StructDecl *struct_decl = struct_type->getDecl();
-    if (strcmp(struct_decl->getName().get(), "Array") != 0)
+    llvm::StringRef name = struct_decl->getName().get();
+    // This is sketchy, but it matches the behavior of GetArrayElementType().
+    if (name != "Array" && name != "NativeArray" && name != "ArraySlice")
       return false;
     if (!struct_decl->getModuleContext()->isStdlibModule())
       return false;
