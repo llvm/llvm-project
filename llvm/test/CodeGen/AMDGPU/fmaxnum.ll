@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_fmax_f32_ieee_mode_on:
 ; GCN: v_mul_f32_e64 [[QUIET0:v[0-9]+]], 1.0, s{{[0-9]+}}
@@ -205,7 +205,7 @@ define amdgpu_ps float @fmax_literal_var_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_max_f32_e32
 ; GCN: v_max_f32_e32
 ; GCN-NOT: v_max_f32
-define <3 x float> @test_func_fmax_v3f32(<3 x float> %a, <3 x float> %b) nounwind {
+define <3 x float> @test_func_fmax_v3f32(<3 x float> %a, <3 x float> %b) #0 {
   %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b) #0
   ret <3 x float> %val
 }
@@ -218,5 +218,5 @@ declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #1
 declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #1
 declare double @llvm.maxnum.f64(double, double)
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }

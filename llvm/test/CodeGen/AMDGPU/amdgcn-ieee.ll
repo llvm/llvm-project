@@ -150,7 +150,6 @@ define amdgpu_ps void @ps_ieee_mode_default() #0 {
   ret void
 }
 
-; FIXME: Should have denormals off by default.
 ; GCN-LABEL: {{^}}ps_ieee_mode_on:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
 ; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]

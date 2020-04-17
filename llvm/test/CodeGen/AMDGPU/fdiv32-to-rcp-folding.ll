@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+fp32-denormals < %s | FileCheck --check-prefixes=GCN,GCN-DENORM %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-fp32-denormals < %s | FileCheck --check-prefixes=GCN,GCN-FLUSH %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck --check-prefixes=GCN,GCN-DENORM %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefixes=GCN,GCN-FLUSH %s
 
 ; GCN-LABEL: {{^}}div_1_by_x_25ulp:
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[L:v[0-9]+]], 0x6f800000

@@ -82,7 +82,15 @@ define amdgpu_kernel void @test_f32_f16_f64_denormals(half addrspace(1)* %out0, 
   ret void
 }
 
-; FIXME: Denormals should be off by default
+; GCN-LABEL: {{^}}test_just_f32_attr_flush
+; GCN: FloatMode: 192
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_just_f32_attr_flush(float addrspace(1)* %out0, double addrspace(1)* %out1) #9 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
 ; GCN-LABEL: {{^}}kill_gs_const:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
@@ -110,10 +118,11 @@ declare void @llvm.amdgcn.kill(i1)
 
 attributes #0 = { nounwind "target-cpu"="tahiti" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "target-features"="+fp64-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals" }
-attributes #4 = { nounwind "target-features"="+fp32-denormals,+fp64-denormals" }
-attributes #5 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
-attributes #6 = { nounwind "target-features"="+fp64-fp16-denormals" }
-attributes #7 = { nounwind "target-features"="-fp64-fp16-denormals" }
-attributes #8 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
+attributes #2 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #9 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

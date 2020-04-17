@@ -625,9 +625,9 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-features"="-fp32-denormals" }
-attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
-attributes #4 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" "target-cpu"="tonga" }
-attributes #5 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" "target-cpu"="gfx900" }
-attributes #6 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" "target-cpu"="gfx900" }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #4 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "target-cpu"="tonga" }
+attributes #5 = { nounwind "denormal-fp-math"="ieee,ieee" "target-cpu"="gfx900" }
+attributes #6 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "target-cpu"="gfx900" }
