@@ -481,9 +481,9 @@ define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> 
 define i1 @or_icmps_const_1bit_diff(i64 %x) {
 ; CHECK-LABEL: or_icmps_const_1bit_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, -5
 ; CHECK-NEXT:    addi 3, 3, -13
-; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 61, 1
+; CHECK-NEXT:    rotldi 3, 3, 3
 ; CHECK-NEXT:    cntlzd 3, 3
 ; CHECK-NEXT:    rldicl 3, 3, 58, 63
 ; CHECK-NEXT:    blr
