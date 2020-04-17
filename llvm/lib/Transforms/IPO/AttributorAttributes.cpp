@@ -906,8 +906,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   // If the assumed unique return value is an argument, annotate it.
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
     // TODO: This should be handled differently!
-    this->AnchorVal = UniqueRVArg;
-    this->KindOrArgNo = UniqueRVArg->getArgNo();
+    getIRPosition() = IRPosition::argument(*UniqueRVArg);
     Changed = IRAttribute::manifest(A);
   } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
     // We can replace the returned value with the unique returned constant.
