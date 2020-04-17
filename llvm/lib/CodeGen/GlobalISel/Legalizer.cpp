@@ -225,7 +225,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint();
+        LocObserver.checkpoint(false);
         continue;
       }
 
@@ -275,7 +275,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         LLVM_DEBUG(dbgs() << MI << "Is dead\n");
         RemoveDeadInstFromLists(&MI);
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint();
+        LocObserver.checkpoint(false);
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
