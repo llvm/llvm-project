@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -42,7 +43,7 @@ private:
   void cleanup();
 
   MapVector<Instruction *, ConstantRange> SeenInsts;
-  SmallPtrSet<Instruction *, 8> Roots;
+  SmallSetVector<Instruction *, 8> Roots;
   EquivalenceClasses<Instruction *> ECs;
   MapVector<Instruction *, Value *> ConvertedInsts;
   LLVMContext *Ctx;
