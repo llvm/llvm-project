@@ -35,6 +35,9 @@ add_entrypoint_library(
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
+
+    # unistd.h entrypoints
+    libc.src.unistd.write
 )
 
 add_entrypoint_library(
