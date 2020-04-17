@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <regex>
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // template <class OutputIterator, class BidirectionalIterator,
 //           class traits, class charT, class ST, class SA>
