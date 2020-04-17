@@ -283,15 +283,14 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
-        LocObserver.checkpoint(
-            VerifyDebugLocs ==
-            DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);
         for (auto *DeadMI : DeadInstructions) {
           LLVM_DEBUG(dbgs() << *DeadMI << "Is dead\n");
           RemoveDeadInstFromLists(DeadMI);
           DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
         }
-        LocObserver.checkpoint();
+        LocObserver.checkpoint(
+            VerifyDebugLocs ==
+            DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);
         Changed = true;
         continue;
       }
