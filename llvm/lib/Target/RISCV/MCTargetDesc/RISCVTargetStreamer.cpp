@@ -61,6 +61,14 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionPop() {
   OS << "\t.option\tpop\n";
 }
 
+void RISCVTargetAsmStreamer::emitDirectiveOptionPIC() {
+  OS << "\t.option\tpic\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoPIC() {
+  OS << "\t.option\tnopic\n";
+}
+
 void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
   OS << "\t.option\trvc\n";
 }
