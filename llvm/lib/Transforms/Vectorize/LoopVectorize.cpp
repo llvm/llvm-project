@@ -2253,9 +2253,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
           auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
-          auto *RepMask = createReplicatedMask(Builder, InterleaveFactor, VF);
           Value *ShuffledMask = Builder.CreateShuffleVector(
-              BlockInMaskPart, Undefs, RepMask, "interleaved.mask");
+              BlockInMaskPart, Undefs,
+              createReplicatedMask(InterleaveFactor, VF), "interleaved.mask");
           GroupMask = MaskForGaps
                           ? Builder.CreateBinOp(Instruction::And, ShuffledMask,
                                                 MaskForGaps)
@@ -2281,7 +2281,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       if (!Member)
         continue;
 
-      Constant *StrideMask = createStrideMask(Builder, I, InterleaveFactor, VF);
+      auto StrideMask = createStrideMask(I, InterleaveFactor, VF);
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], UndefVec, StrideMask, "strided.vec");
@@ -2330,17 +2330,17 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *WideVec = concatenateVectors(Builder, StoredVecs);
 
     // Interleave the elements in the wide vector.
-    Constant *IMask = createInterleaveMask(Builder, VF, InterleaveFactor);
-    Value *IVec = Builder.CreateShuffleVector(WideVec, UndefVec, IMask,
-                                              "interleaved.vec");
+    Value *IVec = Builder.CreateShuffleVector(
+        WideVec, UndefVec, createInterleaveMask(VF, InterleaveFactor),
+        "interleaved.vec");
 
     Instruction *NewStoreInstr;
     if (BlockInMask) {
       Value *BlockInMaskPart = State.get(BlockInMask, Part);
       auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
-      auto *RepMask = createReplicatedMask(Builder, InterleaveFactor, VF);
       Value *ShuffledMask = Builder.CreateShuffleVector(
-          BlockInMaskPart, Undefs, RepMask, "interleaved.mask");
+          BlockInMaskPart, Undefs, createReplicatedMask(InterleaveFactor, VF),
+          "interleaved.mask");
       NewStoreInstr = Builder.CreateMaskedStore(
           IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
     }

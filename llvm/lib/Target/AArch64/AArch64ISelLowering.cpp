@@ -9557,7 +9557,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
       unsigned IdxI = StoreCount * LaneLen * Factor + i;
       if (Mask[IdxI] >= 0) {
         Ops.push_back(Builder.CreateShuffleVector(
-            Op0, Op1, createSequentialMask(Builder, Mask[IdxI], LaneLen, 0)));
+            Op0, Op1, createSequentialMask(Mask[IdxI], LaneLen, 0)));
       } else {
         unsigned StartMask = 0;
         for (unsigned j = 1; j < LaneLen; j++) {
@@ -9573,7 +9573,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
         // Note: StartMask cannot be negative, it's checked in
         // isReInterleaveMask
         Ops.push_back(Builder.CreateShuffleVector(
-            Op0, Op1, createSequentialMask(Builder, StartMask, LaneLen, 0)));
+            Op0, Op1, createSequentialMask(StartMask, LaneLen, 0)));
       }
     }
 

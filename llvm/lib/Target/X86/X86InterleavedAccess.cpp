@@ -186,8 +186,8 @@ void X86InterleavedAccessGroup::decompose(
       DecomposedVectors.push_back(
           cast<ShuffleVectorInst>(Builder.CreateShuffleVector(
               Op0, Op1,
-              createSequentialMask(Builder, Indices[i],
-                                   SubVecTy->getVectorNumElements(), 0))));
+              createSequentialMask(Indices[i], SubVecTy->getVectorNumElements(),
+                                   0))));
     return;
   }
 

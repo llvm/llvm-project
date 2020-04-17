@@ -761,46 +761,46 @@ llvm::createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
   return ConstantVector::get(Mask);
 }
 
-Constant *llvm::createReplicatedMask(IRBuilderBase &Builder, 
-                                     unsigned ReplicationFactor, unsigned VF) {
-  SmallVector<Constant *, 16> MaskVec;
+llvm::SmallVector<int, 16>
+llvm::createReplicatedMask(unsigned ReplicationFactor, unsigned VF) {
+  SmallVector<int, 16> MaskVec;
   for (unsigned i = 0; i < VF; i++)
     for (unsigned j = 0; j < ReplicationFactor; j++)
-      MaskVec.push_back(Builder.getInt32(i));
+      MaskVec.push_back(i);
 
-  return ConstantVector::get(MaskVec);
+  return MaskVec;
 }
 
-Constant *llvm::createInterleaveMask(IRBuilderBase &Builder, unsigned VF,
-                                     unsigned NumVecs) {
-  SmallVector<Constant *, 16> Mask;
+llvm::SmallVector<int, 16> llvm::createInterleaveMask(unsigned VF,
+                                                      unsigned NumVecs) {
+  SmallVector<int, 16> Mask;
   for (unsigned i = 0; i < VF; i++)
     for (unsigned j = 0; j < NumVecs; j++)
-      Mask.push_back(Builder.getInt32(j * VF + i));
+      Mask.push_back(j * VF + i);
 
-  return ConstantVector::get(Mask);
+  return Mask;
 }
 
-Constant *llvm::createStrideMask(IRBuilderBase &Builder, unsigned Start,
-                                 unsigned Stride, unsigned VF) {
-  SmallVector<Constant *, 16> Mask;
+llvm::SmallVector<int, 16>
+llvm::createStrideMask(unsigned Start, unsigned Stride, unsigned VF) {
+  SmallVector<int, 16> Mask;
   for (unsigned i = 0; i < VF; i++)
-    Mask.push_back(Builder.getInt32(Start + i * Stride));
+    Mask.push_back(Start + i * Stride);
 
-  return ConstantVector::get(Mask);
+  return Mask;
 }
 
-Constant *llvm::createSequentialMask(IRBuilderBase &Builder, unsigned Start,
-                                     unsigned NumInts, unsigned NumUndefs) {
-  SmallVector<Constant *, 16> Mask;
+llvm::SmallVector<int, 16> llvm::createSequentialMask(unsigned Start,
+                                                      unsigned NumInts,
+                                                      unsigned NumUndefs) {
+  SmallVector<int, 16> Mask;
   for (unsigned i = 0; i < NumInts; i++)
-    Mask.push_back(Builder.getInt32(Start + i));
+    Mask.push_back(Start + i);
 
-  Constant *Undef = UndefValue::get(Builder.getInt32Ty());
   for (unsigned i = 0; i < NumUndefs; i++)
-    Mask.push_back(Undef);
+    Mask.push_back(-1);
 
-  return ConstantVector::get(Mask);
+  return Mask;
 }
 
 /// A helper function for concatenating vectors. This function concatenates two
@@ -820,13 +820,13 @@ static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
 
   if (NumElts1 > NumElts2) {
     // Extend with UNDEFs.
-    Constant *ExtMask =
-        createSequentialMask(Builder, 0, NumElts2, NumElts1 - NumElts2);
-    V2 = Builder.CreateShuffleVector(V2, UndefValue::get(VecTy2), ExtMask);
+    V2 = Builder.CreateShuffleVector(
+        V2, UndefValue::get(VecTy2),
+        createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
   }
 
-  Constant *Mask = createSequentialMask(Builder, 0, NumElts1 + NumElts2, 0);
-  return Builder.CreateShuffleVector(V1, V2, Mask);
+  return Builder.CreateShuffleVector(
+      V1, V2, createSequentialMask(0, NumElts1 + NumElts2, 0));
 }
 
 Value *llvm::concatenateVectors(IRBuilderBase &Builder,
