@@ -40,20 +40,18 @@ void User::replaceUsesOfWith(Value *From, Value *To) {
 void User::allocHungoffUses(unsigned N, bool IsPhi) {
   assert(HasHungOffUses && "alloc must have hung off uses");
 
-  static_assert(alignof(Use) >= alignof(Use::UserRef),
-                "Alignment is insufficient for 'hung-off-uses' pieces");
-  static_assert(alignof(Use::UserRef) >= alignof(BasicBlock *),
+  static_assert(alignof(Use) >= alignof(BasicBlock *),
                 "Alignment is insufficient for 'hung-off-uses' pieces");
 
-  // Allocate the array of Uses, followed by a pointer (with bottom bit set) to
-  // the User.
-  size_t size = N * sizeof(Use) + sizeof(Use::UserRef);
+  // Allocate the array of Uses
+  size_t size = N * sizeof(Use);
   if (IsPhi)
     size += N * sizeof(BasicBlock *);
   Use *Begin = static_cast<Use*>(::operator new(size));
   Use *End = Begin + N;
-  (void) new(End) Use::UserRef(const_cast<User*>(this), 1);
-  setOperandList(Use::initTags(Begin, End));
+  setOperandList(Begin);
+  for (; Begin != End; Begin++)
+    new (Begin) Use(this);
 }
 
 void User::growHungoffUses(unsigned NewNumUses, bool IsPhi) {
@@ -74,10 +72,8 @@ void User::growHungoffUses(unsigned NewNumUses, bool IsPhi) {
 
   // If this is a Phi, then we need to copy the BB pointers too.
   if (IsPhi) {
-    auto *OldPtr =
-        reinterpret_cast<char *>(OldOps + OldNumUses) + sizeof(Use::UserRef);
-    auto *NewPtr =
-        reinterpret_cast<char *>(NewOps + NewNumUses) + sizeof(Use::UserRef);
+    auto *OldPtr = reinterpret_cast<char *>(OldOps + OldNumUses);
+    auto *NewPtr = reinterpret_cast<char *>(NewOps + NewNumUses);
     std::copy(OldPtr, OldPtr + (OldNumUses * sizeof(BasicBlock *)), NewPtr);
   }
   Use::zap(OldOps, OldOps + OldNumUses, true);
@@ -135,7 +131,8 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   Obj->NumUserOperands = Us;
   Obj->HasHungOffUses = false;
   Obj->HasDescriptor = DescBytes != 0;
-  Use::initTags(Start, End);
+  for (; Start != End; Start++)
+    new (Start) Use(Obj);
 
   if (DescBytes != 0) {
     auto *DescInfo = reinterpret_cast<DescriptorInfo *>(Storage + DescBytes);
