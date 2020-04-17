@@ -29,6 +29,7 @@
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Host.inc"
+#include <sched.h>
 #endif
 #ifdef _WIN32
 #include "Windows/Host.inc"
