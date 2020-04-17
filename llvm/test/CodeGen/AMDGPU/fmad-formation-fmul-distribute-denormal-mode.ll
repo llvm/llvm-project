@@ -10,7 +10,6 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GCN,FMAD %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GCN,FMAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GCN,FMAD %s
-; XFAIL: *
 
 ; Check for incorrect fmad formation when distributing
 
