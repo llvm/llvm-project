@@ -5857,7 +5857,7 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                              unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
-  Type *VectorTy = ToVectorTy(ValTy, VF);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
@@ -5881,7 +5881,7 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                          unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
-  Type *VectorTy = ToVectorTy(ValTy, VF);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   const MaybeAlign Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   if (isa<LoadInst>(I)) {
@@ -5903,7 +5903,7 @@ unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
 unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                           unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
-  Type *VectorTy = ToVectorTy(ValTy, VF);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   const MaybeAlign Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
 
@@ -5916,14 +5916,14 @@ unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                                             unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
-  Type *VectorTy = ToVectorTy(ValTy, VF);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(I);
 
   auto Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
 
   unsigned InterleaveFactor = Group->getFactor();
-  Type *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+  VectorType *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
 
   // Holds the indices of existing members in an interleaved load group.
   // An interleaved store group doesn't need this as it doesn't allow gaps.
@@ -6227,7 +6227,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // NOTE: Don't use ToVectorTy as SK_ExtractSubvector expects a vector type.
     if (VF > 1 && Legal->isFirstOrderRecurrence(Phi))
       return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                VectorTy, VF - 1, VectorType::get(RetTy, 1));
+                                cast<VectorType>(VectorTy), VF - 1,
+                                VectorType::get(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi
