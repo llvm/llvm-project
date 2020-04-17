@@ -560,8 +560,7 @@ template <class ELFT> void createSyntheticSections() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  if (config->discard != DiscardPolicy::All)
-    copyLocalSymbols();
+  copyLocalSymbols();
 
   if (config->copyRelocs)
     addSectionSymbols();
@@ -642,13 +641,15 @@ static bool shouldKeepInSymtab(const Defined &sym) {
   if (sym.isSection())
     return false;
 
-  if (config->discard == DiscardPolicy::None)
+  // If --emit-reloc or -r is given, all symbols including local ones need to be
+  // copied because they may be referenced by relocations.
+  if (config->copyRelocs)
     return true;
 
-  // If -emit-reloc is given, all symbols including local ones need to be
-  // copied because they may be referenced by relocations.
-  if (config->emitRelocs)
+  if (config->discard == DiscardPolicy::None)
     return true;
+  if (config->discard == DiscardPolicy::All)
+    return false;
 
   // In ELF assembly .L symbols are normally discarded by the assembler.
   // If the assembler fails to do so, the linker discards them if
