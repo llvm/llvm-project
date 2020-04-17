@@ -347,6 +347,41 @@ function(add_entrypoint_object target_name)
       "OBJECT_FILES" "${all_objects}"
       "OBJECT_FILES_RAW" "${all_objects_raw}"
   )
+
+  if(LLVM_LIBC_ENABLE_LINTING)
+    set(lint_timestamp "${CMAKE_CURRENT_BINARY_DIR}/.${target_name}.__lint_timestamp__")
+
+    add_custom_command(
+      OUTPUT ${lint_timestamp}
+      # --quiet is used to surpress warning statistics from clang-tidy like:
+      #     Suppressed X warnings (X in non-user code).
+      # There seems to be a bug in clang-tidy where by even with --quiet some
+      # messages from clang's own diagnostics engine leak through:
+      #     X warnings generated.
+      # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
+      # these.
+      COMMAND $<TARGET_FILE:clang-tidy> "--extra-arg=-fno-caret-diagnostics" --quiet
+              # Path to directory containing compile_commands.json
+              -p ${PROJECT_BINARY_DIR}
+              ${ADD_ENTRYPOINT_OBJ_SRCS}
+      # We have two options for running commands, add_custom_command and
+      # add_custom_target. We don't want to run the linter unless source files
+      # have changed. add_custom_target explicitly runs everytime therefore we
+      # use add_custom_command. This function requires an output file and since
+      # linting doesn't produce a file, we create a dummy file using a
+      # crossplatform touch.
+      COMMAND "${CMAKE_COMMAND}" -E touch ${lint_timestamp}
+      COMMENT "Linting... ${target_name}"
+      DEPENDS ${clang-tidy} ${objects_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_target(${fq_target_name}.__lint__
+      DEPENDS ${lint_timestamp})
+    add_dependencies(lint-libc ${fq_target_name}.__lint__)
+    add_dependencies(${fq_target_name} ${fq_target_name}.__lint__)
+  endif()
+
 endfunction(add_entrypoint_object)
 
 # A rule to build a library from a collection of entrypoint objects.
@@ -465,7 +500,7 @@ function(add_libc_unittest target_name)
   if(NOT LLVM_INCLUDE_TESTS)
     return()
   endif()
-  
+
   cmake_parse_arguments(
     "LIBC_UNITTEST"
     "" # No optional arguments
