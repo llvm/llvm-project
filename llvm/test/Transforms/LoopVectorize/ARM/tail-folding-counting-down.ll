@@ -53,9 +53,6 @@ while.end:
 define dso_local void @sgt_no_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_no_loopguard(
 ; COMMON:       vector.body:
-;
-; FIXME: I think this is currently miscompiled after D77635
-;
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.load
 ; CHECK-TF:     masked.store
@@ -255,7 +252,6 @@ while.end:
 define dso_local void @icmp_eq(i8* noalias nocapture readonly %A, i8* noalias nocapture readonly %B, i8* noalias nocapture %C, i32 %N) #0 {
 ; COMMON-LABEL: @icmp_eq
 ; COMMON:       vector.body:
-; TODO
 entry:
   %cmp6 = icmp eq i32 %N, 0
   br i1 %cmp6, label %while.end, label %while.body.preheader
