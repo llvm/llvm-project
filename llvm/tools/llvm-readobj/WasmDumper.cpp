@@ -93,18 +93,8 @@ void WasmDumper::printRelocation(const SectionRef &Section,
   if (SI != Obj->symbol_end())
     SymName = unwrapOrError(Obj->getFileName(), SI->getName());
 
-  bool HasAddend = false;
-  switch (RelocType) {
-  case wasm::R_WASM_MEMORY_ADDR_LEB:
-  case wasm::R_WASM_MEMORY_ADDR_SLEB:
-  case wasm::R_WASM_MEMORY_ADDR_I32:
-  case wasm::R_WASM_FUNCTION_OFFSET_I32:
-  case wasm::R_WASM_SECTION_OFFSET_I32:
-    HasAddend = true;
-    break;
-  default:
-    break;
-  }
+  bool HasAddend = wasm::relocTypeHasAddend(static_cast<uint32_t>(RelocType));
+
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printNumber("Type", RelocTypeName, RelocType);
