@@ -77,7 +77,7 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 ///
 /// Returns true if any modifications are made.
 bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
-                              DominatorTree &DT, LoopInfo &LI,
+                              const DominatorTree &DT, const LoopInfo &LI,
                               ScalarEvolution *SE);
 
 /// Put loop into LCSSA form.
@@ -92,7 +92,8 @@ bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
+bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
+               ScalarEvolution *SE);
 
 /// Put a loop nest into LCSSA form.
 ///
@@ -103,7 +104,7 @@ bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
+bool formLCSSARecursively(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
                           ScalarEvolution *SE);
 
 struct SinkAndHoistLICMFlags {
