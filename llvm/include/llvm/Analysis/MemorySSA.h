@@ -499,14 +499,11 @@ public:
   using const_block_iterator = BasicBlock *const *;
 
   block_iterator block_begin() {
-    auto *Ref = reinterpret_cast<Use::UserRef *>(op_begin() + ReservedSpace);
-    return reinterpret_cast<block_iterator>(Ref + 1);
+    return reinterpret_cast<block_iterator>(op_begin() + ReservedSpace);
   }
 
   const_block_iterator block_begin() const {
-    const auto *Ref =
-        reinterpret_cast<const Use::UserRef *>(op_begin() + ReservedSpace);
-    return reinterpret_cast<const_block_iterator>(Ref + 1);
+    return reinterpret_cast<const_block_iterator>(op_begin() + ReservedSpace);
   }
 
   block_iterator block_end() { return block_begin() + getNumOperands(); }
