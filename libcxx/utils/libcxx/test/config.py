@@ -907,6 +907,8 @@ class Configuration(object):
                 self.cxx.flags += ['-fsanitize=thread']
                 self.config.available_features.add('tsan')
                 self.config.available_features.add('sanitizer-new-delete')
+            elif san == 'DataFlow':
+                self.cxx.flags += ['-fsanitize=dataflow']
             else:
                 self.lit_config.fatal('unsupported value for '
                                       'use_sanitizer: {0}'.format(san))
