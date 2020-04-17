@@ -52,11 +52,13 @@ enum class DebugLocVerifyLevel {
 static cl::opt<DebugLocVerifyLevel> VerifyDebugLocs(
     "verify-legalizer-debug-locs",
     cl::desc("Verify that debug locations are handled"),
-    cl::values(clEnumVal(DebugLocVerifyLevel::None, "No verification"),
-               clEnumVal(DebugLocVerifyLevel::Legalizations,
-                         "Verify legalizations"),
-               clEnumVal(DebugLocVerifyLevel::LegalizationsAndArtifactCombiners,
-                         "Verify legalizations and artifact combines")),
+    cl::values(
+        clEnumValN(DebugLocVerifyLevel::None, "none", "No verification"),
+        clEnumValN(DebugLocVerifyLevel::Legalizations, "legalizations",
+                   "Verify legalizations"),
+        clEnumValN(DebugLocVerifyLevel::LegalizationsAndArtifactCombiners,
+                   "legalizations+artifactcombiners",
+                   "Verify legalizations and artifact combines")),
     cl::init(DebugLocVerifyLevel::Legalizations));
 #else
 // Always disable it for release builds by preventing the observer from being
