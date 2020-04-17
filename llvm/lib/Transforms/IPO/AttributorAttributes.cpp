@@ -800,8 +800,9 @@ public:
     for (Argument &Arg : F->args()) {
       if (Arg.hasReturnedAttr()) {
         auto &ReturnInstSet = ReturnedValues[&Arg];
-        for (Instruction *RI : OpcodeInstMap[Instruction::Ret])
-          ReturnInstSet.insert(cast<ReturnInst>(RI));
+        if (auto *Insts = OpcodeInstMap.lookup(Instruction::Ret))
+          for (Instruction *RI : *Insts)
+            ReturnInstSet.insert(cast<ReturnInst>(RI));
 
         indicateOptimisticFixpoint();
         return;

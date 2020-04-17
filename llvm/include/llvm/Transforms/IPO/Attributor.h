@@ -573,17 +573,17 @@ struct InformationCache {
       It.getSecond()->~FunctionInfo();
   }
 
+  /// A vector type to hold instructions.
+  using InstructionVectorTy = SmallVector<Instruction *, 8>;
+
   /// A map type from opcodes to instructions with this opcode.
-  using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
+  using OpcodeInstMapTy = DenseMap<unsigned, InstructionVectorTy *>;
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
   OpcodeInstMapTy &getOpcodeInstMapForFunction(const Function &F) {
     return getFunctionInfo(F).OpcodeInstMap;
   }
-
-  /// A vector type to hold instructions.
-  using InstructionVectorTy = SmallVector<Instruction *, 4>;
 
   /// Return the instructions in \p F that may read or write memory.
   InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
@@ -633,6 +633,8 @@ struct InformationCache {
 
 private:
   struct FunctionInfo {
+    ~FunctionInfo();
+
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
     OpcodeInstMapTy OpcodeInstMap;
