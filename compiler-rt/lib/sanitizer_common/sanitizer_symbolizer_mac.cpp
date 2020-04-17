@@ -20,6 +20,7 @@
 
 #include <dlfcn.h>
 #include <errno.h>
+#include <mach/mach.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -50,11 +51,27 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
   return true;
 }
 
+#define K_ATOS_ENV_VAR "__check_mach_ports_lookup"
+
 class AtosSymbolizerProcess : public SymbolizerProcess {
  public:
   explicit AtosSymbolizerProcess(const char *path)
       : SymbolizerProcess(path, /*use_posix_spawn*/ true) {
     pid_str_[0] = '\0';
+  }
+
+  void LateInitialize() {
+    if (SANITIZER_IOSSIM) {
+      // `putenv()` may call malloc/realloc so it is only safe to do this
+      // during LateInitialize() or later (i.e. we can't do this in the
+      // constructor).  We also can't do this in `StartSymbolizerSubprocess()`
+      // because in TSan we switch allocators when we're symbolizing.
+      // We use `putenv()` rather than `setenv()` so that we can later directly
+      // write into the storage without LibC getting involved to change what the
+      // variable is set to
+      int result = putenv(mach_port_env_var_entry_);
+      CHECK_EQ(result, 0);
+    }
   }
 
  private:
@@ -64,6 +81,28 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
     // Put the string command line argument in the object so that it outlives
     // the call to GetArgV.
     internal_snprintf(pid_str_, sizeof(pid_str_), "%d", internal_getpid());
+
+    if (SANITIZER_IOSSIM) {
+      // `atos` in the simulator is restricted in its ability to retrieve the
+      // task port for the target process (us) so we need to do extra work
+      // to pass our task port to it.
+      mach_port_t ports[]{mach_task_self()};
+      kern_return_t ret =
+          mach_ports_register(mach_task_self(), ports, /*count=*/1);
+      CHECK_EQ(ret, KERN_SUCCESS);
+
+      // Set environment variable that signals to `atos` that it should look
+      // for our task port. We can't call `setenv()` here because it might call
+      // malloc/realloc. To avoid that we instead update the
+      // `mach_port_env_var_entry_` variable with our current PID.
+      uptr count = internal_snprintf(mach_port_env_var_entry_,
+                                     sizeof(mach_port_env_var_entry_),
+                                     K_ATOS_ENV_VAR "=%s", pid_str_);
+      CHECK_GE(count, sizeof(K_ATOS_ENV_VAR) + internal_strlen(pid_str_));
+      // Document our assumption but without calling `getenv()` in normal
+      // builds.
+      DCHECK_EQ(internal_strcmp(getenv(K_ATOS_ENV_VAR), pid_str_), 0);
+    }
 
     return SymbolizerProcess::StartSymbolizerSubprocess();
   }
@@ -88,7 +127,12 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   }
 
   char pid_str_[16];
+  // Space for `\0` in `kAtosEnvVar_` is reused for `=`.
+  char mach_port_env_var_entry_[sizeof(K_ATOS_ENV_VAR) + sizeof(pid_str_)] =
+      K_ATOS_ENV_VAR "=0";
 };
+
+#undef K_ATOS_ENV_VAR
 
 static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
                                char **out_module, char **out_file, uptr *line,
@@ -190,6 +234,8 @@ bool AtosSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   }
   return true;
 }
+
+void AtosSymbolizer::LateInitialize() { process_->LateInitialize(); }
 
 }  // namespace __sanitizer
 
