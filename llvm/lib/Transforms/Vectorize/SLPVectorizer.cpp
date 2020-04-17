@@ -89,7 +89,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
-#include <bits/stdint-intn.h>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
