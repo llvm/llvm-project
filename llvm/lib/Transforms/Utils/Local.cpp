@@ -1215,12 +1215,10 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.
-  TrailZ = std::min(TrailZ, unsigned(sizeof(unsigned) * CHAR_BIT - 1));
+  // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
+  TrailZ = std::min(TrailZ, Value::MaxAlignmentExponent);
 
   unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
-
-  // LLVM doesn't support alignments larger than this currently.
-  Align = std::min(Align, +Value::MaximumAlignment);
 
   if (PrefAlign > Align)
     Align = enforceKnownAlignment(V, Align, PrefAlign, DL);
