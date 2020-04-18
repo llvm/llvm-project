@@ -707,8 +707,8 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-static bool LLVM_ATTRIBUTE_UNUSED
-isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+bool LLVM_ATTRIBUTE_UNUSED
+mlir::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
   assert(!loops.empty() && "no loops provided");
 
   // We already know that the block can't be empty.

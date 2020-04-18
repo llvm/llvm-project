@@ -93,10 +93,8 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 
   // Bounds for tile space loops.
   for (unsigned i = 0; i < width; i++) {
-    auto lbOperands = origLoops[i].getLowerBoundOperands();
-    auto ubOperands = origLoops[i].getUpperBoundOperands();
-    SmallVector<Value, 4> newLbOperands(lbOperands);
-    SmallVector<Value, 4> newUbOperands(ubOperands);
+    OperandRange newLbOperands = origLoops[i].getLowerBoundOperands();
+    OperandRange newUbOperands = origLoops[i].getUpperBoundOperands();
     newLoops[i].setLowerBound(newLbOperands, origLoops[i].getLowerBoundMap());
     newLoops[i].setUpperBound(newUbOperands, origLoops[i].getUpperBoundMap());
     newLoops[i].setStep(tileSizes[i]);
@@ -111,8 +109,7 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
         /*operands=*/newLoops[i].getInductionVar(), lbMap);
 
     // Set the upper bound.
-    if (mayBeConstantCount.hasValue() &&
-        mayBeConstantCount.getValue() < tileSizes[i]) {
+    if (mayBeConstantCount && mayBeConstantCount.getValue() < tileSizes[i]) {
       // Trip count is less than tile size; upper bound is the trip count.
       auto ubMap = b.getConstantAffineMap(mayBeConstantCount.getValue());
       newLoops[width + i].setUpperBoundMap(ubMap);
@@ -121,20 +118,22 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
       // Construct the upper bound map; the operands are the original operands
       // with 'i' (tile-space loop) appended to it. The new upper bound map is
       // the original one with an additional expression i + tileSize appended.
-      auto ub = origLoops[i].getUpperBound();
+
+      // Add dim operands from original upper bound.
       SmallVector<Value, 4> ubOperands;
+      auto ub = origLoops[i].getUpperBound();
       ubOperands.reserve(ub.getNumOperands() + 1);
       auto origUbMap = ub.getMap();
-      // Add dim operands from original upper bound.
-      for (unsigned j = 0, e = origUbMap.getNumDims(); j < e; ++j) {
+      for (unsigned j = 0, e = origUbMap.getNumDims(); j < e; ++j)
         ubOperands.push_back(ub.getOperand(j));
-      }
+
       // Add dim operand for new loop upper bound.
       ubOperands.push_back(newLoops[i].getInductionVar());
+
       // Add symbol operands from original upper bound.
-      for (unsigned j = 0, e = origUbMap.getNumSymbols(); j < e; ++j) {
+      for (unsigned j = 0, e = origUbMap.getNumSymbols(); j < e; ++j)
         ubOperands.push_back(ub.getOperand(origUbMap.getNumDims() + j));
-      }
+
       SmallVector<AffineExpr, 4> boundExprs;
       boundExprs.reserve(1 + origUbMap.getNumResults());
       auto dim = b.getAffineDimExpr(origUbMap.getNumDims());
@@ -159,22 +158,22 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops.
 //  TODO(bondhugula): handle non hyper-rectangular spaces.
-LogicalResult mlir::tileCodeGen(MutableArrayRef<AffineForOp> band,
-                                ArrayRef<unsigned> tileSizes,
-                                SmallVectorImpl<AffineForOp> *tiledNest) {
+LogicalResult
+mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
+                          ArrayRef<unsigned> tileSizes,
+                          SmallVectorImpl<AffineForOp> *tiledNest) {
   // Check if the supplied for op's are all successively nested.
-  assert(!band.empty() && "no loops in band");
-  assert(band.size() == tileSizes.size() && "Too few/many tile sizes");
+  assert(!input.empty() && "no loops in input band");
+  assert(input.size() == tileSizes.size() && "Too few/many tile sizes");
 
-  for (unsigned i = 1, e = band.size(); i < e; i++)
-    assert(band[i].getParentOp() == band[i - 1] && "not a perfect nest / band");
+  assert(isPerfectlyNested(input) && "input loops not perfectly nested");
 
-  auto origLoops = band;
+  auto origLoops = input;
 
   AffineForOp rootAffineForOp = origLoops[0];
   auto loc = rootAffineForOp.getLoc();
   // Note that width is at least one since band isn't empty.
-  unsigned width = band.size();
+  unsigned width = input.size();
 
   SmallVector<AffineForOp, 6> tiledLoops(2 * width);
 
@@ -209,14 +208,13 @@ LogicalResult mlir::tileCodeGen(MutableArrayRef<AffineForOp> band,
   }
 
   // Move the loop body of the original nest to the new one.
-  moveLoopBody(origLoops[origLoops.size() - 1], innermostPointLoop);
+  moveLoopBody(origLoops.back(), innermostPointLoop);
 
   SmallVector<Value, 8> origLoopIVs;
-  extractForInductionVars(band, &origLoopIVs);
-  SmallVector<Optional<Value>, 6> ids(origLoopIVs.begin(), origLoopIVs.end());
-  FlatAffineConstraints cst;
-  getIndexSet(band, &cst);
+  extractForInductionVars(input, &origLoopIVs);
 
+  FlatAffineConstraints cst;
+  getIndexSet(input, &cst);
   if (!cst.isHyperRectangular(0, width)) {
     llvm::dbgs() << "tiled code generation unimplemented for the "
                     "non-hyperrectangular case, op:"
@@ -258,15 +256,15 @@ static void getTileableBands(FuncOp f,
         getMaximalPerfectLoopNest(forOp);
 }
 
-// Reduce each tile size to the largest divisor of the corresponding trip count
-// (if the trip count is known).
+/// Reduces each tile size to the largest divisor of the corresponding trip
+/// count (if the trip count is known).
 static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
                                          SmallVectorImpl<unsigned> *tileSizes) {
   assert(band.size() == tileSizes->size() && "invalid tile size count");
   for (unsigned i = 0, e = band.size(); i < e; i++) {
     unsigned &tSizeAdjusted = (*tileSizes)[i];
     auto mayConst = getConstantTripCount(band[i]);
-    if (!mayConst.hasValue())
+    if (!mayConst)
       continue;
     // Adjust the tile size to largest factor of the trip count less than
     // tSize.
@@ -289,8 +287,8 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   if (band.empty())
     return;
 
-  // Use tileSize for all loops if specified.
-  if (tileSize.hasValue()) {
+  // Use command-line tileSize for all loops if specified.
+  if (tileSize) {
     tileSizes->assign(band.size(), tileSize);
     return;
   }
@@ -312,7 +310,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   // footprint increases with the tile size linearly in that dimension (i.e.,
   // assumes one-to-one access function).
   auto fp = getMemoryFootprintBytes(band[0], 0);
-  if (!fp.hasValue()) {
+  if (!fp) {
     // Fill with default tile sizes if footprint is unknown.
     std::fill(tileSizes->begin(), tileSizes->end(),
               LoopTiling::kDefaultTileSize);
@@ -339,7 +337,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   // one possible approach. Or compute a polynomial in tile sizes and solve for
   // it.
 
-  // For an n-d tileable band, compute n^th root of the excess.
+  // For an n-d tileable band, compute the n^th root of the excess.
   unsigned tSize =
       static_cast<unsigned>(floorl(std::pow(excessFactor, 1.0 / band.size())));
   // We'll keep a running product to determine the last tile size better.
@@ -375,7 +373,7 @@ void LoopTiling::runOnFunction() {
       diag << "]\n";
     }
     SmallVector<AffineForOp, 6> tiledNest;
-    if (failed(tileCodeGen(band, tileSizes, &tiledNest)))
+    if (failed(tilePerfectlyNested(band, tileSizes, &tiledNest)))
       return signalPassFailure();
 
     // Separate full and partial tiles.
