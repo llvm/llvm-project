@@ -20,9 +20,14 @@ public:
   DataChecker(SemanticsContext &context) : context_{context} {}
   void Leave(const parser::DataStmtRepeat &);
   void Leave(const parser::DataStmtConstant &);
+  void Leave(const parser::DataStmtObject &);
+  void Leave(const parser::DataImpliedDo &);
 
 private:
   SemanticsContext &context_;
+  template <typename T> void CheckIfConstantSubscript(const T &);
+  void CheckSubscript(const parser::SectionSubscript &);
+  bool CheckAllSubscriptsInDataRef(const parser::DataRef &, parser::CharBlock);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_DATA_H_
