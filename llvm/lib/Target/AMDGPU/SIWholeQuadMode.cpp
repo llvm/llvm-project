@@ -244,6 +244,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
+    AU.addPreserved<LiveIntervals>();
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
     AU.addRequired<MachinePostDominatorTree>();
@@ -1077,6 +1078,10 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
       MDT->getBase().applyUpdates(DTUpdates);
     if (PDT)
       PDT->getBase().applyUpdates(DTUpdates);
+
+    // Update live intervals
+    MachineInstr &InsertionPoint = SplitBB->front();
+    LIS->insertMBBInMaps(SplitBB, &InsertionPoint);
   }
 
   // Convert last instruction in to a terminator.
@@ -1091,8 +1096,9 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
   default:
     if (BB->getFirstTerminator() == BB->end()) {
       assert(SplitBB != nullptr);
-      BuildMI(*BB, BB->end(), DebugLoc(), TII->get(AMDGPU::S_BRANCH))
+      MachineInstr *MI = BuildMI(*BB, BB->end(), DebugLoc(), TII->get(AMDGPU::S_BRANCH))
         .addMBB(SplitBB);
+      LIS->InsertMachineInstrInMaps(*MI);
     }
     break;
   }
