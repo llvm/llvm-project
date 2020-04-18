@@ -544,6 +544,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 static bool isBetterKnownHeader(const ModuleMap::KnownHeader &New,
                                 const ModuleMap::KnownHeader &Old) {
   // Prefer available modules.
+  // FIXME: Considering whether the module is available rather than merely
+  // importable is non-hermetic and can result in surprising behavior for
+  // prebuilt modules. Consider only checking for importability here.
   if (New.getModule()->isAvailable() && !Old.getModule()->isAvailable())
     return true;
 
