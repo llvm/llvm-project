@@ -668,6 +668,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
+          AllowedExit.insert(Phi);
           FirstOrderRecurrences.insert(Phi);
           continue;
         }
