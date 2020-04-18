@@ -1929,7 +1929,8 @@ void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
     return;
   SymbolRef::Type Type =
       unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
-  uint32_t Flags = Symbol.getFlags();
+  uint32_t Flags =
+      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   // Don't ask a Mach-O STAB symbol for its section unless you know that
   // STAB symbol's section field refers to a valid section index. Otherwise

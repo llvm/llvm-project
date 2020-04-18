@@ -296,7 +296,11 @@ public:
   ObjectFile(const ObjectFile &other) = delete;
 
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
-    assert(getSymbolFlags(Symb) & SymbolRef::SF_Common);
+    Expected<uint32_t> SymbolFlagsOrErr = getSymbolFlags(Symb);
+    if (!SymbolFlagsOrErr)
+      // TODO: Actually report errors helpfully.
+      report_fatal_error(SymbolFlagsOrErr.takeError());
+    assert(*SymbolFlagsOrErr & SymbolRef::SF_Common);
     return getCommonSymbolSizeImpl(Symb);
   }
 

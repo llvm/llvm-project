@@ -47,7 +47,7 @@ Error IRObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
   return Error::success();
 }
 
-uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
+Expected<uint32_t> IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   return SymTab.getSymbolFlags(getSym(Symb));
 }
 

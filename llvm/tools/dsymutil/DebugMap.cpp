@@ -256,9 +256,12 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
       for (const auto &Sym : Object->symbols()) {
         uint64_t Address = Sym.getValue();
         Expected<StringRef> Name = Sym.getName();
-        if (!Name || (Sym.getFlags() &
-                      (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
+        Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+        if (!Name || !FlagsOrErr ||
+            (*FlagsOrErr & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
           // TODO: Actually report errors helpfully.
+          if (!FlagsOrErr)
+            consumeError(FlagsOrErr.takeError());
           if (!Name)
             consumeError(Name.takeError());
           continue;
