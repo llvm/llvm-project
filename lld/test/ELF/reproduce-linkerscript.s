@@ -8,6 +8,7 @@
 # RUN: echo "/* empty */" > %t.dir/build/bar.script
 # RUN: cd %t.dir
 # RUN: ld.lld build/foo.script -o /dev/null --reproduce repro.tar
+# RUN: tar tf repro.tar
 # RUN: tar tf repro.tar | FileCheck -DPATH='%:t.dir' %s
 
 # CHECK: [[PATH]]/build/foo.script
