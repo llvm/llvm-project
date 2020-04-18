@@ -1,13 +1,13 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 -verbose %t.o -o %t2
-// RUN: llvm-objdump -d %t2 --start-address=0x12ffa --stop-address=0x13002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x13ffa --stop-address=0x14002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x14ffa --stop-address=0x15002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x15ffa --stop-address=0x16006 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x16ffe --stop-address=0x17002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x18000 --stop-address=0x18004 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x19002 --stop-address=0x19006 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x21ffa --stop-address=0x22002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x22ffa --stop-address=0x23002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x23ffa --stop-address=0x24002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x24ffa --stop-address=0x25006 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x25ffe --stop-address=0x26002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x27000 --stop-address=0x28004 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x28002 --stop-address=0x29006 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
 
 /// Test boundary conditions of the cortex-a8 erratum. The following cases
 /// should not trigger the Erratum
@@ -27,9 +27,9 @@ target:
  b.w target
  b.w target
 
-// CALLSITE1:      00012ffa <target>:
-// CALLSITE1-NEXT:    12ffa:            b.w     #-4
-// CALLSITE1-NEXT:    12ffe:            b.w     #-8
+// CALLSITE1:      00021ffa <target>:
+// CALLSITE1-NEXT:    21ffa:            b.w     #-4
+// CALLSITE1-NEXT:    21ffe:            b.w     #-8
 
  .space 4088
  .type target2, %function
@@ -40,10 +40,10 @@ target2:
  nop
  bl target2
 
-// CALLSITE2:      00013ffa <target2>:
-// CALLSITE2-NEXT:    13ffa:            nop
-// CALLSITE2-NEXT:    13ffc:            nop
-// CALLSITE2-NEXT:    13ffe:            bl      #-8
+// CALLSITE2:      00022ffa <target2>:
+// CALLSITE2-NEXT:    22ffa:            nop
+// CALLSITE2-NEXT:    22ffc:            nop
+// CALLSITE2-NEXT:    22ffe:            bl      #-8
 
  .space 4088
  .type target3, %function
@@ -54,9 +54,9 @@ target3:
  nop.w
  beq.w target2
 
-// CALLSITE3:      00014ffa <target3>:
-// CALLSITE3-NEXT:    14ffa:            nop.w
-// CALLSITE3-NEXT:    14ffe:            beq.w   #-4104
+// CALLSITE3:      00023ffa <target3>:
+// CALLSITE3-NEXT:    23ffa:            nop.w
+// CALLSITE3-NEXT:    23ffe:            beq.w   #-4104
 
  .space 4088
  .type source4, %function
@@ -69,11 +69,11 @@ source4:
 target4:
  nop.w
 
-// CALLSITE4:      00015ffa <source4>:
-// CALLSITE4-NEXT:    15ffa:            nop.w
-// CALLSITE4-NEXT:    15ffe:            beq.w   #0
-// CALLSITE4:      00016002 <target4>:
-// CALLSITE4-NEXT:    16002:            nop.w
+// CALLSITE4:      00024ffa <source4>:
+// CALLSITE4-NEXT:    24ffa:            nop.w
+// CALLSITE4-NEXT:    24ffe:            beq.w   #0
+// CALLSITE4:      00025002 <target4>:
+// CALLSITE4-NEXT:    25002:            nop.w
 
  .space 4084
  .type target5, %function
@@ -89,8 +89,8 @@ target5:
 source5:
  beq.w target5
 
-// CALLSITE5:      00016ffe <source5>:
-// CALLSITE5-NEXT:    16ffe:            beq.w   #-8
+// CALLSITE5:      00025ffe <source5>:
+// CALLSITE5-NEXT:    25ffe:            beq.w   #-8
 
 /// Edge case where two word sequence starts at offset 0xffc, check that
 /// we don't match. In this case the branch will be completely in the 2nd
@@ -104,8 +104,8 @@ source5:
 target6:
  bl target6
 
-// CALLSITE6:      00018000 <target6>:
-// CALLSITE6-NEXT:    18000:            bl      #-4
+// CALLSITE6:      00027000 <target6>:
+// CALLSITE6-NEXT:    27000:            bl      #-4
 
 /// Edge case where two word sequence starts at offset 0xffe, check that
 /// we don't match. In this case the branch will be completely in the 2nd
@@ -119,5 +119,5 @@ target6:
 target7:
  bl target7
 
-// CALLSITE7:      00019002 <target7>:
-// CALLSITE7:         19002:            bl      #-4
+// CALLSITE7:      00028002 <target7>:
+// CALLSITE7:         28002:            bl      #-4
