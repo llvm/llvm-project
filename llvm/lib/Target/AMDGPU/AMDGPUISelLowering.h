@@ -416,7 +416,6 @@ enum NodeType : unsigned {
   RCP,
   RSQ,
   RCP_LEGACY,
-  RSQ_LEGACY,
   RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
