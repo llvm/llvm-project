@@ -325,7 +325,7 @@ let SubtargetPredicate = isGFX6GFX7 in {
     defm V_RSQ_CLAMP_F32 :
       VOP1Inst<"v_rsq_clamp_f32", VOP_F32_F32, AMDGPUrsq_clamp>;
     defm V_RSQ_LEGACY_F32 :
-      VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, AMDGPUrsq_legacy>;
+      VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, int_amdgcn_rsq_legacy>;
   } // End SchedRW = [WriteQuarterRate32]
 
   let SchedRW = [WriteDouble] in {

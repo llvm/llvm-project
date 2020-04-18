@@ -5842,8 +5842,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_rsq_legacy:
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
-
-    return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
+    return SDValue();
   case Intrinsic::amdgcn_rcp_legacy:
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
@@ -8777,7 +8776,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::RCP_LEGACY:
-  case AMDGPUISD::RSQ_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::TRIG_PREOP:
   case AMDGPUISD::DIV_SCALE:
@@ -8882,6 +8880,11 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
+    case Intrinsic::amdgcn_rcp:
+    case Intrinsic::amdgcn_rsq:
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_rcp_legacy:
+    case Intrinsic::amdgcn_rsq_legacy:
       return true;
     default:
       break;
@@ -10068,10 +10071,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::FRACT:
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RCP_LEGACY:
-  case AMDGPUISD::RSQ_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::LDEXP: {
+    // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(0);
     if (Src.isUndef())
       return Src;

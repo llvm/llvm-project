@@ -121,8 +121,6 @@ def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 // out = 1.0 / sqrt(a)
 def AMDGPUrsq_impl : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
 
-// out = 1.0 / sqrt(a)
-def AMDGPUrsq_legacy_impl : SDNode<"AMDGPUISD::RSQ_LEGACY", SDTFPUnaryOp>;
 def AMDGPUrcp_legacy_impl : SDNode<"AMDGPUISD::RCP_LEGACY", SDTFPUnaryOp>;
 
 def AMDGPUrcp_iflag : SDNode<"AMDGPUISD::RCP_IFLAG", SDTFPUnaryOp>;
@@ -384,9 +382,6 @@ def AMDGPUrcp : PatFrags<(ops node:$src), [(int_amdgcn_rcp node:$src),
                                            (AMDGPUrcp_impl node:$src)]>;
 def AMDGPUrcp_legacy : PatFrags<(ops node:$src), [(int_amdgcn_rcp_legacy node:$src),
                                                   (AMDGPUrcp_legacy_impl node:$src)]>;
-
-def AMDGPUrsq_legacy : PatFrags<(ops node:$src), [(int_amdgcn_rsq_legacy node:$src),
-                                                  (AMDGPUrsq_legacy_impl node:$src)]>;
 
 def AMDGPUrsq : PatFrags<(ops node:$src), [(int_amdgcn_rsq node:$src),
                                            (AMDGPUrsq_impl node:$src)]>;
