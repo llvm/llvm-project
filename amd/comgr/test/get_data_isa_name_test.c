@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_get_isa_count(&isaCount);
   checkError(status, "amd_comgr_get_isa_count");
 
-  for (int i = 0; i < isaCount; i++) {
+  for (size_t i = 0; i < isaCount; i++) {
     const char *isaName;
     status = amd_comgr_get_isa_name(i, &isaName);
     checkError(status, "amd_comgr_get_isa_name");

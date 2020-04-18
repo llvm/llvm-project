@@ -46,15 +46,15 @@ int main(int argc, char *argv[]) {
   size_t isaCounts;
   status = amd_comgr_get_isa_count(&isaCounts);
   checkError(status, "amd_comgr_get_isa_count");
-  printf("isa count = %ld\n\n", isaCounts);
+  printf("isa count = %zu\n\n", isaCounts);
 
   // print the list
   printf("*** List of ISA names supported:\n");
-  for (int i = 0; i < isaCounts; i++) {
+  for (size_t i = 0; i < isaCounts; i++) {
     const char *name;
     status = amd_comgr_get_isa_name(i, &name);
     checkError(status, "amd_comgr_get_isa_name");
-    printf("%d: %s\n", i, name);
+    printf("%zu: %s\n", i, name);
     amd_comgr_metadata_node_t meta;
     status = amd_comgr_get_isa_metadata(name, &meta);
     checkError(status, "amd_comgr_get_isa_metadata");

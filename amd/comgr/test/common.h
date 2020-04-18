@@ -186,7 +186,7 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
     status = amd_comgr_get_metadata_list_size(value, &size);
     checkError(status, "amd_comgr_get_metadata_list_size");
     printf("LIST %s %ld entries = \n", keybuf, size);
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
       status = amd_comgr_index_list_metadata(value, i, &son);
       checkError(status, "amd_comgr_index_list_metadata");
       status = printEntry(key, son, data);

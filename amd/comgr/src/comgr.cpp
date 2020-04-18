@@ -231,9 +231,9 @@ static StringRef getLanguageName(amd_comgr_language_t Language) {
     return "AMD_COMGR_LANGUAGE_HC";
   case AMD_COMGR_LANGUAGE_HIP:
     return "AMD_COMGR_LANGUAGE_HIP";
-  default:
-    return "UNKNOWN_LANGUAGE";
   }
+
+  llvm_unreachable("invalid language");
 }
 
 static StringRef getStatusName(amd_comgr_status_t Status) {
@@ -246,9 +246,9 @@ static StringRef getStatusName(amd_comgr_status_t Status) {
     return "AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT";
   case AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES:
     return "AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES";
-  default:
-    return "UNKNOWN_STATUS";
   }
+
+  llvm_unreachable("invalid status");
 }
 
 /// Perform a simple quoting of an option to allow separating options with
@@ -1441,28 +1441,25 @@ amd_comgr_status_t AMD_API
   switch (SymbolInfo) {
   case AMD_COMGR_SYMBOL_INFO_NAME_LENGTH:
     *(size_t *)Value = strlen(Sym->Name);
-    break;
+    return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_NAME:
     strcpy((char *)Value, Sym->Name);
-    break;
+    return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_TYPE:
     *(amd_comgr_symbol_type_t *)Value = Sym->Type;
-    break;
+    return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_SIZE:
     *(uint64_t *)Value = Sym->Size;
-    break;
+    return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_IS_UNDEFINED:
     *(bool *)Value = Sym->Undefined;
-    break;
+    return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_VALUE:
     *(uint64_t *)Value = Sym->Value;
-    break;
-
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    return AMD_COMGR_STATUS_SUCCESS;
   }
 
-  return AMD_COMGR_STATUS_SUCCESS;
+  llvm_unreachable("invalid symbol info");
 }
 
 amd_comgr_status_t AMD_API

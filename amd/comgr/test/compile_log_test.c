@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_status_t status;
 
   size_t count;
-  char *buf = "invalid";
+  const char *buf = "invalid";
   size_t size = strlen(buf);
 
   status = amd_comgr_create_data_set(&dataSetCL);

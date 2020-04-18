@@ -63,7 +63,6 @@ void testFlat(amd_comgr_action_info_t actionInfo, const char *options) {
 void testFlats() {
   amd_comgr_action_info_t actionInfo;
   amd_comgr_status_t status;
-  size_t count;
 
   status = amd_comgr_create_action_info(&actionInfo);
   checkError(status, "amd_comgr_create_action_info");
@@ -113,7 +112,6 @@ void testList(amd_comgr_action_info_t actionInfo, const char *options[],
 void testLists() {
   amd_comgr_action_info_t actionInfo;
   amd_comgr_status_t status;
-  size_t count;
 
   status = amd_comgr_create_action_info(&actionInfo);
   checkError(status, "amd_comgr_create_action_info");
