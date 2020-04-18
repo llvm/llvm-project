@@ -14,8 +14,9 @@ class TestCase(TestBase):
 
         # Test that global variables contain the right scope operators.
         global_vars = self.frame().GetVariables(False, False, True, False)
-        global_var_names = [v.GetName() for v in global_vars]
-        expected_var_names = ["A::a", "B::a", "C::a", "::a"]
+        # ManualDWARFIndex using NameToDIE does not sort alphabetically.
+        global_var_names = sorted([v.GetName() for v in global_vars])
+        expected_var_names = ["::a", "A::a", "B::a", "C::a"]
         self.assertEqual(global_var_names, expected_var_names)
 
         # Test lookup in scopes.
