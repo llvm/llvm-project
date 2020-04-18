@@ -144,7 +144,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
-std::vector<StringRef> BitcodeCompiler::compile() {
+std::vector<InputFile *> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
@@ -188,22 +188,32 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   if (!config->ltoCache.empty())
     pruneCache(config->ltoCache, config->ltoCachePolicy);
 
-  std::vector<StringRef> ret;
+  std::vector<InputFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
-    if (buf[i].empty())
-      continue;
-    if (config->saveTemps) {
-      if (i == 0)
-        saveBuffer(buf[i], config->outputFile + ".lto.obj");
-      else
-        saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.obj");
-    }
-    ret.emplace_back(buf[i].data(), buf[i].size());
-  }
+    // Assign unique names to LTO objects. This ensures they have unique names
+    // in the PDB if one is produced. The names should look like:
+    // - foo.exe.lto.obj
+    // - foo.exe.lto.1.obj
+    // - ...
+    StringRef ltoObjName =
+        saver.save(Twine(config->outputFile) + ".lto" +
+                   (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
 
-  for (std::unique_ptr<MemoryBuffer> &file : files)
-    if (file)
-      ret.push_back(file->getBuffer());
+    // Get the native object contents either from the cache or from memory.  Do
+    // not use the cached MemoryBuffer directly, or the PDB will not be
+    // deterministic.
+    StringRef objBuf;
+    if (files[i])
+      objBuf = files[i]->getBuffer();
+    else
+      objBuf = buf[i];
+    if (objBuf.empty())
+      continue;
+
+    if (config->saveTemps)
+      saveBuffer(buf[i], ltoObjName);
+    ret.push_back(make<ObjFile>(MemoryBufferRef(objBuf, ltoObjName)));
+  }
 
   return ret;
 }

@@ -5,8 +5,8 @@
 # RUN: lld-link /out:%t2.exe /entry:g /subsystem:console /lldmap:%t2.map %t.obj %t.lto.obj
 # RUN: FileCheck %s < %t2.map
 
-# CHECK: lto.tmp
-# CHECK-NEXT: lto.tmp
+# CHECK:      .lto.obj:
+# CHECK-NEXT: .lto.obj:
 # CHECK-NEXT: 0 g
 
 --- !COFF
