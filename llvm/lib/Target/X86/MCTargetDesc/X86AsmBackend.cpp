@@ -566,6 +566,10 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
     return false;
   assert(allowAutoPadding() && "incorrect initialization!");
 
+  // We only pad in text section.
+  if (!OS.getCurrentSectionOnly()->getKind().isText())
+    return false;
+
   // To be Done: Currently don't deal with Bundle cases.
   if (OS.getAssembler().isBundlingEnabled())
     return false;
