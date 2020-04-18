@@ -456,11 +456,15 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   bool inlinedAnyCalls = false;
   for (unsigned i = 0; i != calls.size(); ++i) {
     ResolvedCall it = calls[i];
+    bool doInline = shouldInline(it);
     LLVM_DEBUG({
-      llvm::dbgs() << "* Considering inlining call: ";
+      if (doInline)
+        llvm::dbgs() << "* Inlining call: ";
+      else
+        llvm::dbgs() << "* Not inlining call: ";
       it.call.dump();
     });
-    if (!shouldInline(it))
+    if (!doInline)
       continue;
     CallOpInterface call = it.call;
     Region *targetRegion = it.targetNode->getCallableRegion();
