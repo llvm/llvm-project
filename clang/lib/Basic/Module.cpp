@@ -654,8 +654,8 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     SmallVector<Module *, 16> Exports;
     V.M->getExportedModules(Exports);
     for (Module *E : Exports) {
-      // Don't recurse to unavailable submodules.
-      if (E->isAvailable())
+      // Don't import non-importable modules.
+      if (!E->isUnimportable())
         VisitModule({E, &V});
     }
 
