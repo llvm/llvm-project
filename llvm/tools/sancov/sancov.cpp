@@ -657,7 +657,12 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(NameOrErr);
     StringRef Name = NameOrErr.get();
 
-    if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
+    Expected<uint32_t> FlagsOrErr = Symbol.getFlags();
+    // TODO: Test this error.
+    failIfError(FlagsOrErr);
+    uint32_t Flags = FlagsOrErr.get();
+
+    if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
         isCoveragePointSymbol(Name)) {
       Result.insert(Address);
     }

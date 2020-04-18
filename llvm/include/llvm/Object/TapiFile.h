@@ -33,7 +33,7 @@ public:
 
   Error printSymbolName(raw_ostream &OS, DataRefImpl DRI) const override;
 
-  uint32_t getSymbolFlags(DataRefImpl DRI) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl DRI) const override;
 
   basic_symbol_iterator symbol_begin() const override;
 
