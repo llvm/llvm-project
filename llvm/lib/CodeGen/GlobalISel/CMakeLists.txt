@@ -23,6 +23,9 @@ add_llvm_component_library(LLVMGlobalISel
         RegisterBankInfo.cpp
         Utils.cpp
 
+        ADDITIONAL_HEADER_DIRS
+        ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/GlobalISel
+
         DEPENDS
         intrinsics_gen
   )
