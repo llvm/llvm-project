@@ -698,7 +698,7 @@ public:
                         const LoopAccessInfo *LAI)
       : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
 
-  ~InterleavedAccessInfo() { reset(); }
+  ~InterleavedAccessInfo() { invalidateGroups(); }
 
   /// Analyze the interleaved accesses and collect them in interleave
   /// groups. Substitute symbolic strides using \p Strides.
@@ -709,15 +709,23 @@ public:
   /// Invalidate groups, e.g., in case all blocks in loop will be predicated
   /// contrary to original assumption. Although we currently prevent group
   /// formation for predicated accesses, we may be able to relax this limitation
-  /// in the future once we handle more complicated blocks.
-  void reset() {
+  /// in the future once we handle more complicated blocks. Returns true if any
+  /// groups were invalidated.
+  bool invalidateGroups() {
+    if (InterleaveGroups.empty()) {
+      assert(
+          !RequiresScalarEpilogue &&
+          "RequiresScalarEpilog should not be set without interleave groups");
+      return false;
+    }
+
     InterleaveGroupMap.clear();
     for (auto *Ptr : InterleaveGroups)
       delete Ptr;
     InterleaveGroups.clear();
     RequiresScalarEpilogue = false;
+    return true;
   }
-
 
   /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {
