@@ -20,7 +20,7 @@ endif()
 # OpenCL version.
 macro(GENERATE_PCH version)
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/opencl${version}-c.pch
-    COMMAND clang -cc1 -x cl-header -triple amdgcn-amd-amdhsa-opencl
+    COMMAND clang -cc1 -x cl-header -triple amdgcn-amd-amdhsa
       -Werror -O3 -Dcl_khr_fp64 -Dcl_khr_fp16 -DNDEBUG -cl-std=CL${version}
       -emit-pch -o ${CMAKE_CURRENT_BINARY_DIR}/opencl${version}-c.pch
       < ${OPENCL_C_H}
