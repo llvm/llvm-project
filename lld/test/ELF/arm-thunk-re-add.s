@@ -7,10 +7,10 @@
 // RUN: llvm-objdump -d %t.so --start-address=17825800 --stop-address=17825826 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t.so --start-address=17825824 --stop-address=17825892 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
 
-// A branch to a Thunk that we create on pass N, can drift out of range if
-// other Thunks are added in between. In this case we must create a new Thunk
-// for the branch that is in range. We also need to make sure that if the
-// destination of the Thunk is in the PLT the new Thunk also targets the PLT
+/// A branch to a Thunk that we create on pass N, can drift out of range if
+/// other Thunks are added in between. In this case we must create a new Thunk
+/// for the branch that is in range. We also need to make sure that if the
+/// destination of the Thunk is in the PLT the new Thunk also targets the PLT
  .syntax unified
  .thumb
 
@@ -64,7 +64,7 @@ tfunc\suff\():
  FUNCTION 29
  FUNCTION 30
  FUNCTION 31
-// Precreated Thunk Pool goes here
+/// Precreated Thunk Pool goes here
 // CHECK1: <__ThumbV7PILongThunk_imported>:
 // CHECK1-NEXT:  1000004:       40 f2 30 0c     movw    r12, #48
 // CHECK1-NEXT:  1000008:       c0 f2 10 0c     movt    r12, #16
@@ -81,7 +81,7 @@ tfunc\suff\():
  .section .text.33, "ax", %progbits
  .space 0x80000 - 0x14
  .section .text.34, "ax", %progbits
- // Need a Thunk to the PLT entry, can use precreated ThunkSection
+ /// Need a Thunk to the PLT entry, can use precreated ThunkSection
  .globl callers
  .type callers, %function
 callers:
@@ -103,7 +103,7 @@ callers:
 // CHECK3-NEXT: <$a>:
 // CHECK3-NEXT:  1100020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // CHECK3-NEXT:  1100024:       00 e6 8f e2     add     lr, pc, #0, #12
-// CHECK3-NEXT:  1100028:       02 ea 8e e2     add     lr, lr, #8192
+// CHECK3-NEXT:  1100028:       20 ea 8e e2     add     lr, lr, #32
 // CHECK3-NEXT:  110002c:       94 f0 be e5     ldr     pc, [lr, #148]!
 // CHECK3: <$d>:
 // CHECK3-NEXT:  1100030:       d4 d4 d4 d4     .word   0xd4d4d4d4
@@ -112,13 +112,13 @@ callers:
 // CHECK3-NEXT:  110003c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3: <$a>:
 // CHECK3-NEXT:  1100040:       00 c6 8f e2     add     r12, pc, #0, #12
-// CHECK3-NEXT:  1100044:       02 ca 8c e2     add     r12, r12, #8192
+// CHECK3-NEXT:  1100044:       20 ca 8c e2     add     r12, r12, #32
 // CHECK3-NEXT:  1100048:       7c f0 bc e5     ldr     pc, [r12, #124]!
 // CHECK3: <$d>:
 // CHECK3-NEXT:  110004c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3: <$a>:
 // CHECK3-NEXT:  1100050:       00 c6 8f e2     add     r12, pc, #0, #12
-// CHECK3-NEXT:  1100054:       02 ca 8c e2     add     r12, r12, #8192
+// CHECK3-NEXT:  1100054:       20 ca 8c e2     add     r12, r12, #32
 // CHECK3-NEXT:  1100058:       70 f0 bc e5     ldr     pc, [r12, #112]!
 // CHECK3: <$d>:
 // CHECK3-NEXT:  110005c:       d4 d4 d4 d4     .word   0xd4d4d4d4

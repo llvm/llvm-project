@@ -4,9 +4,9 @@
 // RUN: llvm-readobj -S --dyn-relocations %t | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d --triple=armv7a-linux-gnueabi %t | FileCheck %s
 
-// Test the handling of the local exec TLS model. TLS can be resolved
-// statically for an application. The code sequences assume a thread pointer
-// in r9
+/// Test the handling of the local exec TLS model. TLS can be resolved
+/// statically for an application. The code sequences assume a thread pointer
+/// in r9
 
  .text
  .syntax unified
@@ -15,15 +15,15 @@
  .type   _start,%function
 _start:
  .p2align        2
-// Generate R_ARM_TLS_LE32 relocations. These resolve statically to the offset
-// of the variable from the thread pointer
+/// Generate R_ARM_TLS_LE32 relocations. These resolve statically to the offset
+/// of the variable from the thread pointer
 .Lt0: .word   x(TPOFF)
 .Lt1: .word   y(TPOFF)
 .Lt2: .word   z(TPOFF)
 
-// __thread int x = 10
-// __thread int y;
-// __thread int z __attribute((visibility("hidden")))
+/// __thread int x = 10
+/// __thread int y;
+/// __thread int z __attribute((visibility("hidden")))
 
  .hidden z
  .globl  z
@@ -52,7 +52,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT:  ]
-// SEC-NEXT: Address: 0x12120
+// SEC-NEXT: Address: 0x30120
 // SEC:      Size: 4
 // SEC:      Name: .tbss
 // SEC-NEXT: Type: SHT_NOBITS
@@ -61,7 +61,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x12124
+// SEC-NEXT: Address: 0x30124
 // SEC:      Size: 8
 
 // SEC: Dynamic Relocations {
@@ -70,9 +70,9 @@ x:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// offset of x from Thread pointer = (TcbSize + 0x0 = 0x8)
-// CHECK-NEXT:   11114:         08 00 00 00
-// offset of z from Thread pointer = (TcbSize + 0x8 = 0x10)
-// CHECK-NEXT:   11118:         10 00 00 00
-// offset of y from Thread pointer = (TcbSize + 0x4 = 0xc)
-// CHECK-NEXT:   1111c:         0c 00 00 00
+/// offset of x from Thread pointer = (TcbSize + 0x0 = 0x8)
+// CHECK-NEXT:   20114:         08 00 00 00
+/// offset of z from Thread pointer = (TcbSize + 0x8 = 0x10)
+// CHECK-NEXT:   20118:         10 00 00 00
+/// offset of y from Thread pointer = (TcbSize + 0x4 = 0xc)
+// CHECK-NEXT:   2011c:         0c 00 00 00
