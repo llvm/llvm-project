@@ -36,15 +36,15 @@ _ZTIi:  .word 0
 
 // CHECK: Contents of section .ARM.extab:
 // 0x1012c + 0x2010 = 0x1213c = .got
-// CHECK-NEXT:  10124 14100000 b0b0b000 10200000
+// CHECK-NEXT:  10124 14000100 b0b0b000 10000200
 
 // CHECK-ABS: Contents of section .ARM.extab:
 // 0x100f0 = .rodata
-// CHECK-ABS-NEXT: 100e4 14100000 b0b0b000 f0000100
+// CHECK-ABS-NEXT: 100e4 14000100 b0b0b000 f0000100
 
 // CHECK-REL: Contents of section .ARM.extab:
 // 0x100ec + 4 = 0x100f0 = .rodata
-// CHECK-REL-NEXT: 100e4 14100000 b0b0b000 04000000
+// CHECK-REL-NEXT: 100e4 14000100 b0b0b000 04000000
 
 // CHECK: Contents of section .rodata:
 // CHECK-NEXT: 10130 00000000
@@ -57,4 +57,4 @@ _ZTIi:  .word 0
 
 // CHECK: Contents of section .got:
 // 10130 = _ZTIi
-// CHECK-NEXT: 1213c 30010100
+// CHECK-NEXT: 3013c 30010100
