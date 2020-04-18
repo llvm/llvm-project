@@ -2,8 +2,8 @@
 # RUN: llc -mtriple=aarch64-apple-unknown -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
 
 # Outlining CFI instructions is unsafe if it is not tail called, but otherwise,
-# it requires fixups. Show that we don't include CFI instructions in non
-# tail call outlined sequences right now.
+# it requires fixups. Show that we include CFI instructions in tail call 
+# outlined sequences right now.
 
 --- |
   define void @foo() #0 { ret void }
@@ -19,17 +19,11 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: foo
     ; CHECK: liveins: $lr
-    ; CHECK: $w9 = ORRWri $wzr, 1
-    ; CHECK: $w10 = ORRWri $wzr, 2
-    ; CHECK: $w11 = ORRWri $wzr, 3
-    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: $w20 = ORRWri $wzr, 1
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    $w20 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w13 = ORRWri $wzr, 2
     $w14 = ORRWri $wzr, 3
@@ -44,17 +38,11 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: bar
     ; CHECK: liveins: $lr
-    ; CHECK: $w9 = ORRWri $wzr, 1
-    ; CHECK: $w10 = ORRWri $wzr, 2
-    ; CHECK: $w11 = ORRWri $wzr, 3
-    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: $w21 = ORRWri $wzr, 1
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    $w21 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w13 = ORRWri $wzr, 2
     $w14 = ORRWri $wzr, 3
@@ -69,17 +57,11 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: baz
     ; CHECK: liveins: $lr
-    ; CHECK: $w9 = ORRWri $wzr, 1
-    ; CHECK: $w10 = ORRWri $wzr, 2
-    ; CHECK: $w11 = ORRWri $wzr, 3
-    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: $w22 = ORRWri $wzr, 1
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    $w22 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w13 = ORRWri $wzr, 2
     $w14 = ORRWri $wzr, 3

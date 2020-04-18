@@ -1160,9 +1160,17 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
+  MachineFunction *OriginalMF = FirstCand.front()->getMF();
+  const std::vector<MCCFIInstruction> &Instrs =
+      OriginalMF->getFrameInstructions();
   for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
        ++I) {
     MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+    if (I->isCFIInstruction()) {
+      unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = Instrs[CFIIndex];
+      (void)MF.addFrameInst(CFI);
+    }
     NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
@@ -1331,7 +1339,6 @@ bool MachineOutliner::outline(Module &M,
   }
 
   LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
-
   return OutlinedSomething;
 }
 
