@@ -668,8 +668,11 @@ public:
   }
   bool isInvalid() const { return X == (uintptr_t)-1; }
 
-  ArrayRef<uintptr_t> getData() const {
-    return isSmall() ? makeArrayRef(X) : getPointer()->getData();
+  ArrayRef<uintptr_t> getData(uintptr_t &Store) const {
+    if (!isSmall())
+      return getPointer()->getData();
+    Store = getSmallBits();
+    return makeArrayRef(Store);
   }
 
 private:
@@ -717,8 +720,9 @@ template <> struct DenseMapInfo<SmallBitVector> {
     return V;
   }
   static unsigned getHashValue(const SmallBitVector &V) {
+    uintptr_t Store;
     return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
-        std::make_pair(V.size(), V.getData()));
+        std::make_pair(V.size(), V.getData(Store)));
   }
   static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {
     if (LHS.isInvalid() || RHS.isInvalid())
