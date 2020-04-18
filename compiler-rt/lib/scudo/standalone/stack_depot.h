@@ -121,7 +121,7 @@ public:
     u64 HashWithTagBit = (u64(Hash) << 1) | 1;
     if ((Entry & 0x1ffffffff) != HashWithTagBit)
       return false;
-    u32 Size = Entry >> 33;
+    u32 Size = u32(Entry >> 33);
     if (Size >= RingSize)
       return false;
     *RingPosPtr = (RingPos + 1) & RingMask;
