@@ -705,17 +705,25 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
 }
 
-/// Return true if `loops` is a perfect nest.
+/// Returns true if `loops` is a perfectly nested loop nest, where loops appear
+/// in it from outermost to innermost.
 static bool LLVM_ATTRIBUTE_UNUSED
 isPerfectlyNested(ArrayRef<AffineForOp> loops) {
-  auto outerLoop = loops.front();
+  assert(!loops.empty() && "no loops provided");
+
+  // We already know that the block can't be empty.
+  auto hasTwoElements = [](Block *block) {
+    auto secondOpIt = std::next(block->begin());
+    return secondOpIt != block->end() && &*secondOpIt == &block->back();
+  };
+
+  auto enclosingLoop = loops.front();
   for (auto loop : loops.drop_front()) {
     auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
     // parentForOp's body should be just this loop and the terminator.
-    if (parentForOp != outerLoop ||
-        parentForOp.getBody()->getOperations().size() != 2)
+    if (parentForOp != enclosingLoop || !hasTwoElements(parentForOp.getBody()))
       return false;
-    outerLoop = loop;
+    enclosingLoop = loop;
   }
   return true;
 }
