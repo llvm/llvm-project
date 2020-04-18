@@ -2080,7 +2080,7 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
       // order, which is what MSVC does.
       if (auto *Enumerator = dyn_cast_or_null<DIEnumerator>(Element)) {
         EnumeratorRecord ER(MemberAccess::Public,
-                            APSInt::getUnsigned(Enumerator->getValue()),
+                            APSInt(Enumerator->getValue(), true),
                             Enumerator->getName());
         ContinuationBuilder.writeMemberType(ER);
         EnumeratorCount++;
