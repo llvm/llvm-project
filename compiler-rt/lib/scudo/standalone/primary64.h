@@ -209,6 +209,58 @@ public:
   }
   void disableMemoryTagging() { UseMemoryTagging = false; }
 
+  const char *getRegionInfoArrayAddress() const {
+    return reinterpret_cast<const char *>(RegionInfoArray);
+  }
+
+  static uptr getRegionInfoArraySize() {
+    return sizeof(RegionInfoArray);
+  }
+
+  static BlockInfo findNearestBlock(const char *RegionInfoData, uptr Ptr) {
+    const RegionInfo *RegionInfoArray =
+        reinterpret_cast<const RegionInfo *>(RegionInfoData);
+    uptr ClassId;
+    uptr MinDistance = -1UL;
+    for (uptr I = 0; I != NumClasses; ++I) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
+      uptr Begin = RegionInfoArray[I].RegionBeg;
+      uptr End = Begin + RegionInfoArray[I].AllocatedUser;
+      if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
+        continue;
+      uptr RegionDistance;
+      if (Begin <= Ptr) {
+        if (Ptr < End)
+          RegionDistance = 0;
+        else
+          RegionDistance = Ptr - End;
+      } else {
+        RegionDistance = Begin - Ptr;
+      }
+
+      if (RegionDistance < MinDistance) {
+        MinDistance = RegionDistance;
+        ClassId = I;
+      }
+    }
+
+    BlockInfo B = {};
+    if (MinDistance <= 8192) {
+      B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
+      B.RegionEnd = B.RegionBegin + RegionInfoArray[ClassId].AllocatedUser;
+      B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
+      B.BlockBegin =
+          B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) / sptr(B.BlockSize) *
+                               sptr(B.BlockSize));
+      while (B.BlockBegin < B.RegionBegin)
+        B.BlockBegin += B.BlockSize;
+      while (B.RegionEnd < B.BlockBegin + B.BlockSize)
+        B.BlockBegin -= B.BlockSize;
+    }
+    return B;
+  }
+
 private:
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
@@ -231,7 +283,7 @@ private:
     u64 LastReleaseAtNs;
   };
 
-  struct alignas(SCUDO_CACHE_LINE_SIZE) RegionInfo {
+  struct UnpaddedRegionInfo {
     HybridMutex Mutex;
     SinglyLinkedList<TransferBatch> FreeList;
     RegionStats Stats;
@@ -244,13 +296,17 @@ private:
     MapPlatformData Data;
     ReleaseToOsInfo ReleaseInfo;
   };
+  struct RegionInfo : UnpaddedRegionInfo {
+    char Padding[SCUDO_CACHE_LINE_SIZE -
+                 (sizeof(UnpaddedRegionInfo) % SCUDO_CACHE_LINE_SIZE)];
+  };
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr PrimaryBase;
   MapPlatformData Data;
   atomic_s32 ReleaseToOsIntervalMs;
   bool UseMemoryTagging;
-  RegionInfo RegionInfoArray[NumClasses];
+  alignas(SCUDO_CACHE_LINE_SIZE) RegionInfo RegionInfoArray[NumClasses];
 
   RegionInfo *getRegionInfo(uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
