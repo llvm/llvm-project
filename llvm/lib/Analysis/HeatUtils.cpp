@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/HeatUtils.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
