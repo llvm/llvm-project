@@ -868,6 +868,12 @@ function(add_llvm_pass_plugin name)
   endif()
   option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" ${link_into_tools_default})
 
+  # If we statically link the plugin, don't use llvm dylib because we're going
+  # to be part of it.
+  if(LLVM_${name_upper}_LINK_INTO_TOOLS)
+      list(APPEND ARG_UNPARSED_ARGUMENTS DISABLE_LLVM_LINK_LLVM_DYLIB)
+  endif()
+
   if(LLVM_${name_upper}_LINK_INTO_TOOLS)
     list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
     # process_llvm_pass_plugins takes care of the actual linking, just create an

@@ -21,6 +21,34 @@ if (MSVC_IDE OR XCODE)
   file(GLOB_RECURSE POLLY_HEADER_FILES "${POLLY_SOURCE_DIR}/include/polly/*.h")
 endif ()
 
+set(POLLY_COMPONENTS
+    Support
+    Core
+    ScalarOpts
+    InstCombine
+    TransformUtils
+    Analysis
+    ipo
+    MC
+    Passes
+    Linker
+    IRReader
+    Analysis
+    # The libraries below are required for darwin: http://PR26392
+    BitReader
+    MCParser
+    Object
+    ProfileData
+    Target
+    Vectorize
+)
+
+# Polly-ACC requires the NVPTX backend to work. Ask LLVM about its libraries.
+if (GPU_CODEGEN)
+  # This call emits an error if they NVPTX backend is not enable.
+  list(APPEND POLLY_COMPONENTS NVPTX)
+endif ()
+
 # Use an object-library to add the same files to multiple libs without requiring
 # the sources them to be recompiled for each of them.
 add_llvm_pass_plugin(Polly
@@ -71,6 +99,9 @@ add_llvm_pass_plugin(Polly
   Transform/RewriteByReferenceParameters.cpp
   Transform/ScopInliner.cpp
   ${POLLY_HEADER_FILES}
+
+  LINK_COMPONENTS
+  ${POLLY_COMPONENTS}
   )
 set_target_properties(obj.Polly PROPERTIES FOLDER "Polly")
 set_target_properties(Polly PROPERTIES FOLDER "Polly")
@@ -99,45 +130,7 @@ if (GPU_CODEGEN)
   target_link_libraries(Polly PUBLIC PollyPPCG)
 endif ()
 
-
-# Polly-ACC requires the NVPTX backend to work. Ask LLVM about its libraries.
-set(nvptx_libs)
-if (GPU_CODEGEN)
-  # This call emits an error if they NVPTX backend is not enable.
-  llvm_map_components_to_libnames(nvptx_libs NVPTX)
-endif ()
-
-if (LLVM_LINK_LLVM_DYLIB)
-  # The shlib/dylib contains all the LLVM components
-  # (including NVPTX is enabled) already. Adding them to target_link_libraries
-  # would cause them being twice in the address space
-  # (their LLVM*.a/so and their copies in libLLVM.so)
-  # which results in errors when the two instances try to register the same
-  # command-line switches.
-  target_link_libraries(Polly PUBLIC LLVM)
-else ()
-  target_link_libraries(Polly PUBLIC
-    LLVMSupport
-    LLVMCore
-    LLVMScalarOpts
-    LLVMInstCombine
-    LLVMTransformUtils
-    LLVMAnalysis
-    LLVMipo
-    LLVMMC
-    LLVMPasses
-    LLVMLinker
-    LLVMIRReader
-    ${nvptx_libs}
-    # The libraries below are required for darwin: http://PR26392
-    LLVMBitReader
-    LLVMMCParser
-    LLVMObject
-    LLVMProfileData
-    LLVMTarget
-    LLVMVectorize
-    )
-
+if (NOT LLVM_LINK_LLVM_DYLIB)
     # Polly-ACC requires the NVPTX target to be present in the executable it is linked to
     set_property(TARGET bugpoint APPEND PROPERTY LINK_LIBRARIES LLVMTarget)
 endif ()
