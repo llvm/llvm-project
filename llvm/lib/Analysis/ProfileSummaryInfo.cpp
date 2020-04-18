@@ -101,6 +101,7 @@ bool ProfileSummaryInfo::computeSummary() {
   return true;
 }
 
+// FIXME(CallSite): the parameter should be a CallBase.
 Optional<uint64_t>
 ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
                                     BlockFrequencyInfo *BFI,
@@ -385,21 +386,21 @@ bool ProfileSummaryInfo::isColdBlockNthPercentile(int PercentileCutoff,
   return isHotOrColdBlockNthPercentile<false>(PercentileCutoff, BB, BFI);
 }
 
-bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
+bool ProfileSummaryInfo::isHotCallSite(const CallBase &CB,
                                        BlockFrequencyInfo *BFI) {
-  auto C = getProfileCount(CS.getInstruction(), BFI);
+  auto C = getProfileCount(&CB, BFI);
   return C && isHotCount(*C);
 }
 
-bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
+bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
                                         BlockFrequencyInfo *BFI) {
-  auto C = getProfileCount(CS.getInstruction(), BFI);
+  auto C = getProfileCount(&CB, BFI);
   if (C)
     return isColdCount(*C);
 
   // In SamplePGO, if the caller has been sampled, and there is no profile
   // annotated on the callsite, we consider the callsite as cold.
-  return hasSampleProfile() && CS.getCaller()->hasProfileData();
+  return hasSampleProfile() && CB.getCaller()->hasProfileData();
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
