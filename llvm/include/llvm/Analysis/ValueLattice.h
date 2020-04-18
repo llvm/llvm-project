@@ -75,7 +75,7 @@ class ValueLatticeElement {
     overdefined,
   };
 
-  ValueLatticeElementTy Tag : 6;
+  ValueLatticeElementTy Tag : 8;
   /// Number of times a constant range has been extended with widening enabled.
   unsigned NumRangeExtensions : 8;
 
