@@ -1061,11 +1061,6 @@ void SCCPSolver::visitStoreInst(StoreInst &SI) {
   if (TrackedGlobals.empty() || !isa<GlobalVariable>(SI.getOperand(1)))
     return;
 
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
-  // discover a concrete value later.
-  if (isOverdefined(ValueState[&SI]))
-    return (void)markOverdefined(&SI);
-
   GlobalVariable *GV = cast<GlobalVariable>(SI.getOperand(1));
   auto I = TrackedGlobals.find(GV);
   if (I == TrackedGlobals.end())
