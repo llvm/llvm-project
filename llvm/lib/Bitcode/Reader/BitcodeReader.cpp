@@ -2317,7 +2317,7 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
   return Error::success();
 }
 
-static APInt readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits) {
+APInt llvm::readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits) {
   SmallVector<uint64_t, 8> Words(Vals.size());
   transform(Vals, Words.begin(),
                  BitcodeReader::decodeSignRotatedValue);

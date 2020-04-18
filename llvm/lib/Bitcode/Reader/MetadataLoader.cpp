@@ -1277,14 +1277,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_ENUMERATOR: {
-    if (Record.size() != 3)
+    if (Record.size() < 3)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool IsUnsigned = Record[0] & 2;
+    bool IsBigInt = Record[0] & 4;
+    APInt Value;
+
+    if (IsBigInt) {
+      const uint64_t BitWidth = Record[1];
+      const size_t NumWords = Record.size() - 3;
+      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+    } else
+      Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
+
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIEnumerator, (Context, unrotateSign(Record[1]),
-                                       IsUnsigned, getMDString(Record[2]))),
+        GET_OR_DISTINCT(DIEnumerator,
+                        (Context, Value, IsUnsigned, getMDString(Record[2]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;

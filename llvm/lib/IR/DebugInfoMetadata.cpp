@@ -347,7 +347,7 @@ DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
   DEFINE_GETIMPL_STORE(DISubrange, (CountNode, Lo), Ops);
 }
 
-DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
+DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, APInt Value,
                                     bool IsUnsigned, MDString *Name,
                                     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
