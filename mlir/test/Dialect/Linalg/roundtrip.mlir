@@ -620,3 +620,16 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
 //  CHECK-SAME:     memref<?x?x?xf32, #[[strided3D]]> into memref<?x?xf32, #[[strided2D]]>
 //       CHECK:   linalg.reshape {{.*}} [#[[reshapeD01]], #[[reshapeD2]]]
 //  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]> into memref<?x?x?xf32, #[[strided3D]]>
+
+
+// TODO: Return tensors need a semantics convention update.
+func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
+                %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>) {
+  linalg.batch_matmul %a3, %b3, %c3 : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
+  linalg.batch_matmul %ta3, %tb3, %c3 : (tensor<?x?x?xf32>, tensor<?x?x?xf32>, memref<?x?x?xf32>) -> ()
+  return
+}
+// CHECK-LABEL: func @named_ops
+//       CHECK:   linalg.batch_matmul
+//       CHECK:   linalg.batch_matmul
+

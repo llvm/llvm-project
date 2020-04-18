@@ -516,7 +516,8 @@ class LinalgOperandOfRank<int rank>: Type<
     CPred<"$_self.cast<ShapedType>().getRank() == " # rank>]
   >>;
 
-class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, []> {
+class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
+    [SingleBlockImplicitTerminator<"YieldOp">]> {
   let arguments = (ins Variadic<LinalgOperand>:$views,
                    I64Attr:$args_in,
                    I64Attr:$args_out,
@@ -806,11 +807,22 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 def NamedStructuredOpTraits : NativeOpTrait<"linalg::NamedStructuredOpTraits">;
 
 class LinalgNamedStructured_Op<string mnemonic, list<OpTrait> props>
-  : Op<Linalg_Dialect, mnemonic,
-       !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
+    : LinalgStructuredBase_Op<mnemonic, props> {
   string spec = ?;
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
-    "functional-type(operands, results)";
+  // We cannot use an assemblyFormat atm because we need to hook in a custom-
+  // built implicit region from a static OpClass method.
+  // TODO: Revisit in the future if/when appropriate.
+  // let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  //   "functional-type(operands, results)";
+
+  // The parser needs to specialize on the OpType so it has to be auto-generated
+  // in the linalg-ods tool.
+  let printer = [{ return ::printNamedStructuredOp(p, *this); }];
+  let verifier = [{ return ::verifyNamedStructuredOp(*this); }];
+  let hasFolder = 1;
 }
+
+// This file is auto-generated from a tc specification.
+include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.td"
 
 #endif // LINALG_STRUCTURED_OPS
