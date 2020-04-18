@@ -54,6 +54,10 @@ and define the desired behavior for each kind of check:
 * ``-fno-sanitize-recover=...``: print a verbose error report and exit the program;
 * ``-fsanitize-trap=...``: execute a trap instruction (doesn't require UBSan run-time support).
 
+Note that the ``trap`` / ``recover`` options do not enable the corresponding
+sanitizer, and in general need to be accompanied by a suitable ``-fsanitize=``
+flag.
+
 For example if you compile/link your program as:
 
 .. code-block:: console
