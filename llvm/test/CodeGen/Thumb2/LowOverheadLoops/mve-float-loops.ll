@@ -1803,7 +1803,7 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    adds r2, r0, #4
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB11_5: @ %for.body
-; CHECK-NEXT:  @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-NEXT:    vldr.16 s2, [r2, #2]
 ; CHECK-NEXT:    add.w r12, r12, #4
