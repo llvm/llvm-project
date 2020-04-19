@@ -39,7 +39,7 @@ framework, we need to provide two things (and an optional third):
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)
 
-    -   This is the set of [patterns](../../QuickstartRewrites.md) used to
+    -   This is the set of [patterns](../QuickstartRewrites.md) used to
         convert *illegal* operations into a set of zero or more *legal* ones.
 
 *   Optionally, a [Type Converter](../../DialectConversion.md#type-conversion).
@@ -86,7 +86,7 @@ After the conversion target has been defined, we can define how to convert the
 *illegal* operations into *legal* ones. Similarly to the canonicalization
 framework introduced in [chapter 3](Ch-3.md), the
 [`DialectConversion` framework](../../DialectConversion.md) also uses
-[RewritePatterns](../../QuickstartRewrites.md) to perform the conversion logic.
+[RewritePatterns](../QuickstartRewrites.md) to perform the conversion logic.
 These patterns may be the `RewritePatterns` seen before or a new type of pattern
 specific to the conversion framework `ConversionPattern`. `ConversionPatterns`
 are different from traditional `RewritePatterns` in that they accept an

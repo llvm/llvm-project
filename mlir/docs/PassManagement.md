@@ -9,9 +9,9 @@ to use it.
 See [MLIR specification](LangRef.md) for more information about MLIR and its
 core aspects, such as the IR structure and operations.
 
-See [MLIR Rewrites](QuickstartRewrites.md) for a quick start on graph rewriting
-in MLIR. If your transformation involves pattern matching operation DAGs, this
-is a great place to start.
+See [MLIR Rewrites](Tutorials/QuickstartRewrites.md) for a quick start on graph
+rewriting in MLIR. If your transformation involves pattern matching operation
+DAGs, this is a great place to start.
 
 ## Operation Pass
 

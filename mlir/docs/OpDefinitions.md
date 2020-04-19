@@ -10,7 +10,7 @@ equivalent `mlir::Op` C++ template specialization at compiler build time.
 This manual explains in detail all the available mechanisms for defining
 operations in such a table-driven manner. It aims to be a specification instead
 of a tutorial. Please refer to [Quickstart tutorial to adding MLIR graph
-rewrite](QuickstartRewrites.md) for the latter.
+rewrite](Tutorials/QuickstartRewrites.md) for the latter.
 
 In addition to detailing each mechanism, this manual also tries to capture
 best practices. They are rendered as quoted bullet points.
