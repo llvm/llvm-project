@@ -7462,12 +7462,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
 
     // Peek through trunc/aext/zext.
+    // TODO: handle elements smaller than VT.
     // TODO: aext shouldn't require SM_SentinelZero padding.
     // TODO: handle shift of scalars.
     while (Scl.getOpcode() == ISD::TRUNCATE ||
            Scl.getOpcode() == ISD::ANY_EXTEND ||
-           Scl.getOpcode() == ISD::ZERO_EXTEND)
+           Scl.getOpcode() == ISD::ZERO_EXTEND) {
       Scl = Scl.getOperand(0);
+      if (Scl.getScalarValueSizeInBits() < NumBitsPerElt)
+        return false;
+    }
 
     // Attempt to find the source vector the scalar was extracted from.
     SDValue SrcExtract;
