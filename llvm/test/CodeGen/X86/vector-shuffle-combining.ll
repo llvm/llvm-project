@@ -3027,109 +3027,41 @@ define void @PR43024() {
   ret void
 }
 
-; TODO - we're ignoring the i32->i16->i32 'ZERO_EXTEND_INREG' pattern, resulting in an bad movss .
 define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
-; SSE2-LABEL: PR45604:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa (%rsi), %xmm1
-; SSE2-NEXT:    pextrw $2, %xmm1, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movl $11, %eax
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm0
-; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
-; SSE2-NEXT:    pinsrw $4, %ecx, %xmm0
-; SSE2-NEXT:    pinsrw $6, %eax, %xmm0
-; SSE2-NEXT:    pextrw $4, %xmm1, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm2
-; SSE2-NEXT:    pextrw $5, %xmm1, %ecx
-; SSE2-NEXT:    pinsrw $4, %ecx, %xmm2
-; SSE2-NEXT:    pinsrw $6, %eax, %xmm2
-; SSE2-NEXT:    pextrw $6, %xmm1, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm3
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm3
-; SSE2-NEXT:    pextrw $7, %xmm1, %ecx
-; SSE2-NEXT:    pinsrw $4, %ecx, %xmm3
-; SSE2-NEXT:    pinsrw $6, %eax, %xmm3
-; SSE2-NEXT:    xorps %xmm4, %xmm4
-; SSE2-NEXT:    movss {{.*#+}} xmm4 = xmm1[0],xmm4[1,2,3]
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm4
-; SSE2-NEXT:    pextrw $1, %xmm1, %ecx
-; SSE2-NEXT:    pinsrw $4, %ecx, %xmm4
-; SSE2-NEXT:    pinsrw $6, %eax, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, (%rdi)
-; SSE2-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSE2-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rdi)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR45604:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa (%rsi), %xmm1
-; SSSE3-NEXT:    pextrw $2, %xmm1, %eax
-; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    movl $11, %eax
-; SSSE3-NEXT:    pinsrw $2, %eax, %xmm0
-; SSSE3-NEXT:    pextrw $3, %xmm1, %ecx
-; SSSE3-NEXT:    pinsrw $4, %ecx, %xmm0
-; SSSE3-NEXT:    pinsrw $6, %eax, %xmm0
-; SSSE3-NEXT:    pextrw $4, %xmm1, %ecx
-; SSSE3-NEXT:    movd %ecx, %xmm2
-; SSSE3-NEXT:    pinsrw $2, %eax, %xmm2
-; SSSE3-NEXT:    pextrw $5, %xmm1, %ecx
-; SSSE3-NEXT:    pinsrw $4, %ecx, %xmm2
-; SSSE3-NEXT:    pinsrw $6, %eax, %xmm2
-; SSSE3-NEXT:    pextrw $6, %xmm1, %ecx
-; SSSE3-NEXT:    movd %ecx, %xmm3
-; SSSE3-NEXT:    pinsrw $2, %eax, %xmm3
-; SSSE3-NEXT:    pextrw $7, %xmm1, %ecx
-; SSSE3-NEXT:    pinsrw $4, %ecx, %xmm3
-; SSSE3-NEXT:    pinsrw $6, %eax, %xmm3
-; SSSE3-NEXT:    xorps %xmm4, %xmm4
-; SSSE3-NEXT:    movss {{.*#+}} xmm4 = xmm1[0],xmm4[1,2,3]
-; SSSE3-NEXT:    pinsrw $2, %eax, %xmm4
-; SSSE3-NEXT:    pextrw $1, %xmm1, %ecx
-; SSSE3-NEXT:    pinsrw $4, %ecx, %xmm4
-; SSSE3-NEXT:    pinsrw $6, %eax, %xmm4
-; SSSE3-NEXT:    movdqa %xmm4, (%rdi)
-; SSSE3-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSSE3-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSSE3-NEXT:    movdqa %xmm0, 16(%rdi)
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR45604:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa (%rsi), %xmm1
-; SSE41-NEXT:    pextrw $2, %xmm1, %eax
-; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    movl $11, %eax
-; SSE41-NEXT:    pinsrw $2, %eax, %xmm0
-; SSE41-NEXT:    pextrw $3, %xmm1, %ecx
-; SSE41-NEXT:    pinsrw $4, %ecx, %xmm0
-; SSE41-NEXT:    pinsrw $6, %eax, %xmm0
-; SSE41-NEXT:    pextrw $4, %xmm1, %ecx
-; SSE41-NEXT:    movd %ecx, %xmm2
-; SSE41-NEXT:    pinsrw $2, %eax, %xmm2
-; SSE41-NEXT:    pextrw $5, %xmm1, %ecx
-; SSE41-NEXT:    pinsrw $4, %ecx, %xmm2
-; SSE41-NEXT:    pinsrw $6, %eax, %xmm2
-; SSE41-NEXT:    pextrw $6, %xmm1, %ecx
-; SSE41-NEXT:    movd %ecx, %xmm3
-; SSE41-NEXT:    pinsrw $2, %eax, %xmm3
-; SSE41-NEXT:    pextrw $7, %xmm1, %ecx
-; SSE41-NEXT:    pinsrw $4, %ecx, %xmm3
-; SSE41-NEXT:    pinsrw $6, %eax, %xmm3
-; SSE41-NEXT:    pxor %xmm4, %xmm4
-; SSE41-NEXT:    pblendw {{.*#+}} xmm4 = xmm1[0,1],xmm4[2,3,4,5,6,7]
-; SSE41-NEXT:    pinsrw $2, %eax, %xmm4
-; SSE41-NEXT:    pextrw $1, %xmm1, %ecx
-; SSE41-NEXT:    pinsrw $4, %ecx, %xmm4
-; SSE41-NEXT:    pinsrw $6, %eax, %xmm4
-; SSE41-NEXT:    movdqa %xmm4, (%rdi)
-; SSE41-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSE41-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSE41-NEXT:    movdqa %xmm0, 16(%rdi)
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR45604:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rsi), %xmm1
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    movzwl %ax, %eax
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    movl $11, %eax
+; SSE-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE-NEXT:    pextrw $1, %xmm1, %ecx
+; SSE-NEXT:    pinsrw $4, %ecx, %xmm0
+; SSE-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE-NEXT:    pextrw $2, %xmm1, %ecx
+; SSE-NEXT:    movd %ecx, %xmm2
+; SSE-NEXT:    pinsrw $2, %eax, %xmm2
+; SSE-NEXT:    pextrw $3, %xmm1, %ecx
+; SSE-NEXT:    pinsrw $4, %ecx, %xmm2
+; SSE-NEXT:    pinsrw $6, %eax, %xmm2
+; SSE-NEXT:    pextrw $4, %xmm1, %ecx
+; SSE-NEXT:    movd %ecx, %xmm3
+; SSE-NEXT:    pinsrw $2, %eax, %xmm3
+; SSE-NEXT:    pextrw $5, %xmm1, %ecx
+; SSE-NEXT:    pinsrw $4, %ecx, %xmm3
+; SSE-NEXT:    pinsrw $6, %eax, %xmm3
+; SSE-NEXT:    pextrw $6, %xmm1, %ecx
+; SSE-NEXT:    movd %ecx, %xmm4
+; SSE-NEXT:    pinsrw $2, %eax, %xmm4
+; SSE-NEXT:    pextrw $7, %xmm1, %ecx
+; SSE-NEXT:    pinsrw $4, %ecx, %xmm4
+; SSE-NEXT:    pinsrw $6, %eax, %xmm4
+; SSE-NEXT:    movdqa %xmm4, 48(%rdi)
+; SSE-NEXT:    movdqa %xmm3, 32(%rdi)
+; SSE-NEXT:    movdqa %xmm2, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR45604:
 ; AVX1:       # %bb.0:
