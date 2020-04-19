@@ -2048,8 +2048,6 @@ def : Pat<(add i16:$src1, imm:$src2),
           (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
 def : Pat<(addc i16:$src1, imm:$src2),
           (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
-def : Pat<(adde i16:$src1, imm:$src2),
-          (SBCIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
 
 def : Pat<(add i8:$src1, imm:$src2),
           (SUBIRdK i8:$src1, (imm8_neg_XFORM imm:$src2))>;
