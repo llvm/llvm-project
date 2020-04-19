@@ -7,8 +7,8 @@
 define i32 @isint_return(double %d) nounwind {
 ; CHECK64-LABEL: isint_return:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK64-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK64-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK64-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK64-NEXT:    cmpeqsd %xmm0, %xmm1
 ; CHECK64-NEXT:    movq %xmm1, %rax
 ; CHECK64-NEXT:    andl $1, %eax
@@ -18,8 +18,8 @@ define i32 @isint_return(double %d) nounwind {
 ; CHECK32-LABEL: isint_return:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK32-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK32-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK32-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK32-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK32-NEXT:    cmpeqsd %xmm0, %xmm1
 ; CHECK32-NEXT:    movd %xmm1, %eax
 ; CHECK32-NEXT:    andl $1, %eax
@@ -62,8 +62,8 @@ declare void @foo()
 define void @isint_branch(double %d) nounwind {
 ; CHECK64-LABEL: isint_branch:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK64-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK64-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK64-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK64-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK64-NEXT:    jne .LBB2_2
 ; CHECK64-NEXT:    jp .LBB2_2
@@ -77,8 +77,8 @@ define void @isint_branch(double %d) nounwind {
 ; CHECK32-LABEL: isint_branch:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK32-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK32-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK32-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK32-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK32-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK32-NEXT:    jne .LBB2_2
 ; CHECK32-NEXT:    jp .LBB2_2
