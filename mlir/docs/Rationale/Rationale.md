@@ -24,7 +24,7 @@ high performance target specific code.
 MLIR stands for one of "Multi-Level IR" or "Multi-dimensional Loop IR" or
 "Machine Learning IR" or "Mid Level IR", we prefer the first. This document only
 provides the rationale behind MLIR -- its actual
-[specification document](LangRef.md) and other content is hosted elsewhere.
+[specification document](../LangRef.md) and other content is hosted elsewhere.
 
 ## Introduction and Motivation
 
@@ -113,10 +113,10 @@ n-ranked tensor. This disallows the equivalent of pointer arithmetic or the
 ability to index into the same memref in other ways (something which C arrays
 allow for example). Furthermore, for the affine constructs, the compiler can
 follow use-def chains (e.g. through
-[affine.apply operations](Dialects/Affine.md#affineapply-operation)) or through
-the map attributes of [affine operations](Dialects/Affine.md#Operations)) to
+[affine.apply operations](../Dialects/Affine.md#affineapply-operation)) or through
+the map attributes of [affine operations](../Dialects/Affine.md#Operations)) to
 precisely analyze references at compile-time using polyhedral techniques. This
-is possible because of the [restrictions on dimensions and symbols](Dialects/Affine.md#restrictions-on-dimensions-and-symbols).
+is possible because of the [restrictions on dimensions and symbols](../Dialects/Affine.md#restrictions-on-dimensions-and-symbols).
 
 A scalar of element-type (a primitive type or a vector type) that is stored in
 memory is modeled as a 0-d memref. This is also necessary for scalars that are
@@ -167,7 +167,7 @@ change.
 
 ### Block Arguments vs PHI nodes
 
-MLIR Regions represent SSA using "[block arguments](LangRef.md#blocks)" rather
+MLIR Regions represent SSA using "[block arguments](../LangRef.md#blocks)" rather
 than [PHI instructions](http://llvm.org/docs/LangRef.html#i-phi) used in LLVM.
 This choice is representationally identical (the same constructs can be
 represented in either form) but block arguments have several advantages:
@@ -559,12 +559,12 @@ systems, e.g. LLVM, are likely to provide wrappers around their existing type
 systems. For these wrapper types there is no simple canonical name, it's logical
 to think of these types as existing within the namespace of the dialect. If a
 dialect wishes to assign a canonical name to a type, it can be done via
-[type aliases](LangRef.md#type-aliases).
+[type aliases](../LangRef.md#type-aliases).
 
 ### Tuple types
 
 The MLIR type system provides first class support for defining
-[tuple types](LangRef.md#tuple-type). This is due to the fact that `Tuple`
+[tuple types](../LangRef.md#tuple-type). This is due to the fact that `Tuple`
 represents a universal concept that is likely to, and has already begun to,
 present itself in many different dialects. Though this type is first class in
 the type system, it merely serves to provide a common mechanism in which to
@@ -654,7 +654,7 @@ func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
 }
 ```
 
-As per the [MLIR spec](LangRef.md), the restrictions on dimensions and symbol
+As per the [MLIR spec](../LangRef.md), the restrictions on dimensions and symbol
 identifiers to be used with the affine.apply operation only apply to accesses
 inside `affine.for` and `affine.if` operations. However, an analysis of accesses
 inside the called function (`@search_body`) is necessary to determine if the
