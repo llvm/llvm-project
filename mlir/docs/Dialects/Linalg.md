@@ -49,7 +49,7 @@ https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0e
 `linalg.generic` (resp. `linalg.indexed_generic`) that can express custom
 operations with *index-free semantics* (resp. *indexing semantics*).
 The properties of these generic ops are the result of applying the
-guiding principles described in the [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect).
+guiding principles described in the [Rationale Document](../Rationale/RationaleLinalgDialect.md).
 They are listed next, with a brief example and discussion for each.
 
 #### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
