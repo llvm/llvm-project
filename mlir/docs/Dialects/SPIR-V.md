@@ -1313,7 +1313,7 @@ dialect.
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
 [Rationale]: ../Rationale/#block-arguments-vs-phi-nodes
-[ODS]: ../OpDefinitions/
+[ODS]: ../OpDefinitions.md
 [GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
 [MlirDialectConversionTypeConversion]: ../DialectConversion.md#type-converter
 [MlirDialectConversionRewritePattern]: ../DialectConversion.md#conversion-patterns
@@ -1346,7 +1346,7 @@ dialect.
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
-[CustomTypeAttrTutorial]: ../DefiningAttributesAndTypes/
+[CustomTypeAttrTutorial]: ../Tutorials/DefiningAttributesAndTypes.md
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
 [VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources
 [VulkanResourceLimits]: https://renderdoc.org/vkspec_chunked/chap36.html#limits
