@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -emit-pch -std=c++2a -o %t %s
 // RUN: %clang_cc1 -std=c++2a -x ast -ast-print %t | FileCheck %s
 
+// RUN: %clang_cc1 -emit-pch -std=c++2a -fpch-instantiate-templates -o %t %s
+// RUN: %clang_cc1 -std=c++2a -x ast -ast-print %t | FileCheck %s
+
 template<typename T>
 concept C = true;
 

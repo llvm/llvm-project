@@ -5926,6 +5926,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 /// Performs template instantiation for all implicit template
 /// instantiations we have seen until this point.
 void Sema::PerformPendingInstantiations(bool LocalOnly) {
+  std::deque<PendingImplicitInstantiation> delayedPCHInstantiations;
   while (!PendingLocalImplicitInstantiations.empty() ||
          (!LocalOnly && !PendingInstantiations.empty())) {
     PendingImplicitInstantiation Inst;
@@ -5956,6 +5957,10 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
         if (Function->isDefined())
           Function->setInstantiationIsPending(false);
       }
+      // Definition of a PCH-ed template declaration may be available only in the TU.
+      if (!LocalOnly && LangOpts.PCHInstantiateTemplates &&
+          TUKind == TU_Prefix && Function->instantiationIsPending())
+        delayedPCHInstantiations.push_back(Inst);
       continue;
     }
 
@@ -6001,6 +6006,9 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     InstantiateVariableDefinition(/*FIXME:*/ Inst.second, Var, true,
                                   DefinitionRequired, true);
   }
+
+  if (!LocalOnly && LangOpts.PCHInstantiateTemplates)
+    PendingInstantiations.swap(delayedPCHInstantiations);
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

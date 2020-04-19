@@ -8804,9 +8804,17 @@ public:
       S.VTableUses.swap(SavedVTableUses);
 
       // Restore the set of pending implicit instantiations.
-      assert(S.PendingInstantiations.empty() &&
-             "PendingInstantiations should be empty before it is discarded.");
-      S.PendingInstantiations.swap(SavedPendingInstantiations);
+      if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
+        assert(S.PendingInstantiations.empty() &&
+               "PendingInstantiations should be empty before it is discarded.");
+        S.PendingInstantiations.swap(SavedPendingInstantiations);
+      } else {
+        // Template instantiations in the PCH may be delayed until the TU.
+        S.PendingInstantiations.swap(SavedPendingInstantiations);
+        S.PendingInstantiations.insert(S.PendingInstantiations.end(),
+                                       SavedPendingInstantiations.begin(),
+                                       SavedPendingInstantiations.end());
+      }
     }
 
   private:

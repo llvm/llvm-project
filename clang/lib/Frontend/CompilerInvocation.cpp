@@ -3370,6 +3370,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
+  Opts.PCHInstantiateTemplates = Args.hasArg(OPT_fpch_instantiate_templates);
 
   Opts.MatrixTypes = Args.hasArg(OPT_fenable_matrix);
 
