@@ -21,11 +21,6 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -41,6 +36,7 @@ typedef unsigned ID;
 
 class AssumptionCache;
 class BlockFrequencyInfo;
+class DominatorTree;
 class BranchInst;
 class Function;
 class GlobalValue;
@@ -48,6 +44,7 @@ class IntrinsicInst;
 class LoadInst;
 class LoopAccessInfo;
 class Loop;
+class LoopInfo;
 class ProfileSummaryInfo;
 class SCEV;
 class ScalarEvolution;
@@ -57,6 +54,7 @@ class TargetLibraryInfo;
 class Type;
 class User;
 class Value;
+template <typename T> class Optional;
 
 /// Information about a load/store intrinsic defined by the target.
 struct MemIntrinsicInfo {
@@ -835,10 +833,10 @@ public:
   };
 
   /// \return The size of the cache level in bytes, if available.
-  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const;
+  Optional<unsigned> getCacheSize(CacheLevel Level) const;
 
   /// \return The associativity of the cache level, if available.
-  llvm::Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
+  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1301,9 +1299,8 @@ public:
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() const = 0;
-  virtual llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
-  virtual llvm::Optional<unsigned>
-  getCacheAssociativity(CacheLevel Level) const = 0;
+  virtual Optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
+  virtual Optional<unsigned> getCacheAssociativity(CacheLevel Level) const = 0;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1679,11 +1676,10 @@ public:
         I, AllowPromotionWithoutCommonHeader);
   }
   unsigned getCacheLineSize() const override { return Impl.getCacheLineSize(); }
-  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const override {
+  Optional<unsigned> getCacheSize(CacheLevel Level) const override {
     return Impl.getCacheSize(Level);
   }
-  llvm::Optional<unsigned>
-  getCacheAssociativity(CacheLevel Level) const override {
+  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const override {
     return Impl.getCacheAssociativity(Level);
   }
 
