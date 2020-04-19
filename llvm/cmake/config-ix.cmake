@@ -274,8 +274,6 @@ if( LLVM_USING_GLIBC )
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
 endif()
 # This check requires _GNU_SOURCE
-check_symbol_exists(sched_getaffinity sched.h HAVE_SCHED_GETAFFINITY)
-check_symbol_exists(CPU_COUNT sched.h HAVE_CPU_COUNT)
 if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
