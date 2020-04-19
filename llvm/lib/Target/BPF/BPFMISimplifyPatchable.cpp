@@ -116,10 +116,21 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     else
       continue;
 
-    // It must be a form of %1 = *(type *)(%2 + 0) or *(type *)(%2 + 0) = %1.
+    // It must be a form of %2 = *(type *)(%1 + 0) or *(type *)(%1 + 0) = %2.
     const MachineOperand &ImmOp = DefInst->getOperand(2);
     if (!ImmOp.isImm() || ImmOp.getImm() != 0)
       continue;
+
+    // Reject the form:
+    //   %1 = ADD_rr %2, %3
+    //   *(type *)(%2 + 0) = %1
+    if (Opcode == BPF::STB || Opcode == BPF::STH || Opcode == BPF::STW ||
+        Opcode == BPF::STD || Opcode == BPF::STB32 || Opcode == BPF::STH32 ||
+        Opcode == BPF::STW32) {
+      const MachineOperand &Opnd = DefInst->getOperand(0);
+      if (Opnd.isReg() && Opnd.getReg() == I->getReg())
+        continue;
+    }
 
     BuildMI(*DefInst->getParent(), *DefInst, DefInst->getDebugLoc(), TII->get(COREOp))
         .add(DefInst->getOperand(0)).addImm(Opcode).add(*BaseOp)
