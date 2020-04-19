@@ -16,11 +16,9 @@
 #ifndef LLVM_LIB_TARGET_X86_X86TARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_X86_X86TARGETTRANSFORMINFO_H
 
-#include "X86.h"
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 
