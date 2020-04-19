@@ -14,19 +14,16 @@
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SELECTIONDAGBUILDER_H
 
 #include "StatepointLowering.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Statepoint.h"
@@ -55,7 +52,6 @@ class CatchSwitchInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
-class ConstantInt;
 class ConstrainedFPIntrinsic;
 class DbgValueInst;
 class DataLayout;
@@ -77,6 +73,7 @@ class PHINode;
 class ResumeInst;
 class ReturnInst;
 class SDDbgValue;
+class SelectionDAG;
 class StoreInst;
 class SwiftErrorValueTracking;
 class SwitchInst;
