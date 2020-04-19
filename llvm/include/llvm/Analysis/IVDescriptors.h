@@ -14,15 +14,11 @@
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/MustExecute.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
@@ -30,10 +26,13 @@
 namespace llvm {
 
 class DemandedBits;
+class AssumptionCache;
 class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
+class DominatorTree;
+class ICFLoopSafetyInfo;
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
 /// loop. Reduction is a special case of recurrence that has uses of the
