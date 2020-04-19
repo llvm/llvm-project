@@ -19178,16 +19178,24 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   MVT IntVT = CastToInt.getSimpleValueType();
   SDValue X = CastToInt.getOperand(0);
   // TODO: Allow size-changing from source to dest (double -> i32 -> float)
-  if (X.getSimpleValueType() != VT ||
-      VT.getSizeInBits() != IntVT.getSizeInBits())
+  if (X.getSimpleValueType() != VT)
     return SDValue();
 
-  // See if we have a 128-bit vector cast op for this type of cast.
-  unsigned NumEltsInXMM = 128 / VT.getScalarSizeInBits();
-  MVT VecFPVT = MVT::getVectorVT(VT, NumEltsInXMM);
-  MVT VecIntVT = MVT::getVectorVT(IntVT, NumEltsInXMM);
-  if (!useVectorCast(CastToFP.getOpcode(), VecIntVT, VecFPVT, Subtarget))
+  // See if we have 128-bit vector cast instructions for this type of cast.
+  // We need cvttps2dq + cvtdq2ps or cvttpd2dq + cvtdq2pd.
+  if (!Subtarget.hasSSE2() || (VT != MVT::f32 && VT != MVT::f64) ||
+      IntVT != MVT::i32)
     return SDValue();
+
+  unsigned NumFPEltsInXMM = 128 / VT.getScalarSizeInBits();
+  unsigned NumIntEltsInXMM = 128 / IntVT.getScalarSizeInBits();
+  MVT VecFPVT = MVT::getVectorVT(VT, NumFPEltsInXMM);
+  MVT VecIntVT = MVT::getVectorVT(IntVT, NumIntEltsInXMM);
+
+  // We need target-specific opcodes if this is v2f64 -> v4i32 -> v2f64.
+  bool NeedX86Opcodes = VT.getSizeInBits() != IntVT.getSizeInBits();
+  unsigned ToIntOpcode = NeedX86Opcodes ? X86ISD::CVTTP2SI : ISD::FP_TO_SINT;
+  unsigned ToFPOpcode = NeedX86Opcodes ? X86ISD::CVTSI2P : ISD::SINT_TO_FP;
 
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
   //
@@ -19198,8 +19206,8 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   SDLoc DL(CastToFP);
   SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
   SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecFPVT, X);
-  SDValue VCastToInt = DAG.getNode(ISD::FP_TO_SINT, DL, VecIntVT, VecX);
-  SDValue VCastToFP = DAG.getNode(ISD::SINT_TO_FP, DL, VecFPVT, VCastToInt);
+  SDValue VCastToInt = DAG.getNode(ToIntOpcode, DL, VecIntVT, VecX);
+  SDValue VCastToFP = DAG.getNode(ToFPOpcode, DL, VecFPVT, VCastToInt);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VCastToFP, ZeroIdx);
 }
 
