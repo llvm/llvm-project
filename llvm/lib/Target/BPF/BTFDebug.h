@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include <set>
 #include <unordered_map>
 #include "BTF.h"
