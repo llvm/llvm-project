@@ -52,7 +52,7 @@ protected:
   using super = DominanceInfoBase<IsPostDom>;
 
   /// Return true if the specified block A properly dominates block B.
-  bool properlyDominates(Block *a, Block *b);
+  bool properlyDominates(Block *a, Block *b) const;
 
   /// A mapping of regions to their base dominator tree.
   DenseMap<Region *, std::unique_ptr<base>> dominanceInfos;
@@ -65,28 +65,28 @@ public:
   using super::super;
 
   /// Return true if operation A properly dominates operation B.
-  bool properlyDominates(Operation *a, Operation *b);
+  bool properlyDominates(Operation *a, Operation *b) const;
 
   /// Return true if operation A dominates operation B.
-  bool dominates(Operation *a, Operation *b) {
+  bool dominates(Operation *a, Operation *b) const {
     return a == b || properlyDominates(a, b);
   }
 
   /// Return true if value A properly dominates operation B.
-  bool properlyDominates(Value a, Operation *b);
+  bool properlyDominates(Value a, Operation *b) const;
 
   /// Return true if operation A dominates operation B.
-  bool dominates(Value a, Operation *b) {
+  bool dominates(Value a, Operation *b) const {
     return (Operation *)a.getDefiningOp() == b || properlyDominates(a, b);
   }
 
   /// Return true if the specified block A dominates block B.
-  bool dominates(Block *a, Block *b) {
+  bool dominates(Block *a, Block *b) const {
     return a == b || properlyDominates(a, b);
   }
 
   /// Return true if the specified block A properly dominates block B.
-  bool properlyDominates(Block *a, Block *b) {
+  bool properlyDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }
 
