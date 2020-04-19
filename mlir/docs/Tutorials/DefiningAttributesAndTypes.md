@@ -20,7 +20,7 @@ instance of an `MLIRContext`.
 
 Types in MLIR rely on having a unique `kind` value to ensure that casting checks
 remain extremely
-efficient ([rationale](Rationale.md#reserving-dialect-type-kinds)). For a dialect
+efficient ([rationale](../Rationale/Rationale.md#reserving-dialect-type-kinds)). For a dialect
 author, this means that a range of type `kind` values must be explicitly, and
 statically, reserved. A dialect can reserve a range of values by adding a new
 entry to the
