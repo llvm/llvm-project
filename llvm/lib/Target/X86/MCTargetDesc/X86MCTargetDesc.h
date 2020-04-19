@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
-#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
@@ -25,15 +24,13 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCRegister;
 class MCRegisterInfo;
 class MCSubtargetInfo;
-class MCRelocationInfo;
 class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
-class raw_ostream;
-class raw_pwrite_stream;
 
 /// Flavour of dwarf regnumbers
 ///
