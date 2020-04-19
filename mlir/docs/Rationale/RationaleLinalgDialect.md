@@ -330,7 +330,7 @@ Comprehensions](https://dl.acm.org/doi/abs/10.1145/3355606), it has never been
 fully included into mainstream general-purpose optimization pipelines. Detailed
 analysis of the role of polyhedral transformations is provided in the
 [simplified polyhedral
-form](https://mlir.llvm.org/docs/RationaleSimplifiedPolyhedralForm/) document
+form](RationaleSimplifiedPolyhedralForm.md) document
 dating back to the inception of MLIR.
 
 In particular, polyhedral abstractions have proved challenging to integrate with
@@ -514,7 +514,7 @@ properties to describe these semantics, directly in MLIR, is a promising way to:
 write, easy to verify and easy to maintain.
 - Provide a way to specify transformations and the units of IR they manipulate
 declaratively. In turn this allows using local pattern rewrite rules in MLIR
-(i.e. [DRR](https://mlir.llvm.org/docs/DeclarativeRewrites/)).
+(i.e. [DRR](../DeclarativeRewrites.md)).
 - Allow creating customizable passes declaratively by simply selecting rewrite
 rules. This allows mixing transformations, canonicalizations, constant folding
 and other enabling rewrites in a single pass. The result is a system where pass
@@ -618,6 +618,6 @@ src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-1
 This figure is not meant to be perfectly accurate but a rough map of
 how we view the distribution of structural information in existing
 systems, from a codegen-friendly angle. Unsurprisingly, the
-[Linalg Dialect](https://mlir.llvm.org/docs/Dialects/Linalg) and its
+[Linalg Dialect](../Dialects/Linalg/) and its
 future evolutions aspire to a position in the top-right of this map.
 
