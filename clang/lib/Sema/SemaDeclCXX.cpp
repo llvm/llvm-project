@@ -10486,15 +10486,12 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
 
   // Make sure we aren't redeclaring the conversion function.
   QualType ConvType = Context.getCanonicalType(Conversion->getConversionType());
-
   // C++ [class.conv.fct]p1:
   //   [...] A conversion function is never used to convert a
   //   (possibly cv-qualified) object to the (possibly cv-qualified)
   //   same object type (or a reference to it), to a (possibly
   //   cv-qualified) base class of that type (or a reference to it),
   //   or to (possibly cv-qualified) void.
-  // FIXME: Suppress this warning if the conversion function ends up being a
-  // virtual function that overrides a virtual function in a base class.
   QualType ClassType
     = Context.getCanonicalType(Context.getTypeDeclType(ClassDecl));
   if (const ReferenceType *ConvTypeRef = ConvType->getAs<ReferenceType>())
@@ -10502,6 +10499,8 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
   if (Conversion->getTemplateSpecializationKind() != TSK_Undeclared &&
       Conversion->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
     /* Suppress diagnostics for instantiations. */;
+  else if (Conversion->size_overridden_methods() != 0)
+    /* Suppress diagnostics for overriding virtual function in a base class. */;
   else if (ConvType->isRecordType()) {
     ConvType = Context.getCanonicalType(ConvType).getUnqualifiedType();
     if (ConvType == ClassType)

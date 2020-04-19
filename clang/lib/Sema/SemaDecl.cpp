@@ -10716,9 +10716,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
           return Redeclaration;
         }
       }
-    } else if (CXXConversionDecl *Conversion
-               = dyn_cast<CXXConversionDecl>(NewFD)) {
-      ActOnConversionDeclarator(Conversion);
     } else if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(NewFD)) {
       if (auto *TD = Guide->getDescribedFunctionTemplate())
         CheckDeductionGuideTemplate(TD);
@@ -10746,6 +10743,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       if (Method->isStatic())
         checkThisInStaticMemberFunctionType(Method);
     }
+
+    if (CXXConversionDecl *Conversion = dyn_cast<CXXConversionDecl>(NewFD))
+      ActOnConversionDeclarator(Conversion);
 
     // Extra checking for C++ overloaded operators (C++ [over.oper]).
     if (NewFD->isOverloadedOperator() &&
