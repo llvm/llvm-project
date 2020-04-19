@@ -251,5 +251,5 @@ constant propagation or other, unrelated, optimization passes.
 
 Optimization passes that do not fit/are difficult to specify in the above
 structure can be specified as general iterations across modules/functions. See
-[Writing a Pass](WritingAPass.md) for a general overview and introduction to
+[Writing a Pass](../PassManagement.md) for a general overview and introduction to
 optimization passes in MLIR.
