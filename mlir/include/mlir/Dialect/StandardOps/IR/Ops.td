@@ -850,16 +850,16 @@ def CmpIOp : Std_Op<"cmpi",
     attributes: integers require sign specification while floats require various
     floating point-related particularities, e.g., `-ffast-math` behavior,
     IEEE754 compliance, etc
-    ([rationale](../Rationale.md#splitting-floating-point-vs-integer-operations)).
+    ([rationale](../Rationale/Rationale.md#splitting-floating-point-vs-integer-operations)).
     The type of comparison is specified as attribute to avoid introducing ten
     similar operations, taking into account that they are often implemented
     using the same operation downstream
-    ([rationale](../Rationale.md#specifying-comparison-kind-as-attribute)). The
+    ([rationale](../Rationale/Rationale.md#specifying-comparison-kind-as-attribute)). The
     separation between signed and unsigned order comparisons is necessary
     because of integers being signless. The comparison operation must know how
     to interpret values with the foremost bit being set: negatives in two's
     complement or large positives
-    ([rationale](../Rationale.md#specifying-sign-in-integer-comparison-operations)).
+    ([rationale](../Rationale/Rationale.md#specifying-sign-in-integer-comparison-operations)).
 
     Example:
 
@@ -1077,7 +1077,7 @@ def ConstantOp : Std_Op<"constant",
     MLIR does not allow direct references to functions in SSA operands because
     the compiler is multithreaded, and disallowing SSA values to directly
     reference a function simplifies this
-    ([rationale](../Rationale.md#multithreading-the-compiler)).
+    ([rationale](../Rationale/Rationale.md#multithreading-the-compiler)).
   }];
 
   let arguments = (ins AnyAttr:$value);
