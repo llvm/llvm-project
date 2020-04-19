@@ -14,12 +14,12 @@
 #ifndef LLVM_LIB_TARGET_X86_X86CALLLOWERING_H
 #define LLVM_LIB_TARGET_X86_X86CALLLOWERING_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include <functional>
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class DataLayout;
 class MachineRegisterInfo;
 class X86TargetLowering;
