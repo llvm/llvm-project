@@ -19198,8 +19198,10 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
 
   // We need target-specific opcodes if this is v2f64 -> v4i32 -> v2f64.
   bool NeedX86Opcodes = VT.getSizeInBits() != IntVT.getSizeInBits();
-  unsigned ToIntOpcode = NeedX86Opcodes ? X86ISD::CVTTP2SI : ISD::FP_TO_SINT;
-  unsigned ToFPOpcode = NeedX86Opcodes ? X86ISD::CVTSI2P : ISD::SINT_TO_FP;
+  unsigned ToIntOpcode =
+      NeedX86Opcodes ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+  unsigned ToFPOpcode =
+      NeedX86Opcodes ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
 
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
   //
