@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+template <typename T> class DomTreeNodeBase;
+using DomTreeNode = DomTreeNodeBase<BasicBlock>;
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
