@@ -10,7 +10,7 @@ Linalg is designed to solve the High-level Hierarchical Optimization
 (HHO box) in MLIR and to interoperate nicely within a
 *Mixture Of Expert Compilers* environment (i.e. the *CGSel* box).
 
-The [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect)
+The [Rationale Document](../Rationale/RationaleLinalgDialect.md)
 goes into significantly more design and architectural decision details.
 
 ## Set of Key Transformations<a name="key_transformations"></a>
