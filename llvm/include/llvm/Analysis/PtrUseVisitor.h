@@ -295,9 +295,9 @@ protected:
 
   // Generically, arguments to calls and invokes escape the pointer to some
   // other function. Mark that.
-  void visitCallSite(CallSite CS) {
-    PI.setEscaped(CS.getInstruction());
-    Base::visitCallSite(CS);
+  void visitCallBase(CallBase &CB) {
+    PI.setEscaped(&CB);
+    Base::visitCallBase(CB);
   }
 };
 
