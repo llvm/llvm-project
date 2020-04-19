@@ -1341,7 +1341,7 @@ dialect.
 [MlirSpirvBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVBase.td
 [MlirSpirvPasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Passes.h
 [MlirSpirvLowering]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.h
-[MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.td
+[MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/TargetAndABI.h
 [MlirSpirvOpsCpp]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Dialect/SPIRV/SPIRVOps.cpp
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
