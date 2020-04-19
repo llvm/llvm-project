@@ -648,7 +648,7 @@ the lighter syntax: `!foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect types.
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
 ### Standard Types
 
@@ -1243,7 +1243,7 @@ the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
 attribute values.
 
 ### Standard Attribute Values
