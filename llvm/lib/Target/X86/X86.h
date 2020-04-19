@@ -19,9 +19,7 @@
 namespace llvm {
 
 class FunctionPass;
-class ImmutablePass;
 class InstructionSelector;
-class ModulePass;
 class PassRegistry;
 class X86RegisterBankInfo;
 class X86Subtarget;
