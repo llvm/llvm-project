@@ -47,17 +47,13 @@ define <2 x i64> @shuffle_32_add_8_shuffle_32_masks_are_eq(<2 x i64> %v) {
   ret <2 x i64> %bc5
 }
 
-; TODO: Eliminate redundant shuffles
+; Eliminate redundant shuffles
 
 define <2 x i64> @shuffle_8_add_32_shuffle_8_masks_are_eq(<2 x i64> %v) {
 ; CHECK-LABEL: @shuffle_8_add_32_shuffle_8_masks_are_eq(
-; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[V:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i8> [[BC0]], <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <16 x i8> [[SHUFFLE]] to <4 x i32>
-; CHECK-NEXT:    [[ADD_I:%.*]] = shl <4 x i32> [[BC2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[BC4:%.*]] = bitcast <4 x i32> [[ADD_I]] to <16 x i8>
-; CHECK-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <16 x i8> [[BC4]], <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[BC5:%.*]] = bitcast <16 x i8> [[SHUFFLE4]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[BC5:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[BC5]]
 ;
   %bc0 = bitcast <2 x i64> %v to <16 x i8>
@@ -126,15 +122,14 @@ define <16 x i8> @shuffle_16_add_8_masks_are_eq(<8 x i16> %v1, <8 x i16> %v2) {
   ret <16 x i8> %add
 }
 
-; TODO: Sink single shuffle.
+; Sink single shuffle.
 
 define <4 x i32> @shuffle_16_add_32_masks_are_eq_and_can_be_converted_up(<8 x i16> %v1, <8 x i16> %v2) {
 ; CHECK-LABEL: @shuffle_16_add_32_masks_are_eq_and_can_be_converted_up(
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[V1:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x i16> [[V2:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i16> [[SHUFFLE1]] to <4 x i32>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[SHUFFLE2]] to <4 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[BC2]], [[BC1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[V1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[V2:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %shuffle1 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
@@ -145,15 +140,14 @@ define <4 x i32> @shuffle_16_add_32_masks_are_eq_and_can_be_converted_up(<8 x i1
   ret <4 x i32> %add
 }
 
-; TODO: Sink single shuffle.
+; Sink single shuffle.
 
 define <4 x i32> @shuffle_8_add_32_masks_are_eq_and_can_be_converted_up(<16 x i8> %v1, <16 x i8> %v2) {
 ; CHECK-LABEL: @shuffle_8_add_32_masks_are_eq_and_can_be_converted_up(
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[V1:%.*]], <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <16 x i8> [[V2:%.*]], <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <16 x i8> [[SHUFFLE1]] to <4 x i32>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <16 x i8> [[SHUFFLE2]] to <4 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[BC2]], [[BC1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[V1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[V2:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %shuffle1 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -229,13 +223,13 @@ define <16 x i8> @shuffle_32_bitcast_8_shuffle_8_can_not_be_converted_up(<4 x i3
 }
 
 ; shuffle<4 x i32>( bitcast<4 x i32>( shuffle<16 x i8>(v)))
-; TODO: Narrow, squash shuffles, and widen type?
+; TODO: squash shuffles?
 
 define <4 x i32> @shuffle_8_bitcast_32_shuffle_32_can_be_converted_up(<16 x i8> %v1) {
 ; CHECK-LABEL: @shuffle_8_bitcast_32_shuffle_32_can_be_converted_up(
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[V1:%.*]], <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <16 x i8> [[SHUFFLE1]] to <4 x i32>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i32> [[BC1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[V1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[SHUFFLE2]]
 ;
   %shuffle1 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
@@ -245,13 +239,13 @@ define <4 x i32> @shuffle_8_bitcast_32_shuffle_32_can_be_converted_up(<16 x i8> 
 }
 
 ; shuffle<4 x i32>( bitcast<4 x i32>( shuffle<8 x i16>(v)))
-; TODO: Narrow, squash shuffles, and widen type?
+; TODO: squash shuffles?
 
 define <4 x i32> @shuffle_16_bitcast_32_shuffle_32_can_be_converted_up(<8 x i16> %v1) {
 ; CHECK-LABEL: @shuffle_16_bitcast_32_shuffle_32_can_be_converted_up(
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[V1:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i16> [[SHUFFLE1]] to <4 x i32>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i32> [[BC1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[V1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[SHUFFLE2]]
 ;
   %shuffle1 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
@@ -293,13 +287,13 @@ define <4 x i32> @shuffle_16_bitcast_32_shuffle_32_can_not_be_converted_up(<8 x 
 }
 
 ; shuffle<8 x i16>( bitcast<8 x i16>( shuffle<16 x i8>(v)))
-; TODO: Narrow, squash shuffles, and widen type?
+; TODO: squash shuffles and widen type?
 
 define <8 x i16> @shuffle_8_bitcast_16_shuffle_16_can__be_converted_up(<16 x i8> %v1) {
 ; CHECK-LABEL: @shuffle_8_bitcast_16_shuffle_16_can__be_converted_up(
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[V1:%.*]], <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <16 x i8> [[SHUFFLE1]] to <8 x i16>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x i16> [[BC1]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[V1:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:    ret <8 x i16> [[SHUFFLE2]]
 ;
   %shuffle1 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
