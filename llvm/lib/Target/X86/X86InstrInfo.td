@@ -290,6 +290,9 @@ def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 
+def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
+def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
+
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
 def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
@@ -2589,27 +2592,27 @@ let Predicates = [HasBMI2, NoTBM] in {
 }
 
 multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
-                         X86MemOperand x86memop, Intrinsic Int,
+                         X86MemOperand x86memop, SDNode OpNode,
                          PatFrag ld_frag> {
   def rr : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, RC:$src2))]>,
+             [(set RC:$dst, (OpNode RC:$src1, RC:$src2))]>,
              VEX_4V, Sched<[WriteALU]>;
   def rm : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, (ld_frag addr:$src2)))]>,
+             [(set RC:$dst, (OpNode RC:$src1, (ld_frag addr:$src2)))]>,
              VEX_4V, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2] in {
   defm PDEP32 : bmi_pdep_pext<"pdep{l}", GR32, i32mem,
-                               int_x86_bmi_pdep_32, loadi32>, T8XD;
+                               X86pdep, loadi32>, T8XD;
   defm PDEP64 : bmi_pdep_pext<"pdep{q}", GR64, i64mem,
-                               int_x86_bmi_pdep_64, loadi64>, T8XD, VEX_W;
+                               X86pdep, loadi64>, T8XD, VEX_W;
   defm PEXT32 : bmi_pdep_pext<"pext{l}", GR32, i32mem,
-                               int_x86_bmi_pext_32, loadi32>, T8XS;
+                               X86pext, loadi32>, T8XS;
   defm PEXT64 : bmi_pdep_pext<"pext{q}", GR64, i64mem,
-                               int_x86_bmi_pext_64, loadi64>, T8XS, VEX_W;
+                               X86pext, loadi64>, T8XS, VEX_W;
 }
 
 //===----------------------------------------------------------------------===//
