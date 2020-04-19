@@ -64,7 +64,7 @@ representation.
 
 Types in MLIR rely on having a unique `kind` value to ensure that casting checks
 remain extremely efficient
-([rationale](../../Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
+([rationale](../../Rationale/Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
 means we need to explicitly reserve a static range of type `kind` values in the
 symbol registry file
 [DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
