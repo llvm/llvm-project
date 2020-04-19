@@ -18,6 +18,7 @@
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86Subtarget.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -40,6 +41,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
+
 using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
