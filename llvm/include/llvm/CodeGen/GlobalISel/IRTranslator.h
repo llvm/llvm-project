@@ -235,7 +235,7 @@ private:
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
 
-  bool translateInlineAsm(const CallInst &CI, MachineIRBuilder &MIRBuilder);
+  bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
   /// Returns true if the value should be split into multiple LLTs.
   /// If \p Offsets is given then the split type's offsets will be stored in it.
