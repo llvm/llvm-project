@@ -430,14 +430,9 @@ private:
     return block;
   }
 
-  void genFIRUnconditionalBranch(mlir::Block *targetBlock) {
+  void genBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
     builder->create<mlir::BranchOp>(toLocation(), targetBlock);
-  }
-
-  void
-  genFIRUnconditionalBranch(Fortran::lower::pft::Evaluation *targetEvaluation) {
-    genFIRUnconditionalBranch(targetEvaluation->block);
   }
 
   void genFIRConditionalBranch(mlir::Value &cond, mlir::Block *trueTarget,
@@ -464,29 +459,31 @@ private:
   ///
   /// Generate the cleanup block before the program exits
   void genExitRoutine() { builder->create<mlir::ReturnOp>(toLocation()); }
-  void genFIRProgramExit() { genExitRoutine(); }
-  void genFIR(const Fortran::parser::EndProgramStmt &) { genFIRProgramExit(); }
+  void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
   /// END of procedure-like constructs
   ///
   /// Generate the cleanup block before the procedure exits
-  void genExitFunction(mlir::Value val) {
-    builder->create<mlir::ReturnOp>(toLocation(), val);
-  }
   void genReturnSymbol(const Fortran::semantics::Symbol &functionSymbol) {
     const auto &details =
         functionSymbol.get<Fortran::semantics::SubprogramDetails>();
     auto resultRef = lookupSymbol(details.result());
-    mlir::Value r = builder->create<fir::LoadOp>(toLocation(), resultRef);
-    genExitFunction(r);
+    mlir::Value retval = builder->create<fir::LoadOp>(toLocation(), resultRef);
+    builder->create<mlir::ReturnOp>(toLocation(), retval);
   }
 
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
                            const Fortran::semantics::Symbol &symbol) {
+    // Make sure we end the current block with a terminator.
+    if (auto *finalBlock = funit.finalBlock) {
+      if (blockIsUnterminated())
+        builder->create<mlir::BranchOp>(toLocation(), finalBlock);
+      // Set insertion point to final block.
+      builder->setInsertionPoint(finalBlock, finalBlock->end());
+    }
+
     if (Fortran::semantics::IsFunction(symbol)) {
       // FUNCTION
-      if (funit.finalBlock)
-        builder->setInsertionPoint(funit.finalBlock, funit.finalBlock->end());
       genReturnSymbol(symbol);
       return;
     }
@@ -498,11 +495,10 @@ private:
       // return LABEL block
       TODO();
       mlir::Value intExpr{};
-      genExitFunction(intExpr);
+      builder->create<mlir::ReturnOp>(toLocation(), intExpr);
       return;
     }
-    if (funit.finalBlock)
-      builder->setInsertionPoint(funit.finalBlock, funit.finalBlock->end());
+
     genExitRoutine();
   }
 
@@ -510,23 +506,16 @@ private:
   // Statements that have control-flow semantics
   //
 
-  void switchInsertionPointToWhere(fir::WhereOp &where) {
-    builder->setInsertionPointToStart(&where.whereRegion().front());
-  }
-  void switchInsertionPointToOtherwise(fir::WhereOp &where) {
-    builder->setInsertionPointToStart(&where.otherRegion().front());
-  }
-
   template <typename A>
-  mlir::OpBuilder::InsertPoint genWhereCondition(fir::WhereOp &where,
-                                                 const A *stmt) {
+  mlir::OpBuilder::InsertPoint
+  genWhereCondition(fir::WhereOp &where, const A *stmt, bool withElse = true) {
     auto cond = createLogicalExprAsI1(
         toLocation(),
         Fortran::semantics::GetExpr(
             std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t)));
-    where = builder->create<fir::WhereOp>(toLocation(), cond, true);
+    where = builder->create<fir::WhereOp>(toLocation(), cond, withElse);
     auto insPt = builder->saveInsertionPoint();
-    switchInsertionPointToWhere(where);
+    builder->setInsertionPointToStart(&where.whereRegion().front());
     return insPt;
   }
 
@@ -534,10 +523,6 @@ private:
                               mlir::Type t) {
     mlir::Value v = genExprValue(*Fortran::semantics::GetExpr(x));
     return builder->create<fir::ConvertOp>(toLocation(), t, v);
-  }
-
-  mlir::Value genFIRLoopIndex(const Fortran::parser::ScalarExpr &x) {
-    return genFIRLoopIndex(x, mlir::IndexType::get(&mlirContext));
   }
 
   mlir::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
@@ -572,8 +557,8 @@ private:
 
     // Generate fir.where.
     fir::WhereOp where;
-    auto insPt = genWhereCondition(where, &stmt);
-    genFIR(*eval.lexicalSuccessor, /*unstructuredContext*/ false);
+    auto insPt = genWhereCondition(where, &stmt, /*withElse=*/false);
+    genFIR(*eval.lexicalSuccessor, /*unstructuredContext=*/false);
     eval.lexicalSuccessor->skip = true;
     builder->restoreInsertionPoint(insPt);
   }
@@ -778,18 +763,16 @@ private:
       // Add entries to incrementLoopInfo.  (Define extra members for a mask.)
     }
     auto n = incrementLoopInfo.size();
-    for (decltype(n) i = 0; i < n; ++i) {
+    for (decltype(n) i = 0; i < n; ++i)
       genFIRIncrementLoopBegin(incrementLoopInfo[i]);
-    }
 
     // Generate loop body code.
-    for (auto &e : *eval.evaluationList) {
+    for (auto &e : *eval.evaluationList)
       genFIR(e, unstructuredContext);
-    }
 
     // Generate end loop code.
     if (infiniteLoop || whileCondition) {
-      genFIRUnconditionalBranch(doStmtEval.localBlocks[0]);
+      genBranch(doStmtEval.localBlocks[0]);
     } else {
       for (auto i = incrementLoopInfo.size(); i > 0;)
         genFIRIncrementLoopEnd(incrementLoopInfo[--i]);
@@ -872,7 +855,7 @@ private:
         location, builder->getIntegerAttr(info.loopVariableType, 1));
     tripVariable = builder->create<mlir::SubIOp>(location, tripVariable, one);
     builder->create<fir::StoreOp>(location, tripVariable, info.tripVariable);
-    genFIRUnconditionalBranch(info.headerBlock);
+    genBranch(info.headerBlock);
   }
 
   /// Generate structured or unstructured FIR for an IF construct.
@@ -888,15 +871,15 @@ private:
           insPt = genWhereCondition(underWhere, s);
         } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
           // otherwise block, then nested fir.where
-          switchInsertionPointToOtherwise(underWhere);
+          builder->setInsertionPointToStart(&underWhere.otherRegion().front());
           genWhereCondition(underWhere, s);
         } else if (e.isA<Fortran::parser::ElseStmt>()) {
           // otherwise block
-          switchInsertionPointToOtherwise(underWhere);
+          builder->setInsertionPointToStart(&underWhere.otherRegion().front());
         } else if (e.isA<Fortran::parser::EndIfStmt>()) {
           builder->restoreInsertionPoint(insPt);
         } else {
-          genFIR(e, /*unstructuredContext*/ false);
+          genFIR(e, /*unstructuredContext=*/false);
         }
       }
       return;
@@ -927,9 +910,8 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::CaseConstruct &) {
-    for (auto &e : *eval.evaluationList) {
+    for (auto &e : *eval.evaluationList)
       genFIR(e);
-    }
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1111,18 +1093,18 @@ private:
     TODO();
   }
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::NonLabelDoStmt &) {} // nop
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::EndDoStmt &) {} // nop
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::IfThenStmt &) {} // nop
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::ElseIfStmt &) {} // nop
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::ElseStmt &) {} // nop
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::EndIfStmt &) {} // nop
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1223,11 +1205,73 @@ private:
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::AssignmentStmt &stmt) {
-    assert(stmt.typedAssignment && stmt.typedAssignment->v &&
-           "assignment analysis failed");
-    const auto &assignment = *stmt.typedAssignment->v;
-    std::visit( // better formatting
+              const Fortran::parser::ContinueStmt &) {
+    // do nothing
+  }
+  void genFIR(Fortran::lower::pft::Evaluation &eval,
+              const Fortran::parser::DeallocateStmt &) {
+    TODO();
+  }
+
+  // We don't have runtime library support for various features. When they are
+  // encountered, we emit an error message and exit immediately.
+  void noRuntimeSupport(llvm::StringRef stmt) {
+    mlir::emitError(toLocation(), "There is no runtime support for ")
+        << stmt << " statement.\n";
+    std::exit(1);
+  }
+
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::EventPostStmt &) {
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("EVENT POST");
+  }
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::EventWaitStmt &) {
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("EVENT WAIT");
+  }
+
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::FormTeamStmt &) {
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("FORM TEAM");
+  }
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::LockStmt &) {
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("LOCK");
+  }
+
+  /// Nullify pointer object list
+  ///
+  /// For each pointer object, reset the pointer to a disassociated status.
+  /// We do this by setting each pointer to null.
+  void genFIR(Fortran::lower::pft::Evaluation &eval,
+              const Fortran::parser::NullifyStmt &stmt) {
+    for (auto &po : stmt.v) {
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::Name &sym) {
+                auto ty = genType(*sym.symbol);
+                auto load = builder->create<fir::LoadOp>(
+                    toLocation(), lookupSymbol(*sym.symbol));
+                auto idxTy = mlir::IndexType::get(&mlirContext);
+                auto zero = builder->create<mlir::ConstantOp>(
+                    toLocation(), idxTy, builder->getIntegerAttr(idxTy, 0));
+                auto cast =
+                    builder->create<fir::ConvertOp>(toLocation(), ty, zero);
+                builder->create<fir::StoreOp>(toLocation(), cast, load);
+              },
+              [&](const Fortran::parser::StructureComponent &) { TODO(); },
+          },
+          po.u);
+    }
+  }
+
+  /// Shared for both assignments and pointer assignments.
+  void genFIR(const Fortran::evaluate::Assignment &assignment) {
+    std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Assignment::Intrinsic &) {
               const auto *sym =
@@ -1262,11 +1306,16 @@ private:
                 assert(lhsType && "lhs cannot be typeless");
                 if (isNumericScalarCategory(lhsType->category())) {
                   // Fortran 2018 10.2.1.3 p8 and p9
-                  // Conversions are already inserted by semantic
-                  // analysis.
-                  builder->create<fir::StoreOp>(toLocation(),
-                                                genExprValue(assignment.rhs),
-                                                genExprAddr(assignment.lhs));
+                  // Conversions should have been inserted by semantic analysis,
+                  // but they can be incorrect between the rhs and lhs. Correct
+                  // that here.
+                  auto loc = toLocation();
+                  auto addr = genExprAddr(assignment.lhs);
+                  auto val = genExprValue(assignment.rhs);
+                  auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
+                  assert(toTy && "store location must be typed");
+                  auto cast = builder->create<fir::ConvertOp>(loc, toTy, val);
+                  builder->create<fir::StoreOp>(loc, cast, addr);
                 } else if (isCharacterCategory(lhsType->category())) {
                   // Fortran 2018 10.2.1.3 p10 and p11
                   // Generating value for lhs to get fir.boxchar.
@@ -1296,87 +1345,40 @@ private:
         assignment.u);
   }
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::ContinueStmt &) {} // nop
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::DeallocateStmt &) {
-    TODO();
-  }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::EventPostStmt &) {
-    // call some runtime routine
-    TODO();
-  }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::EventWaitStmt &) {
-    // call some runtime routine
-    TODO();
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::PointerAssignmentStmt &stmt) {
+    genFIR(*stmt.typedAssignment->v);
   }
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::FormTeamStmt &) {
-    TODO();
-  }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::LockStmt &) {
-    // call some runtime routine
-    TODO();
-  }
-
-  /// Nullify pointer object list
-  ///
-  /// For each pointer object, reset the pointer to a disassociated status.
-  /// We do this by setting each pointer to null.
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::NullifyStmt &stmt) {
-    for (auto &po : stmt.v) {
-      std::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::parser::Name &sym) {
-                auto ty = genType(*sym.symbol);
-                auto load = builder->create<fir::LoadOp>(
-                    toLocation(), lookupSymbol(*sym.symbol));
-                auto idxTy = mlir::IndexType::get(&mlirContext);
-                auto zero = builder->create<mlir::ConstantOp>(
-                    toLocation(), idxTy, builder->getIntegerAttr(idxTy, 0));
-                auto cast =
-                    builder->create<fir::ConvertOp>(toLocation(), ty, zero);
-                builder->create<fir::StoreOp>(toLocation(), cast, load);
-              },
-              [&](const Fortran::parser::StructureComponent &) { TODO(); },
-          },
-          po.u);
-    }
-  }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::PointerAssignmentStmt &) {
-    TODO();
+  void genFIR(Fortran::lower::pft::Evaluation &,
+              const Fortran::parser::AssignmentStmt &stmt) {
+    genFIR(*stmt.typedAssignment->v);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::SyncAllStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("SYNC ALL");
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::SyncImagesStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("SYNC IMAGES");
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::SyncMemoryStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("SYNC MEMORY");
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::SyncTeamStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("SYNC TEAM");
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::UnlockStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("UNLOCK");
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1390,24 +1392,32 @@ private:
     builder->create<fir::StoreOp>(toLocation(), labelValue, variable);
   }
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::FormatStmt &) {
-    // do nothing. FORMAT statements have no semantics. They may be lowered if
-    // used by a data transfer statement.
+    // do nothing.
+
+    // FORMAT statements have no semantics. They may be lowered if used by a
+    // data transfer statement.
   }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::EntryStmt &) {
     TODO();
   }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::PauseStmt &) {
-    // call some runtime routine
-    TODO();
+    // FIXME: There is no runtime call to make for this yet.
+    noRuntimeSupport("PAUSE");
   }
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
+
+  void genFIR(Fortran::lower::pft::Evaluation &,
               const Fortran::parser::DataStmt &) {
-    TODO();
+    // FIXME: The front-end doesn't provide the right information yet.
+    mlir::emitError(toLocation(), "DATA statement is not handled.");
+    exit(1);
   }
+
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::NamelistStmt &) {
     TODO();
@@ -1437,7 +1447,7 @@ private:
     const auto *funit = eval.getOwningProcedure();
     assert(funit && "not inside main program or a procedure");
     if (funit->isMainProgram()) {
-      genFIRProgramExit();
+      genExitRoutine();
     } else {
       if (stmt.v) {
         // Alternate return
@@ -1458,15 +1468,15 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::CycleStmt &) {
-    genFIRUnconditionalBranch(eval.controlSuccessor);
+    genBranch(eval.controlSuccessor->block);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ExitStmt &) {
-    genFIRUnconditionalBranch(eval.controlSuccessor);
+    genBranch(eval.controlSuccessor->block);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::GotoStmt &) {
-    genFIRUnconditionalBranch(eval.controlSuccessor);
+    genBranch(eval.controlSuccessor->block);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1486,7 +1496,7 @@ private:
     if (unstructuredContext && eval.isActionStmt() && eval.controlSuccessor &&
         eval.controlSuccessor->block && blockIsUnterminated()) {
       // Exit from an unstructured IF or SELECT construct block.
-      genFIRUnconditionalBranch(eval.controlSuccessor);
+      genBranch(eval.controlSuccessor->block);
     }
   }
 
@@ -1654,7 +1664,7 @@ private:
       }
       // TODO: What about lower host-associated variables? (They probably need
       // to be handled as dummy parameters.)
-      
+
       // Otherwise, it's a local variable.
       auto local = createNewLocal(loc, sym);
       addSymbol(sym, local);
@@ -1946,7 +1956,7 @@ private:
     // If the current block does not have a terminator branch,
     // append a fallthrough branch.
     if (blockIsUnterminated())
-      genFIRUnconditionalBranch(newBlock);
+      genBranch(newBlock);
     builder->setInsertionPointToStart(newBlock);
   }
 
@@ -1961,11 +1971,10 @@ private:
     setCurrentPosition(
         Fortran::lower::pft::FunctionLikeUnit::stmtSourceLoc(funit.endStmt));
 
-    if (funit.isMainProgram()) {
-      genFIRProgramExit();
-    } else {
+    if (funit.isMainProgram())
+      genExitRoutine();
+    else
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
-    }
 
     delete builder;
     builder = nullptr;
