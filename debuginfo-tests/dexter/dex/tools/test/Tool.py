@@ -13,7 +13,10 @@ import pickle
 import shutil
 
 from dex.builder import run_external_build_script
-from dex.debugger.Debuggers import get_debugger_steps
+from dex.command.ParseCommand import get_command_infos
+from dex.debugger.Debuggers import run_debugger_subprocess
+from dex.debugger.DebuggerControllers.DefaultController import DefaultController
+from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
 from dex.tools import TestToolBase
 from dex.utils.Exceptions import DebuggerException
@@ -128,10 +131,23 @@ class Tool(TestToolBase):
                 executable_file=options.executable)
         return builderIR
 
+    def _init_debugger_controller(self):
+        step_collection = DextIR(
+            executable_path=self.context.options.executable,
+            source_paths=self.context.options.source_files,
+            dexter_version=self.context.version)
+        step_collection.commands = get_command_infos(
+            self.context.options.source_files)
+        debugger_controller = DefaultController(self.context, step_collection)
+        return debugger_controller
+
     def _get_steps(self, builderIR):
         """Generate a list of debugger steps from a test case.
         """
-        steps = get_debugger_steps(self.context)
+        debugger_controller = self._init_debugger_controller()
+        debugger_controller = run_debugger_subprocess(
+            debugger_controller, self.context.working_directory.path)
+        steps = debugger_controller.step_collection
         steps.builder = builderIR
         return steps
 
