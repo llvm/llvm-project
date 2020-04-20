@@ -97,25 +97,25 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   R.Register(&invoke<Result(*) Signature>::method<(&Class::Method)>::record,   \
              #Result, #Class, #Method, #Signature)
 
-#define LLDB_REGISTER_CHAR_PTR_REDIRECT_STATIC(Result, Class, Method)          \
+#define LLDB_REGISTER_CHAR_PTR_METHOD_STATIC(Result, Class, Method)            \
   R.Register(                                                                  \
       &invoke<Result (*)(char *, size_t)>::method<(&Class::Method)>::record,   \
-      &char_ptr_redirect<Result (*)(char *, size_t)>::method<(                 \
-          &Class::Method)>::record,                                            \
+      &invoke_char_ptr<Result (*)(char *,                                      \
+                                  size_t)>::method<(&Class::Method)>::record,  \
       #Result, #Class, #Method, "(char*, size_t");
 
-#define LLDB_REGISTER_CHAR_PTR_REDIRECT(Result, Class, Method)                 \
+#define LLDB_REGISTER_CHAR_PTR_METHOD(Result, Class, Method)                   \
   R.Register(&invoke<Result (Class::*)(char *, size_t)>::method<(              \
                  &Class::Method)>::record,                                     \
-             &char_ptr_redirect<Result (Class::*)(char *, size_t)>::method<(   \
+             &invoke_char_ptr<Result (Class::*)(char *, size_t)>::method<(     \
                  &Class::Method)>::record,                                     \
              #Result, #Class, #Method, "(char*, size_t");
 
-#define LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(Result, Class, Method)           \
+#define LLDB_REGISTER_CHAR_PTR_METHOD_CONST(Result, Class, Method)             \
   R.Register(&invoke<Result (Class::*)(char *, size_t)                         \
                          const>::method<(&Class::Method)>::record,             \
-             &char_ptr_redirect<Result (Class::*)(char *, size_t)              \
-                                    const>::method<(&Class::Method)>::record,  \
+             &invoke_char_ptr<Result (Class::*)(char *, size_t)                \
+                                  const>::method<(&Class::Method)>::record,    \
              #Result, #Class, #Method, "(char*, size_t");
 
 #define LLDB_CONSTRUCT_(T, Class, ...)                                         \
@@ -166,6 +166,40 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 
 #define LLDB_RECORD_STATIC_METHOD_NO_ARGS(Result, Class, Method)               \
   LLDB_RECORD_(Result (*)(), (&Class::Method), lldb_private::repro::EmptyArg())
+
+#define LLDB_RECORD_CHAR_PTR_(T1, T2, StrOut, ...)                             \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(__VA_ARGS__));        \
+  if (lldb_private::repro::InstrumentationData _data =                         \
+          LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
+    if (lldb_private::repro::Serializer *_serializer =                         \
+            _data.GetSerializer()) {                                           \
+      _recorder.Record(*_serializer, _data.GetRegistry(),                      \
+                       &lldb_private::repro::invoke<T1>::method<(T2)>::record, \
+                       __VA_ARGS__);                                           \
+    } else if (lldb_private::repro::Deserializer *_deserializer =              \
+                   _data.GetDeserializer()) {                                  \
+      if (_recorder.ShouldCapture()) {                                         \
+        return lldb_private::repro::invoke_char_ptr<T1>::method<T2>::replay(   \
+            _recorder, *_deserializer, _data.GetRegistry(), StrOut);           \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#define LLDB_RECORD_CHAR_PTR_METHOD(Result, Class, Method, Signature, StrOut,  \
+                                    ...)                                       \
+  LLDB_RECORD_CHAR_PTR_(Result(Class::*) Signature, (&Class::Method), StrOut,  \
+                        this, __VA_ARGS__)
+
+#define LLDB_RECORD_CHAR_PTR_METHOD_CONST(Result, Class, Method, Signature,    \
+                                          StrOut, ...)                         \
+  LLDB_RECORD_CHAR_PTR_(Result(Class::*) Signature const, (&Class::Method),    \
+                        StrOut, this, __VA_ARGS__)
+
+#define LLDB_RECORD_CHAR_PTR_STATIC_METHOD(Result, Class, Method, Signature,   \
+                                           StrOut, ...)                        \
+  LLDB_RECORD_CHAR_PTR_(Result(*) Signature, (&Class::Method), StrOut,         \
+                        __VA_ARGS__)
 
 #define LLDB_RECORD_RESULT(Result) _recorder.RecordResult(Result, true);
 
@@ -946,34 +980,79 @@ template <typename... Args> struct invoke<void (*)(Args...)> {
   };
 };
 
-template <typename Signature> struct char_ptr_redirect;
-template <typename Result, typename Class>
-struct char_ptr_redirect<Result (Class::*)(char *, size_t) const> {
-  template <Result (Class::*m)(char *, size_t) const> struct method {
+/// Special handling for functions returning strings as (char*, size_t).
+/// {
+
+/// For inline replay, we ignore the arguments and use the ones from the
+/// serializer instead. This doesn't work for methods that use a char* and a
+/// size to return a string. For one these functions have a custom replayer to
+/// prevent override the input buffer. Furthermore, the template-generated
+/// deserialization is not easy to hook into.
+///
+/// The specializations below hand-implement the serialization logic for the
+/// inline replay. Instead of using the function from the registry, it uses the
+/// one passed into the macro.
+template <typename Signature> struct invoke_char_ptr;
+template <typename Result, typename Class, typename... Args>
+struct invoke_char_ptr<Result (Class::*)(Args...) const> {
+  template <Result (Class::*m)(Args...) const> struct method {
     static Result record(Class *c, char *s, size_t l) {
       char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
       return (c->*m)(buffer, l);
     }
+
+    static Result replay(Recorder &recorder, Deserializer &deserializer,
+                         Registry &registry, char *str) {
+      deserializer.Deserialize<unsigned>();
+      Class *c = deserializer.Deserialize<Class *>();
+      deserializer.Deserialize<const char *>();
+      size_t l = deserializer.Deserialize<size_t>();
+      return recorder.ReplayResult(
+          std::move(deserializer.HandleReplayResult((c->*m)(str, l))), true);
+    }
   };
 };
-template <typename Result, typename Class>
-struct char_ptr_redirect<Result (Class::*)(char *, size_t)> {
-  template <Result (Class::*m)(char *, size_t)> struct method {
+
+template <typename Signature> struct invoke_char_ptr;
+template <typename Result, typename Class, typename... Args>
+struct invoke_char_ptr<Result (Class::*)(Args...)> {
+  template <Result (Class::*m)(Args...)> struct method {
     static Result record(Class *c, char *s, size_t l) {
       char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
       return (c->*m)(buffer, l);
     }
+
+    static Result replay(Recorder &recorder, Deserializer &deserializer,
+                         Registry &registry, char *str) {
+      deserializer.Deserialize<unsigned>();
+      Class *c = deserializer.Deserialize<Class *>();
+      deserializer.Deserialize<const char *>();
+      size_t l = deserializer.Deserialize<size_t>();
+      return recorder.ReplayResult(
+          std::move(deserializer.HandleReplayResult((c->*m)(str, l))), true);
+    }
   };
 };
-template <typename Result>
-struct char_ptr_redirect<Result (*)(char *, size_t)> {
-  template <Result (*m)(char *, size_t)> struct method {
+
+template <typename Result, typename... Args>
+struct invoke_char_ptr<Result (*)(Args...)> {
+  template <Result (*m)(Args...)> struct method {
     static Result record(char *s, size_t l) {
       char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
       return (*m)(buffer, l);
     }
+
+    static Result replay(Recorder &recorder, Deserializer &deserializer,
+                         Registry &registry, char *str) {
+      deserializer.Deserialize<unsigned>();
+      deserializer.Deserialize<const char *>();
+      size_t l = deserializer.Deserialize<size_t>();
+      return recorder.ReplayResult(
+          std::move(deserializer.HandleReplayResult((*m)(str, l))), true);
+    }
   };
 };
+/// }
 
 } // namespace repro
 } // namespace lldb_private
