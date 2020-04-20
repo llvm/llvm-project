@@ -15,7 +15,6 @@ define i32 @novect(i32* %p) {
 ; CHECK:           Invalidating analysis: BlockFrequencyAnalysis on novect
 ; CHECK:           Invalidating analysis: DemandedBitsAnalysis on novect
 ; CHECK:           Invalidating analysis: MemorySSAAnalysis on novect
-; CHECK:           Invalidating analysis: InnerAnalysisManagerProxy<llvm::AnalysisManager<llvm::Loop, llvm::LoopStandardAnalysisResults&>, llvm::Function> on novect
 ; CHECK:           Running pass: JumpThreadingPass on novect
 
 ; CHECK:           entry:
