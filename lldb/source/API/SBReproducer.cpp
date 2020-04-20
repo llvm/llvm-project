@@ -111,6 +111,12 @@ const char *SBReproducer::Capture() {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    auto &p = g->GetOrCreate<SBProvider>();
+    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
+  }
+
   return nullptr;
 }
 
@@ -121,15 +127,35 @@ const char *SBReproducer::Capture(const char *path) {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    auto &p = g->GetOrCreate<SBProvider>();
+    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
+  }
+
   return nullptr;
 }
 
 const char *SBReproducer::PassiveReplay(const char *path) {
   static std::string error;
-  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
+  if (auto e = Reproducer::Initialize(ReproducerMode::PassiveReplay,
+                                      FileSpec(path))) {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *l = lldb_private::repro::Reproducer::Instance().GetLoader()) {
+    FileSpec file = l->GetFile<SBProvider::Info>();
+    auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
+    if (!error_or_file) {
+      error =
+          "unable to read SB API data: " + error_or_file.getError().message();
+      return error.c_str();
+    }
+    static ReplayData r(std::move(*error_or_file));
+    InstrumentationData::Initialize(r.GetDeserializer(), r.GetRegistry());
+  }
+
   return nullptr;
 }
 
