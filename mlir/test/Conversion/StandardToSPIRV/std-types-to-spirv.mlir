@@ -486,7 +486,7 @@ func @memref_offset_strides(
 
 // -----
 
-// Check that dynamic shapes are not supported.
+// Dynamic shapes
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [], []>,
@@ -494,13 +494,17 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
 
+// Check that unranked shapes are not supported.
 // CHECK-LABEL: func @unranked_memref
 // CHECK-SAME: memref<*xi32>
 func @unranked_memref(%arg0: memref<*xi32>) { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref
-// CHECK-SAME: memref<8x?xi32>
-func @dynamic_dim_memref(%arg0: memref<8x?xi32>) { return }
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<i32, stride=4> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<f32, stride=4> [0]>, StorageBuffer>
+func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
+                         %arg1: memref<?x?xf32>)
+{ return }
 
 } // end module
 
