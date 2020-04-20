@@ -22,11 +22,10 @@
 
 define void @call_test_byval_mem1() {
 entry:
-  call void @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S1* byval(%struct_S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S1* byval(%struct_S1) align 1 @gS1)
   ret void
 }
 
-declare void @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1* byval(%struct_S1) align 1)
 
 ; CHECKASM-LABEL: .call_test_byval_mem1:
 
@@ -44,6 +43,29 @@ declare void @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1
 ; ASM64BIT:       bl .test_byval_mem1
 ; ASM64BIT:       addi 1, 1, 128
 
+define zeroext  i8 @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1* byval(%struct_S1) align 1 %s) {
+entry:
+  %gep = getelementptr inbounds %struct_S1, %struct_S1* %s, i32 0, i32 0
+  %load = load i8, i8* %gep, align 1
+  ret i8 %load
+}
+
+; CHECK-LABEL: name:            test_byval_mem1
+
+; 32BIT:       fixedStack:
+; 32BIT-NEXT:    - { id: 0, type: default, offset: 56, size: 4, alignment: 8, stack-id: default,
+; 32BIT:       bb.0.entry:
+; 32BIT-NEXT:    %[[VAL:[0-9]+]]:gprc = LBZ 0, %fixed-stack.0
+; 32BIT-NEXT:    $r3 = COPY %[[VAL]]
+; 32BIT-NEXT:    BLR
+
+; 64BIT:       fixedStack:
+; 64BIT-NEXT:    - { id: 0, type: default, offset: 112, size: 8, alignment: 16, stack-id: default,
+; 64BIT:       bb.0.entry:
+; 64BIT-NEXT:    %[[VAL:[0-9]+]]:g8rc = LBZ8 0, %fixed-stack.0
+; 64BIT-NEXT:    $x3 = COPY %[[VAL]]
+; 64BIT-NEXT:    BLR8
+
 
 %struct_S256 = type { [256 x i8] }
 
@@ -51,11 +73,10 @@ declare void @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1
 
 define void @call_test_byval_mem2() {
 entry:
-  call void @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S256* byval(%struct_S256) align 1 @gS256)
+  %call = call zeroext i8 @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S256* byval(%struct_S256) align 1 @gS256)
   ret void
 }
 
-declare void @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S256* byval(%struct_S256) align 1)
 
 ; CHECK-LABEL:    name: call_test_byval_mem2
 
@@ -121,6 +142,29 @@ declare void @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S2
 ; ASM64BIT:       bl .test_byval_mem2
 ; ASM64BIT:       addi 1, 1, 368
 
+
+define zeroext i8 @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S256* byval(%struct_S256) align 1 %s) {
+entry:
+  %gep = getelementptr inbounds %struct_S256, %struct_S256* %s, i32 0, i32 0, i32 255
+  %load = load i8, i8* %gep, align 1
+  ret i8 %load
+}
+
+; CHECK-LABEL: name:            test_byval_mem2
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 56, size: 256, alignment: 8, stack-id: default,
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   %[[VAL:[0-9]+]]:gprc = LBZ 255, %fixed-stack.0
+; 32BIT-NEXT:   $r3 = COPY %[[VAL]]
+; 32BIT-NEXT:   BLR
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 112, size: 256, alignment: 16, stack-id: default,
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   %[[VAL:[0-9]+]]:g8rc = LBZ8 255, %fixed-stack.0
+; 64BIT-NEXT:   $x3 = COPY %[[VAL]]
+; 64BIT-NEXT:   BLR8
 
 %struct_S57 = type { [57 x i8] }
 
