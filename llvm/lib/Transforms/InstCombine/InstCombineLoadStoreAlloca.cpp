@@ -398,10 +398,9 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     // is only subsequently read.
     SmallVector<Instruction *, 4> ToDelete;
     if (MemTransferInst *Copy = isOnlyCopiedFromConstantGlobal(&AI, ToDelete)) {
-      MaybeAlign AllocaAlign = AI.getAlign();
-      Align SourceAlign = getOrEnforceKnownAlignment(
-          Copy->getSource(), AllocaAlign, DL, &AI, &AC, &DT);
-      if ((!AllocaAlign || *AllocaAlign <= SourceAlign) &&
+      unsigned SourceAlign = getOrEnforceKnownAlignment(
+          Copy->getSource(), AI.getAlignment(), DL, &AI, &AC, &DT);
+      if (AI.getAlignment() <= SourceAlign &&
           isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
         LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
         LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
@@ -957,16 +956,16 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
     return Res;
 
   // Attempt to improve the alignment.
-  Align KnownAlign = getOrEnforceKnownAlignment(
-      Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
-  MaybeAlign LoadAlign = LI.getAlign();
-  Align EffectiveLoadAlign =
-      LoadAlign ? *LoadAlign : DL.getABITypeAlign(LI.getType());
+  unsigned KnownAlign = getOrEnforceKnownAlignment(
+      Op, DL.getPrefTypeAlignment(LI.getType()), DL, &LI, &AC, &DT);
+  unsigned LoadAlign = LI.getAlignment();
+  unsigned EffectiveLoadAlign =
+      LoadAlign != 0 ? LoadAlign : DL.getABITypeAlignment(LI.getType());
 
   if (KnownAlign > EffectiveLoadAlign)
-    LI.setAlignment(KnownAlign);
+    LI.setAlignment(MaybeAlign(KnownAlign));
   else if (LoadAlign == 0)
-    LI.setAlignment(EffectiveLoadAlign);
+    LI.setAlignment(MaybeAlign(EffectiveLoadAlign));
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
@@ -1362,11 +1361,11 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
     return eraseInstFromFunction(SI);
 
   // Attempt to improve the alignment.
-  const Align KnownAlign = getOrEnforceKnownAlignment(
-      Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
-  const MaybeAlign StoreAlign = SI.getAlign();
+  const Align KnownAlign = Align(getOrEnforceKnownAlignment(
+      Ptr, DL.getPrefTypeAlignment(Val->getType()), DL, &SI, &AC, &DT));
+  const MaybeAlign StoreAlign = MaybeAlign(SI.getAlignment());
   const Align EffectiveStoreAlign =
-      StoreAlign ? *StoreAlign : DL.getABITypeAlign(Val->getType());
+      StoreAlign ? *StoreAlign : Align(DL.getABITypeAlignment(Val->getType()));
 
   if (KnownAlign > EffectiveStoreAlign)
     SI.setAlignment(KnownAlign);
