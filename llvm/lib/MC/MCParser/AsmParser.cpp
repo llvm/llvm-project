@@ -3528,7 +3528,8 @@ bool AsmParser::parseDirectiveLoc() {
     Lex();
   }
 
-  unsigned Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
+  auto PrevFlags = getContext().getCurrentDwarfLoc().getFlags();
+  unsigned Flags = PrevFlags & DWARF2_FLAG_IS_STMT;
   unsigned Isa = 0;
   int64_t Discriminator = 0;
 
