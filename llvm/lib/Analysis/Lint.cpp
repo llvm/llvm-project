@@ -93,15 +93,13 @@ namespace {
 
     void visitFunction(Function &F);
 
-    void visitCallSite(CallSite CS);
+    void visitCallBase(CallBase &CB);
     void visitMemoryReference(Instruction &I, Value *Ptr,
                               uint64_t Size, unsigned Align,
                               Type *Ty, unsigned Flags);
     void visitEHBeginCatch(IntrinsicInst *II);
     void visitEHEndCatch(IntrinsicInst *II);
 
-    void visitCallInst(CallInst &I);
-    void visitInvokeInst(InvokeInst &I);
     void visitReturnInst(ReturnInst &I);
     void visitLoadInst(LoadInst &I);
     void visitStoreInst(StoreInst &I);
@@ -222,21 +220,20 @@ void Lint::visitFunction(Function &F) {
   // TODO: Check for irreducible control flow.
 }
 
-void Lint::visitCallSite(CallSite CS) {
-  Instruction &I = *CS.getInstruction();
-  Value *Callee = CS.getCalledValue();
+void Lint::visitCallBase(CallBase &I) {
+  Value *Callee = I.getCalledValue();
 
   visitMemoryReference(I, Callee, MemoryLocation::UnknownSize, 0, nullptr,
                        MemRef::Callee);
 
   if (Function *F = dyn_cast<Function>(findValue(Callee,
                                                  /*OffsetOk=*/false))) {
-    Assert(CS.getCallingConv() == F->getCallingConv(),
+    Assert(I.getCallingConv() == F->getCallingConv(),
            "Undefined behavior: Caller and callee calling convention differ",
            &I);
 
     FunctionType *FT = F->getFunctionType();
-    unsigned NumActualArgs = CS.arg_size();
+    unsigned NumActualArgs = I.arg_size();
 
     Assert(FT->isVarArg() ? FT->getNumParams() <= NumActualArgs
                           : FT->getNumParams() == NumActualArgs,
@@ -252,7 +249,7 @@ void Lint::visitCallSite(CallSite CS) {
     // Check argument types (in case the callee was casted) and attributes.
     // TODO: Verify that caller and callee attributes are compatible.
     Function::arg_iterator PI = F->arg_begin(), PE = F->arg_end();
-    CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
+    CallSite::arg_iterator AI = I.arg_begin(), AE = I.arg_end();
     for (; AI != AE; ++AI) {
       Value *Actual = *AI;
       if (PI != PE) {
@@ -266,16 +263,16 @@ void Lint::visitCallSite(CallSite CS) {
         // not fully precise because we don't know the sizes of the dereferenced
         // memory regions.
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
-          AttributeList PAL = CS.getAttributes();
+          AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (CallSite::arg_iterator BI = CS.arg_begin(); BI != AE;
+          for (CallSite::arg_iterator BI = I.arg_begin(); BI != AE;
                ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
             if (PAL.hasParamAttribute(ArgNo, Attribute::ByVal))
               continue;
             // If both arguments are readonly, they have no dependence.
-            if (Formal->onlyReadsMemory() && CS.onlyReadsMemory(ArgNo))
+            if (Formal->onlyReadsMemory() && I.onlyReadsMemory(ArgNo))
               continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
@@ -297,12 +294,11 @@ void Lint::visitCallSite(CallSite CS) {
     }
   }
 
-  if (CS.isCall()) {
-    const CallInst *CI = cast<CallInst>(CS.getInstruction());
+  if (const auto *CI = dyn_cast<CallInst>(&I)) {
     if (CI->isTailCall()) {
       const AttributeList &PAL = CI->getAttributes();
       unsigned ArgNo = 0;
-      for (Value *Arg : CS.args()) {
+      for (Value *Arg : I.args()) {
         // Skip ByVal arguments since they will be memcpy'd to the callee's
         // stack anyway.
         if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
@@ -383,36 +379,28 @@ void Lint::visitCallSite(CallSite CS) {
              "Undefined behavior: va_start called in a non-varargs function",
              &I);
 
-      visitMemoryReference(I, CS.getArgument(0), MemoryLocation::UnknownSize, 0,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
+                           0, nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::vacopy:
-      visitMemoryReference(I, CS.getArgument(0), MemoryLocation::UnknownSize, 0,
-                           nullptr, MemRef::Write);
-      visitMemoryReference(I, CS.getArgument(1), MemoryLocation::UnknownSize, 0,
-                           nullptr, MemRef::Read);
+      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
+                           0, nullptr, MemRef::Write);
+      visitMemoryReference(I, I.getArgOperand(1), MemoryLocation::UnknownSize,
+                           0, nullptr, MemRef::Read);
       break;
     case Intrinsic::vaend:
-      visitMemoryReference(I, CS.getArgument(0), MemoryLocation::UnknownSize, 0,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
+                           0, nullptr, MemRef::Read | MemRef::Write);
       break;
 
     case Intrinsic::stackrestore:
       // Stackrestore doesn't read or write memory, but it sets the
       // stack pointer, which the compiler may read from or write to
       // at any time, so check it for both readability and writeability.
-      visitMemoryReference(I, CS.getArgument(0), MemoryLocation::UnknownSize, 0,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
+                           0, nullptr, MemRef::Read | MemRef::Write);
       break;
     }
-}
-
-void Lint::visitCallInst(CallInst &I) {
-  return visitCallSite(&I);
-}
-
-void Lint::visitInvokeInst(InvokeInst &I) {
-  return visitCallSite(&I);
 }
 
 void Lint::visitReturnInst(ReturnInst &I) {
