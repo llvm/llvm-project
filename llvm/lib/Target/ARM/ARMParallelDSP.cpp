@@ -570,6 +570,10 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
     auto Ld2 = static_cast<LoadInst*>(PMul0->RHS);
     auto Ld3 = static_cast<LoadInst*>(PMul1->RHS);
 
+    // Check that each mul is operating on two different loads.
+    if (Ld0 == Ld2 || Ld1 == Ld3)
+      return false;
+
     if (AreSequentialLoads(Ld0, Ld1, PMul0->VecLd)) {
       if (AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
         LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
