@@ -73,7 +73,7 @@ inline TestInstrumentationData GetTestInstrumentationData() {
 }
 
 class TestInstrumentationDataRAII {
-private:
+public:
   TestInstrumentationDataRAII(llvm::raw_string_ostream &os) {
     g_registry.emplace();
     g_serializer.emplace(os);
@@ -86,12 +86,6 @@ private:
     g_deserializer.emplace(buffer);
   }
 
-  friend std::unique_ptr<TestInstrumentationDataRAII>
-  std::make_unique<TestInstrumentationDataRAII>(llvm::raw_string_ostream &os);
-  friend std::unique_ptr<TestInstrumentationDataRAII>
-  std::make_unique<TestInstrumentationDataRAII>(llvm::StringRef &buffer);
-
-public:
   ~TestInstrumentationDataRAII() { Reset(); }
 
   void Reset() {
