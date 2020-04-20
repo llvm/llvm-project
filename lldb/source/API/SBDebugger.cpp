@@ -1374,6 +1374,18 @@ bool SBDebugger::GetUseColor() const {
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
 }
 
+bool SBDebugger::SetUseSourceCache(bool value) {
+  LLDB_RECORD_METHOD(bool, SBDebugger, SetUseSourceCache, (bool), value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetUseSourceCache(value) : false);
+}
+
+bool SBDebugger::GetUseSourceCache() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDebugger, GetUseSourceCache);
+
+  return (m_opaque_sp ? m_opaque_sp->GetUseSourceCache() : false);
+}
+
 bool SBDebugger::GetDescription(SBStream &description) {
   LLDB_RECORD_METHOD(bool, SBDebugger, GetDescription, (lldb::SBStream &),
                      description);

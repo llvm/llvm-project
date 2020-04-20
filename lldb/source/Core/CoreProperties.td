@@ -103,6 +103,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to use Ansi color codes or not.">;
+  def UseSourceCache: Property<"use-source-cache", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to cache source files in memory or not.">;
   def AutoOneLineSummaries: Property<"auto-one-line-summaries", "Boolean">,
     Global,
     DefaultTrue,
