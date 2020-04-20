@@ -134,7 +134,7 @@ public:
   int C(float *c);
   float GetC();
   int D(const char *d) const;
-  void GetD(char *buffer, size_t length);
+  size_t GetD(char *buffer, size_t length);
   static void E(double e);
   double GetE();
   static int F();
@@ -257,10 +257,11 @@ int InstrumentedFoo::D(const char *d) const {
   return 2;
 }
 
-void InstrumentedFoo::GetD(char *buffer, size_t length) {
-  LLDB_RECORD_METHOD(void, InstrumentedFoo, GetD, (char *, size_t), buffer,
-                     length);
+size_t InstrumentedFoo::GetD(char *buffer, size_t length) {
+  LLDB_RECORD_CHAR_PTR_METHOD(size_t, InstrumentedFoo, GetD, (char *, size_t),
+                              buffer, "", length);
   ::snprintf(buffer, length, "%s", m_d.c_str());
+  return m_d.size();
 }
 
 void InstrumentedFoo::E(double e) {
@@ -374,7 +375,7 @@ TestingRegistry::TestingRegistry() {
   LLDB_REGISTER_METHOD(int, InstrumentedFoo, GetA, ());
   LLDB_REGISTER_METHOD(int &, InstrumentedFoo, GetB, ());
   LLDB_REGISTER_METHOD(float, InstrumentedFoo, GetC, ());
-  LLDB_REGISTER_METHOD(void, InstrumentedFoo, GetD, (char *, size_t));
+  LLDB_REGISTER_METHOD(size_t, InstrumentedFoo, GetD, (char *, size_t));
   LLDB_REGISTER_METHOD(double, InstrumentedFoo, GetE, ());
   LLDB_REGISTER_METHOD(bool, InstrumentedFoo, GetF, ());
 }
@@ -814,6 +815,9 @@ TEST(PassiveReplayTest, InstrumentedFoo) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
   }
@@ -839,6 +843,9 @@ TEST(PassiveReplayTest, InstrumentedFoo) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
   }
@@ -920,6 +927,9 @@ TEST(PassiveReplayTest, InstrumentedBar) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
@@ -951,6 +961,9 @@ TEST(PassiveReplayTest, InstrumentedBar) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
@@ -985,6 +998,9 @@ TEST(PassiveReplayTest, InstrumentedBarRef) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
@@ -1016,6 +1032,9 @@ TEST(PassiveReplayTest, InstrumentedBarRef) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
@@ -1050,6 +1069,9 @@ TEST(PassiveReplayTest, InstrumentedBarPtr) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
@@ -1081,6 +1103,9 @@ TEST(PassiveReplayTest, InstrumentedBarPtr) {
     EXPECT_EQ(foo.GetA(), 100);
     EXPECT_EQ(foo.GetB(), 200);
     EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
     EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
     EXPECT_EQ(foo.GetF(), true);
 
