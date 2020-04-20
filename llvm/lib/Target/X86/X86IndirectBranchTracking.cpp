@@ -138,17 +138,38 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
     if (MBB.hasAddressTaken())
       Changed |= addENDBR(MBB, MBB.begin());
 
-    // Exception handle may indirectly jump to catch pad, So we should add
-    // ENDBR before catch pad instructions.
-    bool EHPadIBTNeeded = MBB.isEHPad();
-
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
       if (I->isCall() && IsCallReturnTwice(I->getOperand(0)))
         Changed |= addENDBR(MBB, std::next(I));
+    }
 
-      if (EHPadIBTNeeded && I->isEHLabel()) {
+    // Exception handle may indirectly jump to catch pad, So we should add
+    // ENDBR before catch pad instructions. For SjLj exception model, it will
+    // create a new BB(new landingpad) indirectly jump to the old landingpad.
+    if (TM->Options.ExceptionModel == ExceptionHandling::SjLj) {
+      for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+        // New Landingpad BB without EHLabel.
+        if (MBB.isEHPad()) {
+          if (I->isDebugInstr())
+            continue;
+          Changed |= addENDBR(MBB, I);
+          break;
+        } else if (I->isEHLabel()) {
+          // Old Landingpad BB (is not Landingpad now) with
+          // the the old "callee" EHLabel.
+          MCSymbol *Sym = I->getOperand(0).getMCSymbol();
+          if (!MF.hasCallSiteLandingPad(Sym))
+            continue;
+          Changed |= addENDBR(MBB, std::next(I));
+          break;
+        }
+      }
+    } else if (MBB.isEHPad()){
+      for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+        if (!I->isEHLabel())
+          continue;
         Changed |= addENDBR(MBB, std::next(I));
-        EHPadIBTNeeded = false;
+        break;
       }
     }
   }
