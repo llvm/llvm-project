@@ -6,15 +6,16 @@
 
 // CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32)>
 // CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32, 50)>
-// CHECK-DAG: [[IDENTITY:#map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[ID:#map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[ID_PLUS_21:#map[0-9]+]] = affine_map<(d0) -> (d0 + 21)>
 
 // CHECK-LABEL: func @loop_tiling()
 // CHECK-NEXT:   affine.for %{{.*}} = 0 to 256 step 32 {
 // CHECK-NEXT:     affine.for %{{.*}} = 0 to 512 step 32 {
 // CHECK-NEXT:       affine.for %{{.*}} = 0 to 1024 step 32 {
-// CHECK-NEXT:         affine.for %{{.*}} = [[IDENTITY]](%{{.*}}) to [[MAP0]](%{{.*}}) {
-// CHECK-NEXT:           affine.for %{{.*}} = [[IDENTITY]](%{{.*}}) to [[MAP0]](%{{.*}}) {
-// CHECK-NEXT:             affine.for %{{.*}} = [[IDENTITY]](%{{.*}}) to [[MAP0]](%{{.*}}) {
+// CHECK-NEXT:         affine.for %{{.*}} = [[ID]](%{{.*}}) to [[MAP0]](%{{.*}}) {
+// CHECK-NEXT:           affine.for %{{.*}} = [[ID]](%{{.*}}) to [[MAP0]](%{{.*}}) {
+// CHECK-NEXT:             affine.for %{{.*}} = [[ID]](%{{.*}}) to [[MAP0]](%{{.*}}) {
 // CHECK-NEXT:               "foo"(%{{.*}}, %{{.*}}, %{{.*}}) : (index, index, index) -> ()
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
@@ -23,12 +24,12 @@
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   affine.for %{{.*}} = 0 to 50 step 32 {
-// CHECK-NEXT:     affine.for %{{.*}} = [[IDENTITY]](%{{.*}}) to min [[MAP1]](%{{.*}}) {
+// CHECK-NEXT:     affine.for %{{.*}} = [[ID]](%{{.*}}) to min [[MAP1]](%{{.*}}) {
 // CHECK-NEXT:       "bar"(%{{.*}}, %{{.*}}) : (index, index) -> ()
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
-// CHECK-NEXT: affine.for %{{.*}} = 0 to 21 step 32 {
-// CHECK-NEXT:    affine.for %{{.*}} = [[IDENTITY]](%{{.*}}) to 21 {
+// CHECK-NEXT: affine.for %[[I:.*]] = 0 to 21 step 32 {
+// CHECK-NEXT:    affine.for %{{.*}} = [[ID]](%[[I]]) to [[ID_PLUS_21]](%[[I]]) {
 // CHECK-NEXT:      "foobar"(%{{.*}}) : (index) -> ()
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -167,6 +168,27 @@ func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: i
 // CHECK-NEXT:      %{{.*}} = affine.load %{{.*}}[%{{.*}}] : memref<?xf32>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
+
+// -----
+
+func @tile_size_larger_than_trip_count_symbolic_bound(%M: index, %N :  index) {
+  affine.for %i = affine_map<(d0) -> (d0)>(%M) to affine_map<(d0) -> (d0 + 2)>(%M) {
+    affine.for %j = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 + 4)>(%N) {
+      "test.foo" () : () -> ()
+    }
+  }
+  return
+}
+
+// CHECK-DAG: #[[ID:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[ID_PLUS_2:.*]] = affine_map<(d0) -> (d0 + 2)>
+// CHECK-DAG: #[[ID_PLUS_4:.*]] = affine_map<(d0) -> (d0 + 4)>
+// CHECK: %[[M:.*]]: index, %[[N:.*]]: index
+// CHECK:      affine.for %[[I:.*]] = #[[ID]](%[[M]]) to #[[ID_PLUS_2]](%[[M]]) step 32
+// CHECK-NEXT:   affine.for %[[J:.*]] = #[[ID]](%[[N]]) to #[[ID_PLUS_4]](%[[N]]) step 32
+// CHECK-NEXT:     affine.for %arg4 = #[[ID]](%[[I]]) to #[[ID_PLUS_2]](%[[I]])
+// CHECK-NEXT:       affine.for %arg5 = #[[ID]](%[[J]]) to #[[ID_PLUS_4]](%[[J]])
+// CHECK-NEXT:         "test.foo"
 
 // -----
 
