@@ -53,11 +53,15 @@ else()
   # If building with LLVM_EXTERNAL_PROJECTS, we've already picked up
   # the include directories for LLVM, but not clang.
   #
-  # FIXME: Do we need to include a binary include directory? lldb gets
-  # away without it.
   if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
     include_directories(${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include)
-  endif ()
+    include_directories(${LLVM_BINARY_DIR}/tools/clang/include)
+  endif()
+
+  if (LLVM_EXTERNAL_LLD_SOURCE_DIR)
+    include_directories(${LLVM_EXTERNAL_LLD_SOURCE_DIR}/include)
+    include_directories(${LLVM_BINARY_DIR}/tools/lld/include)
+  endif()
 endif()
 
 
