@@ -61,8 +61,8 @@ struct ExecutionContext {
   Function             *CurFunction;// The currently executing function
   BasicBlock           *CurBB;      // The currently executing BB
   BasicBlock::iterator  CurInst;    // The next instruction to execute
-  CallSite             Caller;     // Holds the call that called subframes.
-                                   // NULL if main func or debugger invoked fn
+  CallBase             *Caller;     // Holds the call that called subframes.
+                                    // NULL if main func or debugger invoked fn
   std::map<Value *, GenericValue> Values; // LLVM values used in this invocation
   std::vector<GenericValue>  VarArgs; // Values passed through an ellipsis
   AllocaHolder Allocas;            // Track memory allocated by alloca
@@ -149,10 +149,11 @@ public:
   void visitBitCastInst(BitCastInst &I);
   void visitSelectInst(SelectInst &I);
 
-
-  void visitCallSite(CallSite CS);
-  void visitCallInst(CallInst &I) { visitCallSite (CallSite (&I)); }
-  void visitInvokeInst(InvokeInst &I) { visitCallSite (CallSite (&I)); }
+  void visitVAStartInst(VAStartInst &I);
+  void visitVAEndInst(VAEndInst &I);
+  void visitVACopyInst(VACopyInst &I);
+  void visitIntrinsicInst(IntrinsicInst &I);
+  void visitCallBase(CallBase &I);
   void visitUnreachableInst(UnreachableInst &I);
 
   void visitShl(BinaryOperator &I);
