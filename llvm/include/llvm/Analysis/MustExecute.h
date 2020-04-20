@@ -122,8 +122,6 @@ public:
                                      const DominatorTree *DT,
                                      const Loop *CurLoop) const;
 
-  SimpleLoopSafetyInfo() : LoopSafetyInfo() {};
-
   virtual ~SimpleLoopSafetyInfo() {};
 };
 
@@ -170,8 +168,6 @@ public:
   /// from its block. It will make all cache updates to keep it correct after
   /// this removal.
   void removeInstruction(const Instruction *Inst);
-
-  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT), MW(DT) {};
 
   virtual ~ICFLoopSafetyInfo() {};
 };
