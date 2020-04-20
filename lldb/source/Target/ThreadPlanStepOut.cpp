@@ -407,6 +407,14 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder, m_status);
+      // I have a few reports of getting here and not being able to
+      // actually generate a step out from here plan.  That shouldn't happen
+      // because the ShouldStopHere callback shouldn't return true if it
+      // can't make a step out plan.  So far I don't know how that can
+      // happen, but it's better to just stop here than to crash.
+      if (!m_step_out_further_plan_sp)
+        return true;
+
       if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
       {
         // If we are planning to step out further, then the frame we are going
