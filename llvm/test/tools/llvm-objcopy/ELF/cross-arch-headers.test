@@ -147,7 +147,7 @@ Symbols:
 # MIPS-SAME:    mips
 # PPC-SAME:     powerpc{{$}}
 # PPC64BE-SAME: powerpc{{$}}
-# PPC64LE-SAME: powerpc{{$}}
+# PPC64LE-SAME: powerpcle{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
 # SPARC-SAME:   sparc

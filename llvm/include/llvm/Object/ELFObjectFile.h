@@ -1121,7 +1121,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_AARCH64:
       return (IsLittleEndian ? "elf64-littleaarch64" : "elf64-bigaarch64");
     case ELF::EM_PPC64:
-      return "elf64-powerpc";
+      return (IsLittleEndian ? "elf64-powerpcle" : "elf64-powerpc");
     case ELF::EM_RISCV:
       return "elf64-littleriscv";
     case ELF::EM_S390:
