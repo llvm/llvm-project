@@ -80,8 +80,18 @@ class AMDGPUCompiler {
       case llvm::DS_Error:
         Compiler->LogS << "ERROR: ";
         break;
+      case llvm::DS_Warning:
+        Compiler->LogS << "WARNING: ";
+        break;
+      case llvm::DS_Remark:
+        Compiler->LogS << "REMARK: ";
+        break;
+      case llvm::DS_Note:
+        Compiler->LogS << "NOTE: ";
+        break;
       default:
-        llvm_unreachable("Only expecting errors");
+        Compiler->LogS << "(Unknown DiagnosticInfo Severity): ";
+        break;
       }
       llvm::DiagnosticPrinterRawOStream DP(Compiler->LogS);
       DI.print(DP);
