@@ -819,34 +819,9 @@ const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
   return name;
 }
 
-// BuildAddressRangeTable
-void DWARFDebugInfoEntry::BuildAddressRangeTable(
-    const DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
-  if (m_tag) {
-    if (m_tag == DW_TAG_subprogram) {
-      dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
-      dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
-      if (GetAttributeAddressRange(cu, lo_pc, hi_pc, LLDB_INVALID_ADDRESS)) {
-        /// printf("BuildAddressRangeTable() 0x%8.8x: %30s: [0x%8.8x -
-        /// 0x%8.8x)\n", m_offset, DW_TAG_value_to_name(tag), lo_pc, hi_pc);
-        debug_aranges->AppendRange(cu->GetOffset(), lo_pc, hi_pc);
-      }
-    }
-
-    const DWARFDebugInfoEntry *child = GetFirstChild();
-    while (child) {
-      child->BuildAddressRangeTable(cu, debug_aranges);
-      child = child->GetSibling();
-    }
-  }
-}
-
-// BuildFunctionAddressRangeTable
-//
-// This function is very similar to the BuildAddressRangeTable function except
-// that the actual DIE offset for the function is placed in the table instead
-// of the compile unit offset (which is the way the standard .debug_aranges
-// section does it).
+/// This function is builds a table very similar to the standard .debug_aranges
+/// table, except that the actual DIE offset for the function is placed in the
+/// table instead of the compile unit offset.
 void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     const DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   if (m_tag) {
@@ -854,8 +829,6 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
       dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
       dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
       if (GetAttributeAddressRange(cu, lo_pc, hi_pc, LLDB_INVALID_ADDRESS)) {
-        //  printf("BuildAddressRangeTable() 0x%8.8x: [0x%16.16" PRIx64 " -
-        //  0x%16.16" PRIx64 ")\n", m_offset, lo_pc, hi_pc); // DEBUG ONLY
         debug_aranges->AppendRange(GetOffset(), lo_pc, hi_pc);
       }
     }
