@@ -1201,7 +1201,7 @@ public:
   reference operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
     if (shouldReverseIterate<KeyT>()) {
-      assert(Ptr != End[-1] && "dereferencing end() iterator");
+      assert(Ptr != &End[-1] && "dereferencing end() iterator");
       return Ptr[-1];
     }
     assert(Ptr != End && "dereferencing end() iterator");
@@ -1210,7 +1210,7 @@ public:
   pointer operator->() const {
     assert(isHandleInSync() && "invalid iterator access!");
     if (shouldReverseIterate<KeyT>()) {
-      assert(Ptr != End[-1] && "dereferencing end() iterator");
+      assert(Ptr != &End[-1] && "dereferencing end() iterator");
       return &(Ptr[-1]);
     }
     assert(Ptr != End && "dereferencing end() iterator");
@@ -1235,7 +1235,7 @@ public:
   inline DenseMapIterator& operator++() {  // Preincrement
     assert(isHandleInSync() && "invalid iterator access!");
     if (shouldReverseIterate<KeyT>()) {
-      assert(Ptr != End[-1] && "dereferencing end() iterator");
+      assert(Ptr != &End[-1] && "dereferencing end() iterator");
       --Ptr;
       RetreatPastEmptyBuckets();
       return *this;
