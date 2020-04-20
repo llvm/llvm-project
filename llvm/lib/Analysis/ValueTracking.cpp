@@ -4938,35 +4938,22 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 }
 
 bool llvm::propagatesPoison(const Instruction *I) {
-  // TODO: This should include all instructions apart from phis, selects and
-  // call-like instructions.
   switch (I->getOpcode()) {
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Xor:
-  case Instruction::Trunc:
-  case Instruction::BitCast:
-  case Instruction::AddrSpaceCast:
-  case Instruction::Mul:
-  case Instruction::Shl:
-  case Instruction::GetElementPtr:
-    // These operations all propagate poison unconditionally. Note that poison
-    // is not any particular value, so xor or subtraction of poison with
-    // itself still yields poison, not zero.
-    return true;
-
-  case Instruction::AShr:
-  case Instruction::SExt:
-    // For these operations, one bit of the input is replicated across
-    // multiple output bits. A replicated poison bit is still poison.
-    return true;
-
+  case Instruction::Freeze:
+  case Instruction::Select:
+  case Instruction::PHI:
+  case Instruction::Call:
+  case Instruction::Invoke:
+    return false;
   case Instruction::ICmp:
-    // Comparing poison with any value yields poison.  This is why, for
-    // instance, x s< (x +nsw 1) can be folded to true.
+  case Instruction::FCmp:
+  case Instruction::GetElementPtr:
     return true;
-
   default:
+    if (isa<BinaryOperator>(I) || isa<UnaryOperator>(I) || isa<CastInst>(I))
+      return true;
+
+    // Be conservative and return false.
     return false;
   }
 }

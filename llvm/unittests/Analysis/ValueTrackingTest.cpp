@@ -668,6 +668,55 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle2) {
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
+TEST(ValueTracking, propagatesPoison) {
+  std::string AsmHead = "declare i32 @g(i32)\n"
+                        "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
+                        "i1 %cond, i8* %p) {\n";
+  std::string AsmTail = "  ret void\n}";
+  // (propagates poison?, IR instruction)
+  SmallVector<std::pair<bool, std::string>, 32> Data = {
+      {true, "add i32 %x, %y"},
+      {true, "add nsw nuw i32 %x, %y"},
+      {true, "ashr i32 %x, %y"},
+      {true, "lshr exact i32 %x, 31"},
+      {true, "fcmp oeq float %fx, %fy"},
+      {true, "icmp eq i32 %x, %y"},
+      {true, "getelementptr i8, i8* %p, i32 %x"},
+      {true, "getelementptr inbounds i8, i8* %p, i32 %x"},
+      {true, "bitcast float %fx to i32"},
+      {false, "select i1 %cond, i32 %x, i32 %y"},
+      {false, "freeze i32 %x"},
+      {true, "udiv i32 %x, %y"},
+      {true, "urem i32 %x, %y"},
+      {true, "sdiv exact i32 %x, %y"},
+      {true, "srem i32 %x, %y"},
+      {false, "call i32 @g(i32 %x)"}};
+
+  std::string AssemblyStr = AsmHead;
+  for (auto &Itm : Data)
+    AssemblyStr += Itm.second + "\n";
+  AssemblyStr += AsmTail;
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(AssemblyStr, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto &BB = F->getEntryBlock();
+
+  int Index = 0;
+  for (auto &I : BB) {
+    if (isa<ReturnInst>(&I))
+      break;
+    EXPECT_EQ(propagatesPoison(&I), Data[Index].first)
+        << "Incorrect answer at instruction " << Index << " = " << I;
+    Index++;
+  }
+}
+
 TEST(ValueTracking, canCreatePoison) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
