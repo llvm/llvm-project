@@ -390,3 +390,7 @@ void testConfigurationSinks() {
   mySink(1, 2, x);
   // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
 }
+
+void testUnknownFunction(void (*foo)(void)) {
+  foo(); // no-crash
+}
