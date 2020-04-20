@@ -410,9 +410,12 @@ def LLVM_InsertValueOp : LLVM_OneResultOp<"insertvalue", [NoSideEffect]>,
 }
 def LLVM_ShuffleVectorOp
     : LLVM_OneResultOp<"shufflevector", [NoSideEffect]>,
-      Arguments<(ins LLVM_Type:$v1, LLVM_Type:$v2, ArrayAttr:$mask)>,
-      LLVM_Builder<
-      "$res = builder.CreateShuffleVector($v1, $v2, extractPosition($mask));"> {
+      Arguments<(ins LLVM_Type:$v1, LLVM_Type:$v2, ArrayAttr:$mask)> {
+  string llvmBuilder = [{
+      SmallVector<unsigned, 4> position = extractPosition($mask);
+      SmallVector<int, 4> mask(position.begin(), position.end());
+      $res = builder.CreateShuffleVector($v1, $v2, mask);
+  }];
   let builders = [OpBuilder<
     "Builder *b, OperationState &result, Value v1, Value v2, "
     "ArrayAttr mask, ArrayRef<NamedAttribute> attrs = {}">];
