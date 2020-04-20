@@ -1,4 +1,4 @@
-;===- ./lib/LTO/LLVMBuild.txt ----------------------------------*- Conf -*--===;
+;===- ./lib/Extensions/LLVMBuild.txt -------------------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -16,25 +16,6 @@
 
 [component_0]
 type = Library
-name = LTO
+name = Extensions
 parent = Libraries
 required_libraries =
- AggressiveInstCombine
- Analysis
- BitReader
- BitWriter
- CodeGen
- Core
- Extensions
- IPO
- InstCombine
- Linker
- MC
- ObjCARC
- Object
- Passes
- Remarks
- Scalar
- Support
- Target
- TransformUtils
