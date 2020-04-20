@@ -293,11 +293,6 @@ LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
 
-/// Replaces all uses of `orig` with `replacement` except if the user is listed
-/// in `exceptions`.
-void replaceAllUsesExcept(Value orig, Value replacement,
-                          const SmallPtrSetImpl<Operation *> &exceptions);
-
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_LOOP_UTILS_H
