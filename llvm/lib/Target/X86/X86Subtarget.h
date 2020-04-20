@@ -17,15 +17,9 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/Target/TargetMachine.h"
 #include <climits>
 #include <memory>
 
@@ -34,7 +28,13 @@
 
 namespace llvm {
 
+class CallLowering;
 class GlobalValue;
+class InstructionSelector;
+class LegalizerInfo;
+class RegisterBankInfo;
+class StringRef;
+class TargetMachine;
 
 /// The X86 backend supports a number of different styles of PIC.
 ///
