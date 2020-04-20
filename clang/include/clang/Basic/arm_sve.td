@@ -297,6 +297,18 @@ def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEl
 def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Integer arithmetic
+
+multiclass SInstZPZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_{d}]", "ddPd", types, MergeOp1,     intrinsic, flags>;
+  def _X : SInst<name # "[_{d}]", "dPd",  types, MergeAnyExp,  intrinsic, flags>;
+  def _Z : SInst<name # "[_{d}]", "dPd",  types, MergeZeroExp, intrinsic, flags>;
+}
+
+defm SVABS : SInstZPZ<"svabs", "csil", "aarch64_sve_abs">;
+defm SVNEG : SInstZPZ<"svneg", "csil", "aarch64_sve_neg">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
 
@@ -318,6 +330,10 @@ def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aa
 
 ////////////////////////////////////////////////////////////////////////////////
 // Floating-point arithmetic
+
+defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
+defm SVNEG_F : SInstZPZ<"svneg", "hfd", "aarch64_sve_fneg">;
+
 def SVTMAD  : SInst<"svtmad[_{d}]",  "dddi", "hfd", MergeNone, "aarch64_sve_ftmad_x", [], [ImmCheck<2, ImmCheck0_7>]>;
 
 def SVMLA_LANE  : SInst<"svmla_lane[_{d}]",  "ddddi",  "hfd", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
