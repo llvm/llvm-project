@@ -456,12 +456,20 @@ void SVEType::applyModifier(char Mod) {
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
+  case 'h':
+    ElementBitwidth /= 2;
+    break;
   case 'P':
     Signed = true;
     Float = false;
     Predicate = true;
     Bitwidth = 16;
     ElementBitwidth = 1;
+    break;
+  case 'u':
+    Predicate = false;
+    Signed = false;
+    Float = false;
     break;
   case 'i':
     Predicate = false;

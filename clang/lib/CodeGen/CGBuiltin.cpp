@@ -7630,6 +7630,15 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (Builtin->LLVMIntrinsic != 0) {
     llvm::Type* OverloadedTy = getSVEType(TypeFlags);
 
+    // Predicates must match the main datatype.
+    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+      if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
+        if (PredTy->getScalarType()->isIntegerTy(1)) {
+          auto NewPredTy = cast<llvm::VectorType>(OverloadedTy);
+          Ops[i] = EmitSVEPredicateCast(Ops[i], NewPredTy);
+        }
+    }
+
     Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic, OverloadedTy);
     Value *Call = Builder.CreateCall(F, Ops);
 		return Call;

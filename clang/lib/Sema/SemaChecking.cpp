@@ -2025,6 +2025,29 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 16))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck0_7:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 7))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckExtract:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      (2048 / ElementSizeInBits) - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftRight:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, ElementSizeInBits))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftRightNarrow:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1,
+                                      ElementSizeInBits / 2))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftLeft:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      ElementSizeInBits - 1))
+        HasError = true;
+      break;
     }
   }
 

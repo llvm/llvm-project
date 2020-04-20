@@ -58,9 +58,11 @@
 // -------------------
 // prototype: return (arg, arg, ...)
 //
+// u: vector of unsigned integers
 // d: default
 // c: const pointer type
 // P: predicate type
+// h: 1/2 width elements, 2x element count
 //
 // i: constant uint64_t
 //
@@ -157,14 +159,18 @@ class ImmCheckType<int val> {
 }
 def ImmCheck0_31                : ImmCheckType<0>;  // 0..31 (used for e.g. predicate patterns)
 def ImmCheck1_16                : ImmCheckType<1>;  // 1..16
+def ImmCheckExtract             : ImmCheckType<2>;  // 0..(2048/sizeinbits(elt) - 1)
+def ImmCheckShiftRight          : ImmCheckType<3>;  // 1..sizeinbits(elt)
+def ImmCheckShiftRightNarrow    : ImmCheckType<4>;  // 1..sizeinbits(elt)/2
+def ImmCheckShiftLeft           : ImmCheckType<5>;  // 0..(sizeinbits(elt) - 1)
+def ImmCheck0_7                 : ImmCheckType<6>;  // 0..7
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;
-	int EltSizeArg = eltSizeArg;
+  int EltSizeArg = eltSizeArg;
   ImmCheckType Kind = kind;
 }
 
-// Every intrinsic subclasses Inst.
 class Inst<string n, string p, string t, MergeType mt, string i,
            list<FlagType> ft, list<ImmCheck> ch, MemEltType met> {
   string Name = n;
@@ -281,6 +287,30 @@ def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEl
 
 // Store one vector, with no truncation, non-temporal (scalar base, VL displacement)
 def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
+
+////////////////////////////////////////////////////////////////////////////////
+// Permutations and selection
+def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Shifts
+def SVASRD_M : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeOp1,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Narrowing DSP operations
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVSHRNB      : SInst<"svshrnb[_n_{d}]",    "hdi",  "silUsUiUl", MergeNone, "aarch64_sve_shrnb",     [], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Uniform DSP operations
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Floating-point arithmetic
+def SVTMAD  : SInst<"svtmad[_{d}]",  "dddi", "hfd", MergeNone, "aarch64_sve_ftmad_x", [], [ImmCheck<2, ImmCheck0_7>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Saturating scalar arithmetic
