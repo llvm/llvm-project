@@ -41,6 +41,7 @@ void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAllReduceLoweringPass();
 void registerTestAffineLoopUnswitchingPass();
+void registerTestBufferPlacementPreparationPass();
 void registerTestLinalgMatmulToVectorPass();
 void registerTestLoopPermutationPass();
 void registerTestCallGraphPass();
@@ -112,6 +113,7 @@ void registerTestPasses() {
 #if MLIR_CUDA_CONVERSIONS_ENABLED
   registerTestConvertGPUKernelToCubinPass();
 #endif
+  registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
   registerTestFunc();
   registerTestGpuMemoryPromotionPass();
