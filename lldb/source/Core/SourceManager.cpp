@@ -696,7 +696,7 @@ bool SourceManager::File::GetLine(uint32_t line_no, std::string &buffer) {
 }
 
 void SourceManager::SourceFileCache::AddSourceFile(const FileSP &file_sp) {
-  FileSpec file_spec;
+  FileSpec file_spec = file_sp->GetFileSpec();
   FileCache::iterator pos = m_file_cache.find(file_spec);
   if (pos == m_file_cache.end())
     m_file_cache[file_spec] = file_sp;
