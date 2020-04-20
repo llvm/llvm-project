@@ -1374,8 +1374,8 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
 
     // If the pointer is already known to be sufficiently aligned, or if we can
     // round it up to a larger alignment, then we don't need a temporary.
-    if (getOrEnforceKnownAlignment(Arg, ByValAlignment, DL, TheCall, AC) >=
-        ByValAlignment)
+    if (getOrEnforceKnownAlignment(Arg, Align(ByValAlignment), DL, TheCall,
+                                   AC) >= ByValAlignment)
       return Arg;
 
     // Otherwise, we have to make a memcpy to get a safe alignment.  This is bad
