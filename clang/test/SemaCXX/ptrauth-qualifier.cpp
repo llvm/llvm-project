@@ -120,6 +120,16 @@ namespace test_union {
   }
 }
 
+bool test_composite_type0(bool c, int * AQ * a0, int * AQ * a1) {
+  auto t = c ? a0 : a1;
+  return a0 == a1;
+}
+
+bool test_composite_type1(bool c, int * AQ * a0, int * AQ2 * a1) {
+  auto t = c ? a0 : a1; // expected-error {{incompatible operand types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
+  return a0 == a1; // expected-error {{comparison of distinct pointer types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
+}
+
 void test_bad_call_diag(void *AQ* ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note{{candidate function not viable: 1st argument ('void **') has no ptrauth qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
 void test_bad_call_diag2(void ** ptr); // expected-note{{1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no ptrauth qualifier}}
 
