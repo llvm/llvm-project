@@ -11,11 +11,3 @@ vldr d0, foo     @ arm_pcrel_10
 adr r2, foo      @ arm_adr_pcrel_12
 ldr r0, foo      @ arm_ldst_pcrel_12
 
-.thumb
-.thumb_func
-
-.globl bar
-bar:
-adr r0, bar      @ thumb_adr_pcrel_10
-adr.w r0, bar    @ t2_adr_pcrel_12
-ldr.w pc, bar    @ t2_ldst_pcrel_12
