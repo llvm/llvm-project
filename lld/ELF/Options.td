@@ -403,6 +403,12 @@ defm warn_backrefs: B<"warn-backrefs",
     "Warn about backward symbol references to fetch archive members",
     "Do not warn about backward symbol references to fetch archive members (default)">;
 
+defm warn_backrefs_exclude
+    : Eq<"warn-backrefs-exclude",
+         "Glob describing an archive (or an object file within --start-lib) "
+         "which should be ignored for --warn-backrefs.">,
+      MetaVarName<"<glob>">;
+
 defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;

@@ -574,6 +574,10 @@ Read version script from
 Warn about reverse or cyclic dependencies to or between static archives.
 This can be used to ensure linker invocation remains compatible with
 traditional Unix-like linkers.
+.It Fl -warn-backrefs-exclude Ns = Ns Ar glob
+Glob describing an archive (or an object file within --start-lib)
+which should be ignored for
+.Fl -warn-backrefs
 .It Fl -warn-common
 Warn about duplicate common symbols.
 .It Fl -warn-ifunc-textrel

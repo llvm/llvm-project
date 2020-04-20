@@ -1148,6 +1148,14 @@ static void readConfigs(opt::InputArgList &args) {
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
+  for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {
+    StringRef pattern(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
+      config->warnBackrefsExclude.push_back(std::move(*pat));
+    else
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+  }
+
   // Parses -dynamic-list and -export-dynamic-symbol. They make some
   // symbols private. Note that -export-dynamic takes precedence over them
   // as it says all symbols should be exported.
