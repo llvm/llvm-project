@@ -197,7 +197,7 @@ static bool CanReuseDataFragment(const MCDataFragment &F,
   if (!F.hasInstructions())
     return true;
   // When bundling is enabled, we don't want to add data to a fragment that
-  // already has instructions (see MCELFStreamer::EmitInstToData for details)
+  // already has instructions (see MCELFStreamer::emitInstToData for details)
   if (Assembler.isBundlingEnabled())
     return Assembler.getRelaxAll();
   // If the subtarget is changed mid fragment we start a new fragment to record
@@ -395,7 +395,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   MCAsmBackend &Backend = Assembler.getBackend();
   if (!(Backend.mayNeedRelaxation(Inst, STI) ||
         Backend.allowEnhancedRelaxation())) {
-    EmitInstToData(Inst, STI);
+    emitInstToData(Inst, STI);
     return;
   }
 
@@ -409,7 +409,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
     MCInst Relaxed = Inst;
     while (getAssembler().getBackend().mayNeedRelaxation(Relaxed, STI))
       getAssembler().getBackend().relaxInstruction(Relaxed, STI, Relaxed);
-    EmitInstToData(Relaxed, STI);
+    emitInstToData(Relaxed, STI);
     return;
   }
 

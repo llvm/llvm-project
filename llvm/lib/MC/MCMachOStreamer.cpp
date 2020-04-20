@@ -56,7 +56,7 @@ private:
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
 
-  void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitDataRegion(DataRegionData::KindTy Kind);
   void emitDataRegionEnd();
@@ -454,7 +454,7 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   emitZerofill(Section, Symbol, Size, ByteAlignment);
 }
 
-void MCMachOStreamer::EmitInstToData(const MCInst &Inst,
+void MCMachOStreamer::emitInstToData(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
   MCDataFragment *DF = getOrCreateDataFragment();
 
