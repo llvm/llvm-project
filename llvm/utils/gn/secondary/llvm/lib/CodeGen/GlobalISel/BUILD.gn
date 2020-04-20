@@ -21,6 +21,7 @@ static_library("GlobalISel") {
     "GISelKnownBits.cpp",
     "GlobalISel.cpp",
     "IRTranslator.cpp",
+    "InlineAsmLowering.cpp",
     "InstructionSelect.cpp",
     "InstructionSelector.cpp",
     "LegalityPredicates.cpp",
