@@ -925,12 +925,11 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info);
 }
 
-int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *BaseTp, int Index,
-                               Type *SubTp) {
-  auto *Tp = cast<VectorType>(BaseTp);
+int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
+                               int Index, VectorType *SubTp) {
   // 64-bit packed float vectors (v2f32) are widened to type v4f32.
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, BaseTp);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
@@ -965,13 +964,14 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *BaseTp, int Index,
           LT.second.getVectorElementType() ==
               SubLT.second.getVectorElementType() &&
           LT.second.getVectorElementType().getSizeInBits() ==
-              Tp->getElementType()->getPrimitiveSizeInBits()) {
+              BaseTp->getElementType()->getPrimitiveSizeInBits()) {
         assert(NumElts >= NumSubElts && NumElts > OrigSubElts &&
                "Unexpected number of elements!");
-        Type *VecTy = VectorType::get(Tp->getElementType(),
-                                      LT.second.getVectorNumElements());
-        Type *SubTy = VectorType::get(Tp->getElementType(),
-                                      SubLT.second.getVectorNumElements());
+        VectorType *VecTy = VectorType::get(BaseTp->getElementType(),
+                                            LT.second.getVectorNumElements());
+        VectorType *SubTy =
+          VectorType::get(BaseTp->getElementType(),
+                          SubLT.second.getVectorNumElements());
         int ExtractIndex = alignDown((Index % NumElts), NumSubElts);
         int ExtractCost = getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
                                          ExtractIndex, SubTy);
@@ -991,7 +991,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *BaseTp, int Index,
 
   // Handle some common (illegal) sub-vector types as they are often very cheap
   // to shuffle even on targets without PSHUFB.
-  EVT VT = TLI->getValueType(DL, Tp);
+  EVT VT = TLI->getValueType(DL, BaseTp);
   if (VT.isSimple() && VT.isVector() && VT.getSizeInBits() < 128 &&
       !ST->hasSSSE3()) {
      static const CostTblEntry SSE2SubVectorShuffleTbl[] = {
@@ -1032,25 +1032,26 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *BaseTp, int Index,
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
-            Tp->getElementType()->getPrimitiveSizeInBits() &&
-        LegalVT.getVectorNumElements() < Tp->getNumElements()) {
+            BaseTp->getElementType()->getPrimitiveSizeInBits() &&
+        LegalVT.getVectorNumElements() < BaseTp->getNumElements()) {
 
-      unsigned VecTySize = DL.getTypeStoreSize(Tp);
+      unsigned VecTySize = DL.getTypeStoreSize(BaseTp);
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
       unsigned NumOfSrcs = (VecTySize + LegalVTSize - 1) / LegalVTSize;
       // Number of destination vectors after legalization:
       unsigned NumOfDests = LT.first;
 
-      Type *SingleOpTy =
-          VectorType::get(Tp->getElementType(), LegalVT.getVectorNumElements());
+      VectorType *SingleOpTy =
+        VectorType::get(BaseTp->getElementType(),
+                        LegalVT.getVectorNumElements());
 
       unsigned NumOfShuffles = (NumOfSrcs - 1) * NumOfDests;
       return NumOfShuffles *
              getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, 0, nullptr);
     }
 
-    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+    return BaseT::getShuffleCost(Kind, BaseTp, Index, SubTp);
   }
 
   // For 2-input shuffles, we must account for splitting the 2 inputs into many.
@@ -1352,7 +1353,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *BaseTp, int Index,
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, BaseTp, Index, SubTp);
 }
 
 int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -2648,7 +2649,7 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     // TODO: Under what circumstances should we shuffle using the full width?
     int ShuffleCost = 1;
     if (Opcode == Instruction::InsertElement) {
-      Type *SubTy = Val;
+      auto *SubTy = cast<VectorType>(Val);
       EVT VT = TLI->getValueType(DL, Val);
       if (VT.getScalarType() != MScalarTy || VT.getSizeInBits() >= 128)
         SubTy = VectorType::get(ScalarType, SubNumElts);
@@ -2796,7 +2797,7 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
-int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
+int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            bool IsPairwise) {
   // Just use the default implementation for pair reductions.
   if (IsPairwise)
@@ -2868,7 +2869,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   if (LT.first != 1 && MTy.isVector() &&
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
     // Type needs to be split. We need LT.first - 1 arithmetic ops.
-    Type *SingleOpTy =
+    VectorType *SingleOpTy =
         VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
     ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy);
     ArithmeticCost *= LT.first - 1;
@@ -3150,7 +3151,7 @@ int X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned) {
          getCmpSelInstrCost(Instruction::Select, Ty, CondTy, nullptr);
 }
 
-int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
+int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
                                        bool IsPairwise, bool IsUnsigned) {
   // Just use the default implementation for pair reductions.
   if (IsPairwise)
@@ -3241,7 +3242,7 @@ int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
     // Type needs to be split. We need LT.first - 1 operations ops.
     Ty = VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
-    Type *SubCondTy = VectorType::get(
+    auto *SubCondTy = VectorType::get(
         cast<VectorType>(CondTy)->getElementType(), MTy.getVectorNumElements());
     MinMaxCost = getMinMaxCost(Ty, SubCondTy, IsUnsigned);
     MinMaxCost *= LT.first - 1;
@@ -3286,7 +3287,7 @@ int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
-      Type *ShufTy;
+      VectorType *ShufTy;
       if (ValTy->isFloatingPointTy())
         ShufTy = VectorType::get(Type::getDoubleTy(ValTy->getContext()), 2);
       else
@@ -3295,7 +3296,7 @@ int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
           getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
-      Type *ShufTy;
+      VectorType *ShufTy;
       if (ValTy->isFloatingPointTy())
         ShufTy = VectorType::get(Type::getFloatTy(ValTy->getContext()), 4);
       else
@@ -3304,7 +3305,7 @@ int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
           getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
-      Type *ShiftTy = VectorType::get(
+      VectorType *ShiftTy = VectorType::get(
           Type::getIntNTy(ValTy->getContext(), Size), 128 / Size);
       MinMaxCost += getArithmeticInstrCost(
           Instruction::LShr, ShiftTy, TargetTransformInfo::OK_AnyValue,
@@ -3313,8 +3314,8 @@ int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,
     }
 
     // Add the arithmetic op for this level.
-    auto *SubCondTy = VectorType::get(
-        cast<VectorType>(CondTy)->getElementType(), Ty->getNumElements());
+    auto *SubCondTy = VectorType::get(CondTy->getElementType(),
+                                      Ty->getNumElements());
     MinMaxCost += getMinMaxCost(Ty, SubCondTy, IsUnsigned);
   }
 
@@ -4036,7 +4037,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
   unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
 
   // Get the cost of one memory operation.
-  Type *SingleMemOpTy =
+  auto *SingleMemOpTy =
       VectorType::get(cast<VectorType>(VecTy)->getElementType(),
                       LegalVT.getVectorNumElements());
   unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,

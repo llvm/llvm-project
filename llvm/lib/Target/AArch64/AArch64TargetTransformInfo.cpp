@@ -930,7 +930,8 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   return false;
 }
 
-int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
+int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
+                                               VectorType *ValTy,
                                                bool IsPairwiseForm) {
 
   if (IsPairwiseForm)
@@ -958,8 +959,8 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
 }
 
-int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-                                   Type *SubTp) {
+int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                   int Index, VectorType *SubTp) {
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
     static const CostTblEntry ShuffleTbl[] = {

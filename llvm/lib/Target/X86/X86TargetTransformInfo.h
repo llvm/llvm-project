@@ -125,7 +125,8 @@ public:
       TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
-  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
+                     VectorType *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        const Instruction *I = nullptr);
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
@@ -152,13 +153,13 @@ public:
                             ArrayRef<Value *> Args, FastMathFlags FMF,
                             unsigned VF = 1, const Instruction *I = nullptr);
 
-  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm);
 
   int getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
 
-  int getMinMaxReductionCost(Type *Ty, Type *CondTy, bool IsPairwiseForm,
-                             bool IsUnsigned);
+  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                             bool IsPairwiseForm, bool IsUnsigned);
 
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                  unsigned Factor, ArrayRef<unsigned> Indices,
