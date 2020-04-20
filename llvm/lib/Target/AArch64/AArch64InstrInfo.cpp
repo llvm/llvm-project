@@ -6424,9 +6424,14 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
 void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::OutlinedFunction &OF) const {
-  // For thunk outlining, rewrite the last instruction from a call to a
-  // tail-call.
-  if (OF.FrameConstructionID == MachineOutlinerThunk) {
+
+  AArch64FunctionInfo *FI = MF.getInfo<AArch64FunctionInfo>();
+
+  if (OF.FrameConstructionID == MachineOutlinerTailCall)
+    FI->setOutliningStyle("Tail Call");
+  else if (OF.FrameConstructionID == MachineOutlinerThunk) {
+    // For thunk outlining, rewrite the last instruction from a call to a
+    // tail-call.
     MachineInstr *Call = &*--MBB.instr_end();
     unsigned TailOpcode;
     if (Call->getOpcode() == AArch64::BL) {
@@ -6440,6 +6445,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
                            .addImm(0);
     MBB.insert(MBB.end(), TC);
     Call->eraseFromParent();
+
+    FI->setOutliningStyle("Thunk");
   }
 
   bool IsLeafFunction = true;
@@ -6544,6 +6551,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
   signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
                        ShouldSignReturnAddrWithAKey);
+
+  FI->setOutliningStyle("Function");
 
   // Did we have to modify the stack by saving the link register?
   if (OF.FrameConstructionID != MachineOutlinerDefault)
