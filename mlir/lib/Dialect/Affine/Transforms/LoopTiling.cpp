@@ -110,9 +110,11 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 
     // Set the upper bound.
     if (mayBeConstantCount && mayBeConstantCount.getValue() < tileSizes[i]) {
-      // Trip count is less than tile size; upper bound is the trip count.
-      auto ubMap = b.getConstantAffineMap(mayBeConstantCount.getValue());
-      newLoops[width + i].setUpperBoundMap(ubMap);
+      // Trip count is less than the tile size: upper bound is lower bound +
+      // trip count.
+      auto ubMap = b.getSingleDimShiftAffineMap(mayBeConstantCount.getValue());
+      newLoops[width + i].setUpperBound(
+          /*operands=*/newLoops[i].getInductionVar(), ubMap);
     } else if (largestDiv % tileSizes[i] != 0) {
       // Intra-tile loop ii goes from i to min(i + tileSize, ub_i).
       // Construct the upper bound map; the operands are the original operands
