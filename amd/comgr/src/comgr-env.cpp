@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "comgr-env.h"
+#include "llvm/ADT/Twine.h"
 #include <stdlib.h>
 
 using namespace llvm;
@@ -58,17 +59,22 @@ bool shouldEmitVerboseLogs() {
   return VerboseLogs && StringRef(VerboseLogs) != "0";
 }
 
+llvm::StringRef getROCMPath() {
+  static const char *ROCMPath = std::getenv("ROCM_PATH");
+  if (!ROCMPath)
+    ROCMPath = "/opt/rocm";
+  return ROCMPath;
+}
+
 llvm::StringRef getHIPPath() {
-  static const char *HIPPath = std::getenv("HIP_PATH");
-  if (!HIPPath)
-    HIPPath = "/opt/rocm/hip";
+  static const char *TempHIPPath = std::getenv("HIP_PATH");
+  static const std::string HIPPath = TempHIPPath ? TempHIPPath : (getROCMPath() + "/hip").str();
   return HIPPath;
 }
 
 llvm::StringRef getLLVMPath() {
-  static const char *LLVMPath = std::getenv("LLVM_PATH");
-  if (!LLVMPath)
-    LLVMPath = "/opt/rocm/llvm";
+  static const char *TempLLVMPath = std::getenv("LLVM_PATH");
+  static const std::string  LLVMPath = TempLLVMPath ? TempLLVMPath : (getROCMPath() + "/llvm").str();
   return LLVMPath;
 }
 
