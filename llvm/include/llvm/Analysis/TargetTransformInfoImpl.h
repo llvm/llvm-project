@@ -632,9 +632,9 @@ protected:
       // Assume unsigned elements
       isSigned = false;
 
-      // The max required size is the total vector width divided by num
-      // of elements in the vector
-      unsigned MaxRequiredSize = VT->getBitWidth() / VT->getNumElements();
+      // The max required size is the size of the vector element type
+      unsigned MaxRequiredSize =
+          VT->getElementType()->getPrimitiveSizeInBits().getFixedSize();
 
       unsigned MinRequiredSize = 0;
       for (unsigned i = 0, e = VT->getNumElements(); i < e; ++i) {
