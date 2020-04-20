@@ -7141,12 +7141,11 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       continue;
 
     if (Flags.isByVal() && VA.isMemLoc()) {
-      if (Flags.getByValSize() != 0)
-        report_fatal_error(
-            "ByVal arguments passed on stack not implemented yet");
-
+      const unsigned Size =
+          alignTo(Flags.getByValSize() ? Flags.getByValSize() : PtrByteSize,
+                  PtrByteSize);
       const int FI = MF.getFrameInfo().CreateFixedObject(
-          PtrByteSize, VA.getLocMemOffset(), /* IsImmutable */ false,
+          Size, VA.getLocMemOffset(), /* IsImmutable */ false,
           /* IsAliased */ true);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
       InVals.push_back(FIN);
