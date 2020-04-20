@@ -484,6 +484,77 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
   }];
 }
 
+def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
+      SingleBlockImplicitTerminator<"AtomicYieldOp">,
+      TypesMatchWith<"result type matches element type of memref",
+                     "memref", "result",
+                     "$_self.cast<MemRefType>().getElementType()">
+    ]> {
+  let summary = "atomic read-modify-write operation with a region";
+  let description = [{
+    The `atomic_rmw` operation provides a way to perform a read-modify-write
+    sequence that is free from data races. The memref operand represents the
+    buffer that the read and write will be performed against, as accessed by
+    the specified indices. The arity of the indices is the rank of the memref.
+    The result represents the latest value that was stored. The region contains
+    the code for the modification itself. The entry block has a single argument
+    that represents the value stored in `memref[indices]` before the write is
+    performed.
+
+    Example:
+
+    ```mlir
+    %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
+      ^bb0(%current_value : f32):
+        %c1 = constant 1.0 : f32
+        %inc = addf %c1, %current_value : f32
+        atomic_yield %inc : f32
+    }
+    ```
+  }];
+
+  let arguments = (ins
+      MemRefOf<[AnySignlessInteger, AnyFloat]>:$memref,
+      Variadic<Index>:$indices);
+
+  let results = (outs
+      AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
+
+  let regions = (region AnyRegion:$body);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "Value memref, ValueRange ivs">
+  ];
+
+  let extraClassDeclaration = [{
+    OpBuilder getBodyBuilder() {
+      assert(!body().empty() && "Unexpected empty 'body' region.");
+      Block &block = body().front();
+      return OpBuilder(&block, block.end());
+    }
+    // The value stored in memref[ivs].
+    Value getCurrentValue() {
+      return body().front().getArgument(0);
+    }
+  }];
+}
+
+def AtomicYieldOp : Std_Op<"atomic_yield", [
+      HasParent<"GenericAtomicRMWOp">,
+      NoSideEffect,
+      Terminator
+    ]> {
+  let summary = "yield operation for GenericAtomicRMWOp";
+  let description = [{
+    "atomic_yield" yields an SSA value from a GenericAtomicRMWOp region.
+  }];
+
+  let arguments = (ins AnyType:$result);
+  let assemblyFormat = "$result attr-dict `:` type($result)";
+}
+
 //===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
