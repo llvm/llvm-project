@@ -438,8 +438,8 @@ public:
     return 1;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Ty, int Index,
-                          Type *SubTp) {
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, int Index,
+                          VectorType *SubTp) {
     return 1;
   }
 
@@ -512,9 +512,9 @@ public:
     return 0;
   }
 
-  unsigned getArithmeticReductionCost(unsigned, Type *, bool) { return 1; }
+  unsigned getArithmeticReductionCost(unsigned, VectorType *, bool) { return 1; }
 
-  unsigned getMinMaxReductionCost(Type *, Type *, bool, bool) { return 1; }
+  unsigned getMinMaxReductionCost(VectorType *, VectorType *, bool, bool) { return 1; }
 
   unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) { return 0; }
 

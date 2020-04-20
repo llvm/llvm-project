@@ -58,7 +58,7 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
          isa<ConstantInt>(Ext1->getOperand(1)) &&
          "Expected constant extract indexes");
   Type *ScalarTy = Ext0->getType();
-  Type *VecTy = Ext0->getOperand(0)->getType();
+  auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
   int ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
