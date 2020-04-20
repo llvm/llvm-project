@@ -81,7 +81,7 @@ class NullabilityChecker
     : public Checker<check::Bind, check::PreCall, check::PreStmt<ReturnStmt>,
                      check::PostCall, check::PostStmt<ExplicitCastExpr>,
                      check::PostObjCMessage, check::DeadSymbols,
-                     check::Event<ImplicitNullDerefEvent>> {
+                     check::Location, check::Event<ImplicitNullDerefEvent>> {
   mutable std::unique_ptr<BugType> BT;
 
 public:
@@ -101,6 +101,8 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
   void checkEvent(ImplicitNullDerefEvent Event) const;
+  void checkLocation(SVal Location, bool IsLoad, const Stmt *S,
+                     CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -499,6 +501,52 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
       reportBug("Nullable pointer is passed to a callee that requires a "
                 "non-null", ErrorKind::NullablePassedToNonnull,
                 Event.SinkNode, Region, BR);
+    }
+  }
+}
+
+// Whenever we see a load from a typed memory region that's been annotated as
+// 'nonnull', we want to trust the user on that and assume that it is is indeed
+// non-null.
+//
+// We do so even if the value is known to have been assigned to null.
+// The user should be warned on assigning the null value to a non-null pointer
+// as opposed to warning on the later dereference of this pointer.
+//
+// \code
+//   int * _Nonnull var = 0; // we want to warn the user here...
+//   // . . .
+//   *var = 42;              // ...and not here
+// \endcode
+void NullabilityChecker::checkLocation(SVal Location, bool IsLoad,
+                                       const Stmt *S,
+                                       CheckerContext &Context) const {
+  // We should care only about loads.
+  // The main idea is to add a constraint whenever we're loading a value from
+  // an annotated pointer type.
+  if (!IsLoad)
+    return;
+
+  // Annotations that we want to consider make sense only for types.
+  const auto *Region =
+      dyn_cast_or_null<TypedValueRegion>(Location.getAsRegion());
+  if (!Region)
+    return;
+
+  ProgramStateRef State = Context.getState();
+
+  auto StoredVal = State->getSVal(Region).getAs<loc::MemRegionVal>();
+  if (!StoredVal)
+    return;
+
+  Nullability NullabilityOfTheLoadedValue =
+      getNullabilityAnnotation(Region->getValueType());
+
+  if (NullabilityOfTheLoadedValue == Nullability::Nonnull) {
+    // It doesn't matter what we think about this particular pointer, it should
+    // be considered non-null as annotated by the developer.
+    if (ProgramStateRef NewState = State->assume(*StoredVal, true)) {
+      Context.addTransition(NewState);
     }
   }
 }
