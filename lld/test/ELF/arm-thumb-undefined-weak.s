@@ -28,9 +28,13 @@ _start:
 /// R_ARM_THM_MOVW_PREL_NC
  movw r0, :lower16:target - .
 /// R_ARM_THM_ALU_PREL_11_0
- adr r0, target
+/// adr r0, target
+ .inst.w 0xf2af0004
+ .reloc 0x18, R_ARM_THM_ALU_PREL_11_0, target
 /// R_ARM_THM_PC12
- ldr r0, target
+/// ldr r0, target
+ .inst.w 0xf85f0004
+ .reloc 0x1c, R_ARM_THM_PC12, target
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK:         200b4: {{.*}} beq.w   #0 <_start+0x4>
