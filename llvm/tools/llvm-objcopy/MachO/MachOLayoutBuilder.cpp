@@ -315,6 +315,19 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
           O.Exports.Trie.empty() ? 0 : StartOfExportTrie;
       MLC.dyld_info_command_data.export_size = O.Exports.Trie.size();
       break;
+    // Note that LC_ENCRYPTION_INFO.cryptoff despite its name and the comment in
+    // <mach-o/loader.h> is not an offset in the binary file, instead, it is a
+    // relative virtual address. At the moment modification of the __TEXT
+    // segment of executables isn't supported anyway (e.g. data in code entries
+    // are not recalculated). Moreover, in general
+    // LC_ENCRYPT_INFO/LC_ENCRYPTION_INFO_64 are nontrivial to update because
+    // without making additional assumptions (e.g. that the entire __TEXT
+    // segment should be encrypted) we do not know how to recalculate the
+    // boundaries of the encrypted part. For now just copy over these load
+    // commands until we encounter a real world usecase where
+    // LC_ENCRYPT_INFO/LC_ENCRYPTION_INFO_64 need to be adjusted.
+    case MachO::LC_ENCRYPTION_INFO:
+    case MachO::LC_ENCRYPTION_INFO_64:
     case MachO::LC_LOAD_DYLINKER:
     case MachO::LC_MAIN:
     case MachO::LC_RPATH:
