@@ -51,7 +51,7 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 namespace {
 struct OpenMPOpt {
 
-  OpenMPOpt(SmallPtrSetImpl<Function *> &SCC,
+  OpenMPOpt(SmallVectorImpl<Function *> &SCC,
             SmallPtrSetImpl<Function *> &ModuleSlice,
             CallGraphUpdater &CGUpdater)
       : M(*(*SCC.begin())->getParent()), SCC(SCC), ModuleSlice(ModuleSlice),
@@ -475,7 +475,7 @@ private:
   Module &M;
 
   /// The SCC we are operating on.
-  SmallPtrSetImpl<Function *> &SCC;
+  SmallVectorImpl<Function *> &SCC;
 
   /// The slice of the module we are allowed to look at.
   SmallPtrSetImpl<Function *> &ModuleSlice;
@@ -503,9 +503,12 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  SmallPtrSet<Function *, 16> SCC;
-  for (LazyCallGraph::Node &N : C)
-    SCC.insert(&N.getFunction());
+  SmallPtrSet<Function *, 16> ModuleSlice;
+  SmallVector<Function *, 16> SCC;
+  for (LazyCallGraph::Node &N : C) {
+    SCC.push_back(&N.getFunction());
+    ModuleSlice.insert(SCC.back());
+  }
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -513,7 +516,7 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   CallGraphUpdater CGUpdater;
   CGUpdater.initialize(CG, C, AM, UR);
   // TODO: Compute the module slice we are allowed to look at.
-  OpenMPOpt OMPOpt(SCC, SCC, CGUpdater);
+  OpenMPOpt OMPOpt(SCC, ModuleSlice, CGUpdater);
   bool Changed = OMPOpt.run();
   (void)Changed;
   return PreservedAnalyses::all();
@@ -546,11 +549,14 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
 
-    SmallPtrSet<Function *, 16> SCC;
+    SmallPtrSet<Function *, 16> ModuleSlice;
+    SmallVector<Function *, 16> SCC;
     for (CallGraphNode *CGN : CGSCC)
       if (Function *Fn = CGN->getFunction())
-        if (!Fn->isDeclaration())
-          SCC.insert(Fn);
+        if (!Fn->isDeclaration()) {
+          SCC.push_back(Fn);
+          ModuleSlice.insert(Fn);
+        }
 
     if (SCC.empty())
       return false;
@@ -559,7 +565,7 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     CGUpdater.initialize(CG, CGSCC);
 
     // TODO: Compute the module slice we are allowed to look at.
-    OpenMPOpt OMPOpt(SCC, SCC, CGUpdater);
+    OpenMPOpt OMPOpt(SCC, ModuleSlice, CGUpdater);
     return OMPOpt.run();
   }
 
