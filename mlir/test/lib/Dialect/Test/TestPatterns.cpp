@@ -11,6 +11,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
 using namespace mlir;
 
 // Native function for testing NativeCodeCall
@@ -128,6 +129,23 @@ struct TestReturnTypeDriver
   }
 };
 } // end anonymous namespace
+
+namespace {
+struct TestDerivedAttributeDriver
+    : public PassWrapper<TestDerivedAttributeDriver, FunctionPass> {
+  void runOnFunction() override;
+};
+} // end anonymous namespace
+
+void TestDerivedAttributeDriver::runOnFunction() {
+  getFunction().walk([](DerivedAttributeOpInterface dOp) {
+    auto dAttr = dOp.materializeDerivedAttributes();
+    if (!dAttr)
+      return;
+    for (auto d : dAttr)
+      dOp.emitRemark() << d.first << " = " << d.second;
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // Legalization Driver.
@@ -588,6 +606,9 @@ namespace mlir {
 void registerPatternsTestPass() {
   mlir::PassRegistration<TestReturnTypeDriver>("test-return-type",
                                                "Run return type functions");
+
+  mlir::PassRegistration<TestDerivedAttributeDriver>(
+      "test-derived-attr", "Run test derived attributes");
 
   mlir::PassRegistration<TestPatternDriver>("test-patterns",
                                             "Run test dialect patterns");
