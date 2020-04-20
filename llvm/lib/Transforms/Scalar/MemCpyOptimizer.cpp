@@ -1277,8 +1277,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
   if (MDep->getSourceAlign() < ByValAlign &&
-      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, &AC,
-                                 &DT) < ByValAlign)
+      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign->value(), DL,
+                                 &CB, &AC, &DT) < ByValAlign->value())
     return false;
 
   // The address space of the memcpy source must match the byval argument
