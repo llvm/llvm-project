@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/OrderedInstructions.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -108,8 +107,7 @@ struct ValueDFS {
 };
 
 // Perform a strict weak ordering on instructions and arguments.
-static bool valueComesBefore(OrderedInstructions &OI, const Value *A,
-                             const Value *B) {
+static bool valueComesBefore(const Value *A, const Value *B) {
   auto *ArgA = dyn_cast_or_null<Argument>(A);
   auto *ArgB = dyn_cast_or_null<Argument>(B);
   if (ArgA && !ArgB)
@@ -118,17 +116,14 @@ static bool valueComesBefore(OrderedInstructions &OI, const Value *A,
     return false;
   if (ArgA && ArgB)
     return ArgA->getArgNo() < ArgB->getArgNo();
-  return OI.dfsBefore(cast<Instruction>(A), cast<Instruction>(B));
+  return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
 }
 
-// This compares ValueDFS structures, creating OrderedBasicBlocks where
-// necessary to compare uses/defs in the same block.  Doing so allows us to walk
-// the minimum number of instructions necessary to compute our def/use ordering.
+// This compares ValueDFS structures. Doing so allows us to walk the minimum
+// number of instructions necessary to compute our def/use ordering.
 struct ValueDFS_Compare {
   DominatorTree &DT;
-  OrderedInstructions &OI;
-  ValueDFS_Compare(DominatorTree &DT, OrderedInstructions &OI)
-      : DT(DT), OI(OI) {}
+  ValueDFS_Compare(DominatorTree &DT) : DT(DT) {}
 
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
@@ -242,11 +237,11 @@ struct ValueDFS_Compare {
     auto *ArgB = dyn_cast_or_null<Argument>(BDef);
 
     if (ArgA || ArgB)
-      return valueComesBefore(OI, ArgA, ArgB);
+      return valueComesBefore(ArgA, ArgB);
 
     auto *AInst = getDefOrUser(ADef, A.U);
     auto *BInst = getDefOrUser(BDef, B.U);
-    return valueComesBefore(OI, AInst, BInst);
+    return valueComesBefore(AInst, BInst);
   }
 };
 
@@ -260,7 +255,6 @@ class PredicateInfoBuilder {
   Function &F;
   DominatorTree &DT;
   AssumptionCache &AC;
-  OrderedInstructions OI;
 
   // This stores info about each operand or comparison result we make copies
   // of. The real ValueInfos start at index 1, index 0 is unused so that we
@@ -298,7 +292,7 @@ class PredicateInfoBuilder {
 public:
   PredicateInfoBuilder(PredicateInfo &PI, Function &F, DominatorTree &DT,
                        AssumptionCache &AC)
-      : PI(PI), F(F), DT(DT), AC(AC), OI(&DT) {
+      : PI(PI), F(F), DT(DT), AC(AC) {
     // Push an empty operand info so that we can detect 0 as not finding one
     ValueInfos.resize(1);
   }
@@ -655,7 +649,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
 // TODO: Use this algorithm to perform fast single-variable renaming in
 // promotememtoreg and memoryssa.
 void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
-  ValueDFS_Compare Compare(DT, OI);
+  ValueDFS_Compare Compare(DT);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {
     LLVM_DEBUG(dbgs() << "Visiting " << *Op << "\n");
