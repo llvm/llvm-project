@@ -414,3 +414,106 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [ SHF_ALLOC ]
     Size:    0x1
+
+## Check how we dump segments which contain SHT_NOBITS sections.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefix=NOBITS
+
+# NOBITS:      ProgramHeaders:
+# NOBITS-NEXT:   - Type:  PT_LOAD
+# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
+# NOBITS-NEXT:     Sections:
+# NOBITS-NEXT:       - Section: .bss
+# NOBITS-NEXT:   - Type:  PT_LOAD
+# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
+# NOBITS-NEXT:     Sections:
+# NOBITS-NEXT:       - Section: .data.1
+# NOBITS-NEXT:       - Section: .bss
+# NOBITS-NEXT:   - Type:  PT_LOAD
+# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
+# NOBITS-NEXT:     Sections:
+# NOBITS-NEXT:       - Section: .data.1
+# NOBITS-NEXT:       - Section: .bss
+# NOBITS-NEXT:       - Section: .data.2
+# NOBITS-NEXT:   - Type:  PT_LOAD
+# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
+# NOBITS-NEXT:     Sections:
+# NOBITS-NEXT:       - Section: .bss
+# NOBITS-NEXT:       - Section: .data.2
+# NOBITS-NEXT:   - Type:  PT_LOAD
+# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
+# NOBITS-NEXT:     Sections:
+# NOBITS-NEXT:       - Section: .foo.bss
+# NOBITS-NEXT:       - Section: .bar.bss
+# NOBITS-NEXT:     VAddr: 0x0000000200000000
+# NOBITS-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+## Case 1: the segment contains a single SHT_NOBITS section.
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .bss
+## Case 2: the SHT_NOBITS section is the last section in the segment.
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .data.1
+      - Section: .bss
+## Case 3: the SHT_NOBITS section is in the middle of the segment.
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .data.1
+      - Section: .bss
+      - Section: .data.2
+## Case 4: the SHT_NOBITS section is the first section in the segment.
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .bss
+      - Section: .data.2
+## Case 5: another two SHT_NOBITS sections in a different segment.
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .foo.bss
+      - Section: .bar.bss
+    VAddr: 0x200000000
+Sections:
+  - Name:    .data.1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary address and size.
+    Address: 0x1000
+    Size:    0x1
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use a size that is larger than the file size.
+    Size:  0x00000000FFFFFFFF
+  - Name:  .data.2
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary size.
+    Size:  0x1
+  - Name:    .foo.bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Set an arbitrary address and size so that this section can be used
+## to start a different non-overlapping segment.
+## I.e. its address is larger than addresses of previous sections.
+    Size:    0x10
+    Address: 0x200000000
+  - Name:    .bar.bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary size that is different to the size of
+## the previous section.
+    Size:    0x20
