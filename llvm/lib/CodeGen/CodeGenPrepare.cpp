@@ -1939,14 +1939,12 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     // If this is a memcpy (or similar) then we may be able to improve the
     // alignment
     if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(CI)) {
-      Align DestAlign = getKnownAlignment(MI->getDest(), *DL);
-      MaybeAlign MIDestAlign = MI->getDestAlign();
-      if (!MIDestAlign || DestAlign > *MIDestAlign)
+      unsigned DestAlign = getKnownAlignment(MI->getDest(), *DL);
+      if (DestAlign > MI->getDestAlignment())
         MI->setDestAlignment(DestAlign);
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
-        MaybeAlign MTISrcAlign = MTI->getSourceAlign();
-        Align SrcAlign = getKnownAlignment(MTI->getSource(), *DL);
-        if (!MTISrcAlign || SrcAlign > *MTISrcAlign)
+        unsigned SrcAlign = getKnownAlignment(MTI->getSource(), *DL);
+        if (SrcAlign > MTI->getSourceAlignment())
           MTI->setSourceAlignment(SrcAlign);
       }
     }
