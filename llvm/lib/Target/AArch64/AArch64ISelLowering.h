@@ -232,6 +232,8 @@ enum NodeType : unsigned {
 
   REINTERPRET_CAST,
 
+  LD1,
+  LD1S,
   LDNF1,
   LDNF1S,
   LDFF1,
@@ -277,6 +279,8 @@ enum NodeType : unsigned {
   GLDNT1,
   GLDNT1_INDEX,
   GLDNT1S,
+
+  ST1,
 
   // Scatter store
   SST1,
