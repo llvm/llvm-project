@@ -14,18 +14,13 @@
 #define LLVM_LIB_TABLEGEN_TGPARSER_H
 
 #include "TGLexer.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
 
 namespace llvm {
-  class Record;
-  class RecordVal;
-  class RecordKeeper;
-  class RecTy;
-  class Init;
+  class SourceMgr;
+  class Twine;
   struct ForeachLoop;
   struct MultiClass;
   struct SubClassReference;
