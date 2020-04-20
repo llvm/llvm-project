@@ -15,30 +15,40 @@
 
 using namespace llvm;
 
-static void unexpectedEndReached(Error *E, uint64_t Offset) {
-  if (E)
-    *E = createStringError(errc::illegal_byte_sequence,
-                           "unexpected end of data at offset 0x%" PRIx64,
-                           Offset);
+bool DataExtractor::prepareRead(uint64_t Offset, uint64_t Size,
+                                Error *E) const {
+  if (isValidOffsetForDataOfSize(Offset, Size))
+    return true;
+  if (E) {
+    if (Offset <= Data.size())
+      *E = createStringError(
+          errc::illegal_byte_sequence,
+          "unexpected end of data at offset 0x%zx while reading [0x%" PRIx64
+          ", 0x%" PRIx64 ")",
+          Data.size(), Offset, Offset + Size);
+    else
+      *E = createStringError(errc::invalid_argument,
+                             "offset 0x%" PRIx64
+                             " is beyond the end of data at 0x%zx",
+                             Offset, Data.size());
+  }
+  return false;
 }
 
 static bool isError(Error *E) { return E && *E; }
 
 template <typename T>
-static T getU(uint64_t *offset_ptr, const DataExtractor *de,
-              bool isLittleEndian, const char *Data, llvm::Error *Err) {
+T DataExtractor::getU(uint64_t *offset_ptr, Error *Err) const {
   ErrorAsOutParameter ErrAsOut(Err);
   T val = 0;
   if (isError(Err))
     return val;
 
   uint64_t offset = *offset_ptr;
-  if (!de->isValidOffsetForDataOfSize(offset, sizeof(T))) {
-    unexpectedEndReached(Err, offset);
+  if (!prepareRead(offset, sizeof(T), Err))
     return val;
-  }
-  std::memcpy(&val, &Data[offset], sizeof(val));
-  if (sys::IsLittleEndianHost != isLittleEndian)
+  std::memcpy(&val, &Data.data()[offset], sizeof(val));
+  if (sys::IsLittleEndianHost != IsLittleEndian)
     sys::swapByteOrder(val);
 
   // Advance the offset
@@ -47,22 +57,19 @@ static T getU(uint64_t *offset_ptr, const DataExtractor *de,
 }
 
 template <typename T>
-static T *getUs(uint64_t *offset_ptr, T *dst, uint32_t count,
-                const DataExtractor *de, bool isLittleEndian, const char *Data,
-                llvm::Error *Err) {
+T *DataExtractor::getUs(uint64_t *offset_ptr, T *dst, uint32_t count,
+                        Error *Err) const {
   ErrorAsOutParameter ErrAsOut(Err);
   if (isError(Err))
     return nullptr;
 
   uint64_t offset = *offset_ptr;
 
-  if (!de->isValidOffsetForDataOfSize(offset, sizeof(*dst) * count)) {
-    unexpectedEndReached(Err, offset);
+  if (!prepareRead(offset, sizeof(*dst) * count, Err))
     return nullptr;
-  }
   for (T *value_ptr = dst, *end = dst + count; value_ptr != end;
        ++value_ptr, offset += sizeof(*dst))
-    *value_ptr = getU<T>(offset_ptr, de, isLittleEndian, Data, Err);
+    *value_ptr = getU<T>(offset_ptr, Err);
   // Advance the offset
   *offset_ptr = offset;
   // Return a non-NULL pointer to the converted data as an indicator of
@@ -71,55 +78,49 @@ static T *getUs(uint64_t *offset_ptr, T *dst, uint32_t count,
 }
 
 uint8_t DataExtractor::getU8(uint64_t *offset_ptr, llvm::Error *Err) const {
-  return getU<uint8_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
+  return getU<uint8_t>(offset_ptr, Err);
 }
 
-uint8_t *
-DataExtractor::getU8(uint64_t *offset_ptr, uint8_t *dst, uint32_t count) const {
-  return getUs<uint8_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                        Data.data(), nullptr);
+uint8_t *DataExtractor::getU8(uint64_t *offset_ptr, uint8_t *dst,
+                              uint32_t count) const {
+  return getUs<uint8_t>(offset_ptr, dst, count, nullptr);
 }
 
 uint8_t *DataExtractor::getU8(Cursor &C, uint8_t *Dst, uint32_t Count) const {
-  return getUs<uint8_t>(&C.Offset, Dst, Count, this, IsLittleEndian,
-                        Data.data(), &C.Err);
+  return getUs<uint8_t>(&C.Offset, Dst, Count, &C.Err);
 }
 
 uint16_t DataExtractor::getU16(uint64_t *offset_ptr, llvm::Error *Err) const {
-  return getU<uint16_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
+  return getU<uint16_t>(offset_ptr, Err);
 }
 
 uint16_t *DataExtractor::getU16(uint64_t *offset_ptr, uint16_t *dst,
                                 uint32_t count) const {
-  return getUs<uint16_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                         Data.data(), nullptr);
+  return getUs<uint16_t>(offset_ptr, dst, count, nullptr);
 }
 
 uint32_t DataExtractor::getU24(uint64_t *OffsetPtr, Error *Err) const {
-  uint24_t ExtractedVal =
-      getU<uint24_t>(OffsetPtr, this, IsLittleEndian, Data.data(), Err);
+  uint24_t ExtractedVal = getU<uint24_t>(OffsetPtr, Err);
   // The 3 bytes are in the correct byte order for the host.
   return ExtractedVal.getAsUint32(sys::IsLittleEndianHost);
 }
 
 uint32_t DataExtractor::getU32(uint64_t *offset_ptr, llvm::Error *Err) const {
-  return getU<uint32_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
+  return getU<uint32_t>(offset_ptr, Err);
 }
 
 uint32_t *DataExtractor::getU32(uint64_t *offset_ptr, uint32_t *dst,
                                 uint32_t count) const {
-  return getUs<uint32_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                         Data.data(), nullptr);
+  return getUs<uint32_t>(offset_ptr, dst, count, nullptr);
 }
 
 uint64_t DataExtractor::getU64(uint64_t *offset_ptr, llvm::Error *Err) const {
-  return getU<uint64_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
+  return getU<uint64_t>(offset_ptr, Err);
 }
 
 uint64_t *DataExtractor::getU64(uint64_t *offset_ptr, uint64_t *dst,
                                 uint32_t count) const {
-  return getUs<uint64_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                         Data.data(), nullptr);
+  return getUs<uint64_t>(offset_ptr, dst, count, nullptr);
 }
 
 uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
@@ -163,7 +164,10 @@ StringRef DataExtractor::getCStrRef(uint64_t *OffsetPtr, Error *Err) const {
     *OffsetPtr = Pos + 1;
     return StringRef(Data.data() + Start, Pos - Start);
   }
-  unexpectedEndReached(Err, Start);
+  if (Err)
+    *Err = createStringError(errc::illegal_byte_sequence,
+                             "no null terminated string at offset 0x%" PRIx64,
+                             Start);
   return StringRef();
 }
 
@@ -180,10 +184,8 @@ StringRef DataExtractor::getBytes(uint64_t *OffsetPtr, uint64_t Length,
   if (isError(Err))
     return StringRef();
 
-  if (!isValidOffsetForDataOfSize(*OffsetPtr, Length)) {
-    unexpectedEndReached(Err, *OffsetPtr);
+  if (!prepareRead(*OffsetPtr, Length, Err))
     return StringRef();
-  }
 
   StringRef Result = Data.substr(*OffsetPtr, Length);
   *OffsetPtr += Length;
@@ -229,8 +231,6 @@ void DataExtractor::skip(Cursor &C, uint64_t Length) const {
   if (isError(&C.Err))
     return;
 
-  if (isValidOffsetForDataOfSize(C.Offset, Length))
+  if (prepareRead(C.Offset, Length, &C.Err))
     C.Offset += Length;
-  else
-    unexpectedEndReached(&C.Err, C.Offset);
 }

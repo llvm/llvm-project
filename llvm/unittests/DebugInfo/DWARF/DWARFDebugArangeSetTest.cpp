@@ -121,7 +121,7 @@ TEST(DWARFDebugArangeSet, SectionTooShort) {
   static const char DebugArangesSecRaw[11 + 1] = {0};
   ExpectExtractError(DebugArangesSecRaw,
                      "parsing address ranges table at offset 0x0: unexpected "
-                     "end of data at offset 0xb");
+                     "end of data at offset 0xb while reading [0xb, 0xc)");
 }
 
 TEST(DWARFDebugArangeSet, SectionTooShortDWARF64) {
@@ -130,7 +130,7 @@ TEST(DWARFDebugArangeSet, SectionTooShortDWARF64) {
       "\xff\xff\xff\xff"; // DWARF64 mark
   ExpectExtractError(DebugArangesSecRaw,
                      "parsing address ranges table at offset 0x0: unexpected "
-                     "end of data at offset 0x17");
+                     "end of data at offset 0x17 while reading [0x17, 0x18)");
 }
 
 TEST(DWARFDebugArangeSet, NoSpaceForEntries) {
