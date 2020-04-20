@@ -274,11 +274,6 @@ foreach Index = 0-105 in {
 
 // VGPR registers
 foreach Index = 0-255 in {
-  // Set a cost value for vgprs other than the argument registers (v0-v31).
-  // The ratio of index/allocation_granularity is taken as the cost value.
-  // Considered the allocation granularity as 4 here.
-  let CostPerUse=!if(!gt(Index, 31), !srl(Index, 2), 0) in {
-
   // There is no special encoding for low 16 bit subreg, this not a real
   // register but rather an operand for instructions preserving high 16 bits
   // of the result or reading just low 16 bits of a 32 bit VGPR.
@@ -301,7 +296,6 @@ foreach Index = 0-255 in {
     DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]> {
     let HWEncoding{8} = 1;
     let SubRegIndices = [lo16, hi16];
-  }
   }
 }
 
