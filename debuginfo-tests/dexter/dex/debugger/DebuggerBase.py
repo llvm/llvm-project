@@ -7,10 +7,7 @@
 """Base class for all debugger interface implementations."""
 
 import abc
-from itertools import chain
-import os
 import sys
-import time
 import traceback
 
 from dex.dextIR import DebuggerIR, ValueIR
@@ -20,14 +17,11 @@ from dex.utils.ReturnCode import ReturnCode
 
 
 class DebuggerBase(object, metaclass=abc.ABCMeta):
-    def __init__(self, context, step_collection):
+    def __init__(self, context):
         self.context = context
-        self.steps = step_collection
         self._interface = None
         self.has_loaded = False
         self._loading_error = NotYetLoadedDebuggerException()
-        self.watches = set()
-
         try:
             self._interface = self._load_interface()
             self.has_loaded = True
@@ -35,13 +29,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         except DebuggerException:
             self._loading_error = sys.exc_info()
 
-        self.step_index = 0
-
     def __enter__(self):
         try:
             self._custom_init()
             self.clear_breakpoints()
-            self.add_breakpoints()
         except DebuggerException:
             self._loading_error = sys.exc_info()
         return self
@@ -86,79 +77,12 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         tb = ''.join(tb).splitlines(True)
         return tb
 
-    def add_breakpoints(self):
-        for s in self.context.options.source_files:
-            with open(s, 'r') as fp:
-                num_lines = len(fp.readlines())
-            for line in range(1, num_lines + 1):
-                self.add_breakpoint(s, line)
-
-    def _update_step_watches(self, step_info):
-        loc = step_info.current_location
-        watch_cmds = ['DexUnreachable', 'DexExpectStepOrder']
-        towatch = chain.from_iterable(self.steps.commands[x]
-                                      for x in watch_cmds
-                                      if x in self.steps.commands)
-        try:
-            # Iterate over all watches of the types named in watch_cmds
-            for watch in towatch:
-                if (os.path.exists(loc.path)
-                        and os.path.samefile(watch.path, loc.path)
-                        and watch.lineno == loc.lineno):
-                    result = watch.eval(self)
-                    step_info.watches.update(result)
-                    break
-        except KeyError:
-            pass
-
     def _sanitize_function_name(self, name):  # pylint: disable=no-self-use
         """If the function name returned by the debugger needs any post-
         processing to make it fit (for example, if it includes a byte offset),
         do that here.
         """
         return name
-
-    def start(self):
-        self.steps.clear_steps()
-        self.launch()
-
-        for command_obj in chain.from_iterable(self.steps.commands.values()):
-            self.watches.update(command_obj.get_watches())
-
-        max_steps = self.context.options.max_steps
-        for _ in range(max_steps):
-            while self.is_running:
-                pass
-
-            if self.is_finished:
-                break
-
-            self.step_index += 1
-            step_info = self.get_step_info()
-
-            if step_info.current_frame:
-                self._update_step_watches(step_info)
-                self.steps.new_step(self.context, step_info)
-
-            if self.in_source_file(step_info):
-                self.step()
-            else:
-                self.go()
-
-            time.sleep(self.context.options.pause_between_steps)
-        else:
-            raise DebuggerException(
-                'maximum number of steps reached ({})'.format(max_steps))
-
-    def in_source_file(self, step_info):
-        if not step_info.current_frame:
-            return False
-        if not step_info.current_location.path:
-            return False
-        if not os.path.exists(step_info.current_location.path):
-            return False
-        return any(os.path.samefile(step_info.current_location.path, f) \
-                   for f in self.context.options.source_files)
 
     @abc.abstractmethod
     def _load_interface(self):
@@ -209,7 +133,7 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_step_info(self):
+    def get_step_info(self, watches, step_index):
         pass
 
     @abc.abstractproperty
