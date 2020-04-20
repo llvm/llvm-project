@@ -131,6 +131,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // stack slot.
   unsigned TaggedBasePointerOffset = 0;
 
+  /// OutliningStyle denotes, if a function was outined, how it was outlined,
+  /// e.g. Tail Call, Thunk, or Function if none apply.
+  Optional<std::string> OutliningStyle;
+
 public:
   AArch64FunctionInfo() = default;
 
@@ -178,6 +182,9 @@ public:
 
   void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
   uint64_t getLocalStackSize() const { return LocalStackSize; }
+
+  void setOutliningStyle(std::string Style) { OutliningStyle = Style; }
+  Optional<std::string> getOutliningStyle() const { return OutliningStyle; }
 
   void setCalleeSavedStackSize(unsigned Size) {
     CalleeSavedStackSize = Size;

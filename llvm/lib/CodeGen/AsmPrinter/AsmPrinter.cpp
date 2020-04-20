@@ -669,6 +669,8 @@ void AsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   OutStreamer->emitValue(Value, Size);
 }
 
+void AsmPrinter::emitFunctionHeaderComment() {}
+
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
 void AsmPrinter::emitFunctionHeader() {
@@ -705,6 +707,7 @@ void AsmPrinter::emitFunctionHeader() {
   if (isVerbose()) {
     F.printAsOperand(OutStreamer->GetCommentOS(),
                    /*PrintType=*/false, F.getParent());
+    emitFunctionHeaderComment();
     OutStreamer->GetCommentOS() << '\n';
   }
 
