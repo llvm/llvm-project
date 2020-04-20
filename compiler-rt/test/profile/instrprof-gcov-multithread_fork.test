@@ -1,0 +1,11 @@
+UNSUPPORTED: windows
+
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clangxx --coverage -lpthread -o %t %S/Inputs/instrprof-gcov-multithread_fork.cpp
+RUN: test -f instrprof-gcov-multithread_fork.gcno
+
+RUN: rm -f instrprof-gcov-multithread_fork.gcda
+RUN: %run %t
+RUN: llvm-cov gcov instrprof-gcov-multithread_fork.gcda
