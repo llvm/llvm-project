@@ -14,6 +14,8 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
+// expected-warning@array:* 0-1 {{suggest braces around initialization of subobject}}
+
 int main(int, char**) {
   {
     char source[3][6] = {"hi", "world"};
