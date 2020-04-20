@@ -99,6 +99,11 @@ STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumShiftInserts, "Number of vector shift inserts");
 STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
 
+static cl::opt<bool>
+EnableAArch64SlrGeneration("aarch64-shift-insert-generation", cl::Hidden,
+                           cl::desc("Allow AArch64 SLI/SRI formation"),
+                           cl::init(false));
+
 // FIXME: The necessary dtprel relocations don't seem to be supported
 // well in the GNU bfd and gold linkers at the moment. Therefore, by
 // default, for now, fall back to GeneralDynamic code generation.
@@ -1318,8 +1323,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::VSHL:              return "AArch64ISD::VSHL";
   case AArch64ISD::VLSHR:             return "AArch64ISD::VLSHR";
   case AArch64ISD::VASHR:             return "AArch64ISD::VASHR";
-  case AArch64ISD::VSLI:              return "AArch64ISD::VSLI";
-  case AArch64ISD::VSRI:              return "AArch64ISD::VSRI";
   case AArch64ISD::CMEQ:              return "AArch64ISD::CMEQ";
   case AArch64ISD::CMGE:              return "AArch64ISD::CMGE";
   case AArch64ISD::CMGT:              return "AArch64ISD::CMGT";
@@ -3145,21 +3148,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       report_fatal_error(
           "llvm.eh.recoverfp must take a function as the first argument");
     return IncomingFPOp;
-  }
-
-  case Intrinsic::aarch64_neon_vsri:
-  case Intrinsic::aarch64_neon_vsli: {
-    EVT Ty = Op.getValueType();
-
-    if (!Ty.isVector())
-      report_fatal_error("Unexpected type for aarch64_neon_vsli");
-
-    assert(Op.getConstantOperandVal(3) <= Ty.getScalarSizeInBits());
-
-    bool IsShiftRight = IntNo == Intrinsic::aarch64_neon_vsri;
-    unsigned Opcode = IsShiftRight ? AArch64ISD::VSRI : AArch64ISD::VSLI;
-    return DAG.getNode(Opcode, dl, Ty, Op.getOperand(1), Op.getOperand(2),
-                       Op.getOperand(3));
   }
   }
 }
@@ -7909,9 +7897,8 @@ static unsigned getIntrinsicID(const SDNode *N) {
 
 // Attempt to form a vector S[LR]I from (or (and X, BvecC1), (lsl Y, C2)),
 // to (SLI X, Y, C2), where X and Y have matching vector types, BvecC1 is a
-// BUILD_VECTORs with constant element C1, C2 is a constant, and:
-//   - for the SLI case: C1 == Ones(ElemSizeInBits) >> (ElemSizeInBits - C2)
-//   - for the SRI case: C1 == Ones(ElemSizeInBits) << (ElemSizeInBits - C2)
+// BUILD_VECTORs with constant element C1, C2 is a constant, and C1 == ~C2.
+// Also, logical shift right -> sri, with the same structure.
 static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
@@ -7944,27 +7931,25 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   if (!isAllConstantBuildVector(And.getOperand(1), C1))
     return SDValue();
 
-  // Is C1 == Ones(ElemSizeInBits) << (ElemSizeInBits - C2) or
-  // C1 == Ones(ElemSizeInBits) >> (ElemSizeInBits - C2), taking into account
-  // how much one can shift elements of a particular size?
+  // Is C1 == ~C2, taking into account how much one can shift elements of a
+  // particular size?
   uint64_t C2 = C2node->getZExtValue();
   unsigned ElemSizeInBits = VT.getScalarSizeInBits();
   if (C2 > ElemSizeInBits)
     return SDValue();
   unsigned ElemMask = (1 << ElemSizeInBits) - 1;
-  if (IsShiftRight) {
-    if ((C1 & ElemMask) != ((ElemMask << (ElemSizeInBits - C2)) & ElemMask))
-      return SDValue();
-  } else {
-    if ((C1 & ElemMask) != ((ElemMask >> (ElemSizeInBits - C2)) & ElemMask))
-      return SDValue();
-  }
+  if ((C1 & ElemMask) != (~C2 & ElemMask))
+    return SDValue();
 
   SDValue X = And.getOperand(0);
   SDValue Y = Shift.getOperand(0);
 
-  unsigned Inst = IsShiftRight ? AArch64ISD::VSRI : AArch64ISD::VSLI;
-  SDValue ResultSLI = DAG.getNode(Inst, DL, VT, X, Y, Shift.getOperand(1));
+  unsigned Intrin =
+      IsShiftRight ? Intrinsic::aarch64_neon_vsri : Intrinsic::aarch64_neon_vsli;
+  SDValue ResultSLI =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                  DAG.getConstant(Intrin, DL, MVT::i32), X, Y,
+                  Shift.getOperand(1));
 
   LLVM_DEBUG(dbgs() << "aarch64-lower: transformed: \n");
   LLVM_DEBUG(N->dump(&DAG));
@@ -7978,8 +7963,10 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
-  if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
-    return Res;
+  if (EnableAArch64SlrGeneration) {
+    if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
+      return Res;
+  }
 
   EVT VT = Op.getValueType();
 
