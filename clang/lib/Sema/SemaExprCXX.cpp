@@ -6208,6 +6208,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
   // exists.
   SmallVector<unsigned, 4> QualifierUnion;
   SmallVector<std::pair<const Type *, const Type *>, 4> MemberOfClass;
+  SmallVector<PointerAuthQualifier, 4> PtrAuthQualifier;
   QualType Composite1 = T1;
   QualType Composite2 = T2;
   unsigned NeedConstBefore = 0;
@@ -6226,6 +6227,9 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       QualifierUnion.push_back(
                  Composite1.getCVRQualifiers() | Composite2.getCVRQualifiers());
       MemberOfClass.push_back(std::make_pair(nullptr, nullptr));
+      PtrAuthQualifier.resize(PtrAuthQualifier.size() + 1);
+      if (Composite1.getPointerAuth() == Composite2.getPointerAuth())
+        PtrAuthQualifier.back() = Composite1.getPointerAuth();
       continue;
     }
 
@@ -6244,6 +6248,9 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
                  Composite1.getCVRQualifiers() | Composite2.getCVRQualifiers());
       MemberOfClass.push_back(std::make_pair(MemPtr1->getClass(),
                                              MemPtr2->getClass()));
+      PtrAuthQualifier.resize(PtrAuthQualifier.size() + 1);
+      if (Composite1.getPointerAuth() == Composite2.getPointerAuth())
+        PtrAuthQualifier.back() = Composite1.getPointerAuth();
       continue;
     }
 
@@ -6299,8 +6306,11 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
 
   // Rewrap the composites as pointers or member pointers with the union CVRs.
   auto MOC = MemberOfClass.rbegin();
+  auto PtrAuthQualIt = PtrAuthQualifier.rbegin();
   for (unsigned CVR : llvm::reverse(QualifierUnion)) {
     Qualifiers Quals = Qualifiers::fromCVRMask(CVR);
+    if (PointerAuthQualifier PtrAuthQual = *PtrAuthQualIt++)
+      Quals.setPointerAuth(PtrAuthQual);
     auto Classes = *MOC++;
     if (Classes.first && Classes.second) {
       // Rebuild member pointer type
