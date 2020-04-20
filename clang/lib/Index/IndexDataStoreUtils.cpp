@@ -335,6 +335,9 @@ indexstore_symbol_kind_t index::getIndexStoreKind(SymbolKind K) {
   case SymbolKind::ConversionFunction:
     return INDEXSTORE_SYMBOL_KIND_CONVERSIONFUNCTION;
   case SymbolKind::Parameter:
+  case SymbolKind::TemplateTypeParm:
+  case SymbolKind::TemplateTemplateParm:
+  case SymbolKind::NonTypeTemplateParm:
     return INDEXSTORE_SYMBOL_KIND_PARAMETER;
   case SymbolKind::Using:
     return INDEXSTORE_SYMBOL_KIND_USING;
