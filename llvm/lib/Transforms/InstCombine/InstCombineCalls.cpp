@@ -117,16 +117,16 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
 }
 
 Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
-  unsigned DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
-  unsigned CopyDstAlign = MI->getDestAlignment();
-  if (CopyDstAlign < DstAlign){
+  Align DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
+  MaybeAlign CopyDstAlign = MI->getDestAlign();
+  if (!CopyDstAlign || *CopyDstAlign < DstAlign) {
     MI->setDestAlignment(DstAlign);
     return MI;
   }
 
-  unsigned SrcAlign = getKnownAlignment(MI->getRawSource(), DL, MI, &AC, &DT);
-  unsigned CopySrcAlign = MI->getSourceAlignment();
-  if (CopySrcAlign < SrcAlign) {
+  Align SrcAlign = getKnownAlignment(MI->getRawSource(), DL, MI, &AC, &DT);
+  MaybeAlign CopySrcAlign = MI->getSourceAlign();
+  if (!CopySrcAlign || *CopySrcAlign < SrcAlign) {
     MI->setSourceAlignment(SrcAlign);
     return MI;
   }
@@ -234,9 +234,10 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 }
 
 Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
-  const unsigned KnownAlignment =
+  const Align KnownAlignment =
       getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
-  if (MI->getDestAlignment() < KnownAlignment) {
+  MaybeAlign MemSetAlign = MI->getDestAlign();
+  if (!MemSetAlign || *MemSetAlign < KnownAlignment) {
     MI->setDestAlignment(KnownAlignment);
     return MI;
   }
@@ -2456,7 +2457,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -2473,7 +2474,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
     // Turn stvx -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -2490,7 +2491,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *VTy =
           VectorType::get(Builder.getFloatTy(),
@@ -2503,7 +2504,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvlfd:
     // Turn PPC QPX qvlfd -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(32), DL, II, &AC,
                                    &DT) >= 32) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -2512,7 +2513,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfs:
     // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *VTy = VectorType::get(
           Builder.getFloatTy(),
@@ -2525,7 +2526,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfd:
     // Turn PPC QPX qvstfd -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(32), DL, II, &AC,
                                    &DT) >= 32) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -3349,9 +3350,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
 
   case Intrinsic::arm_neon_vld1: {
-    unsigned MemAlign = getKnownAlignment(II->getArgOperand(0),
-                                          DL, II, &AC, &DT);
-    if (Value *V = simplifyNeonVld1(*II, MemAlign, Builder))
+    Align MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    if (Value *V = simplifyNeonVld1(*II, MemAlign.value(), Builder))
       return replaceInstUsesWith(*II, V);
     break;
   }
@@ -3369,14 +3369,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_vst2lane:
   case Intrinsic::arm_neon_vst3lane:
   case Intrinsic::arm_neon_vst4lane: {
-    unsigned MemAlign =
-        getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    Align MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
     unsigned AlignArg = II->getNumArgOperands() - 1;
     ConstantInt *IntrAlign = dyn_cast<ConstantInt>(II->getArgOperand(AlignArg));
-    if (IntrAlign && IntrAlign->getZExtValue() < MemAlign)
+    if (IntrAlign && IntrAlign->getZExtValue() < MemAlign.value())
       return replaceOperand(*II, AlignArg,
                             ConstantInt::get(Type::getInt32Ty(II->getContext()),
-                                             MemAlign, false));
+                                             MemAlign.value(), false));
     break;
   }
 
