@@ -49,7 +49,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -249,7 +248,7 @@ void Lint::visitCallBase(CallBase &I) {
     // Check argument types (in case the callee was casted) and attributes.
     // TODO: Verify that caller and callee attributes are compatible.
     Function::arg_iterator PI = F->arg_begin(), PE = F->arg_end();
-    CallSite::arg_iterator AI = I.arg_begin(), AE = I.arg_end();
+    auto AI = I.arg_begin(), AE = I.arg_end();
     for (; AI != AE; ++AI) {
       Value *Actual = *AI;
       if (PI != PE) {
@@ -265,8 +264,7 @@ void Lint::visitCallBase(CallBase &I) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (CallSite::arg_iterator BI = I.arg_begin(); BI != AE;
-               ++BI, ++ArgNo) {
+          for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
             if (PAL.hasParamAttribute(ArgNo, Attribute::ByVal))
