@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
@@ -267,7 +266,7 @@ public:
   // compute() should be used by external users.
   SizeOffsetType visitAllocaInst(AllocaInst &I);
   SizeOffsetType visitArgument(Argument &A);
-  SizeOffsetType visitCallSite(CallSite CS);
+  SizeOffsetType visitCallBase(CallBase &CB);
   SizeOffsetType visitConstantPointerNull(ConstantPointerNull&);
   SizeOffsetType visitExtractElementInst(ExtractElementInst &I);
   SizeOffsetType visitExtractValueInst(ExtractValueInst &I);
@@ -337,7 +336,7 @@ public:
 
   // The individual instruction visitors should be treated as private.
   SizeOffsetEvalType visitAllocaInst(AllocaInst &I);
-  SizeOffsetEvalType visitCallSite(CallSite CS);
+  SizeOffsetEvalType visitCallBase(CallBase &CB);
   SizeOffsetEvalType visitExtractElementInst(ExtractElementInst &I);
   SizeOffsetEvalType visitExtractValueInst(ExtractValueInst &I);
   SizeOffsetEvalType visitGEPOperator(GEPOperator &GEP);
