@@ -102,9 +102,10 @@ LIT Options
 Command Line Options
 --------------------
 
-To use these options you pass them on the LIT command line as --param NAME or
---param NAME=VALUE. Some options have default values specified during CMake's
-configuration. Passing the option on the command line will override the default.
+To use these options you pass them on the LIT command line as ``--param NAME``
+or ``--param NAME=VALUE``. Some options have default values specified during
+CMake's configuration. Passing the option on the command line will override the
+default.
 
 .. program:: lit
 
