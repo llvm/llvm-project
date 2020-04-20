@@ -456,8 +456,18 @@ void SVEType::applyModifier(char Mod) {
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
+  case 'e':
+    Signed = false;
+    ElementBitwidth /= 2;
+    break;
   case 'h':
     ElementBitwidth /= 2;
+    break;
+  case 'q':
+    ElementBitwidth /= 4;
+    break;
+  case 'o':
+    ElementBitwidth *= 4;
     break;
   case 'P':
     Signed = true;
