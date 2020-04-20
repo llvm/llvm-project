@@ -101,6 +101,9 @@ public:
     void AddSourceFile(const FileSP &file_sp);
     FileSP FindSourceFile(const FileSpec &file_spec) const;
 
+    // Removes all elements from the cache.
+    void Clear() { m_file_cache.clear(); }
+
   protected:
     typedef std::map<FileSpec, FileSP> FileCache;
     FileCache m_file_cache;

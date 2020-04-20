@@ -72,7 +72,7 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   FileSP file_sp;
   if (same_as_previous)
     file_sp = m_last_file_sp;
-  else if (debugger_sp)
+  else if (debugger_sp && debugger_sp->GetUseSourceCache())
     file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(file_spec);
 
   TargetSP target_sp(m_target_wp.lock());
@@ -95,7 +95,7 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
     else
       file_sp = std::make_shared<File>(file_spec, debugger_sp);
 
-    if (debugger_sp)
+    if (debugger_sp && debugger_sp->GetUseSourceCache())
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
   }
   return file_sp;
