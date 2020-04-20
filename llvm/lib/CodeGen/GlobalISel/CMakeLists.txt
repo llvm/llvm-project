@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMGlobalISel
         CombinerHelper.cpp
         GISelChangeObserver.cpp
         IRTranslator.cpp
+        InlineAsmLowering.cpp
         InstructionSelect.cpp
         InstructionSelector.cpp
         LegalityPredicates.cpp
