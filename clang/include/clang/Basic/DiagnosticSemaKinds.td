@@ -3004,7 +3004,7 @@ def warn_objc_literal_comparison : Warning<
   "a numeric literal|a boxed expression|}0 has undefined behavior">,
   InGroup<ObjCLiteralComparison>;
 def err_missing_atsign_prefix : Error<
-  "string literal must be prefixed by '@' ">;
+  "%select{string|numeric}0 literal must be prefixed by '@'">;
 def warn_objc_string_literal_comparison : Warning<
   "direct comparison of a string literal has undefined behavior">,
   InGroup<ObjCStringComparison>;
