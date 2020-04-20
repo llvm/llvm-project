@@ -1245,12 +1245,17 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   addPltEntries(Obj, AllSymbols, Saver);
 
   // Create a mapping from virtual address to section. An empty section can
-  // cause more than one section at the same address. Use a stable sort to
-  // stabilize the output.
+  // cause more than one section at the same address. Sort such sections to be
+  // before same-addressed non-empty sections so that symbol lookups prefer the
+  // non-empty section.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
   for (SectionRef Sec : Obj->sections())
     SectionAddresses.emplace_back(Sec.getAddress(), Sec);
-  llvm::stable_sort(SectionAddresses, llvm::less_first());
+  llvm::stable_sort(SectionAddresses, [](const auto &LHS, const auto &RHS) {
+    if (LHS.first != RHS.first)
+      return LHS.first < RHS.first;
+    return LHS.second.getSize() < RHS.second.getSize();
+  });
 
   // Linked executables (.exe and .dll files) typically don't include a real
   // symbol table but they might contain an export table.
@@ -1520,41 +1525,48 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // through a relocation.
             //
             // In a non-relocatable object, the target may be in any section.
+            // In that case, locate the section(s) containing the target address
+            // and find the symbol in one of those, if possible.
             //
             // N.B. We don't walk the relocations in the relocatable case yet.
-            auto *TargetSectionSymbols = &Symbols;
+            std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
             if (!Obj->isRelocatableObject()) {
-              auto It = partition_point(
+              auto It = llvm::partition_point(
                   SectionAddresses,
                   [=](const std::pair<uint64_t, SectionRef> &O) {
                     return O.first <= Target;
                   });
-              if (It != SectionAddresses.begin()) {
+              uint64_t TargetSecAddr = 0;
+              while (It != SectionAddresses.begin()) {
                 --It;
-                TargetSectionSymbols = &AllSymbols[It->second];
-              } else {
-                TargetSectionSymbols = &AbsoluteSymbols;
+                if (TargetSecAddr == 0)
+                  TargetSecAddr = It->first;
+                if (It->first != TargetSecAddr)
+                  break;
+                TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+              }
+            } else {
+              TargetSectionSymbols.push_back(&Symbols);
+            }
+            TargetSectionSymbols.push_back(&AbsoluteSymbols);
+
+            // Find the last symbol in the first candidate section whose offset
+            // is less than or equal to the target. If there are no such
+            // symbols, try in the next section and so on, before finally using
+            // the nearest preceding absolute symbol (if any), if there are no
+            // other valid symbols.
+            const SymbolInfoTy *TargetSym = nullptr;
+            for (const SectionSymbolsTy *TargetSymbols : TargetSectionSymbols) {
+              auto It = llvm::partition_point(
+                  *TargetSymbols,
+                  [=](const SymbolInfoTy &O) { return O.Addr <= Target; });
+              if (It != TargetSymbols->begin()) {
+                TargetSym = &*(It - 1);
+                break;
               }
             }
 
-            // Find the last symbol in the section whose offset is less than
-            // or equal to the target. If there isn't a section that contains
-            // the target, find the nearest preceding absolute symbol.
-            auto TargetSym = partition_point(
-                *TargetSectionSymbols,
-                [=](const SymbolInfoTy &O) {
-                  return O.Addr <= Target;
-                });
-            if (TargetSym == TargetSectionSymbols->begin()) {
-              TargetSectionSymbols = &AbsoluteSymbols;
-              TargetSym = partition_point(
-                  AbsoluteSymbols,
-                  [=](const SymbolInfoTy &O) {
-                    return O.Addr <= Target;
-                  });
-            }
-            if (TargetSym != TargetSectionSymbols->begin()) {
-              --TargetSym;
+            if (TargetSym != nullptr) {
               uint64_t TargetAddress = TargetSym->Addr;
               std::string TargetName = TargetSym->Name.str();
               if (Demangle)
