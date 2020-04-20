@@ -36,9 +36,6 @@ for.end:
   ret void
 }
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 ;  unsigned i, j;
 ;  for (i = 1; i < SIZE; i++) {
 ;    for (j = i; j < SIZE; j++) {

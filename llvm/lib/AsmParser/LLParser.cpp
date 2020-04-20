@@ -70,6 +70,11 @@ bool LLParser::Run() {
         Lex.getLoc(),
         "Can't read textual IR with a Context that discards named Values");
 
+  if (M) {
+    if (ParseTargetDefinitions())
+      return true;
+  }
+
   return ParseTopLevelEntities() || ValidateEndOfModule() ||
          ValidateEndOfIndex();
 }
@@ -294,6 +299,23 @@ bool LLParser::ValidateEndOfIndex() {
 // Top-Level Entities
 //===----------------------------------------------------------------------===//
 
+bool LLParser::ParseTargetDefinitions() {
+  while (true) {
+    switch (Lex.getKind()) {
+    case lltok::kw_target:
+      if (ParseTargetDefinition())
+        return true;
+      break;
+    case lltok::kw_source_filename:
+      if (ParseSourceFileName())
+        return true;
+      break;
+    default:
+      return false;
+    }
+  }
+}
+
 bool LLParser::ParseTopLevelEntities() {
   // If there is no Module, then parse just the summary index entries.
   if (!M) {
@@ -322,11 +344,6 @@ bool LLParser::ParseTopLevelEntities() {
     case lltok::kw_declare: if (ParseDeclare()) return true; break;
     case lltok::kw_define:  if (ParseDefine()) return true; break;
     case lltok::kw_module:  if (ParseModuleAsm()) return true; break;
-    case lltok::kw_target:  if (ParseTargetDefinition()) return true; break;
-    case lltok::kw_source_filename:
-      if (ParseSourceFileName())
-        return true;
-      break;
     case lltok::kw_deplibs: if (ParseDepLibs()) return true; break;
     case lltok::LocalVarID: if (ParseUnnamedType()) return true; break;
     case lltok::LocalVar:   if (ParseNamedType()) return true; break;
