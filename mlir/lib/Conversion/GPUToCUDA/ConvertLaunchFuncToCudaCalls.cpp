@@ -273,14 +273,8 @@ Value GpuLaunchFuncToCudaCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
                                                      OpBuilder &builder) {
 
   // Get the launch target.
-  auto containingModule = launchOp.getParentOfType<ModuleOp>();
-  if (!containingModule)
-    return {};
-  auto gpuModule = containingModule.lookupSymbol<gpu::GPUModuleOp>(
-      launchOp.getKernelModuleName());
-  if (!gpuModule)
-    return {};
-  auto gpuFunc = gpuModule.lookupSymbol<LLVM::LLVMFuncOp>(launchOp.kernel());
+  auto gpuFunc = SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(
+      launchOp, launchOp.kernel());
   if (!gpuFunc)
     return {};
 
@@ -416,8 +410,8 @@ void GpuLaunchFuncToCudaCallsPass::translateGpuLaunchCalls(
   // the kernel function.
   auto cuOwningModuleRef =
       builder.create<LLVM::LoadOp>(loc, getPointerType(), cuModule);
-  auto kernelName = generateKernelNameConstant(launchOp.getKernelModuleName(),
-                                               launchOp.kernel(), loc, builder);
+  auto kernelName = generateKernelNameConstant(
+      launchOp.getKernelModuleName(), launchOp.getKernelName(), loc, builder);
   auto cuFunction = allocatePointer(builder, loc);
   auto cuModuleGetFunction =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleGetFunctionName);

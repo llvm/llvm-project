@@ -18,7 +18,7 @@ module attributes {gpu.container_module} {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
     %cst = constant 1 : index
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = "basic_module_structure", kernel_module = @kernels }
+    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernels::@basic_module_structure }
         : (index, index, index, index, index, index, f32, memref<12xf32>) -> ()
     return
   }
@@ -39,7 +39,7 @@ module attributes {gpu.container_module} {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
     %cst = constant 1 : index
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = "missing_entry_point_abi", kernel_module = @kernels }
+    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernels::@missing_entry_point_abi }
         : (index, index, index, index, index, index, f32, memref<12xf32>) -> ()
     return
   }

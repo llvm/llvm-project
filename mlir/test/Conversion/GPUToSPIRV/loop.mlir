@@ -9,7 +9,7 @@ module attributes {
 } {
   func @loop(%arg0 : memref<10xf32>, %arg1 : memref<10xf32>) {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = "loop_kernel", kernel_module = @kernels} : (index, index, index, index, index, index, memref<10xf32>, memref<10xf32>) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = @kernels::@loop_kernel} : (index, index, index, index, index, index, memref<10xf32>, memref<10xf32>) -> ()
     return
   }
 
