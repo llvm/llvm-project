@@ -491,3 +491,19 @@ entry:
   %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
   ret half %1
 }
+
+define dso_local half @t_fadd_vfmah_f16(half %a, half %b, <4 x half> %c, <4 x half> %d) {
+; CHECK-LABEL: t_fadd_vfmah_f16:
+; CHECK:       .Lt_fadd_vfmah_f16$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    fadd v2.4h, v2.4h, v3.4h
+; CHECK-NEXT:    mov h2, v2.h[3]
+; CHECK-NEXT:    fmadd h0, h1, h2, h0
+; CHECK-NEXT:    ret
+entry:
+  %0 = fadd <4 x half> %c, %d
+  %extract = extractelement <4 x half> %0, i32 3
+  %1 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
+  ret half %1
+}
