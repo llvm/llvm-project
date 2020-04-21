@@ -235,14 +235,17 @@ private:
     return Changed;
   }
 
-  static Value *combinedIdentStruct(Value *Ident0, Value *Ident1,
-                                    bool GlobalOnly) {
+  static Value *combinedIdentStruct(Value *CurrentIdent, Value *NextIdent,
+                                    bool GlobalOnly, bool &SingleChoice) {
+    if (CurrentIdent == NextIdent)
+      return CurrentIdent;
+
     // TODO: Figure out how to actually combine multiple debug locations. For
-    //       now we just keep the first we find.
-    if (Ident0)
-      return Ident0;
-    if (!GlobalOnly || isa<GlobalValue>(Ident1))
-      return Ident1;
+    //       now we just keep an existing one if there is a single choice.
+    if (!GlobalOnly || isa<GlobalValue>(NextIdent)) {
+      SingleChoice = !CurrentIdent;
+      return NextIdent;
+    }
     return nullptr;
   }
 
@@ -253,18 +256,19 @@ private:
   /// information, e.g., the source locations, see combinedIdentStruct.
   Value *getCombinedIdentFromCallUsesIn(RuntimeFunctionInfo &RFI, Function &F,
                                         bool GlobalOnly) {
+    bool SingleChoice = true;
     Value *Ident = nullptr;
     auto CombineIdentStruct = [&](Use &U, Function &Caller) {
       CallInst *CI = getCallIfRegularCall(U, &RFI);
       if (!CI || &F != &Caller)
         return false;
       Ident = combinedIdentStruct(Ident, CI->getArgOperand(0),
-                                  /* GlobalOnly */ true);
+                                  /* GlobalOnly */ true, SingleChoice);
       return false;
     };
     RFI.foreachUse(CombineIdentStruct);
 
-    if (!Ident) {
+    if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
       // unfortunate but we work around it for now.
       if (!OMPBuilder.getInsertionPoint().getBlock())
