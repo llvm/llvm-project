@@ -3,6 +3,8 @@
 // RUN: %env_tool_opts=verbosity=3 %run %t_loader %t_shared_lib.dylib > %t_loader_output.txt 2>&1
 // RUN: FileCheck -input-file=%t_loader_output.txt %s
 // RUN: FileCheck -check-prefix=CHECK-STACKTRACE -input-file=%t_loader_output.txt %s
+// rdar://problem/61793759 and rdar://problem/62126022.
+// UNSUPPORTED: lsan
 
 #include <stdio.h>
 
