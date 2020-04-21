@@ -487,6 +487,11 @@ Attributor::~Attributor() {
   for (AbstractAttribute *AA : AllAbstractAttributes)
     AA->~AbstractAttribute();
 
+  // The Kind2AAMap objects are allocated via a BumpPtrAllocator, we call
+  // the destructor manually.
+  for (auto &It : AAMap)
+    It.getSecond()->~Kind2AAMapTy();
+
   for (auto &It : ArgumentReplacementMap)
     DeleteContainerPointers(It.second);
 }
