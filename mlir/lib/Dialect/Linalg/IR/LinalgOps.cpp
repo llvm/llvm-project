@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
@@ -29,6 +30,20 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+/// Forward declarations.
+template <typename NamedStructuredOpType>
+static void buildNamedStructuredOpRegion(Builder &builder,
+                                         OperationState &result,
+                                         TypeRange operandTypes,
+                                         TypeRange tensorResultTypes);
+template <typename NamedStructuredOpType>
+static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op);
+template <typename NamedStructuredOpType>
+static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
+                                          OperationState &result);
+template <typename NamedStructuredOpType>
+static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op);
 
 /// Determines whether it is possible to fold it away in the parent Linalg op:
 ///
@@ -184,7 +199,14 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
+template <typename GenericOpType>
+struct BlockArgsVerifier {
+  static LogicalResult verify(GenericOpType op, Block &block);
+};
+
+template <typename GenericOpType>
+LogicalResult BlockArgsVerifier<GenericOpType>::verify(GenericOpType op,
+                                                       Block &block) {
   auto nOperands = op.getNumOperands();
   if (block.getNumArguments() != nOperands)
     return op.emitOpError("expected number of block arguments to match number "
@@ -203,7 +225,9 @@ LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   return success();
 }
 
-LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
+template <>
+LogicalResult BlockArgsVerifier<IndexedGenericOp>::verify(IndexedGenericOp op,
+                                                          Block &block) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
   auto nOperands = op.getNumOperands();
@@ -245,7 +269,7 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   auto &region = op.region();
   if (region.getBlocks().size() != 1)
     return op.emitOpError("expected region with 1 block");
-  if (failed(verifyBlockArgs(op, region.getBlocks().front())))
+  if (failed(BlockArgsVerifier<GenericOpType>::verify(op, region.front())))
     return failure();
 
   SmallVector<AffineMap, 4> indexingMaps;
@@ -737,17 +761,18 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
                  parser.resolveOperands(opInfo, types, loc, result.operands));
 }
 
-template <typename GenericOpType>
-static LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
-  // The operand number and types must match the view element types.
-  auto nOutputs = genericOp.getNumOutputs();
+// Check the operand number and types must match the element types of the
+// LinalgOp interface's shaped operands.
+static LogicalResult verifyYield(YieldOp op, LinalgOp linalgOpInterface) {
+  auto nOutputs = linalgOpInterface.getNumOutputs();
   if (op.getNumOperands() != nOutputs)
     return op.emitOpError("expected number of yield values (")
            << nOutputs << ") to match the number of operands of the enclosing "
-           << "linalg.generic op (" << op.getNumOperands() << ")";
+           << "LinalgOp (" << op.getNumOperands() << ")";
 
   for (unsigned i = 0; i != nOutputs; ++i) {
-    auto elementType = genericOp.getOutputShapedType(i).getElementType();
+    auto elementType =
+        linalgOpInterface.getOutputShapedType(i).getElementType();
     if (op.getOperand(i).getType() != elementType)
       return op.emitOpError("type of yield operand ")
              << (i + 1) << " (" << op.getOperand(i).getType()
@@ -763,17 +788,10 @@ static LogicalResult verify(YieldOp op) {
   if (parentOp->getNumRegions() != 1 || parentOp->getRegion(0).empty())
     return op.emitOpError("expected single non-empty parent region");
 
-  auto genericOp = dyn_cast<GenericOp>(parentOp);
-  if (genericOp)
-    return verifyYield(op, genericOp);
+  if (auto linalgOp = dyn_cast<LinalgOp>(parentOp))
+    return verifyYield(op, cast<LinalgOp>(parentOp));
 
-  auto indexedGenericOp = dyn_cast<IndexedGenericOp>(parentOp);
-  if (indexedGenericOp)
-    return verifyYield(op, indexedGenericOp);
-
-  return op.emitOpError("expected '")
-         << GenericOp::getOperationName() << "' or '"
-         << IndexedGenericOp::getOperationName() << "' parent op";
+  return op.emitOpError("expected parent op with LinalgOp interface");
 }
 
 /////// Operations corresponding to library calls defined with Tablegen ////////
@@ -1055,4 +1073,83 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Auto-generated Linalg named ops.
+//===----------------------------------------------------------------------===//
+
+template <typename NamedStructuredOpType>
+void buildNamedStructuredOpRegion(Builder &builder, OperationState &result,
+                                  TypeRange operandTypes,
+                                  TypeRange tensorResultTypes) {
+  Region &region = *result.addRegion();
+  Block *body = new Block();
+  // TODO: atm all operands go through getElementTypeOrSelf,
+  // reconsider when we have evidence we need to.
+  for (auto t : operandTypes)
+    body->addArgument(getElementTypeOrSelf(t));
+  for (auto t : tensorResultTypes)
+    body->addArgument(getElementTypeOrSelf(t));
+  region.push_back(body);
+
+  OpBuilder opBuilder(builder.getContext());
+  opBuilder.setInsertionPointToStart(&region.front());
+  mlir::edsc::ScopedContext scope(opBuilder, builder.getUnknownLoc());
+  NamedStructuredOpType::regionBuilder(*body);
+}
+
+template <typename NamedStructuredOpType>
+static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
+  p << op.getOperationName() << ' ';
+  p.printOptionalAttrDict(op.getAttrs());
+  p << ' ' << op.getOperands();
+  p << ": (" << op.getOperandTypes() << ")";
+  auto outputTensorTypes = op.getResultTypes();
+  if (!outputTensorTypes.empty())
+    p << " -> (" << outputTensorTypes << ")";
+}
+
+template <typename NamedStructuredOpType>
+static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
+                                          OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 8> operandsInfo;
+
+  // Optional attributes may be added.
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseOperandList(operandsInfo))
+    return failure();
+
+  SmallVector<Type, 8> operandTypes;
+  if (parser.parseColon() || parser.parseLParen() ||
+      parser.parseTypeList(operandTypes) || parser.parseRParen())
+    return failure();
+
+  // Generic ops may specify that a subset of its outputs are tensors. Such
+  // outputs are specified in the result type.
+  SmallVector<Type, 8> tensorResultTypes;
+  if (parser.parseOptionalArrowTypeList(tensorResultTypes))
+    return failure();
+
+  if (!tensorResultTypes.empty())
+    result.addTypes(tensorResultTypes);
+
+  buildNamedStructuredOpRegion<NamedStructuredOpType>(
+      parser.getBuilder(), result, operandTypes, tensorResultTypes);
+
+  return parser.resolveOperands(operandsInfo, operandTypes,
+                                parser.getCurrentLocation(), result.operands);
+}
+
+template <typename NamedStructuredOpType>
+static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op) {
+  return verifyGenericOp<NamedStructuredOpType>(op);
+}
+
+#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.cpp.inc"
+
+// TODO: Determine whether we can generate the folders and verifiers.
+LogicalResult BatchMatmulOp::fold(ArrayRef<Attribute>,
+                                  SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
 }

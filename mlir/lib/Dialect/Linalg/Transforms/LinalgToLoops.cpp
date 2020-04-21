@@ -121,8 +121,22 @@ getInputAndOutputIndices(ArrayRef<Value> allIvs, SingleInputPoolingOp op) {
 }
 
 namespace {
+
+// Generic loop emitter, to be specialized on an op-per op basis.
+// TODO: Hook up to named ops interface and, later, retire when all named ops
+// are auto-generated.
 template <typename IndexedValueType, typename LinalgOpType>
-class LinalgScopedEmitter {};
+class LinalgScopedEmitter {
+public:
+  static void emitScalarImplementation(ArrayRef<Value> allIvs,
+                                       LinalgOpType linalgOp) {
+    assert(linalgOp.hasBufferSemantics() &&
+           "expected linalg op with buffer semantics");
+    llvm_unreachable("NYI");
+    linalgOp.emitScalarImplementation()(ScopedContext::getBuilder(),
+                                        ScopedContext::getLocation(), allIvs);
+  }
+};
 
 template <typename IndexedValueType>
 class LinalgScopedEmitter<IndexedValueType, CopyOp> {

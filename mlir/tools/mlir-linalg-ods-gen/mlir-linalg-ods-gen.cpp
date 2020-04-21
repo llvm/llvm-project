@@ -90,6 +90,7 @@ public:
     // Keywords.
     kw_def,
     FIRST_KEYWORD = kw_def,
+    kw_ods_def,
     kw_floordiv,
     kw_ceildiv,
     kw_mod,
@@ -289,6 +290,7 @@ Token Lexer::lexIdentifier(const char *tokStart) {
   StringRef str(tokStart, curPtr - tokStart);
   Token::Kind kind = llvm::StringSwitch<Token::Kind>(str)
                          .Case("def", Token::Kind::kw_def)
+                         .Case("ods_def", Token::Kind::kw_ods_def)
                          .Case("floordiv", Token::Kind::kw_floordiv)
                          .Case("ceildiv", Token::Kind::kw_ceildiv)
                          .Case("mod", Token::Kind::kw_mod)
@@ -896,7 +898,8 @@ struct TensorExpr : public Expression {
   TensorExpr(StringRef name,
              SmallVectorImpl<std::unique_ptr<Expression>> &&exprs,
              ArrayRef<unsigned> reductionDims)
-      : Expression(Kind::TensorExpr), opId(name), expressions(std::move(exprs)),
+      : Expression(Kind::TensorExpr), operationName(name),
+        expressions(std::move(exprs)),
         reductionDimensions(reductionDims.begin(), reductionDims.end()) {}
 
   static bool classof(const Expression *e) {
@@ -904,7 +907,7 @@ struct TensorExpr : public Expression {
   }
 
   bool operator==(const TensorExpr &other) const {
-    if (opId != other.opId)
+    if (operationName != other.operationName)
       return false;
     if (expressions.size() != other.expressions.size())
       return false;
@@ -922,7 +925,7 @@ struct TensorExpr : public Expression {
   template <typename Lambda, bool PreOrder>
   void visit(Lambda callback) const;
 
-  StringRef opId;
+  StringRef operationName;
   SmallVector<std::unique_ptr<Expression>, 4> expressions;
   SetVector<unsigned> reductionDimensions;
 };
@@ -988,22 +991,22 @@ public:
   /// When `gen-impl` is used, this prints the C++ implementation for the extra
   /// methods defined in ODS (referenceIterators, referenceIndexingMaps and
   /// regionBuilder).
-  LogicalResult parseAndEmitTCDef(llvm::raw_ostream &os);
+  LogicalResult parseAndEmitODSDef(llvm::raw_ostream &os);
 
   /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
   void printODS(llvm::raw_ostream &os, StringRef cppOpName,
                 StringRef linalgOpName);
 
   /// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
-  void printReferenceIterators(llvm::raw_ostream &os, StringRef opId,
+  void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
                                ComprehensionParsingState &state);
 
   /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.
-  void printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
+  void printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state);
 
   /// Print the C++ StructuredOpsInterface impl of `regionBuilder`.
-  void printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
+  void printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                           ComprehensionParsingState &state);
 
 private:
@@ -1346,7 +1349,7 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
   return success();
 }
 
-/// Parse and print the information for a TC def.
+/// Parse and print the information for a ODS def.
 ///
 ///   tensor-def-list ::= tensor-def (`,` tensor-def )*
 ///
@@ -1355,16 +1358,29 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
 ///   tc-def ::= `def` bare-id `(`tensor-def-list`)` `->` `(` tensor-def-list`)`
 ///     `{` comprehension-list `}`
 ///
+///   ods-def ::= `ods_def` `<` bare-id `>` `:` tc-def
+///
 /// All the affine-expr in a `tensor-typedef` must be dimensionless (i.e.
 /// contain only expressions involving symbols and constants), but can
 /// otherwise contain arbitrary affine expressions.
-LogicalResult TCParser::parseAndEmitTCDef(llvm::raw_ostream &os) {
+LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
+  if (failed(parser.parseToken(Token::Kind::kw_ods_def,
+                               "expected 'ods_def' to define a TC ODS")) ||
+      failed(parser.parseToken(Token::Kind::lt, "expected '<'")))
+    return failure();
+  StringRef cppOpName = parser.curToken.getSpelling();
+  LLVM_DEBUG(llvm::dbgs() << "\n\nStart parsing ODS: " << cppOpName << "\n");
+
+  if (failed(parser.parseToken(Token::Kind::id, "expected id")) ||
+      failed(parser.parseToken(Token::Kind::gt, "expected '>'")) ||
+      failed(parser.parseToken(Token::Kind::colon, "expected ':'")))
+    return failure();
   if (failed(parser.parseToken(Token::Kind::kw_def,
                                "expected 'def' to define a TC")))
     return failure();
 
   StringRef tcName = parser.curToken.getSpelling();
-  LLVM_DEBUG(llvm::dbgs() << "\n\nStart parsing tc: " << tcName << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "\n\nStart parsing TC: " << tcName << "\n");
   if (failed(parser.parseToken(Token::Kind::id, "expected id")) ||
       failed(parser.parseToken(Token::Kind::l_paren, "expected '('")))
     return failure();
@@ -1404,7 +1420,7 @@ LogicalResult TCParser::parseAndEmitTCDef(llvm::raw_ostream &os) {
   SmallVector<ComprehensionParsingState, 4> perComprehensionStates;
   while (parser.curToken.isNot(Token::Kind::r_brace)) {
     perComprehensionStates.push_back(ComprehensionParsingState());
-    if (failed(parseOneComprehension(tcName, tcName,
+    if (failed(parseOneComprehension(cppOpName, tcName,
                                      perComprehensionStates.back())))
       return failure();
   };
@@ -1418,16 +1434,16 @@ LogicalResult TCParser::parseAndEmitTCDef(llvm::raw_ostream &os) {
     return failure();
   }
   if (genODSDecl) {
-    printODS(os, tcName, tcName);
+    printODS(os, cppOpName, tcName);
     os << "\n";
   }
   if (genODSImpl) {
     auto &state = perComprehensionStates.back();
     std::string extraMethods;
     llvm::raw_string_ostream ss(extraMethods);
-    printReferenceIterators(ss, tcName, state);
-    printReferenceIndexingMaps(ss, tcName, state);
-    printRegionBuilder(ss, tcName, state);
+    printReferenceIterators(ss, cppOpName, state);
+    printReferenceIndexingMaps(ss, cppOpName, state);
+    printRegionBuilder(ss, cppOpName, state);
     ss.flush();
     os << extraMethods << "\n";
   }
@@ -1442,18 +1458,32 @@ LogicalResult TCParser::parseAndEmitTCDef(llvm::raw_ostream &os) {
 /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
 void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
                         StringRef linalgOpName) {
-  const char *header = R"FMT(  def {0}Op : LinalgNamedStructured_Op<"{1}", [
+  const char *header = R"FMT(  def {0} : LinalgNamedStructured_Op<"{1}", [
     NInputs<{2}>,
     NOutputs<{3}>,
-    NamedStructuredOpTraits]> {
+    NamedStructuredOpTraits,
+    SingleBlockImplicitTerminator<"YieldOp">]> {
       let arguments = (ins Variadic<LinalgOperand>:$views);
       let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
+      let regions = (region SizedRegion<1>:$region);
+      let builders = [OpBuilder<
+        "Builder *b, OperationState &result, TypeRange outputTypes, "
+        # "ValueRange views",
+        [{{
+          result.addOperands(views);
+          result.addTypes(outputTypes);
+          buildNamedStructuredOpRegion<{0}>(
+            *b, result, TypeRange(views), outputTypes);
+        }]>
+      ];
+      let parser = [{
+        return ::parseNamedStructuredOp<{0}>(parser, result);
+      }];
       let extraClassDeclaration = [{{
         llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
         llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
-        void regionBuilder(ArrayRef<BlockArgument> args);
+        static void regionBuilder(Block &block);
       }];
-      let hasFolder = 1;
   })FMT";
 
   unsigned nInputs = 0, nOutputs = 0;
@@ -1468,7 +1498,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
 }
 
 /// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
-void TCParser::printReferenceIterators(llvm::raw_ostream &os, StringRef opId,
+void TCParser::printReferenceIterators(llvm::raw_ostream &os,
+                                       StringRef cppOpName,
                                        ComprehensionParsingState &state) {
   const char *referenceReferenceIteratorsFmt =
       R"FMT(
@@ -1498,11 +1529,12 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os, StringRef opId,
       });
   ss.flush();
 
-  os << llvm::formatv(referenceReferenceIteratorsFmt, opId, iteratorsStr);
+  os << llvm::formatv(referenceReferenceIteratorsFmt, cppOpName, iteratorsStr);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.
-void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
+void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
+                                          StringRef cppOpName,
                                           ComprehensionParsingState &state) {
   const char *referenceIndexingMapsFmt =
       R"FMT(
@@ -1527,7 +1559,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
     orderedUses[it.second] = it.first;
   llvm::interleaveComma(orderedUses, mapsStringStream, [&](TensorUse u) {
     assert(u.indexingMap);
-    const char *mapFmt = "\n\tAffineMap::get({0}, 0, {1})";
+    const char *mapFmt = "\n\tAffineMap::get({0}, 0, {1}, context)";
     if (u.indexingMap.isEmpty()) {
       mapsStringStream << llvm::formatv(mapFmt, state.dims.size(), "context");
       return;
@@ -1544,11 +1576,11 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef opId,
   });
   mapsStringStream.flush();
 
-  os << llvm::formatv(referenceIndexingMapsFmt, opId, dimsStr, mapsStr);
+  os << llvm::formatv(referenceIndexingMapsFmt, cppOpName, dimsStr, mapsStr);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `regionBuilder`.
-void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
+void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state) {
   unsigned count = state.orderedTensorArgs.size();
   llvm::DenseMap<const TensorExpr *, unsigned> subExprsMap;
@@ -1570,15 +1602,17 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
                             });
       subExprsStringStream.flush();
       const char *tensorExprFmt = "\n    ValueHandle _{0} = {1}({2});";
-      os << llvm::formatv(tensorExprFmt, ++count, pTensorExpr->opId, subExprs);
+      os << llvm::formatv(tensorExprFmt, ++count, pTensorExpr->operationName,
+                          subExprs);
       subExprsMap[pTensorExpr] = count;
     }
   };
 
   const char *regionBuilderFmt = R"FMT(
-  void {0}::regionBuilder(ArrayRef<BlockArgument> args) {
+  void {0}::regionBuilder(Block &block) {
     using namespace edsc;
     using namespace intrinsics;
+    auto args = block.getArguments();
     ValueHandle {1};
     {2}
     (linalg_yield(ValueRange{ {3} }));
@@ -1612,8 +1646,8 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef opId,
   expressionStringStream.flush();
   yieldStringStream.flush();
 
-  os << llvm::formatv(regionBuilderFmt, opId, valueHandleStr, expressionsStr,
-                      yieldStr);
+  os << llvm::formatv(regionBuilderFmt, cppOpName, valueHandleStr,
+                      expressionsStr, yieldStr);
 }
 
 /// Iterate over each Tensor Comprehension def.
@@ -1621,7 +1655,7 @@ LogicalResult parseAndEmitAllTensorComprehensions(llvm::raw_ostream &os,
                                                   Parser &parser) {
   while (parser.curToken.getKind() != Token::Kind::eof) {
     TCParser tcParser(parser);
-    if (failed(tcParser.parseAndEmitTCDef(os)))
+    if (failed(tcParser.parseAndEmitODSDef(os)))
       return failure();
   }
   return success();
