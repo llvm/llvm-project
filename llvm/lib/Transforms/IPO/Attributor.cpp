@@ -832,7 +832,12 @@ static bool checkForAllInstructionsImpl(
     const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
     bool CheckBBLivenessOnly = false) {
   for (unsigned Opcode : Opcodes) {
-    for (Instruction *I : OpcodeInstMap[Opcode]) {
+    // Check if we have instructions with this opcode at all first.
+    auto *Insts = OpcodeInstMap.lookup(Opcode);
+    if (!Insts)
+      continue;
+
+    for (Instruction *I : *Insts) {
       // Skip dead instructions.
       if (A && A->isAssumedDead(IRPosition::value(*I), QueryingAA, LivenessAA,
                                 CheckBBLivenessOnly))
@@ -1669,8 +1674,12 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // The alignment of a pointer is interesting for stores.
       IsInterestingOpcode = true;
     }
-    if (IsInterestingOpcode)
-      FI.OpcodeInstMap[I.getOpcode()].push_back(&I);
+    if (IsInterestingOpcode) {
+      auto *&Insts = FI.OpcodeInstMap[I.getOpcode()];
+      if (!Insts)
+        Insts = new (Allocator) InstructionVectorTy();
+      Insts->push_back(&I);
+    }
     if (I.mayReadOrWriteMemory())
       FI.RWInsts.push_back(&I);
   }
@@ -1678,6 +1687,13 @@ void InformationCache::initializeInformationCache(const Function &CF,
   if (F.hasFnAttribute(Attribute::AlwaysInline) &&
       isInlineViable(F).isSuccess())
     InlineableFunctions.insert(&F);
+}
+
+InformationCache::FunctionInfo::~FunctionInfo() {
+  // The instruction vectors are allocated using a BumpPtrAllocator, we need to
+  // manually destroy them.
+  for (auto &It : OpcodeInstMap)
+    It.getSecond()->~InstructionVectorTy();
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
