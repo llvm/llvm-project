@@ -1274,7 +1274,8 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
-static const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) {
+const TargetRegisterClass *
+SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) {
   switch (BitWidth) {
   case 1:
     return &AMDGPU::VReg_1RegClass;
@@ -1301,7 +1302,8 @@ static const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) {
   }
 }
 
-static const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) {
+const TargetRegisterClass *
+SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) {
   switch (BitWidth) {
   case 32:
     return &AMDGPU::AGPR_32RegClass;
@@ -1318,7 +1320,8 @@ static const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) {
   }
 }
 
-static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth) {
+const TargetRegisterClass *
+SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   switch (BitWidth) {
   case 16:
     return &AMDGPU::SGPR_LO16RegClass;
