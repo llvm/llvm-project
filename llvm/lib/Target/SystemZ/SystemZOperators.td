@@ -40,6 +40,10 @@ def SDT_ZWrapOffset         : SDTypeProfile<1, 2,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisPtrTy<0>]>;
 def SDT_ZAdjDynAlloc        : SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
+def SDT_ZProbedAlloca       : SDTypeProfile<1, 2,
+                                            [SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisPtrTy<0>]>;
 def SDT_ZGR128Binary        : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, untyped>,
                                              SDTCisInt<1>,
@@ -269,6 +273,8 @@ def z_select_ccmask_1   : SDNode<"SystemZISD::SELECT_CCMASK",
                                  SDT_ZSelectCCMask>;
 def z_ipm_1             : SDNode<"SystemZISD::IPM", SDT_ZIPM>;
 def z_adjdynalloc       : SDNode<"SystemZISD::ADJDYNALLOC", SDT_ZAdjDynAlloc>;
+def z_probed_alloca     : SDNode<"SystemZISD::PROBED_ALLOCA", SDT_ZProbedAlloca,
+                                 [SDNPHasChain]>;
 def z_popcnt            : SDNode<"SystemZISD::POPCNT", SDTIntUnaryOp>;
 def z_smul_lohi         : SDNode<"SystemZISD::SMUL_LOHI", SDT_ZGR128Binary>;
 def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;

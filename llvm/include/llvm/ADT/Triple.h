@@ -739,6 +739,11 @@ public:
     return getArch() == Triple::riscv32 || getArch() == Triple::riscv64;
   }
 
+  /// Tests whether the target is SystemZ.
+  bool isSystemZ() const {
+    return getArch() == Triple::systemz;
+  }
+
   /// Tests whether the target is x86 (32- or 64-bit).
   bool isX86() const {
     return getArch() == Triple::x86 || getArch() == Triple::x86_64;
