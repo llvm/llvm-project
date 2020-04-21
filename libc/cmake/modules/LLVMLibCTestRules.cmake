@@ -1,3 +1,42 @@
+# This is a helper function and not a build rule. It is to be used by the
+# various test rules to generate the full list of object files
+# recursively produced by "add_entrypoint_object" and "add_object_library"
+# targets.
+# Usage:
+#   get_object_files_for_test(<result var> <target0> [<target1> ...])
+#
+#   targetN is either an "add_entrypoint_target" target or an
+#   "add_object_library" target.
+function(get_object_files_for_test result)
+  set(object_files "")
+  foreach(dep IN LISTS ARGN)
+    get_target_property(dep_type ${dep} "TARGET_TYPE")
+    if(NOT dep_type)
+      # Target for which TARGET_TYPE property is not set do not
+      # provide any object files.
+      continue()
+    endif()
+
+    if(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
+      get_target_property(dep_object_files ${dep} "OBJECT_FILES")
+      if(dep_object_files)
+        list(APPEND object_files ${dep_object_files})
+      endif()
+    elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
+      if(object_file_raw)
+        list(APPEND object_files ${object_file_raw})
+      endif()
+    endif()
+
+    get_target_property(indirect_deps ${dep} "DEPS")
+    get_object_files_for_test(indirect_objfiles ${indirect_deps})
+    list(APPEND object_files ${indirect_objfiles})
+  endforeach(dep)
+  list(REMOVE_DUPLICATES object_files)
+  set(${result} ${object_files} PARENT_SCOPE)
+endfunction(get_object_files_for_test)
+
 # Rule to add a libc unittest.
 # Usage
 #    add_libc_unittest(
@@ -29,21 +68,6 @@ function(add_libc_unittest target_name)
                         "'add_entrypoint_object' targets.")
   endif()
 
-  set(library_deps "")
-  get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  foreach(dep IN LISTS fq_deps_list)
-    get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
-      get_target_property(obj_files ${dep} "OBJECT_FILES_RAW")
-      list(APPEND library_deps ${obj_files})
-    elseif(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
-      get_target_property(obj_files ${dep} "OBJECT_FILES")
-      list(APPEND library_deps ${obj_files})
-    endif()
-    # TODO: Check if the dep is a normal CMake library target. If yes, then add it
-    # to the list of library_deps.
-  endforeach(dep)
-  list(REMOVE_DUPLICATES library_deps)
 
   get_fq_target_name(${target_name} fq_target_name)
   add_executable(
@@ -66,9 +90,9 @@ function(add_libc_unittest target_name)
     )
   endif()
 
-  if(library_deps)
-    target_link_libraries(${fq_target_name} PRIVATE ${library_deps})
-  endif()
+  get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
+  get_object_files_for_test(link_object_files ${fq_deps_list})
+  target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -123,22 +147,6 @@ function(add_libc_fuzzer target_name)
                         "'add_entrypoint_object' targets.")
   endif()
 
-  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
-  set(library_deps "")
-  foreach(dep IN LISTS fq_deps_list)
-    get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if (dep_type)
-      string(COMPARE EQUAL ${dep_type} ${ENTRYPOINT_OBJ_TARGET_TYPE} dep_is_entrypoint)
-      if(dep_is_entrypoint)
-        get_target_property(obj_file ${dep} "OBJECT_FILES_RAW")
-        list(APPEND library_deps ${obj_file})
-        continue()
-      endif()
-    endif()
-    # TODO: Check if the dep is a normal CMake library target. If yes, then add it
-    # to the list of library_deps.
-  endforeach(dep)
-
   get_fq_target_name(${target_name} fq_target_name)
   add_executable(
     ${fq_target_name}
@@ -154,9 +162,9 @@ function(add_libc_fuzzer target_name)
       ${LIBC_BUILD_DIR}/include
   )
 
-  if(library_deps)
-    target_link_libraries(${fq_target_name} PRIVATE ${library_deps})
-  endif()
+  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
+  get_object_files_for_test(link_object_files ${fq_deps_list})
+  target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
 
   set_target_properties(${fq_target_name}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
