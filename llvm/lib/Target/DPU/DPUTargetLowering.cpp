@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DPUTargetLowering.h"
 #include "DPUISelLowering.h"
 #include "DPUMachineFunctionInfo.h"
-#include "DPUTargetLowering.h"
 #include "DPUTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -109,6 +109,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
 
   setMinStackArgumentAlignment(Align(4));
 
+  setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::SRL); // to produce BSWAP16
   setTargetDAGCombine(ISD::SRA); // to produce BSWAP16
   setOperationAction(ISD::BSWAP, MVT::i32, Custom);
@@ -1492,6 +1493,71 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG,
   return LoweredMultiplication;
 }
 
+static bool isConstantShift(SDValue Op, unsigned int &Shift) {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode != ISD::SHL && Opcode != ISD::SRL) {
+    return false;
+  }
+
+  uint64_t Value;
+  if (!canFetchConstantTo(Op.getOperand(1), &Value)) {
+    return false;
+  }
+
+  Shift = Value;
+
+  return true;
+}
+
+static SDValue performORCombine(SDNode *N,
+                                DPUTargetLowering::DAGCombinerInfo &DCI,
+                                SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps()) {
+    return SDValue();
+  }
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL = SDLoc(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned int Op0Shift, Op1Shift;
+
+  if (Op0.hasOneUse() && Op1.hasOneUse() &&
+      Op0.getOpcode() == Op1.getOpcode() && isConstantShift(Op0, Op0Shift) &&
+      isConstantShift(Op1, Op1Shift)) {
+    unsigned ShiftOpcode = Op0.getOpcode();
+    SDValue Op0Operand = Op0.getOperand(0);
+    SDValue Op1Operand = Op1.getOperand(0);
+
+    unsigned int MinShift;
+
+    if (Op0Shift == Op1Shift) {
+      MinShift = Op0Shift;
+    } else {
+      SDValue *ChangedOp;
+
+      if (Op0Shift > Op1Shift) {
+        MinShift = Op1Shift;
+        ChangedOp = &Op0Operand;
+      } else {
+        MinShift = Op0Shift;
+        ChangedOp = &Op1Operand;
+      }
+
+      unsigned int DiffShift = std::abs((int)Op0Shift - (int)Op1Shift);
+      SDValue DiffShiftConstant = DAG.getConstant(DiffShift, DL, VT);
+      *ChangedOp =
+          DAG.getNode(ShiftOpcode, DL, VT, *ChangedOp, DiffShiftConstant);
+    }
+
+    SDValue ShiftConstant = DAG.getConstant(MinShift, DL, VT);
+    SDValue OrNode = DAG.getNode(ISD::OR, DL, VT, Op0Operand, Op1Operand);
+    return DAG.getNode(ShiftOpcode, DL, VT, OrNode, ShiftConstant);
+  }
+
+  return SDValue();
+}
+
 static SDValue PerformShiftCombine(SDValue Op, SelectionDAG &DAG, int Opcode) {
   SDValue Bswap = Op.getOperand(0);
   if ((Bswap.getOpcode() == ISD::BSWAP) &&
@@ -1507,6 +1573,8 @@ SDValue DPUTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::MUL:
     return PerformMULCombine(SDValue(N, 0), DAG, optLevel);
+  case ISD::OR:
+    return performORCombine(N, DCI, DAG);
   case ISD::SRA:
     return PerformShiftCombine(SDValue(N, 0), DAG, DPUISD::LHS_BIG);
   case ISD::SRL:
