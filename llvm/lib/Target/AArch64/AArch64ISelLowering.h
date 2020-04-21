@@ -215,6 +215,14 @@ enum NodeType : unsigned {
   REV,
   TBL,
 
+  // Floating-point reductions.
+  FADDA_PRED,
+  FADDV_PRED,
+  FMAXV_PRED,
+  FMAXNMV_PRED,
+  FMINV_PRED,
+  FMINNMV_PRED,
+
   INSR,
   PTEST,
   PTRUE,
