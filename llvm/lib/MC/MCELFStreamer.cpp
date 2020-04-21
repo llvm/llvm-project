@@ -509,7 +509,7 @@ static void CheckBundleSubtargets(const MCSubtargetInfo *OldSTI,
     report_fatal_error("A Bundle can only have one Subtarget.");
 }
 
-void MCELFStreamer::EmitInstToData(const MCInst &Inst,
+void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                    const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
   SmallVector<MCFixup, 4> Fixups;

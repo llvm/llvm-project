@@ -170,7 +170,7 @@ void MCWasmStreamer::EmitInstToFragment(const MCInst &Inst,
   this->MCObjectStreamer::EmitInstToFragment(Inst, STI);
 }
 
-void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
+void MCWasmStreamer::emitInstToData(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
   SmallVector<MCFixup, 4> Fixups;
