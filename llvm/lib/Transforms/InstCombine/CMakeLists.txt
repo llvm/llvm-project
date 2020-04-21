@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMInstCombine
   InstCombineCompares.cpp
   InstCombineLoadStoreAlloca.cpp
   InstCombineMulDivRem.cpp
+  InstCombineNegator.cpp
   InstCombinePHI.cpp
   InstCombineSelect.cpp
   InstCombineShifts.cpp

@@ -1682,12 +1682,10 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
-  // (A*B)-(A*C) -> A*(B-C) etc
-  if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return replaceInstUsesWith(I, V);
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // If this is a 'B = x-(-A)', change to B = x+A.
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  // We deal with this without involving Negator to preserve NSW flag.
   if (Value *V = dyn_castNegVal(Op1)) {
     BinaryOperator *Res = BinaryOperator::CreateAdd(Op0, V);
 
@@ -1703,6 +1701,45 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     return Res;
   }
+
+  auto TryToNarrowDeduceFlags = [this, &I, &Op0, &Op1]() -> Instruction * {
+    if (Instruction *Ext = narrowMathIfNoOverflow(I))
+      return Ext;
+
+    bool Changed = false;
+    if (!I.hasNoSignedWrap() && willNotOverflowSignedSub(Op0, Op1, I)) {
+      Changed = true;
+      I.setHasNoSignedWrap(true);
+    }
+    if (!I.hasNoUnsignedWrap() && willNotOverflowUnsignedSub(Op0, Op1, I)) {
+      Changed = true;
+      I.setHasNoUnsignedWrap(true);
+    }
+
+    return Changed ? &I : nullptr;
+  };
+
+  // First, let's try to interpret `sub a, b` as `add a, (sub 0, b)`,
+  // and let's try to sink `(sub 0, b)` into `b` itself. But only if this isn't
+  // a pure negation used by a select that looks like abs/nabs.
+  bool IsNegation = match(Op0, m_ZeroInt());
+  if (!IsNegation || none_of(I.users(), [&I, Op1](const User *U) {
+        const Instruction *UI = dyn_cast<Instruction>(U);
+        if (!UI)
+          return false;
+        return match(UI,
+                     m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
+               match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
+      })) {
+    if (Value *NegOp1 = Negator::Negate(IsNegation, Op1, *this))
+      return BinaryOperator::CreateAdd(NegOp1, Op0);
+  }
+  if (IsNegation)
+    return TryToNarrowDeduceFlags(); // Should have been handled in Negator!
+
+  // (A*B)-(A*C) -> A*(B-C) etc
+  if (Value *V = SimplifyUsingDistributiveLaws(I))
+    return replaceInstUsesWith(I, V);
 
   if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(Op0, Op1);
@@ -1720,22 +1757,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (match(Op0, m_OneUse(m_Add(m_Value(X), m_AllOnes()))))
     return BinaryOperator::CreateAdd(Builder.CreateNot(Op1), X);
 
-  // Y - (X + 1) --> ~X + Y
-  if (match(Op1, m_OneUse(m_Add(m_Value(X), m_One()))))
-    return BinaryOperator::CreateAdd(Builder.CreateNot(X), Op0);
-
-  // Y - ~X --> (X + 1) + Y
-  if (match(Op1, m_OneUse(m_Not(m_Value(X))))) {
-    return BinaryOperator::CreateAdd(
-        Builder.CreateAdd(Op0, ConstantInt::get(I.getType(), 1)), X);
-  }
-
   if (Constant *C = dyn_cast<Constant>(Op0)) {
-    // -f(x) -> f(-x) if possible.
-    if (match(C, m_Zero()))
-      if (Value *Neg = freelyNegateValue(Op1))
-        return replaceInstUsesWith(I, Neg);
-
     Value *X;
     if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
       // C - (zext bool) --> bool ? C - 1 : C
@@ -1770,26 +1792,12 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   }
 
   const APInt *Op0C;
-  if (match(Op0, m_APInt(Op0C))) {
-    if (Op0C->isNullValue() && Op1->hasOneUse()) {
-      Value *LHS, *RHS;
-      SelectPatternFlavor SPF = matchSelectPattern(Op1, LHS, RHS).Flavor;
-      if (SPF == SPF_ABS || SPF == SPF_NABS) {
-        // This is a negate of an ABS/NABS pattern. Just swap the operands
-        // of the select.
-        cast<SelectInst>(Op1)->swapValues();
-        // Don't swap prof metadata, we didn't change the branch behavior.
-        return replaceInstUsesWith(I, Op1);
-      }
-    }
-
+  if (match(Op0, m_APInt(Op0C)) && Op0C->isMask()) {
     // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
     // zero.
-    if (Op0C->isMask()) {
-      KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
-      if ((*Op0C | RHSKnown.Zero).isAllOnesValue())
-        return BinaryOperator::CreateXor(Op1, Op0);
-    }
+    KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
+    if ((*Op0C | RHSKnown.Zero).isAllOnesValue())
+      return BinaryOperator::CreateXor(Op1, Op0);
   }
 
   {
@@ -1919,49 +1927,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(
         Op0, Builder.CreateNot(Y, Y->getName() + ".not"));
 
-  if (Op1->hasOneUse()) {
-    Value *Y = nullptr, *Z = nullptr;
-    Constant *C = nullptr;
-
-    // (X - (Y - Z))  -->  (X + (Z - Y)).
-    if (match(Op1, m_Sub(m_Value(Y), m_Value(Z))))
-      return BinaryOperator::CreateAdd(Op0,
-                                      Builder.CreateSub(Z, Y, Op1->getName()));
-
-    // Subtracting -1/0 is the same as adding 1/0:
-    // sub [nsw] Op0, sext(bool Y) -> add [nsw] Op0, zext(bool Y)
-    // 'nuw' is dropped in favor of the canonical form.
-    if (match(Op1, m_SExt(m_Value(Y))) &&
-        Y->getType()->getScalarSizeInBits() == 1) {
-      Value *Zext = Builder.CreateZExt(Y, I.getType());
-      BinaryOperator *Add = BinaryOperator::CreateAdd(Op0, Zext);
-      Add->setHasNoSignedWrap(I.hasNoSignedWrap());
-      return Add;
-    }
-    // sub [nsw] X, zext(bool Y) -> add [nsw] X, sext(bool Y)
-    // 'nuw' is dropped in favor of the canonical form.
-    if (match(Op1, m_ZExt(m_Value(Y))) && Y->getType()->isIntOrIntVectorTy(1)) {
-      Value *Sext = Builder.CreateSExt(Y, I.getType());
-      BinaryOperator *Add = BinaryOperator::CreateAdd(Op0, Sext);
-      Add->setHasNoSignedWrap(I.hasNoSignedWrap());
-      return Add;
-    }
-
-    // X - A*-B -> X + A*B
-    // X - -A*B -> X + A*B
-    Value *A, *B;
-    if (match(Op1, m_c_Mul(m_Value(A), m_Neg(m_Value(B)))))
-      return BinaryOperator::CreateAdd(Op0, Builder.CreateMul(A, B));
-
-    // X - A*C -> X + A*-C
-    // No need to handle commuted multiply because multiply handling will
-    // ensure constant will be move to the right hand side.
-    if (match(Op1, m_Mul(m_Value(A), m_Constant(C))) && !isa<ConstantExpr>(C)) {
-      Value *NewMul = Builder.CreateMul(A, ConstantExpr::getNeg(C));
-      return BinaryOperator::CreateAdd(Op0, NewMul);
-    }
-  }
-
   {
     // ~A - Min/Max(~A, O) -> Max/Min(A, ~O) - A
     // ~A - Min/Max(O, ~A) -> Max/Min(A, ~O) - A
@@ -2036,20 +2001,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
           canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;
 
-  if (Instruction *Ext = narrowMathIfNoOverflow(I))
-    return Ext;
-
-  bool Changed = false;
-  if (!I.hasNoSignedWrap() && willNotOverflowSignedSub(Op0, Op1, I)) {
-    Changed = true;
-    I.setHasNoSignedWrap(true);
-  }
-  if (!I.hasNoUnsignedWrap() && willNotOverflowUnsignedSub(Op0, Op1, I)) {
-    Changed = true;
-    I.setHasNoUnsignedWrap(true);
-  }
-
-  return Changed ? &I : nullptr;
+  return TryToNarrowDeduceFlags();
 }
 
 /// This eliminates floating-point negation in either 'fneg(X)' or
