@@ -1568,7 +1568,53 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm Pat_Load_P4  : unpred_load_predicate<nxv4i1, LDR_PXI>;
   defm Pat_Load_P2  : unpred_load_predicate<nxv2i1, LDR_PXI>;
 
-  multiclass ld1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT> {
+  multiclass ld1<Instruction RegRegInst, Instruction RegImmInst, ValueType Ty,
+                 SDPatternOperator Load, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
+    // reg + reg
+    let AddedComplexity = 1 in {
+      def : Pat<(Ty (Load  (PredTy PPR:$gp), (AddrCP GPR64:$base, GPR64:$offset), MemVT)),
+                (RegRegInst PPR:$gp, GPR64sp:$base, GPR64:$offset)>;
+    }
+
+    // scalar + immediate (mul vl)
+    let AddedComplexity = 2 in {
+      def : Pat<(Ty (Load  (PredTy PPR:$gp), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), MemVT)),
+                (RegImmInst PPR:$gp, GPR64sp:$base, simm4s1:$offset)>;
+    }
+
+    // base
+    def : Pat<(Ty (Load  (PredTy PPR:$gp), GPR64:$base, MemVT)),
+              (RegImmInst PPR:$gp, GPR64sp:$base, (i64 0))>;
+  }
+
+  // 2-element contiguous loads
+  defm : ld1<LD1B_D,  LD1B_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_D, LD1SB_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1H_D,  LD1H_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1SH_D, LD1SH_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1W_D,  LD1W_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1SW_D, LD1SW_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1D,    LD1D_IMM,    nxv2i64, AArch64ld1,  nxv2i1, nxv2i64, am_sve_regreg_lsl3>;
+  defm : ld1<LD1D,    LD1D_IMM,    nxv2f64, AArch64ld1,  nxv2i1, nxv2f64, am_sve_regreg_lsl3>;
+
+  // 4-element contiguous loads
+  defm : ld1<LD1B_S,  LD1B_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_S, LD1SB_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1H_S,  LD1H_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1SH_S, LD1SH_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1W,    LD1W_IMM,    nxv4i32, AArch64ld1,  nxv4i1, nxv4i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1W,    LD1W_IMM,    nxv4f32, AArch64ld1,  nxv4i1, nxv4f32, am_sve_regreg_lsl2>;
+
+  // 8-element contiguous loads
+  defm : ld1<LD1B_H,  LD1B_H_IMM,  nxv8i16, AArch64ld1,  nxv8i1, nxv8i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_H, LD1SB_H_IMM, nxv8i16, AArch64ld1s, nxv8i1, nxv8i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1H,    LD1H_IMM,    nxv8i16, AArch64ld1,  nxv8i1, nxv8i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1H,    LD1H_IMM,    nxv8f16, AArch64ld1,  nxv8i1, nxv8f16, am_sve_regreg_lsl1>;
+
+  // 16-element contiguous loads
+  defm : ld1<LD1B, LD1B_IMM, nxv16i8, AArch64ld1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
+
+  multiclass ldnf1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT> {
     // scalar + immediate (mul vl)
     let AddedComplexity = 1 in {
       def : Pat<(Ty (Load  (PredTy PPR:$gp), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), MemVT)),
@@ -1580,60 +1626,32 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
               (I PPR:$gp, GPR64sp:$base, (i64 0))>;
   }
 
-  // 2-element contiguous loads
-  defm : ld1<LD1B_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i8>;
-  defm : ld1<LD1SB_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i8>;
-  defm : ld1<LD1H_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i16>;
-  defm : ld1<LD1SH_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i16>;
-  defm : ld1<LD1W_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i32>;
-  defm : ld1<LD1SW_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i32>;
-  defm : ld1<LD1D_IMM,    nxv2i64, AArch64ld1,  nxv2i1, nxv2i64>;
-  defm : ld1<LD1D_IMM,    nxv2f64, AArch64ld1,  nxv2i1, nxv2f64>;
-
-  // 4-element contiguous loads
-  defm : ld1<LD1B_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i8>;
-  defm : ld1<LD1SB_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i8>;
-  defm : ld1<LD1H_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i16>;
-  defm : ld1<LD1SH_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i16>;
-  defm : ld1<LD1W_IMM,    nxv4i32, AArch64ld1,  nxv4i1, nxv4i32>;
-  defm : ld1<LD1W_IMM,    nxv4f32, AArch64ld1,  nxv4i1, nxv4f32>;
-
-  // 8-element contiguous loads
-  defm : ld1<LD1B_H_IMM,  nxv8i16, AArch64ld1,  nxv8i1, nxv8i8>;
-  defm : ld1<LD1SB_H_IMM, nxv8i16, AArch64ld1s, nxv8i1, nxv8i8>;
-  defm : ld1<LD1H_IMM,    nxv8i16, AArch64ld1,  nxv8i1, nxv8i16>;
-  defm : ld1<LD1H_IMM,    nxv8f16, AArch64ld1,  nxv8i1, nxv8f16>;
-
-  // 16-element contiguous loads
-  defm : ld1<LD1B_IMM,    nxv16i8, AArch64ld1, nxv16i1, nxv16i8>;
-
-
   // 2-element contiguous non-faulting loads
-  defm : ld1<LDNF1B_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i8>;
-  defm : ld1<LDNF1SB_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i8>;
-  defm : ld1<LDNF1H_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i16>;
-  defm : ld1<LDNF1SH_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i16>;
-  defm : ld1<LDNF1W_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i32>;
-  defm : ld1<LDNF1SW_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i32>;
-  defm : ld1<LDNF1D_IMM,    nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i64>;
-  defm : ld1<LDNF1D_IMM,    nxv2f64, AArch64ldnf1,  nxv2i1, nxv2f64>;
+  defm : ldnf1<LDNF1B_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i8>;
+  defm : ldnf1<LDNF1SB_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i8>;
+  defm : ldnf1<LDNF1H_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i16>;
+  defm : ldnf1<LDNF1SH_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i16>;
+  defm : ldnf1<LDNF1W_D_IMM,  nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i32>;
+  defm : ldnf1<LDNF1SW_D_IMM, nxv2i64, AArch64ldnf1s, nxv2i1, nxv2i32>;
+  defm : ldnf1<LDNF1D_IMM,    nxv2i64, AArch64ldnf1,  nxv2i1, nxv2i64>;
+  defm : ldnf1<LDNF1D_IMM,    nxv2f64, AArch64ldnf1,  nxv2i1, nxv2f64>;
 
   // 4-element contiguous non-faulting loads
-  defm : ld1<LDNF1B_S_IMM,  nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i8>;
-  defm : ld1<LDNF1SB_S_IMM, nxv4i32, AArch64ldnf1s, nxv4i1, nxv4i8>;
-  defm : ld1<LDNF1H_S_IMM,  nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i16>;
-  defm : ld1<LDNF1SH_S_IMM, nxv4i32, AArch64ldnf1s, nxv4i1, nxv4i16>;
-  defm : ld1<LDNF1W_IMM,    nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i32>;
-  defm : ld1<LDNF1W_IMM,    nxv4f32, AArch64ldnf1,  nxv4i1, nxv4f32>;
+  defm : ldnf1<LDNF1B_S_IMM,  nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i8>;
+  defm : ldnf1<LDNF1SB_S_IMM, nxv4i32, AArch64ldnf1s, nxv4i1, nxv4i8>;
+  defm : ldnf1<LDNF1H_S_IMM,  nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i16>;
+  defm : ldnf1<LDNF1SH_S_IMM, nxv4i32, AArch64ldnf1s, nxv4i1, nxv4i16>;
+  defm : ldnf1<LDNF1W_IMM,    nxv4i32, AArch64ldnf1,  nxv4i1, nxv4i32>;
+  defm : ldnf1<LDNF1W_IMM,    nxv4f32, AArch64ldnf1,  nxv4i1, nxv4f32>;
 
   // 8-element contiguous non-faulting loads
-  defm : ld1<LDNF1B_H_IMM,  nxv8i16, AArch64ldnf1,  nxv8i1, nxv8i8>;
-  defm : ld1<LDNF1SB_H_IMM, nxv8i16, AArch64ldnf1s, nxv8i1, nxv8i8>;
-  defm : ld1<LDNF1H_IMM,    nxv8i16, AArch64ldnf1,  nxv8i1, nxv8i16>;
-  defm : ld1<LDNF1H_IMM,    nxv8f16, AArch64ldnf1,  nxv8i1, nxv8f16>;
+  defm : ldnf1<LDNF1B_H_IMM,  nxv8i16, AArch64ldnf1,  nxv8i1, nxv8i8>;
+  defm : ldnf1<LDNF1SB_H_IMM, nxv8i16, AArch64ldnf1s, nxv8i1, nxv8i8>;
+  defm : ldnf1<LDNF1H_IMM,    nxv8i16, AArch64ldnf1,  nxv8i1, nxv8i16>;
+  defm : ldnf1<LDNF1H_IMM,    nxv8f16, AArch64ldnf1,  nxv8i1, nxv8f16>;
 
   // 16-element contiguous non-faulting loads
-  defm : ld1<LDNF1B_IMM,    nxv16i8, AArch64ldnf1, nxv16i1, nxv16i8>;
+  defm : ldnf1<LDNF1B_IMM,    nxv16i8, AArch64ldnf1, nxv16i1, nxv16i8>;
 
   multiclass ldff1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
     // reg + reg
@@ -1675,35 +1693,42 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   // 16-element contiguous first faulting loads
   defm : ldff1<LDFF1B, nxv16i8, AArch64ldff1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
-  multiclass st1<Instruction I, ValueType Ty, SDPatternOperator Store, ValueType PredTy, ValueType MemVT> {
-    // scalar + immediate (mul vl)
+  multiclass st1<Instruction RegRegInst, Instruction RegImmInst, ValueType Ty,
+                 SDPatternOperator Store, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
+    // reg + reg
     let AddedComplexity = 1 in {
+      def : Pat<(Store (Ty ZPR:$vec), (AddrCP GPR64:$base, GPR64:$offset), (PredTy PPR:$gp), MemVT),
+                (RegRegInst ZPR:$vec, PPR:$gp, GPR64sp:$base, GPR64:$offset)>;
+    }
+
+    // scalar + immediate (mul vl)
+    let AddedComplexity = 2 in {
       def : Pat<(Store (Ty ZPR:$vec), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), (PredTy PPR:$gp), MemVT),
-                (I ZPR:$vec, PPR:$gp, GPR64sp:$base, simm4s1:$offset)>;
+                (RegImmInst ZPR:$vec, PPR:$gp, GPR64sp:$base, simm4s1:$offset)>;
     }
 
     // base
     def : Pat<(Store (Ty ZPR:$vec), GPR64:$base, (PredTy PPR:$gp), MemVT),
-              (I ZPR:$vec, PPR:$gp, GPR64:$base, (i64 0))>;
+              (RegImmInst ZPR:$vec, PPR:$gp, GPR64:$base, (i64 0))>;
   }
 
   // 2-element contiguous store
-  defm : st1<ST1B_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i8>;
-  defm : st1<ST1H_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i16>;
-  defm : st1<ST1W_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i32>;
-  defm : st1<ST1D_IMM,   nxv2i64, AArch64st1, nxv2i1, nxv2i64>;
+  defm : st1<ST1B_D, ST1B_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
+  defm : st1<ST1H_D, ST1H_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
+  defm : st1<ST1W_D, ST1W_D_IMM, nxv2i64, AArch64st1, nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
+  defm : st1<ST1D,   ST1D_IMM,   nxv2i64, AArch64st1, nxv2i1, nxv2i64, am_sve_regreg_lsl3>;
 
   // 4-element contiguous store
-  defm : st1<ST1B_S_IMM, nxv4i32, AArch64st1, nxv4i1, nxv4i8>;
-  defm : st1<ST1H_S_IMM, nxv4i32, AArch64st1, nxv4i1, nxv4i16>;
-  defm : st1<ST1W_IMM,   nxv4i32, AArch64st1, nxv4i1, nxv4i32>;
+  defm : st1<ST1B_S, ST1B_S_IMM, nxv4i32, AArch64st1, nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
+  defm : st1<ST1H_S, ST1H_S_IMM, nxv4i32, AArch64st1, nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
+  defm : st1<ST1W,   ST1W_IMM,   nxv4i32, AArch64st1, nxv4i1, nxv4i32, am_sve_regreg_lsl2>;
 
   // 8-element contiguous store
-  defm : st1<ST1B_H_IMM, nxv8i16, AArch64st1, nxv8i1, nxv8i8>;
-  defm : st1<ST1H_IMM,   nxv8i16, AArch64st1, nxv8i1, nxv8i16>;
+  defm : st1<ST1B_H, ST1B_H_IMM, nxv8i16, AArch64st1, nxv8i1, nxv8i8,  am_sve_regreg_lsl0>;
+  defm : st1<ST1H,   ST1H_IMM,   nxv8i16, AArch64st1, nxv8i1, nxv8i16, am_sve_regreg_lsl1>;
 
   // 16-element contiguous store
-  defm : st1<ST1B_IMM,   nxv16i8, AArch64st1, nxv16i1, nxv16i8>;
+  defm : st1<ST1B, ST1B_IMM,   nxv16i8, AArch64st1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
 }
 
