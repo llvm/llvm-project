@@ -517,3 +517,60 @@ Sections:
 ## Use an arbitrary size that is different to the size of
 ## the previous section.
     Size:    0x20
+
+## Check that we require sections in a program header
+## declaration to be sorted by their offsets.
+# RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNSORTED --implicit-check-not="error:"
+
+# UNSORTED:      error: sections in the program header with index 1 are not sorted by their file offset
+# UNSORTED-NEXT: error: sections in the program header with index 3 are not sorted by their file offset
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+ProgramHeaders:
+## Case 1: the .bar section is placed after the .foo section in the file.
+##         Check we report an error about the violation of the order.
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .bar
+      - Section: .foo
+    VAddr:  0x1000
+## There is nothing wrong with this segment. We have it to show that
+## we report correct program header indices in error messages.
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .foo
+      - Section: .bar
+    VAddr:  0x1000
+## Case 2: the .bar section is placed before the .zed section in the file,
+##         but the sh_offset of .zed is less than the sh_offset of
+##         the .bar section because of the "ShOffset" property.
+##         Document we report an error for such a case.
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .bar
+      - Section: .zed
+    VAddr:  0x1001
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+    Address: 0x1000
+  - Name:    .bar
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+  - Name:     .zed
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC ]
+    Size:     0x1
+    ShOffset: 0x0
