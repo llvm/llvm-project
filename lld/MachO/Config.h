@@ -11,6 +11,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <vector>
+
 namespace lld {
 namespace macho {
 
@@ -19,6 +21,8 @@ class Symbol;
 struct Configuration {
   llvm::StringRef outputFile;
   Symbol *entry;
+
+  std::vector<llvm::StringRef> searchPaths;
 };
 
 extern Configuration *config;

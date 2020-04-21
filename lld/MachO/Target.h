@@ -15,6 +15,9 @@ namespace lld {
 namespace macho {
 
 enum {
+  // We are currently only supporting 64-bit targets since macOS and iOS are
+  // deprecating 32-bit apps.
+  WordSize = 8,
   PageSize = 4096,
   ImageBase = 4096,
   MaxAlignmentPowerOf2 = 32,
