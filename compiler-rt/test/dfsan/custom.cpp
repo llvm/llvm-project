@@ -207,6 +207,19 @@ void test_strcasecmp() {
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
 #endif
+
+  char s1[] = "AbZ";
+  char s2[] = "aBy";
+  dfsan_set_label(i_label, &s1[2], 1);
+  dfsan_set_label(j_label, &s2[2], 1);
+
+  rv = strcasecmp(s1, s2);
+  assert(rv > 0); // 'Z' > 'y'
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+#endif
 }
 
 void test_strncasecmp() {
@@ -225,6 +238,31 @@ void test_strncasecmp() {
   rv = strncasecmp(str1, str2, 3);
   assert(rv == 0);
   ASSERT_ZERO_LABEL(rv);
+
+  char s1[] = "AbZ";
+  char s2[] = "aBy";
+  dfsan_set_label(i_label, &s1[2], 1);
+  dfsan_set_label(j_label, &s2[2], 1);
+
+  rv = strncasecmp(s1, s2, 0);
+  assert(rv == 0); // Compare zero chars.
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 1);
+  assert(rv == 0); // 'A' == 'a'
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 2);
+  assert(rv == 0); // 'b' == 'B'
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 3);
+  assert(rv > 0); // 'Z' > 'y'
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+#endif
 }
 
 void test_strchr() {
