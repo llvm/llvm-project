@@ -210,6 +210,8 @@ TEST_F(HeadersTest, IncludeDirective) {
 #include_next "foo.h"
 )cpp";
 
+  // ms-compatibility changes meaning of #import, make sure it is turned off.
+  CDB.ExtraClangFlags.push_back("-fno-ms-compatibility");
   EXPECT_THAT(collectIncludes().MainFileIncludes,
               UnorderedElementsAre(Directive(tok::pp_include),
                                    Directive(tok::pp_import),

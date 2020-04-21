@@ -61,6 +61,8 @@ TEST(PreamblePatchTest, IncludeParsing) {
         ^#include <b.h>)cpp",
   };
 
+  // ms-compatibility changes meaning of #import, make sure it is turned off.
+  CDB.ExtraClangFlags.push_back("-fno-ms-compatibility");
   const auto FileName = testPath("foo.cc");
   for (const auto Case : Cases) {
     Annotations Test(Case);
@@ -96,6 +98,8 @@ TEST(PreamblePatchTest, ContainsNewIncludes) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics Diags;
+  // ms-compatibility changes meaning of #import, make sure it is turned off.
+  CDB.ExtraClangFlags.push_back("-fno-ms-compatibility");
 
   const auto FileName = testPath("foo.cc");
   ParseInputs PI;
