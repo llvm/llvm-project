@@ -52,7 +52,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -105,7 +104,7 @@ using IndicesVector = std::vector<uint64_t>;
 static Function *
 doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
             SmallPtrSetImpl<Argument *> &ByValArgsToTransform,
-            Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
+            Optional<function_ref<void(CallBase &OldCS, CallBase &NewCS)>>
                 ReplaceCallSite) {
   // Start by computing a new prototype for the function, which is the same as
   // the old function, but has modified arguments.
@@ -241,15 +240,14 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   //
   SmallVector<Value *, 16> Args;
   while (!F->use_empty()) {
-    CallSite CS(F->user_back());
-    assert(CS.getCalledFunction() == F);
-    Instruction *Call = CS.getInstruction();
-    const AttributeList &CallPAL = CS.getAttributes();
-    IRBuilder<NoFolder> IRB(Call);
+    CallBase &CB = cast<CallBase>(*F->user_back());
+    assert(CB.getCalledFunction() == F);
+    const AttributeList &CallPAL = CB.getAttributes();
+    IRBuilder<NoFolder> IRB(&CB);
 
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
-    CallSite::arg_iterator AI = CS.arg_begin();
+    auto AI = CB.arg_begin();
     ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
          ++I, ++AI, ++ArgNo)
@@ -317,46 +315,46 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       }
 
     // Push any varargs arguments on the list.
-    for (; AI != CS.arg_end(); ++AI, ++ArgNo) {
+    for (; AI != CB.arg_end(); ++AI, ++ArgNo) {
       Args.push_back(*AI);
       ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;
-    CS.getOperandBundlesAsDefs(OpBundles);
+    CB.getOperandBundlesAsDefs(OpBundles);
 
-    CallSite NewCS;
-    if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
+    CallBase *NewCS = nullptr;
+    if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", Call);
+                                 Args, OpBundles, "", &CB);
     } else {
-      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", Call);
-      NewCall->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
+      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", &CB);
+      NewCall->setTailCallKind(cast<CallInst>(&CB)->getTailCallKind());
       NewCS = NewCall;
     }
-    NewCS.setCallingConv(CS.getCallingConv());
-    NewCS.setAttributes(
+    NewCS->setCallingConv(CB.getCallingConv());
+    NewCS->setAttributes(
         AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
                            CallPAL.getRetAttributes(), ArgAttrVec));
-    NewCS->setDebugLoc(Call->getDebugLoc());
+    NewCS->setDebugLoc(CB.getDebugLoc());
     uint64_t W;
-    if (Call->extractProfTotalWeight(W))
+    if (CB.extractProfTotalWeight(W))
       NewCS->setProfWeight(W);
     Args.clear();
     ArgAttrVec.clear();
 
     // Update the callgraph to know that the callsite has been transformed.
     if (ReplaceCallSite)
-      (*ReplaceCallSite)(CS, NewCS);
+      (*ReplaceCallSite)(CB, *NewCS);
 
-    if (!Call->use_empty()) {
-      Call->replaceAllUsesWith(NewCS.getInstruction());
-      NewCS->takeName(Call);
+    if (!CB.use_empty()) {
+      CB.replaceAllUsesWith(NewCS);
+      NewCS->takeName(&CB);
     }
 
     // Finally, remove the old call from the program, reducing the use-count of
     // F.
-    Call->eraseFromParent();
+    CB.eraseFromParent();
   }
 
   const DataLayout &DL = F->getParent()->getDataLayout();
@@ -488,10 +486,9 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg, Type *Ty) {
   // Look at all call sites of the function.  At this point we know we only have
   // direct callees.
   for (User *U : Callee->users()) {
-    CallSite CS(U);
-    assert(CS && "Should only have direct calls!");
+    CallBase &CB = cast<CallBase>(*U);
 
-    if (!isDereferenceablePointer(CS.getArgument(ArgNo), Ty, DL))
+    if (!isDereferenceablePointer(CB.getArgOperand(ArgNo), Ty, DL))
       return false;
   }
   return true;
@@ -849,11 +846,11 @@ bool ArgumentPromotionPass::areFunctionArgsABICompatible(
     SmallPtrSetImpl<Argument *> &ArgsToPromote,
     SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
   for (const Use &U : F.uses()) {
-    CallSite CS(U.getUser());
-    if (!CS)
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB)
       return false;
-    const Function *Caller = CS.getCaller();
-    const Function *Callee = CS.getCalledFunction();
+    const Function *Caller = CB->getCaller();
+    const Function *Callee = CB->getCalledFunction();
     if (!TTI.areFunctionArgsABICompatible(Caller, Callee, ArgsToPromote) ||
         !TTI.areFunctionArgsABICompatible(Caller, Callee, ByValArgsToTransform))
       return false;
@@ -868,7 +865,7 @@ bool ArgumentPromotionPass::areFunctionArgsABICompatible(
 static Function *
 promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements,
-                 Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
+                 Optional<function_ref<void(CallBase &OldCS, CallBase &NewCS)>>
                      ReplaceCallSite,
                  const TargetTransformInfo &TTI) {
   // Don't perform argument promotion for naked functions; otherwise we can end
@@ -907,16 +904,16 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   // is self-recursive and check that target features are compatible.
   bool isSelfRecursive = false;
   for (Use &U : F->uses()) {
-    CallSite CS(U.getUser());
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
     // Must be a direct call.
-    if (CS.getInstruction() == nullptr || !CS.isCallee(&U))
+    if (CB == nullptr || !CB->isCallee(&U))
       return nullptr;
 
     // Can't change signature of musttail callee
-    if (CS.isMustTailCall())
+    if (CB->isMustTailCall())
       return nullptr;
 
-    if (CS.getInstruction()->getParent()->getParent() == F)
+    if (CB->getParent()->getParent() == F)
       isSelfRecursive = true;
   }
 
@@ -944,9 +941,9 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
       F->removeParamAttr(ArgNo, Attribute::StructRet);
       F->addParamAttr(ArgNo, Attribute::NoAlias);
       for (Use &U : F->uses()) {
-        CallSite CS(U.getUser());
-        CS.removeParamAttr(ArgNo, Attribute::StructRet);
-        CS.addParamAttr(ArgNo, Attribute::NoAlias);
+        CallBase &CB = cast<CallBase>(*U.getUser());
+        CB.removeParamAttr(ArgNo, Attribute::StructRet);
+        CB.addParamAttr(ArgNo, Attribute::NoAlias);
       }
     }
 
@@ -1137,14 +1134,13 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
       if (!OldF)
         continue;
 
-      auto ReplaceCallSite = [&](CallSite OldCS, CallSite NewCS) {
-        Function *Caller = OldCS.getInstruction()->getParent()->getParent();
+      auto ReplaceCallSite = [&](CallBase &OldCS, CallBase &NewCS) {
+        Function *Caller = OldCS.getParent()->getParent();
         CallGraphNode *NewCalleeNode =
             CG.getOrInsertFunction(NewCS.getCalledFunction());
         CallGraphNode *CallerNode = CG[Caller];
-        CallerNode->replaceCallEdge(*cast<CallBase>(OldCS.getInstruction()),
-                                    *cast<CallBase>(NewCS.getInstruction()),
-                                    NewCalleeNode);
+        CallerNode->replaceCallEdge(cast<CallBase>(OldCS),
+                                    cast<CallBase>(NewCS), NewCalleeNode);
       };
 
       const TargetTransformInfo &TTI =
