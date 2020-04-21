@@ -3051,6 +3051,12 @@ WebAssembly
 
 .. option:: -munimplemented-simd128, -mno-unimplemented-simd128
 
+.. option:: -mexec-model=<arg>
+
+Select between "command" and "reactor" executable models. Commands have a main
+function which scopes the lifetime of the program. Reactors are activated and
+remain active until explicitly terminated.
+
 X86
 ---
 .. option:: -m3dnow, -mno-3dnow
