@@ -45,6 +45,7 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_copy_from_dummy_target()
 
+    @skipIfReproducer # Unexpected packet during replay
     def make_target_and_import(self):
         target = self.make_target()
         self.import_resolver_script()
