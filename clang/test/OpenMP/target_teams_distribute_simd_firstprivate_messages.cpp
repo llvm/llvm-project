@@ -5,6 +5,7 @@
 
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
 
+#pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
