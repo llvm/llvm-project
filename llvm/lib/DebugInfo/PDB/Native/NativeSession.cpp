@@ -173,8 +173,11 @@ NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
   sys::path::append(PdbPath, PdbName);
 
   auto Allocator = std::make_unique<BumpPtrAllocator>();
-  if (loadPdbFile(PdbPath, Allocator))
+
+  if (auto File = loadPdbFile(PdbPath, Allocator))
     return std::string(PdbPath);
+  else
+    return File.takeError();
 
   return make_error<RawError>("PDB not found");
 }
