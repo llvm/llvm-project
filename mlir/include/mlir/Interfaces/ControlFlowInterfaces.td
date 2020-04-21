@@ -68,6 +68,14 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         }
         return llvm::None;
       }]
+    >,
+    InterfaceMethod<[{
+        Returns the successor that would be chosen with the given constant
+        operands. Returns nullptr if a single successor could not be chosen.
+      }],
+      "Block *", "getSuccessorForOperands",
+      (ins "ArrayRef<Attribute>":$operands), [{}],
+      /*defaultImplementation=*/[{ return nullptr; }]
     >
   ];
 

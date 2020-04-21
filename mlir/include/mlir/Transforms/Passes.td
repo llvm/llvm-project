@@ -273,6 +273,20 @@ def PrintOp : Pass<"print-op-graph", "ModuleOp"> {
   let constructor = "mlir::createPrintOpGraphPass()";
 }
 
+def SCCP : Pass<"sccp"> {
+  let summary = "Sparse Conditional Constant Propagation";
+  let description = [{
+    This pass implements a general algorithm for sparse conditional constant
+    propagation. This algorithm detects values that are known to be constant and
+    optimistically propagates this throughout the IR. Any values proven to be
+    constant are replaced, and removed if possible.
+
+    This implementation is based on the algorithm described by Wegman and Zadeck
+    in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
+  }];
+  let constructor = "mlir::createSCCPPass()";
+}
+
 def StripDebugInfo : Pass<"strip-debuginfo"> {
   let summary = "Strip debug info from all operations";
   let description = [{
