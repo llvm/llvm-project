@@ -8,7 +8,4 @@ add_libc_unittest(
     fwrite_test.cpp
   DEPENDS
     libc.src.stdio.fwrite
-    # TODO(sivachandra): remove private dependencies of fwrite
-    libc.src.threads.mtx_lock
-    libc.src.threads.mtx_unlock
 )
