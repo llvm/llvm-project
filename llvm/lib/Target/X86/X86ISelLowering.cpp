@@ -47304,9 +47304,11 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     auto *Ld = cast<LoadSDNode>(In);
     if (Ld->isSimple()) {
       MVT SVT = In.getSimpleValueType().getVectorElementType();
-      ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      EVT MemVT = EVT::getVectorVT(*DAG.getContext(), SVT,
-                                   VT.getVectorNumElements());
+      ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG
+                                 ? ISD::SEXTLOAD
+                                 : ISD::ZEXTLOAD;
+      EVT MemVT =
+          EVT::getVectorVT(*DAG.getContext(), SVT, VT.getVectorNumElements());
       if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
         SDValue Load =
             DAG.getExtLoad(Ext, SDLoc(N), VT, Ld->getChain(), Ld->getBasePtr(),
