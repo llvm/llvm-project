@@ -3006,6 +3006,10 @@ private:
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
 };
 
+/// Insertion operator for diagnostics.
+const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                    const ASTContext::SectionInfo &Section);
+
 /// Utility function for constructing a nullary selector.
 inline Selector GetNullarySelector(StringRef name, ASTContext &Ctx) {
   IdentifierInfo* II = &Ctx.Idents.get(name);

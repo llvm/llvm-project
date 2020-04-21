@@ -12754,7 +12754,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (GlobalStorage && var->isThisDeclarationADefinition() &&
       !inTemplateInstantiation()) {
     PragmaStack<StringLiteral *> *Stack = nullptr;
-    int SectionFlags = ASTContext::PSF_Implicit | ASTContext::PSF_Read;
+    int SectionFlags = ASTContext::PSF_Read;
     if (var->getType().isConstQualified())
       Stack = &ConstSegStack;
     else if (!var->getInit()) {
@@ -12764,14 +12764,19 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       Stack = &DataSegStack;
       SectionFlags |= ASTContext::PSF_Write;
     }
-    if (Stack->CurrentValue && !var->hasAttr<SectionAttr>())
+    if (const SectionAttr *SA = var->getAttr<SectionAttr>()) {
+      if (SA->getSyntax() == AttributeCommonInfo::AS_Declspec)
+        SectionFlags |= ASTContext::PSF_Implicit;
+      UnifySection(SA->getName(), SectionFlags, var);
+    } else if (Stack->CurrentValue) {
+      SectionFlags |= ASTContext::PSF_Implicit;
+      auto SectionName = Stack->CurrentValue->getString();
       var->addAttr(SectionAttr::CreateImplicit(
-          Context, Stack->CurrentValue->getString(),
-          Stack->CurrentPragmaLocation, AttributeCommonInfo::AS_Pragma,
-          SectionAttr::Declspec_allocate));
-    if (const SectionAttr *SA = var->getAttr<SectionAttr>())
-      if (UnifySection(SA->getName(), SectionFlags, var))
+          Context, SectionName, Stack->CurrentPragmaLocation,
+          AttributeCommonInfo::AS_Pragma, SectionAttr::Declspec_allocate));
+      if (UnifySection(SectionName, SectionFlags, var))
         var->dropAttr<SectionAttr>();
+    }
 
     // Apply the init_seg attribute if this has an initializer.  If the
     // initializer turns out to not be dynamic, we'll end up ignoring this

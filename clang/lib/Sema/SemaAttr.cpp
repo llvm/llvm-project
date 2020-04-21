@@ -530,42 +530,49 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
 bool Sema::UnifySection(StringRef SectionName,
                         int SectionFlags,
                         DeclaratorDecl *Decl) {
-  auto Section = Context.SectionInfos.find(SectionName);
-  if (Section == Context.SectionInfos.end()) {
+  SourceLocation PragmaLocation;
+  if (auto A = Decl->getAttr<SectionAttr>())
+    if (A->isImplicit())
+      PragmaLocation = A->getLocation();
+  auto SectionIt = Context.SectionInfos.find(SectionName);
+  if (SectionIt == Context.SectionInfos.end()) {
     Context.SectionInfos[SectionName] =
-        ASTContext::SectionInfo(Decl, SourceLocation(), SectionFlags);
+        ASTContext::SectionInfo(Decl, PragmaLocation, SectionFlags);
     return false;
   }
   // A pre-declared section takes precedence w/o diagnostic.
-  if (Section->second.SectionFlags == SectionFlags ||
-      !(Section->second.SectionFlags & ASTContext::PSF_Implicit))
+  const auto &Section = SectionIt->second;
+  if (Section.SectionFlags == SectionFlags ||
+      ((SectionFlags & ASTContext::PSF_Implicit) &&
+       !(Section.SectionFlags & ASTContext::PSF_Implicit)))
     return false;
-  auto OtherDecl = Section->second.Decl;
-  Diag(Decl->getLocation(), diag::err_section_conflict)
-      << Decl << OtherDecl;
-  Diag(OtherDecl->getLocation(), diag::note_declared_at)
-      << OtherDecl->getName();
-  if (auto A = Decl->getAttr<SectionAttr>())
-    if (A->isImplicit())
-      Diag(A->getLocation(), diag::note_pragma_entered_here);
-  if (auto A = OtherDecl->getAttr<SectionAttr>())
-    if (A->isImplicit())
-      Diag(A->getLocation(), diag::note_pragma_entered_here);
+  Diag(Decl->getLocation(), diag::err_section_conflict) << Decl << Section;
+  if (Section.Decl)
+    Diag(Section.Decl->getLocation(), diag::note_declared_at)
+        << Section.Decl->getName();
+  if (PragmaLocation.isValid())
+    Diag(PragmaLocation, diag::note_pragma_entered_here);
+  if (Section.PragmaSectionLocation.isValid())
+    Diag(Section.PragmaSectionLocation, diag::note_pragma_entered_here);
   return true;
 }
 
 bool Sema::UnifySection(StringRef SectionName,
                         int SectionFlags,
                         SourceLocation PragmaSectionLocation) {
-  auto Section = Context.SectionInfos.find(SectionName);
-  if (Section != Context.SectionInfos.end()) {
-    if (Section->second.SectionFlags == SectionFlags)
+  auto SectionIt = Context.SectionInfos.find(SectionName);
+  if (SectionIt != Context.SectionInfos.end()) {
+    const auto &Section = SectionIt->second;
+    if (Section.SectionFlags == SectionFlags)
       return false;
-    if (!(Section->second.SectionFlags & ASTContext::PSF_Implicit)) {
+    if (!(Section.SectionFlags & ASTContext::PSF_Implicit)) {
       Diag(PragmaSectionLocation, diag::err_section_conflict)
-          << "this" << "a prior #pragma section";
-      Diag(Section->second.PragmaSectionLocation,
-           diag::note_pragma_entered_here);
+          << "this" << Section;
+      if (Section.Decl)
+        Diag(Section.Decl->getLocation(), diag::note_declared_at)
+            << Section.Decl->getName();
+      if (Section.PragmaSectionLocation.isValid())
+        Diag(Section.PragmaSectionLocation, diag::note_pragma_entered_here);
       return true;
     }
   }
