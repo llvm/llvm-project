@@ -420,9 +420,6 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     if (Config.StripAll || Config.StripAllGNU)
       return true;
 
-    if (Config.StripDebug && Sym.Type == STT_FILE)
-      return true;
-
     if (Config.SymbolsToRemove.matches(Sym.Name))
       return true;
 
