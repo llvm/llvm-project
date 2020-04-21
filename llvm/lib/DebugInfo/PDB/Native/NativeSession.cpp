@@ -104,7 +104,7 @@ loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   if (auto EC = File->parseStreamData())
     return std::move(EC);
 
-  return File;
+  return std::move(File);
 }
 
 Error NativeSession::createFromPdbPath(StringRef PdbPath,
