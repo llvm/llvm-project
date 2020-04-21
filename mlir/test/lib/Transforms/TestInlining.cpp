@@ -45,7 +45,7 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
       // region if there is more than one use.
       if (failed(inlineRegion(
               interface, &callee.body(), caller, caller.getArgOperands(),
-              SmallVector<Value, 8>(caller.getResults()), caller.getLoc(),
+              caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
 
