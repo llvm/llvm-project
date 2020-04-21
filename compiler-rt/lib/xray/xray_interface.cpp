@@ -264,14 +264,14 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   // now we're assuming we can mprotect the whole section of text between the
   // minimum sled address and the maximum sled address (+ the largest sled
   // size).
-  auto MinSled = InstrMap.Sleds[0];
-  auto MaxSled = InstrMap.Sleds[InstrMap.Entries - 1];
+  auto *MinSled = &InstrMap.Sleds[0];
+  auto *MaxSled = &InstrMap.Sleds[InstrMap.Entries - 1];
   for (std::size_t I = 0; I < InstrMap.Entries; I++) {
     const auto &Sled = InstrMap.Sleds[I];
-    if (Sled.Address < MinSled.Address)
-      MinSled = Sled;
-    if (Sled.Address > MaxSled.Address)
-      MaxSled = Sled;
+    if (Sled.address() < MinSled->address())
+      MinSled = &Sled;
+    if (Sled.address() > MaxSled->address())
+      MaxSled = &Sled;
   }
 
   const size_t PageSize = flags()->xray_page_size_override > 0
@@ -283,9 +283,10 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   }
 
   void *PageAlignedAddr =
-      reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
+      reinterpret_cast<void *>(MinSled->address() & ~(PageSize - 1));
   size_t MProtectLen =
-      (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
+      (MaxSled->address() - reinterpret_cast<uptr>(PageAlignedAddr)) +
+      cSledLength;
   MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
@@ -337,20 +338,21 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
   auto SledRange = InstrMap.SledsIndex[FuncId - 1];
   auto *f = SledRange.Begin;
   auto *e = SledRange.End;
-  auto MinSled = *f;
-  auto MaxSled = *(SledRange.End - 1);
+  auto *MinSled = f;
+  auto *MaxSled = (SledRange.End - 1);
   while (f != e) {
-    if (f->Address < MinSled.Address)
-      MinSled = *f;
-    if (f->Address > MaxSled.Address)
-      MaxSled = *f;
+    if (f->address() < MinSled->address())
+      MinSled = f;
+    if (f->address() > MaxSled->address())
+      MaxSled = f;
     ++f;
   }
 
   void *PageAlignedAddr =
-      reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
+      reinterpret_cast<void *>(MinSled->address() & ~(PageSize - 1));
   size_t MProtectLen =
-      (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
+      (MaxSled->address() - reinterpret_cast<uptr>(PageAlignedAddr)) +
+      cSledLength;
   MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
