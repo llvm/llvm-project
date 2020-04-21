@@ -288,7 +288,7 @@ bool MCStreamer::EmitCVInlineSiteIdDirective(unsigned FunctionId,
       FunctionId, IAFunc, IAFile, IALine, IACol);
 }
 
-void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+void MCStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     unsigned Line, unsigned Column,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName, SMLoc Loc) {}
@@ -315,11 +315,11 @@ bool MCStreamer::checkCVLocSection(unsigned FuncId, unsigned FileNo,
   return true;
 }
 
-void MCStreamer::EmitCVLinetableDirective(unsigned FunctionId,
+void MCStreamer::emitCVLinetableDirective(unsigned FunctionId,
                                           const MCSymbol *Begin,
                                           const MCSymbol *End) {}
 
-void MCStreamer::EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+void MCStreamer::emitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
                                                 unsigned SourceFileId,
                                                 unsigned SourceLineNum,
                                                 const MCSymbol *FnStartSym,
@@ -337,42 +337,42 @@ static void copyBytesForDefRange(SmallString<20> &BytePrefix,
   memcpy(&BytePrefix[2], &DefRangeHeader, sizeof(T));
 }
 
-void MCStreamer::EmitCVDefRangeDirective(
+void MCStreamer::emitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {}
 
-void MCStreamer::EmitCVDefRangeDirective(
+void MCStreamer::emitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     codeview::DefRangeRegisterRelHeader DRHdr) {
   SmallString<20> BytePrefix;
   copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER_REL, DRHdr);
-  EmitCVDefRangeDirective(Ranges, BytePrefix);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
-void MCStreamer::EmitCVDefRangeDirective(
+void MCStreamer::emitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     codeview::DefRangeSubfieldRegisterHeader DRHdr) {
   SmallString<20> BytePrefix;
   copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_SUBFIELD_REGISTER,
                        DRHdr);
-  EmitCVDefRangeDirective(Ranges, BytePrefix);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
-void MCStreamer::EmitCVDefRangeDirective(
+void MCStreamer::emitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     codeview::DefRangeRegisterHeader DRHdr) {
   SmallString<20> BytePrefix;
   copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER, DRHdr);
-  EmitCVDefRangeDirective(Ranges, BytePrefix);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
-void MCStreamer::EmitCVDefRangeDirective(
+void MCStreamer::emitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     codeview::DefRangeFramePointerRelHeader DRHdr) {
   SmallString<20> BytePrefix;
   copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_FRAMEPOINTER_REL,
                        DRHdr);
-  EmitCVDefRangeDirective(Ranges, BytePrefix);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
 void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
@@ -958,7 +958,7 @@ void MCStreamer::Finish() {
   if (TS)
     TS->finish();
 
-  FinishImpl();
+  finishImpl();
 }
 
 void MCStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -1070,7 +1070,7 @@ void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, unsigned ByteAlignment) {}
-void MCStreamer::ChangeSection(MCSection *, const MCExpr *) {}
+void MCStreamer::changeSection(MCSection *, const MCExpr *) {}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1091,7 +1091,7 @@ void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
 void MCStreamer::emitBundleAlignMode(unsigned AlignPow2) {}
 void MCStreamer::emitBundleLock(bool AlignToEnd) {}
-void MCStreamer::FinishImpl() {}
+void MCStreamer::finishImpl() {}
 void MCStreamer::emitBundleUnlock() {}
 
 void MCStreamer::SwitchSection(MCSection *Section, const MCExpr *Subsection) {
@@ -1099,7 +1099,7 @@ void MCStreamer::SwitchSection(MCSection *Section, const MCExpr *Subsection) {
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
   if (MCSectionSubPair(Section, Subsection) != curSection) {
-    ChangeSection(Section, Subsection);
+    changeSection(Section, Subsection);
     SectionStack.back().first = MCSectionSubPair(Section, Subsection);
     assert(!Section->hasEnded() && "Section already ended");
     MCSymbol *Sym = Section->getBeginSymbol();

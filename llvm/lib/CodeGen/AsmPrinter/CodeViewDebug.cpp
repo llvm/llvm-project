@@ -559,7 +559,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
     addLocIfNotPresent(CurFn->ChildSites, Loc);
   }
 
-  OS.EmitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
+  OS.emitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
                         /*PrologueEnd=*/false, /*IsStmt=*/false,
                         DL->getFilename(), SMLoc());
 }
@@ -616,11 +616,11 @@ void CodeViewDebug::endModule() {
 
   // This subsection holds a file index to offset in string table table.
   OS.AddComment("File index to string table offset subsection");
-  OS.EmitCVFileChecksumsDirective();
+  OS.emitCVFileChecksumsDirective();
 
   // This subsection holds the string table.
   OS.AddComment("String table");
-  OS.EmitCVStringTableDirective();
+  OS.emitCVStringTableDirective();
 
   // Emit S_BUILDINFO, which points to LF_BUILDINFO. Put this in its own symbol
   // subsection in the generic .debug$S section at the end. There is no
@@ -888,7 +888,7 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     OS.AddComment("Type index of inlined function");
     OS.emitInt32(InlineeIdx.getIndex());
     OS.AddComment("Offset into filechecksum table");
-    OS.EmitCVFileChecksumOffsetDirective(FileId);
+    OS.emitCVFileChecksumOffsetDirective(FileId);
     OS.AddComment("Starting line number");
     OS.emitInt32(SP->getLine());
   }
@@ -915,7 +915,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();
 
-  OS.EmitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
+  OS.emitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
                                     FI.Begin, FI.End);
 
   endSymbolRecord(InlineEnd);
@@ -1141,7 +1141,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   endCVSubsection(SymbolsEnd);
 
   // We have an assembler directive that takes care of the whole line table.
-  OS.EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
+  OS.emitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
 CodeViewDebug::LocalVarDefRange
@@ -2677,7 +2677,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                : (EncFP == FI.EncodedLocalFramePtrReg))) {
         DefRangeFramePointerRelHeader DRHdr;
         DRHdr.Offset = Offset;
-        OS.EmitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
       } else {
         uint16_t RegRelFlags = 0;
         if (DefRange.IsSubfield) {
@@ -2689,7 +2689,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = Reg;
         DRHdr.Flags = RegRelFlags;
         DRHdr.BasePointerOffset = Offset;
-        OS.EmitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
       }
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
@@ -2698,12 +2698,12 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
         DRHdr.OffsetInParent = DefRange.StructOffset;
-        OS.EmitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
       } else {
         DefRangeRegisterHeader DRHdr;
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
-        OS.EmitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
       }
     }
   }

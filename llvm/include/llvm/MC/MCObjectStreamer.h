@@ -69,7 +69,7 @@ public:
   /// Object streamers require the integrated assembler.
   bool isIntegratedAssemblerRequired() const override { return true; }
 
-  void EmitFrames(MCAsmBackend *MAB);
+  void emitFrames(MCAsmBackend *MAB);
   void emitCFISections(bool EH, bool Debug) override;
 
   MCFragment *getCurrentFragment() const;
@@ -122,12 +122,12 @@ public:
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.
-  virtual void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
+  virtual void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
   void emitBundleAlignMode(unsigned AlignPow2) override;
   void emitBundleLock(bool AlignToEnd) override;
@@ -148,22 +148,22 @@ public:
                                 const MCSymbol *Label, unsigned PointerSize);
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label);
-  void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
+  void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
                           StringRef FileName, SMLoc Loc) override;
-  void EmitCVLinetableDirective(unsigned FunctionId, const MCSymbol *Begin,
+  void emitCVLinetableDirective(unsigned FunctionId, const MCSymbol *Begin,
                                 const MCSymbol *End) override;
-  void EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+  void emitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
                                       unsigned SourceFileId,
                                       unsigned SourceLineNum,
                                       const MCSymbol *FnStartSym,
                                       const MCSymbol *FnEndSym) override;
-  void EmitCVDefRangeDirective(
+  void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion) override;
-  void EmitCVStringTableDirective() override;
-  void EmitCVFileChecksumsDirective() override;
-  void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
+  void emitCVStringTableDirective() override;
+  void emitCVFileChecksumsDirective() override;
+  void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
   void emitDTPRel32Value(const MCExpr *Value) override;
   void emitDTPRel64Value(const MCExpr *Value) override;
   void emitTPRel32Value(const MCExpr *Value) override;
@@ -183,7 +183,7 @@ public:
   void emitAddrsig() override;
   void emitAddrsigSym(const MCSymbol *Sym) override;
 
-  void FinishImpl() override;
+  void finishImpl() override;
 
   /// Emit the absolute difference between two symbols if possible.
   ///
