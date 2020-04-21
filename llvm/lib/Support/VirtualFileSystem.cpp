@@ -2010,8 +2010,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
   if (!Entries.empty()) {
     const YAMLVFSEntry &Entry = Entries.front();
     bool first_entry_is_directory = Entry.IsDirectory;
-    StringRef Dir =
-        first_entry_is_directory ? Entry.VPath : path::parent_path(Entry.VPath);
+    StringRef Dir = first_entry_is_directory ? StringRef(Entry.VPath)
+                                             : path::parent_path(Entry.VPath);
     startDirectory(Dir);
 
     StringRef RPath = Entry.RPath;
@@ -2026,8 +2026,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       writeEntry(path::filename(Entry.VPath), RPath);
 
     for (const auto &Entry : Entries.slice(1)) {
-      StringRef Dir =
-          Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath);
+      StringRef Dir = Entry.IsDirectory ? StringRef(Entry.VPath)
+                                        : path::parent_path(Entry.VPath);
       if (Dir == DirStack.back()) {
         if (!first_entry_is_directory) {
           OS << ",\n";
