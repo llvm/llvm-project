@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCOFFDump.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+
+#include "llvm-objdump.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -29,7 +31,14 @@ Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile *Obj,
   Expected<StringRef> SymNameOrErr = SymI->getName();
   if (!SymNameOrErr)
     return SymNameOrErr.takeError();
-  StringRef SymName = *SymNameOrErr;
+
+  std::string SymName = (*SymNameOrErr).str();
+  if (Demangle)
+    SymName = demangle(SymName);
+
+  if (SymbolDescription)
+    SymName = getXCOFFSymbolDescription(createSymbolInfo(Obj, *SymI), SymName);
+
   Result.append(SymName.begin(), SymName.end());
   return Error::success();
 }
@@ -55,20 +64,25 @@ bool objdump::isLabel(const XCOFFObjectFile *Obj, const SymbolRef &Sym) {
   return false;
 }
 
-void objdump::printXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
-                                          StringRef SymbolName) {
+std::string objdump::getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
+                                               StringRef SymbolName) {
   assert(SymbolInfo.isXCOFF() && "Must be a XCOFFSymInfo.");
 
+  std::string Result;
   // Dummy symbols have no symbol index.
   if (SymbolInfo.XCOFFSymInfo.Index)
-    outs() << "(idx: " << SymbolInfo.XCOFFSymInfo.Index.getValue() << ") ";
-
-  outs() << SymbolName;
+    Result = ("(idx: " + Twine(SymbolInfo.XCOFFSymInfo.Index.getValue()) +
+              ") " + SymbolName)
+                 .str();
+  else
+    Result.append(SymbolName.begin(), SymbolName.end());
 
   if (SymbolInfo.XCOFFSymInfo.StorageMappingClass &&
       !SymbolInfo.XCOFFSymInfo.IsLabel) {
     const XCOFF::StorageMappingClass Smc =
         SymbolInfo.XCOFFSymInfo.StorageMappingClass.getValue();
-    outs() << "[" << XCOFF::getMappingClassString(Smc) << "]";
+    Result.append(("[" + XCOFF::getMappingClassString(Smc) + "]").str());
   }
+
+  return Result;
 }

@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +44,7 @@ extern cl::opt<bool> PrivateHeaders;
 extern cl::opt<bool> Relocations;
 extern cl::opt<bool> SectionHeaders;
 extern cl::opt<bool> SectionContents;
+extern cl::opt<bool> SymbolDescription;
 extern cl::opt<bool> SymbolTable;
 extern cl::opt<std::string> TripleName;
 extern cl::opt<bool> UnwindInfo;
@@ -151,6 +153,8 @@ T unwrapOrError(Expected<T> EO, Ts &&... Args) {
 
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
+SymbolInfoTy createSymbolInfo(const object::ObjectFile *Obj,
+                              const object::SymbolRef &Symbol);
 
 } // end namespace llvm
 
