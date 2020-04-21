@@ -68,11 +68,6 @@ static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
 
-static cl::opt<unsigned> DepRecInterval(
-    "attributor-dependence-recompute-interval", cl::Hidden,
-    cl::desc("Number of iterations until dependences are recomputed."),
-    cl::init(4));
-
 static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
                                        cl::init(true), cl::Hidden);
 
@@ -915,8 +910,6 @@ ChangeStatus Attributor::run() {
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
-  bool RecomputeDependences = false;
-
   do {
     // Remember the size to determine new attributes.
     size_t NumAAs = AllAbstractAttributes.size();
@@ -948,24 +941,9 @@ ChangeStatus Attributor::run() {
         else
           ChangedAAs.push_back(DepOnInvalidAA);
       }
-      if (!RecomputeDependences)
-        Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
-                        QuerriedAAs->OptionalAAs.end());
-    }
-
-    // If dependences (=QueryMap) are recomputed we have to look at all abstract
-    // attributes again, regardless of what changed in the last iteration.
-    if (RecomputeDependences) {
-      LLVM_DEBUG(
-          dbgs() << "[Attributor] Run all AAs to recompute dependences\n");
-      // The query map entries are reused (1) because it is likely a future
-      // iteration has similar dependences and (2) the QueryMapValueTy is
-      // allocated via a BumpPtrAllocator and cannot be reused otherwise.
-      for (auto &It : QueryMap)
-        It.getSecond()->clear();
-      ChangedAAs.clear();
-      Worklist.insert(AllAbstractAttributes.begin(),
-                      AllAbstractAttributes.end());
+      Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
+                      QuerriedAAs->OptionalAAs.end());
+      QuerriedAAs->clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
@@ -976,6 +954,7 @@ ChangeStatus Attributor::run() {
                         QuerriedAAs->OptionalAAs.end());
         Worklist.insert(QuerriedAAs->RequiredAAs.begin(),
                         QuerriedAAs->RequiredAAs.end());
+        QuerriedAAs->clear();
       }
     }
 
@@ -1004,9 +983,6 @@ ChangeStatus Attributor::run() {
         }
       }
 
-    // Check if we recompute the dependences in the next iteration.
-    RecomputeDependences = (DepRecomputeInterval > 0 &&
-                            IterationCounter % DepRecomputeInterval == 0);
 
     // Add attributes to the changed set if they have been created in the last
     // iteration.
@@ -1050,6 +1026,8 @@ ChangeStatus Attributor::run() {
                         QuerriedAAs->OptionalAAs.end());
       ChangedAAs.append(QuerriedAAs->RequiredAAs.begin(),
                         QuerriedAAs->RequiredAAs.end());
+      // Release the memory early.
+      QuerriedAAs->clear();
     }
   }
 
@@ -2002,7 +1980,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  Attributor A(Functions, InfoCache, CGUpdater, DepRecInterval);
+  Attributor A(Functions, InfoCache, CGUpdater);
 
   // Create shallow wrappers for all functions that are not IPO amendable
   if (AllowShallowWrappers)
