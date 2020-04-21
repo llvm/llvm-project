@@ -138,7 +138,7 @@ class Tool(TestToolBase):
             try:
                 debugger_controller =self._init_debugger_controller()
                 debugger_controller = run_debugger_subprocess(
-                    self.context, debugger_controller)
+                    debugger_controller, self.context.working_directory.path)
                 steps = debugger_controller.step_collection
             except DebuggerException:
                 steps =  DextIR(
