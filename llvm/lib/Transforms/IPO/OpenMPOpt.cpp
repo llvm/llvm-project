@@ -63,6 +63,8 @@ struct OpenMPOpt {
 
   /// Generic information that describes a runtime function
   struct RuntimeFunctionInfo {
+    ~RuntimeFunctionInfo() { DeleteContainerSeconds(UsesMap); }
+
     /// The kind, as described by the RuntimeFunction enum.
     RuntimeFunction Kind;
 
@@ -82,7 +84,24 @@ struct OpenMPOpt {
     Function *Declaration = nullptr;
 
     /// Uses of this runtime function per function containing the use.
-    DenseMap<Function *, SmallPtrSet<Use *, 16>> UsesMap;
+    using UseVector = SmallVector<Use *, 16>;
+
+    /// Return the vector of uses in function \p F.
+    UseVector &getOrCreateUseVector(Function *F) {
+      UseVector *&UV = UsesMap[F];
+      if (!UV)
+        UV = new UseVector();
+      return *UV;
+    }
+
+    /// Return the vector of uses in function \p F or `nullptr` if there are
+    /// none.
+    const UseVector *getUseVector(Function &F) const {
+      return UsesMap.lookup(&F);
+    }
+
+    /// Return how many functions contain uses of this runtime function.
+    size_t getNumFunctionsWithUses() const { return UsesMap.size(); }
 
     /// Return the number of arguments (or the minimal number for variadic
     /// functions).
@@ -92,16 +111,31 @@ struct OpenMPOpt {
     /// true. The callback will be fed the function in which the use was
     /// encountered as second argument.
     void foreachUse(function_ref<bool(Use &, Function &)> CB) {
-      SmallVector<Use *, 8> ToBeDeleted;
+      SmallVector<unsigned, 8> ToBeDeleted;
       for (auto &It : UsesMap) {
         ToBeDeleted.clear();
-        for (Use *U : It.second)
+        unsigned Idx = 0;
+        UseVector &UV = *It.second;
+        for (Use *U : UV) {
           if (CB(*U, *It.first))
-            ToBeDeleted.push_back(U);
-        for (Use *U : ToBeDeleted)
-          It.second.erase(U);
+            ToBeDeleted.push_back(Idx);
+          ++Idx;
+        }
+
+        // Remove the to-be-deleted indices in reverse order as prior
+        // modifcations will not modify the smaller indices.
+        while (!ToBeDeleted.empty()) {
+          unsigned Idx = ToBeDeleted.pop_back_val();
+          UV[Idx] = UV.back();
+          UV.pop_back();
+        }
       }
     }
+
+  private:
+    /// Map from functions to all uses of this runtime function contained in
+    /// them.
+    DenseMap<Function *, UseVector *> UsesMap;
   };
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
@@ -248,15 +282,11 @@ private:
   /// \p ReplVal if given.
   bool deduplicateRuntimeCalls(Function &F, RuntimeFunctionInfo &RFI,
                                Value *ReplVal = nullptr) {
-    auto UsesIt = RFI.UsesMap.find(&F);
-    if (UsesIt == RFI.UsesMap.end())
+    auto *UV = RFI.getUseVector(F);
+    if (!UV || UV->size() + (ReplVal != nullptr) < 2)
       return false;
 
-    auto &Uses = UsesIt->getSecond();
-    if (Uses.size() + (ReplVal != nullptr) < 2)
-      return false;
-
-    LLVM_DEBUG(dbgs() << TAG << "Deduplicate " << Uses.size() << " uses of "
+    LLVM_DEBUG(dbgs() << TAG << "Deduplicate " << UV->size() << " uses of "
                       << RFI.Name
                       << (ReplVal ? " with an existing value\n" : "\n")
                       << "\n");
@@ -278,7 +308,7 @@ private:
     };
 
     if (!ReplVal) {
-      for (Use *U : Uses)
+      for (Use *U : *UV)
         if (CallInst *CI = getCallIfRegularCall(*U, &RFI)) {
           if (!CanBeMoved(*CI))
             continue;
@@ -357,10 +387,11 @@ private:
     // The argument users of __kmpc_global_thread_num calls are GTIds.
     RuntimeFunctionInfo &GlobThreadNumRFI =
         RFIs[OMPRTL___kmpc_global_thread_num];
-    for (auto &It : GlobThreadNumRFI.UsesMap)
-      for (Use *U : It.second)
-        if (CallInst *CI = getCallIfRegularCall(*U, &GlobThreadNumRFI))
-          AddUserArgs(*CI);
+    GlobThreadNumRFI.foreachUse([&](Use &U, Function &F) {
+      if (CallInst *CI = getCallIfRegularCall(U, &GlobThreadNumRFI))
+        AddUserArgs(*CI);
+      return false;
+    });
 
     // Transitively search for more arguments by looking at the users of the
     // ones we know already. During the search the GTIdArgs vector is extended
@@ -432,11 +463,11 @@ private:
       for (Use &U : RFI.Declaration->uses()) {
         if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
           if (ModuleSlice.count(UserI->getFunction())) {
-            RFI.UsesMap[UserI->getFunction()].insert(&U);
+            RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
             ++NumUses;
           }
         } else {
-          RFI.UsesMap[nullptr].insert(&U);
+          RFI.getOrCreateUseVector(nullptr).push_back(&U);
           ++NumUses;
         }
       }
@@ -447,7 +478,7 @@ private:
   {                                                                            \
     SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
     Function *F = M.getFunction(_Name);                                        \
-    if (declMatchesRTFTypes(F, _ReturnType , ArgsTypes)) {                     \
+    if (declMatchesRTFTypes(F, _ReturnType, ArgsTypes)) {                      \
       auto &RFI = RFIs[_Enum];                                                 \
       RFI.Kind = _Enum;                                                        \
       RFI.Name = _Name;                                                        \
@@ -459,10 +490,11 @@ private:
       (void)NumUses;                                                           \
       LLVM_DEBUG({                                                             \
         dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
-              << " found\n";                                                   \
+               << " found\n";                                                  \
         if (RFI.Declaration)                                                   \
           dbgs() << TAG << "-> got " << NumUses << " uses in "                 \
-                << RFI.UsesMap.size() << " different functions.\n";            \
+                 << RFI.getNumFunctionsWithUses()                              \
+                 << " different functions.\n";                                 \
       });                                                                      \
     }                                                                          \
   }
