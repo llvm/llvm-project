@@ -1,46 +1,8 @@
-# This is a helper function and not a build rule. It is to be used by the
-# the "add_entrypoint_library" rule to generate the full list of object files
-# recursively produced by "add_object_library" targets upstream in the
-# dependency tree. This function traverses up through the
-# "add_entrypoint_object" targets but does not collect the object files
-# produced by them.
-# Usage:
-#   get_object_files_for_test(<result var> <target0> [<target1> ...])
-#
-#   targetN is either an "add_entrypoint_target" target or an
-#   "add_object_library" target.
-function(get_object_files_for_entrypoint_library result)
-  set(object_files "")
-  foreach(dep IN LISTS ARGN)
-    get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if (NOT dep_type)
-      continue()
-    endif()
-
-    if(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
-      get_target_property(dep_object_files ${dep} "OBJECT_FILES")
-      if(dep_object_files)
-        list(APPEND object_files ${dep_object_files})
-      endif()
-    endif()
-
-    get_target_property(indirect_deps ${dep} "DEPS")
-    get_object_files_for_entrypoint_library(indirect_objfiles ${indirect_deps})
-    list(APPEND object_files ${indirect_objfiles})
-  endforeach(dep)
-  list(REMOVE_DUPLICATES object_files)
-  set(${result} ${object_files} PARENT_SCOPE)
-endfunction()
-
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
-#
-# NOTE: If one wants an entrypoint to be availabe in a library, then they will
-# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
-# entrypoint dependencies will not be added to the library.
 function(add_entrypoint_library target_name)
   cmake_parse_arguments(
     "ENTRYPOINT_LIBRARY"
@@ -54,16 +16,15 @@ function(add_entrypoint_library target_name)
                         "of 'add_entrypoint_object' targets.")
   endif()
 
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
-  get_object_files_for_entrypoint_library(obj_list ${fq_deps_list})
-  foreach(dep IN LISTS fq_deps_list)
+  set(obj_list "")
+  foreach(dep IN LISTS ENTRYPOINT_LIBRARY_DEPENDS)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' target.")
     endif()
-    get_target_property(objfile ${dep} "OBJECT_FILE")
-    list(APPEND obj_list ${objfile})
+    get_target_property(target_obj_files ${dep} "OBJECT_FILES")
+    list(APPEND obj_list "${target_obj_files}")
   endforeach(dep)
   list(REMOVE_DUPLICATES obj_list)
 
@@ -117,8 +78,6 @@ function(add_redirector_library target_name)
   )
 endfunction(add_redirector_library)
 
-set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
-
 # Rule to add header only libraries.
 # Usage
 #    add_header_library(
@@ -148,12 +107,12 @@ function(add_header_library target_name)
     list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
   endforeach()
 
-  set(interface_target_name "${fq_target_name}.__header_library__")
+  set(interface_target_name "${fq_target_name}_header_library__")
 
   add_library(${interface_target_name} INTERFACE)
   target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
-  get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
   if(ADD_HEADER_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
     add_dependencies(${interface_target_name} ${fq_deps_list})
   endif()
 
@@ -162,7 +121,6 @@ function(add_header_library target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
-      "TARGET_TYPE" "${HDR_LIBRARY_TARGET_TYPE}"
-      "DEPS" "${fq_deps_list}"
+      "TARGET_TYPE" "HDR_LIBRARY"
   )
 endfunction(add_header_library)

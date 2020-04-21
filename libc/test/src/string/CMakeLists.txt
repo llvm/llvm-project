@@ -9,7 +9,11 @@ add_libc_unittest(
   SRCS
     strcat_test.cpp
   DEPENDS
+    # TODO (sivachandra): remove redundant deps.
+    libc.src.string.memcpy
     libc.src.string.strcat
+    libc.src.string.strcpy
+    libc.src.string.strlen
 )
 
 add_libc_unittest(
@@ -19,7 +23,10 @@ add_libc_unittest(
   SRCS
     strcpy_test.cpp
   DEPENDS
+    # TODO (sivachandra): remove redundant deps.
+    libc.src.string.memcpy
     libc.src.string.strcpy
+    libc.src.string.strlen
 )
 
 add_libc_unittest(
