@@ -138,13 +138,30 @@ private:
   LogicalResult replaceWithConstant(OpBuilder &builder, OperationFolder &folder,
                                     Value value);
 
+  /// Visit the users of the given IR that reside within executable blocks.
+  template <typename T>
+  void visitUsers(T &value) {
+    for (Operation *user : value.getUsers())
+      if (isBlockExecutable(user->getBlock()))
+        visitOperation(user);
+  }
+
   /// Visit the given operation and compute any necessary lattice state.
   void visitOperation(Operation *op);
 
   /// Visit the given operation, which defines regions, and compute any
   /// necessary lattice state. This also resolves the lattice state of both the
   /// operation results and any nested regions.
-  void visitRegionOperation(Operation *op);
+  void visitRegionOperation(Operation *op,
+                            ArrayRef<Attribute> constantOperands);
+
+  /// Visit the given set of region successors, computing any necessary lattice
+  /// state. The provided function returns the input operands to the region at
+  /// the given index. If the index is 'None', the input operands correspond to
+  /// the parent operation results.
+  void visitRegionSuccessors(
+      Operation *parentOp, ArrayRef<RegionSuccessor> regionSuccessors,
+      function_ref<OperandRange(Optional<unsigned>)> getInputsForRegion);
 
   /// Visit the given terminator operation and compute any necessary lattice
   /// state.
@@ -185,6 +202,16 @@ private:
   void markAllOverdefined(Operation *op, ValuesT values) {
     markAllOverdefined(values);
     opWorklist.push_back(op);
+  }
+  template <typename ValuesT>
+  void markAllOverdefinedAndVisitUsers(ValuesT values) {
+    for (auto value : values) {
+      auto &lattice = latticeValues[value];
+      if (!lattice.isOverdefined()) {
+        lattice.markOverdefined();
+        visitUsers(value);
+      }
+    }
   }
 
   /// Returns true if the given value was marked as overdefined.
@@ -229,15 +256,8 @@ SCCPSolver::SCCPSolver(MutableArrayRef<Region> regions) {
 void SCCPSolver::solve() {
   while (!blockWorklist.empty() || !opWorklist.empty()) {
     // Process any operations in the op worklist.
-    while (!opWorklist.empty()) {
-      Operation *op = opWorklist.pop_back_val();
-
-      // Visit all of the live users to propagate changes to this operation.
-      for (Operation *user : op->getUsers()) {
-        if (isBlockExecutable(user->getBlock()))
-          visitOperation(user);
-      }
-    }
+    while (!opWorklist.empty())
+      visitUsers(*opWorklist.pop_back_val());
 
     // Process any blocks in the block worklist.
     while (!blockWorklist.empty())
@@ -330,7 +350,7 @@ void SCCPSolver::visitOperation(Operation *op) {
   // Process region holding operations. The region visitor processes result
   // values, so we can exit afterwards.
   if (op->getNumRegions())
-    return visitRegionOperation(op);
+    return visitRegionOperation(op, operandConstants);
 
   // If this op produces no results, it can't produce any constants.
   if (op->getNumResults() == 0)
@@ -379,25 +399,144 @@ void SCCPSolver::visitOperation(Operation *op) {
   }
 }
 
-void SCCPSolver::visitRegionOperation(Operation *op) {
-  for (Region &region : op->getRegions()) {
-    if (region.empty())
-      continue;
-    Block *entryBlock = &region.front();
-    markBlockExecutable(entryBlock);
-    markAllOverdefined(entryBlock->getArguments());
+void SCCPSolver::visitRegionOperation(Operation *op,
+                                      ArrayRef<Attribute> constantOperands) {
+  // Check to see if we can reason about the internal control flow of this
+  // region operation.
+  auto regionInterface = dyn_cast<RegionBranchOpInterface>(op);
+  if (!regionInterface) {
+    // If we can't, conservatively mark all regions as executable.
+    for (Region &region : op->getRegions()) {
+      if (region.empty())
+        continue;
+      Block *entryBlock = &region.front();
+      markBlockExecutable(entryBlock);
+      markAllOverdefined(entryBlock->getArguments());
+    }
+
+    // Don't try to simulate the results of a region operation as we can't
+    // guarantee that folding will be out-of-place. We don't allow in-place
+    // folds as the desire here is for simulated execution, and not general
+    // folding.
+    return markAllOverdefined(op, op->getResults());
   }
 
-  // Don't try to simulate the results of a region operation as we can't
-  // guarantee that folding will be out-of-place. We don't allow in-place folds
-  // as the desire here is for simulated execution, and not general folding.
-  return markAllOverdefined(op, op->getResults());
+  // Check to see which regions are executable.
+  SmallVector<RegionSuccessor, 1> successors;
+  regionInterface.getSuccessorRegions(/*index=*/llvm::None, constantOperands,
+                                      successors);
+
+  // If the interface identified that no region will be executed. Mark
+  // any results of this operation as overdefined, as we can't reason about
+  // them.
+  // TODO: If we had an interface to detect pass through operands, we could
+  // resolve some results based on the lattice state of the operands. We could
+  // also allow for the parent operation to have itself as a region successor.
+  if (successors.empty())
+    return markAllOverdefined(op, op->getResults());
+  return visitRegionSuccessors(op, successors, [&](Optional<unsigned> index) {
+    assert(index && "expected valid region index");
+    return regionInterface.getSuccessorEntryOperands(*index);
+  });
+}
+
+void SCCPSolver::visitRegionSuccessors(
+    Operation *parentOp, ArrayRef<RegionSuccessor> regionSuccessors,
+    function_ref<OperandRange(Optional<unsigned>)> getInputsForRegion) {
+  for (const RegionSuccessor &it : regionSuccessors) {
+    Region *region = it.getSuccessor();
+    ValueRange succArgs = it.getSuccessorInputs();
+
+    // Check to see if this is the parent operation.
+    if (!region) {
+      ResultRange results = parentOp->getResults();
+      if (llvm::all_of(results, [&](Value res) { return isOverdefined(res); }))
+        continue;
+
+      // Mark the results outside of the input range as overdefined.
+      if (succArgs.size() != results.size()) {
+        opWorklist.push_back(parentOp);
+        if (succArgs.empty())
+          return markAllOverdefined(results);
+
+        unsigned firstResIdx = succArgs[0].cast<OpResult>().getResultNumber();
+        markAllOverdefined(results.take_front(firstResIdx));
+        markAllOverdefined(results.drop_front(firstResIdx + succArgs.size()));
+      }
+
+      // Update the lattice for any operation results.
+      OperandRange operands = getInputsForRegion(/*index=*/llvm::None);
+      for (auto it : llvm::zip(succArgs, operands))
+        meet(parentOp, latticeValues[std::get<0>(it)],
+             latticeValues[std::get<1>(it)]);
+      return;
+    }
+    assert(!region->empty() && "expected region to be non-empty");
+    Block *entryBlock = &region->front();
+    markBlockExecutable(entryBlock);
+
+    // If all of the arguments are already overdefined, the arguments have
+    // already been fully resolved.
+    auto arguments = entryBlock->getArguments();
+    if (llvm::all_of(arguments, [&](Value arg) { return isOverdefined(arg); }))
+      continue;
+
+    // Mark any arguments that do not receive inputs as overdefined, we won't be
+    // able to discern if they are constant.
+    if (succArgs.size() != arguments.size()) {
+      if (succArgs.empty()) {
+        markAllOverdefined(arguments);
+        continue;
+      }
+
+      unsigned firstArgIdx = succArgs[0].cast<BlockArgument>().getArgNumber();
+      markAllOverdefinedAndVisitUsers(arguments.take_front(firstArgIdx));
+      markAllOverdefinedAndVisitUsers(
+          arguments.drop_front(firstArgIdx + succArgs.size()));
+    }
+
+    // Update the lattice for arguments that have inputs from the predecessor.
+    OperandRange succOperands = getInputsForRegion(region->getRegionNumber());
+    for (auto it : llvm::zip(succArgs, succOperands)) {
+      LatticeValue &argLattice = latticeValues[std::get<0>(it)];
+      if (argLattice.meet(latticeValues[std::get<1>(it)]))
+        visitUsers(std::get<0>(it));
+    }
+  }
 }
 
 void SCCPSolver::visitTerminatorOperation(
     Operation *op, ArrayRef<Attribute> constantOperands) {
-  if (op->getNumSuccessors() == 0)
-    return;
+  // If this operation has no successors, we treat it as an exiting terminator.
+  if (op->getNumSuccessors() == 0) {
+    // Check to see if the parent tracks region control flow.
+    Region *parentRegion = op->getParentRegion();
+    Operation *parentOp = parentRegion->getParentOp();
+    auto regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp);
+    if (!regionInterface || !isBlockExecutable(parentOp->getBlock()))
+      return;
+
+    // Query the set of successors from the current region.
+    SmallVector<RegionSuccessor, 1> regionSuccessors;
+    regionInterface.getSuccessorRegions(parentRegion->getRegionNumber(),
+                                        constantOperands, regionSuccessors);
+    if (regionSuccessors.empty())
+      return;
+
+    // If this terminator is not "region-like", conservatively mark all of the
+    // successor values as overdefined.
+    if (!op->hasTrait<OpTrait::ReturnLike>()) {
+      for (auto &it : regionSuccessors)
+        markAllOverdefinedAndVisitUsers(it.getSuccessorInputs());
+      return;
+    }
+
+    // Otherwise, propagate the operand lattice states to each of the
+    // successors.
+    OperandRange operands = op->getOperands();
+    return visitRegionSuccessors(parentOp, regionSuccessors,
+                                 [&](Optional<unsigned>) { return operands; });
+  }
 
   // Try to resolve to a specific successor with the constant operands.
   if (auto branch = dyn_cast<BranchOpInterface>(op)) {
@@ -465,11 +604,8 @@ void SCCPSolver::visitBlockArgument(Block *block, int i) {
   }
 
   // If the lattice was updated, visit any executable users of the argument.
-  if (updatedLattice) {
-    for (Operation *user : arg.getUsers())
-      if (isBlockExecutable(user->getBlock()))
-        visitOperation(user);
-  }
+  if (updatedLattice)
+    visitUsers(arg);
 }
 
 bool SCCPSolver::markBlockExecutable(Block *block) {
