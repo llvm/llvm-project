@@ -131,6 +131,27 @@ func @inline_convert_call() -> i16 {
   return %res : i16
 }
 
+func @convert_callee_fn_multiblock() -> i32 {
+  br ^bb0
+^bb0:
+  %0 = constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @inline_convert_result_multiblock
+func @inline_convert_result_multiblock() -> i16 {
+// CHECK:   br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %[[C:.+]] = constant 0 : i32
+// CHECK:   br ^bb2(%[[C]] : i32)
+// CHECK: ^bb2(%[[BBARG:.+]]: i32):
+// CHECK:   %[[CAST_RESULT:.+]] = "test.cast"(%[[BBARG]]) : (i32) -> i16
+// CHECK:   return %[[CAST_RESULT]] : i16
+
+  %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock } : () -> (i16)
+  return %res : i16
+}
+
 // CHECK-LABEL: func @no_inline_convert_call
 func @no_inline_convert_call() {
   // CHECK: "test.conversion_call_op"
