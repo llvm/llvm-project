@@ -240,6 +240,7 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
       llvm_unreachable("Expecting to have one constant and one relocation.");
 
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(LHS);
+    (void)SRE;
     const MCConstantExpr *CE = cast<MCConstantExpr>(RHS);
 
     // Currently these are the only valid PCRelative Relocations.
