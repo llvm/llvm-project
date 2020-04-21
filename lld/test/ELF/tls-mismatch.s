@@ -12,8 +12,10 @@
 ## We fail to flag the swapped case.
 # RUN: ld.lld %t.o %t2.o -o /dev/null
 
+## We fail to flag the STT_NOTYPE reference. This usually happens with hand-written
+## assembly because compiler-generated code properly sets symbol types.
 # RUN: echo 'movq tls1,%rax' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
-# RUN: not ld.lld %t3.o %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t3.o %t.o -o /dev/null
 
 ## Overriding a TLS definition with a non-TLS definition does not make sense.
 # RUN: not ld.lld --defsym tls1=42 %t.o -o /dev/null 2>&1 | FileCheck %s
@@ -21,11 +23,13 @@
 ## Part of PR36049: This should probably be allowed.
 # RUN: not ld.lld --defsym tls1=tls2 %t.o -o /dev/null 2>&1 | FileCheck %s
 
+## An undefined symbol in module-level inline assembly of a bitcode file
+## is considered STT_NOTYPE. We should not error.
 # RUN: echo 'target triple = "x86_64-pc-linux-gnu" \
 # RUN:   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128" \
 # RUN:   module asm "movq tls1@GOTTPOFF(%rip), %rax"' | llvm-as - -o %t.bc
 # RUN: ld.lld %t.o %t.bc -o /dev/null
-# RUN: not ld.lld %t.bc %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t.bc %t.o -o /dev/null
 
 # CHECK: error: TLS attribute mismatch: tls1
 
