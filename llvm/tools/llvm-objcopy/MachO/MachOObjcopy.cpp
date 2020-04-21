@@ -171,11 +171,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SectionsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
-      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
-      Config.PreserveDates || Config.StripAllGNU || Config.StripDWO ||
-      Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
-      Config.DecompressDebugSections || Config.StripNonAlloc ||
-      Config.StripSections || Config.StripUnneeded ||
+      Config.ExtractDWO || Config.LocalizeHidden || Config.PreserveDates ||
+      Config.StripAllGNU || Config.StripDWO || Config.StripNonAlloc ||
+      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
+      Config.StripNonAlloc || Config.StripSections || Config.StripUnneeded ||
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,

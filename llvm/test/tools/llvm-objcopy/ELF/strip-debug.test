@@ -116,6 +116,8 @@ Symbols:
   - Name:    debugfoo
     Section: .debugfoo
     Binding:  STB_GLOBAL
+  - Name:    filesymbol
+    Type:    STT_FILE
 
 # CHECK: SectionHeaderCount: 5
 
@@ -124,7 +126,7 @@ Symbols:
 # CHECK: Name: .strtab
 # CHECK: Name: .shstrtab
 
-# Check that *only* foo is copied and not debugfoo
+# Check that *only* foo is copied and not debugfoo or filesymbol.
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
