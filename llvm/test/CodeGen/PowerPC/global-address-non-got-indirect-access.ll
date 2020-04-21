@@ -131,9 +131,8 @@ entry:
 define ppc_fp128 @_Z23ReadStaticLongDoubleVarv() {
 ; CHECK-LABEL: _Z23ReadStaticLongDoubleVarv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL19StaticLongDoubleVar@PCREL, 1
-; CHECK-NEXT:    lfd f2, 8(r3)
 ; CHECK-NEXT:    plfd f1, _ZL19StaticLongDoubleVar@PCREL(0), 1
+; CHECK-NEXT:    plfd f2, _ZL19StaticLongDoubleVar@PCREL+8(0), 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = load ppc_fp128, ppc_fp128* @_ZL19StaticLongDoubleVar, align 16
@@ -144,9 +143,8 @@ entry:
 define i128 @_Z27ReadStaticSigned__Int128Varv() {
 ; CHECK-LABEL: _Z27ReadStaticSigned__Int128Varv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL23StaticSigned__Int128Var@PCREL, 1
-; CHECK-NEXT:    ld r4, 8(r3)
 ; CHECK-NEXT:    pld r3, _ZL23StaticSigned__Int128Var@PCREL(0), 1
+; CHECK-NEXT:    pld r4, _ZL23StaticSigned__Int128Var@PCREL+8(0), 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i128, i128* @_ZL23StaticSigned__Int128Var, align 16
@@ -340,8 +338,7 @@ entry:
 define void @_Z24WriteStaticLongDoubleVarg(ppc_fp128 %val) {
 ; CHECK-LABEL: _Z24WriteStaticLongDoubleVarg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL19StaticLongDoubleVar@PCREL, 1
-; CHECK-NEXT:    stfd f2, 8(r3)
+; CHECK-NEXT:    pstfd f2, _ZL19StaticLongDoubleVar@PCREL+8(0), 1
 ; CHECK-NEXT:    pstfd f1, _ZL19StaticLongDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
@@ -353,8 +350,7 @@ entry:
 define void @_Z28WriteStaticSigned__Int128Varn(i128 %val) {
 ; CHECK-LABEL: _Z28WriteStaticSigned__Int128Varn:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r5, 0, _ZL23StaticSigned__Int128Var@PCREL, 1
-; CHECK-NEXT:    std r4, 8(r5)
+; CHECK-NEXT:    pstd r4, _ZL23StaticSigned__Int128Var@PCREL+8(0), 1
 ; CHECK-NEXT:    pstd r3, _ZL23StaticSigned__Int128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
@@ -490,8 +486,7 @@ entry:
 define signext i32 @_Z15ReadStaticArrayv() {
 ; CHECK-LABEL: _Z15ReadStaticArrayv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL5array@PCREL, 1
-; CHECK-NEXT:    lwa r3, 12(r3)
+; CHECK-NEXT:    plwa r3, _ZL5array@PCREL+12(0), 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @_ZL5array, i64 0, i64 3), align 4
@@ -502,9 +497,8 @@ entry:
 define void @_Z16WriteStaticArrayv() {
 ; CHECK-LABEL: _Z16WriteStaticArrayv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL5array@PCREL, 1
-; CHECK-NEXT:    li r4, 5
-; CHECK-NEXT:    stw r4, 12(r3)
+; CHECK-NEXT:    li r3, 5
+; CHECK-NEXT:    pstw r3, _ZL5array@PCREL+12(0), 1
 ; CHECK-NEXT:    blr
 entry:
   store i32 5, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @_ZL5array, i64 0, i64 3), align 4
@@ -518,8 +512,7 @@ entry:
 define signext i32 @_Z16ReadStaticStructv() {
 ; CHECK-LABEL: _Z16ReadStaticStructv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL9structure@PCREL, 1
-; CHECK-NEXT:    lwa r3, 4(r3)
+; CHECK-NEXT:    plwa r3, _ZL9structure@PCREL+4(0), 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @_ZL9structure, i64 0, i32 2), align 4
@@ -530,9 +523,8 @@ entry:
 define void @_Z17WriteStaticStructv() {
 ; CHECK-LABEL: _Z17WriteStaticStructv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    paddi r3, 0, _ZL9structure@PCREL, 1
-; CHECK-NEXT:    li r4, 3
-; CHECK-NEXT:    stw r4, 4(r3)
+; CHECK-NEXT:    li r3, 3
+; CHECK-NEXT:    pstw r3, _ZL9structure@PCREL+4(0), 1
 ; CHECK-NEXT:    blr
 entry:
   store i32 3, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @_ZL9structure, i64 0, i32 2), align 4
