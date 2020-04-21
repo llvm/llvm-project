@@ -13,6 +13,7 @@ add_mlir_library(MLIRTransforms
   OpStats.cpp
   ParallelLoopCollapsing.cpp
   PipelineDataTransfer.cpp
+  SCCP.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
   ViewOpGraph.cpp

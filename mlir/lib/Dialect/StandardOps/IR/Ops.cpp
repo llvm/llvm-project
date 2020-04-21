@@ -597,6 +597,8 @@ Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
 
 bool BranchOp::canEraseSuccessorOperand() { return true; }
 
+Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
+
 //===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
@@ -862,6 +864,14 @@ Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
 }
 
 bool CondBranchOp::canEraseSuccessorOperand() { return true; }
+
+Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (BoolAttr condAttr = operands.front().dyn_cast_or_null<BoolAttr>())
+    return condAttr.getValue() ? trueDest() : falseDest();
+  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
+    return condAttr.getValue().isOneValue() ? trueDest() : falseDest();
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // Constant*Op
