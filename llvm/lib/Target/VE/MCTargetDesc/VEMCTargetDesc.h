@@ -31,9 +31,6 @@ class Triple;
 class StringRef;
 class raw_pwrite_stream;
 class raw_ostream;
-
-Target &getTheVETarget();
-
 } // namespace llvm
 
 // Defines symbolic names for VE registers.  This defines a mapping from
