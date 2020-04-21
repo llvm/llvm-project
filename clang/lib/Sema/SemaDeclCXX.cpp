@@ -15002,6 +15002,10 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
 void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (VD->isInvalidDecl()) return;
+  // If initializing the variable failed, don't also diagnose problems with
+  // the desctructor, they're likely related.
+  if (VD->getInit() && VD->getInit()->containsErrors())
+    return;
 
   CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(Record->getDecl());
   if (ClassDecl->isInvalidDecl()) return;

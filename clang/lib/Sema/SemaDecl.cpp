@@ -12554,12 +12554,17 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     InitializationSequence InitSeq(*this, Entity, Kind, None);
     ExprResult Init = InitSeq.Perform(*this, Entity, Kind, None);
 
-    // If default-init fails, leave var uninitialized but valid, for recovery.
-
     if (Init.get()) {
       Var->setInit(MaybeCreateExprWithCleanups(Init.get()));
       // This is important for template substitution.
       Var->setInitStyle(VarDecl::CallInit);
+    } else if (Init.isInvalid()) {
+      // If default-init fails, attach a recovery-expr initializer to track
+      // that initialization was attempted and failed.
+      auto RecoveryExpr =
+          CreateRecoveryExpr(Var->getLocation(), Var->getLocation(), {});
+      if (RecoveryExpr.get())
+        Var->setInit(RecoveryExpr.get());
     }
 
     CheckCompleteVariableDeclaration(Var);
