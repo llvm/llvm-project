@@ -408,7 +408,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
       (Assembler.isBundlingEnabled() && Sec->isBundleLocked())) {
     MCInst Relaxed = Inst;
     while (getAssembler().getBackend().mayNeedRelaxation(Relaxed, STI))
-      getAssembler().getBackend().relaxInstruction(Relaxed, STI, Relaxed);
+      getAssembler().getBackend().relaxInstruction(Relaxed, STI);
     emitInstToData(Relaxed, STI);
     return;
   }

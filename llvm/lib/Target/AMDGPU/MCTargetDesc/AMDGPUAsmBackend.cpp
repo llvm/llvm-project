@@ -40,8 +40,8 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override;
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -54,12 +54,13 @@ public:
 
 } //End anonymous namespace
 
-void AMDGPUAsmBackend::relaxInstruction(const MCInst &Inst,
-                                        const MCSubtargetInfo &STI,
-                                        MCInst &Res) const {
+void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
+                                        const MCSubtargetInfo &STI) const {
+  MCInst Res;
   unsigned RelaxedOpcode = AMDGPU::getSOPPWithRelaxation(Inst.getOpcode());
   Res.setOpcode(RelaxedOpcode);
   Res.addOperand(Inst.getOperand(0));
+  Inst = std::move(Res);
   return;
 }
 
