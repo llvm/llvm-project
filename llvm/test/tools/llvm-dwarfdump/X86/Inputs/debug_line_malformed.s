@@ -77,7 +77,7 @@
 .asciz "dir2"
 .byte   0
 .asciz "file1"          # File table
-.byte   0, 0, 0
+.byte   1, 2, 3
 .asciz "file2"
 .byte   1, 2
 .Lprologue_short_prologue_end:
