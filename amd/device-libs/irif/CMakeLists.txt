@@ -15,13 +15,13 @@ add_custom_command(OUTPUT ${irif_lib_file}
   COMMAND ${LLVM_LINK} ${sources} -o ${irif_lib_file}
   DEPENDS ${sources})
 
-add_custom_target(irif_lib DEPENDS ${irif_lib_file}
-                           SOURCES ${sources})
-set_target_properties(irif_lib PROPERTIES
+add_custom_target(irif DEPENDS ${irif_lib_file}
+                       SOURCES ${sources})
+set_target_properties(irif PROPERTIES
   OUTPUT_NAME ${irif_lib_file}
   ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   ARCHIVE_OUTPUT_NAME "irif")
 
 if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-  add_dependencies(irif_lib llvm-link)
+  add_dependencies(irif llvm-link)
 endif()

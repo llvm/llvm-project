@@ -61,16 +61,15 @@ macro(opencl_bc_lib)
   set(sources ${OPENCL_BC_LIB_SOURCES})
   set(internal_link_libs ${OPENCL_BC_LIB_INTERNAL_LINK_LIBS})
 
-  get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
+  get_target_property(irif_lib_output irif OUTPUT_NAME)
 
   set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
-  set(LIB_TGT ${name}_lib)
   set(clean_files)
 
-  list(APPEND AMDGCN_LIB_LIST ${LIB_TGT})
+  list(APPEND AMDGCN_LIB_LIST ${name})
   set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
 
-  list(APPEND AMDGCN_DEP_LIST ${LIB_TGT})
+  list(APPEND AMDGCN_DEP_LIST ${name})
   set(AMDGCN_DEP_LIST ${AMDGCN_DEP_LIST} PARENT_SCOPE)
 
   set_inc_options()
@@ -121,12 +120,12 @@ macro(opencl_bc_lib)
       -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
     COMMAND "${PREPARE_BUILTINS}"
       -o "${OUT_NAME}${FINAL_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}"
-    DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}" ${internal_link_libs})
+      DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}" ${internal_link_libs})
 
-  add_custom_target("${LIB_TGT}" ALL
+  add_custom_target("${name}" ALL
     DEPENDS "${OUT_NAME}${FINAL_SUFFIX}"
     SOURCES ${OPENCL_BC_LIB_SOURCES})
-  set_target_properties(${LIB_TGT} PROPERTIES
+  set_target_properties(${name} PROPERTIES
     OUTPUT_NAME "${OUT_NAME}${FINAL_SUFFIX}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     ARCHIVE_OUTPUT_NAME "${name}"
@@ -136,13 +135,13 @@ macro(opencl_bc_lib)
     "${OUT_NAME}${LIB_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}")
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-    add_dependencies("${LIB_TGT}" llvm-link clang opt llvm-objdump)
+    add_dependencies("${name}" llvm-link clang opt llvm-objdump)
   endif()
 
   if (TARGET prepare-builtins)
-    add_dependencies("${LIB_TGT}" prepare-builtins)
+    add_dependencies("${name}" prepare-builtins)
   endif()
-  add_dependencies("${LIB_TGT}" irif_lib)
+  add_dependencies("${name}" irif)
 
   set_directory_properties(PROPERTIES
     ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")
@@ -157,7 +156,7 @@ function(clang_opencl_code name dir)
   set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
   set(mlink_flags)
   foreach (lib ${ARGN})
-    get_target_property(lib_path "${lib}_lib" OUTPUT_NAME)
+    get_target_property(lib_path "${lib}" OUTPUT_NAME)
     list(APPEND mlink_flags
       -Xclang -mlink-bitcode-file
       -Xclang "${lib_path}")
@@ -173,7 +172,7 @@ function(clang_opencl_code name dir)
   set_target_properties(${TEST_TGT} PROPERTIES
     OUTPUT_NAME "${OUT_NAME}.co")
   foreach (lib ${ARGN})
-    add_dependencies(${TEST_TGT} ${lib}_lib)
+    add_dependencies(${TEST_TGT} ${lib})
   endforeach()
 endfunction()
 
