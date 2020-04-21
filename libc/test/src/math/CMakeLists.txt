@@ -29,8 +29,6 @@ add_header_library(
     float.h
 )
 
-# TODO(sivachandra): Remove the dependency on __errno_location as the tested
-# entry points depend on the already.
 add_math_unittest(
   cosf_test
   NEED_MPFR
@@ -42,7 +40,6 @@ add_math_unittest(
     sdcomp26094.h
   DEPENDS
     .float_utils
-    libc.src.errno.__errno_location
     libc.src.math.cosf
     libc.utils.CPP.standalone_cpp
 )
@@ -58,7 +55,6 @@ add_math_unittest(
     sdcomp26094.h
   DEPENDS
     .float_utils
-    libc.src.errno.__errno_location
     libc.src.math.sinf
     libc.utils.CPP.standalone_cpp
 )
@@ -74,7 +70,6 @@ add_math_unittest(
     sdcomp26094.h
   DEPENDS
     .float_utils
-    libc.src.errno.__errno_location
     libc.src.math.sincosf
     libc.utils.CPP.standalone_cpp
 )

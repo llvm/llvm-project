@@ -43,36 +43,17 @@ function(add_object_library target_name)
     )
   endif()
 
-  set(all_object_files $<TARGET_OBJECTS:${fq_target_name}>)
-  if(ADD_OBJECT_DEPENDS)
-    get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
-    add_dependencies(
-      ${fq_target_name}
-      ${fq_deps_list}
-    )
-    foreach(obj_target IN LISTS fq_deps_list)
-      if(NOT TARGET obj_target)
-        # Not all targets will be visible. So, we will ignore those which aren't
-        # visible yet.
-        continue()
-      endif()
-      get_target_property(obj_type ${obj_target} "TARGET_TYPE")
-      if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})))
-        continue()
-      endif()
-      # If a dependency is also a object file library, we will collect the list of
-      # object files from it.
-      get_target_property(obj_files ${obj_target} "OBJECT_FILES")
-      list(APPEND all_object_files ${obj_files})
-    endforeach(obj_target)
+  get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
+  if(fq_deps_list)
+    add_dependencies(${fq_target_name} ${fq_deps_list})
   endif()
-  list(REMOVE_DUPLICATES all_object_files)
 
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       "TARGET_TYPE" ${OBJECT_LIBRARY_TARGET_TYPE}
-      "OBJECT_FILES" "${all_object_files}"
+      "OBJECT_FILES" "$<TARGET_OBJECTS:${fq_target_name}>"
+      "DEPS" "${fq_deps_list}"
   )
 endfunction(add_object_library)
 
@@ -123,14 +104,15 @@ function(add_entrypoint_object target_name)
 
     add_custom_target(${fq_target_name})
     add_dependencies(${fq_target_name} ${fq_dep_name})
-    get_target_property(all_objects ${fq_dep_name} "OBJECT_FILES")
-    get_target_property(all_objects_raw ${fq_dep_name} "OBJECT_FILES_RAW")
+    get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
+    get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
         "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
-        "OBJECT_FILES" "${all_objects}"
-        "OBJECT_FILES_RAW" "${all_objects_raw}"
+        "OBJECT_FILE"
+        "OBJECT_FILE_RAW"
+        "DEPS" "${fq_dep_name}"
     )
     return()
   endif()
@@ -170,38 +152,12 @@ function(add_entrypoint_object target_name)
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
   )
+  get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   add_dependencies(
     ${objects_target_name}
     libc.src.__support.common
+    ${fq_deps_list}
   )
-  set(dep_objects "")
-  if(ADD_ENTRYPOINT_OBJ_DEPENDS)
-    get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
-    add_dependencies(
-      ${objects_target_name}
-      ${fq_deps_list}
-    )
-    foreach(dep_target IN LISTS fq_deps_list)
-      if(NOT TARGET ${dep_target})
-        # Not all targets will be visible. So, we will ignore those which aren't
-        # visible yet.
-        continue()
-      endif()
-      get_target_property(obj_type ${dep_target} "TARGET_TYPE")
-      if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})))
-        # Even from among the visible targets, we will collect object files
-        # only from add_object_library targets.
-        continue()
-      endif()
-      # Calling get_target_property requires that the target be visible at this
-      # point. For object library dependencies, this is a reasonable requirement.
-      # We can revisit this in future if we need cases which break under this
-      # requirement.
-      get_target_property(obj_files ${dep_target} "OBJECT_FILES")
-      list(APPEND dep_objects ${obj_files})
-    endforeach(dep_target)
-  endif()
-  list(REMOVE_DUPLICATES dep_objects)
 
   if(ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS)
     target_compile_options(
@@ -239,16 +195,13 @@ function(add_entrypoint_object target_name)
     ALL
     DEPENDS ${object_file}
   )
-  set(all_objects ${object_file})
-  list(APPEND all_objects ${dep_objects})
-  set(all_objects_raw ${object_file_raw})
-  list(APPEND all_objects_raw ${dep_objects})
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
-      "OBJECT_FILES" "${all_objects}"
-      "OBJECT_FILES_RAW" "${all_objects_raw}"
+      "OBJECT_FILE" "${object_file}"
+      "OBJECT_FILE_RAW" "${object_file_raw}"
+      "DEPS" "${fq_deps_list}"
   )
 
   if(LLVM_LIBC_ENABLE_LINTING)
@@ -310,4 +263,3 @@ function(add_redirector_object target_name)
     BEFORE PRIVATE -fPIC
   )
 endfunction(add_redirector_object)
-
