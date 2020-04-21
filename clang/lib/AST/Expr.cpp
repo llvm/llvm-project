@@ -3270,6 +3270,26 @@ namespace {
 
     bool hasSideEffects() const { return HasSideEffects; }
 
+    void VisitDecl(const Decl *D) {
+      if (!D)
+        return;
+
+      // We assume the caller checks subexpressions (eg, the initializer, VLA
+      // bounds) for side-effects on our behalf.
+      if (auto *VD = dyn_cast<VarDecl>(D)) {
+        // Registering a destructor is a side-effect.
+        if (IncludePossibleEffects && VD->isThisDeclarationADefinition() &&
+            VD->needsDestruction(Context))
+          HasSideEffects = true;
+      }
+    }
+
+    void VisitDeclStmt(const DeclStmt *DS) {
+      for (auto *D : DS->decls())
+        VisitDecl(D);
+      Inherited::VisitDeclStmt(DS);
+    }
+
     void VisitExpr(const Expr *E) {
       if (!HasSideEffects &&
           E->HasSideEffects(Context, IncludePossibleEffects))
