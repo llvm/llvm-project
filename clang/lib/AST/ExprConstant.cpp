@@ -10438,7 +10438,7 @@ static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
     APValue V;
-    if (!::EvaluateAsRValue(Info, Arg, V)) {
+    if (!::EvaluateAsRValue(Info, Arg, V) || Info.EvalStatus.HasSideEffects) {
       Fold.keepDiagnostics();
       return false;
     }
