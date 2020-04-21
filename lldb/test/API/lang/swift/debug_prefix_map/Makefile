@@ -1,4 +1,3 @@
-
 all: a.out
 
 include Makefile.rules

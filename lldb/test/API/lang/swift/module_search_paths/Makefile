@@ -1,5 +1,4 @@
 SWIFT_SOURCES := main.swift
-
 all: module-build
 
 include Makefile.rules

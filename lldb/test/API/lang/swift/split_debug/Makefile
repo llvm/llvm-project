@@ -1,4 +1,3 @@
-
 SWIFT_SOURCES := main.swift
 
 SPLIT_DEBUG_SYMBOLS=YES

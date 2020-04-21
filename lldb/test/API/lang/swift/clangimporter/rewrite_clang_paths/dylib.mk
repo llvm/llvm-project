@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 DYLIB_ONLY := YES
 DYLIB_NAME := $(BASENAME)
 DYLIB_SWIFT_SOURCES := $(DYLIB_NAME).swift
@@ -13,4 +12,4 @@ SWIFTFLAGS_EXTRAS = \
 	    -import-objc-header $(BOTDIR)/Foo/bridge.h \
 	    -Xcc -ivfsoverlay -Xcc buildbot/Foo/overlay.yaml
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

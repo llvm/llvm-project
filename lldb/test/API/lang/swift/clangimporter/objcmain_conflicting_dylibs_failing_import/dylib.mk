@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 DYLIB_ONLY := YES
 DYLIB_NAME := $(BASENAME)
 DYLIB_SWIFT_SOURCES := $(DYLIB_NAME).swift
@@ -8,4 +7,4 @@ SWIFTFLAGS_EXTRAS = \
 
 SWIFT_OBJC_INTEROP := 1
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

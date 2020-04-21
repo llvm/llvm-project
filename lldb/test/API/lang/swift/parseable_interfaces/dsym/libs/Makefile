@@ -1,4 +1,3 @@
-
 DYLIB_NAME := $(BASENAME)
 DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 

@@ -1,4 +1,3 @@
-
 EXE=
 all: libmod.a.dylib libmod.b.dylib main.a main.b
 

@@ -1,4 +1,3 @@
-
 all: a.out dlopen_module
 
 include Makefile.rules

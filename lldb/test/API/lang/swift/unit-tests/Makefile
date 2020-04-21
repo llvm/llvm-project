@@ -1,4 +1,3 @@
-
 all: dylib xctest
 C_SOURCES=xctest.c
 EXE=xctest

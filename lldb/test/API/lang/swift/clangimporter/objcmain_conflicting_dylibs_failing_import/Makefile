@@ -1,4 +1,3 @@
-
 OBJC_SOURCES := main.m
 LD_EXTRAS = -lFoo -lBar -L$(BUILDDIR)
 CFLAGS_EXTRAS = -I$(BUILDDIR) -fmodules

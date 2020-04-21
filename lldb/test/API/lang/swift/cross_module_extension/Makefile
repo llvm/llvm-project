@@ -1,4 +1,3 @@
-
 EXE=main
 SWIFT_SOURCES=main.swift
 LD_EXTRAS=-lmoda -lmodb -L$(shell pwd)

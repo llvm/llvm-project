@@ -1,4 +1,3 @@
-
 EXE=main
 SWIFT_SOURCES=main.swift
 SWIFTFLAGS_EXTRAS= -I$(shell pwd)

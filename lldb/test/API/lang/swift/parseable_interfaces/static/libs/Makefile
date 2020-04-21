@@ -1,4 +1,3 @@
-
 # Set the dylib variables so the rules for generating swift objects and
 # modules are active.
 DYLIB_NAME := $(BASENAME)

@@ -1,4 +1,3 @@
-
 SWIFT_SOURCES := main.swift
 
 # Hack to force the bridging-header.pch rule to be built before everything else.

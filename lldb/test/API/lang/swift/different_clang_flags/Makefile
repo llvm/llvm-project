@@ -1,4 +1,3 @@
-
 EXE := main
 SWIFT_SOURCES := main.swift
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR) -I$(SRCDIR)/moda_dir/cdeps -I$(SRCDIR)/modb_dir/cdeps
