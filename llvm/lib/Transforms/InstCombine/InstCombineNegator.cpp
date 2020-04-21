@@ -319,7 +319,7 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   }
 
   llvm_unreachable("Can't get here. We always return from switch.");
-};
+}
 
 LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
   Value *Negated = visit(Root, /*Depth=*/0);
@@ -331,7 +331,7 @@ LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
     return llvm::None;
   }
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
-};
+}
 
 LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
                                       InstCombiner &IC) {
@@ -374,4 +374,4 @@ LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
 
   // And return the new root.
   return Res->second;
-};
+}
