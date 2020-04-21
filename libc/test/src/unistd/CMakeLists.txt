@@ -9,7 +9,5 @@ add_libc_unittest(
   DEPENDS
     libc.src.unistd.write
     libc.include.errno
-    # TODO(sivachandra): Remove redundant deps.
-    libc.src.errno.__errno_location
     libc.include.unistd
 )
