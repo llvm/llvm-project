@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -471,7 +472,6 @@ private:
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;
   Value *dyn_castNegVal(Value *V) const;
-  Value *freelyNegateValue(Value *V);
   Type *FindElementAtOffset(PointerType *PtrTy, int64_t Offset,
                             SmallVectorImpl<Value *> &NewIndices);
 
@@ -513,7 +513,7 @@ private:
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
   Instruction *simplifyMaskedGather(IntrinsicInst &II);
   Instruction *simplifyMaskedScatter(IntrinsicInst &II);
-  
+
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
   ///
@@ -1012,6 +1012,55 @@ private:
   ///
   /// If the multiplication is known not to overflow then NoSignedWrap is set.
   Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
+};
+
+namespace {
+
+// As a default, let's assume that we want to be aggressive,
+// and attempt to traverse with no limits in attempt to sink negation.
+static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
+
+// Let's guesstimate that most often we will end up visiting/producing
+// fairly small number of new instructions.
+static constexpr unsigned NegatorMaxNodesSSO = 16;
+
+} // namespace
+
+class Negator final {
+  /// Top-to-bottom, def-to-use negated instruction tree we produced.
+  SmallVector<Instruction *, NegatorMaxNodesSSO> NewInstructions;
+
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
+  BuilderTy Builder;
+
+  const bool IsTrulyNegation;
+
+  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
+
+#if LLVM_ENABLE_STATS
+  unsigned NumValuesVisitedInThisNegator = 0;
+  ~Negator();
+#endif
+
+  using Result = std::pair<ArrayRef<Instruction *> /*NewInstructions*/,
+                           Value * /*NegatedRoot*/>;
+
+  LLVM_NODISCARD Value *visit(Value *V, unsigned Depth);
+
+  /// Recurse depth-first and attempt to sink the negation.
+  /// FIXME: use worklist?
+  LLVM_NODISCARD Optional<Result> run(Value *Root);
+
+  Negator(const Negator &) = delete;
+  Negator(Negator &&) = delete;
+  Negator &operator=(const Negator &) = delete;
+  Negator &operator=(Negator &&) = delete;
+
+public:
+  /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
+  /// otherwise returns negated value.
+  LLVM_NODISCARD static Value *Negate(bool LHSIsZero, Value *Root,
+                                      InstCombiner &IC);
 };
 
 } // end namespace llvm
