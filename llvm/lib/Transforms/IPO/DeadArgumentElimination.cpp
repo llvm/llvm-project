@@ -441,7 +441,7 @@ DeadArgumentEliminationPass::SurveyUse(const Use *U, UseVector &MaybeLiveUses,
           // The value is passed in through a vararg! Must be live.
           return Live;
 
-        assert(CB->getArgument(ArgNo) == CB->getOperand(U->getOperandNo()) &&
+        assert(CB->getArgOperand(ArgNo) == CB->getOperand(U->getOperandNo()) &&
                "Argument is not where we expected it");
 
         // Value passed to a normal call. It's only live when the corresponding
