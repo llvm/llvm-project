@@ -38,10 +38,10 @@ add_entrypoint_object(
     ../sigaction.h
   DEPENDS
     .__restore
-    .raise
     libc.config.linux.linux_syscall_h
     libc.include.signal
     libc.include.sys_syscall
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
