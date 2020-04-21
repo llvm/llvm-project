@@ -110,7 +110,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "OperandRange", "getSuccessorEntryOperands",
       (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
-        return OperandRange({operandEnd, operandEnd});
+        return OperandRange(operandEnd, operandEnd);
       }]
     >,
     InterfaceMethod<[{
