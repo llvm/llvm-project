@@ -454,3 +454,159 @@ define <2 x i4> @negate_mul_not_uses_vec(<2 x i4> %x, <2 x i4> %y) {
   %r = sub <2 x i4> zeroinitializer, %s
   ret <2 x i4> %r
 }
+
+; signed division can be negated if divisor can be negated and is not 1/-1
+define i8 @negate_sdiv(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_sdiv(
+; CHECK-NEXT:    [[T0:%.*]] = sdiv i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = sdiv i8 %y, 42
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_sdiv_extrause(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_sdiv_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sdiv i8 [[Y:%.*]], 42
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = sdiv i8 %y, 42
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+
+; Right-shift sign bit smear is negatible.
+define i8 @negate_ashr(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_ashr(
+; CHECK-NEXT:    [[T0:%.*]] = ashr i8 [[Y:%.*]], 7
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = ashr i8 %y, 7
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_lshr(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lshr(
+; CHECK-NEXT:    [[T0:%.*]] = lshr i8 [[Y:%.*]], 7
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = lshr i8 %y, 7
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_ashr_extrause(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_ashr_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = ashr i8 [[Y:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = ashr i8 %y, 7
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_lshr_extrause(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lshr_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = lshr i8 [[Y:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = lshr i8 %y, 7
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_ashr_wrongshift(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_ashr_wrongshift(
+; CHECK-NEXT:    [[T0:%.*]] = ashr i8 [[Y:%.*]], 6
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = ashr i8 %y, 6
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_lshr_wrongshift(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lshr_wrongshift(
+; CHECK-NEXT:    [[T0:%.*]] = lshr i8 [[Y:%.*]], 6
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = lshr i8 %y, 6
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+
+; *ext of i1 is always negatible
+define i8 @negate_sext(i8 %x, i1 %y) {
+; CHECK-LABEL: @negate_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[T1:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = sext i1 %y to i8
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_zext(i8 %x, i1 %y) {
+; CHECK-LABEL: @negate_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[T1:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = zext i1 %y to i8
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_sext_extrause(i8 %x, i1 %y) {
+; CHECK-LABEL: @negate_sext_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = sext i1 %y to i8
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_zext_extrause(i8 %x, i1 %y) {
+; CHECK-LABEL: @negate_zext_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = zext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = zext i1 %y to i8
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_sext_wrongwidth(i8 %x, i2 %y) {
+; CHECK-LABEL: @negate_sext_wrongwidth(
+; CHECK-NEXT:    [[T0:%.*]] = sext i2 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = sext i2 %y to i8
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+define i8 @negate_zext_wrongwidth(i8 %x, i2 %y) {
+; CHECK-LABEL: @negate_zext_wrongwidth(
+; CHECK-NEXT:    [[T0:%.*]] = zext i2 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = zext i2 %y to i8
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
