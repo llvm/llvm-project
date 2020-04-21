@@ -14,6 +14,7 @@
 #include "MCTargetDesc/VEInstPrinter.h"
 #include "MCTargetDesc/VEMCExpr.h"
 #include "MCTargetDesc/VETargetStreamer.h"
+#include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
 #include "VEInstrInfo.h"
 #include "VETargetMachine.h"
