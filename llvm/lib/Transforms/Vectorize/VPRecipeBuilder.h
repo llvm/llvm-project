@@ -59,7 +59,50 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
+  /// Check if the load or store instruction \p I should widened for \p
+  /// Range.Start and potentially masked. Such instructions are handled by a
+  /// recipe that takes an additional VPInstruction for the mask.
+  VPWidenMemoryInstructionRecipe *
+  tryToWidenMemory(Instruction *I, VFRange &Range, VPlanPtr &Plan);
+
+  /// Check if an induction recipe should be constructed for \I. If so build and
+  /// return it. If not, return null.
+  VPWidenIntOrFpInductionRecipe *tryToOptimizeInductionPHI(PHINode *Phi) const;
+
+  /// Optimize the special case where the operand of \p I is a constant integer
+  /// induction variable.
+  VPWidenIntOrFpInductionRecipe *
+  tryToOptimizeInductionTruncate(TruncInst *I, VFRange &Range) const;
+
+  /// Handle non-loop phi nodes. Currently all such phi nodes are turned into
+  /// a sequence of select instructions as the vectorizer currently performs
+  /// full if-conversion.
+  VPBlendRecipe *tryToBlend(PHINode *Phi, VPlanPtr &Plan);
+
+  /// Handle call instructions. If \p CI can be widened for \p Range.Start,
+  /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
+  /// decision from \p Range.Start to \p Range.End.
+  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, VFRange &Range,
+                                    VPlan &Plan) const;
+
+  /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
+  /// if it can. The function should only be called if the cost-model indicates
+  /// that widening should be performed.
+  VPWidenRecipe *tryToWiden(Instruction *I, VPlan &Plan) const;
+
 public:
+  VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
+                  LoopVectorizationLegality *Legal,
+                  LoopVectorizationCostModel &CM,
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+      : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
+        Builder(Builder) {}
+
+  /// Check if a recipe can be create for \p I withing the given VF \p Range.
+  /// If a recipe can be created, return it. Otherwise return nullptr.
+  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr, VFRange &Range,
+                                       VPlanPtr &Plan);
+
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -96,52 +139,9 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Check if the load or store instruction \p I should widened for \p
-  /// Range.Start and potentially masked. Such instructions are handled by a
-  /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryInstructionRecipe *
-  tryToWidenMemory(Instruction *I, VFRange &Range, VPlanPtr &Plan);
-
-  /// Check if an induction recipe should be constructed for \I. If so build and
-  /// return it. If not, return null.
-  VPWidenIntOrFpInductionRecipe *tryToOptimizeInductionPHI(PHINode *Phi);
-
-  /// Optimize the special case where the operand of \p I is a constant integer
-  /// induction variable.
-  VPWidenIntOrFpInductionRecipe *tryToOptimizeInductionTruncate(TruncInst *I,
-                                                                VFRange &Range);
-
-  /// Handle non-loop phi nodes. Currently all such phi nodes are turned into
-  /// a sequence of select instructions as the vectorizer currently performs
-  /// full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, VPlanPtr &Plan);
-
-  /// Handle call instructions. If \p CI can be widened for \p Range.Start,
-  /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
-  /// decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, VFRange &Range, VPlan &Plan);
-
-  /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
-  /// if it can. The function should only be called if the cost-model indicates
-  /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, VPlan &Plan);
-
   /// Create a replicating region for instruction \p I that requires
   /// predication. \p PredRecipe is a VPReplicateRecipe holding \p I.
   VPRegionBlock *createReplicateRegion(Instruction *I, VPRecipeBase *PredRecipe,
-                                       VPlanPtr &Plan);
-
-public:
-  VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
-                  LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
-      : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
-        Builder(Builder) {}
-
-  /// Check if a recipe can be create for \p I withing the given VF \p Range.
-  /// If a recipe can be created, return it. Otherwise return nullptr.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr, VFRange &Range,
                                        VPlanPtr &Plan);
 
   /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
