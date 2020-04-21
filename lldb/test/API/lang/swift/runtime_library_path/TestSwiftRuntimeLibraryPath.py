@@ -13,8 +13,8 @@ class TestSwiftRuntimeLibraryPath(lldbtest.TestBase):
 
     @swiftTest
     @skipUnlessDarwin
-    def test_allocator_self(self):
-        """That the default runtime library path can be recovered even if
+    def test(self):
+        """Test that the default runtime library path can be recovered even if
         paths weren't serialized."""
         self.build()
         log = self.getBuildArtifact("types.log")
