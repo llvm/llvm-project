@@ -827,10 +827,12 @@ class Configuration(object):
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
         self.cxx.useWarnings(enable_warnings)
-        self.cxx.warning_flags += [
-            '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
-            '-Wall', '-Wextra', '-Werror'
-        ]
+        self.cxx.warning_flags += ['-Wall', '-Wextra']
+        # On GCC, the libc++ headers cause errors due to throw() decorators
+        # on operator new clashing with those from the test suite, so we
+        # don't enable warnings in system headers on GCC.
+        if self.cxx.type != 'gcc':
+            self.cxx.warning_flags += ['-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER']
         if self.cxx.hasWarningFlag('-Wuser-defined-warnings'):
             self.cxx.warning_flags += ['-Wuser-defined-warnings']
             self.config.available_features.add('diagnose-if-support')
@@ -849,11 +851,7 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wunused-variable')
         self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
         self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
-        std = self.get_lit_conf('std', None)
-        if std in ['c++98', 'c++03']:
-            # The '#define static_assert' provided by libc++ in C++03 mode
-            # causes an unused local typedef whenever it is used.
-            self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
+        self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
 
     def configure_sanitizer(self):
         san = self.get_lit_conf('use_sanitizer', '').strip()
@@ -982,8 +980,9 @@ class Configuration(object):
         sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
+        compile_flags = self.cxx.compile_flags + self.cxx.warning_flags
         sub.append(('%{flags}',         ' '.join(map(pipes.quote, flags))))
-        sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, self.cxx.compile_flags))))
+        sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, compile_flags))))
         sub.append(('%{link_flags}',    ' '.join(map(pipes.quote, self.cxx.link_flags))))
         sub.append(('%{link_libcxxabi}', pipes.quote(self.cxx.link_libcxxabi_flag)))
 
