@@ -26,6 +26,7 @@ static_library("MachO2") {
     "OutputSegment.cpp",
     "SymbolTable.cpp",
     "Symbols.cpp",
+    "SyntheticSections.cpp",
     "Target.cpp",
     "Writer.cpp",
   ]
