@@ -92,6 +92,9 @@ TEST_F(TestTypeSystemSwiftTypeRef, Array) {
              b.Node(Node::Kind::TypeList, b.IntType())));
   CompilerType int_array = GetCompilerType(b.Mangle(n));
   ASSERT_TRUE(int_array.IsArrayType(nullptr, nullptr, nullptr));
+  NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+  CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+  ASSERT_EQ(int_array.GetArrayElementType(nullptr), int_type);
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, Function) {

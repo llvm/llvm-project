@@ -67,7 +67,7 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
                                                            swift::STDLIB_NAME);
       e->addChild(module, Dem);
       NodePointer optional =
-          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Optional");
+          Dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Optional");
       e->addChild(optional, Dem);
       type->addChild(e, Dem);
       canonical->addChild(type, Dem);
@@ -93,7 +93,7 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
                                                            swift::STDLIB_NAME);
       structure->addChild(module, Dem);
       NodePointer array =
-          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Array");
+          Dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Array");
       structure->addChild(array, Dem);
       type->addChild(structure, Dem);
       canonical->addChild(type, Dem);
@@ -121,7 +121,7 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
                                                            swift::STDLIB_NAME);
       structure->addChild(module, Dem);
       NodePointer dict =
-          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Dictionary");
+          Dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Dictionary");
       structure->addChild(dict, Dem);
       type->addChild(structure, Dem);
       canonical->addChild(type, Dem);
@@ -307,7 +307,24 @@ bool TypeSystemSwiftTypeRef::Verify(lldb::opaque_compiler_type_t type) {
     return true;
 
   const char *str = reinterpret_cast<const char *>(type);
-  return SwiftLanguageRuntime::IsSwiftMangledName(str);
+  if (!SwiftLanguageRuntime::IsSwiftMangledName(str))
+    return false;
+
+  // Finally, check that the mangled name is canonical.
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = dem.demangleSymbol(str);
+  std::string remangled = mangleNode(node);
+  return remangled == std::string(str);
+}
+
+namespace {
+template <typename T> bool Equivalent(T l, T r) { return l == r; }
+/// Compare two swift types from different type systems by comparing their
+/// (canonicalized) mangled name.
+template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
+  return l.GetMangledTypeName() == r.GetMangledTypeName();
+}
 }
 #endif
 
@@ -316,7 +333,7 @@ bool TypeSystemSwiftTypeRef::Verify(lldb::opaque_compiler_type_t type) {
   do {                                                                         \
     auto result = IMPL();                                                      \
     if (m_swift_ast_context)                                                   \
-      assert(result == (EXPECTED) &&                                           \
+      assert(Equivalent(result, (EXPECTED)) &&                                 \
              "TypeSystemSwiftTypeRef diverges from SwiftASTContext");          \
     return result;                                                             \
   } while (0)
@@ -341,6 +358,8 @@ swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::DemangleCanonicalType(swift::Demangle::Demangler &Dem,
                                               void *opaque_type) {
   using namespace swift::Demangle;
+  if (!opaque_type)
+    return nullptr;
   NodePointer node =
       GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(opaque_type));
 
@@ -379,14 +398,15 @@ bool TypeSystemSwiftTypeRef::IsArrayType(void *type, CompilerType *element_type,
         node->getChild(0)->getText() != swift::STDLIB_NAME ||
         node->getChild(1)->getKind() != Node::Kind::Identifier ||
         !node->getChild(1)->hasText() ||
-        node->getChild(1)->getText() != "Array")
+        (node->getChild(1)->getText() != "Array" &&
+         node->getChild(1)->getText() != "NativeArray" &&
+         node->getChild(1)->getText() != "ArraySlice"))
       return false;
 
     if (elem_node->getNumChildren() != 1 ||
         elem_node->getKind() != Node::Kind::TypeList)
       return false;
     elem_node = elem_node->getFirstChild();
-
     if (element_type)
       *element_type = RemangleAsType(Dem, elem_node);
 
@@ -573,14 +593,19 @@ lldb::TypeClass TypeSystemSwiftTypeRef::GetTypeClass(void *type) {
 // Creating related types
 CompilerType TypeSystemSwiftTypeRef::GetArrayElementType(void *type,
                                                          uint64_t *stride) {
-  return m_swift_ast_context->GetArrayElementType(ReconstructType(type),
-                                                  stride);
+  auto impl = [&]() {
+    CompilerType element_type;
+    IsArrayType(type, &element_type, nullptr, nullptr);
+    return element_type;
+  };
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetArrayElementType(
+                                ReconstructType(type), nullptr));
 }
 CompilerType TypeSystemSwiftTypeRef::GetCanonicalType(void *type) {
   return m_swift_ast_context->GetCanonicalType(ReconstructType(type));
 }
 int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(void *type) {
-  auto impl = [&]() { return GetNumberOfFunctionArguments(type); };
+  auto impl = [&]() -> int { return GetNumberOfFunctionArguments(type); };
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentCount(
                                 ReconstructType(type)));
 }
