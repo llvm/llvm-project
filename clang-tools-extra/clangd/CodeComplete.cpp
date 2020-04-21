@@ -1023,7 +1023,7 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   const PreambleData &Preamble;
-  const PreamblePatch &PreamblePatch;
+  const PreamblePatch &Patch;
   llvm::StringRef Contents;
   size_t Offset;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
@@ -1096,7 +1096,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   PreambleBounds PreambleRegion =
       ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
   bool CompletingInPreamble = PreambleRegion.Size > Input.Offset;
-  Input.PreamblePatch.apply(*CI);
+  Input.Patch.apply(*CI);
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   auto Clang = prepareCompilerInstance(
