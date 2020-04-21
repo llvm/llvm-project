@@ -2010,7 +2010,8 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
-  InformationCache InfoCache(M, AG, /* CGSCC */ nullptr);
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -2036,7 +2037,8 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   Module &M = *Functions.back()->getParent();
   CallGraphUpdater CGUpdater;
   CGUpdater.initialize(CG, C, AM, UR);
-  InformationCache InfoCache(M, AG, /* CGSCC */ &Functions);
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -2063,7 +2065,8 @@ struct AttributorLegacyPass : public ModulePass {
       Functions.insert(&F);
 
     CallGraphUpdater CGUpdater;
-    InformationCache InfoCache(M, AG, /* CGSCC */ nullptr);
+    BumpPtrAllocator Allocator;
+    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
   }
 
@@ -2098,7 +2101,8 @@ struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
     CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
     CGUpdater.initialize(CG, SCC);
     Module &M = *Functions.back()->getParent();
-    InformationCache InfoCache(M, AG, /* CGSCC */ &Functions);
+    BumpPtrAllocator Allocator;
+    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
   }
 
