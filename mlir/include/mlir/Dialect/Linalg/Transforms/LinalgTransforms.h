@@ -121,6 +121,14 @@ LogicalResult promoteSubviewsLinalgOpPrecondition(Operation *op);
 SmallVector<Value, 0> promoteSubviewsLinalgOp(PatternRewriter &rewriter,
                                               Operation *op);
 
+/// Similar to `promoteSubviewsLinalgOp` but only tries to promote
+/// the views corresponding to the operands specified in
+/// `operandIndicesToPromote`.
+/// If linalgMarker is specified and the transformation is successfull
+/// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
+SmallVector<Value, 0> promoteSelectedSubviewsLinalgOpAndSetMarker(
+    PatternRewriter &rewriter, Operation *op,
+    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker = "");
 } // namespace linalg
 } // namespace mlir
 
