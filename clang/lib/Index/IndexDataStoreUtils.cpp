@@ -285,6 +285,9 @@ SymbolRoleSet index::getSymbolRoles(uint64_t Roles) {
 indexstore_symbol_kind_t index::getIndexStoreKind(SymbolKind K) {
   switch (K) {
   case SymbolKind::Unknown:
+  case SymbolKind::TemplateTypeParm:
+  case SymbolKind::TemplateTemplateParm:
+  case SymbolKind::NonTypeTemplateParm:
     return INDEXSTORE_SYMBOL_KIND_UNKNOWN;
   case SymbolKind::Module:
     return INDEXSTORE_SYMBOL_KIND_MODULE;
@@ -335,9 +338,6 @@ indexstore_symbol_kind_t index::getIndexStoreKind(SymbolKind K) {
   case SymbolKind::ConversionFunction:
     return INDEXSTORE_SYMBOL_KIND_CONVERSIONFUNCTION;
   case SymbolKind::Parameter:
-  case SymbolKind::TemplateTypeParm:
-  case SymbolKind::TemplateTemplateParm:
-  case SymbolKind::NonTypeTemplateParm:
     return INDEXSTORE_SYMBOL_KIND_PARAMETER;
   case SymbolKind::Using:
     return INDEXSTORE_SYMBOL_KIND_USING;
