@@ -444,3 +444,25 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK-NOT:     linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK-NOT:     linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
 // CHECK:         linalg.matmul(%[[v0]], %[[s1]], %[[s2]]) : memref<?x?xf32>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
+
+func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+  %c2000 = constant 2000 : index
+  %c4000 = constant 4000 : index
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %cf = constant 1.0 : f32
+  %3 = std.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
+ 	 memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+  linalg.fill(%3, %cf) { __internal_linalg_transform__ = "_promote_views_aligned_"}
+  	:  memref<?x?xf32, offset: ?, strides: [?, ?]>, f32
+  return
+}
+// CHECK-LABEL: func @aligned_promote_fill
+// CHECK:	  %[[cf:.*]] = constant {{.*}} : f32
+// CHECK:         %[[s0:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:         %[[a0:.*]] = alloc({{%.*}}) {alignment = 32 : i64} : memref<?xi8>
+// CHECK:         %[[v0:.*]] = std.view %[[a0]][][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK:         %[[l0:.*]] = subview %[[v0]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[STRIDED_2D]]>
+// CHECK:         linalg.fill(%[[v0]], {{%.*}}) : memref<?x?xf32>, f32
+// CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK:         linalg.fill(%[[v0]], %[[cf]]) : memref<?x?xf32>, f32
