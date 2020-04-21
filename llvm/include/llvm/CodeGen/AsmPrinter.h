@@ -48,7 +48,6 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineConstantPoolValue;
 class MachineDominatorTree;
 class MachineFunction;
@@ -69,7 +68,6 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
-class ProfileSummaryInfo;
 class raw_ostream;
 class StackMaps;
 class TargetLoweringObjectFile;
@@ -111,10 +109,6 @@ public:
 
   /// Optimization remark emitter.
   MachineOptimizationRemarkEmitter *ORE;
-
-  MachineBlockFrequencyInfo *MBFI;
-
-  ProfileSummaryInfo *PSI;
 
   /// The symbol for the entry in __patchable_function_entires.
   MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
