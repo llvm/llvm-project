@@ -7,7 +7,7 @@ foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   add_custom_command(OUTPUT ${INC_DIR}/${header}
     COMMAND bc2h $<TARGET_FILE:${AMDGCN_LIB_TARGET}>
                  ${INC_DIR}/${header}
-                 ${AMDGCN_LIB_TARGET}
+                 "${AMDGCN_LIB_TARGET}_lib"
     DEPENDS bc2h ${AMDGCN_LIB_TARGET}
     COMMENT "Generating ${AMDGCN_LIB_TARGET}.inc"
   )
@@ -51,10 +51,10 @@ file(APPEND ${INC_DIR}/libraries.inc "#include \"llvm/ADT/StringRef.h\"\n")
 file(APPEND ${INC_DIR}/libraries.inc
   "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(llvm::StringRef gfxip) {")
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
-  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_.+_lib$")
-    string(REGEX REPLACE "^oclc_isa_version_(.+)_lib$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
+  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_.+$")
+    string(REGEX REPLACE "^oclc_isa_version_(.+)$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
     file(APPEND ${INC_DIR}/libraries.inc
-      "if (gfxip == \"${gfxip}\") return std::make_tuple(\"${AMDGCN_LIB_TARGET}.bc\", ${AMDGCN_LIB_TARGET}, ${AMDGCN_LIB_TARGET}_size);")
+      "if (gfxip == \"${gfxip}\") return std::make_tuple(\"${AMDGCN_LIB_TARGET}.bc\", ${AMDGCN_LIB_TARGET}_lib, ${AMDGCN_LIB_TARGET}_lib_size);")
   endif()
 endforeach()
 file(APPEND ${INC_DIR}/libraries.inc
@@ -62,8 +62,8 @@ file(APPEND ${INC_DIR}/libraries.inc
 
 # Generate function to select libraries for given feature.
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
-  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_.*_on_lib$")
-    string(REGEX REPLACE "^oclc_(.*)_on_lib" "\\1" function ${AMDGCN_LIB_TARGET})
+  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_.*_on$")
+    string(REGEX REPLACE "^oclc_(.*)_on" "\\1" function ${AMDGCN_LIB_TARGET})
     file(APPEND ${INC_DIR}/libraries.inc
       "static std::tuple<const char*, const void*, size_t> get_oclc_${function}(bool on) { \
        return std::make_tuple( \
