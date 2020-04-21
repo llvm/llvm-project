@@ -15972,8 +15972,57 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Transform
+// (add C1, (MAT_PCREL_ADDR GlobalAddr+C2)) to
+// (MAT_PCREL_ADDR GlobalAddr+(C1+C2))
+// In this case both C1 and C2 must be known constants.
+// C1+C2 must fit into a 34 bit signed integer.
+static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
+                                          const PPCSubtarget &Subtarget) {
+  if (!Subtarget.isUsingPCRelativeCalls())
+    return SDValue();
+
+  // Check both Operand 0 and Operand 1 of the ADD node for the PCRel node.
+  // If we find that node try to cast the Global Address and the Constant.
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (LHS.getOpcode() != PPCISD::MAT_PCREL_ADDR)
+    std::swap(LHS, RHS);
+
+  if (LHS.getOpcode() != PPCISD::MAT_PCREL_ADDR)
+    return SDValue();
+
+  // Operand zero of PPCISD::MAT_PCREL_ADDR is the GA node.
+  GlobalAddressSDNode *GSDN = dyn_cast<GlobalAddressSDNode>(LHS.getOperand(0));
+  ConstantSDNode* ConstNode = dyn_cast<ConstantSDNode>(RHS);
+
+  // Check that both casts succeeded.
+  if (!GSDN || !ConstNode)
+    return SDValue();
+
+  int64_t NewOffset = GSDN->getOffset() + ConstNode->getSExtValue();
+  SDLoc DL(GSDN);
+
+  // The signed int offset needs to fit in 34 bits.
+  if (!isInt<34>(NewOffset))
+    return SDValue();
+
+  // The new global address is a copy of the old global address except
+  // that it has the updated Offset.
+  SDValue GA =
+      DAG.getTargetGlobalAddress(GSDN->getGlobal(), DL, GSDN->getValueType(0),
+                                 NewOffset, GSDN->getTargetFlags());
+  SDValue MatPCRel =
+      DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, GSDN->getValueType(0), GA);
+  return MatPCRel;
+}
+
 SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToADDZE(N, DCI.DAG, Subtarget))
+    return Value;
+
+  if (auto Value = combineADDToMAT_PCREL_ADDR(N, DCI.DAG, Subtarget))
     return Value;
 
   return SDValue();
