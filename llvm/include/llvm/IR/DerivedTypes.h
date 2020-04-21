@@ -519,12 +519,6 @@ public:
     return Scalable;
   }
 
-  /// Return the minimum number of bits in the Vector type.
-  /// Returns zero when the vector is a vector of pointers.
-  unsigned getBitWidth() const {
-    return getNumElements() * getElementType()->getPrimitiveSizeInBits();
-  }
-
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
     return T->getTypeID() == VectorTyID;
