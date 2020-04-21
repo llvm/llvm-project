@@ -74,7 +74,15 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
   MemoryBufferRef mbref = mb->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take mb ownership
-  return mbref;
+
+  // If this is a regular non-fat file, return it.
+  const char *buf = mbref.getBufferStart();
+  auto *hdr = reinterpret_cast<const MachO::fat_header *>(buf);
+  if (read32be(&hdr->magic) != MachO::FAT_MAGIC)
+    return mbref;
+
+  error("TODO: Add support for universal binaries");
+  return None;
 }
 
 static const load_command *findCommand(const mach_header_64 *hdr,
@@ -155,6 +163,7 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
     sections = parseSections(objSections);
   }
 
+  // TODO: Error on missing LC_SYMTAB?
   if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
     auto *c = reinterpret_cast<const symtab_command *>(cmd);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
@@ -168,7 +177,7 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
 
       // Undefined symbol
       if (!sym.n_sect) {
-        error("TODO: Support undefined symbols");
+        symbols.push_back(symtab->addUndefined(name));
         continue;
       }
 
@@ -194,6 +203,38 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
     for (const section_64 &sec : objSections) {
       parseRelocations(sec, (*it)->relocs);
       ++it;
+    }
+  }
+}
+
+DylibFile::DylibFile(MemoryBufferRef mb) : InputFile(DylibKind, mb) {
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
+
+  // Initialize dylibName.
+  if (const load_command *cmd = findCommand(hdr, LC_ID_DYLIB)) {
+    auto *c = reinterpret_cast<const dylib_command *>(cmd);
+    dylibName = reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
+  } else {
+    error("dylib " + getName() + " missing LC_ID_DYLIB load command");
+    return;
+  }
+
+  // Initialize symbols.
+  if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
+    auto *c = reinterpret_cast<const symtab_command *>(cmd);
+    const char *strtab = reinterpret_cast<const char *>(buf + c->stroff);
+    ArrayRef<const nlist_64> nList(
+        reinterpret_cast<const nlist_64 *>(buf + c->symoff), c->nsyms);
+
+    symbols.reserve(c->nsyms);
+
+    for (const nlist_64 &sym : nList) {
+      StringRef name = strtab + sym.n_strx;
+      // TODO: Figure out what to do about undefined symbols: ignore or warn
+      // if unsatisfied? Also make sure we handle re-exported symbols
+      // correctly.
+      symbols.push_back(symtab->addDylib(name, this));
     }
   }
 }

@@ -14,6 +14,8 @@ namespace macho {
 
 void writeResult();
 
+void createSyntheticSections();
+
 } // namespace macho
 } // namespace lld
 
