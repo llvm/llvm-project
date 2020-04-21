@@ -8,11 +8,39 @@
 
 #include "Preamble.h"
 #include "Compiler.h"
+#include "Headers.h"
 #include "Logger.h"
 #include "Trace.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include <iterator>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -74,6 +102,81 @@ private:
   const SourceManager *SourceMgr = nullptr;
 };
 
+// Runs preprocessor over preamble section.
+class PreambleOnlyAction : public PreprocessorFrontendAction {
+protected:
+  void ExecuteAction() override {
+    Preprocessor &PP = getCompilerInstance().getPreprocessor();
+    auto &SM = PP.getSourceManager();
+    PP.EnterMainSourceFile();
+    auto Bounds = ComputePreambleBounds(getCompilerInstance().getLangOpts(),
+                                        SM.getBuffer(SM.getMainFileID()), 0);
+    Token Tok;
+    do {
+      PP.Lex(Tok);
+      assert(SM.isInMainFile(Tok.getLocation()));
+    } while (Tok.isNot(tok::eof) &&
+             SM.getDecomposedLoc(Tok.getLocation()).second < Bounds.Size);
+  }
+};
+
+/// Gets the includes in the preamble section of the file by running
+/// preprocessor over \p Contents. Returned includes do not contain resolved
+/// paths. \p VFS and \p Cmd is used to build the compiler invocation, which
+/// might stat/read files.
+llvm::Expected<std::vector<Inclusion>>
+scanPreambleIncludes(llvm::StringRef Contents,
+                     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                     const tooling::CompileCommand &Cmd) {
+  // Build and run Preprocessor over the preamble.
+  ParseInputs PI;
+  PI.Contents = Contents.str();
+  PI.FS = std::move(VFS);
+  PI.CompileCommand = Cmd;
+  IgnoringDiagConsumer IgnoreDiags;
+  auto CI = buildCompilerInvocation(PI, IgnoreDiags);
+  if (!CI)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "failed to create compiler invocation");
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
+  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), nullptr, std::move(ContentsBuffer),
+      // Provide an empty FS to prevent preprocessor from performing IO. This
+      // also implies missing resolved paths for includes.
+      new llvm::vfs::InMemoryFileSystem, IgnoreDiags);
+  if (Clang->getFrontendOpts().Inputs.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "compiler instance had no inputs");
+  // We are only interested in main file includes.
+  Clang->getPreprocessorOpts().SingleFileParseMode = true;
+  PreambleOnlyAction Action;
+  if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "failed BeginSourceFile");
+  Preprocessor &PP = Clang->getPreprocessor();
+  IncludeStructure Includes;
+  PP.addPPCallbacks(
+      collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+  if (llvm::Error Err = Action.Execute())
+    return std::move(Err);
+  Action.EndSourceFile();
+  return Includes.MainFileIncludes;
+}
+
+const char *spellingForIncDirective(tok::PPKeywordKind IncludeDirective) {
+  switch (IncludeDirective) {
+  case tok::pp_include:
+    return "include";
+  case tok::pp_import:
+    return "import";
+  case tok::pp_include_next:
+    return "include_next";
+  default:
+    break;
+  }
+  llvm_unreachable("not an include directive");
+}
 } // namespace
 
 PreambleData::PreambleData(const ParseInputs &Inputs,
@@ -166,5 +269,78 @@ bool isPreambleCompatible(const PreambleData &Preamble,
          Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
                                     Inputs.FS.get());
 }
+
+PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
+                                    const ParseInputs &Modified,
+                                    const PreambleData &Baseline) {
+  // First scan the include directives in Baseline and Modified. These will be
+  // used to figure out newly added directives in Modified. Scanning can fail,
+  // the code just bails out and creates an empty patch in such cases, as:
+  // - If scanning for Baseline fails, no knowledge of existing includes hence
+  //   patch will contain all the includes in Modified. Leading to rebuild of
+  //   whole preamble, which is terribly slow.
+  // - If scanning for Modified fails, cannot figure out newly added ones so
+  //   there's nothing to do but generate an empty patch.
+  auto BaselineIncludes = scanPreambleIncludes(
+      // Contents needs to be null-terminated.
+      Baseline.Preamble.getContents().str(),
+      Baseline.StatCache->getConsumingFS(Modified.FS), Modified.CompileCommand);
+  if (!BaselineIncludes) {
+    elog("Failed to scan includes for baseline of {0}: {1}", FileName,
+         BaselineIncludes.takeError());
+    return {};
+  }
+  auto ModifiedIncludes = scanPreambleIncludes(
+      Modified.Contents, Baseline.StatCache->getConsumingFS(Modified.FS),
+      Modified.CompileCommand);
+  if (!ModifiedIncludes) {
+    elog("Failed to scan includes for modified contents of {0}: {1}", FileName,
+         ModifiedIncludes.takeError());
+    return {};
+  }
+
+  PreamblePatch PP;
+  // This shouldn't coincide with any real file name.
+  llvm::SmallString<128> PatchName;
+  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
+                          "__preamble_patch__.h");
+  PP.PatchFileName = PatchName.str().str();
+
+  // We are only interested in newly added includes, record the ones in Baseline
+  // for exclusion.
+  llvm::DenseSet<std::pair<tok::PPKeywordKind, llvm::StringRef>>
+      ExistingIncludes;
+  for (const auto &Inc : *BaselineIncludes)
+    ExistingIncludes.insert({Inc.Directive, Inc.Written});
+  // Calculate extra includes that needs to be inserted.
+  llvm::raw_string_ostream Patch(PP.PatchContents);
+  for (const auto &Inc : *ModifiedIncludes) {
+    if (ExistingIncludes.count({Inc.Directive, Inc.Written}))
+      continue;
+    Patch << llvm::formatv("#{0} {1}\n", spellingForIncDirective(Inc.Directive),
+                           Inc.Written);
+  }
+  Patch.flush();
+
+  // FIXME: Handle more directives, e.g. define/undef.
+  return PP;
+}
+
+void PreamblePatch::apply(CompilerInvocation &CI) const {
+  // No need to map an empty file.
+  if (PatchContents.empty())
+    return;
+  auto &PPOpts = CI.getPreprocessorOpts();
+  auto PatchBuffer =
+      // we copy here to ensure contents are still valid if CI outlives the
+      // PreamblePatch.
+      llvm::MemoryBuffer::getMemBufferCopy(PatchContents, PatchFileName);
+  // CI will take care of the lifetime of the buffer.
+  PPOpts.addRemappedFile(PatchFileName, PatchBuffer.release());
+  // The patch will be parsed after loading the preamble ast and before parsing
+  // the main file.
+  PPOpts.Includes.push_back(PatchFileName);
+}
+
 } // namespace clangd
 } // namespace clang
