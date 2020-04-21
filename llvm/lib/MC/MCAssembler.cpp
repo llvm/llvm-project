@@ -926,8 +926,8 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
 
   // Relax the fragment.
 
-  MCInst Relaxed;
-  getBackend().relaxInstruction(F.getInst(), *F.getSubtargetInfo(), Relaxed);
+  MCInst Relaxed = F.getInst();
+  getBackend().relaxInstruction(Relaxed, *F.getSubtargetInfo());
 
   // Encode the new instruction.
   //

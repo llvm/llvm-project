@@ -161,12 +161,11 @@ public:
 
   /// Relax the instruction in the given fragment to the next wider instruction.
   ///
-  /// \param Inst The instruction to relax, which may be the same as the
-  /// output.
+  /// \param [out] Inst The instruction to relax, which is also the relaxed
+  /// instruction.
   /// \param STI the subtarget information for the associated instruction.
-  /// \param [out] Res On return, the relaxed instruction.
-  virtual void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                                MCInst &Res) const = 0;
+  virtual void relaxInstruction(MCInst &Inst,
+                                const MCSubtargetInfo &STI) const {};
 
   /// @}
 
