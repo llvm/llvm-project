@@ -803,10 +803,13 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     const IRPosition &IRP = AA.getIRPosition();
-    auto &KindToAbstractAttributeMap = AAMap[IRP];
-    assert(!KindToAbstractAttributeMap.count(&AAType::ID) &&
-           "Attribute already in map!");
-    KindToAbstractAttributeMap[&AAType::ID] = &AA;
+    Kind2AAMapTy *&Kind2AA = AAMap[IRP];
+    if (!Kind2AA)
+      Kind2AA = new (Allocator) Kind2AAMapTy();
+
+    assert(!(*Kind2AA)[&AAType::ID] && "Attribute already in map!");
+    (*Kind2AA)[&AAType::ID] = &AA;
+
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -1185,18 +1188,19 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    auto KindToAbstractAttributeMapIt = AAMap.find(IRP);
-    if ( KindToAbstractAttributeMapIt == AAMap.end())
+    Kind2AAMapTy *Kind2AA = AAMap.lookup(IRP);
+    if (!Kind2AA)
       return nullptr;
-    if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMapIt->second.lookup(&AAType::ID))) {
-      // Do not register a dependence on an attribute with an invalid state.
-      if (TrackDependence && AA->getState().isValidState())
-        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
-                         DepClass);
-      return AA;
-    }
-    return nullptr;
+
+    AAType *AA = static_cast<AAType *>((*Kind2AA)[&AAType::ID]);
+    if (!AA)
+      return nullptr;
+
+    // Do not register a dependence on an attribute with an invalid state.
+    if (TrackDependence && AA->getState().isValidState())
+      recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
+                       DepClass);
+    return AA;
   }
 
   /// Apply all requested function signature rewrites
@@ -1215,9 +1219,9 @@ private:
   /// on the outer level, and the addresses of the static member (AAType::ID) on
   /// the inner level.
   ///{
-  using KindToAbstractAttributeMap =
+  using Kind2AAMapTy =
       SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
-  DenseMap<IRPosition, KindToAbstractAttributeMap> AAMap;
+  DenseMap<IRPosition, Kind2AAMapTy*> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
