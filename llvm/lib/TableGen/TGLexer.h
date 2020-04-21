@@ -21,6 +21,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 template <typename T> class ArrayRef;
