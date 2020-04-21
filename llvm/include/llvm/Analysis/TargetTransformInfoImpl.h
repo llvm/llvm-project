@@ -44,69 +44,6 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  unsigned getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) {
-    switch (Opcode) {
-    default:
-      // By default, just classify everything as 'basic'.
-      return TTI::TCC_Basic;
-
-    case Instruction::GetElementPtr:
-      llvm_unreachable("Use getGEPCost for GEP operations!");
-
-    case Instruction::BitCast:
-      assert(OpTy && "Cast instructions must provide the operand type");
-      if (Ty == OpTy || (Ty->isPointerTy() && OpTy->isPointerTy()))
-        // Identity and pointer-to-pointer casts are free.
-        return TTI::TCC_Free;
-
-      // Otherwise, the default basic cost is used.
-      return TTI::TCC_Basic;
-
-    case Instruction::Freeze:
-      // Freeze operation is free because it should be lowered into a register
-      // use without any register copy in assembly code.
-      return TTI::TCC_Free;
-
-    case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::SDiv:
-    case Instruction::SRem:
-    case Instruction::UDiv:
-    case Instruction::URem:
-      return TTI::TCC_Expensive;
-
-    case Instruction::IntToPtr: {
-      // An inttoptr cast is free so long as the input is a legal integer type
-      // which doesn't contain values outside the range of a pointer.
-      unsigned OpSize = OpTy->getScalarSizeInBits();
-      if (DL.isLegalInteger(OpSize) &&
-          OpSize <= DL.getPointerTypeSizeInBits(Ty))
-        return TTI::TCC_Free;
-
-      // Otherwise it's not a no-op.
-      return TTI::TCC_Basic;
-    }
-    case Instruction::PtrToInt: {
-      // A ptrtoint cast is free so long as the result is large enough to store
-      // the pointer, and a legal integer type.
-      unsigned DestSize = Ty->getScalarSizeInBits();
-      if (DL.isLegalInteger(DestSize) &&
-          DestSize >= DL.getPointerTypeSizeInBits(OpTy))
-        return TTI::TCC_Free;
-
-      // Otherwise it's not a no-op.
-      return TTI::TCC_Basic;
-    }
-    case Instruction::Trunc:
-      // trunc to a native type is free (assuming the target has compare and
-      // shift-right of the same width).
-      if (DL.isLegalInteger(DL.getTypeSizeInBits(Ty)))
-        return TTI::TCC_Free;
-
-      return TTI::TCC_Basic;
-    }
-  }
-
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) {
     // In the basic model, we just assume that all-constant GEPs will be folded
@@ -445,6 +382,35 @@ public:
 
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                             const Instruction *I) {
+    switch (Opcode) {
+    default:
+      break;
+    case Instruction::IntToPtr: {
+      unsigned SrcSize = Src->getScalarSizeInBits();
+      if (DL.isLegalInteger(SrcSize) &&
+          SrcSize <= DL.getPointerTypeSizeInBits(Dst))
+        return 0;
+      break;
+    }
+    case Instruction::PtrToInt: {
+      unsigned DstSize = Dst->getScalarSizeInBits();
+      if (DL.isLegalInteger(DstSize) &&
+          DstSize >= DL.getPointerTypeSizeInBits(Src))
+        return 0;
+      break;
+    }
+    case Instruction::BitCast:
+      if (Dst == Src || (Dst->isPointerTy() && Src->isPointerTy()))
+        // Identity and pointer-to-pointer casts are free.
+        return 0;
+      break;
+    case Instruction::Trunc:
+      // trunc to a native type is free (assuming the target has compare and
+      // shift-right of the same width).
+      if (DL.isLegalInteger(DL.getTypeSizeInBits(Dst)))
+        return 0;
+      break;
+    }
     return 1;
   }
 
@@ -828,26 +794,7 @@ public:
   }
 
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands) {
-    if (isa<PHINode>(U))
-      return TTI::TCC_Free; // Model all PHI nodes as free.
-
-    if (isa<ExtractValueInst>(U))
-      return TTI::TCC_Free; // Model all ExtractValue nodes as free.
-
-    if (isa<FreezeInst>(U))
-      return TTI::TCC_Free; // Model all Freeze nodes as free.
-
-    // Static alloca doesn't generate target instructions.
-    if (auto *A = dyn_cast<AllocaInst>(U))
-      if (A->isStaticAlloca())
-        return TTI::TCC_Free;
-
     auto *TargetTTI = static_cast<T *>(this);
-
-    if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U))
-      return TargetTTI->getGEPCost(GEP->getSourceElementType(),
-                                   GEP->getPointerOperand(),
-                                   Operands.drop_front());
 
     if (auto CS = ImmutableCallSite(U)) {
       const Function *F = CS.getCalledFunction();
@@ -867,14 +814,55 @@ public:
       return TTI::TCC_Basic * (CS.arg_size() + 1);
     }
 
-    if (isa<SExtInst>(U) || isa<ZExtInst>(U) || isa<FPExtInst>(U))
-      // The old behaviour of generally treating extensions of icmp to be free
-      // has been removed. A target that needs it should override getUserCost().
-      return TargetTTI->getExtCost(cast<Instruction>(U), Operands.back());
-
-    return TargetTTI->getOperationCost(
-        Operator::getOpcode(U), U->getType(),
-        U->getNumOperands() == 1 ? U->getOperand(0)->getType() : nullptr);
+    Type *Ty = U->getType();
+    Type *OpTy =
+      U->getNumOperands() == 1 ? U->getOperand(0)->getType() : nullptr;
+    unsigned Opcode = Operator::getOpcode(U);
+    auto *I = dyn_cast<Instruction>(U);
+    switch (Opcode) {
+    default:
+      break;
+    case Instruction::PHI:
+    case Instruction::ExtractValue:
+    case Instruction::Freeze:
+      return TTI::TCC_Free;
+    case Instruction::Alloca:
+      if (cast<AllocaInst>(U)->isStaticAlloca())
+        return TTI::TCC_Free;
+      break;
+    case Instruction::GetElementPtr: {
+      const GEPOperator *GEP = cast<GEPOperator>(U);
+      return TargetTTI->getGEPCost(GEP->getSourceElementType(),
+                                   GEP->getPointerOperand(),
+                                   Operands.drop_front());
+    }
+    case Instruction::FDiv:
+    case Instruction::FRem:
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem:
+      return TTI::TCC_Expensive;
+    case Instruction::IntToPtr:
+    case Instruction::PtrToInt:
+    case Instruction::Trunc:
+      if (getCastInstrCost(Opcode, Ty, OpTy, I) == TTI::TCC_Free ||
+          TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, I) == TTI::TCC_Free)
+        return TTI::TCC_Free;
+      break;
+    case Instruction::BitCast:
+      if (getCastInstrCost(Opcode, Ty, OpTy, I) == TTI::TCC_Free)
+        return TTI::TCC_Free;
+      break;
+    case Instruction::FPExt:
+    case Instruction::SExt:
+    case Instruction::ZExt:
+      if (TargetTTI->getExtCost(I, Operands.back()) == TTI::TCC_Free)
+        return TTI::TCC_Free;
+      break;
+    }
+    // By default, just classify everything as 'basic'.
+    return TTI::TCC_Basic;
   }
 
   int getInstructionLatency(const Instruction *I) {
