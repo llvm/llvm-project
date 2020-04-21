@@ -859,7 +859,8 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
 Value *InstCombiner::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                                    BinaryOperator &Logic) {
   bool JoinedByAnd = Logic.getOpcode() == Instruction::And;
-  assert(JoinedByAnd || Logic.getOpcode() == Instruction::Or && "Wrong opcode");
+  assert((JoinedByAnd || Logic.getOpcode() == Instruction::Or) &&
+         "Wrong opcode");
   ICmpInst::Predicate Pred = LHS->getPredicate();
   if (Pred != RHS->getPredicate())
     return nullptr;
