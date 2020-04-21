@@ -1221,7 +1221,7 @@ private:
   ///{
   using Kind2AAMapTy =
       SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
-  DenseMap<IRPosition, Kind2AAMapTy*> AAMap;
+  DenseMap<IRPosition, Kind2AAMapTy *> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
@@ -1960,7 +1960,7 @@ Pass *createAttributorCGSCCLegacyPass();
 /// An abstract attribute for the returned values of a function.
 struct AAReturnedValues
     : public IRAttribute<Attribute::Returned, AbstractAttribute> {
-  AAReturnedValues(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return an assumed unique return value if a single candidate is found. If
   /// there cannot be one, return a nullptr. If it is not clear yet, return the
@@ -2000,7 +2000,7 @@ struct AAReturnedValues
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoUnwind(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoUnwind(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if nounwind is assumed.
   bool isAssumedNoUnwind() const { return getAssumed(); }
@@ -2018,7 +2018,7 @@ struct AANoUnwind
 struct AANoSync
     : public IRAttribute<Attribute::NoSync,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoSync(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
@@ -2037,7 +2037,7 @@ struct AANoSync
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANonNull(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -2056,7 +2056,7 @@ struct AANonNull
 struct AANoRecurse
     : public IRAttribute<Attribute::NoRecurse,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoRecurse(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoRecurse(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "norecurse" is assumed.
   bool isAssumedNoRecurse() const { return getAssumed(); }
@@ -2075,7 +2075,7 @@ struct AANoRecurse
 struct AAWillReturn
     : public IRAttribute<Attribute::WillReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AAWillReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAWillReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "willreturn" is assumed.
   bool isAssumedWillReturn() const { return getAssumed(); }
@@ -2094,7 +2094,7 @@ struct AAWillReturn
 struct AAUndefinedBehavior
     : public StateWrapper<BooleanState, AbstractAttribute>,
       public IRPosition {
-  AAUndefinedBehavior(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAUndefinedBehavior(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Return true if "undefined behavior" is assumed.
   bool isAssumedToCauseUB() const { return getAssumed(); }
@@ -2122,7 +2122,7 @@ struct AAUndefinedBehavior
 /// An abstract interface to determine reachability of point A to B.
 struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
                         public IRPosition {
-  AAReachability(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAReachability(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if 'From' instruction is assumed to reach, 'To' instruction.
   /// Users should provide two positions they are interested in, and the class
@@ -2154,7 +2154,7 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoAlias(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
@@ -2173,7 +2173,7 @@ struct AANoAlias
 struct AANoFree
     : public IRAttribute<Attribute::NoFree,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoFree(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -2192,7 +2192,7 @@ struct AANoFree
 struct AANoReturn
     : public IRAttribute<Attribute::NoReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if the underlying object is assumed to never return.
   bool isAssumedNoReturn() const { return getAssumed(); }
@@ -2210,7 +2210,7 @@ struct AANoReturn
 /// An abstract interface for liveness abstract attribute.
 struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
-  AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAIsDead(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
 protected:
   /// The query functions are protected such that other attributes need to go
@@ -2406,7 +2406,7 @@ protected:
 struct AADereferenceable
     : public IRAttribute<Attribute::Dereferenceable,
                          StateWrapper<DerefState, AbstractAttribute>> {
-  AADereferenceable(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const {
@@ -2450,7 +2450,7 @@ using AAAlignmentStateType =
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
                      StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
-  AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
   unsigned getAssumedAlign() const { return getAssumed(); }
@@ -2470,7 +2470,7 @@ struct AANoCapture
     : public IRAttribute<
           Attribute::NoCapture,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
-  AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// NO_CAPTURE is the best possible state, 0 the worst possible state.
@@ -2519,7 +2519,7 @@ struct AANoCapture
 /// An abstract interface for value simplify abstract attribute.
 struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
                          public IRPosition {
-  AAValueSimplify(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAValueSimplify(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; }
@@ -2539,7 +2539,7 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
 
 struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
                        public IRPosition {
-  AAHeapToStack(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAHeapToStack(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
   bool isAssumedHeapToStack() const { return getAssumed(); }
@@ -2569,7 +2569,7 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 /// one, and the values we need can be loaded (=dereferenceable).
 struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
                            public IRPosition {
-  AAPrivatizablePtr(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
@@ -2602,7 +2602,7 @@ struct AAMemoryBehavior
     : public IRAttribute<
           Attribute::ReadNone,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
-  AAMemoryBehavior(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// BEST_STATE is the best possible state, 0 the worst possible state.
@@ -2655,7 +2655,7 @@ struct AAMemoryLocation
           StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
   using MemoryLocationsKind = StateType::base_t;
 
-  AAMemoryLocation(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Encoding of different locations that could be accessed by a memory
   /// access.
@@ -2809,7 +2809,7 @@ struct AAMemoryLocation
 struct AAValueConstantRange : public IntegerRangeState,
                               public AbstractAttribute,
                               public IRPosition {
-  AAValueConstantRange(const IRPosition &IRP)
+  AAValueConstantRange(const IRPosition &IRP, Attributor &A)
       : IntegerRangeState(IRP.getAssociatedType()->getIntegerBitWidth()),
         IRPosition(IRP) {}
 
