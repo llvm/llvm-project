@@ -338,6 +338,24 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
   assert(succeeded(promoteSubviewsLinalgOpPrecondition(op)) &&
          "DRR failure case must be a precondition");
 
+  LinalgOp linOp = cast<LinalgOp>(op);
+  SmallVector<int64_t, 4> toPromote;
+  int64_t nBuffers = linOp.getNumInputsAndOutputBuffers();
+  toPromote.reserve(nBuffers);
+  for (int64_t i = 0; i < nBuffers; ++i)
+    toPromote.push_back(i);
+  return promoteSelectedSubviewsLinalgOpAndSetMarker(rewriter, op, toPromote);
+}
+
+SmallVector<Value, 0> mlir::linalg::promoteSelectedSubviewsLinalgOpAndSetMarker(
+    PatternRewriter &rewriter, Operation *op,
+    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker) {
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: Promote subviews for linalg op: "
+                    << *op << ":\n");
+
+  assert(succeeded(promoteSubviewsLinalgOpPrecondition(op)) &&
+         "DRR failure case must be a precondition");
+
   if (auto convOp = dyn_cast<linalg::ConvOp>(op)) {
     // TODO(ntv): add a level of indirection to linalg.generic.
     if (convOp.padding())
@@ -348,11 +366,16 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
   assert(linOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SetVector<Value> subViews;
-  for (auto it : linOp.getInputsAndOutputBuffers())
-    if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
+  for (int64_t index : operandIndicesToPromote)
+    if (auto sv =
+            dyn_cast_or_null<SubViewOp>(linOp.getBuffer(index).getDefiningOp()))
       subViews.insert(sv);
+
   if (!subViews.empty()) {
-    promoteSubViewOperands(rewriter, linOp, subViews);
+    auto newOp = promoteSubViewOperands(rewriter, linOp, subViews);
+    if (!linalgMarker.empty())
+      newOp.setAttr(LinalgTransforms::kLinalgTransformMarker,
+                    rewriter.getStringAttr(linalgMarker));
     return {};
   }
   llvm_unreachable("DRR failure case must be a precondition");
