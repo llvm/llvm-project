@@ -1156,9 +1156,8 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 /// often possible though. If alignment is important, a more reliable approach
 /// is to simply align all global variables and allocation instructions to
 /// their preferred alignment from the beginning.
-static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
-                                      unsigned PrefAlign,
-                                      const DataLayout &DL) {
+static Align enforceKnownAlignment(Value *V, Align Alignment, Align PrefAlign,
+                                   const DataLayout &DL) {
   assert(PrefAlign > Alignment);
 
   V = V->stripPointerCasts();
@@ -1170,21 +1169,21 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     // stripPointerCasts recurses through infinite layers of bitcasts,
     // while computeKnownBits is not allowed to traverse more than 6
     // levels.
-    Alignment = std::max(AI->getAlignment(), Alignment);
+    Alignment = max(AI->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(Align(PrefAlign)))
+    if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Alignment;
-    AI->setAlignment(Align(PrefAlign));
+    AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Alignment = std::max(GO->getAlignment(), Alignment);
+    Alignment = max(GO->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
@@ -1195,18 +1194,18 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     if (!GO->canIncreaseAlignment())
       return Alignment;
 
-    GO->setAlignment(Align(PrefAlign));
+    GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   return Alignment;
 }
 
-unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
-                                          const DataLayout &DL,
-                                          const Instruction *CxtI,
-                                          AssumptionCache *AC,
-                                          const DominatorTree *DT) {
+Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
+                                       const DataLayout &DL,
+                                       const Instruction *CxtI,
+                                       AssumptionCache *AC,
+                                       const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
@@ -1218,13 +1217,13 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
   // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
   TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
+  Align Alignment = Align(1u << std::min(Known.getBitWidth() - 1, TrailZ));
 
-  if (PrefAlign > Align)
-    Align = enforceKnownAlignment(V, Align, PrefAlign, DL);
+  if (PrefAlign && *PrefAlign > Alignment)
+    Alignment = enforceKnownAlignment(V, Alignment, *PrefAlign, DL);
 
   // We don't need to make any adjustment.
-  return Align;
+  return Alignment;
 }
 
 ///===---------------------------------------------------------------------===//
