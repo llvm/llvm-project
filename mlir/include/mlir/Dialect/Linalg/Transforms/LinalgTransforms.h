@@ -123,12 +123,14 @@ SmallVector<Value, 0> promoteSubviewsLinalgOp(PatternRewriter &rewriter,
 
 /// Similar to `promoteSubviewsLinalgOp` but only tries to promote
 /// the views corresponding to the operands specified in
-/// `operandIndicesToPromote`.
+/// `operandIndicesToPromote`. Generated allocations are memory-aligned
+/// according to the `alignment` parameter.
 /// If linalgMarker is specified and the transformation is successfull
 /// sets the attribute `kLinalgTransformMarker` to `linalgMarker`.
 SmallVector<Value, 0> promoteSelectedSubviewsLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op,
-    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker = "");
+    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker = "",
+    int64_t alignment = 0);
 } // namespace linalg
 } // namespace mlir
 

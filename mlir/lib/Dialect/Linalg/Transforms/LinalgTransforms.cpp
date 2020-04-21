@@ -349,7 +349,8 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
 
 SmallVector<Value, 0> mlir::linalg::promoteSelectedSubviewsLinalgOpAndSetMarker(
     PatternRewriter &rewriter, Operation *op,
-    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker) {
+    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker,
+    int64_t alignment) {
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: Promote subviews for linalg op: "
                     << *op << ":\n");
 
@@ -372,7 +373,8 @@ SmallVector<Value, 0> mlir::linalg::promoteSelectedSubviewsLinalgOpAndSetMarker(
       subViews.insert(sv);
 
   if (!subViews.empty()) {
-    auto newOp = promoteSubViewOperands(rewriter, linOp, subViews);
+    auto newOp =
+        promoteSubViewOperands(rewriter, linOp, subViews, false, alignment);
     if (!linalgMarker.empty())
       newOp.setAttr(LinalgTransforms::kLinalgTransformMarker,
                     rewriter.getStringAttr(linalgMarker));
