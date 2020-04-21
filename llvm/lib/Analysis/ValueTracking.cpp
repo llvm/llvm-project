@@ -4693,8 +4693,9 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     if (isa<UndefValue>(C) || isa<ConstantExpr>(C))
       return false;
 
-    // TODO: Add ConstantFP and pointers.
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) )
+    // TODO: Add ConstantFP.
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) ||
+        isa<ConstantPointerNull>(C))
       return true;
 
     if (C->getType()->isVectorTy())
