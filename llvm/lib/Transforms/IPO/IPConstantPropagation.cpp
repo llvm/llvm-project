@@ -53,7 +53,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
 
   // For each argument, keep track of its constant value and whether it is a
   // constant or not.  The bool is driven to true when found to be non-constant.
-  SmallVector<std::pair<Constant*, bool>, 16> ArgumentConstants;
+  SmallVector<PointerIntPair<Constant *, 1, bool>, 16> ArgumentConstants;
   ArgumentConstants.resize(F.arg_size());
 
   unsigned NumNonconstant = 0;
@@ -80,7 +80,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++Arg) {
 
       // If this argument is known non-constant, ignore it.
-      if (ArgumentConstants[i].second)
+      if (ArgumentConstants[i].getInt())
         continue;
 
       Value *V = ACS.getCallArgOperand(i);
@@ -102,13 +102,13 @@ static bool PropagateConstantsIntoArguments(Function &F) {
         if (++NumNonconstant == ArgumentConstants.size())
           return false;
 
-        ArgumentConstants[i].second = true;
+        ArgumentConstants[i].setInt(true);
         continue;
       }
 
-      if (C && ArgumentConstants[i].first == nullptr) {
-        ArgumentConstants[i].first = C;   // First constant seen.
-      } else if (C && ArgumentConstants[i].first == C) {
+      if (C && ArgumentConstants[i].getPointer() == nullptr) {
+        ArgumentConstants[i].setPointer(C); // First constant seen.
+      } else if (C && ArgumentConstants[i].getPointer() == C) {
         // Still the constant value we think it is.
       } else if (V == &*Arg) {
         // Ignore recursive calls passing argument down.
@@ -117,7 +117,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
         // give up on this function.
         if (++NumNonconstant == ArgumentConstants.size())
           return false;
-        ArgumentConstants[i].second = true;
+        ArgumentConstants[i].setInt(true);
       }
     }
   }
@@ -128,11 +128,11 @@ static bool PropagateConstantsIntoArguments(Function &F) {
   Function::arg_iterator AI = F.arg_begin();
   for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++AI) {
     // Do we have a constant argument?
-    if (ArgumentConstants[i].second || AI->use_empty() ||
+    if (ArgumentConstants[i].getInt() || AI->use_empty() ||
         AI->hasInAllocaAttr() || (AI->hasByValAttr() && !F.onlyReadsMemory()))
       continue;
 
-    Value *V = ArgumentConstants[i].first;
+    Value *V = ArgumentConstants[i].getPointer();
     if (!V) V = UndefValue::get(AI->getType());
     AI->replaceAllUsesWith(V);
     ++NumArgumentsProped;
