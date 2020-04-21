@@ -294,9 +294,10 @@ def ParallelOp : Loop_Op<"parallel",
     Example:
 
     ```mlir
-    loop.parallel (%iv) = (%lb) to (%ub) step (%step) -> f32 {
-      %zero = constant 0.0 : f32
-      loop.reduce(%zero) : f32 {
+    %init = constant 0.0 : f32
+    loop.parallel (%iv) = (%lb) to (%ub) step (%step) init (%init) -> f32 {
+      %elem_to_reduce = load %buffer[%iv] : memref<100xf32>
+      loop.reduce(%elem_to_reduce) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
