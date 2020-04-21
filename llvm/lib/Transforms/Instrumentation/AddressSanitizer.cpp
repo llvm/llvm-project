@@ -30,7 +30,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -1076,12 +1075,11 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
       DynamicAllocaPoisonCallVec.push_back(APC);
   }
 
-  void visitCallSite(CallSite CS) {
-    Instruction *I = CS.getInstruction();
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
+  void visitCallBase(CallBase &CB) {
+    if (CallInst *CI = dyn_cast<CallInst>(&CB)) {
       HasNonEmptyInlineAsm |= CI->isInlineAsm() &&
                               !CI->isIdenticalTo(EmptyInlineAsm.get()) &&
-                              I != ASan.LocalDynamicShadow;
+                              &CB != ASan.LocalDynamicShadow;
       HasReturnsTwiceCall |= CI->canReturnTwice();
     }
   }
@@ -2685,12 +2683,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         // ok, take it.
       } else {
         if (isa<AllocaInst>(Inst)) NumAllocas++;
-        CallSite CS(&Inst);
-        if (CS) {
+        if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CS.doesNotReturn() && !CS->hasMetadata("nosanitize"))
-            NoReturnCalls.push_back(CS.getInstruction());
+          if (CB->doesNotReturn() && !CB->hasMetadata("nosanitize"))
+            NoReturnCalls.push_back(CB);
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
