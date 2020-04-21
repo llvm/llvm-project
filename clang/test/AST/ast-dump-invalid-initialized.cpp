@@ -4,6 +4,8 @@ struct A { A(int, int) {} };
 class ForwardDecl;
 
 void test() {
+  // Verify the valid-bit of the VarDecl.
+
   // CHECK: `-VarDecl {{.*}} a1 'A'
   A a1;
   // CHECK: `-VarDecl {{.*}} a2 'const A'
@@ -16,4 +18,10 @@ void test() {
   const A& b1;
   // CHECK: `-VarDecl {{.*}} invalid b2 'ForwardDecl'
   ForwardDecl b2;
+  // CHECK: `-VarDecl {{.*}} invalid b3 'auto'
+  auto b3 = garbage();
+  // CHECK: `-VarDecl {{.*}} invalid b4 'auto'
+  auto b4 = A(1);
+  // CHECK: `-VarDecl {{.*}} invalid b5 'auto'
+  auto b5 = A{1};
 }
