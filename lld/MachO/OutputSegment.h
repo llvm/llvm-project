@@ -19,8 +19,13 @@ class InputSection;
 
 class OutputSegment {
 public:
+  InputSection *firstSection() const { return sections.front().second.at(0); }
+
+  InputSection *lastSection() const { return sections.back().second.back(); }
+
   StringRef name;
   uint32_t perms;
+  uint8_t index;
   llvm::MapVector<StringRef, std::vector<InputSection *>> sections;
 };
 
