@@ -680,7 +680,7 @@ bool Parser::isTypeConstraintAnnotation() {
 ///
 /// \returns true if an error occurred, and false otherwise.
 bool Parser::TryAnnotateTypeConstraint() {
-  if (!getLangOpts().CPlusPlus2a)
+  if (!getLangOpts().CPlusPlus20)
     return false;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);

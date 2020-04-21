@@ -26,14 +26,14 @@
 #ifndef CXX11_KEYWORD
 #define CXX11_KEYWORD(X,Y) KEYWORD(X,KEYCXX11|(Y))
 #endif
-#ifndef CXX2A_KEYWORD
-#define CXX2A_KEYWORD(X,Y) KEYWORD(X,KEYCXX2A|(Y))
+#ifndef CXX20_KEYWORD
+#define CXX20_KEYWORD(X,Y) KEYWORD(X,KEYCXX20|(Y))
 #endif
 #ifndef CONCEPTS_KEYWORD
-#define CONCEPTS_KEYWORD(X) CXX2A_KEYWORD(X,KEYCONCEPTS)
+#define CONCEPTS_KEYWORD(X) CXX20_KEYWORD(X,KEYCONCEPTS)
 #endif
 #ifndef COROUTINES_KEYWORD
-#define COROUTINES_KEYWORD(X) CXX2A_KEYWORD(X,KEYCOROUTINES)
+#define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
 #endif
 #ifndef MODULES_KEYWORD
 #define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
@@ -244,7 +244,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //              implementation namespace
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
-//   KEYCXX2A - This is a C++ keyword introduced to C++ in C++2a
+//   KEYCXX20 - This is a C++ keyword introduced to C++ in C++20
 //   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
 //                 are enabled.
 //   KEYMODULES - This is a keyword if the C++ extensions for modules
@@ -374,11 +374,11 @@ CXX11_KEYWORD(nullptr               , 0)
 CXX11_KEYWORD(static_assert         , KEYMSCOMPAT)
 CXX11_KEYWORD(thread_local          , 0)
 
-// C++2a keywords
+// C++20 keywords
 CONCEPTS_KEYWORD(concept)
 CONCEPTS_KEYWORD(requires)
 
-// C++2a / coroutines TS keywords
+// C++20 / coroutines TS keywords
 COROUTINES_KEYWORD(co_await)
 COROUTINES_KEYWORD(co_return)
 COROUTINES_KEYWORD(co_yield)
@@ -388,9 +388,9 @@ MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
 // C++20 keywords.
-CXX2A_KEYWORD(char8_t               , CHAR8SUPPORT)
-CXX2A_KEYWORD(consteval             , 0)
-CXX2A_KEYWORD(constinit             , 0)
+CXX20_KEYWORD(char8_t               , CHAR8SUPPORT)
+CXX20_KEYWORD(consteval             , 0)
+CXX20_KEYWORD(constinit             , 0)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
@@ -865,7 +865,7 @@ ANNOTATION(header_unit)
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
 #undef CONCEPTS_KEYWORD
-#undef CXX2A_KEYWORD
+#undef CXX20_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD
 #undef PUNCTUATOR
