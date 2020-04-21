@@ -328,8 +328,8 @@ void MCWinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::FinishImpl() {
-  MCObjectStreamer::FinishImpl();
+void MCWinCOFFStreamer::finishImpl() {
+  MCObjectStreamer::finishImpl();
 }
 
 void MCWinCOFFStreamer::Error(const Twine &Msg) const {

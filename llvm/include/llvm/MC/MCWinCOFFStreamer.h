@@ -64,7 +64,7 @@ public:
                       unsigned ByteAlignment) override;
   void emitIdent(StringRef IdentString) override;
   void EmitWinEHHandlerData(SMLoc Loc) override;
-  void FinishImpl() override;
+  void finishImpl() override;
 
   /// \}
 

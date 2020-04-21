@@ -81,7 +81,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
+  void changeSection(MCSection *Sect, const MCExpr *Subsect) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
@@ -114,7 +114,7 @@ public:
     getAssembler().getLOHContainer().addDirective(Kind, Args);
   }
 
-  void FinishImpl() override;
+  void finishImpl() override;
 };
 
 } // end anonymous namespace.
@@ -149,7 +149,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   return false;
 }
 
-void MCMachOStreamer::ChangeSection(MCSection *Section,
+void MCMachOStreamer::changeSection(MCSection *Section,
                                     const MCExpr *Subsection) {
   // Change the section normally.
   bool Created = changeSectionImpl(Section, Subsection);
@@ -475,8 +475,8 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
   DF->getContents().append(Code.begin(), Code.end());
 }
 
-void MCMachOStreamer::FinishImpl() {
-  EmitFrames(&getAssembler().getBackend());
+void MCMachOStreamer::finishImpl() {
+  emitFrames(&getAssembler().getBackend());
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.
@@ -505,7 +505,7 @@ void MCMachOStreamer::FinishImpl() {
     }
   }
 
-  this->MCObjectStreamer::FinishImpl();
+  this->MCObjectStreamer::finishImpl();
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
