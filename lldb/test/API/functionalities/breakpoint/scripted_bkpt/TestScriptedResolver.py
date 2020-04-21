@@ -16,6 +16,7 @@ class TestScriptedResolver(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @skipIfReproducer # Unexpected packet during replay
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()
@@ -45,7 +46,6 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_copy_from_dummy_target()
 
-    @skipIfReproducer # Unexpected packet during replay
     def make_target_and_import(self):
         target = self.make_target()
         self.import_resolver_script()
