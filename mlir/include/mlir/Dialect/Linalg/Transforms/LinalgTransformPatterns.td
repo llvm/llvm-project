@@ -114,4 +114,9 @@ def PreconditionPromoteSubviewsLinalgOp : CPred<
   "succeeded(promoteSubviewsLinalgOpPrecondition(op))">;
 def PromoteSubviewsLinalgOp : NativeCodeCall<
   "promoteSubviewsLinalgOp($_builder, op)">;
+
+class PromoteSelectedSubviewsLinalgOp<list<int> operands, string marker=""> :
+  NativeCodeCall<"promoteSelectedSubviewsLinalgOpAndSetMarker($_builder, op, {" #
+    StrJoinInt<operands>.result # "}, \"" # marker # "\")">;
+
 #endif // LINALG_TRANSFORMS

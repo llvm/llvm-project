@@ -395,3 +395,53 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK      :         linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK      :         linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK      :         linalg.matmul(%[[v0]], %[[v1]], %[[v2]]) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
+
+func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                             %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                             %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+  %c2000 = constant 2000 : index
+  %c3000 = constant 3000 : index
+  %c4000 = constant 4000 : index
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = dim %arg0, 0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %1 = dim %arg0, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %2 = dim %arg1, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  loop.for %arg3 = %c0 to %0 step %c2000 {
+    loop.for %arg4 = %c0 to %2 step %c3000 {
+      loop.for %arg5 = %c0 to %1 step %c4000 {
+        %3 = std.subview %arg0[%arg3, %arg5][%c2000, %c4000][%c1, %c1] :
+             memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+        %4 = std.subview %arg1[%arg5, %arg4][%c4000, %c3000][%c1, %c1] :
+             memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+        %5 = std.subview %arg2[%arg3, %arg4][%c2000, %c3000][%c1, %c1] :
+             memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul(%3, %4, %5) {__internal_linalg_transform__ = "_promote_first_view_"} :
+                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                      memref<?x?xf32, offset: ?, strides: [?, ?]>
+      }
+    }
+  }
+  return
+}
+// CHECK-LABEL: func @promote_first_subview_matmul
+// CHECK:   loop.for {{.*}} = %c0 to {{.*}} step %c2000 {
+// CHECK:     loop.for {{.*}} = %c0 to {{.*}} step %c3000 {
+// CHECK:       loop.for {{.*}} = %c0 to {{.*}} step %c4000 {
+// CHECK:         %[[s0:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:         %[[s1:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:         %[[s2:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:         %[[a0:.*]] = alloc({{%.*}}) : memref<?xi8>
+// CHECK:         %[[v0:.*]] = std.view %[[a0]][][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK:         %[[l0:.*]] = subview %[[v0]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[map:.*]]>
+// CHECK-NOT:     %[[a1:.*]] = alloc({{%.*}}) : memref<?xi8>
+// CHECK-NOT:     %[[v1:.*]] = std.view %[[a1]][][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK-NOT:     %[[l0:.*]] = subview %[[v1]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[map]]>
+// CHECK-NOT:     %[[a2:.*]] = alloc({{%.*}}) : memref<?xi8>
+// CHECK-NOT:     %[[v2:.*]] = std.view %[[a2]][][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK-NOT:     %[[l0:.*]] = subview %[[v2]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[map]]>
+// CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK-NOT:     linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK-NOT:     linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
+// CHECK:         linalg.matmul(%[[v0]], %[[s1]], %[[s2]]) : memref<?x?xf32>, memref<?x?xf32, #[[map]]>, memref<?x?xf32, #[[map]]>
