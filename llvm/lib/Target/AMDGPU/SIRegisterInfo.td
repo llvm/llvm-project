@@ -725,99 +725,37 @@ def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
 }
 
 // Register class for all vector registers (VGPRs + Interploation Registers)
-def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4], 32,
-                            (add VGPR_64)> {
-  let Size = 64;
+class VRegClass<int numRegs, list<ValueType> regTypes, dag regList> :
+    RegisterClass<"AMDGPU", regTypes, 32, regList> {
+  let Size = !mul(numRegs, 32);
 
-  // Requires 2 v_mov_b32 to copy
-  let CopyCost = 2;
-  let AllocationPriority = 2;
-  let Weight = 2;
+  // Requires n v_mov_b32 to copy
+  let CopyCost = numRegs;
+  let AllocationPriority = numRegs;
+  let Weight = numRegs;
 }
 
-def VReg_96 : RegisterClass<"AMDGPU", [v3i32, v3f32], 32, (add VGPR_96)> {
-  let Size = 96;
+def VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4],
+                        (add VGPR_64)>;
+def VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
+def VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, i128], (add VGPR_128)>;
+def VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
+def VReg_256 : VRegClass<8, [v8i32, v8f32], (add VGPR_256)>;
+def VReg_512 : VRegClass<16, [v16i32, v16f32], (add VGPR_512)>;
+def VReg_1024 : VRegClass<32, [v32i32, v32f32], (add VGPR_1024)>;
 
-  // Requires 3 v_mov_b32 to copy
-  let CopyCost = 3;
-  let AllocationPriority = 3;
-  let Weight = 3;
+class ARegClass<int numRegs, list<ValueType> regTypes, dag regList> :
+    VRegClass<numRegs, regTypes, regList> {
+  // Requires n v_accvgpr_write and n v_accvgpr_read to copy + burn 1 vgpr
+  let CopyCost = !add(numRegs, numRegs, 1);
 }
 
-def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64, i128], 32,
-                             (add VGPR_128)> {
-  let Size = 128;
+def AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
+                        (add AGPR_64)>;
+def AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
+def AReg_512 : ARegClass<16, [v16i32, v16f32], (add AGPR_512)>;
+def AReg_1024 : ARegClass<32, [v32i32, v32f32], (add AGPR_1024)>;
 
-  // Requires 4 v_mov_b32 to copy
-  let CopyCost = 4;
-  let AllocationPriority = 4;
-  let Weight = 4;
-}
-
-def VReg_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
-                             (add VGPR_160)> {
-  let Size = 160;
-
-  // Requires 5 v_mov_b32 to copy
-  let CopyCost = 5;
-  let AllocationPriority = 5;
-  let Weight = 5;
-}
-
-def VReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32,
-                             (add VGPR_256)> {
-  let Size = 256;
-  let CopyCost = 8;
-  let AllocationPriority = 6;
-  let Weight = 8;
-}
-
-def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
-                             (add VGPR_512)> {
-  let Size = 512;
-  let CopyCost = 16;
-  let AllocationPriority = 7;
-  let Weight = 16;
-}
-
-def VReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
-                              (add VGPR_1024)> {
-  let Size = 1024;
-  let CopyCost = 32;
-  let AllocationPriority = 8;
-  let Weight = 32;
-}
-
-def AReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32, v4f16, v4i16], 32,
-                            (add AGPR_64)> {
-  let Size = 64;
-
-  let CopyCost = 5;
-  let AllocationPriority = 2;
-}
-
-def AReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
-                             (add AGPR_128)> {
-  let Size = 128;
-
-  // Requires 4 v_accvgpr_write and 4 v_accvgpr_read to copy + burn 1 vgpr
-  let CopyCost = 9;
-  let AllocationPriority = 4;
-}
-
-def AReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
-                             (add AGPR_512)> {
-  let Size = 512;
-  let CopyCost = 33;
-  let AllocationPriority = 7;
-}
-
-def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
-                              (add AGPR_1024)> {
-  let Size = 1024;
-  let CopyCost = 65;
-  let AllocationPriority = 8;
-}
 } // End GeneratePressureSet = 0
 
 // This is not a real register. This is just to have a register to add
