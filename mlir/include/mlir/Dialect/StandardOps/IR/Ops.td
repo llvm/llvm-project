@@ -1865,7 +1865,7 @@ def RemFOp : FloatArithmeticOp<"remf"> {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">, ReturnLike,
                                  Terminator]> {
   let summary = "return operation";
   let description = [{
