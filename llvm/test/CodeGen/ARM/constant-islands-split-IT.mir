@@ -110,7 +110,6 @@ body:             |
   ; CHECK:   CONSTPOOL_ENTRY 6, %const.0, 8
   ; CHECK: bb.9 (align 2):
   ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   liveins: $r0
   ; CHECK:   dead renamable $r0 = SPACE 4000, undef renamable $r0
   ; CHECK:   t2B %bb.9, 14 /* CC::al */, $noreg
   ; CHECK: bb.10:
@@ -143,7 +142,6 @@ body:             |
 
   bb.3:
     successors: %bb.3(0x80000000)
-    liveins: $r0
 
     dead renamable $r0 = SPACE 4000, undef renamable $r0
     t2B %bb.3, 14, $noreg
