@@ -143,13 +143,13 @@ LANGSTANDARD_ALIAS_DEPR(gnucxx17, "gnu++1z")
 LANGSTANDARD(cxx20, "c++20",
              CXX, "ISO C++ 2020 DIS",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus2a | Digraphs | HexFloat)
+             CPlusPlus20 | Digraphs | HexFloat)
 LANGSTANDARD_ALIAS_DEPR(cxx20, "c++2a")
 
 LANGSTANDARD(gnucxx20, "gnu++20",
              CXX, "ISO C++ 2020 DIS with GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus2a | Digraphs | HexFloat | GNUMode)
+             CPlusPlus20 | Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx20, "gnu++2a")
 
 // OpenCL

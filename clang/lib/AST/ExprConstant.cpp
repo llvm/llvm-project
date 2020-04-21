@@ -2593,7 +2593,7 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
-    } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus2a) {
+    } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus20) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
@@ -4997,7 +4997,7 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   // DR1872: An instantiated virtual constexpr function can't be called in a
   // constant expression (prior to C++20). We can still constant-fold such a
   // call.
-  if (!Info.Ctx.getLangOpts().CPlusPlus2a && isa<CXXMethodDecl>(Declaration) &&
+  if (!Info.Ctx.getLangOpts().CPlusPlus20 && isa<CXXMethodDecl>(Declaration) &&
       cast<CXXMethodDecl>(Declaration)->isVirtual())
     Info.CCEDiag(CallLoc, diag::note_constexpr_virtual_call);
 
@@ -5609,7 +5609,7 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
     if (!handleLValueToRValueConversion(Info, Args[0], Args[0]->getType(), RHS,
                                         RHSValue, MD->getParent()->isUnion()))
       return false;
-    if (Info.getLangOpts().CPlusPlus2a && MD->isTrivial() &&
+    if (Info.getLangOpts().CPlusPlus20 && MD->isTrivial() &&
         !HandleUnionActiveMemberChange(Info, Args[0], *This))
       return false;
     if (!handleAssignment(Info, Args[0], *This, MD->getThisType(),
@@ -6081,7 +6081,7 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
   // This is permitted only within a call to std::allocator<T>::allocate.
   auto Caller = Info.getStdAllocatorCaller("allocate");
   if (!Caller) {
-    Info.FFDiag(E->getExprLoc(), Info.getLangOpts().CPlusPlus2a
+    Info.FFDiag(E->getExprLoc(), Info.getLangOpts().CPlusPlus20
                                      ? diag::note_constexpr_new_untyped
                                      : diag::note_constexpr_new);
     return false;
@@ -6863,7 +6863,7 @@ public:
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
-    if (!Info.Ctx.getLangOpts().CPlusPlus2a)
+    if (!Info.Ctx.getLangOpts().CPlusPlus20)
       CCEDiag(E, diag::note_constexpr_invalid_cast) << 1;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
@@ -7022,7 +7022,7 @@ public:
           return Error(Callee);
         This = &ThisVal;
       } else if (const auto *PDE = dyn_cast<CXXPseudoDestructorExpr>(Callee)) {
-        if (!Info.getLangOpts().CPlusPlus2a)
+        if (!Info.getLangOpts().CPlusPlus20)
           Info.CCEDiag(PDE, diag::note_constexpr_pseudo_destructor);
         return EvaluateObjectArgument(Info, PDE->getBase(), ThisVal) &&
                HandleDestruction(Info, PDE, ThisVal, PDE->getDestroyedType());
@@ -7728,7 +7728,7 @@ bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
     else
       TypeInfo = TypeInfoLValue(E->getExprOperand()->getType().getTypePtr());
   } else {
-    if (!Info.Ctx.getLangOpts().CPlusPlus2a) {
+    if (!Info.Ctx.getLangOpts().CPlusPlus20) {
       Info.CCEDiag(E, diag::note_constexpr_typeid_polymorphic)
         << E->getExprOperand()->getType()
         << E->getExprOperand()->getSourceRange();
@@ -7864,7 +7864,7 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
   if (!Evaluate(NewVal, this->Info, E->getRHS()))
     return false;
 
-  if (Info.getLangOpts().CPlusPlus2a &&
+  if (Info.getLangOpts().CPlusPlus20 &&
       !HandleUnionActiveMemberChange(Info, E->getLHS(), Result))
     return false;
 
@@ -8736,7 +8736,7 @@ static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
                                           QualType AllocType);
 
 bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
-  if (!Info.getLangOpts().CPlusPlus2a)
+  if (!Info.getLangOpts().CPlusPlus20)
     Info.CCEDiag(E, diag::note_constexpr_new);
 
   // We cannot speculatively evaluate a delete expression.
@@ -13614,7 +13614,7 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     // This is the only case where we need to produce an extension warning:
     // the only other way we can succeed is if we find a dynamic allocation,
     // and we will have warned when we allocated it in that case.
-    if (!Info.getLangOpts().CPlusPlus2a)
+    if (!Info.getLangOpts().CPlusPlus20)
       Info.CCEDiag(E, diag::note_constexpr_new);
     return true;
   }

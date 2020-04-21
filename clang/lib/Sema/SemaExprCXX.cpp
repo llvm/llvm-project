@@ -5684,7 +5684,7 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
         // C++2a allows functions with ref-qualifier & if their cv-qualifier-seq
         // is (exactly) 'const'.
         if (Proto->isConst() && !Proto->isVolatile())
-          Diag(Loc, getLangOpts().CPlusPlus2a
+          Diag(Loc, getLangOpts().CPlusPlus20
                         ? diag::warn_cxx17_compat_pointer_to_const_ref_member_on_rvalue
                         : diag::ext_pointer_to_const_ref_member_on_rvalue);
         else

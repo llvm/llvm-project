@@ -456,7 +456,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     // Don't suggest fixes for bitfields because in-class initialization is not
     // possible until C++2a.
     if (F->getType()->isEnumeralType() ||
-        (!getLangOpts().CPlusPlus2a && F->isBitField()))
+        (!getLangOpts().CPlusPlus20 && F->isBitField()))
       return;
     if (!F->getParent()->isUnion() || UnionsSeen.insert(F->getParent()).second)
       FieldsToFix.insert(F);

@@ -2411,7 +2411,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();
   Opts.CPlusPlus17 = Std.isCPlusPlus17();
-  Opts.CPlusPlus2a = Std.isCPlusPlus2a();
+  Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUInline = !Opts.C99 && !Opts.CPlusPlus;
@@ -2940,7 +2940,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
   Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
-  Opts.Coroutines = Opts.CPlusPlus2a || Args.hasArg(OPT_fcoroutines_ts);
+  Opts.Coroutines = Opts.CPlusPlus20 || Args.hasArg(OPT_fcoroutines_ts);
 
   Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
     Args.hasArg(OPT_fconvergent_functions);
@@ -2950,7 +2950,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                    OPT_fno_double_square_bracket_attributes,
                    Opts.DoubleSquareBracketAttributes);
 
-  Opts.CPlusPlusModules = Opts.CPlusPlus2a;
+  Opts.CPlusPlusModules = Opts.CPlusPlus20;
   Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);
   Opts.Modules =
       Args.hasArg(OPT_fmodules) || Opts.ModulesTS || Opts.CPlusPlusModules;
@@ -2972,7 +2972,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ImplicitModules = !Args.hasArg(OPT_fno_implicit_modules);
   Opts.CharIsSigned = Opts.OpenCL || !Args.hasArg(OPT_fno_signed_char);
   Opts.WChar = Opts.CPlusPlus && !Args.hasArg(OPT_fno_wchar);
-  Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus2a);
+  Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus20);
   if (const Arg *A = Args.getLastArg(OPT_fwchar_type_EQ)) {
     Opts.WCharSize = llvm::StringSwitch<unsigned>(A->getValue())
                          .Case("char", 1)

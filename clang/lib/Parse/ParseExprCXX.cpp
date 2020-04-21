@@ -1261,7 +1261,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
                                 /*EnteredScope=*/HasExplicitTemplateParams);
   if (HasExplicitTemplateParams) {
-    Diag(Tok, getLangOpts().CPlusPlus2a
+    Diag(Tok, getLangOpts().CPlusPlus20
                   ? diag::warn_cxx17_compat_lambda_template_parameter_list
                   : diag::ext_lambda_template_parameter_list);
 

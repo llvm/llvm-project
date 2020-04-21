@@ -96,7 +96,7 @@ void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
   // If Std is not specified, infer it from the language options.
   // libcxx implementation backports it to C++11 std::experimental::simd.
   if (Std.empty())
-    Std = getLangOpts().CPlusPlus2a ? "std" : "std::experimental";
+    Std = getLangOpts().CPlusPlus20 ? "std" : "std::experimental";
 
   Finder->addMatcher(callExpr(callee(functionDecl(
                                   matchesName("^::(_mm_|_mm256_|_mm512_|vec_)"),
