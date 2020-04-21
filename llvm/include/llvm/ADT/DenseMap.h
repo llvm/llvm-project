@@ -220,16 +220,22 @@ public:
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&... Args) {
     BucketT *TheBucket;
-    BucketT *EndBucket =
-        shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd();
     if (LookupBucketFor(Key, TheBucket))
-      return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+      return std::make_pair(makeIterator(TheBucket,
+                                         shouldReverseIterate<KeyT>()
+                                             ? getBuckets()
+                                             : getBucketsEnd(),
+                                         *this, true),
                             false); // Already in map.
 
     // Otherwise, insert the new element.
     TheBucket =
         InsertIntoBucket(TheBucket, std::move(Key), std::forward<Ts>(Args)...);
-    return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+    return std::make_pair(makeIterator(TheBucket,
+                                       shouldReverseIterate<KeyT>()
+                                           ? getBuckets()
+                                           : getBucketsEnd(),
+                                       *this, true),
                           true);
   }
 
@@ -239,15 +245,21 @@ public:
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&... Args) {
     BucketT *TheBucket;
-    BucketT *EndBucket =
-        shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd();
     if (LookupBucketFor(Key, TheBucket))
-      return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+      return std::make_pair(makeIterator(TheBucket,
+                                         shouldReverseIterate<KeyT>()
+                                             ? getBuckets()
+                                             : getBucketsEnd(),
+                                         *this, true),
                             false); // Already in map.
 
     // Otherwise, insert the new element.
     TheBucket = InsertIntoBucket(TheBucket, Key, std::forward<Ts>(Args)...);
-    return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+    return std::make_pair(makeIterator(TheBucket,
+                                       shouldReverseIterate<KeyT>()
+                                           ? getBuckets()
+                                           : getBucketsEnd(),
+                                       *this, true),
                           true);
   }
 
@@ -260,16 +272,22 @@ public:
   std::pair<iterator, bool> insert_as(std::pair<KeyT, ValueT> &&KV,
                                       const LookupKeyT &Val) {
     BucketT *TheBucket;
-    BucketT *EndBucket =
-        shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd();
     if (LookupBucketFor(Val, TheBucket))
-      return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+      return std::make_pair(makeIterator(TheBucket,
+                                         shouldReverseIterate<KeyT>()
+                                             ? getBuckets()
+                                             : getBucketsEnd(),
+                                         *this, true),
                             false); // Already in map.
 
     // Otherwise, insert the new element.
     TheBucket = InsertIntoBucketWithLookup(TheBucket, std::move(KV.first),
                                            std::move(KV.second), Val);
-    return std::make_pair(makeIterator(TheBucket, EndBucket, *this, true),
+    return std::make_pair(makeIterator(TheBucket,
+                                       shouldReverseIterate<KeyT>()
+                                           ? getBuckets()
+                                           : getBucketsEnd(),
+                                       *this, true),
                           true);
   }
 
