@@ -40,6 +40,8 @@ static cl::opt<bool> ManifestInternal(
 static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
                                        cl::Hidden);
 
+STATISTIC(NumAAs, "Number of abstract attributes created");
+
 // Some helper macros to deal with statistics tracking.
 //
 // Usage:
@@ -6995,6 +6997,7 @@ const char AAValueConstantRange::ID = 0;
 #define SWITCH_PK_CREATE(CLASS, IRP, PK, SUFFIX)                               \
   case IRPosition::PK:                                                         \
     AA = new (A.Allocator) CLASS##SUFFIX(IRP, A);                              \
+    ++NumAAs;                                                                  \
     break;
 
 #define CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(CLASS)                 \
