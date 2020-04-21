@@ -28772,8 +28772,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
         N->getMemOperand(), N->getAddressingMode(), N->getExtensionType(),
         N->isExpandingLoad());
     // Emit a blend.
-    SDValue Select = DAG.getNode(ISD::VSELECT, dl, MaskVT, Mask, NewLoad,
-                                 PassThru);
+    SDValue Select = DAG.getNode(ISD::VSELECT, dl, VT, Mask, NewLoad, PassThru);
     return DAG.getMergeValues({ Select, NewLoad.getValue(1) }, dl);
   }
 
@@ -28809,10 +28808,10 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
       PassThru, N->getMemoryVT(), N->getMemOperand(), N->getAddressingMode(),
       N->getExtensionType(), N->isExpandingLoad());
 
-  SDValue Exract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT,
-                               NewLoad.getValue(0),
-                               DAG.getIntPtrConstant(0, dl));
-  SDValue RetOps[] = {Exract, NewLoad.getValue(1)};
+  SDValue Extract =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, NewLoad.getValue(0),
+                  DAG.getIntPtrConstant(0, dl));
+  SDValue RetOps[] = {Extract, NewLoad.getValue(1)};
   return DAG.getMergeValues(RetOps, dl);
 }
 
