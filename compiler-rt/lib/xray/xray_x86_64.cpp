@@ -151,7 +151,7 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
   // opcode and first operand.
   //
   // Prerequisite is to compute the relative offset to the trampoline's address.
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
@@ -197,7 +197,7 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
   //
   // Prerequisite is to compute the relative offset fo the
   // __xray_FunctionExit function's address.
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionExit) -
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
@@ -225,7 +225,7 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
                            const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the tail call sled with a similar
   // sequence as the entry sled, but calls the tail exit sled instead.
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset =
       reinterpret_cast<int64_t>(__xray_FunctionTailExit) -
       (static_cast<int64_t>(Address) + 11);
@@ -270,12 +270,12 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   //
   // ---
   //
-  // In Version 1:
+  // In Version 1 or 2:
   //
   //   The jump offset is now 15 bytes (0x0f), so when restoring the nopw back
   //   to a jmp, use 15 bytes instead.
   //
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   if (Enable) {
     std::atomic_store_explicit(
         reinterpret_cast<std::atomic<uint16_t> *>(Address), NopwSeq,
@@ -283,6 +283,7 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   } else {
     switch (Sled.Version) {
     case 1:
+    case 2:
       std::atomic_store_explicit(
           reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp15Seq,
           std::memory_order_release);
@@ -317,7 +318,7 @@ bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
   // unstashes the registers and returns. If the arguments are already in
   // the correct registers, the stashing and unstashing become equivalently
   // sized nops.
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   if (Enable) {
     std::atomic_store_explicit(
         reinterpret_cast<std::atomic<uint16_t> *>(Address), NopwSeq,
