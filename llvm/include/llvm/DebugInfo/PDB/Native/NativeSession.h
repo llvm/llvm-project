@@ -26,6 +26,11 @@ class PDBFile;
 class NativeExeSymbol;
 
 class NativeSession : public IPDBSession {
+  struct PdbSearchOptions {
+    StringRef ExePath;
+    // FIXME: Add other PDB search options (_NT_SYMBOL_PATH, symsrv)
+  };
+
 public:
   NativeSession(std::unique_ptr<PDBFile> PdbFile,
                 std::unique_ptr<BumpPtrAllocator> Allocator);
@@ -33,8 +38,11 @@ public:
 
   static Error createFromPdb(std::unique_ptr<MemoryBuffer> MB,
                              std::unique_ptr<IPDBSession> &Session);
+  static Error createFromPdbPath(StringRef PdbPath,
+                                 std::unique_ptr<IPDBSession> &Session);
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
+  static Expected<std::string> searchForPdb(const PdbSearchOptions &Opts);
 
   uint64_t getLoadAddress() const override;
   bool setLoadAddress(uint64_t Address) override;
@@ -109,6 +117,7 @@ private:
 
   SymbolCache Cache;
   SymIndexId ExeSymbol = 0;
+  uint64_t LoadAddress = 0;
 };
 } // namespace pdb
 } // namespace llvm
