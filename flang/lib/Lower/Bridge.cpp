@@ -1594,6 +1594,7 @@ private:
     const auto &sym = var.getSymbol();
     std::string globalName = mangleName(sym);
     fir::GlobalOp global;
+    bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
     if (builder->getNamedGlobal(globalName))
       return;
     if (const auto *details =
@@ -1607,13 +1608,14 @@ private:
           return;
         } else
           global = builder->createGlobal(
-              toLocation(), genType(sym), globalName, false,
+              toLocation(), genType(sym), globalName, isConst,
               [&](Fortran::lower::FirOpBuilder &builder) {
                 auto initVal = genExprValue(details->init().value());
                 builder.create<fir::HasValueOp>(toLocation(), initVal);
               });
-      } else
+      } else {
         global = builder->createGlobal(toLocation(), genType(sym), globalName);
+      }
       auto addrOf = builder->create<fir::AddrOfOp>(
           toLocation(), global.resultType(), global.getSymbol());
       addSymbol(sym, addrOf);
