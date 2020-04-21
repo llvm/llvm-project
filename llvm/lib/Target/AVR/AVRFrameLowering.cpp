@@ -65,13 +65,6 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
-  // Save the frame pointer if we have one.
-  if (HasFP) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHWRr))
-        .addReg(AVR::R29R28, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-
   // Emit special prologue code to save R1, R0 and SREG in interrupt/signal
   // handlers before saving any other registers.
   if (AFI->isInterruptOrSignalHandler()) {
@@ -167,9 +160,6 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
         .addReg(AVR::R0, RegState::Kill);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
   }
-
-  if (hasFP(MF))
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R29R28);
 
   // Early exit if there is no need to restore the frame pointer.
   if (!FrameSize) {
@@ -411,8 +401,10 @@ void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
   // If we have a frame pointer, the Y register needs to be saved as well.
-  // We don't do that here however - the prologue and epilogue generation
-  // code will handle it specially.
+  if (hasFP(MF)) {
+    SavedRegs.set(AVR::R29);
+    SavedRegs.set(AVR::R28);
+  }
 }
 /// The frame analyzer pass.
 ///
