@@ -2,7 +2,7 @@
     "name": "vscode-clangd",
     "displayName": "vscode-clangd",
     "description": "Clang Language Server",
-    "version": "0.0.21",
+    "version": "0.0.22",
     "publisher": "llvm-vs-code-extensions",
     "homepage": "https://clangd.llvm.org/",
     "icon": "icon.png",
