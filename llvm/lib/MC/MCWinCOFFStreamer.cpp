@@ -48,7 +48,7 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {}
 
-void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
+void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   MCDataFragment *DF = getOrCreateDataFragment();
 

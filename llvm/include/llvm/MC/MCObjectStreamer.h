@@ -49,7 +49,7 @@ class MCObjectStreamer : public MCStreamer {
   };
   SmallVector<PendingMCFixup, 2> PendingFixups;
 
-  virtual void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
+  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   MCSymbol *emitCFILabel() override;
