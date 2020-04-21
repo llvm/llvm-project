@@ -857,7 +857,7 @@ public:
     case Instruction::FPExt:
     case Instruction::SExt:
     case Instruction::ZExt:
-      if (TargetTTI->getExtCost(I, Operands.back()) == TTI::TCC_Free)
+      if (I && TargetTTI->getExtCost(I, Operands.back()) == TTI::TCC_Free)
         return TTI::TCC_Free;
       break;
     }
