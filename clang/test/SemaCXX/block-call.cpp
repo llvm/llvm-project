@@ -10,8 +10,6 @@ int main() {
   int (^PFR) (int) = IFP; // expected-error {{cannot initialize a variable of type 'int (^)(int)' with an lvalue of type 'int (^)()'}}
   PFR = II;       // OK
 
-  int (^IFP) () = PFR; // OK
-
 
   const int (^CIC) () = IFP; // OK -  initializing 'const int (^)()' with an expression of type 'int (^)()'}}
 
@@ -32,8 +30,8 @@ int main() {
 
   int (^IPCC6) (int, char (^CArg) (float))  = IPCC4; // expected-error {{cannot initialize a variable of type 'int (^)(int, char (^)(float))' with an lvalue of type}}
 
-  IPCC2 = 0;
-  IPCC2 = 1; 
+  IPCC2 = 0; // OK - assign a nullptr to a pointer.
+  IPCC2 = 1; // expected-error {{invalid block pointer conversion assigning to 'int *(^)()' from 'int'}}
   int (^x)() = 0;
   int (^y)() = 3;   // expected-error {{cannot initialize a variable of type 'int (^)()' with an rvalue of type 'int'}}
   int a = 1;
