@@ -1235,8 +1235,14 @@ private:
     /// Set of abstract attributes which were used and which were necessarily
     /// required for any potential optimistic state.
     SetVector<AbstractAttribute *> RequiredAAs;
+
+    /// Clear the sets but keep the allocated storage as it is likely be resued.
+    void clear() {
+      OptionalAAs.clear();
+      RequiredAAs.clear();
+    }
   };
-  using QueryMapTy = MapVector<const AbstractAttribute *, QueryMapValueTy>;
+  using QueryMapTy = DenseMap<const AbstractAttribute *, QueryMapValueTy *>;
   QueryMapTy QueryMap;
   ///}
 
