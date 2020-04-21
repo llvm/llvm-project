@@ -15,8 +15,8 @@ def run_reproducer(path):
                             stderr=subprocess.PIPE)
     reason = None
     try:
-        success = proc.returncode == 0
         outs, errs = proc.communicate(timeout=TIMEOUT)
+        success = proc.returncode == 0
         result = 'PASSED' if success else 'FAILED'
         if not success:
             outs = outs.decode()
