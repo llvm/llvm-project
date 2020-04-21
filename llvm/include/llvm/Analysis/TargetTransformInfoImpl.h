@@ -17,7 +17,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -796,8 +795,8 @@ public:
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands) {
     auto *TargetTTI = static_cast<T *>(this);
 
-    if (auto CS = ImmutableCallSite(U)) {
-      const Function *F = CS.getCalledFunction();
+    if (const auto *CB = dyn_cast<CallBase>(U)) {
+      const Function *F = CB->getCalledFunction();
       if (F) {
         FunctionType *FTy = F->getFunctionType();
         if (Intrinsic::ID IID = F->getIntrinsicID()) {
@@ -811,7 +810,7 @@ public:
 
         return TTI::TCC_Basic * (FTy->getNumParams() + 1);
       }
-      return TTI::TCC_Basic * (CS.arg_size() + 1);
+      return TTI::TCC_Basic * (CB->arg_size() + 1);
     }
 
     Type *Ty = U->getType();
