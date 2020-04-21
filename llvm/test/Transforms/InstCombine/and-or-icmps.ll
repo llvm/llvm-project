@@ -210,12 +210,20 @@ define void @simplify_before_foldAndOfICmps() {
 ; CHECK-LABEL: @simplify_before_foldAndOfICmps(
 ; CHECK-NEXT:    [[A8:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[L7:%.*]] = load i16, i16* [[A8]], align 2
-; CHECK-NEXT:    [[C10:%.*]] = icmp ult i16 [[L7]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
+; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
+; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
+; CHECK-NEXT:    [[C5:%.*]] = icmp slt i16 [[L7]], 1
+; CHECK-NEXT:    [[C11:%.*]] = icmp ne i16 [[L7]], 0
 ; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[C10]]
-; CHECK-NEXT:    [[L7_LOBIT:%.*]] = ashr i16 [[L7]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[L7_LOBIT]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, i1* null, i64 [[TMP1]]
+; CHECK-NEXT:    [[B15:%.*]] = xor i1 [[C7]], [[C10]]
+; CHECK-NEXT:    [[B19:%.*]] = xor i1 [[C11]], [[B15]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C10]], [[C5]]
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[TMP2]], [[B19]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C10]], true
+; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C3]] to i64
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, i1* null, i64 [[TMP4]]
 ; CHECK-NEXT:    store i16 [[L7]], i16* undef, align 2
 ; CHECK-NEXT:    store i1 [[C18]], i1* undef, align 1
 ; CHECK-NEXT:    store i1* [[G26]], i1** undef, align 8
