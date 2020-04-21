@@ -431,3 +431,63 @@ entry:
   %vmulx2.i = tail call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> %a, <8 x half> %vecinit7) #4
   ret <8 x half> %vmulx2.i
 }
+
+define dso_local half @t_vfmah_lane3_f16(half %a, half %b, <4 x half> %c) {
+; CHECK-LABEL: t_vfmah_lane3_f16:
+; CHECK:       .Lt_vfmah_lane3_f16$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov h2, v2.h[3]
+; CHECK-NEXT:    fmadd h0, h1, h2, h0
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <4 x half> %c, i32 3
+  %0 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmah_laneq7_f16(half %a, half %b, <8 x half> %c) {
+; CHECK-LABEL: t_vfmah_laneq7_f16:
+; CHECK:       .Lt_vfmah_laneq7_f16$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov h2, v2.h[7]
+; CHECK-NEXT:    fmadd h0, h1, h2, h0
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <8 x half> %c, i32 7
+  %0 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmsh_lane3_f16(half %a, half %b, <4 x half> %c) {
+; CHECK-LABEL: t_vfmsh_lane3_f16:
+; CHECK:       .Lt_vfmsh_lane3_f16$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov h2, v2.h[3]
+; CHECK-NEXT:    fmsub h0, h1, h2, h0
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <4 x half> %c, i32 3
+  %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
+  ret half %1
+}
+
+define dso_local half @t_vfmsh_laneq7_f16(half %a, half %b, <8 x half> %c) {
+; CHECK-LABEL: t_vfmsh_laneq7_f16:
+; CHECK:       .Lt_vfmsh_laneq7_f16$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov h2, v2.h[7]
+; CHECK-NEXT:    fmsub h0, h1, h2, h0
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <8 x half> %c, i32 7
+  %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
+  ret half %1
+}
