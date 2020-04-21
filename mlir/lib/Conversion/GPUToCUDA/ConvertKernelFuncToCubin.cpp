@@ -31,6 +31,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -56,6 +57,12 @@ public:
 
   void runOnOperation() override {
     gpu::GPUModuleOp module = getOperation();
+
+    // Lock access to the llvm context.
+    llvm::sys::SmartScopedLock<true> scopedLock(
+        module.getContext()
+            ->getRegisteredDialect<LLVM::LLVMDialect>()
+            ->getLLVMContextMutex());
 
     // Make sure the NVPTX target is initialized.
     LLVMInitializeNVPTXTarget();
