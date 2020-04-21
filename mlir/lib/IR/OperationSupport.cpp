@@ -151,7 +151,7 @@ TypeRange::TypeRange(ArrayRef<Value> values)
 TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   detail::ValueRangeOwner owner = values.begin().getBase();
   if (auto *op = reinterpret_cast<Operation *>(owner.ptr.dyn_cast<void *>()))
-    this->base = &op->getResultTypes()[owner.startIndex];
+    this->base = op->getResultTypes().drop_front(owner.startIndex).data();
   else if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
     this->base = operand;
   else
@@ -195,7 +195,7 @@ ResultRange::ResultRange(Operation *op)
     : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
 
 ArrayRef<Type> ResultRange::getTypes() const {
-  return getBase()->getResultTypes();
+  return getBase()->getResultTypes().slice(getStartIndex(), size());
 }
 
 /// See `llvm::indexed_accessor_range` for details.
