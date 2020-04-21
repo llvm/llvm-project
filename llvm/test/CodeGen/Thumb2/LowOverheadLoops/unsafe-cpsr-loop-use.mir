@@ -131,7 +131,7 @@ body:             |
     renamable $r1, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14, $noreg
     t2DoLoopStart renamable $r0
     renamable $r2 = t2LSRri renamable $r0, 1, 14, $noreg, $noreg
-    $lr = tMOVr killed $r0, 14, $noreg
+    $lr = tMOVr $r0, 14, $noreg
 
   bb.1.while.body:
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
@@ -144,7 +144,7 @@ body:             |
     renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit renamable $r3, implicit killed $itstate
     early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
     renamable $lr = tMOVr $lr, 14, $noreg
-    t2LoopEnd killed renamable $lr, %bb.1, implicit-def dead $cpsr
+    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
 
   bb.2.while.end:
