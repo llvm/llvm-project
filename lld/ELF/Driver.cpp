@@ -609,9 +609,6 @@ static bool isOutputFormatBinary(opt::InputArgList &args) {
 }
 
 static DiscardPolicy getDiscard(opt::InputArgList &args) {
-  if (args.hasArg(OPT_relocatable))
-    return DiscardPolicy::None;
-
   auto *arg =
       args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
   if (!arg)
