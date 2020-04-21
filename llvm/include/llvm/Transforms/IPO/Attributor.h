@@ -729,15 +729,12 @@ struct Attributor {
   /// \param InfoCache Cache to hold various information accessible for
   ///                  the abstract attributes.
   /// \param CGUpdater Helper to update an underlying call graph.
-  /// \param DepRecomputeInterval Number of iterations until the dependences
-  ///                             between abstract attributes are recomputed.
   /// \param Whitelist If not null, a set limiting the attribute opportunities.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
-             CallGraphUpdater &CGUpdater, unsigned DepRecomputeInterval,
+             CallGraphUpdater &CGUpdater,
              DenseSet<const char *> *Whitelist = nullptr)
       : Allocator(InfoCache.Allocator), Functions(Functions),
-        InfoCache(InfoCache), CGUpdater(CGUpdater),
-        DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
+        InfoCache(InfoCache), CGUpdater(CGUpdater), Whitelist(Whitelist) {}
 
   ~Attributor();
 
@@ -1267,10 +1264,6 @@ private:
 
   /// Set if the attribute currently updated did query a non-fix attribute.
   bool QueriedNonFixAA;
-
-  /// Number of iterations until the dependences between abstract attributes are
-  /// recomputed.
-  const unsigned DepRecomputeInterval;
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Whitelist;
