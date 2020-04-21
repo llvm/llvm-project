@@ -10,8 +10,8 @@ module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_id_x()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_id_x() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
       // CHECK-NEXT: [[VEC:%.*]] = spv.Load "Input" [[ADDRESS]]
       // CHECK-NEXT: {{%.*}} = spv.CompositeExtract [[VEC]]{{\[}}0 : i32{{\]}}
@@ -33,8 +33,8 @@ module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_id_y()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_id_y() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
       // CHECK-NEXT: [[VEC:%.*]] = spv.Load "Input" [[ADDRESS]]
       // CHECK-NEXT: {{%.*}} = spv.CompositeExtract [[VEC]]{{\[}}1 : i32{{\]}}
@@ -56,8 +56,8 @@ module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_id_z()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_id_z() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
       // CHECK-NEXT: [[VEC:%.*]] = spv.Load "Input" [[ADDRESS]]
       // CHECK-NEXT: {{%.*}} = spv.CompositeExtract [[VEC]]{{\[}}2 : i32{{\]}}
@@ -78,8 +78,8 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module Logical GLSL450
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_size_x()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[32, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_size_x() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[32, 1, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
       // Note that this ignores the workgroup size specification in gpu.launch.
       // We may want to define gpu.workgroup_size and convert it to the entry
@@ -102,8 +102,8 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module Logical GLSL450
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_size_y()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_size_y() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
       // CHECK: spv.constant 4 : i32
       %0 = "gpu.block_dim"() {dimension = "y"} : () -> index
@@ -123,8 +123,8 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module Logical GLSL450
   gpu.module @kernels {
-    gpu.func @builtin_workgroup_size_z()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_workgroup_size_z() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
       // The constant value is obtained from the spv.entry_point_abi.
       // CHECK: spv.constant 1 : i32
       %0 = "gpu.block_dim"() {dimension = "z"} : () -> index
@@ -145,8 +145,8 @@ module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module Logical GLSL450
   // CHECK: spv.globalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
   gpu.module @kernels {
-    gpu.func @builtin_local_id_x()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_local_id_x() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[LOCALINVOCATIONID]]
       // CHECK-NEXT: [[VEC:%.*]] = spv.Load "Input" [[ADDRESS]]
       // CHECK-NEXT: {{%.*}} = spv.CompositeExtract [[VEC]]{{\[}}0 : i32{{\]}}
@@ -168,8 +168,8 @@ module attributes {gpu.container_module} {
   // CHECK-LABEL:  spv.module Logical GLSL450
   // CHECK: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
   gpu.module @kernels {
-    gpu.func @builtin_num_workgroups_x()
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @builtin_num_workgroups_x() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[NUMWORKGROUPS]]
       // CHECK-NEXT: [[VEC:%.*]] = spv.Load "Input" [[ADDRESS]]
       // CHECK-NEXT: {{%.*}} = spv.CompositeExtract [[VEC]]{{\[}}0 : i32{{\]}}

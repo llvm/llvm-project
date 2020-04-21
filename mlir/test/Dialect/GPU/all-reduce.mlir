@@ -6,7 +6,7 @@ module @kernels attributes {gpu.kernel_module} {
 
   // CHECK-LABEL: gpu.func @kernel(
   // CHECK-SAME: [[VAL_0:%.*]]: f32) workgroup([[VAL_1:%.*]] : memref<32xf32, 3>) kernel {
-  gpu.func @kernel(%arg0 : f32) attributes { gpu.kernel } {
+  gpu.func @kernel(%arg0 : f32) kernel {
     // CHECK:   [[VAL_2:%.*]] = constant 31 : i32
     // CHECK:   [[VAL_3:%.*]] = constant 0 : i32
     // CHECK:   [[VAL_4:%.*]] = constant 0 : index
