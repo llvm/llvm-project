@@ -20,7 +20,6 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
