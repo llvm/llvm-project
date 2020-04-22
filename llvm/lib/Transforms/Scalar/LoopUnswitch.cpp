@@ -43,7 +43,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -682,9 +681,10 @@ bool LoopUnswitch::processCurrentLoop() {
 
   for (const auto BB : CurrentLoop->blocks()) {
     for (auto &I : *BB) {
-      auto CS = CallSite(&I);
-      if (!CS) continue;
-      if (CS.isConvergent())
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        continue;
+      if (CB->isConvergent())
         return false;
       if (auto *II = dyn_cast<InvokeInst>(&I))
         if (!II->getUnwindDest()->canSplitPredecessors())
