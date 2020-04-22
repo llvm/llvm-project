@@ -210,7 +210,7 @@ struct ParenState {
         ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
         NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
         IsCSharpGenericTypeConstraint(false), IsChainedConditional(false),
-        IsWrappedConditional(false) {}
+        IsWrappedConditional(false), UnindentOperator(false) {}
 
   /// \brief The token opening this parenthesis level, or nullptr if this level
   /// is opened by fake parenthesis.
@@ -344,6 +344,10 @@ struct ParenState {
   /// question mark)
   bool IsWrappedConditional : 1;
 
+  /// \brief Indicates the indent should be reduced by the length of the
+  /// operator.
+  bool UnindentOperator : 1;
+
   bool operator<(const ParenState &Other) const {
     if (Indent != Other.Indent)
       return Indent < Other.Indent;
@@ -389,6 +393,8 @@ struct ParenState {
       return IsChainedConditional;
     if (IsWrappedConditional != Other.IsWrappedConditional)
       return IsWrappedConditional;
+    if (UnindentOperator != Other.UnindentOperator)
+      return UnindentOperator;
     return false;
   }
 };
