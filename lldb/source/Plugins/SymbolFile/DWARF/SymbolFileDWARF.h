@@ -238,7 +238,7 @@ public:
   GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
   virtual void GetObjCMethods(lldb_private::ConstString class_name,
-                              llvm::function_ref<bool(DIERef ref)> callback);
+                              llvm::function_ref<bool(DWARFDIE die)> callback);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 

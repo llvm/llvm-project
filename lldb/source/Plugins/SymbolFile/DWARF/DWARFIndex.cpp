@@ -11,6 +11,8 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 
+#include "lldb/Core/Module.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -60,4 +62,25 @@ bool DWARFIndex::ProcessFunctionDIE(
   }
 
   return true;
+}
+
+DWARFIndex::DIERefCallbackImpl::DIERefCallbackImpl(
+    const DWARFIndex &index, llvm::function_ref<bool(DWARFDIE die)> callback,
+    llvm::StringRef name)
+    : m_index(index),
+      m_dwarf(*llvm::cast<SymbolFileDWARF>(index.m_module.GetSymbolFile())),
+      m_callback(callback), m_name(name) {}
+
+bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
+  if (DWARFDIE die = m_dwarf.GetDIE(ref))
+    return m_callback(die);
+  m_index.ReportInvalidDIERef(ref, m_name);
+  return true;
+}
+
+void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
+  m_module.ReportErrorIfModifyDetected(
+      "the DWARF debug information has been modified (accelerator table had "
+      "bad die 0x%8.8x for '%s')\n",
+      ref.die_offset(), name.str().c_str());
 }
