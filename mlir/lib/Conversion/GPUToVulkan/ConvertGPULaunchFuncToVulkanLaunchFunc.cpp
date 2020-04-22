@@ -54,10 +54,12 @@ private:
 
   /// Checks where the given type is supported by Vulkan runtime.
   bool isSupportedType(Type type) {
-    // TODO(denis0x0D): Handle other types.
-    if (auto memRefType = type.dyn_cast_or_null<MemRefType>())
+    if (auto memRefType = type.dyn_cast_or_null<MemRefType>()) {
+      auto elementType = memRefType.getElementType();
       return memRefType.hasRank() &&
-             (memRefType.getRank() >= 1 && memRefType.getRank() <= 3);
+             (memRefType.getRank() >= 1 && memRefType.getRank() <= 3) &&
+             (elementType.isIntOrFloat());
+    }
     return false;
   }
 

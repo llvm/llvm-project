@@ -664,7 +664,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   // only 80 bits contain information.
   case Type::X86_FP80TyID:
     return TypeSize::Fixed(80);
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.Min *

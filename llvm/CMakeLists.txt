@@ -2,6 +2,14 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
+if ("${CMAKE_VERSION}" VERSION_LESS "3.13.4")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 12.0.0, the "
+    "minimum version of CMake required to build LLVM will become 3.13.4, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.13.4 now to avoid issues in the future!")
+endif()
+
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)

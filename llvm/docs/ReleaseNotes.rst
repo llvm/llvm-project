@@ -76,6 +76,11 @@ During this release ...
   set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
   Language Extensions.
 
+* Added support for assembly for the optional Custom Datapath Extension (CDE)
+  for Arm M-profile targets.
+
+* Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
+
 Changes to the MIPS Target
 --------------------------
 

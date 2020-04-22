@@ -3,7 +3,7 @@
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-arm-none-eabi"
+  target triple = "thumbv8.1m.main-none-none-eabi"
 
   define hidden arm_aapcs_vfpcc <4 x float> @vpt_block_1_ins(<4 x float> %inactive, <4 x float> %a, <4 x float> %b, i16 zeroext %p) local_unnamed_addr #0 {
   entry:

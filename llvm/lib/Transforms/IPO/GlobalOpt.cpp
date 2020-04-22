@@ -28,7 +28,6 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -130,7 +129,8 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
       default: break;
       case Type::PointerTyID:
         return true;
-      case Type::VectorTyID:
+      case Type::FixedVectorTyID:
+      case Type::ScalableVectorTyID:
         if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
           return true;
         break;
@@ -2188,12 +2188,12 @@ static bool hasChangeableCC(Function *F) {
 
 /// Return true if the block containing the call site has a BlockFrequency of
 /// less than ColdCCRelFreq% of the entry block.
-static bool isColdCallSite(CallSite CS, BlockFrequencyInfo &CallerBFI) {
+static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
   const BranchProbability ColdProb(ColdCCRelFreq, 100);
-  auto CallSiteBB = CS.getInstruction()->getParent();
+  auto *CallSiteBB = CB.getParent();
   auto CallSiteFreq = CallerBFI.getBlockFreq(CallSiteBB);
   auto CallerEntryFreq =
-      CallerBFI.getBlockFreq(&(CS.getCaller()->getEntryBlock()));
+      CallerBFI.getBlockFreq(&(CB.getCaller()->getEntryBlock()));
   return CallSiteFreq < CallerEntryFreq * ColdProb;
 }
 
@@ -2213,10 +2213,10 @@ isValidCandidateForColdCC(Function &F,
     if (isa<BlockAddress>(U))
       continue;
 
-    CallSite CS(cast<Instruction>(U));
-    Function *CallerFunc = CS.getInstruction()->getParent()->getParent();
+    CallBase &CB = cast<CallBase>(*U);
+    Function *CallerFunc = CB.getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CS, CallerBFI))
+    if (!isColdCallSite(CB, CallerBFI))
       return false;
     auto It = std::find(AllCallsCold.begin(), AllCallsCold.end(), CallerFunc);
     if (It == AllCallsCold.end())
@@ -2242,7 +2242,6 @@ hasOnlyColdCalls(Function &F,
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        CallSite CS(cast<Instruction>(CI));
         // Skip over isline asm instructions since they aren't function calls.
         if (CI->isInlineAsm())
           continue;
@@ -2259,7 +2258,7 @@ hasOnlyColdCalls(Function &F,
             CalledFn->hasAddressTaken())
           return false;
         BlockFrequencyInfo &CallerBFI = GetBFI(F);
-        if (!isColdCallSite(CS, CallerBFI))
+        if (!isColdCallSite(*CI, CallerBFI))
           return false;
       }
     }

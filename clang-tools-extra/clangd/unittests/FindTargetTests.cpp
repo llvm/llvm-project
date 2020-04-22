@@ -1286,6 +1286,20 @@ TEST_F(FindExplicitReferencesTest, All) {
         "1: targets = {}\n"
         "2: targets = {T}\n"
       },
+      // unknown template name should not crash.
+      {R"cpp(
+        template <template <typename> typename T>
+        struct Base {};
+        namespace foo {
+        template <typename $0^T>
+        struct $1^Derive : $2^Base<$3^T::template $4^Unknown> {};
+        }
+      )cpp",
+      "0: targets = {foo::Derive::T}, decl\n"
+      "1: targets = {foo::Derive}, decl\n"
+      "2: targets = {Base}\n"
+      "3: targets = {foo::Derive::T}\n"
+      "4: targets = {}, qualifier = 'T::'\n"},
     };
 
   for (const auto &C : Cases) {

@@ -32,7 +32,7 @@ public:
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
   void GetObjCMethods(lldb_private::ConstString class_name,
-                      llvm::function_ref<bool(DIERef ref)> callback) override;
+                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

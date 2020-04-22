@@ -61,6 +61,8 @@ Non-comprehensive list of changes in this release
   v8.1-M MVE instruction set. ``<arm_mve.h>`` supports the complete API defined
   in the Arm C Language Extensions.
 
+- For the ARM target, C-language intrinsics ``<arm_cde.h>`` for the CDE
+  instruction set are now provided.
 
 * clang adds support for a set of  extended integer types (``_ExtInt(N)``) that
   permit non-power of 2 integers, exposing the LLVM integer types. Since a major

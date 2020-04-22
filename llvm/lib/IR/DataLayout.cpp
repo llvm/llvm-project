@@ -739,7 +739,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     AlignType = FLOAT_ALIGN;
     break;
   case Type::X86_MMXTyID:
-  case Type::VectorTyID:
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID:
     AlignType = VECTOR_ALIGN;
     break;
   default:

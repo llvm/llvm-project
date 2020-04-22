@@ -53,59 +53,69 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DIERef ref)> callback) {
+    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
-  m_apple_names_up->FindByName(basename.GetStringRef(), callback);
+  m_apple_names_up->FindByName(
+      basename.GetStringRef(),
+      DIERefCallback(callback, basename.GetStringRef()));
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DIERef ref)> callback) {
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
   m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data);
-  DWARFMappedHash::ExtractDIEArray(hash_data, callback);
+  // This is not really the DIE name.
+  DWARFMappedHash::ExtractDIEArray(hash_data,
+                                   DIERefCallback(callback, regex.GetText()));
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &cu, llvm::function_ref<bool(DIERef ref)> callback) {
+    const DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
   m_apple_names_up->AppendAllDIEsInRange(cu.GetOffset(), cu.GetNextUnitOffset(),
                                          hash_data);
-  DWARFMappedHash::ExtractDIEArray(hash_data, callback);
+  DWARFMappedHash::ExtractDIEArray(hash_data, DIERefCallback(callback));
 }
 
 void AppleDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DIERef ref)> callback) {
+    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_objc_up)
     return;
-  m_apple_objc_up->FindByName(class_name.GetStringRef(), callback);
+  m_apple_objc_up->FindByName(
+      class_name.GetStringRef(),
+      DIERefCallback(callback, class_name.GetStringRef()));
 }
 
 void AppleDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DIERef ref)> callback) {
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
   m_apple_types_up->FindCompleteObjCClassByName(
-      class_name.GetStringRef(), callback, must_be_implementation);
+      class_name.GetStringRef(),
+      DIERefCallback(callback, class_name.GetStringRef()),
+      must_be_implementation);
 }
 
-void AppleDWARFIndex::GetTypes(ConstString name,
-                               llvm::function_ref<bool(DIERef ref)> callback) {
+void AppleDWARFIndex::GetTypes(
+    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
-  m_apple_types_up->FindByName(name.GetStringRef(), callback);
+  m_apple_types_up->FindByName(name.GetStringRef(),
+                               DIERefCallback(callback, name.GetStringRef()));
 }
 
-void AppleDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                               llvm::function_ref<bool(DIERef ref)> callback) {
+void AppleDWARFIndex::GetTypes(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
 
@@ -125,7 +135,8 @@ void AppleDWARFIndex::GetTypes(const DWARFDeclContext &context,
     if (log)
       m_module.LogMessage(log, "FindByNameAndTagAndQualifiedNameHash()");
     m_apple_types_up->FindByNameAndTagAndQualifiedNameHash(
-        type_name.GetStringRef(), tag, qualified_name_hash, callback);
+        type_name.GetStringRef(), tag, qualified_name_hash,
+        DIERefCallback(callback, type_name.GetStringRef()));
     return;
   }
 
@@ -146,18 +157,23 @@ void AppleDWARFIndex::GetTypes(const DWARFDeclContext &context,
 
     if (log)
       m_module.LogMessage(log, "FindByNameAndTag()");
-    m_apple_types_up->FindByNameAndTag(type_name.GetStringRef(), tag, callback);
+    m_apple_types_up->FindByNameAndTag(
+        type_name.GetStringRef(), tag,
+        DIERefCallback(callback, type_name.GetStringRef()));
     return;
   }
 
-  m_apple_types_up->FindByName(type_name.GetStringRef(), callback);
+  m_apple_types_up->FindByName(
+      type_name.GetStringRef(),
+      DIERefCallback(callback, type_name.GetStringRef()));
 }
 
 void AppleDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DIERef ref)> callback) {
+    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_namespaces_up)
     return;
-  m_apple_namespaces_up->FindByName(name.GetStringRef(), callback);
+  m_apple_namespaces_up->FindByName(
+      name.GetStringRef(), DIERefCallback(callback, name.GetStringRef()));
 }
 
 void AppleDWARFIndex::GetFunctions(
@@ -172,21 +188,14 @@ void AppleDWARFIndex::GetFunctions(
 
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DIERef ref)> callback) {
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
   m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data);
-  DWARFMappedHash::ExtractDIEArray(hash_data, callback);
-}
-
-void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
-                                          llvm::StringRef name) {
-  m_module.ReportErrorIfModifyDetected(
-      "the DWARF debug information has been modified (accelerator table had "
-      "bad die 0x%8.8x for '%s')\n",
-      ref.die_offset(), name.str().c_str());
+  DWARFMappedHash::ExtractDIEArray(hash_data,
+                                   DIERefCallback(callback, regex.GetText()));
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {

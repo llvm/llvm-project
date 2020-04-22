@@ -157,10 +157,11 @@ typedef enum {
   LLVMStructTypeKind,      /**< Structures */
   LLVMArrayTypeKind,       /**< Arrays */
   LLVMPointerTypeKind,     /**< Pointers */
-  LLVMVectorTypeKind,      /**< SIMD 'packed' format, or other vector type */
   LLVMMetadataTypeKind,    /**< Metadata */
   LLVMX86_MMXTypeKind,     /**< X86 MMX */
-  LLVMTokenTypeKind        /**< Tokens */
+  LLVMTokenTypeKind,       /**< Tokens */
+  LLVMFixedVectorTypeKind, /**< Fixed width SIMD vector type */
+  LLVMScalableVectorTypeKind /**< Scalable SIMD vector type */
 } LLVMTypeKind;
 
 typedef enum {

@@ -2602,6 +2602,9 @@ bool PPCTargetLowering::SelectAddressPCRel(SDValue N, SDValue &Base) const {
   if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(N))
     if (GAN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
       return true;
+  if (JumpTableSDNode *JT = dyn_cast<JumpTableSDNode>(N))
+    if (JT->getTargetFlags() & PPCII::MO_PCREL_FLAG)
+      return true;
   return false;
 }
 
@@ -2893,6 +2896,16 @@ PPCTargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
 SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+
+  // isUsingPCRelativeCalls() returns true when PCRelative is enabled
+  if (Subtarget.isUsingPCRelativeCalls()) {
+    SDLoc DL(JT);
+    EVT Ty = getPointerTy(DAG.getDataLayout());
+    SDValue GA =
+        DAG.getTargetJumpTable(JT->getIndex(), Ty, PPCII::MO_PCREL_FLAG);
+    SDValue MatAddr = DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
+    return MatAddr;
+  }
 
   // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
@@ -5139,6 +5152,12 @@ static bool isIndirectCall(const SDValue &Callee, SelectionDAG &DAG,
   return true;
 }
 
+// AIX and 64-bit ELF ABIs w/o PCRel require a TOC save/restore around calls.
+static inline bool isTOCSaveRestoreRequired(const PPCSubtarget &Subtarget) {
+  return Subtarget.isAIXABI() ||
+         (Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls());
+}
+
 static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
                               const Function &Caller,
                               const SDValue &Callee,
@@ -5155,20 +5174,12 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // pointer is modeled by using a pseudo instruction for the call opcode that
     // represents the 2 instruction sequence of an indirect branch and link,
     // immediately followed by a load of the TOC pointer from the the stack save
-    // slot into gpr2.
-    if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
-      return PPCISD::BCTRL_LOAD_TOC;
-
-    // An indirect call that does not need a TOC restore.
-    return PPCISD::BCTRL;
+    // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
+    // as it is not saved or used.
+    return isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
+                                               : PPCISD::BCTRL;
   }
 
-  // FIXME: At this moment indirect calls are treated ahead of the
-  // PC Relative condition because binaries can still contain a possible
-  // mix of functions that use a TOC and functions that do not use a TOC.
-  // Once the PC Relative feature is complete this condition should be moved
-  // up ahead of the indirect calls and should return a PPCISD::BCTRL for
-  // that case.
   if (Subtarget.isUsingPCRelativeCalls()) {
     assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
     return PPCISD::CALL_NOTOC;
@@ -5426,7 +5437,9 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
     // pointer from the linkage area. The operand for the TOC restore is an add
     // of the TOC save offset to the stack pointer. This must be the second
     // operand: after the chain input but before any other variadic arguments.
-    if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
+    // For 64-bit ELFv2 ABI with PCRel, do not restore the TOC as it is not
+    // saved or used.
+    if (isTOCSaveRestoreRequired(Subtarget)) {
       const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
 
       SDValue StackPtr = DAG.getRegister(StackPtrReg, RegVT);
@@ -6496,17 +6509,21 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
   // See prepareDescriptorIndirectCall and buildCallOperands for more
   // information about calls through function pointers in the 64-bit SVR4 ABI.
   if (CFlags.IsIndirect) {
-    assert(!CFlags.IsTailCall &&  "Indirect tails calls not supported");
-    // Load r2 into a virtual register and store it to the TOC save area.
-    setUsesTOCBasePtr(DAG);
-    SDValue Val = DAG.getCopyFromReg(Chain, dl, PPC::X2, MVT::i64);
-    // TOC save area offset.
-    unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
-    SDValue PtrOff = DAG.getIntPtrConstant(TOCSaveOffset, dl);
-    SDValue AddPtr = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
-    Chain = DAG.getStore(
-        Val.getValue(1), dl, Val, AddPtr,
-        MachinePointerInfo::getStack(DAG.getMachineFunction(), TOCSaveOffset));
+    // For 64-bit ELFv2 ABI with PCRel, do not save the TOC of the
+    // caller in the TOC save area.
+    if (isTOCSaveRestoreRequired(Subtarget)) {
+      assert(!CFlags.IsTailCall && "Indirect tails calls not supported");
+      // Load r2 into a virtual register and store it to the TOC save area.
+      setUsesTOCBasePtr(DAG);
+      SDValue Val = DAG.getCopyFromReg(Chain, dl, PPC::X2, MVT::i64);
+      // TOC save area offset.
+      unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
+      SDValue PtrOff = DAG.getIntPtrConstant(TOCSaveOffset, dl);
+      SDValue AddPtr = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
+      Chain = DAG.getStore(Val.getValue(1), dl, Val, AddPtr,
+                           MachinePointerInfo::getStack(
+                               DAG.getMachineFunction(), TOCSaveOffset));
+    }
     // In the ELFv2 ABI, R12 must contain the address of an indirect callee.
     // This does not mean the MTCTR instruction must use R12; it's easier
     // to model this as an extra parameter, so do that.
