@@ -79,7 +79,7 @@ During this release ...
 * Added support for assembly for the optional Custom Datapath Extension (CDE)
   for Arm M-profile targets.
 
-* Implemented C-language intrinsics <arm_cde.h> for the CDE instruction set.
+* Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
 
 Changes to the MIPS Target
 --------------------------
