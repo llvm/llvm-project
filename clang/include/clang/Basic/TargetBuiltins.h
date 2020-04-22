@@ -234,7 +234,9 @@ namespace clang {
     bool isZExtReturn() const { return Flags & IsZExtReturn; }
     bool isByteIndexed() const { return Flags & IsByteIndexed; }
     bool isOverloadNone() const { return Flags & IsOverloadNone; }
+    bool isOverloadWhile() const { return Flags & IsOverloadWhile; }
     bool isOverloadDefault() const { return !(Flags & OverloadKindMask); }
+    bool isOverloadWhileRW() const { return Flags & IsOverloadWhileRW; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

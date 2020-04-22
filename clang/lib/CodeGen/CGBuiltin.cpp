@@ -7511,6 +7511,30 @@ llvm::Type *CodeGenFunction::getEltType(SVETypeFlags TypeFlags) {
   }
 }
 
+// Return the llvm predicate vector type corresponding to the specified element
+// TypeFlags.
+llvm::VectorType* CodeGenFunction::getSVEPredType(SVETypeFlags TypeFlags) {
+  switch (TypeFlags.getEltType()) {
+  default: llvm_unreachable("Unhandled SVETypeFlag!");
+
+  case SVETypeFlags::EltTyInt8:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 16, true });
+  case SVETypeFlags::EltTyInt16:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 8, true });
+  case SVETypeFlags::EltTyInt32:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 4, true });
+  case SVETypeFlags::EltTyInt64:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 2, true });
+
+  case SVETypeFlags::EltTyFloat16:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 8, true });
+  case SVETypeFlags::EltTyFloat32:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 4, true });
+  case SVETypeFlags::EltTyFloat64:
+    return llvm::VectorType::get(Builder.getInt1Ty(), { 2, true });
+  }
+}
+
 // Return the llvm vector type corresponding to the specified element TypeFlags.
 llvm::VectorType *CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   switch (TypeFlags.getEltType()) {
@@ -7780,6 +7804,12 @@ CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
     return {};
 
   llvm::Type *DefaultType = getSVEType(TypeFlags);
+
+  if (TypeFlags.isOverloadWhile())
+    return {DefaultType, Ops[1]->getType()};
+
+  if (TypeFlags.isOverloadWhileRW())
+    return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};

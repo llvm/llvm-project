@@ -6450,7 +6450,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
     IsLeafFunction = false;
 
     // LR has to be a live in so that we can save it.
-    MBB.addLiveIn(AArch64::LR);
+    if (!MBB.isLiveIn(AArch64::LR))
+      MBB.addLiveIn(AArch64::LR);
 
     MachineBasicBlock::iterator It = MBB.begin();
     MachineBasicBlock::iterator Et = MBB.end();
@@ -6529,8 +6530,13 @@ void AArch64InstrInfo::buildOutlinedFrame(
   }
 
   // It's not a tail call, so we have to insert the return ourselves.
+
+  // LR has to be a live in so that we can return to it.
+  if (!MBB.isLiveIn(AArch64::LR))
+    MBB.addLiveIn(AArch64::LR);
+
   MachineInstr *ret = BuildMI(MF, DebugLoc(), get(AArch64::RET))
-                          .addReg(AArch64::LR, RegState::Undef);
+                          .addReg(AArch64::LR);
   MBB.insert(MBB.end(), ret);
 
   signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
