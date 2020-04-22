@@ -10,6 +10,7 @@
     .p2align 2
     @ Let C/C++ see the symbol
     .global __xray_FunctionEntry
+    .hidden __xray_FunctionEntry
     @ It preserves all registers except r0, r12(ip), r14(lr) and r15(pc)
     @ Assume that "q" part of the floating-point registers is not used
     @   for passing parameters to C/C++ functions.
@@ -40,6 +41,7 @@ FunctionEntry_restore:
     .p2align 2
     @ Let C/C++ see the symbol
 	.global __xray_FunctionExit
+	.hidden __xray_FunctionExit
 	@ Assume that d1-d7 are not used for the return value.
     @ Assume that "q" part of the floating-point registers is not used for the
     @   return value in C/C++.
@@ -71,6 +73,7 @@ FunctionExit_restore:
     .p2align 2
     @ Let C/C++ see the symbol
     .global __xray_FunctionTailExit
+    .hidden __xray_FunctionTailExit
     @ It preserves all registers except r0, r12(ip), r14(lr) and r15(pc)
     @ Assume that "q" part of the floating-point registers is not used
     @   for passing parameters to C/C++ functions.
