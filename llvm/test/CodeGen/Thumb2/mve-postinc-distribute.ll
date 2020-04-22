@@ -17,10 +17,9 @@ define i32 @vaddv(i32* nocapture readonly %data, i32 %N) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #32
 ; CHECK-NEXT:    vaddva.s32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #16]
-; CHECK-NEXT:    adds r1, #32
+; CHECK-NEXT:    vldrw.u32 q0, [r1, #-16]
 ; CHECK-NEXT:    vaddva.s32 r0, q0
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -68,40 +67,36 @@ define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocaptu
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    lsr.w lr, r7, #3
 ; CHECK-NEXT:    mov r7, r12
-; CHECK-NEXT:    mov r9, r12
+; CHECK-NEXT:    mov r11, r12
 ; CHECK-NEXT:    wls lr, lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    mov.w r9, #0
+; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    add.w r8, r0, lr, lsl #5
-; CHECK-NEXT:    add.w r6, r0, #32
-; CHECK-NEXT:    add.w r0, r1, #32
-; CHECK-NEXT:    lsl.w r5, lr, #4
-; CHECK-NEXT:    mov r4, r9
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    add.w r6, r1, #32
+; CHECK-NEXT:    lsl.w r9, lr, #4
+; CHECK-NEXT:    mov r4, r11
 ; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    mov r12, r9
+; CHECK-NEXT:    mov r12, r11
 ; CHECK-NEXT:  .LBB1_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vldrh.u16 q3, [r6, #-16]
-; CHECK-NEXT:    add.w r10, r6, #32
-; CHECK-NEXT:    add.w r11, r0, #32
-; CHECK-NEXT:    vmlaldavax.s16 r4, r9, q0, q1
+; CHECK-NEXT:    vldrh.u16 q2, [r6, #-16]
+; CHECK-NEXT:    vldrh.u16 q3, [r0, #-16]
+; CHECK-NEXT:    vmlaldavax.s16 r4, r11, q0, q1
 ; CHECK-NEXT:    vmlsldava.s16 r12, r7, q0, q1
-; CHECK-NEXT:    vldrh.u16 q0, [r6]
-; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vmlaldavax.s16 r4, r9, q3, q2
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #32
+; CHECK-NEXT:    vldrh.u16 q1, [r6], #32
+; CHECK-NEXT:    vmlaldavax.s16 r4, r11, q3, q2
 ; CHECK-NEXT:    vmlsldava.s16 r12, r7, q3, q2
-; CHECK-NEXT:    mov r6, r10
-; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.cond.while.end_crit_edge
-; CHECK-NEXT:    add.w r1, r1, r5, lsl #1
+; CHECK-NEXT:    add.w r1, r1, r9, lsl #1
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:  .LBB1_4: @ %while.end
-; CHECK-NEXT:    vmlaldavax.s16 r4, r9, q0, q1
+; CHECK-NEXT:    vmlaldavax.s16 r4, r11, q0, q1
 ; CHECK-NEXT:    vmlsldava.s16 r12, r7, q0, q1
 ; CHECK-NEXT:    mov r10, r4
-; CHECK-NEXT:    mov r5, r9
+; CHECK-NEXT:    mov r5, r11
 ; CHECK-NEXT:    lsrl r10, r5, #6
 ; CHECK-NEXT:    ldr.w r8, [sp, #36]
 ; CHECK-NEXT:    mov r6, r12
@@ -113,20 +108,20 @@ define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocaptu
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh.w r5, [r0, #2]
 ; CHECK-NEXT:    ldrsh.w r6, [r1]
-; CHECK-NEXT:    ldrsh.w r10, [r0]
+; CHECK-NEXT:    ldrsh.w r9, [r0]
 ; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    ldrsh.w r2, [r1, #2]
 ; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    smlalbb r4, r9, r6, r5
-; CHECK-NEXT:    smlalbb r12, r7, r6, r10
+; CHECK-NEXT:    smlalbb r4, r11, r6, r5
+; CHECK-NEXT:    smlalbb r12, r7, r6, r9
 ; CHECK-NEXT:    muls r5, r2, r5
-; CHECK-NEXT:    smlalbb r4, r9, r2, r10
+; CHECK-NEXT:    smlalbb r4, r11, r2, r9
 ; CHECK-NEXT:    subs.w r12, r12, r5
 ; CHECK-NEXT:    sbc.w r7, r7, r5, asr #31
 ; CHECK-NEXT:    le lr, .LBB1_5
 ; CHECK-NEXT:  @ %bb.6: @ %while.end34.loopexit
 ; CHECK-NEXT:    lsrl r12, r7, #6
-; CHECK-NEXT:    lsrl r4, r9, #6
+; CHECK-NEXT:    lsrl r4, r11, #6
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    mov r10, r4
 ; CHECK-NEXT:  .LBB1_7: @ %while.end34
@@ -301,14 +296,11 @@ define void @fma8(float* noalias nocapture readonly %A, float* noalias nocapture
 ; CHECK-NEXT:    vldrw.u32 q2, [r6, #16]
 ; CHECK-NEXT:    vldrw.u32 q3, [r6]
 ; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q1, [r5]
-; CHECK-NEXT:    vstrw.32 q2, [r6, #16]
-; CHECK-NEXT:    adds r4, #32
-; CHECK-NEXT:    adds r5, #32
+; CHECK-NEXT:    vldrw.u32 q0, [r4], #32
+; CHECK-NEXT:    vldrw.u32 q1, [r5], #32
 ; CHECK-NEXT:    vfma.f32 q3, q1, q0
-; CHECK-NEXT:    vstrw.32 q3, [r6]
-; CHECK-NEXT:    adds r6, #32
+; CHECK-NEXT:    vstrw.32 q3, [r6], #32
+; CHECK-NEXT:    vstrw.32 q2, [r6, #-16]
 ; CHECK-NEXT:    le lr, .LBB2_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
