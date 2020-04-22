@@ -129,7 +129,8 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
       default: break;
       case Type::PointerTyID:
         return true;
-      case Type::VectorTyID:
+      case Type::FixedVectorTyID:
+      case Type::ScalableVectorTyID:
         if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
           return true;
         break;

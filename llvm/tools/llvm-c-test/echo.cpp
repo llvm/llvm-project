@@ -137,7 +137,10 @@ struct TypeCloner {
           Clone(LLVMGetElementType(Src)),
           LLVMGetPointerAddressSpace(Src)
         );
-      case LLVMVectorTypeKind:
+      case LLVMScalableVectorTypeKind:
+        // FIXME: scalable vectors unsupported
+        break;
+      case LLVMFixedVectorTypeKind:
         return LLVMVectorType(
           Clone(LLVMGetElementType(Src)),
           LLVMGetVectorSize(Src)

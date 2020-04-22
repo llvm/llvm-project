@@ -488,7 +488,8 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
       return cmpNumbers(STyL->getNumElements(), STyR->getNumElements());
     return cmpTypes(STyL->getElementType(), STyR->getElementType());
   }
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     auto *STyL = cast<VectorType>(TyL);
     auto *STyR = cast<VectorType>(TyR);
     if (STyL->getElementCount().Scalable != STyR->getElementCount().Scalable)
