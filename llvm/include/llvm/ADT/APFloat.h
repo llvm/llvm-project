@@ -142,7 +142,7 @@ enum lostFraction { // Example of truncated bits:
 // members.
 struct APFloatBase {
   typedef APInt::WordType integerPart;
-  static const unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
+  static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
   typedef int32_t ExponentType;

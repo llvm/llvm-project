@@ -1424,6 +1424,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::LDNF1S:            return "AArch64ISD::LDNF1S";
   case AArch64ISD::LDFF1:             return "AArch64ISD::LDFF1";
   case AArch64ISD::LDFF1S:            return "AArch64ISD::LDFF1S";
+  case AArch64ISD::LD1RQ:             return "AArch64ISD::LD1RQ";
   case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
   case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
   case AArch64ISD::GLD1_SXTW:         return "AArch64ISD::GLD1_SXTW";
@@ -11622,6 +11623,24 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   return L;
 }
 
+static SDValue performLD1RQCombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  EVT LoadVT = VT;
+  if (VT.isFloatingPoint())
+    LoadVT = VT.changeTypeToInteger();
+
+  SDValue Ops[] = {N->getOperand(0), N->getOperand(2), N->getOperand(3)};
+  SDValue Load = DAG.getNode(AArch64ISD::LD1RQ, DL, {LoadVT, MVT::Other}, Ops);
+  SDValue LoadChain = SDValue(Load.getNode(), 1);
+
+  if (VT.isFloatingPoint())
+    Load = DAG.getNode(ISD::BITCAST, DL, VT, Load.getValue(0));
+
+  return DAG.getMergeValues({ Load, LoadChain }, DL);
+}
+
 static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue Data = N->getOperand(2);
@@ -13211,6 +13230,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performNEONPostLDSTCombine(N, DCI, DAG);
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_ld1rq:
+      return performLD1RQCombine(N, DAG);
     case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
     case Intrinsic::aarch64_sve_ldnt1_gather:

@@ -65,16 +65,16 @@
 
 using namespace llvm;
 
-const raw_ostream::Colors raw_ostream::BLACK;
-const raw_ostream::Colors raw_ostream::RED;
-const raw_ostream::Colors raw_ostream::GREEN;
-const raw_ostream::Colors raw_ostream::YELLOW;
-const raw_ostream::Colors raw_ostream::BLUE;
-const raw_ostream::Colors raw_ostream::MAGENTA;
-const raw_ostream::Colors raw_ostream::CYAN;
-const raw_ostream::Colors raw_ostream::WHITE;
-const raw_ostream::Colors raw_ostream::SAVEDCOLOR;
-const raw_ostream::Colors raw_ostream::RESET;
+constexpr raw_ostream::Colors raw_ostream::BLACK;
+constexpr raw_ostream::Colors raw_ostream::RED;
+constexpr raw_ostream::Colors raw_ostream::GREEN;
+constexpr raw_ostream::Colors raw_ostream::YELLOW;
+constexpr raw_ostream::Colors raw_ostream::BLUE;
+constexpr raw_ostream::Colors raw_ostream::MAGENTA;
+constexpr raw_ostream::Colors raw_ostream::CYAN;
+constexpr raw_ostream::Colors raw_ostream::WHITE;
+constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
+constexpr raw_ostream::Colors raw_ostream::RESET;
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer

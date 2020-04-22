@@ -759,18 +759,16 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
       reportError("sections in the program header with index " +
                   Twine(PhdrIdx) + " are not sorted by their file offset");
 
+    uint64_t PhdrFileOffset = Fragments.empty() ? 0 : Fragments.front().Offset;
     if (YamlPhdr.Offset) {
-      PHeader.p_offset = *YamlPhdr.Offset;
-    } else {
-      if (YamlPhdr.Sections.size())
-        PHeader.p_offset = UINT32_MAX;
-      else
-        PHeader.p_offset = 0;
-
-      // Find the minimum offset for the program header.
-      for (const Fragment &F : Fragments)
-        PHeader.p_offset = std::min((uint64_t)PHeader.p_offset, F.Offset);
+      if (!Fragments.empty() && *YamlPhdr.Offset > PhdrFileOffset)
+        reportError("'Offset' for segment with index " + Twine(PhdrIdx) +
+                    " must be less than or equal to the minimum file offset of "
+                    "all included sections (0x" +
+                    Twine::utohexstr(PhdrFileOffset) + ")");
+      PhdrFileOffset = *YamlPhdr.Offset;
     }
+    PHeader.p_offset = PhdrFileOffset;
 
     // Find the maximum offset of the end of a section in order to set p_filesz
     // and p_memsz. When setting p_filesz, trailing SHT_NOBITS sections are not

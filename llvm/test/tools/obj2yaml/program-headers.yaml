@@ -574,3 +574,118 @@ Sections:
     Flags:    [ SHF_ALLOC ]
     Size:     0x1
     ShOffset: 0x0
+
+## Check how we dump segments which contain empty sections.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+
+## Show the layout of the object before we dump it using obj2yaml.
+## Notes: 1) '.empty.foo', '.empty.bar1' and '.bar' have the same file offset, but '.empty.foo'
+##           has a VA that is outside of the segment, hence we should not include it in it.
+##        2) '.bar1' ends at 0x79, which is the starting file offset of both '.empty.bar2'
+##           and '.empty.zed'. We should only include '.empty.bar2', because the VA of the
+##           '.empty.zed' section is outside the segment's virtual space.
+# RUN: llvm-readelf -sections %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
+
+# ZERO-SIZE-MAPPING:      Section Headers:
+# ZERO-SIZE-MAPPING-NEXT:   [Nr] Name        Type     Address          Off    Size
+# ZERO-SIZE-MAPPING:        [ 1] .empty.foo  PROGBITS 0000000000001000 000078 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 2] .empty.bar1 PROGBITS 0000000000002000 000078 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 3] .bar        PROGBITS 0000000000002000 000078 000001
+# ZERO-SIZE-MAPPING-NEXT:   [ 4] .empty.bar2 PROGBITS 0000000000002001 000079 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 5] .empty.zed  PROGBITS 0000000000003000 000079 000000
+
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=ZERO-SIZE
+
+# ZERO-SIZE:      ProgramHeaders:
+# ZERO-SIZE-NEXT:   - Type:  PT_LOAD
+# ZERO-SIZE-NEXT:     Flags: [ PF_W, PF_R ]
+# ZERO-SIZE-NEXT:     Sections:
+# ZERO-SIZE-NEXT:       - Section: .empty.bar1
+# ZERO-SIZE-NEXT:       - Section: .bar
+# ZERO-SIZE-NEXT:       - Section: .empty.bar2
+# ZERO-SIZE-NEXT:     VAddr: 0x0000000000002000
+# ZERO-SIZE-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    Sections:
+      - Section: .bar
+    VAddr: 0x2000
+Sections:
+  - Name:    .empty.foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+  - Name:    .empty.bar1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2000
+  - Name:    .bar
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x1
+  - Name:    .empty.bar2
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2001
+  - Name:    .empty.zed
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x3000
+
+## Check how we dump a segment when we have sections that are outside of the virtual
+## address space of a segment, but inside its file space. We do not include such sections
+## in a segment when they are at the edges of a segment, because this is a normal case and
+## it may mean they belong to a different segment.
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: obj2yaml %t8 | FileCheck %s --check-prefix=BROKEN-VA
+
+# BROKEN-VA:      ProgramHeaders:
+# BROKEN-VA-NEXT:  - Type:  PT_LOAD
+# BROKEN-VA-NEXT:    Flags: [ PF_W, PF_R ]
+# BROKEN-VA-NEXT:    Sections:
+# BROKEN-VA-NEXT:      - Section: .empty_middle
+# BROKEN-VA-NEXT:    VAddr: 0x0000000000001000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    VAddr: 0x1000
+    Sections:
+      - Section: .empty_begin
+      - Section: .empty_middle
+      - Section: .empty_end
+Sections:
+  - Name:    .empty_begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE
+  - Type:    Fill
+    Pattern: "00"
+    Size:    1
+    Name:    begin
+  - Name:    .empty_middle
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE
+  - Type:    Fill
+    Pattern: "00"
+    Size:    1
+  - Name:    .empty_end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE
