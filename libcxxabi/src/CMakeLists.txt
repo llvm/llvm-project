@@ -60,6 +60,10 @@ if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
 endif()
 
+if (LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST)
+  add_definitions(-D_LIBCXXABI_FORGIVING_DYNAMIC_CAST)
+endif()
+
 if (APPLE)
   add_library_flags_if(LIBCXXABI_HAS_SYSTEM_LIB System)
 else()
