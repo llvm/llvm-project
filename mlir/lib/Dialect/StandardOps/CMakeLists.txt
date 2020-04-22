@@ -16,5 +16,6 @@ target_link_libraries(MLIRStandardOps
   MLIREDSC
   MLIRIR
   MLIRSideEffects
+  MLIRViewLikeInterface
   LLVMSupport
   )
