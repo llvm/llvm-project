@@ -340,6 +340,9 @@ int main(int argc, char **argv) {
 #pragma omp parallel for reduction(+ : m) // OK
   for (int i = 0; i < 10; ++i)
     m++;
+#pragma omp parallel for reduction(task, + : m) // OK
+  for (int i = 0; i < 10; ++i)
+    m++;
 
 #pragma omp parallel for reduction(inscan, + : m) reduction(*: fl) reduction(default, &&: j) // expected-error 2 {{expected 'reduction' clause with the 'inscan' modifier}} expected-note 2 {{'reduction' clause with 'inscan' modifier is used here}}
   for (int i = 0; i < 10; ++i) {

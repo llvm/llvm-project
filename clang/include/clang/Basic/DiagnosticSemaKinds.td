@@ -10230,6 +10230,9 @@ def warn_nested_declare_variant
 def err_omp_non_pointer_type_array_shaping_base : Error<
   "expected expression with a pointer to a complete type as a base of an array "
   "shaping operation">;
+def err_omp_reduction_task_not_parallel_or_worksharing : Error<
+  "'reduction' clause with 'task' modifier allowed only on non-simd parallel or"
+  " worksharing constructs">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

@@ -245,8 +245,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 2; ++i) {}
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
-#pragma omp target parallel for defaultmap(tofrom: scalar)
-// CHECK-NEXT: #pragma omp target parallel for defaultmap(tofrom: scalar)
+#pragma omp target parallel for defaultmap(tofrom: scalar) reduction(task, +: argc)
+// CHECK-NEXT: #pragma omp target parallel for defaultmap(tofrom: scalar) reduction(task, +: argc)
   for (int i = 0; i < 2; ++i) {}
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
