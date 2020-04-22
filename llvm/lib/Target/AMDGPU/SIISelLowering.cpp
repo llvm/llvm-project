@@ -10665,8 +10665,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         break;
       case 1024:
         RC = &AMDGPU::AReg_1024RegClass;
-        // v32 types are not legal but we support them here.
-        return std::make_pair(0U, RC);
+        break;
       }
       break;
     }
