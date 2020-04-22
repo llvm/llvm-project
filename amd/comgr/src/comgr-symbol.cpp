@@ -171,7 +171,9 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     Symp->Value = Fsym.getValue();
 
     DataRefImpl Symb = Fsym.getRawDataRefImpl();
-    uint64_t Flags = Fsym.getObject()->getSymbolFlags(Symb);
+    auto Flags = Fsym.getObject()->getSymbolFlags(Symb);
+    if (!Flags)
+      return NULL;
 
     // symbol size
     ELFSymbolRef Esym(Fsym);
@@ -179,7 +181,7 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     Symp->Type = mapToComgrSymbolType(Esym.getELFType());
 
     // symbol undefined?
-    if (Flags & SymbolRef::SF_Undefined)
+    if (*Flags & SymbolRef::SF_Undefined)
       Symp->Undefined = true;
     else
       Symp->Undefined = false;
@@ -239,13 +241,15 @@ amd_comgr_status_t SymbolHelper::iterateTable(
       if (!TypeOrErr)
         return AMD_COMGR_STATUS_ERROR;
       DataRefImpl Symb = Symbol.getRawDataRefImpl();
-      uint64_t Flags = Symbol.getObject()->getSymbolFlags(Symb);
+      auto Flags = Symbol.getObject()->getSymbolFlags(Symb);
+      if (!Flags)
+        return AMD_COMGR_STATUS_ERROR;
 
       ELFSymbolRef Esym(Symbol);
       Ctxp->Size = Esym.getSize();
       Ctxp->Type = mapToComgrSymbolType(Esym.getELFType());
 
-      Ctxp->Undefined = (Flags & SymbolRef::SF_Undefined) ? true : false;
+      Ctxp->Undefined = (*Flags & SymbolRef::SF_Undefined) ? true : false;
 
       std::unique_ptr<COMGR::DataSymbol> Symp(
           new (std::nothrow) COMGR::DataSymbol(Ctxp.release()));

@@ -1804,7 +1804,10 @@ void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *o,
       report_error(ArchiveName, o->getFileName(), TypeOrError.takeError(),
                    ArchitectureName);
     SymbolRef::Type Type = *TypeOrError;
-    uint32_t Flags = Symbol.getFlags();
+    auto Flags = Symbol.getFlags();
+    if (!Flags)
+      report_error(ArchiveName, o->getFileName(), Flags.takeError(),
+                   ArchitectureName);
     Expected<section_iterator> SectionOrErr = Symbol.getSection();
     if (!SectionOrErr)
       report_error(ArchiveName, o->getFileName(), SectionOrErr.takeError(),
@@ -1825,11 +1828,11 @@ void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *o,
       Name = *NameOrErr;
     }
 
-    bool Global = Flags & SymbolRef::SF_Global;
-    bool Weak = Flags & SymbolRef::SF_Weak;
-    bool Absolute = Flags & SymbolRef::SF_Absolute;
-    bool Common = Flags & SymbolRef::SF_Common;
-    bool Hidden = Flags & SymbolRef::SF_Hidden;
+    bool Global = *Flags & SymbolRef::SF_Global;
+    bool Weak = *Flags & SymbolRef::SF_Weak;
+    bool Absolute = *Flags & SymbolRef::SF_Absolute;
+    bool Common = *Flags & SymbolRef::SF_Common;
+    bool Hidden = *Flags & SymbolRef::SF_Hidden;
 
     char GlobLoc = ' ';
     if (Type != SymbolRef::ST_Unknown)
