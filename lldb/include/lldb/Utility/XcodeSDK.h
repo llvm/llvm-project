@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_SDK_H
 #define LLDB_UTILITY_SDK_H
 
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include <tuple>
