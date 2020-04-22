@@ -246,8 +246,7 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   for (auto &BB : L->blocks())
     for (auto &I : *BB) {
       if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
-        ImmutableCallSite CS(&I);
-        if (const Function *F = CS.getCalledFunction()) {
+        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
           if (isLoweredToCall(F))
             HasCall = true;
           if (F->getIntrinsicID() == Intrinsic::memcpy ||
