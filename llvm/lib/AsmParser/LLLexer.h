@@ -20,7 +20,6 @@
 #include <string>
 
 namespace llvm {
-  class MemoryBuffer;
   class Type;
   class SMDiagnostic;
   class LLVMContext;
