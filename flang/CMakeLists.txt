@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.0)
+cmake_minimum_required(VERSION 3.13.4)
 
 # RPATH settings on macOS do not affect INSTALL_NAME.
 if (POLICY CMP0068)

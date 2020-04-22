@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13.4)
 
 option(ACXXEL_ENABLE_UNIT_TESTS "enable acxxel unit tests" ON)
 option(ACXXEL_ENABLE_MULTI_DEVICE_UNIT_TESTS "enable acxxel multi-device unit tests" OFF)
