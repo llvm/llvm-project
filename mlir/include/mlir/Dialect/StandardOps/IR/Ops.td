@@ -499,7 +499,8 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
     The result represents the latest value that was stored. The region contains
     the code for the modification itself. The entry block has a single argument
     that represents the value stored in `memref[indices]` before the write is
-    performed.
+    performed. No side-effecting ops are allowed in the body of
+    `GenericAtomicRMWOp`.
 
     Example:
 
