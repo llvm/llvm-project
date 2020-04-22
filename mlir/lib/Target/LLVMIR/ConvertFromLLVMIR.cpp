@@ -168,12 +168,12 @@ LLVMType Importer::processType(llvm::Type *type) {
       return nullptr;
     return LLVMType::getArrayTy(elementType, type->getArrayNumElements());
   }
-  case llvm::Type::VectorTyID: {
-    auto *typeVTy = llvm::cast<llvm::VectorType>(type);
-    if (typeVTy->isScalable()) {
-      emitError(unknownLoc) << "scalable vector types not supported";
-      return nullptr;
-    }
+  case llvm::Type::ScalableVectorTyID: {
+    emitError(unknownLoc) << "scalable vector types not supported";
+    return nullptr;
+  }
+  case llvm::Type::FixedVectorTyID: {
+    auto *typeVTy = llvm::cast<llvm::FixedVectorType>(type);
     LLVMType elementType = processType(typeVTy->getElementType());
     if (!elementType)
       return nullptr;

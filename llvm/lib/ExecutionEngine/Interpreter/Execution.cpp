@@ -169,13 +169,14 @@ static void executeFRemInst(GenericValue &Dest, GenericValue Src1,
       Dest.IntVal = APInt(1,Src1.IntVal.OP(Src2.IntVal)); \
       break;
 
-#define IMPLEMENT_VECTOR_INTEGER_ICMP(OP, TY)                        \
-  case Type::VectorTyID: {                                           \
-    assert(Src1.AggregateVal.size() == Src2.AggregateVal.size());    \
-    Dest.AggregateVal.resize( Src1.AggregateVal.size() );            \
-    for( uint32_t _i=0;_i<Src1.AggregateVal.size();_i++)             \
-      Dest.AggregateVal[_i].IntVal = APInt(1,                        \
-      Src1.AggregateVal[_i].IntVal.OP(Src2.AggregateVal[_i].IntVal));\
+#define IMPLEMENT_VECTOR_INTEGER_ICMP(OP, TY)                                  \
+  case Type::FixedVectorTyID:                                                  \
+  case Type::ScalableVectorTyID: {                                             \
+    assert(Src1.AggregateVal.size() == Src2.AggregateVal.size());              \
+    Dest.AggregateVal.resize(Src1.AggregateVal.size());                        \
+    for (uint32_t _i = 0; _i < Src1.AggregateVal.size(); _i++)                 \
+      Dest.AggregateVal[_i].IntVal = APInt(                                    \
+          1, Src1.AggregateVal[_i].IntVal.OP(Src2.AggregateVal[_i].IntVal));   \
   } break;
 
 // Handle pointers specially because they must be compared with only as much
@@ -367,12 +368,13 @@ void Interpreter::visitICmpInst(ICmpInst &I) {
     Src1.AggregateVal[_i].TY##Val OP Src2.AggregateVal[_i].TY##Val);\
   break;
 
-#define IMPLEMENT_VECTOR_FCMP(OP)                                   \
-  case Type::VectorTyID:                                            \
-    if (cast<VectorType>(Ty)->getElementType()->isFloatTy()) {      \
-      IMPLEMENT_VECTOR_FCMP_T(OP, Float);                           \
-    } else {                                                        \
-        IMPLEMENT_VECTOR_FCMP_T(OP, Double);                        \
+#define IMPLEMENT_VECTOR_FCMP(OP)                                              \
+  case Type::FixedVectorTyID:                                                  \
+  case Type::ScalableVectorTyID:                                               \
+    if (cast<VectorType>(Ty)->getElementType()->isFloatTy()) {                 \
+      IMPLEMENT_VECTOR_FCMP_T(OP, Float);                                      \
+    } else {                                                                   \
+      IMPLEMENT_VECTOR_FCMP_T(OP, Double);                                     \
     }
 
 static GenericValue executeFCMP_OEQ(GenericValue Src1, GenericValue Src2,
@@ -1327,7 +1329,7 @@ GenericValue Interpreter::executeFPTruncInst(Value *SrcVal, Type *DstTy,
                                              ExecutionContext &SF) {
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcVal->getType()->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcVal->getType())) {
     assert(SrcVal->getType()->getScalarType()->isDoubleTy() &&
            DstTy->getScalarType()->isFloatTy() &&
            "Invalid FPTrunc instruction");
@@ -1350,7 +1352,7 @@ GenericValue Interpreter::executeFPExtInst(Value *SrcVal, Type *DstTy,
                                            ExecutionContext &SF) {
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcVal->getType()->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcVal->getType())) {
     assert(SrcVal->getType()->getScalarType()->isFloatTy() &&
            DstTy->getScalarType()->isDoubleTy() && "Invalid FPExt instruction");
 
@@ -1373,7 +1375,7 @@ GenericValue Interpreter::executeFPToUIInst(Value *SrcVal, Type *DstTy,
   Type *SrcTy = SrcVal->getType();
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcTy->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcTy)) {
     Type *DstVecTy = DstTy->getScalarType();
     Type *SrcVecTy = SrcTy->getScalarType();
     uint32_t DBitWidth = cast<IntegerType>(DstVecTy)->getBitWidth();
@@ -1411,7 +1413,7 @@ GenericValue Interpreter::executeFPToSIInst(Value *SrcVal, Type *DstTy,
   Type *SrcTy = SrcVal->getType();
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcTy->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcTy)) {
     Type *DstVecTy = DstTy->getScalarType();
     Type *SrcVecTy = SrcTy->getScalarType();
     uint32_t DBitWidth = cast<IntegerType>(DstVecTy)->getBitWidth();
@@ -1447,7 +1449,7 @@ GenericValue Interpreter::executeUIToFPInst(Value *SrcVal, Type *DstTy,
                                             ExecutionContext &SF) {
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcVal->getType()->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcVal->getType())) {
     Type *DstVecTy = DstTy->getScalarType();
     unsigned size = Src.AggregateVal.size();
     // the sizes of src and dst vectors must be equal
@@ -1479,7 +1481,7 @@ GenericValue Interpreter::executeSIToFPInst(Value *SrcVal, Type *DstTy,
                                             ExecutionContext &SF) {
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if (SrcVal->getType()->getTypeID() == Type::VectorTyID) {
+  if (isa<VectorType>(SrcVal->getType())) {
     Type *DstVecTy = DstTy->getScalarType();
     unsigned size = Src.AggregateVal.size();
     // the sizes of src and dst vectors must be equal
@@ -1540,8 +1542,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
   Type *SrcTy = SrcVal->getType();
   GenericValue Dest, Src = getOperandValue(SrcVal, SF);
 
-  if ((SrcTy->getTypeID() == Type::VectorTyID) ||
-      (DstTy->getTypeID() == Type::VectorTyID)) {
+  if (isa<VectorType>(SrcTy) || isa<VectorType>(DstTy)) {
     // vector src bitcast to vector dst or vector src bitcast to scalar dst or
     // scalar src bitcast to vector dst
     bool isLittleEndian = getDataLayout().isLittleEndian();
@@ -1553,7 +1554,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
     unsigned SrcNum;
     unsigned DstNum;
 
-    if (SrcTy->getTypeID() == Type::VectorTyID) {
+    if (isa<VectorType>(SrcTy)) {
       SrcElemTy = SrcTy->getScalarType();
       SrcBitSize = SrcTy->getScalarSizeInBits();
       SrcNum = Src.AggregateVal.size();
@@ -1566,7 +1567,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
       SrcVec.AggregateVal.push_back(Src);
     }
 
-    if (DstTy->getTypeID() == Type::VectorTyID) {
+    if (isa<VectorType>(DstTy)) {
       DstElemTy = DstTy->getScalarType();
       DstBitSize = DstTy->getScalarSizeInBits();
       DstNum = (SrcNum * SrcBitSize) / DstBitSize;
@@ -1639,7 +1640,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
     }
 
     // convert result from integer to specified type
-    if (DstTy->getTypeID() == Type::VectorTyID) {
+    if (isa<VectorType>(DstTy)) {
       if (DstElemTy->isDoubleTy()) {
         Dest.AggregateVal.resize(DstNum);
         for (unsigned i = 0; i < DstNum; i++)
@@ -1662,8 +1663,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
         Dest.IntVal = TempDst.AggregateVal[0].IntVal;
       }
     }
-  } else { //  if ((SrcTy->getTypeID() == Type::VectorTyID) ||
-           //     (DstTy->getTypeID() == Type::VectorTyID))
+  } else { //  if (isa<VectorType>(SrcTy)) || isa<VectorType>(DstTy))
 
     // scalar src bitcast to scalar dst
     if (DstTy->isPointerTy()) {
@@ -1954,7 +1954,8 @@ void Interpreter::visitExtractValueInst(ExtractValueInst &I) {
     break;
     case Type::ArrayTyID:
     case Type::StructTyID:
-    case Type::VectorTyID:
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID:
       Dest.AggregateVal = pSrc->AggregateVal;
     break;
     case Type::PointerTyID:
@@ -2001,7 +2002,8 @@ void Interpreter::visitInsertValueInst(InsertValueInst &I) {
     break;
     case Type::ArrayTyID:
     case Type::StructTyID:
-    case Type::VectorTyID:
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID:
       pDest->AggregateVal = Src2.AggregateVal;
     break;
     case Type::PointerTyID:

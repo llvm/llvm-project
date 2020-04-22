@@ -307,7 +307,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
     const ArrayType *ATy = cast<const ArrayType>(Ty);
     return getSmallestAddressableSize(ATy->getElementType(), GV, TM);
   }
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID: {
     const VectorType *PTy = cast<const VectorType>(Ty);
     return getSmallestAddressableSize(PTy->getElementType(), GV, TM);
   }
