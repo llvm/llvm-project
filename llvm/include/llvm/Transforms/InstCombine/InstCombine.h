@@ -67,10 +67,6 @@ public:
 //
 FunctionPass *createInstructionCombiningPass();
 FunctionPass *createInstructionCombiningPass(unsigned MaxIterations);
-
-/// \deprecated
-FunctionPass *createInstructionCombiningPass(bool ExpensiveCombines,
-                                             unsigned MaxIterations);
 }
 
 #endif

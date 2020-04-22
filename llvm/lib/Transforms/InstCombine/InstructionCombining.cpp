@@ -3822,11 +3822,6 @@ FunctionPass *llvm::createInstructionCombiningPass(unsigned MaxIterations) {
   return new InstructionCombiningPass(MaxIterations);
 }
 
-FunctionPass *llvm::createInstructionCombiningPass(bool ExpensiveCombines,
-                                                   unsigned MaxIterations) {
-  return new InstructionCombiningPass(MaxIterations);
-}
-
 void LLVMAddInstructionCombiningPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createInstructionCombiningPass());
 }
