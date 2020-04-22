@@ -771,21 +771,24 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
       PHeader.p_offset = Fragments.front().Offset;
     }
 
-    // Find the maximum offset of the end of a section in order to set p_filesz
-    // and p_memsz. When setting p_filesz, trailing SHT_NOBITS sections are not
-    // counted.
-    uint64_t FileOffset = PHeader.p_offset, MemOffset = PHeader.p_offset;
-    for (const Fragment &F : Fragments) {
-      uint64_t End = F.Offset + F.Size;
-      MemOffset = std::max(MemOffset, End);
-
-      if (F.Type != llvm::ELF::SHT_NOBITS)
-        FileOffset = std::max(FileOffset, End);
+    // Set the file size if not set explicitly.
+    if (YamlPhdr.FileSize) {
+      PHeader.p_filesz = *YamlPhdr.FileSize;
+    } else if (!Fragments.empty()) {
+      uint64_t FileSize = Fragments.back().Offset - PHeader.p_offset;
+      // SHT_NOBITS sections occupy no physical space in a file, we should not
+      // take their sizes into account when calculating the file size of a
+      // segment.
+      if (Fragments.back().Type != llvm::ELF::SHT_NOBITS)
+        FileSize += Fragments.back().Size;
+      PHeader.p_filesz = FileSize;
     }
 
-    // Set the file size and the memory size if not set explicitly.
-    PHeader.p_filesz = YamlPhdr.FileSize ? uint64_t(*YamlPhdr.FileSize)
-                                         : FileOffset - PHeader.p_offset;
+    // Find the maximum offset of the end of a section in order to set p_memsz.
+    uint64_t MemOffset = PHeader.p_offset;
+    for (const Fragment &F : Fragments)
+      MemOffset = std::max(MemOffset, F.Offset + F.Size);
+    // Set the memory size if not set explicitly.
     PHeader.p_memsz = YamlPhdr.MemSize ? uint64_t(*YamlPhdr.MemSize)
                                        : MemOffset - PHeader.p_offset;
 
