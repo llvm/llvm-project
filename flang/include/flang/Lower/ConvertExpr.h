@@ -9,8 +9,6 @@
 #ifndef FORTRAN_LOWER_CONVERT_EXPR_H
 #define FORTRAN_LOWER_CONVERT_EXPR_H
 
-#include "Intrinsics.h"
-
 /// [Coding style](https://llvm.org/docs/CodingStandards.html)
 
 namespace mlir {
@@ -51,21 +49,19 @@ class SymMap;
 mlir::Value createSomeExpression(mlir::Location loc,
                                  AbstractConverter &converter,
                                  const evaluate::Expr<evaluate::SomeType> &expr,
-                                 SymMap &symMap,
-                                 const IntrinsicLibrary &intrinsics);
+                                 SymMap &symMap);
 
 mlir::Value
 createI1LogicalExpression(mlir::Location loc, AbstractConverter &converter,
                           const evaluate::Expr<evaluate::SomeType> &expr,
-                          SymMap &symMap, const IntrinsicLibrary &intrinsics);
+                          SymMap &symMap);
 
 /// Create an address.
 /// Lowers `expr` to the FIR dialect of MLIR. The expression must be an entity
 /// and the address of the entity is returned.
 mlir::Value createSomeAddress(mlir::Location loc, AbstractConverter &converter,
                               const evaluate::Expr<evaluate::SomeType> &expr,
-                              SymMap &symMap,
-                              const IntrinsicLibrary &intrinsics);
+                              SymMap &symMap);
 
 } // namespace lower
 } // namespace Fortran

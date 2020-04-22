@@ -44,6 +44,16 @@ subroutine dble_test(a)
   print *, dble(a)
 end subroutine
 
+! CONJG
+! CHECK-LABEL: conjg_test
+subroutine conjg_test(z1, z2)
+  complex :: z1, z2
+  ! CHECK: fir.extract_value 
+  ! CHECK: fir.negf
+  ! CHECK: fir.insert_value 
+  z2 = conjg(z1)
+end subroutine
+
 ! ICHAR
 ! CHECK-LABEL: ichar_test
 subroutine ichar_test(c)
@@ -51,6 +61,16 @@ subroutine ichar_test(c)
   ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
   print *, ichar(c)
 end subroutine
+
+! LEN
+! CHECK-LABEL: len_test
+subroutine len_test(i, c)
+  integer :: i
+  character(*) :: c
+  ! CHECK: fir.boxchar_len
+  i = len(c)
+end subroutine
+
 
 ! SIGN
 ! CHECK-LABEL: sign_testi
@@ -75,3 +95,10 @@ subroutine sign_testr(a, b, c)
   c = sign(a, b)
 end subroutine
 
+! SQRT
+! CHECK-LABEL: sqrt_testr
+subroutine sqrt_testr(a, b)
+  real :: a, b
+  ! CHECK: call {{.*}}sqrt
+  b = sqrt(a)
+end subroutine
