@@ -248,8 +248,8 @@ public:
   bool edges_empty() const { return Edges.empty(); }
 
   /// Remove the edge pointed to by the given iterator.
-  /// Invalidates all iterators that point to or past the given one.
-  void removeEdge(const_edge_iterator I) { Edges.erase(I); }
+  /// Returns an iterator to the new next element.
+  edge_iterator removeEdge(edge_iterator I) { return Edges.erase(I); }
 
 private:
   static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
