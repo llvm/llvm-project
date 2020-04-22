@@ -2669,6 +2669,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
       createPostIncLoadStore(BaseAccess, IncrementOffset, NewBaseReg, TII, TRI);
   BaseAccess->eraseFromParent();
   Increment->eraseFromParent();
+  (void)BaseAccessPost;
   LLVM_DEBUG(dbgs() << "  To    : "; BaseAccessPost->dump());
 
   for (auto *Use : SuccessorAccesses) {
