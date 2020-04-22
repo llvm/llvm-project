@@ -44,7 +44,6 @@ add_host_subdirectory(common
   common/SocketAddress.cpp
   common/Socket.cpp
   common/StringConvert.cpp
-  common/TaskPool.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
   common/ThreadLauncher.cpp
