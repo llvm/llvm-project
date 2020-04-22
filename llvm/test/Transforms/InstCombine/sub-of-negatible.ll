@@ -622,3 +622,56 @@ define i8 @negate_zext_wrongwidth(i8 %x, i2 %y) {
   %t1 = sub i8 %x, %t0
   ret i8 %t1
 }
+
+define <2 x i4> @negate_shufflevector_oneinput_reverse(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @negate_shufflevector_oneinput_reverse(
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i4> <i4 -6, i4 5>, [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x i4> [[T0]], <2 x i4> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i4> [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    ret <2 x i4> [[T2]]
+;
+  %t0 = shl <2 x i4> <i4 -6, i4 5>, %x
+  %t1 = shufflevector <2 x i4> %t0, <2 x i4> undef, <2 x i32> <i32 1, i32 0>
+  %t2 = sub <2 x i4> %y, %t1
+  ret <2 x i4> %t2
+}
+define <2 x i4> @negate_shufflevector_oneinput_second_lane_is_undef(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @negate_shufflevector_oneinput_second_lane_is_undef(
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i4> <i4 -6, i4 5>, [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x i4> [[T0]], <2 x i4> undef, <2 x i32> <i32 0, i32 undef>
+; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i4> [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    ret <2 x i4> [[T2]]
+;
+  %t0 = shl <2 x i4> <i4 -6, i4 5>, %x
+  %t1 = shufflevector <2 x i4> %t0, <2 x i4> undef, <2 x i32> <i32 0, i32 2>
+  %t2 = sub <2 x i4> %y, %t1
+  ret <2 x i4> %t2
+}
+define <2 x i4> @negate_shufflevector_twoinputs(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @negate_shufflevector_twoinputs(
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i4> <i4 -6, i4 5>, [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i4> [[Y:%.*]], <i4 undef, i4 -1>
+; CHECK-NEXT:    [[T2:%.*]] = shufflevector <2 x i4> [[T0]], <2 x i4> [[T1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[Z:%.*]], [[T2]]
+; CHECK-NEXT:    ret <2 x i4> [[T3]]
+;
+  %t0 = shl <2 x i4> <i4 -6, i4 5>, %x
+  %t1 = xor <2 x i4> %y, <i4 -1, i4 -1>
+  %t2 = shufflevector <2 x i4> %t0, <2 x i4> %t1, <2 x i32> <i32 0, i32 3>
+  %t3 = sub <2 x i4> %z, %t2
+  ret <2 x i4> %t3
+}
+define <2 x i4> @negate_shufflevector_oneinput_extrause(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @negate_shufflevector_oneinput_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i4> <i4 -6, i4 5>, [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x i4> [[T0]], <2 x i4> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    call void @use_v2i4(<2 x i4> [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i4> [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    ret <2 x i4> [[T2]]
+;
+  %t0 = shl <2 x i4> <i4 -6, i4 5>, %x
+  %t1 = shufflevector <2 x i4> %t0, <2 x i4> undef, <2 x i32> <i32 1, i32 0>
+  call void @use_v2i4(<2 x i4> %t1)
+  %t2 = sub <2 x i4> %y, %t1
+  ret <2 x i4> %t2
+}
