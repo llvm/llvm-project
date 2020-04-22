@@ -8,7 +8,6 @@
 
 #include "include/errno.h"
 #include "include/signal.h"
-#include "src/errno/llvmlibc_errno.h"
 #include "src/signal/sigaddset.h"
 
 #include "utils/UnitTest/ErrnoSetterMatcher.h"
