@@ -12,7 +12,6 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/IO.h"
-#include "flang/Lower/Intrinsics.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -235,9 +234,6 @@ public:
                         fir::NameUniquer &uniquer)
       : mlirContext{bridge.getMLIRContext()}, cooked{bridge.getCookedSource()},
         module{bridge.getModule()}, defaults{bridge.getDefaultKinds()},
-        intrinsics{Fortran::lower::IntrinsicLibrary(
-            Fortran::lower::IntrinsicLibrary::Version::LLVM,
-            bridge.getMLIRContext())},
         uniquer{uniquer} {}
   virtual ~FirConverter() = default;
 
@@ -355,17 +351,16 @@ private:
 
   mlir::Value createFIRAddr(mlir::Location loc,
                             const Fortran::semantics::SomeExpr *expr) {
-    return createSomeAddress(loc, *this, *expr, localSymbols, intrinsics);
+    return createSomeAddress(loc, *this, *expr, localSymbols);
   }
 
   mlir::Value createFIRExpr(mlir::Location loc,
                             const Fortran::semantics::SomeExpr *expr) {
-    return createSomeExpression(loc, *this, *expr, localSymbols, intrinsics);
+    return createSomeExpression(loc, *this, *expr, localSymbols);
   }
   mlir::Value createLogicalExprAsI1(mlir::Location loc,
                                     const Fortran::semantics::SomeExpr *expr) {
-    return createI1LogicalExpression(loc, *this, *expr, localSymbols,
-                                     intrinsics);
+    return createI1LogicalExpression(loc, *this, *expr, localSymbols);
   }
 
   /// Find the symbol in the local map or return null.
@@ -2021,7 +2016,6 @@ private:
   const Fortran::parser::CookedSource *cooked;
   mlir::ModuleOp &module;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaults;
-  Fortran::lower::IntrinsicLibrary intrinsics;
   Fortran::lower::FirOpBuilder *builder = nullptr;
   fir::NameUniquer &uniquer;
   Fortran::lower::SymMap localSymbols;
