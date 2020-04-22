@@ -1179,6 +1179,18 @@ func @generic_atomic_rmw_result_type_mismatch(%I: memref<10xf32>, %i : index) {
 
 // -----
 
+func @generic_atomic_rmw_has_side_effects(%I: memref<10xf32>, %i : index) {
+  // expected-error@+4 {{should contain only operations with no side effects}}
+  %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%old_value : f32):
+      %c1 = constant 1.0 : f32
+      %buf = alloc() : memref<2048xf32>
+      atomic_yield %c1 : f32
+  }
+}
+
+// -----
+
 func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
   // expected-error@+4 {{op types mismatch between yield op: 'i32' and its parent: 'f32'}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {

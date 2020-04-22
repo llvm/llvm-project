@@ -507,7 +507,18 @@ static LogicalResult verify(GenericAtomicRMWOp op) {
   if (op.getResult().getType() != block.getArgument(0).getType())
     return op.emitOpError(
         "expected block argument of the same type result type");
-  return success();
+
+  bool hasSideEffects =
+      op.body()
+          .walk([&](Operation *nestedOp) {
+            if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
+              return WalkResult::advance();
+            nestedOp->emitError("body of 'generic_atomic_rmw' should contain "
+                                "only operations with no side effects");
+            return WalkResult::interrupt();
+          })
+          .wasInterrupted();
+  return hasSideEffects ? failure() : success();
 }
 
 static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
