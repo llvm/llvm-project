@@ -1942,7 +1942,10 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       default: return -1;
       case 1: return AMDGPU::AGPR_32RegClassID;
       case 2: return AMDGPU::AReg_64RegClassID;
+      case 3: return AMDGPU::AReg_96RegClassID;
       case 4: return AMDGPU::AReg_128RegClassID;
+      case 5: return AMDGPU::AReg_160RegClassID;
+      case 8: return AMDGPU::AReg_256RegClassID;
       case 16: return AMDGPU::AReg_512RegClassID;
       case 32: return AMDGPU::AReg_1024RegClassID;
     }

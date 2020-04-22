@@ -519,13 +519,23 @@ def AGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
                             (add (sequence "AGPR%u", 0, 255))> {
   let AllocationPriority = 1;
   let Size = 32;
+  let Weight = 1;
 }
 
 // AGPR 64-bit registers
 def AGPR_64 : SIRegisterTuples<getSubRegs<2>.ret, AGPR_32, 255, 1, 2, "a">;
 
+// AGPR 96-bit registers
+def AGPR_96 : SIRegisterTuples<getSubRegs<3>.ret, AGPR_32, 255, 1, 3, "a">;
+
 // AGPR 128-bit registers
 def AGPR_128 : SIRegisterTuples<getSubRegs<4>.ret, AGPR_32, 255, 1, 4, "a">;
+
+// AGPR 160-bit registers
+def AGPR_160 : SIRegisterTuples<getSubRegs<5>.ret, AGPR_32, 255, 1, 5, "a">;
+
+// AGPR 256-bit registers
+def AGPR_256 : SIRegisterTuples<getSubRegs<8>.ret, AGPR_32, 255, 1, 8, "a">;
 
 // AGPR 512-bit registers
 def AGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, AGPR_32, 255, 1, 16, "a">;
@@ -752,7 +762,10 @@ class ARegClass<int numRegs, list<ValueType> regTypes, dag regList> :
 
 def AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
                         (add AGPR_64)>;
+def AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
 def AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
+def AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
+def AReg_256 : ARegClass<8, [v8i32, v8f32], (add AGPR_256)>;
 def AReg_512 : ARegClass<16, [v16i32, v16f32], (add AGPR_512)>;
 def AReg_1024 : ARegClass<32, [v32i32, v32f32], (add AGPR_1024)>;
 
