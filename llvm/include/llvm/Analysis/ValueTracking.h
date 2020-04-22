@@ -563,26 +563,34 @@ class Value;
                                               const Loop *L);
 
   /// Return true if this function can prove that I is guaranteed to yield
-  /// poison if at least one of its operands is poison.
-  bool propagatesPoison(const Instruction *I);
+  /// full-poison (all bits poison) if at least one of its operands are
+  /// full-poison (all bits poison).
+  ///
+  /// The exact rules for how poison propagates through instructions have
+  /// not been settled as of 2015-07-10, so this function is conservative
+  /// and only considers poison to be propagated in uncontroversial
+  /// cases. There is no attempt to track values that may be only partially
+  /// poison.
+  bool propagatesFullPoison(const Instruction *I);
 
   /// Return either nullptr or an operand of I such that I will trigger
-  /// undefined behavior if I is executed and that operand has a poison
-  /// value.
-  const Value *getGuaranteedNonPoisonOp(const Instruction *I);
+  /// undefined behavior if I is executed and that operand has a full-poison
+  /// value (all bits poison).
+  const Value *getGuaranteedNonFullPoisonOp(const Instruction *I);
 
   /// Return true if the given instruction must trigger undefined behavior.
   /// when I is executed with any operands which appear in KnownPoison holding
-  /// a poison value at the point of execution.
+  /// a full-poison value at the point of execution.
   bool mustTriggerUB(const Instruction *I,
                      const SmallSet<const Value *, 16>& KnownPoison);
 
   /// Return true if this function can prove that if PoisonI is executed
-  /// and yields a poison value, then that will trigger undefined behavior.
+  /// and yields a full-poison value (all bits poison), then that will
+  /// trigger undefined behavior.
   ///
   /// Note that this currently only considers the basic block that is
   /// the parent of I.
-  bool programUndefinedIfPoison(const Instruction *PoisonI);
+  bool programUndefinedIfFullPoison(const Instruction *PoisonI);
 
   /// Return true if I can create poison from non-poison operands.
   /// For vectors, canCreatePoison returns true if there is potential poison in
