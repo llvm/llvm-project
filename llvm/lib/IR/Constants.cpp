@@ -1895,8 +1895,8 @@ Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
   assert(DstTy->isIntOrIntVectorTy() &&
          "PtrToInt destination must be integer or integer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
-  if (auto *CVTy = dyn_cast<VectorType>(C->getType()))
-    assert(CVTy->getNumElements() ==
+  if (isa<VectorType>(C->getType()))
+    assert(cast<VectorType>(C->getType())->getNumElements() ==
                cast<VectorType>(DstTy)->getNumElements() &&
            "Invalid cast between a different number of vector elements");
   return getFoldedCast(Instruction::PtrToInt, C, DstTy, OnlyIfReduced);
@@ -1909,8 +1909,8 @@ Constant *ConstantExpr::getIntToPtr(Constant *C, Type *DstTy,
   assert(DstTy->isPtrOrPtrVectorTy() &&
          "IntToPtr destination must be a pointer or pointer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
-  if (auto *CVTy = dyn_cast<VectorType>(C->getType()))
-    assert(CVTy->getNumElements() ==
+  if (isa<VectorType>(C->getType()))
+    assert(cast<VectorType>(C->getType())->getNumElements() ==
                cast<VectorType>(DstTy)->getNumElements() &&
            "Invalid cast between a different number of vector elements");
   return getFoldedCast(Instruction::IntToPtr, C, DstTy, OnlyIfReduced);
