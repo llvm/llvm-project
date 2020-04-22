@@ -2068,7 +2068,7 @@ def err_reference_bind_init_list : Error<
 def err_init_list_bad_dest_type : Error<
   "%select{|non-aggregate }0type %1 cannot be initialized with an initializer "
   "list">;
-def warn_cxx2a_compat_aggregate_init_with_ctors : Warning<
+def warn_cxx20_compat_aggregate_init_with_ctors : Warning<
   "aggregate initialization of type %0 with user-declared constructors "
   "is incompatible with C++20">, DefaultIgnore, InGroup<CXX20Compat>;
 
@@ -2589,7 +2589,7 @@ def warn_cxx11_compat_constexpr_body_invalid_stmt : Warning<
   "use of this statement in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
-def ext_constexpr_body_invalid_stmt_cxx2a : ExtWarn<
+def ext_constexpr_body_invalid_stmt_cxx20 : ExtWarn<
   "use of this statement in a constexpr %select{function|constructor}0 "
   "is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_body_invalid_stmt : Warning<
@@ -2652,7 +2652,7 @@ def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
 
 // C++20 function try blocks in constexpr
-def ext_constexpr_function_try_block_cxx2a : ExtWarn<
+def ext_constexpr_function_try_block_cxx20 : ExtWarn<
   "function try block in constexpr %select{function|constructor}0 is "
   "a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_function_try_block : Warning<
@@ -6421,10 +6421,10 @@ def note_array_init_plain_string_into_char8_t : Note<
 def err_array_init_utf8_string_into_char : Error<
   "%select{|ISO C++20 does not permit }0initialization of char array with "
   "UTF-8 string literal%select{ is not permitted by '-fchar8_t'|}0">;
-def warn_cxx2a_compat_utf8_string : Warning<
+def warn_cxx20_compat_utf8_string : Warning<
   "type of UTF-8 string literal will change from array of const char to "
   "array of const char8_t in C++20">, InGroup<CXX20Compat>, DefaultIgnore;
-def note_cxx2a_compat_utf8_string_remove_u8 : Note<
+def note_cxx20_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
 def err_array_init_different_type : Error<
@@ -6565,7 +6565,7 @@ def warn_arith_conv_enum_float : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3">,
   InGroup<EnumFloatConversion>, DefaultIgnore;
-def warn_arith_conv_enum_float_cxx2a : Warning<
+def warn_arith_conv_enum_float_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "%select{floating-point|enumeration}1 type %2 "
   "%plural{2:with|4:from|:and}0 "
@@ -6575,27 +6575,27 @@ def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
   InGroup<EnumEnumConversion>, DefaultIgnore;
-def warn_arith_conv_mixed_enum_types_cxx2a : Warning<
+def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Text>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;
-def warn_arith_conv_mixed_anon_enum_types_cxx2a : Warning<
-  warn_arith_conv_mixed_enum_types_cxx2a.Text>,
+def warn_arith_conv_mixed_anon_enum_types_cxx20 : Warning<
+  warn_arith_conv_mixed_enum_types_cxx20.Text>,
   InGroup<DeprecatedAnonEnumEnumConversion>;
 def warn_conditional_mixed_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Text>,
   InGroup<EnumCompareConditional>, DefaultIgnore;
-def warn_conditional_mixed_enum_types_cxx2a : Warning<
-  warn_arith_conv_mixed_enum_types_cxx2a.Text>,
+def warn_conditional_mixed_enum_types_cxx20 : Warning<
+  warn_arith_conv_mixed_enum_types_cxx20.Text>,
   InGroup<DeprecatedEnumCompareConditional>;
 def warn_comparison_mixed_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Text>,
   InGroup<EnumCompare>;
-def warn_comparison_mixed_enum_types_cxx2a : Warning<
-  warn_arith_conv_mixed_enum_types_cxx2a.Text>,
+def warn_comparison_mixed_enum_types_cxx20 : Warning<
+  warn_arith_conv_mixed_enum_types_cxx20.Text>,
   InGroup<DeprecatedEnumCompare>;
 def warn_comparison_of_mixed_enum_types_switch : Warning<
   "comparison of different enumeration types in switch statement"
@@ -7380,7 +7380,7 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_equals_this_lambda_capture : Warning<
     "explicit capture of 'this' with a capture default of '=' is incompatible "
     "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-  def ext_equals_this_lambda_capture_cxx2a : ExtWarn<
+  def ext_equals_this_lambda_capture_cxx20 : ExtWarn<
     "explicit capture of 'this' with a capture default of '=' "
     "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
@@ -8271,7 +8271,7 @@ def ext_cxx14_attr : Extension<
   "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
 def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
-def ext_cxx2a_attr : Extension<
+def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20>;
 
 def warn_unused_comparison : Warning<

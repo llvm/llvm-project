@@ -3805,7 +3805,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           } else
             Tracker.skipToEnd();
         } else {
-          Diag(Tok.getLocation(), diag::warn_cxx2a_compat_explicit_bool);
+          Diag(Tok.getLocation(), diag::warn_cxx20_compat_explicit_bool);
         }
       }
       isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
