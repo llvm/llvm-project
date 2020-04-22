@@ -27,7 +27,6 @@ class MachineModuleInfo;
 class MachineRegisterInfo;
 class MBFIWrapper;
 class ProfileSummaryInfo;
-class raw_ostream;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 
