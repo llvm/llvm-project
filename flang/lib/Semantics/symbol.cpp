@@ -119,6 +119,7 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
   type_ = &type;
 }
 
+void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
@@ -353,6 +354,9 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
+  if (auto assocRank{x.rank()}) {
+    os << " rank: " << *assocRank;
+  }
   DumpExpr(os, "expr", x.expr());
   return os;
 }
