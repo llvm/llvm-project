@@ -140,13 +140,13 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) kernel {
+    gpu.func @kernel_1(%arg1 : !llvm<"float*">) {
       gpu.return
     }
   }
 
   func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm<"float*">) {
-    // xpected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
+    // expected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
     {kernel = "kernel_1", kernel_module = @kernels}
         : (index, index, index, index, index, index, !llvm<"float*">) -> ()
