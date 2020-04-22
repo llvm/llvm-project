@@ -105,15 +105,16 @@ endforeach()
 
 if(FUCHSIA_SDK)
   set(FUCHSIA_aarch64_NAME arm64)
+  set(FUCHSIA_i386_NAME x64)
   set(FUCHSIA_x86_64_NAME x64)
   set(FUCHSIA_riscv64_NAME riscv64)
-  foreach(target x86_64;aarch64;riscv64)
+  foreach(target i386;x86_64;aarch64;riscv64)
     set(FUCHSIA_${target}_COMPILER_FLAGS "-I${FUCHSIA_SDK}/pkg/fdio/include")
     set(FUCHSIA_${target}_LINKER_FLAGS "-L${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/lib")
     set(FUCHSIA_${target}_SYSROOT "${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/sysroot")
   endforeach()
 
-  foreach(target x86_64;aarch64;riscv64)
+  foreach(target i386;x86_64;aarch64;riscv64)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}-unknown-fuchsia")
     set(BUILTINS_${target}-unknown-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
