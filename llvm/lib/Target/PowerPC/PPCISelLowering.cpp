@@ -2602,6 +2602,9 @@ bool PPCTargetLowering::SelectAddressPCRel(SDValue N, SDValue &Base) const {
   if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(N))
     if (GAN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
       return true;
+  if (JumpTableSDNode *JT = dyn_cast<JumpTableSDNode>(N))
+    if (JT->getTargetFlags() & PPCII::MO_PCREL_FLAG)
+      return true;
   return false;
 }
 
@@ -2893,6 +2896,16 @@ PPCTargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
 SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+
+  // isUsingPCRelativeCalls() returns true when PCRelative is enabled
+  if (Subtarget.isUsingPCRelativeCalls()) {
+    SDLoc DL(JT);
+    EVT Ty = getPointerTy(DAG.getDataLayout());
+    SDValue GA =
+        DAG.getTargetJumpTable(JT->getIndex(), Ty, PPCII::MO_PCREL_FLAG);
+    SDValue MatAddr = DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
+    return MatAddr;
+  }
 
   // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
