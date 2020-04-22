@@ -208,6 +208,21 @@ public:
     return BrOpen != std::string::npos && BrClose != std::string::npos;
   }
 
+  /// Return true if the intrinsic takes a splat operand.
+  bool hasSplat() const {
+    // These prototype modifiers are described in arm_sve.td.
+    return Proto.find_first_of("ajfrKLR") != std::string::npos;
+  }
+
+  /// Return the parameter index of the splat operand.
+  unsigned getSplatIdx() const {
+    // These prototype modifiers are described in arm_sve.td.
+    auto Idx = Proto.find_first_of("ajfrKLR");
+    assert(Idx != std::string::npos && Idx > 0 &&
+           "Prototype has no splat operand");
+    return Idx - 1;
+  }
+
   /// Emits the intrinsic declaration to the ostream.
   void emitIntrinsic(raw_ostream &OS) const;
 
@@ -276,6 +291,12 @@ public:
   // Returns the SVETypeFlags for the given merge type.
   uint64_t encodeMergeType(uint64_t MT) {
     return encodeFlag(MT, "MergeTypeMask");
+  }
+
+  // Returns the SVETypeFlags for the given splat operand.
+  unsigned encodeSplatOperand(unsigned SplatIdx) {
+    assert(SplatIdx < 7 && "SplatIdx out of encodable range");
+    return encodeFlag(SplatIdx + 1, "SplatOperandMask");
   }
 
   // Returns the SVETypeFlags value for the given SVEType.
@@ -476,9 +497,18 @@ void SVEType::applyModifier(char Mod) {
     Bitwidth = 16;
     ElementBitwidth = 1;
     break;
+  case 'a':
+    Bitwidth = ElementBitwidth;
+    NumVectors = 0;
+    break;
   case 'u':
     Predicate = false;
     Signed = false;
+    Float = false;
+    break;
+  case 'x':
+    Predicate = false;
+    Signed = true;
     Float = false;
     break;
   case 'i':
@@ -626,6 +656,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeTypeFlags(BaseType);
   this->Flags |= Emitter.encodeMemoryElementType(MemoryElementTy);
   this->Flags |= Emitter.encodeMergeType(MergeTy);
+  if (hasSplat())
+    this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {

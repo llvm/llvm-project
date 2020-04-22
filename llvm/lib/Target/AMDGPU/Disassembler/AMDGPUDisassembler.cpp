@@ -930,6 +930,7 @@ unsigned AMDGPUDisassembler::getAgprClassId(const OpWidthTy Width) const {
     return AGPR_32RegClassID;
   case OPW64: return AReg_64RegClassID;
   case OPW128: return AReg_128RegClassID;
+  case OPW256: return AReg_256RegClassID;
   case OPW512: return AReg_512RegClassID;
   case OPW1024: return AReg_1024RegClassID;
   }

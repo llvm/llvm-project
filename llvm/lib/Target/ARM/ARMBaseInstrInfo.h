@@ -788,6 +788,49 @@ bool HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
                                          const ARMSubtarget *Subtarget,
                                          bool ForCodesize = false);
 
+// Return the immediate if this is ADDri or SUBri, scaled as appropriate.
+// Returns 0 for unknown instructions.
+inline int getAddSubImmediate(MachineInstr &MI) {
+  int Scale = 1;
+  unsigned ImmOp;
+  switch (MI.getOpcode()) {
+  case ARM::t2ADDri:
+    ImmOp = 2;
+    break;
+  case ARM::t2SUBri:
+  case ARM::t2SUBri12:
+    ImmOp = 2;
+    Scale = -1;
+    break;
+  case ARM::tSUBi3:
+  case ARM::tSUBi8:
+    ImmOp = 3;
+    Scale = -1;
+    break;
+  default:
+    return 0;
+  }
+  return Scale * MI.getOperand(ImmOp).getImm();
+}
+
+// Given a memory access Opcode, check that the give Imm would be a valid Offset
+// for this instruction using its addressing mode.
+inline bool isLegalAddressImm(unsigned Opcode, int Imm,
+                              const TargetInstrInfo *TII) {
+  const MCInstrDesc &Desc = TII->get(Opcode);
+  unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
+  switch (AddrMode) {
+  case ARMII::AddrModeT2_i7:
+    return std::abs(Imm) < (((1 << 7) * 1) - 1);
+  case ARMII::AddrModeT2_i7s2:
+    return std::abs(Imm) < (((1 << 7) * 2) - 1) && Imm % 2 == 0;
+  case ARMII::AddrModeT2_i7s4:
+    return std::abs(Imm) < (((1 << 7) * 4) - 1) && Imm % 4 == 0;
+  default:
+    llvm_unreachable("Unhandled Addressing mode");
+  }
+}
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H

@@ -121,7 +121,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 // COMMONIR:      [[LANE:%.*]] = shufflevector <8 x half> [[TMP5]], <8 x half> [[TMP5]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
 // UNCONSTRAINED: [[FMLA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP4]], <4 x half> [[TMP3]])
 // CONSTRAINED:   [[FMLA:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP4]], <4 x half> [[TMP3]], metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CHECK-ASM:     fmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h
+// CHECK-ASM:     fmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.h[{{[0-9]+}}]
 // COMMONIR:      ret <4 x half> [[FMLA]]
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
   return vfma_laneq_f16(a, b, c, 7);
@@ -239,7 +239,7 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 // COMMONIR:      [[LANE:%.*]] = shufflevector <8 x half> [[TMP5]], <8 x half> [[TMP5]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
 // UNCONSTRAINED: [[FMLA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP4]], <4 x half> [[TMP3]])
 // CONSTRAINED:   [[FMLA:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP4]], <4 x half> [[TMP3]], metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CHECK-ASM:     fmls v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h
+// CHECK-ASM:     fmls v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.h[{{[0-9]+}}]
 // COMMONIR:      ret <4 x half> [[FMLA]]
 float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
   return vfms_laneq_f16(a, b, c, 7);

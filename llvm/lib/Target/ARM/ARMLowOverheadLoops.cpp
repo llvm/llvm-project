@@ -463,21 +463,8 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // that the predication will be equivalent. For this we need:
   // NumElements = NumElements - VectorWidth. The sub will be a sub immediate
   // and we can also allow register copies within the chain too.
-  auto IsValidSub = [](MachineInstr *MI, unsigned ExpectedVecWidth) {
-    unsigned ImmOpIdx = 0;
-    switch (MI->getOpcode()) {
-    default:
-      llvm_unreachable("unhandled sub opcode");
-    case ARM::tSUBi3:
-    case ARM::tSUBi8:
-      ImmOpIdx = 3;
-      break;
-    case ARM::t2SUBri:
-    case ARM::t2SUBri12:
-      ImmOpIdx = 2;
-      break;
-    }
-    return MI->getOperand(ImmOpIdx).getImm() == ExpectedVecWidth;
+  auto IsValidSub = [](MachineInstr *MI, int ExpectedVecWidth) {
+    return -getAddSubImmediate(*MI) == ExpectedVecWidth;
   };
 
   MBB = VCTP->getParent();

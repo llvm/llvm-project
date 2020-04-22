@@ -650,7 +650,7 @@ class Configuration(object):
     def configure_compile_flags_exceptions(self):
         enable_exceptions = self.get_lit_bool('enable_exceptions', True)
         if not enable_exceptions:
-            self.config.available_features.add('libcpp-no-exceptions')
+            self.config.available_features.add('no-exceptions')
             self.cxx.compile_flags += ['-fno-exceptions']
 
     def configure_compile_flags_rtti(self):

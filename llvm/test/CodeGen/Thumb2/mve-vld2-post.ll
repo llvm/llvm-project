@@ -68,9 +68,8 @@ define <4 x i64> *@vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #32
 ; CHECK-NEXT:    vmov.f64 d2, d1
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s6, s10
@@ -151,8 +150,7 @@ define <4 x double> *@vld2_v2f64(<4 x double> *%src, <2 x double> *%dst) {
 ; CHECK-LABEL: vld2_v2f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #32
 ; CHECK-NEXT:    vadd.f64 d1, d0, d1
 ; CHECK-NEXT:    vadd.f64 d0, d2, d3
 ; CHECK-NEXT:    vstrw.32 q0, [r1]

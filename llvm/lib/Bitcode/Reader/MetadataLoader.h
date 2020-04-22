@@ -27,7 +27,6 @@ class Error;
 class Function;
 class Instruction;
 class Metadata;
-class MDNode;
 class Module;
 class Type;
 

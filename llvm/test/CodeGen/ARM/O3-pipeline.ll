@@ -94,6 +94,7 @@
 ; CHECK-NEXT:      Remove dead machine instructions
 ; CHECK-NEXT:      MVE VPT Optimisation Pass
 ; CHECK-NEXT:      ARM MLA / MLS expansion pass
+; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM pre- register allocation load / store optimization pass
 ; CHECK-NEXT:      ARM A15 S->D optimizer
 ; CHECK-NEXT:      Detect Dead Lanes
