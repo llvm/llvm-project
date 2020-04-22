@@ -3955,8 +3955,8 @@ public:
   llvm::Type *SVEBuiltinMemEltTy(SVETypeFlags TypeFlags);
 
   llvm::Type *getEltType(SVETypeFlags TypeFlags);
-
   llvm::VectorType *getSVEType(const SVETypeFlags &TypeFlags);
+  llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred, llvm::VectorType *VTy);
   llvm::Value *EmitSVEGatherLoad(SVETypeFlags TypeFlags,
                                  llvm::SmallVectorImpl<llvm::Value *> &Ops,
