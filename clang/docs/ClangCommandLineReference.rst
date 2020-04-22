@@ -2973,6 +2973,11 @@ Enable MT ASE (MIPS only)
 
 PowerPC
 -------
+.. option:: -maix-struct-return
+
+Override the default ABI for 32-bit targets to return all structs in memory,
+as in the Power 32-bit ABI for Linux (2011), and on AIX and Darwin.
+
 .. option:: -maltivec, -mno-altivec
 
 .. option:: -mcmpb, -mno-cmpb
@@ -3008,6 +3013,11 @@ PowerPC
 .. option:: -msecure-plt
 
 .. option:: -mspe, -mno-spe
+
+.. option:: -msvr4-struct-return
+
+Override the default ABI for 32-bit targets to return small structs in
+registers, as in the System V ABI (1995).
 
 .. option:: -mvsx, -mno-vsx
 
