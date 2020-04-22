@@ -3332,6 +3332,10 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
   //  assert(Offset < (1 << 24) && "unimplemented reg plus immediate");
 
   const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
+  Register TmpReg = DestReg;
+  if (TmpReg == AArch64::XZR)
+    TmpReg = MBB.getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
   do {
     uint64_t ThisVal = std::min<uint64_t>(Offset, MaxEncodableValue);
     unsigned LocalShiftSize = 0;
@@ -3341,7 +3345,11 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
     }
     assert((ThisVal >> ShiftSize) <= MaxEncoding &&
            "Encoding cannot handle value that big");
-    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
+
+    Offset -= ThisVal << LocalShiftSize;
+    if (Offset == 0)
+      TmpReg = DestReg;
+    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg)
                    .addReg(SrcReg)
                    .addImm(Sign * (int)ThisVal);
     if (ShiftSize)
@@ -3362,8 +3370,8 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
           BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP))
               .addImm(Imm)
               .setMIFlag(Flag);
-        assert((Offset - Imm) == 0 && "Expected remaining offset to be zero to "
-                                      "emit a single SEH directive");
+        assert(Offset == 0 && "Expected remaining offset to be zero to "
+                              "emit a single SEH directive");
       } else if (DestReg == AArch64::SP) {
         if (HasWinCFI)
           *HasWinCFI = true;
@@ -3376,8 +3384,7 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
         *HasWinCFI = true;
     }
 
-    SrcReg = DestReg;
-    Offset -= ThisVal << LocalShiftSize;
+    SrcReg = TmpReg;
   } while (Offset);
 }
 
