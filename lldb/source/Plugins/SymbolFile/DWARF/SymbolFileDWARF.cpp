@@ -1464,7 +1464,7 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 }
 
 void SymbolFileDWARF::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DIERef ref)> callback) {
+    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   m_index->GetObjCMethods(class_name, callback);
 }
 
@@ -2051,16 +2051,10 @@ void SymbolFileDWARF::FindGlobalVariables(
   uint32_t pruned_idx = original_size;
 
   SymbolContext sc;
-  m_index->GetGlobalVariables(ConstString(basename), [&](DIERef die_ref) {
+  m_index->GetGlobalVariables(ConstString(basename), [&](DWARFDIE die) {
     if (!sc.module_sp)
       sc.module_sp = m_objfile_sp->GetModule();
     assert(sc.module_sp);
-
-    DWARFDIE die = GetDIE(die_ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
-      return true;
-    }
 
     if (die.Tag() != DW_TAG_variable)
       return true;
@@ -2123,16 +2117,10 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   const uint32_t original_size = variables.GetSize();
 
   SymbolContext sc;
-  m_index->GetGlobalVariables(regex, [&](DIERef die_ref) {
+  m_index->GetGlobalVariables(regex, [&](DWARFDIE die) {
     if (!sc.module_sp)
       sc.module_sp = m_objfile_sp->GetModule();
     assert(sc.module_sp);
-
-    DWARFDIE die = GetDIE(die_ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, regex.GetText());
-      return true;
-    }
 
     DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
@@ -2292,14 +2280,8 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
         regex.GetText().str().c_str());
   }
 
-  DWARFDebugInfo &info = DebugInfo();
   llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
-  m_index->GetFunctions(regex, [&](DIERef ref) {
-    DWARFDIE die = info.GetDIE(ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(ref, regex.GetText());
-      return true;
-    }
+  m_index->GetFunctions(regex, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
     return true;
@@ -2359,13 +2341,7 @@ void SymbolFileDWARF::FindTypes(
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return;
 
-  m_index->GetTypes(name, [&](DIERef die_ref) {
-    DWARFDIE die = GetDIE(die_ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
-      return true;
-    }
-
+  m_index->GetTypes(name, [&](DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, die))
       return true; // The containing decl contexts don't match
 
@@ -2427,13 +2403,7 @@ void SymbolFileDWARF::FindTypes(
   if (!name)
     return;
 
-  m_index->GetTypes(name, [&](DIERef die_ref) {
-    DWARFDIE die = GetDIE(die_ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
-      return true;
-    }
-
+  m_index->GetTypes(name, [&](DWARFDIE die) {
     if (!languages[GetLanguage(*die.GetCU())])
       return true;
 
@@ -2478,13 +2448,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return namespace_decl_ctx;
 
-  m_index->GetNamespaces(name, [&](DIERef die_ref) {
-    DWARFDIE die = GetDIE(die_ref);
-    if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
-      return true;
-    }
-
+  m_index->GetNamespaces(name, [&](DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, die))
       return true; // The containing decl contexts don't match
 
@@ -2650,13 +2614,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
     return type_sp;
 
   m_index->GetCompleteObjCClass(
-      type_name, must_be_implementation, [&](DIERef die_ref) {
-        DWARFDIE type_die = GetDIE(die_ref);
-        if (!type_die) {
-          m_index->ReportInvalidDIERef(die_ref, type_name.GetStringRef());
-          return true;
-        }
-
+      type_name, must_be_implementation, [&](DWARFDIE type_die) {
         bool try_resolving_type = false;
 
         // Don't try and resolve the DIE we are looking for with the DIE
@@ -2827,13 +2785,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
         }
       }
 
-      m_index->GetTypes(dwarf_decl_ctx, [&](DIERef die_ref) {
-        DWARFDIE type_die = GetDIE(die_ref);
-        if (!type_die) {
-          m_index->ReportInvalidDIERef(die_ref, type_name.GetStringRef());
-          return true;
-        }
-
+      m_index->GetTypes(dwarf_decl_ctx, [&](DWARFDIE type_die) {
         // Make sure type_die's langauge matches the type system we are
         // looking for. We don't want to find a "Foo" type from Java if we
         // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
@@ -3055,12 +3007,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         sc.comp_unit->SetVariableList(variables);
 
         m_index->GetGlobalVariables(
-            dwarf_cu->GetNonSkeletonUnit(), [&](DIERef die_ref) {
-              DWARFDIE die = GetDIE(die_ref);
-              if (!die) {
-                m_index->ReportInvalidDIERef(die_ref, "");
-                return true;
-              }
+            dwarf_cu->GetNonSkeletonUnit(), [&](DWARFDIE die) {
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
               if (var_sp) {
