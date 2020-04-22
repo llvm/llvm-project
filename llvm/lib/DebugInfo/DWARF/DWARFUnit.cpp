@@ -962,18 +962,12 @@ parseDWARFStringOffsetsTableHeader(DWARFDataExtractor &DA,
 
 Expected<Optional<StrOffsetsContributionDescriptor>>
 DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
-  uint64_t Offset;
-  if (IsDWO) {
-    Offset = 0;
-    if (DA.getData().data() == nullptr)
-      return None;
-  } else {
-    auto OptOffset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base));
-    if (!OptOffset)
-      return None;
-    Offset = *OptOffset;
-  }
-  auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+  assert(!IsDWO);
+  auto OptOffset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base));
+  if (!OptOffset)
+    return None;
+  auto DescOrError =
+      parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), *OptOffset);
   if (!DescOrError)
     return DescOrError.takeError();
   return *DescOrError;
@@ -981,6 +975,7 @@ DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
 
 Expected<Optional<StrOffsetsContributionDescriptor>>
 DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
+  assert(IsDWO);
   uint64_t Offset = 0;
   auto IndexEntry = Header.getIndexEntry();
   const auto *C =
