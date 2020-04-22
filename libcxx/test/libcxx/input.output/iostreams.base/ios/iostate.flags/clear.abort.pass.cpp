@@ -15,7 +15,7 @@
 // Make sure that we abort() when exceptions are disabled and the exception
 // flag is set for the iostate we pass to clear().
 
-// REQUIRES: libcpp-no-exceptions
+// REQUIRES: no-exceptions
 
 #include <csignal>
 #include <cstdlib>

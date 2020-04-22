@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 // <memory>
 
 // template<class D, class A> shared_ptr(nullptr_t, D d, A a);
