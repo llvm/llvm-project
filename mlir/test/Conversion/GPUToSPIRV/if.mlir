@@ -9,7 +9,7 @@ module attributes {
 } {
   func @main(%arg0 : memref<10xf32>, %arg1 : i1) {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = "kernel_simple_selection", kernel_module = @kernels} : (index, index, index, index, index, index, memref<10xf32>, i1) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = @kernels::@kernel_simple_selection} : (index, index, index, index, index, index, memref<10xf32>, i1) -> ()
     return
   }
 
