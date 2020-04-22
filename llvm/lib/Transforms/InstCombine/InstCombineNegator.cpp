@@ -111,6 +111,10 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   ++NumValuesVisitedInThisNegator;
 #endif
 
+  // -(undef) -> undef.
+  if (match(V, m_Undef()))
+    return V;
+
   // In i1, negation can simply be ignored.
   if (V->getType()->isIntOrIntVectorTy(1))
     return V;
@@ -264,6 +268,18 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
     // Do preserve the metadata!
     return Builder.CreateSelect(I->getOperand(0), NegOp1, NegOp2,
                                 I->getName() + ".neg", /*MDFrom=*/I);
+  }
+  case Instruction::ShuffleVector: {
+    // `shufflevector` is negatible if both operands are negatible.
+    ShuffleVectorInst *Shuf = cast<ShuffleVectorInst>(I);
+    Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
+    if (!NegOp0) // Early return.
+      return nullptr;
+    Value *NegOp1 = visit(I->getOperand(1), Depth + 1);
+    if (!NegOp1)
+      return nullptr;
+    return Builder.CreateShuffleVector(NegOp0, NegOp1, Shuf->getShuffleMask(),
+                                       I->getName() + ".neg");
   }
   case Instruction::Trunc: {
     // `trunc` is negatible if its operand is negatible.
