@@ -4177,12 +4177,24 @@ namespace {
 /// PPC32_SVR4_ABIInfo - The 32-bit PowerPC ELF (SVR4) ABI information.
 class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
   bool IsSoftFloatABI;
+  bool IsRetSmallStructInRegABI;
 
   CharUnits getParamTypeAlignment(QualType Ty) const;
 
 public:
-  PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI)
-      : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI) {}
+  PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI,
+                     bool RetSmallStructInRegABI)
+      : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI),
+        IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
@@ -4190,8 +4202,13 @@ public:
 
 class PPC32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  PPC32TargetCodeGenInfo(CodeGenTypes &CGT, bool SoftFloatABI)
-      : TargetCodeGenInfo(new PPC32_SVR4_ABIInfo(CGT, SoftFloatABI)) {}
+  PPC32TargetCodeGenInfo(CodeGenTypes &CGT, bool SoftFloatABI,
+                         bool RetSmallStructInRegABI)
+      : TargetCodeGenInfo(new PPC32_SVR4_ABIInfo(CGT, SoftFloatABI,
+                                                 RetSmallStructInRegABI)) {}
+
+  static bool isStructReturnInRegABI(const llvm::Triple &Triple,
+                                     const CodeGenOptions &Opts);
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -4225,6 +4242,34 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (AlignTy)
     return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
   return CharUnits::fromQuantity(4);
+}
+
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
+  uint64_t Size;
+
+  // -msvr4-struct-return puts small aggregates in GPR3 and GPR4.
+  if (isAggregateTypeForABI(RetTy) && IsRetSmallStructInRegABI &&
+      (Size = getContext().getTypeSize(RetTy)) <= 64) {
+    // System V ABI (1995), page 3-22, specified:
+    // > A structure or union whose size is less than or equal to 8 bytes
+    // > shall be returned in r3 and r4, as if it were first stored in the
+    // > 8-byte aligned memory area and then the low addressed word were
+    // > loaded into r3 and the high-addressed word into r4.  Bits beyond
+    // > the last member of the structure or union are not defined.
+    //
+    // GCC for big-endian PPC32 inserts the pad before the first member,
+    // not "beyond the last member" of the struct.  To stay compatible
+    // with GCC, we coerce the struct to an integer of the same size.
+    // LLVM will extend it and return i32 in r3, or i64 in r3:r4.
+    if (Size == 0)
+      return ABIArgInfo::getIgnore();
+    else {
+      llvm::Type *CoerceTy = llvm::Type::getIntNTy(getVMContext(), Size);
+      return ABIArgInfo::getDirect(CoerceTy);
+    }
+  }
+
+  return DefaultABIInfo::classifyReturnType(RetTy);
 }
 
 // TODO: this implementation is now likely redundant with
@@ -4380,6 +4425,25 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   }
 
   return Result;
+}
+
+bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
+    const llvm::Triple &Triple, const CodeGenOptions &Opts) {
+  assert(Triple.getArch() == llvm::Triple::ppc);
+
+  switch (Opts.getStructReturnConvention()) {
+  case CodeGenOptions::SRCK_Default:
+    break;
+  case CodeGenOptions::SRCK_OnStack: // -maix-struct-return
+    return false;
+  case CodeGenOptions::SRCK_InRegs: // -msvr4-struct-return
+    return true;
+  }
+
+  if (Triple.isOSBinFormatELF() && !Triple.isOSLinux())
+    return true;
+
+  return false;
 }
 
 bool
@@ -10264,10 +10328,14 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return SetCGInfo(new ARMTargetCodeGenInfo(Types, Kind));
   }
 
-  case llvm::Triple::ppc:
+  case llvm::Triple::ppc: {
+    bool IsSoftFloat =
+        CodeGenOpts.FloatABI == "soft" || getTarget().hasFeature("spe");
+    bool RetSmallStructInRegABI =
+        PPC32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
     return SetCGInfo(
-        new PPC32TargetCodeGenInfo(Types, CodeGenOpts.FloatABI == "soft" ||
-                                   getTarget().hasFeature("spe")));
+        new PPC32TargetCodeGenInfo(Types, IsSoftFloat, RetSmallStructInRegABI));
+  }
   case llvm::Triple::ppc64:
     if (Triple.isOSBinFormatELF()) {
       PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv1;
