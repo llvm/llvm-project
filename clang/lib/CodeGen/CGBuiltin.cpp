@@ -7773,6 +7773,18 @@ static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatUndef);
 }
 
+SmallVector<llvm::Type *, 2>
+CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
+                                     ArrayRef<Value *> Ops) {
+  if (TypeFlags.isOverloadNone())
+    return {};
+
+  llvm::Type *DefaultType = getSVEType(TypeFlags);
+
+  assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
+  return {DefaultType};
+}
+
 Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   // Find out if any arguments are required to be integer constant expressions.
@@ -7814,8 +7826,6 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isScatterStore())
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
-    llvm::VectorType *OverloadedTy = getSVEType(TypeFlags);
-
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
 
@@ -7823,13 +7833,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       InsertExplicitUndefOperand(Builder, Ty, Ops);
 
     // Predicates must match the main datatype.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+    for (unsigned i = 0, e = Ops.size(); i != e; ++i)
       if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
-        if (PredTy->getScalarType()->isIntegerTy(1)) {
-          auto NewPredTy = cast<llvm::VectorType>(OverloadedTy);
-          Ops[i] = EmitSVEPredicateCast(Ops[i], NewPredTy);
-        }
-    }
+        if (PredTy->getElementType()->isIntegerTy(1))
+          Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (TypeFlags.hasSplatOperand()) {
@@ -7845,9 +7852,23 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       Ops[1] = Builder.CreateCall(Sel, {Ops[0], Ops[1], SplatZero});
     }
 
-    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic, OverloadedTy);
+    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
+                                   getSVEOverloadTypes(TypeFlags, Ops));
     Value *Call = Builder.CreateCall(F, Ops);
-		return Call;
+
+    // Predicate results must be converted to svbool_t.
+    if (auto PredTy = dyn_cast<llvm::VectorType>(Call->getType()))
+      if (PredTy->getScalarType()->isIntegerTy(1))
+        Call = EmitSVEPredicateCast(Call, cast<llvm::VectorType>(Ty));
+
+    return Call;
+  }
+
+  switch (BuiltinID) {
+  default:
+    return nullptr;
+  case SVE::BI__builtin_sve_svpfalse_b:
+    return ConstantInt::getFalse(Ty);
   }
 
   /// Should not happen
