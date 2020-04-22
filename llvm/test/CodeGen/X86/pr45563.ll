@@ -1,4 +1,4 @@
-; RUN: llc < %s -debug-only=isel -O3 -mattr=avx  2>&1 | FileCheck %s
+; RUN: llc < %s -O3 -mattr=avx | FileCheck %s
 
 ; Bug 45563:
 ; The LowerMLOAD() method AVX masked load branch should
@@ -12,7 +12,8 @@
 
 define <16 x double> @bug45563(<16 x double>* %addr, <16 x double> %dst, <16 x i64> %e, <16 x i64> %f) {
 ; CHECK-LABEL: bug45563:
-; CHECK:       v4f64 = vselect
+; CHECK:       vmaskmovpd
+; CHECK:       vblendvpd
   %mask = icmp slt <16 x i64> %e, %f
   %res = call <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %addr, i32 4, <16 x i1>%mask, <16 x double> %dst)
   ret <16 x double> %res
