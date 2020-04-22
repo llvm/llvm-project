@@ -53,6 +53,11 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
 
 #define K_ATOS_ENV_VAR "__check_mach_ports_lookup"
 
+// This cannot live in `AtosSymbolizerProcess` because instances of that object
+// are allocated by the internal allocator which under ASan is poisoned with
+// kAsanInternalHeapMagic.
+static char kAtosMachPortEnvEntry[] = K_ATOS_ENV_VAR "=000000000000000";
+
 class AtosSymbolizerProcess : public SymbolizerProcess {
  public:
   explicit AtosSymbolizerProcess(const char *path)
@@ -69,7 +74,7 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
       // We use `putenv()` rather than `setenv()` so that we can later directly
       // write into the storage without LibC getting involved to change what the
       // variable is set to
-      int result = putenv(mach_port_env_var_entry_);
+      int result = putenv(kAtosMachPortEnvEntry);
       CHECK_EQ(result, 0);
     }
   }
@@ -95,12 +100,13 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
       // for our task port. We can't call `setenv()` here because it might call
       // malloc/realloc. To avoid that we instead update the
       // `mach_port_env_var_entry_` variable with our current PID.
-      uptr count = internal_snprintf(mach_port_env_var_entry_,
-                                     sizeof(mach_port_env_var_entry_),
+      uptr count = internal_snprintf(kAtosMachPortEnvEntry,
+                                     sizeof(kAtosMachPortEnvEntry),
                                      K_ATOS_ENV_VAR "=%s", pid_str_);
       CHECK_GE(count, sizeof(K_ATOS_ENV_VAR) + internal_strlen(pid_str_));
       // Document our assumption but without calling `getenv()` in normal
       // builds.
+      DCHECK(getenv(K_ATOS_ENV_VAR));
       DCHECK_EQ(internal_strcmp(getenv(K_ATOS_ENV_VAR), pid_str_), 0);
     }
 
@@ -127,9 +133,10 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   }
 
   char pid_str_[16];
-  // Space for `\0` in `kAtosEnvVar_` is reused for `=`.
-  char mach_port_env_var_entry_[sizeof(K_ATOS_ENV_VAR) + sizeof(pid_str_)] =
-      K_ATOS_ENV_VAR "=0";
+  // Space for `\0` in `K_ATOS_ENV_VAR` is reused for `=`.
+  static_assert(sizeof(kAtosMachPortEnvEntry) ==
+                    (sizeof(K_ATOS_ENV_VAR) + sizeof(pid_str_)),
+                "sizes should match");
 };
 
 #undef K_ATOS_ENV_VAR
