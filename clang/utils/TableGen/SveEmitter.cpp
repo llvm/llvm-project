@@ -264,6 +264,14 @@ public:
     llvm_unreachable("Unsupported imm check");
   }
 
+  /// Returns the enum value for the flag type
+  uint64_t getEnumValueForFlag(StringRef C) const {
+    auto Res = FlagTypes.find(C);
+    if (Res != FlagTypes.end())
+      return Res->getValue();
+    llvm_unreachable("Unsupported flag");
+  }
+
   // Returns the SVETypeFlags for a given value and mask.
   uint64_t encodeFlag(uint64_t V, StringRef MaskName) const {
     auto It = FlagTypes.find(MaskName);
@@ -528,9 +536,30 @@ void SVEType::applyModifier(char Mod) {
     Immediate = true;
     PredicatePattern = true;
     break;
+  case 'k':
+    Predicate = false;
+    Signed = true;
+    Float = false;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    break;
   case 'l':
     Predicate = false;
     Signed = true;
+    Float = false;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    break;
+  case 'm':
+    Predicate = false;
+    Signed = false;
+    Float = false;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    break;
+  case 'n':
+    Predicate = false;
+    Signed = false;
     Float = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
@@ -830,6 +859,13 @@ void SVEEmitter::createIntrinsic(
   int64_t Flags = 0;
   for (auto FlagRec : FlagsList)
     Flags |= FlagRec->getValueAsInt("Value");
+
+  // Create a dummy TypeSpec for non-overloaded builtins.
+  if (Types.empty()) {
+    assert((Flags & getEnumValueForFlag("IsOverloadNone")) &&
+           "Expect TypeSpec for overloaded builtin!");
+    Types = "i";
+  }
 
   // Extract type specs from string
   SmallVector<TypeSpec, 8> TypeSpecs;

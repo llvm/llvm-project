@@ -3954,6 +3954,8 @@ public:
   /// pointer operand.
   llvm::Type *SVEBuiltinMemEltTy(SVETypeFlags TypeFlags);
 
+  SmallVector<llvm::Type *, 2> getSVEOverloadTypes(SVETypeFlags TypeFlags,
+                                                   ArrayRef<llvm::Value *> Ops);
   llvm::Type *getEltType(SVETypeFlags TypeFlags);
   llvm::VectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
