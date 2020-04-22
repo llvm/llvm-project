@@ -70,14 +70,14 @@ module attributes {gpu.container_module} {
     // CHECK: %{{.*}} = constant 8
     %cst = constant 8 : index
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_1", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_1} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_1", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_1}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_2", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_2} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_2", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_2}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
     return

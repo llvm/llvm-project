@@ -27,7 +27,7 @@ module attributes {gpu.container_module} {
     // CHECK: llvm.call @mcuGetStreamHelper
     // CHECK: llvm.call @mcuLaunchKernel
     // CHECK: llvm.call @mcuStreamSynchronize
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = "kernel", kernel_module = @kernel_module }
+    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernel_module::@kernel }
         : (!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.float, !llvm<"float*">) -> ()
 
     llvm.return

@@ -3,7 +3,7 @@
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_id_x", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_x} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -26,7 +26,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_id_y", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_y} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -49,7 +49,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_id_z", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_z} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -72,7 +72,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_size_x", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_x} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -96,7 +96,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_size_y", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_y} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -117,7 +117,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_workgroup_size_z", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_z} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -138,7 +138,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_local_id_x", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_local_id_x} : (index, index, index, index, index, index) -> ()
     return
   }
 
@@ -161,7 +161,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = "builtin_num_workgroups_x", kernel_module = @kernels} : (index, index, index, index, index, index) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_num_workgroups_x} : (index, index, index, index, index, index) -> ()
     return
   }
 

@@ -334,14 +334,16 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
 
   let extraClassDeclaration = [{
     /// The kernel function specified by the operation's `kernel` attribute.
-    StringRef kernel();
+    SymbolRefAttr kernel();
 
     /// The number of operands passed to the kernel function.
     unsigned getNumKernelOperands();
 
-    /// The name of the kernel module specified by the operation's
-    /// `kernel_module` attribute.
+    /// The name of the kernel's containing module.
     StringRef getKernelModuleName();
+
+    /// The name of the kernel.
+    StringRef getKernelName();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
@@ -361,12 +363,8 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     friend LogicalResult GPUDialect::verifyOperationAttribute(Operation *,
                                                               NamedAttribute);
 
-    /// The name of the symbolRef attribute specifying the kernel to launch.
+    /// The name of the symbol reference attribute specifying the kernel to launch.
     static StringRef getKernelAttrName() { return "kernel"; }
-
-    /// The name of the symbolRef attribute specifying the name of the module
-    /// containing the kernel to launch.
-    static StringRef getKernelModuleAttrName() { return "kernel_module"; }
   }];
 
   let verifier = [{ return ::verify(*this); }];
