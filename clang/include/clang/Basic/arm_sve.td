@@ -58,9 +58,14 @@
 // -------------------
 // prototype: return (arg, arg, ...)
 //
+// u: vector of unsigned integers
 // d: default
 // c: const pointer type
 // P: predicate type
+// e: 1/2 width unsigned elements, 2x element count
+// h: 1/2 width elements, 2x element count
+// q: 1/4 width elements, 4x element count
+// o: 4x width elements, 1/4 element count
 //
 // i: constant uint64_t
 //
@@ -157,14 +162,23 @@ class ImmCheckType<int val> {
 }
 def ImmCheck0_31                : ImmCheckType<0>;  // 0..31 (used for e.g. predicate patterns)
 def ImmCheck1_16                : ImmCheckType<1>;  // 1..16
+def ImmCheckExtract             : ImmCheckType<2>;  // 0..(2048/sizeinbits(elt) - 1)
+def ImmCheckShiftRight          : ImmCheckType<3>;  // 1..sizeinbits(elt)
+def ImmCheckShiftRightNarrow    : ImmCheckType<4>;  // 1..sizeinbits(elt)/2
+def ImmCheckShiftLeft           : ImmCheckType<5>;  // 0..(sizeinbits(elt) - 1)
+def ImmCheck0_7                 : ImmCheckType<6>;  // 0..7
+def ImmCheckLaneIndex           : ImmCheckType<7>;  // 0..(128/(1*sizeinbits(elt)) - 1)
+def ImmCheckLaneIndexCompRotate : ImmCheckType<8>;  // 0..(128/(2*sizeinbits(elt)) - 1)
+def ImmCheckLaneIndexDot        : ImmCheckType<9>;  // 0..(128/(4*sizeinbits(elt)) - 1)
+def ImmCheckComplexRot90_270    : ImmCheckType<10>; // [90,270]
+def ImmCheckComplexRotAll90     : ImmCheckType<11>; // [0, 90, 180,270]
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;
-	int EltSizeArg = eltSizeArg;
+  int EltSizeArg = eltSizeArg;
   ImmCheckType Kind = kind;
 }
 
-// Every intrinsic subclasses Inst.
 class Inst<string n, string p, string t, MergeType mt, string i,
            list<FlagType> ft, list<ImmCheck> ch, MemEltType met> {
   string Name = n;
@@ -283,6 +297,82 @@ def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEl
 def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Integer arithmetic
+
+multiclass SInstZPZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_{d}]", "ddPd", types, MergeOp1,     intrinsic, flags>;
+  def _X : SInst<name # "[_{d}]", "dPd",  types, MergeAnyExp,  intrinsic, flags>;
+  def _Z : SInst<name # "[_{d}]", "dPd",  types, MergeZeroExp, intrinsic, flags>;
+}
+
+defm SVABS : SInstZPZ<"svabs", "csil", "aarch64_sve_abs">;
+defm SVNEG : SInstZPZ<"svneg", "csil", "aarch64_sve_neg">;
+
+//------------------------------------------------------------------------------
+
+multiclass SInstZPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]",   "dPdd", types, MergeOp1,  intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]",   "dPdd", types, MergeAny,  intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]",   "dPdd", types, MergeZero, intrinsic, flags>;
+}
+
+defm SVABD_S  : SInstZPZZ<"svabd",  "csil",         "aarch64_sve_sabd">;
+defm SVABD_U  : SInstZPZZ<"svabd",  "UcUsUiUl",     "aarch64_sve_uabd">;
+defm SVADD    : SInstZPZZ<"svadd",  "csilUcUsUiUl", "aarch64_sve_add">;
+defm SVDIV_S  : SInstZPZZ<"svdiv",  "il",           "aarch64_sve_sdiv">;
+defm SVDIV_U  : SInstZPZZ<"svdiv",  "UiUl",         "aarch64_sve_udiv">;
+defm SVDIVR_S : SInstZPZZ<"svdivr", "il",           "aarch64_sve_sdivr">;
+defm SVDIVR_U : SInstZPZZ<"svdivr", "UiUl",         "aarch64_sve_udivr">;
+defm SVMAX_S  : SInstZPZZ<"svmax",  "csil",         "aarch64_sve_smax">;
+defm SVMAX_U  : SInstZPZZ<"svmax",  "UcUsUiUl",     "aarch64_sve_umax">;
+defm SVMIN_S  : SInstZPZZ<"svmin",  "csil",         "aarch64_sve_smin">;
+defm SVMIN_U  : SInstZPZZ<"svmin",  "UcUsUiUl",     "aarch64_sve_umin">;
+defm SVMUL    : SInstZPZZ<"svmul",  "csilUcUsUiUl", "aarch64_sve_mul">;
+defm SVMULH_S : SInstZPZZ<"svmulh", "csil",         "aarch64_sve_smulh">;
+defm SVMULH_U : SInstZPZZ<"svmulh", "UcUsUiUl",     "aarch64_sve_umulh">;
+defm SVSUB    : SInstZPZZ<"svsub",  "csilUcUsUiUl", "aarch64_sve_sub">;
+defm SVSUBR   : SInstZPZZ<"svsubr", "csilUcUsUiUl", "aarch64_sve_subr">;
+////////////////////////////////////////////////////////////////////////////////
+// Permutations and selection
+def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Shifts
+def SVASRD_M : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeOp1,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Narrowing DSP operations
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVSHRNB      : SInst<"svshrnb[_n_{d}]",    "hdi",  "silUsUiUl", MergeNone, "aarch64_sve_shrnb",     [], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Uniform DSP operations
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Floating-point arithmetic
+
+defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
+defm SVNEG_F : SInstZPZ<"svneg", "hfd", "aarch64_sve_fneg">;
+
+def SVTMAD  : SInst<"svtmad[_{d}]",  "dddi", "hfd", MergeNone, "aarch64_sve_ftmad_x", [], [ImmCheck<2, ImmCheck0_7>]>;
+
+def SVMLA_LANE  : SInst<"svmla_lane[_{d}]",  "ddddi",  "hfd", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVCMLA_LANE : SInst<"svcmla_lane[_{d}]", "ddddii", "hf",  MergeNone, "aarch64_sve_fcmla_lane", [], [ImmCheck<3, ImmCheckLaneIndexCompRotate, 2>,
+                                                                                                        ImmCheck<4, ImmCheckComplexRotAll90>]>;
+
+def SVCADD_M : SInst<"svcadd[_{d}]", "dPddi",  "hfd", MergeOp1,  "aarch64_sve_fcadd", [], [ImmCheck<3, ImmCheckComplexRot90_270>]>;
+def SVCMLA_M : SInst<"svcmla[_{d}]", "dPdddi", "hfd", MergeOp1,  "aarch64_sve_fcmla", [], [ImmCheck<4, ImmCheckComplexRotAll90>]>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Saturating scalar arithmetic
 def SVQDECH_S : SInst<"svqdech_pat[_{d}]",   "ddIi", "s", MergeNone, "aarch64_sve_sqdech", [], [ImmCheck<2, ImmCheck1_16>]>;
 def SVQDECH_U : SInst<"svqdech_pat[_{d}]",   "ddIi", "Us", MergeNone, "aarch64_sve_uqdech", [], [ImmCheck<2, ImmCheck1_16>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Integer arithmetic
+def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;

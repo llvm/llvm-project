@@ -4033,8 +4033,8 @@ void ASTReader::makeModuleVisible(Module *Mod,
       continue;
     }
 
-    if (!Mod->isAvailable()) {
-      // Modules that aren't available cannot be made visible.
+    if (Mod->isUnimportable()) {
+      // Modules that aren't importable cannot be made visible.
       continue;
     }
 
@@ -5539,9 +5539,9 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       // imported module file.
       CurrentModule->Requirements.clear();
       CurrentModule->MissingHeaders.clear();
-      CurrentModule->IsMissingRequirement =
-          ParentModule && ParentModule->IsMissingRequirement;
-      CurrentModule->IsAvailable = !CurrentModule->IsMissingRequirement;
+      CurrentModule->IsUnimportable =
+          ParentModule && ParentModule->IsUnimportable;
+      CurrentModule->IsAvailable = !CurrentModule->IsUnimportable;
       break;
     }
 

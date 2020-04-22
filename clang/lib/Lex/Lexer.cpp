@@ -3700,7 +3700,7 @@ LexNextToken:
     } else if (Char == '=') {
       char After = getCharAndSize(CurPtr+SizeTmp, SizeTmp2);
       if (After == '>') {
-        if (getLangOpts().CPlusPlus2a) {
+        if (getLangOpts().CPlusPlus20) {
           if (!isLexingRawMode())
             Diag(BufferPtr, diag::warn_cxx17_compat_spaceship);
           CurPtr = ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),

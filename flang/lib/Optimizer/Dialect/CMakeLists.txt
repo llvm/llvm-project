@@ -1,3 +1,5 @@
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
 add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRDialect.cpp
@@ -6,6 +8,7 @@ add_flang_library(FIRDialect
 
   DEPENDS
   FIROpsIncGen
+  ${dialect_libs}
 
   LINK_LIBS
   FIRSupport

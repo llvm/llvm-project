@@ -27,3 +27,9 @@ Changes:
   is applied on top of v1.4.1 to add RISC-V timer support.
 * https://github.com/google/benchmark/commit/8e48105d465c586068dd8e248fe75a8971c6ba3a
   is applied on top of v1.4.1 to fix cross-build from linux to windows via MinGW.
+* https://github.com/google/benchmark/commit/a77d5f70efaebe2b7e8c10134526a23a7ce7ef35
+  and
+  https://github.com/google/benchmark/commit/ecc1685340f58f7fe6b707036bc0bb1fccabb0c1
+  are applied on top of the previous cherrypick to fix timestamp-related inline
+  asm issues and 32-bit RISC-V build failures. The second cherrypicked commit
+  fixes formatting issues introduced by the preceding change.

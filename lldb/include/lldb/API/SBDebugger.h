@@ -199,6 +199,10 @@ public:
 
   bool GetUseColor() const;
 
+  bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetUseSourceCache() const;
+
   static bool GetDefaultArchitecture(char *arch_name, size_t arch_name_len);
 
   static bool SetDefaultArchitecture(const char *arch_name);

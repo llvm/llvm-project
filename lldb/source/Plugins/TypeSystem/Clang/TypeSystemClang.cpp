@@ -3987,6 +3987,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Vector:
     return lldb::eTypeClassVector;
   case clang::Type::Builtin:
+  // Ext-Int is just an integer type.
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
     return lldb::eTypeClassBuiltin;
   case clang::Type::ObjCObjectPointer:
     return lldb::eTypeClassObjCObjectPointer;
@@ -4661,6 +4664,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // TODO: Set this to more than one???
     break;
 
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
+    return qual_type->isUnsignedIntegerType() ? lldb::eEncodingUint
+                                              : lldb::eEncodingSint;
+
   case clang::Type::Builtin:
     switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {
     case clang::BuiltinType::Void:
@@ -4914,6 +4922,11 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::ExtVector:
   case clang::Type::Vector:
     break;
+
+  case clang::Type::ExtInt:
+  case clang::Type::DependentExtInt:
+    return qual_type->isUnsignedIntegerType() ? lldb::eFormatUnsigned
+                                              : lldb::eFormatDecimal;
 
   case clang::Type::Builtin:
     switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind()) {
@@ -7358,7 +7371,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
                     function_type->getReturnType())));
         cxx_conversion_decl->setType(method_qual_type);
         cxx_conversion_decl->setInlineSpecified(is_inline);
-        cxx_conversion_decl->setExplicitSpecifier(explicit_spec);        
+        cxx_conversion_decl->setExplicitSpecifier(explicit_spec);
         cxx_conversion_decl->setConstexprKind(CSK_unspecified);
         cxx_method_decl = cxx_conversion_decl;
       }
@@ -8774,9 +8787,10 @@ void TypeSystemClang::DumpSummary(lldb::opaque_compiler_type_t type,
   }
 }
 
-void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type) {
+void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
+                                          lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
-  DumpTypeDescription(type, &s);
+  DumpTypeDescription(type, &s, level);
 
   CompilerType ct(this, type);
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
@@ -8787,7 +8801,8 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type) {
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
-                                          Stream *s) {
+                                          Stream *s,
+                                          lldb::DescriptionLevel level) {
   if (type) {
     clang::QualType qual_type =
         RemoveWrappingTypes(GetQualType(type), {clang::Type::Typedef});
@@ -8801,24 +8816,31 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     case clang::Type::ObjCInterface: {
       GetCompleteType(type);
 
-      const clang::ObjCObjectType *objc_class_type =
+      auto *objc_class_type =
           llvm::dyn_cast<clang::ObjCObjectType>(qual_type.getTypePtr());
       assert(objc_class_type);
-      if (objc_class_type) {
-        clang::ObjCInterfaceDecl *class_interface_decl =
+      if (!objc_class_type)
+        break;
+      clang::ObjCInterfaceDecl *class_interface_decl =
             objc_class_type->getInterface();
-        if (class_interface_decl) {
-          clang::PrintingPolicy policy = getASTContext().getPrintingPolicy();
-          class_interface_decl->print(llvm_ostrm, policy, s->GetIndentLevel());
-        }
-      }
+      if (!class_interface_decl)
+        break;
+      if (level == eDescriptionLevelVerbose)
+        class_interface_decl->dump(llvm_ostrm);
+      else
+        class_interface_decl->print(llvm_ostrm,
+                                    getASTContext().getPrintingPolicy(),
+                                    s->GetIndentLevel());
     } break;
 
     case clang::Type::Typedef: {
-      const clang::TypedefType *typedef_type =
-          qual_type->getAs<clang::TypedefType>();
-      if (typedef_type) {
-        const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
+      auto *typedef_type = qual_type->getAs<clang::TypedefType>();
+      if (!typedef_type)
+        break;
+      const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
+      if (level == eDescriptionLevelVerbose)
+        typedef_decl->dump(llvm_ostrm);
+      else {
         std::string clang_typedef_name(
             typedef_decl->getQualifiedNameAsString());
         if (!clang_typedef_name.empty()) {
@@ -8831,31 +8853,39 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     case clang::Type::Record: {
       GetCompleteType(type);
 
-      const clang::RecordType *record_type =
-          llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+      auto *record_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
       const clang::RecordDecl *record_decl = record_type->getDecl();
-      const clang::CXXRecordDecl *cxx_record_decl =
-          llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
-
-      if (cxx_record_decl)
-        cxx_record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
-                               s->GetIndentLevel());
-      else
-        record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
-                           s->GetIndentLevel());
+      if (level == eDescriptionLevelVerbose)
+        record_decl->dump(llvm_ostrm);
+      else {
+        if (auto *cxx_record_decl =
+                llvm::dyn_cast<clang::CXXRecordDecl>(record_decl))
+          cxx_record_decl->print(llvm_ostrm,
+                                 getASTContext().getPrintingPolicy(),
+                                 s->GetIndentLevel());
+        else
+          record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
+                             s->GetIndentLevel());
+      }
     } break;
 
     default: {
-      const clang::TagType *tag_type =
-          llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
-      if (tag_type) {
-        clang::TagDecl *tag_decl = tag_type->getDecl();
-        if (tag_decl)
-          tag_decl->print(llvm_ostrm, 0);
+      if (auto *tag_type =
+              llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr())) {
+        if (clang::TagDecl *tag_decl = tag_type->getDecl()) {
+          if (level == eDescriptionLevelVerbose)
+            tag_decl->dump(llvm_ostrm);
+          else 
+            tag_decl->print(llvm_ostrm, 0);
+        }
       } else {
-        std::string clang_type_name(qual_type.getAsString());
-        if (!clang_type_name.empty())
-          s->PutCString(clang_type_name);
+        if (level == eDescriptionLevelVerbose)
+          qual_type->dump(llvm_ostrm);
+        else {
+          std::string clang_type_name(qual_type.getAsString());
+          if (!clang_type_name.empty())
+            s->PutCString(clang_type_name);
+        }
       }
     }
     }
@@ -8863,7 +8893,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s->Write(buf.data(), buf.size());
     }
-  }
+}
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {

@@ -29,6 +29,7 @@ add_flang_library(FortranEvaluate
   LINK_LIBS
   FortranCommon
   FortranDecimal
+  FortranSemantics
   FortranParser
 )
 

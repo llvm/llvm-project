@@ -45,6 +45,10 @@ LogicalResult loopUnrollByFactor(AffineForOp forOp, uint64_t unrollFactor);
 /// whichever is lower.
 LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
 
+/// Returns true if `loops` is a perfectly nested loop nest, where loops appear
+/// in it from outermost to innermost.
+bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
+
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).
 /// A loop is perfectly nested iff: the first op in the loop's body is another
@@ -84,10 +88,12 @@ LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops. `tiledNest` when
 /// non-null is set to the loops of the tiled nest from outermost to innermost.
+/// Loops in `input` are erased when the tiling is successful.
 LLVM_NODISCARD
-LogicalResult tileCodeGen(MutableArrayRef<AffineForOp> band,
-                          ArrayRef<unsigned> tileSizes,
-                          SmallVectorImpl<AffineForOp> *tiledNest = nullptr);
+LogicalResult
+tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
+                    ArrayRef<unsigned> tileSizes,
+                    SmallVectorImpl<AffineForOp> *tiledNest = nullptr);
 
 /// Performs loop interchange on 'forOpA' and 'forOpB'. Requires that 'forOpA'
 /// and 'forOpB' are part of a perfectly nested sequence of loops.
@@ -286,11 +292,6 @@ AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
 LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
-
-/// Replaces all uses of `orig` with `replacement` except if the user is listed
-/// in `exceptions`.
-void replaceAllUsesExcept(Value orig, Value replacement,
-                          const SmallPtrSetImpl<Operation *> &exceptions);
 
 } // end namespace mlir
 

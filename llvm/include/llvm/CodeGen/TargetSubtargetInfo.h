@@ -29,6 +29,7 @@
 namespace llvm {
 
 class CallLowering;
+class InlineAsmLowering;
 class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
@@ -101,6 +102,10 @@ public:
     return nullptr;
   }
   virtual const CallLowering *getCallLowering() const { return nullptr; }
+
+  virtual const InlineAsmLowering *getInlineAsmLowering() const {
+    return nullptr;
+  }
 
   // FIXME: This lets targets specialize the selector by subtarget (which lets
   // us do things like a dedicated avx512 selector).  However, we might want

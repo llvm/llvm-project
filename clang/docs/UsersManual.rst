@@ -1466,7 +1466,7 @@ are listed below.
 
 **-f[no-]sanitize-recover=check1,check2,...**
 
-**-f[no-]sanitize-recover=all**
+**-f[no-]sanitize-recover[=all]**
 
    Controls which checks enabled by ``-fsanitize=`` flag are non-fatal.
    If the check is fatal, program will halt after the first error
@@ -1492,6 +1492,8 @@ are listed below.
 
 **-f[no-]sanitize-trap=check1,check2,...**
 
+**-f[no-]sanitize-trap[=all]**
+
    Controls which checks enabled by the ``-fsanitize=`` flag trap. This
    option is intended for use in cases where the sanitizer runtime cannot
    be used (for instance, when building libc or a kernel module), or where
@@ -1499,9 +1501,7 @@ are listed below.
 
    This flag is only compatible with :doc:`control flow integrity
    <ControlFlowIntegrity>` schemes and :doc:`UndefinedBehaviorSanitizer`
-   checks other than ``vptr``. If this flag
-   is supplied together with ``-fsanitize=undefined``, the ``vptr`` sanitizer
-   will be implicitly disabled.
+   checks other than ``vptr``.
 
    This flag is enabled by default for sanitizers in the ``cfi`` group.
 

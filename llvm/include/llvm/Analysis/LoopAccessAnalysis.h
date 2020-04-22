@@ -15,16 +15,10 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -36,6 +30,7 @@ class SCEV;
 class SCEVUnionPredicate;
 class LoopAccessInfo;
 class OptimizationRemarkEmitter;
+class raw_osstream;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.

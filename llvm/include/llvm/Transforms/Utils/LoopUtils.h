@@ -13,28 +13,16 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/PriorityWorklist.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
+template <typename T> class DomTreeNodeBase;
+using DomTreeNode = DomTreeNodeBase<BasicBlock>;
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
@@ -53,6 +41,14 @@ class SCEV;
 class SCEVExpander;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class LPPassManager;
+class Instruction;
+
+template <typename T> class Optional;
+template <typename T, unsigned N> class SmallSetVector;
+template <typename T, unsigned N> class SmallVector;
+template <typename T> class SmallVectorImpl;
+template <typename T, unsigned N> class SmallPriorityWorklist;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU, bool PreserveLCSSA);

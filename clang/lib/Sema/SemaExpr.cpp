@@ -1391,7 +1391,7 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
   bool IsCompAssign = ACK == Sema::ACK_CompAssign;
   if ((!IsCompAssign && LEnum && R->isFloatingType()) ||
       (REnum && L->isFloatingType())) {
-    S.Diag(Loc, S.getLangOpts().CPlusPlus2a
+    S.Diag(Loc, S.getLangOpts().CPlusPlus20
                     ? diag::warn_arith_conv_enum_float_cxx2a
                     : diag::warn_arith_conv_enum_float)
         << LHS->getSourceRange() << RHS->getSourceRange()
@@ -1404,23 +1404,23 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
-      DiagID = S.getLangOpts().CPlusPlus2a
+      DiagID = S.getLangOpts().CPlusPlus20
                     ? diag::warn_arith_conv_mixed_anon_enum_types_cxx2a
                     : diag::warn_arith_conv_mixed_anon_enum_types;
     } else if (ACK == Sema::ACK_Conditional) {
       // Conditional expressions are separated out because they have
       // historically had a different warning flag.
-      DiagID = S.getLangOpts().CPlusPlus2a
+      DiagID = S.getLangOpts().CPlusPlus20
                    ? diag::warn_conditional_mixed_enum_types_cxx2a
                    : diag::warn_conditional_mixed_enum_types;
     } else if (ACK == Sema::ACK_Comparison) {
       // Comparison expressions are separated out because they have
       // historically had a different warning flag.
-      DiagID = S.getLangOpts().CPlusPlus2a
+      DiagID = S.getLangOpts().CPlusPlus20
                    ? diag::warn_comparison_mixed_enum_types_cxx2a
                    : diag::warn_comparison_mixed_enum_types;
     } else {
-      DiagID = S.getLangOpts().CPlusPlus2a
+      DiagID = S.getLangOpts().CPlusPlus20
                    ? diag::warn_arith_conv_mixed_enum_types_cxx2a
                    : diag::warn_arith_conv_mixed_enum_types;
     }
@@ -1771,7 +1771,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
 
   // Warn on initializing an array of char from a u8 string literal; this
   // becomes ill-formed in C++2a.
-  if (getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus2a &&
+  if (getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus20 &&
       !getLangOpts().Char8 && Kind == StringLiteral::UTF8) {
     Diag(StringTokLocs.front(), diag::warn_cxx2a_compat_utf8_string);
 
@@ -4542,7 +4542,7 @@ Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base, SourceLocation lbLoc,
   }
 
   // A comma-expression as the index is deprecated in C++2a onwards.
-  if (getLangOpts().CPlusPlus2a &&
+  if (getLangOpts().CPlusPlus20 &&
       ((isa<BinaryOperator>(idx) && cast<BinaryOperator>(idx)->isCommaOp()) ||
        (isa<CXXOperatorCallExpr>(idx) &&
         cast<CXXOperatorCallExpr>(idx)->getOperator() == OO_Comma))) {
@@ -6162,7 +6162,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn)) {
     if (ULE->hasExplicitTemplateArgs() &&
         ULE->decls_begin() == ULE->decls_end()) {
-      Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus2a
+      Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
                                  ? diag::warn_cxx17_compat_adl_only_template_id
                                  : diag::ext_adl_only_template_id)
           << ULE->getName();
@@ -6783,7 +6783,7 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     // already diagnose use of (non-C++20) C99 designator syntax.
     if (getLangOpts().CPlusPlus && !DiagnosedArrayDesignator &&
         !DiagnosedNestedDesignator && !DiagnosedMixedDesignator) {
-      Diag(FirstDesignator, getLangOpts().CPlusPlus2a
+      Diag(FirstDesignator, getLangOpts().CPlusPlus20
                                 ? diag::warn_cxx17_compat_designated_init
                                 : diag::ext_cxx_designated_init);
     } else if (!getLangOpts().CPlusPlus && !getLangOpts().C99) {
@@ -9283,7 +9283,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     if (getLangOpts().ObjC &&
         (CheckObjCBridgeRelatedConversions(E->getBeginLoc(), LHSType,
                                            E->getType(), E, Diagnose) ||
-         ConversionToObjCStringLiteralCheck(LHSType, E, Diagnose))) {
+         CheckConversionToObjCLiteral(LHSType, E, Diagnose))) {
       if (!Diagnose)
         return Incompatible;
       // Replace the expression with a corrected version and continue so we
@@ -10469,7 +10469,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   // If LHS does not have a signed type and non-negative value
   // then, the behavior is undefined before C++2a. Warn about it.
   if (Left.isNegative() && !S.getLangOpts().isSignedOverflowDefined() &&
-      !S.getLangOpts().CPlusPlus2a) {
+      !S.getLangOpts().CPlusPlus20) {
     S.DiagRuntimeBehavior(Loc, LHS.get(),
                           S.PDiag(diag::warn_shift_lhs_negative)
                             << LHS.get()->getSourceRange());
@@ -10949,7 +10949,7 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   // C++2a [depr.array.comp]:
   //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
   //   operands of array type are deprecated.
-  if (S.getLangOpts().CPlusPlus2a && LHSStripped->getType()->isArrayType() &&
+  if (S.getLangOpts().CPlusPlus20 && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
     S.Diag(Loc, diag::warn_depr_array_comparison)
         << LHS->getSourceRange() << RHS->getSourceRange()
@@ -12595,7 +12595,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 
   CheckForNullPointerDereference(*this, LHSExpr);
 
-  if (getLangOpts().CPlusPlus2a && LHSType.isVolatileQualified()) {
+  if (getLangOpts().CPlusPlus20 && LHSType.isVolatileQualified()) {
     if (CompoundType.isNull()) {
       // C++2a [expr.ass]p5:
       //   A simple-assignment whose left operand is of a volatile-qualified
@@ -12798,7 +12798,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   // Now make sure the operand is a modifiable lvalue.
   if (CheckForModifiableLvalue(Op, OpLoc, S))
     return QualType();
-  if (S.getLangOpts().CPlusPlus2a && ResType.isVolatileQualified()) {
+  if (S.getLangOpts().CPlusPlus20 && ResType.isVolatileQualified()) {
     // C++2a [expr.pre.inc]p1, [expr.post.inc]p1:
     //   An operand with volatile-qualified type is deprecated
     S.Diag(OpLoc, diag::warn_deprecated_increment_decrement_volatile)
@@ -13973,7 +13973,7 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
                                    RHS->getType(), Functions);
 
   // In C++20 onwards, we may have a second operator to look up.
-  if (S.getLangOpts().CPlusPlus2a) {
+  if (S.getLangOpts().CPlusPlus20) {
     if (OverloadedOperatorKind ExtraOp = getRewrittenOverloadedOperator(OverOp))
       S.LookupOverloadedOperatorName(ExtraOp, Sc, LHS->getType(),
                                      RHS->getType(), Functions);
@@ -15228,21 +15228,15 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
       SourceLocExpr(Context, Kind, BuiltinLoc, RPLoc, ParentContext);
 }
 
-bool Sema::ConversionToObjCStringLiteralCheck(QualType DstType, Expr *&Exp,
-                                              bool Diagnose) {
+bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,
+                                        bool Diagnose) {
   if (!getLangOpts().ObjC)
     return false;
 
   const ObjCObjectPointerType *PT = DstType->getAs<ObjCObjectPointerType>();
   if (!PT)
     return false;
-
-  if (!PT->isObjCIdType()) {
-    // Check if the destination is the 'NSString' interface.
-    const ObjCInterfaceDecl *ID = PT->getInterfaceDecl();
-    if (!ID || !ID->getIdentifier()->isStr("NSString"))
-      return false;
-  }
+  const ObjCInterfaceDecl *ID = PT->getInterfaceDecl();
 
   // Ignore any parens, implicit casts (should only be
   // array-to-pointer decays), and not-so-opaque values.  The last is
@@ -15252,15 +15246,41 @@ bool Sema::ConversionToObjCStringLiteralCheck(QualType DstType, Expr *&Exp,
     if (OV->getSourceExpr())
       SrcExpr = OV->getSourceExpr()->IgnoreParenImpCasts();
 
-  StringLiteral *SL = dyn_cast<StringLiteral>(SrcExpr);
-  if (!SL || !SL->isAscii())
-    return false;
-  if (Diagnose) {
-    Diag(SL->getBeginLoc(), diag::err_missing_atsign_prefix)
-        << FixItHint::CreateInsertion(SL->getBeginLoc(), "@");
-    Exp = BuildObjCStringLiteral(SL->getBeginLoc(), SL).get();
+  if (auto *SL = dyn_cast<StringLiteral>(SrcExpr)) {
+    if (!PT->isObjCIdType() &&
+        !(ID && ID->getIdentifier()->isStr("NSString")))
+      return false;
+    if (!SL->isAscii())
+      return false;
+
+    if (Diagnose) {
+      Diag(SL->getBeginLoc(), diag::err_missing_atsign_prefix)
+          << /*string*/0 << FixItHint::CreateInsertion(SL->getBeginLoc(), "@");
+      Exp = BuildObjCStringLiteral(SL->getBeginLoc(), SL).get();
+    }
+    return true;
   }
-  return true;
+
+  if ((isa<IntegerLiteral>(SrcExpr) || isa<CharacterLiteral>(SrcExpr) ||
+      isa<FloatingLiteral>(SrcExpr) || isa<ObjCBoolLiteralExpr>(SrcExpr) ||
+      isa<CXXBoolLiteralExpr>(SrcExpr)) &&
+      !SrcExpr->isNullPointerConstant(
+          getASTContext(), Expr::NPC_NeverValueDependent)) {
+    if (!ID || !ID->getIdentifier()->isStr("NSNumber"))
+      return false;
+    if (Diagnose) {
+      Diag(SrcExpr->getBeginLoc(), diag::err_missing_atsign_prefix)
+          << /*number*/1
+          << FixItHint::CreateInsertion(SrcExpr->getBeginLoc(), "@");
+      Expr *NumLit =
+          BuildObjCNumericLiteral(SrcExpr->getBeginLoc(), SrcExpr).get();
+      if (NumLit)
+        Exp = NumLit;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
@@ -15853,7 +15873,7 @@ void Sema::WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec) {
 /// and if so, remove it from the list of volatile-qualified assignments that
 /// we are going to warn are deprecated.
 void Sema::CheckUnusedVolatileAssignment(Expr *E) {
-  if (!E->getType().isVolatileQualified() || !getLangOpts().CPlusPlus2a)
+  if (!E->getType().isVolatileQualified() || !getLangOpts().CPlusPlus20)
     return;
 
   // Note: ignoring parens here is not justified by the standard rules, but

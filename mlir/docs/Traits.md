@@ -217,7 +217,7 @@ foo.region_op {
 ```
 
 This trait is an important structural property of the IR, and enables operations
-to have [passes](WritingAPass.md) scheduled under them.
+to have [passes](PassManagement.md) scheduled under them.
 
 ### Single Block with Implicit Terminator
 

@@ -246,8 +246,7 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   for (auto &BB : L->blocks())
     for (auto &I : *BB) {
       if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
-        ImmutableCallSite CS(&I);
-        if (const Function *F = CS.getCalledFunction()) {
+        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
           if (isLoweredToCall(F))
             HasCall = true;
           if (F->getIntrinsicID() == Intrinsic::memcpy ||
@@ -526,9 +525,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
-int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-                                   Type *SubTp) {
-  assert (Tp->isVectorTy());
+int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                   int Index, VectorType *SubTp) {
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 

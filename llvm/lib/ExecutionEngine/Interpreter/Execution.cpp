@@ -902,13 +902,13 @@ void Interpreter::popStackAndReturnValueToCaller(Type *RetTy,
     // If we have a previous stack frame, and we have a previous call,
     // fill in the return value...
     ExecutionContext &CallingSF = ECStack.back();
-    if (Instruction *I = CallingSF.Caller.getInstruction()) {
+    if (CallingSF.Caller) {
       // Save result...
-      if (!CallingSF.Caller.getType()->isVoidTy())
-        SetValue(I, Result, CallingSF);
-      if (InvokeInst *II = dyn_cast<InvokeInst> (I))
+      if (!CallingSF.Caller->getType()->isVoidTy())
+        SetValue(CallingSF.Caller, Result, CallingSF);
+      if (InvokeInst *II = dyn_cast<InvokeInst>(CallingSF.Caller))
         SwitchToNewBasicBlock (II->getNormalDest (), CallingSF);
-      CallingSF.Caller = CallSite();          // We returned from the call...
+      CallingSF.Caller = nullptr;             // We returned from the call...
     }
   }
 }
@@ -1113,64 +1113,59 @@ void Interpreter::visitStoreInst(StoreInst &I) {
 //                 Miscellaneous Instruction Implementations
 //===----------------------------------------------------------------------===//
 
-void Interpreter::visitCallSite(CallSite CS) {
+void Interpreter::visitVAStartInst(VAStartInst &I) {
+  ExecutionContext &SF = ECStack.back();
+  GenericValue ArgIndex;
+  ArgIndex.UIntPairVal.first = ECStack.size() - 1;
+  ArgIndex.UIntPairVal.second = 0;
+  SetValue(&I, ArgIndex, SF);
+}
+
+void Interpreter::visitVAEndInst(VAEndInst &I) {
+  // va_end is a noop for the interpreter
+}
+
+void Interpreter::visitVACopyInst(VACopyInst &I) {
+  ExecutionContext &SF = ECStack.back();
+  SetValue(&I, getOperandValue(*I.arg_begin(), SF), SF);
+}
+
+void Interpreter::visitIntrinsicInst(IntrinsicInst &I) {
   ExecutionContext &SF = ECStack.back();
 
-  // Check to see if this is an intrinsic function call...
-  Function *F = CS.getCalledFunction();
-  if (F && F->isDeclaration())
-    switch (F->getIntrinsicID()) {
-    case Intrinsic::not_intrinsic:
-      break;
-    case Intrinsic::vastart: { // va_start
-      GenericValue ArgIndex;
-      ArgIndex.UIntPairVal.first = ECStack.size() - 1;
-      ArgIndex.UIntPairVal.second = 0;
-      SetValue(CS.getInstruction(), ArgIndex, SF);
-      return;
-    }
-    case Intrinsic::vaend:    // va_end is a noop for the interpreter
-      return;
-    case Intrinsic::vacopy:   // va_copy: dest = src
-      SetValue(CS.getInstruction(), getOperandValue(*CS.arg_begin(), SF), SF);
-      return;
-    default:
-      // If it is an unknown intrinsic function, use the intrinsic lowering
-      // class to transform it into hopefully tasty LLVM code.
-      //
-      BasicBlock::iterator me(CS.getInstruction());
-      BasicBlock *Parent = CS.getInstruction()->getParent();
-      bool atBegin(Parent->begin() == me);
-      if (!atBegin)
-        --me;
-      IL->LowerIntrinsicCall(cast<CallInst>(CS.getInstruction()));
+  // If it is an unknown intrinsic function, use the intrinsic lowering
+  // class to transform it into hopefully tasty LLVM code.
+  //
+  BasicBlock::iterator Me(&I);
+  BasicBlock *Parent = I.getParent();
+  bool atBegin(Parent->begin() == Me);
+  if (!atBegin)
+    --Me;
+  IL->LowerIntrinsicCall(&I);
 
-      // Restore the CurInst pointer to the first instruction newly inserted, if
-      // any.
-      if (atBegin) {
-        SF.CurInst = Parent->begin();
-      } else {
-        SF.CurInst = me;
-        ++SF.CurInst;
-      }
-      return;
-    }
-
-
-  SF.Caller = CS;
-  std::vector<GenericValue> ArgVals;
-  const unsigned NumArgs = SF.Caller.arg_size();
-  ArgVals.reserve(NumArgs);
-  uint16_t pNum = 1;
-  for (CallSite::arg_iterator i = SF.Caller.arg_begin(),
-         e = SF.Caller.arg_end(); i != e; ++i, ++pNum) {
-    Value *V = *i;
-    ArgVals.push_back(getOperandValue(V, SF));
+  // Restore the CurInst pointer to the first instruction newly inserted, if
+  // any.
+  if (atBegin) {
+    SF.CurInst = Parent->begin();
+  } else {
+    SF.CurInst = Me;
+    ++SF.CurInst;
   }
+}
+
+void Interpreter::visitCallBase(CallBase &I) {
+  ExecutionContext &SF = ECStack.back();
+
+  SF.Caller = &I;
+  std::vector<GenericValue> ArgVals;
+  const unsigned NumArgs = SF.Caller->arg_size();
+  ArgVals.reserve(NumArgs);
+  for (Value *V : SF.Caller->args())
+    ArgVals.push_back(getOperandValue(V, SF));
 
   // To handle indirect calls, we must get the pointer value from the argument
   // and treat it as a function pointer.
-  GenericValue SRC = getOperandValue(SF.Caller.getCalledValue(), SF);
+  GenericValue SRC = getOperandValue(SF.Caller->getCalledValue(), SF);
   callFunction((Function*)GVTOP(SRC), ArgVals);
 }
 
@@ -2120,8 +2115,8 @@ GenericValue Interpreter::getOperandValue(Value *V, ExecutionContext &SF) {
 // callFunction - Execute the specified function...
 //
 void Interpreter::callFunction(Function *F, ArrayRef<GenericValue> ArgVals) {
-  assert((ECStack.empty() || !ECStack.back().Caller.getInstruction() ||
-          ECStack.back().Caller.arg_size() == ArgVals.size()) &&
+  assert((ECStack.empty() || !ECStack.back().Caller ||
+          ECStack.back().Caller->arg_size() == ArgVals.size()) &&
          "Incorrect number of arguments passed into function call!");
   // Make a new stack frame... and fill it in.
   ECStack.emplace_back();

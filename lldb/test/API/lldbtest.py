@@ -110,6 +110,11 @@ class LLDBTest(TestFormat):
             timeoutInfo = 'Reached timeout of {} seconds'.format(
                 litConfig.maxIndividualTestTime)
 
+        if sys.version_info.major == 2:
+            # In Python 2, string objects can contain Unicode characters.
+            out = out.decode('utf-8')
+            err = err.decode('utf-8')
+
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
             ' '.join(cmd), exitCode)
         if timeoutInfo is not None:

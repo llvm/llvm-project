@@ -149,4 +149,20 @@ def : Pat<(MatmulOp:$op $_, $_, $_),
               HasLinalgTransformMarker<"_promote_views_">]>>
            )]>;
 
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (PromoteSelectedSubviewsLinalgOp<[0], "first_view_promotion">),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_first_view_">]>>
+           )]>;
+
+def : Pat<(FillOp:$op $_, $_),
+          (PromoteSelectedSubviewsLinalgOp<[0], "aligned_promotion", 32>),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_views_aligned_">]>>
+           )]>;
+
 #endif // TEST_LINALG_TRANSFORMS_PATTERNS

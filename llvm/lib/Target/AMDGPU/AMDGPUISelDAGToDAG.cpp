@@ -647,29 +647,6 @@ MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, VT, Ops);
 }
 
-static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
-  switch (NumVectorElts) {
-  case 1:
-    return AMDGPU::SReg_32RegClassID;
-  case 2:
-    return AMDGPU::SReg_64RegClassID;
-  case 3:
-    return AMDGPU::SGPR_96RegClassID;
-  case 4:
-    return AMDGPU::SGPR_128RegClassID;
-  case 5:
-    return AMDGPU::SGPR_160RegClassID;
-  case 8:
-    return AMDGPU::SReg_256RegClassID;
-  case 16:
-    return AMDGPU::SReg_512RegClassID;
-  case 32:
-    return AMDGPU::SReg_1024RegClassID;
-  }
-
-  llvm_unreachable("invalid vector size");
-}
-
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
@@ -797,7 +774,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     }
 
     assert(VT.getVectorElementType().bitsEq(MVT::i32));
-    unsigned RegClassID = selectSGPRVectorRegClassID(NumVectorElts);
+    unsigned RegClassID =
+        SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32)->getID();
     SelectBuildVector(N, RegClassID);
     return;
   }

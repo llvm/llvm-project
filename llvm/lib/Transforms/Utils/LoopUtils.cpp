@@ -11,7 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -34,6 +40,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"

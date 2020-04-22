@@ -21,11 +21,6 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -41,6 +36,7 @@ typedef unsigned ID;
 
 class AssumptionCache;
 class BlockFrequencyInfo;
+class DominatorTree;
 class BranchInst;
 class Function;
 class GlobalValue;
@@ -48,6 +44,7 @@ class IntrinsicInst;
 class LoadInst;
 class LoopAccessInfo;
 class Loop;
+class LoopInfo;
 class ProfileSummaryInfo;
 class SCEV;
 class ScalarEvolution;
@@ -57,6 +54,7 @@ class TargetLibraryInfo;
 class Type;
 class User;
 class Value;
+template <typename T> class Optional;
 
 /// Information about a load/store intrinsic defined by the target.
 struct MemIntrinsicInfo {
@@ -203,35 +201,11 @@ public:
     TCC_Expensive = 4 ///< The cost of a 'div' instruction on x86.
   };
 
-  /// Estimate the cost of a specific operation when lowered.
-  ///
-  /// Note that this is designed to work on an arbitrary synthetic opcode, and
-  /// thus work for hypothetical queries before an instruction has even been
-  /// formed. However, this does *not* work for GEPs, and must not be called
-  /// for a GEP instruction. Instead, use the dedicated getGEPCost interface as
-  /// analyzing a GEP's cost required more information.
-  ///
-  /// Typically only the result type is required, and the operand type can be
-  /// omitted. However, if the opcode is one of the cast instructions, the
-  /// operand type is required.
-  ///
-  /// The returned cost is defined in terms of \c TargetCostConstants, see its
-  /// comments for a detailed explanation of the cost values.
-  int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy = nullptr) const;
-
   /// Estimate the cost of a GEP operation when lowered.
-  ///
-  /// The contract for this function is the same as \c getOperationCost except
-  /// that it supports an interface that provides extra information specific to
-  /// the GEP operation.
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) const;
 
   /// Estimate the cost of a EXT operation when lowered.
-  ///
-  /// The contract for this function is the same as \c getOperationCost except
-  /// that it supports an interface that provides extra information specific to
-  /// the EXT operation.
   int getExtCost(const Instruction *I, const Value *Src) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
@@ -279,15 +253,7 @@ public:
   /// Estimate the cost of a given IR user when lowered.
   ///
   /// This can estimate the cost of either a ConstantExpr or Instruction when
-  /// lowered. It has two primary advantages over the \c getOperationCost and
-  /// \c getGEPCost above, and one significant disadvantage: it can only be
-  /// used when the IR construct has already been formed.
-  ///
-  /// The advantages are that it can inspect the SSA use graph to reason more
-  /// accurately about the cost. For example, all-constant-GEPs can often be
-  /// folded into a load or other instruction, but if they are used in some
-  /// other context they may not be folded. This routine can distinguish such
-  /// cases.
+  /// lowered.
   ///
   /// \p Operands is a list of operands which can be a result of transformations
   /// of the current operands. The number of the operands on the list must equal
@@ -835,10 +801,10 @@ public:
   };
 
   /// \return The size of the cache level in bytes, if available.
-  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const;
+  Optional<unsigned> getCacheSize(CacheLevel Level) const;
 
   /// \return The associativity of the cache level, if available.
-  llvm::Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
+  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -912,8 +878,8 @@ public:
   /// extraction shuffle kinds to show the insert/extract point and the type of
   /// the subvector being inserted/extracted.
   /// NOTE: For subvector extractions Tp represents the source type.
-  int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index = 0,
-                     Type *SubTp = nullptr) const;
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index = 0,
+                     VectorType *SubTp = nullptr) const;
 
   /// \return The expected cost of cast instructions, such as bitcast, trunc,
   /// zext, etc. If there is an existing instruction that holds Opcode, it
@@ -991,10 +957,10 @@ public:
   /// Split:
   ///  (v0, v1, v2, v3)
   ///  ((v0+v2), (v1+v3), undef, undef)
-  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm) const;
-  int getMinMaxReductionCost(Type *Ty, Type *CondTy, bool IsPairwiseForm,
-                             bool IsUnsigned) const;
+  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                             bool IsPairwiseForm, bool IsUnsigned) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
@@ -1189,7 +1155,6 @@ class TargetTransformInfo::Concept {
 public:
   virtual ~Concept() = 0;
   virtual const DataLayout &getDataLayout() const = 0;
-  virtual int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) = 0;
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands) = 0;
   virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
@@ -1301,9 +1266,8 @@ public:
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() const = 0;
-  virtual llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
-  virtual llvm::Optional<unsigned>
-  getCacheAssociativity(CacheLevel Level) const = 0;
+  virtual Optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
+  virtual Optional<unsigned> getCacheAssociativity(CacheLevel Level) const = 0;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1335,8 +1299,8 @@ public:
       OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
       OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) = 0;
-  virtual int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index,
-                             Type *SubTp) = 0;
+  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
+                             VectorType *SubTp) = 0;
   virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                const Instruction *I) = 0;
   virtual int getExtractWithExtendCost(unsigned Opcode, Type *Dst,
@@ -1359,9 +1323,9 @@ public:
                              ArrayRef<unsigned> Indices, unsigned Alignment,
                              unsigned AddressSpace, bool UseMaskForCond = false,
                              bool UseMaskForGaps = false) = 0;
-  virtual int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+  virtual int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                          bool IsPairwiseForm) = 0;
-  virtual int getMinMaxReductionCost(Type *Ty, Type *CondTy,
+  virtual int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                                      bool IsPairwiseForm, bool IsUnsigned) = 0;
   virtual int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                     ArrayRef<Type *> Tys, FastMathFlags FMF,
@@ -1432,9 +1396,6 @@ public:
     return Impl.getDataLayout();
   }
 
-  int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) override {
-    return Impl.getOperationCost(Opcode, Ty, OpTy);
-  }
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);
@@ -1679,11 +1640,10 @@ public:
         I, AllowPromotionWithoutCommonHeader);
   }
   unsigned getCacheLineSize() const override { return Impl.getCacheLineSize(); }
-  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const override {
+  Optional<unsigned> getCacheSize(CacheLevel Level) const override {
     return Impl.getCacheSize(Level);
   }
-  llvm::Optional<unsigned>
-  getCacheAssociativity(CacheLevel Level) const override {
+  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const override {
     return Impl.getCacheAssociativity(Level);
   }
 
@@ -1735,8 +1695,8 @@ public:
     return Impl.getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
-  int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index,
-                     Type *SubTp) override {
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
+                     VectorType *SubTp) override {
     return Impl.getShuffleCost(Kind, Tp, Index, SubTp);
   }
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -1779,12 +1739,12 @@ public:
                                            Alignment, AddressSpace,
                                            UseMaskForCond, UseMaskForGaps);
   }
-  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm) override {
     return Impl.getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm);
   }
-  int getMinMaxReductionCost(Type *Ty, Type *CondTy, bool IsPairwiseForm,
-                             bool IsUnsigned) override {
+  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                             bool IsPairwiseForm, bool IsUnsigned) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned);
   }
   int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys,

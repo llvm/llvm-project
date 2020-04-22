@@ -38,6 +38,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"

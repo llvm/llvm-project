@@ -246,7 +246,8 @@ DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
 DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
                                           bool IsUnsigned) {
   assert(!Name.empty() && "Unable to create enumerator without name");
-  return DIEnumerator::get(VMContext, Val, IsUnsigned, Name);
+  return DIEnumerator::get(VMContext, APInt(64, Val, !IsUnsigned), IsUnsigned,
+                           Name);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {

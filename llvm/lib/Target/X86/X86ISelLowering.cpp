@@ -13,6 +13,7 @@
 
 #include "X86ISelLowering.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
+#include "X86.h"
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
 #include "X86InstrBuilder.h"
@@ -7461,12 +7462,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
 
     // Peek through trunc/aext/zext.
+    // TODO: handle elements smaller than VT.
     // TODO: aext shouldn't require SM_SentinelZero padding.
     // TODO: handle shift of scalars.
     while (Scl.getOpcode() == ISD::TRUNCATE ||
            Scl.getOpcode() == ISD::ANY_EXTEND ||
-           Scl.getOpcode() == ISD::ZERO_EXTEND)
+           Scl.getOpcode() == ISD::ZERO_EXTEND) {
       Scl = Scl.getOperand(0);
+      if (Scl.getScalarValueSizeInBits() < NumBitsPerElt)
+        return false;
+    }
 
     // Attempt to find the source vector the scalar was extracted from.
     SDValue SrcExtract;
@@ -19177,16 +19182,26 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   MVT IntVT = CastToInt.getSimpleValueType();
   SDValue X = CastToInt.getOperand(0);
   // TODO: Allow size-changing from source to dest (double -> i32 -> float)
-  if (X.getSimpleValueType() != VT ||
-      VT.getSizeInBits() != IntVT.getSizeInBits())
+  if (X.getSimpleValueType() != VT)
     return SDValue();
 
-  // See if we have a 128-bit vector cast op for this type of cast.
-  unsigned NumEltsInXMM = 128 / VT.getScalarSizeInBits();
-  MVT VecFPVT = MVT::getVectorVT(VT, NumEltsInXMM);
-  MVT VecIntVT = MVT::getVectorVT(IntVT, NumEltsInXMM);
-  if (!useVectorCast(CastToFP.getOpcode(), VecIntVT, VecFPVT, Subtarget))
+  // See if we have 128-bit vector cast instructions for this type of cast.
+  // We need cvttps2dq + cvtdq2ps or cvttpd2dq + cvtdq2pd.
+  if (!Subtarget.hasSSE2() || (VT != MVT::f32 && VT != MVT::f64) ||
+      IntVT != MVT::i32)
     return SDValue();
+
+  unsigned NumFPEltsInXMM = 128 / VT.getScalarSizeInBits();
+  unsigned NumIntEltsInXMM = 128 / IntVT.getScalarSizeInBits();
+  MVT VecFPVT = MVT::getVectorVT(VT, NumFPEltsInXMM);
+  MVT VecIntVT = MVT::getVectorVT(IntVT, NumIntEltsInXMM);
+
+  // We need target-specific opcodes if this is v2f64 -> v4i32 -> v2f64.
+  bool NeedX86Opcodes = VT.getSizeInBits() != IntVT.getSizeInBits();
+  unsigned ToIntOpcode =
+      NeedX86Opcodes ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+  unsigned ToFPOpcode =
+      NeedX86Opcodes ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
 
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
   //
@@ -19197,8 +19212,8 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, SelectionDAG &DAG,
   SDLoc DL(CastToFP);
   SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
   SDValue VecX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecFPVT, X);
-  SDValue VCastToInt = DAG.getNode(ISD::FP_TO_SINT, DL, VecIntVT, VecX);
-  SDValue VCastToFP = DAG.getNode(ISD::SINT_TO_FP, DL, VecFPVT, VCastToInt);
+  SDValue VCastToInt = DAG.getNode(ToIntOpcode, DL, VecIntVT, VecX);
+  SDValue VCastToFP = DAG.getNode(ToFPOpcode, DL, VecFPVT, VCastToInt);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VCastToFP, ZeroIdx);
 }
 
@@ -28757,8 +28772,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
         N->getMemOperand(), N->getAddressingMode(), N->getExtensionType(),
         N->isExpandingLoad());
     // Emit a blend.
-    SDValue Select = DAG.getNode(ISD::VSELECT, dl, MaskVT, Mask, NewLoad,
-                                 PassThru);
+    SDValue Select = DAG.getNode(ISD::VSELECT, dl, VT, Mask, NewLoad, PassThru);
     return DAG.getMergeValues({ Select, NewLoad.getValue(1) }, dl);
   }
 
@@ -28794,10 +28808,10 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
       PassThru, N->getMemoryVT(), N->getMemOperand(), N->getAddressingMode(),
       N->getExtensionType(), N->isExpandingLoad());
 
-  SDValue Exract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT,
-                               NewLoad.getValue(0),
-                               DAG.getIntPtrConstant(0, dl));
-  SDValue RetOps[] = {Exract, NewLoad.getValue(1)};
+  SDValue Extract =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, NewLoad.getValue(0),
+                  DAG.getIntPtrConstant(0, dl));
+  SDValue RetOps[] = {Extract, NewLoad.getValue(1)};
   return DAG.getMergeValues(RetOps, dl);
 }
 
@@ -30219,6 +30233,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(AND)
   NODE_NAME_CASE(BEXTR)
   NODE_NAME_CASE(BZHI)
+  NODE_NAME_CASE(PDEP)
+  NODE_NAME_CASE(PEXT)
   NODE_NAME_CASE(MUL_IMM)
   NODE_NAME_CASE(MOVMSK)
   NODE_NAME_CASE(PTEST)
@@ -47287,9 +47303,11 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     auto *Ld = cast<LoadSDNode>(In);
     if (Ld->isSimple()) {
       MVT SVT = In.getSimpleValueType().getVectorElementType();
-      ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      EVT MemVT = EVT::getVectorVT(*DAG.getContext(), SVT,
-                                   VT.getVectorNumElements());
+      ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG
+                                 ? ISD::SEXTLOAD
+                                 : ISD::ZEXTLOAD;
+      EVT MemVT =
+          EVT::getVectorVT(*DAG.getContext(), SVT, VT.getVectorNumElements());
       if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
         SDValue Load =
             DAG.getExtLoad(Ext, SDLoc(N), VT, Ld->getChain(), Ld->getBasePtr(),

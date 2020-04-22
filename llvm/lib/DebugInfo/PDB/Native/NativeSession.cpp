@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
@@ -25,11 +26,14 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 #include <algorithm>
 #include <cassert>
@@ -75,14 +79,119 @@ Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
   return Error::success();
 }
 
-Error NativeSession::createFromExe(StringRef Path,
-                                   std::unique_ptr<IPDBSession> &Session) {
-  return make_error<RawError>(raw_error_code::feature_unsupported);
+static Expected<std::unique_ptr<PDBFile>>
+loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
+      MemoryBuffer::getFile(PdbPath, /*FileSize=*/-1,
+                            /*RequiresNullTerminator=*/false);
+  if (!ErrorOrBuffer)
+    return make_error<RawError>(ErrorOrBuffer.getError());
+  std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
+
+  PdbPath = Buffer->getBufferIdentifier();
+  file_magic Magic;
+  auto EC = identify_magic(PdbPath, Magic);
+  if (EC || Magic != file_magic::pdb)
+    return make_error<RawError>(EC);
+
+  auto Stream = std::make_unique<MemoryBufferByteStream>(std::move(Buffer),
+                                                         llvm::support::little);
+
+  auto File = std::make_unique<PDBFile>(PdbPath, std::move(Stream), *Allocator);
+  if (auto EC = File->parseFileHeaders())
+    return std::move(EC);
+
+  if (auto EC = File->parseStreamData())
+    return std::move(EC);
+
+  return std::move(File);
 }
 
-uint64_t NativeSession::getLoadAddress() const { return 0; }
+Error NativeSession::createFromPdbPath(StringRef PdbPath,
+                                       std::unique_ptr<IPDBSession> &Session) {
+  auto Allocator = std::make_unique<BumpPtrAllocator>();
+  auto PdbFile = loadPdbFile(PdbPath, Allocator);
+  if (!PdbFile)
+    return PdbFile.takeError();
 
-bool NativeSession::setLoadAddress(uint64_t Address) { return false; }
+  Session = std::make_unique<NativeSession>(std::move(PdbFile.get()),
+                                            std::move(Allocator));
+  return Error::success();
+}
+
+static Expected<std::string> getPdbPathFromExe(StringRef ExePath) {
+  Expected<object::OwningBinary<object::Binary>> BinaryFile =
+      object::createBinary(ExePath);
+  if (!BinaryFile)
+    return BinaryFile.takeError();
+
+  const object::COFFObjectFile *ObjFile =
+      dyn_cast<object::COFFObjectFile>(BinaryFile->getBinary());
+  if (!ObjFile)
+    return make_error<RawError>(raw_error_code::invalid_format);
+
+  StringRef PdbPath;
+  const llvm::codeview::DebugInfo *PdbInfo = nullptr;
+  if (auto EC = ObjFile->getDebugPDBInfo(PdbInfo, PdbPath))
+    return make_error<RawError>(EC);
+
+  return std::string(PdbPath);
+}
+
+Error NativeSession::createFromExe(StringRef ExePath,
+                                   std::unique_ptr<IPDBSession> &Session) {
+  Expected<std::string> PdbPath = getPdbPathFromExe(ExePath);
+  if (!PdbPath)
+    return PdbPath.takeError();
+
+  file_magic Magic;
+  auto EC = identify_magic(PdbPath.get(), Magic);
+  if (EC || Magic != file_magic::pdb)
+    return make_error<RawError>(EC);
+
+  auto Allocator = std::make_unique<BumpPtrAllocator>();
+  auto File = loadPdbFile(PdbPath.get(), Allocator);
+  if (!File)
+    return File.takeError();
+
+  Session = std::make_unique<NativeSession>(std::move(File.get()),
+                                            std::move(Allocator));
+
+  return Error::success();
+}
+
+Expected<std::string>
+NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
+  Expected<std::string> PathOrErr = getPdbPathFromExe(Opts.ExePath);
+  if (!PathOrErr)
+    return PathOrErr.takeError();
+  StringRef PathFromExe = PathOrErr.get();
+  sys::path::Style Style = PathFromExe.startswith("/")
+                               ? sys::path::Style::posix
+                               : sys::path::Style::windows;
+  StringRef PdbName = sys::path::filename(PathFromExe, Style);
+
+  // Check if pdb exists in the executable directory.
+  SmallString<128> PdbPath = StringRef(Opts.ExePath);
+  sys::path::remove_filename(PdbPath);
+  sys::path::append(PdbPath, PdbName);
+
+  auto Allocator = std::make_unique<BumpPtrAllocator>();
+
+  if (auto File = loadPdbFile(PdbPath, Allocator))
+    return std::string(PdbPath);
+  else
+    return File.takeError();
+
+  return make_error<RawError>("PDB not found");
+}
+
+uint64_t NativeSession::getLoadAddress() const { return LoadAddress; }
+
+bool NativeSession::setLoadAddress(uint64_t Address) {
+  LoadAddress = Address;
+  return true;
+}
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
   return PDBSymbol::createAs<PDBSymbolExe>(*this, getNativeGlobalScope());
@@ -95,12 +204,30 @@ NativeSession::getSymbolById(SymIndexId SymbolId) const {
 
 bool NativeSession::addressForVA(uint64_t VA, uint32_t &Section,
                                  uint32_t &Offset) const {
-  return false;
+  uint32_t RVA = VA - getLoadAddress();
+  return addressForRVA(RVA, Section, Offset);
 }
 
-bool NativeSession::addressForRVA(uint32_t VA, uint32_t &Section,
+bool NativeSession::addressForRVA(uint32_t RVA, uint32_t &Section,
                                   uint32_t &Offset) const {
-  return false;
+  auto Dbi = Pdb->getPDBDbiStream();
+  if (!Dbi)
+    return false;
+
+  Section = 0;
+  Offset = 0;
+
+  if ((int32_t)RVA < 0)
+    return true;
+
+  Offset = RVA;
+  for (; Section < Dbi->getSectionHeaders().size(); ++Section) {
+    auto &Sec = Dbi->getSectionHeaders()[Section];
+    if (RVA < Sec.VirtualAddress)
+      return true;
+    Offset = RVA - Sec.VirtualAddress;
+  }
+  return true;
 }
 
 std::unique_ptr<PDBSymbol>

@@ -118,14 +118,17 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                 SetVector<BasicBlock *> &Headers) {
   auto &CandidateLoops = ParentLoop ? ParentLoop->getSubLoopsVector()
                                     : LI.getTopLevelLoopsVector();
-  // Partition the candidate loops into two ranges. The first part
-  // contains loops that are not children of the new loop. The second
-  // part contains children that need to be moved to the new loop.
-  auto FirstChild =
-      std::partition(CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
+  // The new loop cannot be its own child, and any candidate is a
+  // child iff its header is owned by the new loop. Move all the
+  // children to a new vector.
+  auto FirstChild = std::partition(
+      CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
         return L == NewLoop || Blocks.count(L->getHeader()) == 0;
       });
-  for (auto II = FirstChild, IE = CandidateLoops.end(); II != IE; ++II) {
+  SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
+  CandidateLoops.erase(FirstChild, CandidateLoops.end());
+
+  for (auto II = ChildLoops.begin(), IE = ChildLoops.end(); II != IE; ++II) {
     auto Child = *II;
     LLVM_DEBUG(dbgs() << "child loop: " << Child->getHeader()->getName()
                       << "\n");
@@ -143,14 +146,10 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
       continue;
     }
 
-    if (ParentLoop) {
-      LLVM_DEBUG(dbgs() << "removed child loop from parent\n");
-      ParentLoop->removeChildLoop(Child);
-    }
-    LLVM_DEBUG(dbgs() << "added child loop to new loop\n");
+    Child->setParentLoop(nullptr);
     NewLoop->addChildLoop(Child);
+    LLVM_DEBUG(dbgs() << "added child loop to new loop\n");
   }
-  CandidateLoops.erase(FirstChild, CandidateLoops.end());
 }
 
 // Given a set of blocks and headers in an irreducible SCC, convert it into a

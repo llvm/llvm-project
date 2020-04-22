@@ -562,14 +562,14 @@ int main(int argc, char **argv) {
   }
 
   FileCheckRequest Req;
-  for (auto Prefix : CheckPrefixes)
+  for (StringRef Prefix : CheckPrefixes)
     Req.CheckPrefixes.push_back(Prefix);
 
-  for (auto CheckNot : ImplicitCheckNot)
+  for (StringRef CheckNot : ImplicitCheckNot)
     Req.ImplicitCheckNot.push_back(CheckNot);
 
   bool GlobalDefineError = false;
-  for (auto G : GlobalDefines) {
+  for (StringRef G : GlobalDefines) {
     size_t EqIdx = G.find('=');
     if (EqIdx == std::string::npos) {
       errs() << "Missing equal sign in command-line definition '-D" << G

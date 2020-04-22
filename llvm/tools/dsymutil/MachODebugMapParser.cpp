@@ -493,7 +493,7 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     // relocations will use the symbol itself, and won't need an
     // object file address. The object file address field is optional
     // in the DebugMap, leave it unassigned for these symbols.
-    uint32_t Flags = Sym.getFlags();
+    uint32_t Flags = cantFail(Sym.getFlags());
     if (Flags & SymbolRef::SF_Absolute) {
       CurrentObjectAddresses[*Name] = None;
     } else if (Flags & SymbolRef::SF_Common) {

@@ -26,7 +26,7 @@ class DexUnreachable(CommandBase):
     def get_name():
         return __class__.__name__
 
-    def eval(self, debugger):
+    def eval(self, step_info):
         # If we're ever called, at all, then we're evaluating a line that has
         # been marked as unreachable. Which means a failure.
         vir = ValueIR(expression="Unreachable",

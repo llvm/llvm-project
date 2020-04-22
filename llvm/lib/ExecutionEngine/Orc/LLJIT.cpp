@@ -965,12 +965,6 @@ LLJIT::~LLJIT() {
     CompileThreads->wait();
 }
 
-Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
-  auto InternedName = ES->intern(Name);
-  SymbolMap Symbols({{InternedName, Sym}});
-  return Main->define(absoluteSymbols(std::move(Symbols)));
-}
-
 Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 

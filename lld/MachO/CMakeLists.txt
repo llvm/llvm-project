@@ -10,6 +10,7 @@ add_lld_library(lldMachO2
   OutputSegment.cpp
   SymbolTable.cpp
   Symbols.cpp
+  SyntheticSections.cpp
   Target.cpp
   Writer.cpp
 

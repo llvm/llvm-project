@@ -21,7 +21,7 @@ bool RemoteAwarePlatform::GetModuleSpec(const FileSpec &module_file_spec,
     return m_remote_platform_sp->GetModuleSpec(module_file_spec, arch,
                                                module_spec);
 
-  return Platform::GetModuleSpec(module_file_spec, arch, module_spec);
+  return false;
 }
 
 Status RemoteAwarePlatform::RunShellCommand(

@@ -1647,6 +1647,8 @@ struct MDFieldPrinter {
                      bool ShouldSkipNull = true);
   template <class IntTy>
   void printInt(StringRef Name, IntTy Int, bool ShouldSkipZero = true);
+  void printAPInt(StringRef Name, APInt Int, bool IsUnsigned,
+                  bool ShouldSkipZero);
   void printBool(StringRef Name, bool Value, Optional<bool> Default = None);
   void printDIFlags(StringRef Name, DINode::DIFlags Flags);
   void printDISPFlags(StringRef Name, DISubprogram::DISPFlags Flags);
@@ -1720,6 +1722,15 @@ void MDFieldPrinter::printInt(StringRef Name, IntTy Int, bool ShouldSkipZero) {
     return;
 
   Out << FS << Name << ": " << Int;
+}
+
+void MDFieldPrinter::printAPInt(StringRef Name, APInt Int, bool IsUnsigned,
+                                bool ShouldSkipZero) {
+  if (ShouldSkipZero && Int.isNullValue())
+    return;
+
+  Out << FS << Name << ": ";
+  Int.print(Out, !IsUnsigned);
 }
 
 void MDFieldPrinter::printBool(StringRef Name, bool Value,
@@ -1851,13 +1862,10 @@ static void writeDIEnumerator(raw_ostream &Out, const DIEnumerator *N,
   Out << "!DIEnumerator(";
   MDFieldPrinter Printer(Out);
   Printer.printString("name", N->getName(), /* ShouldSkipEmpty */ false);
-  if (N->isUnsigned()) {
-    auto Value = static_cast<uint64_t>(N->getValue());
-    Printer.printInt("value", Value, /* ShouldSkipZero */ false);
+  Printer.printAPInt("value", N->getValue(), N->isUnsigned(),
+                     /*ShouldSkipZero=*/false);
+  if (N->isUnsigned())
     Printer.printBool("isUnsigned", true);
-  } else {
-    Printer.printInt("value", N->getValue(), /* ShouldSkipZero */ false);
-  }
   Out << ")";
 }
 

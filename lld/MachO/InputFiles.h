@@ -27,17 +27,16 @@ class InputFile {
 public:
   enum Kind {
     ObjKind,
+    DylibKind,
   };
 
   virtual ~InputFile() = default;
-
   Kind kind() const { return fileKind; }
   StringRef getName() const { return mb.getBufferIdentifier(); }
 
   MemoryBufferRef mb;
   std::vector<Symbol *> symbols;
   std::vector<InputSection *> sections;
-  StringRef dylibName;
 
 protected:
   InputFile(Kind kind, MemoryBufferRef mb) : mb(mb), fileKind(kind) {}
@@ -56,6 +55,16 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef mb);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
+};
+
+// .dylib file
+class DylibFile : public InputFile {
+public:
+  explicit DylibFile(MemoryBufferRef mb);
+  static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
+
+  StringRef dylibName;
+  uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
 };
 
 extern std::vector<InputFile *> inputFiles;

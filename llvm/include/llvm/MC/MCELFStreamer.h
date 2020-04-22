@@ -39,7 +39,7 @@ public:
   /// @{
 
   void InitSections(bool NoExecStack) override;
-  void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                       uint64_t Offset) override;
@@ -73,7 +73,7 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
 
-  void FinishImpl() override;
+  void finishImpl() override;
 
   void emitBundleAlignMode(unsigned AlignPow2) override;
   void emitBundleLock(bool AlignToEnd) override;
@@ -81,8 +81,8 @@ public:
 
 private:
   bool isBundleLocked() const;
-  void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
-  void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
+  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
+  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);

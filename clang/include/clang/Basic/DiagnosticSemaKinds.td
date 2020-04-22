@@ -2945,7 +2945,7 @@ def warn_objc_literal_comparison : Warning<
   "a numeric literal|a boxed expression|}0 has undefined behavior">,
   InGroup<ObjCLiteralComparison>;
 def err_missing_atsign_prefix : Error<
-  "string literal must be prefixed by '@' ">;
+  "%select{string|numeric}0 literal must be prefixed by '@'">;
 def warn_objc_string_literal_comparison : Warning<
   "direct comparison of a string literal has undefined behavior">,
   InGroup<ObjCStringComparison>;
@@ -9244,6 +9244,10 @@ def err_argument_not_shifted_byte : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits">;
 def err_argument_not_shifted_byte_or_xxff : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF">;
+def err_rotation_argument_to_cadd
+    : Error<"argument should be the value 90 or 270">;
+def err_rotation_argument_to_cmla
+    : Error<"argument should be the value 0, 90, 180 or 270">;
 def warn_neon_vector_initializer_non_portable : Warning<
   "vector initializers are not compatible with NEON intrinsics in big endian "
   "mode">, InGroup<DiagGroup<"nonportable-vector-initialization">>;

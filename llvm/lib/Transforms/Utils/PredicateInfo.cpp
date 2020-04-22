@@ -39,7 +39,6 @@
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
 using namespace PatternMatch;
-using namespace llvm::PredicateInfoClasses;
 
 INITIALIZE_PASS_BEGIN(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
                       "PredicateInfo Printer", false, false)
@@ -83,7 +82,6 @@ getBlockEdge(const PredicateBase *PB) {
 }
 
 namespace llvm {
-namespace PredicateInfoClasses {
 enum LocalNum {
   // Operations that must appear first in the block.
   LN_First,
@@ -109,8 +107,7 @@ struct ValueDFS {
 };
 
 // Perform a strict weak ordering on instructions and arguments.
-static bool valueComesBefore(OrderedInstructions &OI, const Value *A,
-                             const Value *B) {
+static bool valueComesBefore(const Value *A, const Value *B) {
   auto *ArgA = dyn_cast_or_null<Argument>(A);
   auto *ArgB = dyn_cast_or_null<Argument>(B);
   if (ArgA && !ArgB)
@@ -119,17 +116,14 @@ static bool valueComesBefore(OrderedInstructions &OI, const Value *A,
     return false;
   if (ArgA && ArgB)
     return ArgA->getArgNo() < ArgB->getArgNo();
-  return OI.dfsBefore(cast<Instruction>(A), cast<Instruction>(B));
+  return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
 }
 
-// This compares ValueDFS structures, creating OrderedBasicBlocks where
-// necessary to compare uses/defs in the same block.  Doing so allows us to walk
-// the minimum number of instructions necessary to compute our def/use ordering.
+// This compares ValueDFS structures. Doing so allows us to walk the minimum
+// number of instructions necessary to compute our def/use ordering.
 struct ValueDFS_Compare {
   DominatorTree &DT;
-  OrderedInstructions &OI;
-  ValueDFS_Compare(DominatorTree &DT, OrderedInstructions &OI)
-      : DT(DT), OI(OI) {}
+  ValueDFS_Compare(DominatorTree &DT) : DT(DT) {}
 
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
@@ -243,18 +237,71 @@ struct ValueDFS_Compare {
     auto *ArgB = dyn_cast_or_null<Argument>(BDef);
 
     if (ArgA || ArgB)
-      return valueComesBefore(OI, ArgA, ArgB);
+      return valueComesBefore(ArgA, ArgB);
 
     auto *AInst = getDefOrUser(ADef, A.U);
     auto *BInst = getDefOrUser(BDef, B.U);
-    return valueComesBefore(OI, AInst, BInst);
+    return valueComesBefore(AInst, BInst);
   }
 };
 
-} // namespace PredicateInfoClasses
+class PredicateInfoBuilder {
+  // Used to store information about each value we might rename.
+  struct ValueInfo {
+    SmallVector<PredicateBase *, 4> Infos;
+  };
 
-bool PredicateInfo::stackIsInScope(const ValueDFSStack &Stack,
-                                   const ValueDFS &VDUse) const {
+  PredicateInfo &PI;
+  Function &F;
+  DominatorTree &DT;
+  AssumptionCache &AC;
+
+  // This stores info about each operand or comparison result we make copies
+  // of. The real ValueInfos start at index 1, index 0 is unused so that we
+  // can more easily detect invalid indexing.
+  SmallVector<ValueInfo, 32> ValueInfos;
+
+  // This gives the index into the ValueInfos array for a given Value. Because
+  // 0 is not a valid Value Info index, you can use DenseMap::lookup and tell
+  // whether it returned a valid result.
+  DenseMap<Value *, unsigned int> ValueInfoNums;
+
+  // The set of edges along which we can only handle phi uses, due to critical
+  // edges.
+  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
+
+  ValueInfo &getOrCreateValueInfo(Value *);
+  const ValueInfo &getValueInfo(Value *) const;
+
+  void processAssume(IntrinsicInst *, BasicBlock *,
+                     SmallVectorImpl<Value *> &OpsToRename);
+  void processBranch(BranchInst *, BasicBlock *,
+                     SmallVectorImpl<Value *> &OpsToRename);
+  void processSwitch(SwitchInst *, BasicBlock *,
+                     SmallVectorImpl<Value *> &OpsToRename);
+  void renameUses(SmallVectorImpl<Value *> &OpsToRename);
+  void addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
+                  PredicateBase *PB);
+
+  typedef SmallVectorImpl<ValueDFS> ValueDFSStack;
+  void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
+  Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
+  bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
+  void popStackUntilDFSScope(ValueDFSStack &, const ValueDFS &);
+
+public:
+  PredicateInfoBuilder(PredicateInfo &PI, Function &F, DominatorTree &DT,
+                       AssumptionCache &AC)
+      : PI(PI), F(F), DT(DT), AC(AC) {
+    // Push an empty operand info so that we can detect 0 as not finding one
+    ValueInfos.resize(1);
+  }
+
+  void buildPredicateInfo();
+};
+
+bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
+                                          const ValueDFS &VDUse) const {
   if (Stack.empty())
     return false;
   // If it's a phi only use, make sure it's for this phi node edge, and that the
@@ -281,15 +328,15 @@ bool PredicateInfo::stackIsInScope(const ValueDFSStack &Stack,
           VDUse.DFSOut <= Stack.back().DFSOut);
 }
 
-void PredicateInfo::popStackUntilDFSScope(ValueDFSStack &Stack,
-                                          const ValueDFS &VD) {
+void PredicateInfoBuilder::popStackUntilDFSScope(ValueDFSStack &Stack,
+                                                 const ValueDFS &VD) {
   while (!Stack.empty() && !stackIsInScope(Stack, VD))
     Stack.pop_back();
 }
 
 // Convert the uses of Op into a vector of uses, associating global and local
 // DFS info with each one.
-void PredicateInfo::convertUsesToDFSOrdered(
+void PredicateInfoBuilder::convertUsesToDFSOrdered(
     Value *Op, SmallVectorImpl<ValueDFS> &DFSOrderedSet) {
   for (auto &U : Op->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
@@ -338,19 +385,20 @@ void collectCmpOps(CmpInst *Comparison, SmallVectorImpl<Value *> &CmpOperands) {
 }
 
 // Add Op, PB to the list of value infos for Op, and mark Op to be renamed.
-void PredicateInfo::addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
-                               PredicateBase *PB) {
+void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
+                                      Value *Op, PredicateBase *PB) {
   auto &OperandInfo = getOrCreateValueInfo(Op);
   if (OperandInfo.Infos.empty())
     OpsToRename.push_back(Op);
-  AllInfos.push_back(PB);
+  PI.AllInfos.push_back(PB);
   OperandInfo.Infos.push_back(PB);
 }
 
 // Process an assume instruction and place relevant operations we want to rename
 // into OpsToRename.
-void PredicateInfo::processAssume(IntrinsicInst *II, BasicBlock *AssumeBB,
-                                  SmallVectorImpl<Value *> &OpsToRename) {
+void PredicateInfoBuilder::processAssume(
+    IntrinsicInst *II, BasicBlock *AssumeBB,
+    SmallVectorImpl<Value *> &OpsToRename) {
   // See if we have a comparison we support
   SmallVector<Value *, 8> CmpOperands;
   SmallVector<Value *, 2> ConditionsToProcess;
@@ -389,8 +437,9 @@ void PredicateInfo::processAssume(IntrinsicInst *II, BasicBlock *AssumeBB,
 
 // Process a block terminating branch, and place relevant operations to be
 // renamed into OpsToRename.
-void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
-                                  SmallVectorImpl<Value *> &OpsToRename) {
+void PredicateInfoBuilder::processBranch(
+    BranchInst *BI, BasicBlock *BranchBB,
+    SmallVectorImpl<Value *> &OpsToRename) {
   BasicBlock *FirstBB = BI->getSuccessor(0);
   BasicBlock *SecondBB = BI->getSuccessor(1);
   SmallVector<BasicBlock *, 2> SuccsToProcess;
@@ -459,8 +508,9 @@ void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
 }
 // Process a block terminating switch, and place relevant operations to be
 // renamed into OpsToRename.
-void PredicateInfo::processSwitch(SwitchInst *SI, BasicBlock *BranchBB,
-                                  SmallVectorImpl<Value *> &OpsToRename) {
+void PredicateInfoBuilder::processSwitch(
+    SwitchInst *SI, BasicBlock *BranchBB,
+    SmallVectorImpl<Value *> &OpsToRename) {
   Value *Op = SI->getCondition();
   if ((!isa<Instruction>(Op) && !isa<Argument>(Op)) || Op->hasOneUse())
     return;
@@ -486,7 +536,7 @@ void PredicateInfo::processSwitch(SwitchInst *SI, BasicBlock *BranchBB,
 }
 
 // Build predicate info for our function
-void PredicateInfo::buildPredicateInfo() {
+void PredicateInfoBuilder::buildPredicateInfo() {
   DT.updateDFSNumbers();
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
@@ -530,9 +580,9 @@ static Function *getCopyDeclaration(Module *M, Type *Ty) {
 
 // Given the renaming stack, make all the operands currently on the stack real
 // by inserting them into the IR.  Return the last operation's value.
-Value *PredicateInfo::materializeStack(unsigned int &Counter,
-                                       ValueDFSStack &RenameStack,
-                                       Value *OrigOp) {
+Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
+                                             ValueDFSStack &RenameStack,
+                                             Value *OrigOp) {
   // Find the first thing we have to materialize
   auto RevIter = RenameStack.rbegin();
   for (; RevIter != RenameStack.rend(); ++RevIter)
@@ -558,10 +608,10 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
       IRBuilder<> B(getBranchTerminator(ValInfo));
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
       if (IF->users().empty())
-        CreatedDeclarations.insert(IF);
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC =
           B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
-      PredicateMap.insert({PIC, ValInfo});
+      PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     } else {
       auto *PAssume = dyn_cast<PredicateAssume>(ValInfo);
@@ -570,9 +620,9 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
       IRBuilder<> B(PAssume->AssumeInst);
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
       if (IF->users().empty())
-        CreatedDeclarations.insert(IF);
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC = B.CreateCall(IF, Op);
-      PredicateMap.insert({PIC, ValInfo});
+      PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
   }
@@ -598,8 +648,8 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
 //
 // TODO: Use this algorithm to perform fast single-variable renaming in
 // promotememtoreg and memoryssa.
-void PredicateInfo::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
-  ValueDFS_Compare Compare(DT, OI);
+void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
+  ValueDFS_Compare Compare(DT);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {
     LLVM_DEBUG(dbgs() << "Visiting " << *Op << "\n");
@@ -719,7 +769,8 @@ void PredicateInfo::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
   }
 }
 
-PredicateInfo::ValueInfo &PredicateInfo::getOrCreateValueInfo(Value *Operand) {
+PredicateInfoBuilder::ValueInfo &
+PredicateInfoBuilder::getOrCreateValueInfo(Value *Operand) {
   auto OIN = ValueInfoNums.find(Operand);
   if (OIN == ValueInfoNums.end()) {
     // This will grow it
@@ -732,8 +783,8 @@ PredicateInfo::ValueInfo &PredicateInfo::getOrCreateValueInfo(Value *Operand) {
   return ValueInfos[OIN->second];
 }
 
-const PredicateInfo::ValueInfo &
-PredicateInfo::getValueInfo(Value *Operand) const {
+const PredicateInfoBuilder::ValueInfo &
+PredicateInfoBuilder::getValueInfo(Value *Operand) const {
   auto OINI = ValueInfoNums.lookup(Operand);
   assert(OINI != 0 && "Operand was not really in the Value Info Numbers");
   assert(OINI < ValueInfos.size() &&
@@ -743,10 +794,9 @@ PredicateInfo::getValueInfo(Value *Operand) const {
 
 PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
                              AssumptionCache &AC)
-    : F(F), DT(DT), AC(AC), OI(&DT) {
-  // Push an empty operand info so that we can detect 0 as not finding one
-  ValueInfos.resize(1);
-  buildPredicateInfo();
+    : F(F) {
+  PredicateInfoBuilder Builder(*this, F, DT, AC);
+  Builder.buildPredicateInfo();
 }
 
 // Remove all declarations we created . The PredicateInfo consumers are

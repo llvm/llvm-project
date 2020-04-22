@@ -931,15 +931,15 @@ void InlineSpiller::insertReload(unsigned NewVReg,
 /// Check if \p Def fully defines a VReg with an undefined value.
 /// If that's the case, that means the value of VReg is actually
 /// not relevant.
-static bool isFullUndefDef(const MachineInstr &Def) {
+static bool isRealSpill(const MachineInstr &Def) {
   if (!Def.isImplicitDef())
-    return false;
+    return true;
   assert(Def.getNumOperands() == 1 &&
          "Implicit def with more than one definition");
   // We can say that the VReg defined by Def is undef, only if it is
   // fully defined by Def. Otherwise, some of the lanes may not be
   // undef and the value of the VReg matters.
-  return !Def.getOperand(0).getSubReg();
+  return Def.getOperand(0).getSubReg();
 }
 
 /// insertSpill - Insert a spill of NewVReg after MI.
@@ -948,26 +948,27 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI, &MBB);
-  bool IsRealSpill = true;
-  if (isFullUndefDef(*MI)) {
+  MachineBasicBlock::iterator SpillBefore = std::next(MI);
+  bool IsRealSpill = isRealSpill(*MI);
+  if (IsRealSpill)
+    TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
+                            MRI.getRegClass(NewVReg), &TRI);
+  else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
     // run time.
-    BuildMI(MBB, std::next(MI), MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
+    BuildMI(MBB, SpillBefore, MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
         .addReg(NewVReg, getKillRegState(isKill));
-    IsRealSpill = false;
-  } else
-    TII.storeRegToStackSlot(MBB, std::next(MI), NewVReg, isKill, StackSlot,
-                            MRI.getRegClass(NewVReg), &TRI);
 
-  LIS.InsertMachineInstrRangeInMaps(std::next(MI), MIS.end());
+  MachineBasicBlock::iterator Spill = std::next(MI);
+  LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
 
-  LLVM_DEBUG(dumpMachineInstrRangeWithSlotIndex(std::next(MI), MIS.end(), LIS,
-                                                "spill"));
+  LLVM_DEBUG(
+      dumpMachineInstrRangeWithSlotIndex(Spill, MIS.end(), LIS, "spill"));
   ++NumSpills;
   if (IsRealSpill)
-    HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
+    HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);
 }
 
 /// spillAroundUses - insert spill code around each use of Reg.

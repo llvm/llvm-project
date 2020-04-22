@@ -4177,8 +4177,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         bool NeedCopy = false;
 
         if (Addr.getAlignment() < Align &&
-            llvm::getOrEnforceKnownAlignment(V, Align.getQuantity(), *TD) <
-                Align.getQuantity()) {
+            llvm::getOrEnforceKnownAlignment(V, Align.getAsAlign(), *TD) <
+                Align.getAsAlign()) {
           NeedCopy = true;
         } else if (I->hasLValue()) {
           auto LV = I->getKnownLValue();

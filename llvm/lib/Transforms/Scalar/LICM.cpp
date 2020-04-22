@@ -46,6 +46,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -330,7 +331,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   BasicBlock *Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  ICFLoopSafetyInfo SafetyInfo(DT);
+  ICFLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(L);
 
   // We want to visit all of the instructions in this loop... that are not parts
@@ -496,10 +497,10 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // operands of the instruction are loop invariant.
       //
       bool FreeInLoop = false;
-      if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
+      if (!I.mayHaveSideEffects() &&
+          isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, &Flags,
-                             ORE) &&
-          !I.mayHaveSideEffects()) {
+                             ORE)) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;

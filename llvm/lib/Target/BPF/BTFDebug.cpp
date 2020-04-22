@@ -171,7 +171,12 @@ void BTFTypeEnum::completeType(BTFDebug &BDebug) {
     struct BTF::BTFEnum BTFEnum;
     BTFEnum.NameOff = BDebug.addString(Enum->getName());
     // BTF enum value is 32bit, enforce it.
-    BTFEnum.Val = static_cast<uint32_t>(Enum->getValue());
+    uint32_t Value;
+    if (Enum->isUnsigned())
+      Value = static_cast<uint32_t>(Enum->getValue().getZExtValue());
+    else
+      Value = static_cast<uint32_t>(Enum->getValue().getSExtValue());
+    BTFEnum.Val = Value;
     EnumValues.push_back(BTFEnum);
   }
 }

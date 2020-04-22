@@ -288,7 +288,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   if (LangTo.CPlusPlus11 != LangFrom.CPlusPlus11 ||
       LangTo.CPlusPlus14 != LangFrom.CPlusPlus14 ||
       LangTo.CPlusPlus17 != LangFrom.CPlusPlus17 ||
-      LangTo.CPlusPlus2a != LangFrom.CPlusPlus2a) {
+      LangTo.CPlusPlus20 != LangFrom.CPlusPlus20) {
     ++NumLangDialectMismatch;
     return llvm::make_error<IndexError>(
         index_error_code::lang_dialect_mismatch);

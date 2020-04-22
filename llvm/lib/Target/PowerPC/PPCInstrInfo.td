@@ -5068,8 +5068,11 @@ def RotateInsertByte1 {
   dag Left = (RLWIMI RotateInsertByte3.Left, Swap4.Bits, 8, 24, 31);
 }
 
-def : Pat<(i32 (bitreverse i32:$A)),
-  (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
+// Clear the upper half of the register when in 64-bit mode
+let Predicates = [In64BitMode] in
+def : Pat<(i32 (bitreverse i32:$A)), (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
+let Predicates = [In32BitMode] in
+def : Pat<(i32 (bitreverse i32:$A)), RotateInsertByte1.Left>;
 
 // Fast 64-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):

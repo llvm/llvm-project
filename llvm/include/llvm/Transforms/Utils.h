@@ -26,6 +26,12 @@ class Pass;
 ModulePass *createMetaRenamerPass();
 
 //===----------------------------------------------------------------------===//
+// createUniqueInternalLinkageNamesPass - Make internal linkage symbol names
+// unique.
+//
+ModulePass *createUniqueInternalLinkageNamesPass();
+
+//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.

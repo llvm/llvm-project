@@ -395,8 +395,6 @@ ProgramHeaders:
       - Section: .note.ABI-tag
       - Section: .note.gnu.build-id
       - Section: .gnu.hash
-      - Section: .dynsym
-      - Section: .dynstr
       - Section: .gnu.version
       - Section: .gnu.version_r
       - Section: .rela.dyn
@@ -409,6 +407,8 @@ ProgramHeaders:
       - Section: .rodata
       - Section: .eh_frame_hdr
       - Section: .eh_frame
+      - Section: .dynsym
+      - Section: .dynstr
 Symbols:
   - Name:            .interp
     Type:            STT_SECTION

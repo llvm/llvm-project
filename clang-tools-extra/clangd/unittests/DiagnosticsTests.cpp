@@ -33,6 +33,7 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Pair;
+using testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 ::testing::Matcher<const Diag &> WithFix(::testing::Matcher<Fix> FixMatcher) {
@@ -103,6 +104,7 @@ TEST(DiagnosticsTest, DiagnosticRanges) {
   // Check we report correct ranges, including various edge-cases.
   Annotations Test(R"cpp(
     // error-ok
+    #define ID(X) X
     namespace test{};
     void $decl[[foo]]();
     class T{$explicit[[]]$constructor[[T]](int a);};
@@ -115,6 +117,7 @@ o]]();
       struct Foo { int x; }; Foo a;
       a.$nomember[[y]];
       test::$nomembernamespace[[test]];
+      $macro[[ID($macroarg[[fod]])]]();
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
@@ -143,6 +146,10 @@ o]]();
           Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
           Diag(Test.range("nomembernamespace"),
                "no member named 'test' in namespace 'test'"),
+          AllOf(Diag(Test.range("macro"),
+                     "use of undeclared identifier 'fod'; did you mean 'foo'?"),
+                WithFix(Fix(Test.range("macroarg"), "foo",
+                            "change 'fod' to 'foo'"))),
           // We make sure here that the entire token is highlighted
           AllOf(Diag(Test.range("constructor"),
                      "single-argument constructors must be marked explicit to "
@@ -376,6 +383,47 @@ TEST(DiagnosticsTest, Preprocessor) {
   EXPECT_THAT(
       TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
+}
+
+// Recursive main-file include is diagnosed, and doesn't crash.
+TEST(DiagnosticsTest, RecursivePreamble) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include "foo.h" // error-ok
+    int symbol;
+  )cpp");
+  TU.Filename = "foo.h";
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(DiagName("pp_including_mainfile_in_preamble")));
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
+}
+
+// Recursive main-file include with #pragma once guard is OK.
+TEST(DiagnosticsTest, RecursivePreamblePragmaOnce) {
+  auto TU = TestTU::withCode(R"cpp(
+    #pragma once
+    #include "foo.h"
+    int symbol;
+  )cpp");
+  TU.Filename = "foo.h";
+  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
+}
+
+// Recursive main-file include with #ifndef guard should be OK.
+// However, it's not yet recognized (incomplete at end of preamble).
+TEST(DiagnosticsTest, RecursivePreambleIfndefGuard) {
+  auto TU = TestTU::withCode(R"cpp(
+    #ifndef FOO
+    #define FOO
+    #include "foo.h" // error-ok
+    int symbol;
+    #endif
+  )cpp");
+  TU.Filename = "foo.h";
+  // FIXME: should be no errors here.
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(DiagName("pp_including_mainfile_in_preamble")));
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
 }
 
 TEST(DiagnosticsTest, InsideMacros) {

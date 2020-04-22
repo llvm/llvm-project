@@ -2016,6 +2016,27 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     int ArgNum, CheckTy, ElementSizeInBits;
     std::tie(ArgNum, CheckTy, ElementSizeInBits) = I;
 
+    typedef bool(*OptionSetCheckFnTy)(int64_t Value);
+
+    // Function that checks whether the operand (ArgNum) is an immediate
+    // that is one of the predefined values.
+    auto CheckImmediateInSet = [&](OptionSetCheckFnTy CheckImm,
+                                   int ErrDiag) -> bool {
+      // We can't check the value of a dependent argument.
+      Expr *Arg = TheCall->getArg(ArgNum);
+      if (Arg->isTypeDependent() || Arg->isValueDependent())
+        return false;
+
+      // Check constant-ness first.
+      llvm::APSInt Imm;
+      if (SemaBuiltinConstantArg(TheCall, ArgNum, Imm))
+        return true;
+
+      if (!CheckImm(Imm.getSExtValue()))
+        return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
+      return false;
+    };
+
     switch ((SVETypeFlags::ImmCheckType)CheckTy) {
     case SVETypeFlags::ImmCheck0_31:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 31))
@@ -2023,6 +2044,57 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       break;
     case SVETypeFlags::ImmCheck1_16:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 16))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_7:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 7))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckExtract:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      (2048 / ElementSizeInBits) - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftRight:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, ElementSizeInBits))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftRightNarrow:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1,
+                                      ElementSizeInBits / 2))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckShiftLeft:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      ElementSizeInBits - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckLaneIndex:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      (128 / (1 * ElementSizeInBits)) - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckLaneIndexCompRotate:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      (128 / (2 * ElementSizeInBits)) - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckLaneIndexDot:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
+                                      (128 / (4 * ElementSizeInBits)) - 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckComplexRot90_270:
+      if (CheckImmediateInSet([](int64_t V) { return V == 90 || V == 270; },
+                              diag::err_rotation_argument_to_cadd))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheckComplexRotAll90:
+      if (CheckImmediateInSet(
+              [](int64_t V) {
+                return V == 0 || V == 90 || V == 180 || V == 270;
+              },
+              diag::err_rotation_argument_to_cmla))
         HasError = true;
       break;
     }

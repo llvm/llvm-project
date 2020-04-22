@@ -52,6 +52,8 @@ set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
+set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
+
 set(UBSAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl UBSAN_DYNAMIC_LIBS)
@@ -212,6 +214,11 @@ else()
                                       EXTRA ubsan.syms.extra)
         set(VERSION_SCRIPT_FLAG
             -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.ubsan_standalone-dynamic-${arch}.vers)
+        # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
+        # but requires a special option to enable it.
+        if (OS_NAME MATCHES "SunOS")
+            list(APPEND VERSION_SCRIPT_FLAG -Wl,-z,gnu-version-script-compat)
+        endif()
         set_property(SOURCE
           ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
           APPEND PROPERTY

@@ -9,14 +9,14 @@ module attributes {
 } {
   func @main(%arg0 : memref<10xf32>, %arg1 : i1) {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = "kernel_simple_selection", kernel_module = @kernels} : (index, index, index, index, index, index, memref<10xf32>, i1) -> ()
+    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = @kernels::@kernel_simple_selection} : (index, index, index, index, index, index, memref<10xf32>, i1) -> ()
     return
   }
 
   gpu.module @kernels {
     // CHECK-LABEL: @kernel_simple_selection
-    gpu.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1)
-    attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) kernel
+    attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       %value = constant 0.0 : f32
       %i = constant 0 : index
 
@@ -36,8 +36,8 @@ module attributes {
     }
 
     // CHECK-LABEL: @kernel_nested_selection
-    gpu.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1)
-    attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+    gpu.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) kernel
+    attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       %i = constant 0 : index
       %j = constant 9 : index
 

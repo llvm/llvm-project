@@ -422,7 +422,7 @@ LLVM-specific variables
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
-  and ``Address;Undefined``. Defaults to empty string.
+  ``DataFlow``, and ``Address;Undefined``. Defaults to empty string.
 
 **LLVM_ENABLE_LTO**:STRING
   Add ``-flto`` or ``-flto=`` flags to the compile and link command

@@ -24,7 +24,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
-#include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -110,11 +109,10 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
     b.setInsertionPointToStart(&block);
     for (unsigned i = 0, e = indexedGenericOp.getNumLoops(); i < e; ++i) {
       Value oldIndex = block.getArgument(i);
-      Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
-                                        loopRanges[i].offset);
-      replaceAllUsesExcept(
-          oldIndex, newIndex,
-          SmallPtrSet<Operation *, 1>{newIndex.getDefiningOp()});
+      AddIOp newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
+                                         loopRanges[i].offset);
+      oldIndex.replaceAllUsesExcept(newIndex,
+                                    SmallPtrSet<Operation *, 1>{newIndex});
     }
   }
   return clonedOp;

@@ -2048,7 +2048,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PLT, "ppc-plt"},
       {MO_PIC_FLAG, "ppc-pic"},
-      {MO_PCREL_FLAG, "ppc-pcrel"}};
+      {MO_PCREL_FLAG, "ppc-pcrel"},
+      {MO_GOT_FLAG, "ppc-got"}};
   return makeArrayRef(TargetFlags);
 }
 

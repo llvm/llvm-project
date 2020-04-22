@@ -1173,7 +1173,7 @@ bool InlineCostCallAnalyzer::isColdCallSite(CallBase &Call,
   // If global profile summary is available, then callsite's coldness is
   // determined based on that.
   if (PSI && PSI->hasProfileSummary())
-    return PSI->isColdCallSite(CallSite(&Call), CallerBFI);
+    return PSI->isColdCallSite(Call, CallerBFI);
 
   // Otherwise we need BFI to be available.
   if (!CallerBFI)
@@ -1197,8 +1197,7 @@ InlineCostCallAnalyzer::getHotCallSiteThreshold(CallBase &Call,
 
   // If global profile summary is available, then callsite's hotness is
   // determined based on that.
-  if (PSI && PSI->hasProfileSummary() &&
-      PSI->isHotCallSite(CallSite(&Call), CallerBFI))
+  if (PSI && PSI->hasProfileSummary() && PSI->isHotCallSite(Call, CallerBFI))
     return Params.HotCallSiteThreshold;
 
   // Otherwise we need BFI to be available and to have a locally hot callsite

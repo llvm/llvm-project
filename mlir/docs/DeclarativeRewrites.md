@@ -11,8 +11,8 @@ compiler build time.
 This manual explains in detail all of the available mechanisms for defining
 rewrite rules in such a declarative manner. It aims to be a specification
 instead of a tutorial. Please refer to
-[Quickstart tutorial to adding MLIR graph rewrite](QuickstartRewrites.md) for
-the latter.
+[Quickstart tutorial to adding MLIR graph
+rewrite](Tutorials/QuickstartRewrites.md) for the latter.
 
 Given that declarative rewrite rules depend on op definition specification, this
 manual assumes knowledge of the [ODS](OpDefinitions.md) doc.

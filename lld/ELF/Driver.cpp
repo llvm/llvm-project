@@ -609,9 +609,6 @@ static bool isOutputFormatBinary(opt::InputArgList &args) {
 }
 
 static DiscardPolicy getDiscard(opt::InputArgList &args) {
-  if (args.hasArg(OPT_relocatable))
-    return DiscardPolicy::None;
-
   auto *arg =
       args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
   if (!arg)
@@ -1146,6 +1143,14 @@ static void readConfigs(opt::InputArgList &args) {
       for (StringRef s : args::getLines(*buffer))
         config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {
+    StringRef pattern(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
+      config->warnBackrefsExclude.push_back(std::move(*pat));
+    else
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
   }
 
   // Parses -dynamic-list and -export-dynamic-symbol. They make some

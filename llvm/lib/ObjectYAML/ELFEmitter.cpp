@@ -753,6 +753,11 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
   for (auto &YamlPhdr : Doc.ProgramHeaders) {
     Elf_Phdr &PHeader = PHeaders[PhdrIdx++];
     std::vector<Fragment> Fragments = getPhdrFragments(YamlPhdr, SHeaders);
+    if (!llvm::is_sorted(Fragments, [](const Fragment &A, const Fragment &B) {
+          return A.Offset < B.Offset;
+        }))
+      reportError("sections in the program header with index " +
+                  Twine(PhdrIdx) + " are not sorted by their file offset");
 
     if (YamlPhdr.Offset) {
       PHeader.p_offset = *YamlPhdr.Offset;

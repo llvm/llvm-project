@@ -5,8 +5,8 @@ define zeroext i8 @t(double %x) nounwind readnone {
 ; CHECK-LABEL: t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpeqsd %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    andl $1, %eax
@@ -24,8 +24,8 @@ define zeroext i8 @u(double %x) nounwind readnone {
 ; CHECK-LABEL: u:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpneqsd %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    andl $1, %eax

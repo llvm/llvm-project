@@ -46,6 +46,7 @@
 #ifdef _LIBCXX_DYNAMIC_FALLBACK
 #include "abort_message.h"
 #include <sys/syslog.h>
+#include <atomic>
 #endif
 
 static inline
@@ -640,9 +641,12 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
         {
             // We get here only if there is some kind of visibility problem
             //   in client code.
-            syslog(LOG_ERR, "dynamic_cast error 1: Both of the following type_info's "
-                    "should have public visibility. At least one of them is hidden. %s"
-                    ", %s.\n", static_type->name(), dynamic_type->name());
+            static std::atomic<size_t> error_count(0);
+            size_t error_count_snapshot = error_count.fetch_add(1, std::memory_order_relaxed);
+            if ((error_count_snapshot & (error_count_snapshot-1)) == 0)
+                syslog(LOG_ERR, "dynamic_cast error 1: Both of the following type_info's "
+                        "should have public visibility. At least one of them is hidden. %s"
+                        ", %s.\n", static_type->name(), dynamic_type->name());
             // Redo the search comparing type_info's using strcmp
             info = {dst_type, static_ptr, static_type, src2dst_offset, 0};
             info.number_of_dst_type = 1;
@@ -663,11 +667,14 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
         if (info.path_dst_ptr_to_static_ptr == unknown &&
             info.path_dynamic_ptr_to_static_ptr == unknown)
         {
-            syslog(LOG_ERR, "dynamic_cast error 2: One or more of the following type_info's "
-                            "has hidden visibility or is defined in more than one translation "
-                            "unit. They should all have public visibility. "
-                            "%s, %s, %s.\n", static_type->name(), dynamic_type->name(),
-                    dst_type->name());
+            static std::atomic<size_t> error_count(0);
+            size_t error_count_snapshot = error_count.fetch_add(1, std::memory_order_relaxed);
+            if ((error_count_snapshot & (error_count_snapshot-1)) == 0)
+                syslog(LOG_ERR, "dynamic_cast error 2: One or more of the following type_info's "
+                                "has hidden visibility or is defined in more than one translation "
+                                "unit. They should all have public visibility. "
+                                "%s, %s, %s.\n", static_type->name(), dynamic_type->name(),
+                        dst_type->name());
             // Redo the search comparing type_info's using strcmp
             info = {dst_type, static_ptr, static_type, src2dst_offset, 0};
             dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, true);

@@ -21,15 +21,16 @@ add_llvm_library(MLIRTestDialect
 )
 target_link_libraries(MLIRTestDialect
   PUBLIC
+  LLVMSupport
   MLIRControlFlowInterfaces
+  MLIRDerivedAttributeOpInterface
   MLIRDialect
   MLIRIR
+  MLIRInferTypeOpInterface
   MLIRLinalgTransforms
   MLIRPass
   MLIRStandardOps
   MLIRStandardToStandard
-  MLIRTransforms
   MLIRTransformUtils
-  MLIRInferTypeOpInterface
-  LLVMSupport
+  MLIRTransforms
 )

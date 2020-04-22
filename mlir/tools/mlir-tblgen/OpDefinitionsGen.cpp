@@ -396,21 +396,66 @@ void OpEmitter::genAttrGetters() {
     }
   }
 
-  // Generate helper method to query whether a named attribute is a derived
-  // attribute. This enables, for example, avoiding adding an attribute that
-  // overlaps with a derived attribute.
-  auto derivedAttr = make_filter_range(op.getAttributes(),
-                                       [](const NamedAttribute &namedAttr) {
-                                         return namedAttr.attr.isDerivedAttr();
-                                       });
-  if (!derivedAttr.empty()) {
+  auto derivedAttrs = make_filter_range(op.getAttributes(),
+                                        [](const NamedAttribute &namedAttr) {
+                                          return namedAttr.attr.isDerivedAttr();
+                                        });
+  if (!derivedAttrs.empty()) {
     opClass.addTrait("DerivedAttributeOpInterface::Trait");
-    auto &method = opClass.newMethod("bool", "isDerivedAttribute",
-                                     "StringRef name", OpMethod::MP_Static);
-    auto &body = method.body();
-    for (auto namedAttr : derivedAttr)
-      body << "    if (name == \"" << namedAttr.name << "\") return true;\n";
-    body << " return false;";
+    // Generate helper method to query whether a named attribute is a derived
+    // attribute. This enables, for example, avoiding adding an attribute that
+    // overlaps with a derived attribute.
+    {
+      auto &method = opClass.newMethod("bool", "isDerivedAttribute",
+                                       "StringRef name", OpMethod::MP_Static);
+      auto &body = method.body();
+      for (auto namedAttr : derivedAttrs)
+        body << "  if (name == \"" << namedAttr.name << "\") return true;\n";
+      body << " return false;";
+    }
+    // Generate method to materialize derived attributes as a DictionaryAttr.
+    {
+      OpMethod &method =
+          opClass.newMethod("DictionaryAttr", "materializeDerivedAttributes");
+      auto &body = method.body();
+
+      auto nonMaterializable =
+          make_filter_range(derivedAttrs, [](const NamedAttribute &namedAttr) {
+            return namedAttr.attr.getConvertFromStorageCall().empty();
+          });
+      if (!nonMaterializable.empty()) {
+        std::string attrs;
+        llvm::raw_string_ostream os(attrs);
+        interleaveComma(nonMaterializable, os,
+                        [&](const NamedAttribute &attr) { os << attr.name; });
+        PrintWarning(
+            op.getLoc(),
+            formatv(
+                "op has non-materialzable derived attributes '{0}', skipping",
+                os.str()));
+        body << formatv("  emitOpError(\"op has non-materializable derived "
+                        "attributes '{0}'\");\n",
+                        attrs);
+        body << "  return nullptr;";
+        return;
+      }
+
+      body << "  MLIRContext* ctx = getContext();\n";
+      body << "  Builder odsBuilder(ctx); (void)odsBuilder;\n";
+      body << "  return DictionaryAttr::get({\n";
+      interleave(
+          derivedAttrs, body,
+          [&](const NamedAttribute &namedAttr) {
+            auto tmpl = namedAttr.attr.getConvertFromStorageCall();
+            body << "    {Identifier::get(\"" << namedAttr.name << "\", ctx),\n"
+                 << tgfmt(tmpl, &fctx.withSelf(namedAttr.name + "()")
+                                     .withBuilder("odsBuilder")
+                                     .addSubst("_ctx", "ctx"))
+                 << "}";
+          },
+          ",\n");
+      body << "\n    }, ctx);";
+    }
   }
 }
 
@@ -1115,16 +1160,14 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
     body << "  " << builderOpState
          << ".addAttribute(\"operand_segment_sizes\", "
             "odsBuilder->getI32VectorAttr({";
-    llvm::interleaveComma(
-        llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
-          if (op.getOperand(i).isOptional())
-            body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
-          else if (op.getOperand(i).isVariadic())
-            body << "static_cast<int32_t>(" << getArgumentName(op, i)
-                 << ".size())";
-          else
-            body << "1";
-        });
+    interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+      if (op.getOperand(i).isOptional())
+        body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
+      else if (op.getOperand(i).isVariadic())
+        body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
+      else
+        body << "1";
+    });
     body << "}));\n";
   }
 
@@ -1222,10 +1265,10 @@ void OpEmitter::genOpInterfaceMethods() {
         continue;
       std::string args;
       llvm::raw_string_ostream os(args);
-      llvm::interleaveComma(method.getArguments(), os,
-                            [&](const OpInterfaceMethod::Argument &arg) {
-                              os << arg.type << " " << arg.name;
-                            });
+      interleaveComma(method.getArguments(), os,
+                      [&](const OpInterfaceMethod::Argument &arg) {
+                        os << arg.type << " " << arg.name;
+                      });
       opClass.newMethod(method.getReturnType(), method.getName(), os.str(),
                         method.isStatic() ? OpMethod::MP_Static
                                           : OpMethod::MP_None,
@@ -1776,7 +1819,7 @@ static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
 static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
   IfDefScope scope("GET_OP_LIST", os);
 
-  llvm::interleave(
+  interleave(
       // TODO: We are constructing the Operator wrapper instance just for
       // getting it's qualified class name here. Reduce the overhead by having a
       // lightweight version of Operator class just for that purpose.

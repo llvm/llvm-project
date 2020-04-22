@@ -36,7 +36,9 @@ using namespace VE;
 #include "VEGenAsmWriter.inc"
 
 void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << '%' << StringRef(getRegisterName(RegNo)).lower();
+  // Generic registers have identical register name among register classes.
+  unsigned AltIdx = VE::AsmName;
+  OS << '%' << getRegisterName(RegNo, AltIdx);
 }
 
 void VEInstPrinter::printInst(const MCInst *MI, uint64_t Address,

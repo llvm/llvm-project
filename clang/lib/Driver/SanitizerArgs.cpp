@@ -56,8 +56,6 @@ static const SanitizerMask Unrecoverable =
     SanitizerKind::Unreachable | SanitizerKind::Return;
 static const SanitizerMask AlwaysRecoverable =
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress;
-static const SanitizerMask LegacyFsanitizeRecoverMask =
-    SanitizerKind::Undefined | SanitizerKind::Integer;
 static const SanitizerMask NeedsLTO = SanitizerKind::CFI;
 static const SanitizerMask TrappingSupported =
     (SanitizerKind::Undefined & ~SanitizerKind::Vptr) |
@@ -221,16 +219,6 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
       Arg->claim();
       TrapRemove |= expandSanitizerGroups(parseArgValues(D, Arg, true));
-    } else if (Arg->getOption().matches(
-                   options::OPT_fsanitize_undefined_trap_on_error)) {
-      Arg->claim();
-      TrappingKinds |=
-          expandSanitizerGroups(SanitizerKind::UndefinedGroup & ~TrapRemove) &
-          ~TrapRemove;
-    } else if (Arg->getOption().matches(
-                   options::OPT_fno_sanitize_undefined_trap_on_error)) {
-      Arg->claim();
-      TrapRemove |= expandSanitizerGroups(SanitizerKind::UndefinedGroup);
     }
   }
 
@@ -541,18 +529,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask DiagnosedUnrecoverableKinds;
   SanitizerMask DiagnosedAlwaysRecoverableKinds;
   for (const auto *Arg : Args) {
-    const char *DeprecatedReplacement = nullptr;
-    if (Arg->getOption().matches(options::OPT_fsanitize_recover)) {
-      DeprecatedReplacement =
-          "-fsanitize-recover=undefined,integer' or '-fsanitize-recover=all";
-      RecoverableKinds |= expandSanitizerGroups(LegacyFsanitizeRecoverMask);
-      Arg->claim();
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_recover)) {
-      DeprecatedReplacement = "-fno-sanitize-recover=undefined,integer' or "
-                              "'-fno-sanitize-recover=all";
-      RecoverableKinds &= ~expandSanitizerGroups(LegacyFsanitizeRecoverMask);
-      Arg->claim();
-    } else if (Arg->getOption().matches(options::OPT_fsanitize_recover_EQ)) {
+    if (Arg->getOption().matches(options::OPT_fsanitize_recover_EQ)) {
       SanitizerMask Add = parseArgValues(D, Arg, true);
       // Report error if user explicitly tries to recover from unrecoverable
       // sanitizer.
@@ -580,10 +557,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       }
       RecoverableKinds &= ~expandSanitizerGroups(Remove);
       Arg->claim();
-    }
-    if (DeprecatedReplacement) {
-      D.Diag(diag::warn_drv_deprecated_arg) << Arg->getAsString(Args)
-                                            << DeprecatedReplacement;
     }
   }
   RecoverableKinds &= Kinds;

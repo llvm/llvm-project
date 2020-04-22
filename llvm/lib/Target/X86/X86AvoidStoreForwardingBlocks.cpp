@@ -33,6 +33,7 @@
 // transformation done here is correct regardless to other memory accesses.
 //===----------------------------------------------------------------------===//
 
+#include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"

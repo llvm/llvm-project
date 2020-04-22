@@ -1282,13 +1282,13 @@ bool FileCheck::readCheckFile(
   PatternContext->createLineVariable();
 
   std::vector<Pattern> ImplicitNegativeChecks;
-  for (const auto &PatternString : Req.ImplicitCheckNot) {
+  for (StringRef PatternString : Req.ImplicitCheckNot) {
     // Create a buffer with fake command line content in order to display the
     // command line option responsible for the specific implicit CHECK-NOT.
     std::string Prefix = "-implicit-check-not='";
     std::string Suffix = "'";
     std::unique_ptr<MemoryBuffer> CmdLine = MemoryBuffer::getMemBufferCopy(
-        Prefix + PatternString + Suffix, "command line");
+        (Prefix + PatternString + Suffix).str(), "command line");
 
     StringRef PatternInBuffer =
         CmdLine->getBuffer().substr(Prefix.size(), PatternString.size());
@@ -1418,15 +1418,11 @@ bool FileCheck::readCheckFile(
       (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
     errs() << "error: no check strings found with prefix"
            << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
-    auto I = Req.CheckPrefixes.begin();
-    auto E = Req.CheckPrefixes.end();
-    if (I != E) {
-      errs() << "\'" << *I << ":'";
-      ++I;
+    for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
+      if (I != 0)
+        errs() << ", ";
+      errs() << "\'" << Req.CheckPrefixes[I] << ":'";
     }
-    for (; I != E; ++I)
-      errs() << ", \'" << *I << ":'";
-
     errs() << '\n';
     return true;
   }
@@ -1889,7 +1885,7 @@ bool FileCheck::ValidateCheckPrefixes() {
 
   for (StringRef Prefix : Req.CheckPrefixes) {
     // Reject empty prefixes.
-    if (Prefix == "")
+    if (Prefix.empty())
       return false;
 
     if (!PrefixSet.insert(Prefix).second)
@@ -1913,18 +1909,17 @@ Regex FileCheck::buildCheckPrefixRegex() {
   // We already validated the contents of CheckPrefixes so just concatenate
   // them as alternatives.
   SmallString<32> PrefixRegexStr;
-  for (StringRef Prefix : Req.CheckPrefixes) {
-    if (Prefix != Req.CheckPrefixes.front())
+  for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
+    if (I != 0)
       PrefixRegexStr.push_back('|');
-
-    PrefixRegexStr.append(Prefix);
+    PrefixRegexStr.append(Req.CheckPrefixes[I]);
   }
 
   return Regex(PrefixRegexStr);
 }
 
 Error FileCheckPatternContext::defineCmdlineVariables(
-    std::vector<std::string> &CmdlineDefines, SourceMgr &SM) {
+    ArrayRef<StringRef> CmdlineDefines, SourceMgr &SM) {
   assert(GlobalVariableTable.empty() && GlobalNumericVariableTable.empty() &&
          "Overriding defined variable with command-line variable definitions");
 

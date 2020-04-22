@@ -3150,20 +3150,15 @@ uint32_t ScriptInterpreterPythonImpl::GetFlagsForCommandObject(
   if (PyErr_Occurred())
     PyErr_Clear();
 
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
+  long long py_return = unwrapOrSetPythonException(
+      As<long long>(implementor.CallMethod(callee_name)));
 
   // if it fails, print the error but otherwise go on
   if (PyErr_Occurred()) {
     PyErr_Print();
     PyErr_Clear();
-  }
-
-  if (py_return.IsAllocated() && PythonInteger::Check(py_return.get())) {
-    PythonInteger int_value(PyRefType::Borrowed, py_return.get());
-    result = int_value.GetInteger();
+  } else {
+    result = py_return;
   }
 
   return result;

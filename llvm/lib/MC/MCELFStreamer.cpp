@@ -143,7 +143,7 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
     Section->setAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
-void MCELFStreamer::ChangeSection(MCSection *Section,
+void MCELFStreamer::changeSection(MCSection *Section,
                                   const MCExpr *Subsection) {
   MCSection *CurSection = getCurrentSectionOnly();
   if (CurSection && isBundleLocked())
@@ -491,9 +491,9 @@ void MCELFStreamer::finalizeCGProfile() {
   }
 }
 
-void MCELFStreamer::EmitInstToFragment(const MCInst &Inst,
+void MCELFStreamer::emitInstToFragment(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
-  this->MCObjectStreamer::EmitInstToFragment(Inst, STI);
+  this->MCObjectStreamer::emitInstToFragment(Inst, STI);
   MCRelaxableFragment &F = *cast<MCRelaxableFragment>(getCurrentFragment());
 
   for (unsigned i = 0, e = F.getFixups().size(); i != e; ++i)
@@ -509,7 +509,7 @@ static void CheckBundleSubtargets(const MCSubtargetInfo *OldSTI,
     report_fatal_error("A Bundle can only have one Subtarget.");
 }
 
-void MCELFStreamer::EmitInstToData(const MCInst &Inst,
+void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                    const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
   SmallVector<MCFixup, 4> Fixups;
@@ -665,15 +665,15 @@ void MCELFStreamer::emitBundleUnlock() {
     Sec.setBundleLockState(MCSection::NotBundleLocked);
 }
 
-void MCELFStreamer::FinishImpl() {
+void MCELFStreamer::finishImpl() {
   // Ensure the last section gets aligned if necessary.
   MCSection *CurSection = getCurrentSectionOnly();
   setSectionAlignmentForBundling(getAssembler(), CurSection);
 
   finalizeCGProfile();
-  EmitFrames(nullptr);
+  emitFrames(nullptr);
 
-  this->MCObjectStreamer::FinishImpl();
+  this->MCObjectStreamer::finishImpl();
 }
 
 void MCELFStreamer::emitThumbFunc(MCSymbol *Func) {

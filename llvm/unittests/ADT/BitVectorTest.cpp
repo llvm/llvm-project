@@ -1204,4 +1204,34 @@ TYPED_TEST(BitVectorTest, DenseSet) {
   EXPECT_EQ(true, Set.erase(A));
   EXPECT_EQ(0U, Set.size());
 }
+
+/// Test that capacity doesn't affect hashing.
+TYPED_TEST(BitVectorTest, DenseMapHashing) {
+  using DMI = DenseMapInfo<TypeParam>;
+  {
+    TypeParam A;
+    A.resize(200);
+    A.set(100);
+
+    TypeParam B;
+    B.resize(200);
+    B.set(100);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+  {
+    TypeParam A;
+    A.resize(20);
+    A.set(10);
+
+    TypeParam B;
+    B.resize(20);
+    B.set(10);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+}
+
 } // namespace

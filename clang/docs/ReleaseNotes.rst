@@ -110,6 +110,11 @@ Modified Compiler Flags
 - Duplicate qualifiers on asm statements (ex. `asm volatile volatile ("")`) no
   longer produces a warning via -Wduplicate-decl-specifier, but now an error
   (this matches GCC's behavior).
+- The deprecated argument ``-f[no-]sanitize-recover`` has changed to mean
+  ``-f[no-]sanitize-recover=all`` instead of
+  ``-f[no-]sanitize-recover=undefined,integer`` and is no longer deprecated.
+- The argument to ``-f[no-]sanitize-trap=...`` is now optional and defaults to
+  ``all``.
 
 New Pragmas in Clang
 --------------------

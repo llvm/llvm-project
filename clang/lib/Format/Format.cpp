@@ -2621,7 +2621,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
   LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
-  LangOpts.CPlusPlus2a = LexingStd >= FormatStyle::LS_Cpp20;
+  LangOpts.CPlusPlus20 = LexingStd >= FormatStyle::LS_Cpp20;
 
   LangOpts.LineComment = 1;
   bool AlternativeOperators = Style.isCpp();

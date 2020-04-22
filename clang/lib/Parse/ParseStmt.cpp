@@ -1922,7 +1922,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
                                : ForRangeInfo.ColonLoc,
-               getLangOpts().CPlusPlus2a
+               getLangOpts().CPlusPlus20
                    ? diag::warn_cxx17_compat_for_range_init_stmt
                    : diag::ext_for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()

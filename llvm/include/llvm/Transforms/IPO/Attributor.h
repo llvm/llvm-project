@@ -217,23 +217,6 @@ struct IRPosition {
     return IRPosition(const_cast<CallBase &>(CB), Kind(ArgNo));
   }
 
-  /// Create a position describing the function scope of \p ICS.
-  static const IRPosition callsite_function(ImmutableCallSite ICS) {
-    return IRPosition::callsite_function(cast<CallBase>(*ICS.getInstruction()));
-  }
-
-  /// Create a position describing the returned value of \p ICS.
-  static const IRPosition callsite_returned(ImmutableCallSite ICS) {
-    return IRPosition::callsite_returned(cast<CallBase>(*ICS.getInstruction()));
-  }
-
-  /// Create a position describing the argument of \p ICS at position \p ArgNo.
-  static const IRPosition callsite_argument(ImmutableCallSite ICS,
-                                            unsigned ArgNo) {
-    return IRPosition::callsite_argument(cast<CallBase>(*ICS.getInstruction()),
-                                         ArgNo);
-  }
-
   /// Create a position describing the argument of \p ACS at position \p ArgNo.
   static const IRPosition callsite_argument(AbstractCallSite ACS,
                                             unsigned ArgNo) {
@@ -418,9 +401,9 @@ struct IRPosition {
       return;
 
     AttributeList AttrList;
-    CallSite CS = CallSite(&getAnchorValue());
-    if (CS)
-      AttrList = CS.getAttributes();
+    auto *CB = dyn_cast<CallBase>(&getAnchorValue());
+    if (CB)
+      AttrList = CB->getAttributes();
     else
       AttrList = getAssociatedFunction()->getAttributes();
 
@@ -428,8 +411,8 @@ struct IRPosition {
     for (Attribute::AttrKind AK : AKs)
       AttrList = AttrList.removeAttribute(Ctx, getAttrIdx(), AK);
 
-    if (CS)
-      CS.setAttributes(AttrList);
+    if (CB)
+      CB->setAttributes(AttrList);
     else
       getAssociatedFunction()->setAttributes(AttrList);
   }
@@ -566,8 +549,8 @@ private:
 /// instance down in the abstract attributes.
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
-                   SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()),
+                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC)
+      : DL(M.getDataLayout()), Allocator(Allocator),
         Explorer(
             /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
             /* ExploreCFGBackward */ true,
@@ -584,20 +567,23 @@ struct InformationCache {
         AG(AG), CGSCC(CGSCC) {}
 
   ~InformationCache() {
-    DeleteContainerSeconds(FuncInfoMap);
+    // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
+    // the destructor manually.
+    for (auto &It : FuncInfoMap)
+      It.getSecond()->~FunctionInfo();
   }
 
+  /// A vector type to hold instructions.
+  using InstructionVectorTy = SmallVector<Instruction *, 8>;
+
   /// A map type from opcodes to instructions with this opcode.
-  using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
+  using OpcodeInstMapTy = DenseMap<unsigned, InstructionVectorTy *>;
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
   OpcodeInstMapTy &getOpcodeInstMapForFunction(const Function &F) {
     return getFunctionInfo(F).OpcodeInstMap;
   }
-
-  /// A vector type to hold instructions.
-  using InstructionVectorTy = SmallVector<Instruction *, 4>;
 
   /// Return the instructions in \p F that may read or write memory.
   InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
@@ -647,6 +633,8 @@ struct InformationCache {
 
 private:
   struct FunctionInfo {
+    ~FunctionInfo();
+
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
     OpcodeInstMapTy OpcodeInstMap;
@@ -669,7 +657,7 @@ private:
   FunctionInfo &getFunctionInfo(const Function &F) {
     FunctionInfo *&FI = FuncInfoMap[&F];
     if (!FI) {
-      FI = new FunctionInfo();
+      FI = new (Allocator) FunctionInfo();
       initializeInformationCache(F, *FI);
     }
     return *FI;
@@ -683,6 +671,9 @@ private:
 
   /// The datalayout used in the module.
   const DataLayout &DL;
+
+  /// The allocator used to allocate memory, e.g. for `FunctionInfo`s.
+  BumpPtrAllocator &Allocator;
 
   /// MustBeExecutedContextExplorer
   MustBeExecutedContextExplorer Explorer;
@@ -738,14 +729,12 @@ struct Attributor {
   /// \param InfoCache Cache to hold various information accessible for
   ///                  the abstract attributes.
   /// \param CGUpdater Helper to update an underlying call graph.
-  /// \param DepRecomputeInterval Number of iterations until the dependences
-  ///                             between abstract attributes are recomputed.
   /// \param Whitelist If not null, a set limiting the attribute opportunities.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
-             CallGraphUpdater &CGUpdater, unsigned DepRecomputeInterval,
+             CallGraphUpdater &CGUpdater,
              DenseSet<const char *> *Whitelist = nullptr)
-      : Functions(Functions), InfoCache(InfoCache), CGUpdater(CGUpdater),
-        DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
+      : Allocator(InfoCache.Allocator), Functions(Functions),
+        InfoCache(InfoCache), CGUpdater(CGUpdater), Whitelist(Whitelist) {}
 
   ~Attributor();
 
@@ -813,10 +802,13 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     const IRPosition &IRP = AA.getIRPosition();
-    auto &KindToAbstractAttributeMap = AAMap[IRP];
-    assert(!KindToAbstractAttributeMap.count(&AAType::ID) &&
-           "Attribute already in map!");
-    KindToAbstractAttributeMap[&AAType::ID] = &AA;
+    Kind2AAMapTy *&Kind2AA = AAMap[IRP];
+    if (!Kind2AA)
+      Kind2AA = new (Allocator) Kind2AAMapTy();
+
+    assert(!(*Kind2AA)[&AAType::ID] && "Attribute already in map!");
+    (*Kind2AA)[&AAType::ID] = &AA;
+
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -1117,7 +1109,7 @@ struct Attributor {
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
-  BumpPtrAllocator Allocator;
+  BumpPtrAllocator &Allocator;
 
 private:
   /// Check \p Pred on all call sites of \p Fn.
@@ -1195,18 +1187,19 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    auto KindToAbstractAttributeMapIt = AAMap.find(IRP);
-    if ( KindToAbstractAttributeMapIt == AAMap.end())
+    Kind2AAMapTy *Kind2AA = AAMap.lookup(IRP);
+    if (!Kind2AA)
       return nullptr;
-    if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMapIt->second.lookup(&AAType::ID))) {
-      // Do not register a dependence on an attribute with an invalid state.
-      if (TrackDependence && AA->getState().isValidState())
-        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
-                         DepClass);
-      return AA;
-    }
-    return nullptr;
+
+    AAType *AA = static_cast<AAType *>((*Kind2AA)[&AAType::ID]);
+    if (!AA)
+      return nullptr;
+
+    // Do not register a dependence on an attribute with an invalid state.
+    if (TrackDependence && AA->getState().isValidState())
+      recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
+                       DepClass);
+    return AA;
   }
 
   /// Apply all requested function signature rewrites
@@ -1225,9 +1218,9 @@ private:
   /// on the outer level, and the addresses of the static member (AAType::ID) on
   /// the inner level.
   ///{
-  using KindToAbstractAttributeMap =
+  using Kind2AAMapTy =
       SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
-  DenseMap<IRPosition, KindToAbstractAttributeMap> AAMap;
+  DenseMap<IRPosition, Kind2AAMapTy *> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
@@ -1241,8 +1234,14 @@ private:
     /// Set of abstract attributes which were used and which were necessarily
     /// required for any potential optimistic state.
     SetVector<AbstractAttribute *> RequiredAAs;
+
+    /// Clear the sets but keep the allocated storage as it is likely be resued.
+    void clear() {
+      OptionalAAs.clear();
+      RequiredAAs.clear();
+    }
   };
-  using QueryMapTy = MapVector<const AbstractAttribute *, QueryMapValueTy>;
+  using QueryMapTy = DenseMap<const AbstractAttribute *, QueryMapValueTy *>;
   QueryMapTy QueryMap;
   ///}
 
@@ -1265,10 +1264,6 @@ private:
 
   /// Set if the attribute currently updated did query a non-fix attribute.
   bool QueriedNonFixAA;
-
-  /// Number of iterations until the dependences between abstract attributes are
-  /// recomputed.
-  const unsigned DepRecomputeInterval;
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Whitelist;
@@ -1966,7 +1961,7 @@ Pass *createAttributorCGSCCLegacyPass();
 /// An abstract attribute for the returned values of a function.
 struct AAReturnedValues
     : public IRAttribute<Attribute::Returned, AbstractAttribute> {
-  AAReturnedValues(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return an assumed unique return value if a single candidate is found. If
   /// there cannot be one, return a nullptr. If it is not clear yet, return the
@@ -2006,7 +2001,7 @@ struct AAReturnedValues
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoUnwind(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoUnwind(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if nounwind is assumed.
   bool isAssumedNoUnwind() const { return getAssumed(); }
@@ -2024,7 +2019,7 @@ struct AANoUnwind
 struct AANoSync
     : public IRAttribute<Attribute::NoSync,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoSync(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
@@ -2043,7 +2038,7 @@ struct AANoSync
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANonNull(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -2062,7 +2057,7 @@ struct AANonNull
 struct AANoRecurse
     : public IRAttribute<Attribute::NoRecurse,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoRecurse(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoRecurse(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "norecurse" is assumed.
   bool isAssumedNoRecurse() const { return getAssumed(); }
@@ -2081,7 +2076,7 @@ struct AANoRecurse
 struct AAWillReturn
     : public IRAttribute<Attribute::WillReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AAWillReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAWillReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "willreturn" is assumed.
   bool isAssumedWillReturn() const { return getAssumed(); }
@@ -2100,7 +2095,7 @@ struct AAWillReturn
 struct AAUndefinedBehavior
     : public StateWrapper<BooleanState, AbstractAttribute>,
       public IRPosition {
-  AAUndefinedBehavior(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAUndefinedBehavior(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Return true if "undefined behavior" is assumed.
   bool isAssumedToCauseUB() const { return getAssumed(); }
@@ -2128,7 +2123,7 @@ struct AAUndefinedBehavior
 /// An abstract interface to determine reachability of point A to B.
 struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
                         public IRPosition {
-  AAReachability(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAReachability(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if 'From' instruction is assumed to reach, 'To' instruction.
   /// Users should provide two positions they are interested in, and the class
@@ -2160,7 +2155,7 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoAlias(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
@@ -2179,7 +2174,7 @@ struct AANoAlias
 struct AANoFree
     : public IRAttribute<Attribute::NoFree,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoFree(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -2198,7 +2193,7 @@ struct AANoFree
 struct AANoReturn
     : public IRAttribute<Attribute::NoReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  AANoReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if the underlying object is assumed to never return.
   bool isAssumedNoReturn() const { return getAssumed(); }
@@ -2216,7 +2211,7 @@ struct AANoReturn
 /// An abstract interface for liveness abstract attribute.
 struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
-  AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAIsDead(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
 protected:
   /// The query functions are protected such that other attributes need to go
@@ -2412,7 +2407,7 @@ protected:
 struct AADereferenceable
     : public IRAttribute<Attribute::Dereferenceable,
                          StateWrapper<DerefState, AbstractAttribute>> {
-  AADereferenceable(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const {
@@ -2456,7 +2451,7 @@ using AAAlignmentStateType =
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
                      StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
-  AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
   unsigned getAssumedAlign() const { return getAssumed(); }
@@ -2476,7 +2471,7 @@ struct AANoCapture
     : public IRAttribute<
           Attribute::NoCapture,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
-  AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// NO_CAPTURE is the best possible state, 0 the worst possible state.
@@ -2525,7 +2520,7 @@ struct AANoCapture
 /// An abstract interface for value simplify abstract attribute.
 struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
                          public IRPosition {
-  AAValueSimplify(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAValueSimplify(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; }
@@ -2545,7 +2540,7 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
 
 struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
                        public IRPosition {
-  AAHeapToStack(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAHeapToStack(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
   bool isAssumedHeapToStack() const { return getAssumed(); }
@@ -2575,7 +2570,7 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 /// one, and the values we need can be loaded (=dereferenceable).
 struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
                            public IRPosition {
-  AAPrivatizablePtr(const IRPosition &IRP) : IRPosition(IRP) {}
+  AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
@@ -2608,7 +2603,7 @@ struct AAMemoryBehavior
     : public IRAttribute<
           Attribute::ReadNone,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
-  AAMemoryBehavior(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// BEST_STATE is the best possible state, 0 the worst possible state.
@@ -2661,7 +2656,7 @@ struct AAMemoryLocation
           StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
   using MemoryLocationsKind = StateType::base_t;
 
-  AAMemoryLocation(const IRPosition &IRP) : IRAttribute(IRP) {}
+  AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Encoding of different locations that could be accessed by a memory
   /// access.
@@ -2815,7 +2810,7 @@ struct AAMemoryLocation
 struct AAValueConstantRange : public IntegerRangeState,
                               public AbstractAttribute,
                               public IRPosition {
-  AAValueConstantRange(const IRPosition &IRP)
+  AAValueConstantRange(const IRPosition &IRP, Attributor &A)
       : IntegerRangeState(IRP.getAssociatedType()->getIntegerBitWidth()),
         IRPosition(IRP) {}
 
@@ -2858,6 +2853,14 @@ struct AAValueConstantRange : public IntegerRangeState,
 
   /// Unique ID (due to the unique address)
   static const char ID;
+};
+
+/// Run options, used by the pass manager.
+enum AttributorRunOption {
+  NONE = 0,
+  MODULE = 1 << 0,
+  CGSCC = 1 << 1,
+  ALL = MODULE | CGSCC
 };
 
 } // end namespace llvm

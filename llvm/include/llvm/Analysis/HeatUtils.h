@@ -14,15 +14,13 @@
 #ifndef LLVM_ANALYSIS_HEATUTILS_H
 #define LLVM_ANALYSIS_HEATUTILS_H
 
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-
+#include <cstdint>
 #include <string>
 
 namespace llvm {
+
+class BlockFrequencyInfo;
+class Function;
 
 // Returns the maximum frequency of a BB in a function.
 uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI);

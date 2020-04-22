@@ -68,11 +68,6 @@ static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
 
-static cl::opt<unsigned> DepRecInterval(
-    "attributor-dependence-recompute-interval", cl::Hidden,
-    cl::desc("Number of iterations until dependences are recomputed."),
-    cl::init(4));
-
 static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
                                        cl::init(true), cl::Hidden);
 
@@ -228,7 +223,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   case IRPosition::IRP_CALL_SITE:
   case IRPosition::IRP_CALL_SITE_RETURNED:
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    Attrs = ImmutableCallSite(&IRP.getAnchorValue()).getAttributes();
+    Attrs = cast<CallBase>(IRP.getAnchorValue()).getAttributes();
     break;
   }
 
@@ -253,7 +248,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   case IRPosition::IRP_CALL_SITE:
   case IRPosition::IRP_CALL_SITE_RETURNED:
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    CallSite(&IRP.getAnchorValue()).setAttributes(Attrs);
+    cast<CallBase>(IRP.getAnchorValue()).setAttributes(Attrs);
     break;
   case IRPosition::IRP_INVALID:
   case IRPosition::IRP_FLOAT:
@@ -269,7 +264,7 @@ const IRPosition IRPosition::TombstoneKey(256);
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
-  ImmutableCallSite ICS(&IRP.getAnchorValue());
+  const auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue());
   switch (IRP.getPositionKind()) {
   case IRPosition::IRP_INVALID:
   case IRPosition::IRP_FLOAT:
@@ -280,41 +275,40 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     IRPositions.emplace_back(IRPosition::function(*IRP.getAnchorScope()));
     return;
   case IRPosition::IRP_CALL_SITE:
-    assert(ICS && "Expected call site!");
+    assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles())
-      if (const Function *Callee = ICS.getCalledFunction())
+    if (!CB->hasOperandBundles())
+      if (const Function *Callee = CB->getCalledFunction())
         IRPositions.emplace_back(IRPosition::function(*Callee));
     return;
   case IRPosition::IRP_CALL_SITE_RETURNED:
-    assert(ICS && "Expected call site!");
+    assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles()) {
-      if (const Function *Callee = ICS.getCalledFunction()) {
+    if (!CB->hasOperandBundles()) {
+      if (const Function *Callee = CB->getCalledFunction()) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
           if (Arg.hasReturnedAttr()) {
             IRPositions.emplace_back(
-                IRPosition::callsite_argument(ICS, Arg.getArgNo()));
+                IRPosition::callsite_argument(*CB, Arg.getArgNo()));
             IRPositions.emplace_back(
-                IRPosition::value(*ICS.getArgOperand(Arg.getArgNo())));
+                IRPosition::value(*CB->getArgOperand(Arg.getArgNo())));
             IRPositions.emplace_back(IRPosition::argument(Arg));
           }
       }
     }
-    IRPositions.emplace_back(
-        IRPosition::callsite_function(cast<CallBase>(*ICS.getInstruction())));
+    IRPositions.emplace_back(IRPosition::callsite_function(*CB));
     return;
   case IRPosition::IRP_CALL_SITE_ARGUMENT: {
     int ArgNo = IRP.getArgNo();
-    assert(ICS && ArgNo >= 0 && "Expected call site!");
+    assert(CB && ArgNo >= 0 && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!ICS.hasOperandBundles()) {
-      const Function *Callee = ICS.getCalledFunction();
+    if (!CB->hasOperandBundles()) {
+      const Function *Callee = CB->getCalledFunction();
       if (Callee && Callee->arg_size() > unsigned(ArgNo))
         IRPositions.emplace_back(IRPosition::argument(*Callee->getArg(ArgNo)));
       if (Callee)
@@ -369,8 +363,8 @@ bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
     return false;
 
   AttributeList AttrList;
-  if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
-    AttrList = ICS.getAttributes();
+  if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+    AttrList = CB->getAttributes();
   else
     AttrList = getAssociatedFunction()->getAttributes();
 
@@ -406,6 +400,7 @@ bool IRPosition::getAttrsFromAssumes(Attribute::AttrKind AK,
 }
 
 void IRPosition::verify() {
+#ifdef EXPENSIVE_CHECKS
   switch (KindOrArgNo) {
   default:
     assert(KindOrArgNo >= 0 && "Expected argument or call site argument!");
@@ -453,6 +448,7 @@ void IRPosition::verify() {
     assert(AnchorVal == &getAssociatedValue() && "Associated value mismatch!");
     break;
   }
+#endif
 }
 
 Optional<Constant *>
@@ -488,6 +484,16 @@ Attributor::~Attributor() {
   for (AbstractAttribute *AA : AllAbstractAttributes)
     AA->~AbstractAttribute();
 
+  // The Kind2AAMap objects are allocated via a BumpPtrAllocator, we call
+  // the destructor manually.
+  for (auto &It : AAMap)
+    It.getSecond()->~Kind2AAMapTy();
+
+  // The QueryMapValueTy objects are allocated via a BumpPtrAllocator, we call
+  // the destructor manually.
+  for (auto &It : QueryMap)
+    It.getSecond()->~QueryMapValueTy();
+
   for (auto &It : ArgumentReplacementMap)
     DeleteContainerPointers(It.second);
 }
@@ -510,12 +516,12 @@ bool Attributor::isAssumedDead(const Use &U,
     return isAssumedDead(IRPosition::value(*U.get()), QueryingAA, FnLivenessAA,
                          CheckBBLivenessOnly, DepClass);
 
-  if (CallSite CS = CallSite(UserI)) {
+  if (auto *CB = dyn_cast<CallBase>(UserI)) {
     // For call site argument uses we can check if the argument is
     // unused/dead.
-    if (CS.isArgOperand(&U)) {
+    if (CB->isArgOperand(&U)) {
       const IRPosition &CSArgPos =
-          IRPosition::callsite_argument(CS, CS.getArgumentNo(&U));
+          IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U));
       return isAssumedDead(CSArgPos, QueryingAA, FnLivenessAA,
                            CheckBBLivenessOnly, DepClass);
     }
@@ -823,7 +829,12 @@ static bool checkForAllInstructionsImpl(
     const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
     bool CheckBBLivenessOnly = false) {
   for (unsigned Opcode : Opcodes) {
-    for (Instruction *I : OpcodeInstMap[Opcode]) {
+    // Check if we have instructions with this opcode at all first.
+    auto *Insts = OpcodeInstMap.lookup(Opcode);
+    if (!Insts)
+      continue;
+
+    for (Instruction *I : *Insts) {
       // Skip dead instructions.
       if (A && A->isAssumedDead(IRPosition::value(*I), QueryingAA, LivenessAA,
                                 CheckBBLivenessOnly))
@@ -901,8 +912,6 @@ ChangeStatus Attributor::run() {
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
-  bool RecomputeDependences = false;
-
   do {
     // Remember the size to determine new attributes.
     size_t NumAAs = AllAbstractAttributes.size();
@@ -914,12 +923,17 @@ ChangeStatus Attributor::run() {
     // to run updates.
     for (unsigned u = 0; u < InvalidAAs.size(); ++u) {
       AbstractAttribute *InvalidAA = InvalidAAs[u];
-      auto &QuerriedAAs = QueryMap[InvalidAA];
+
+      // Check the dependences to fast track invalidation.
+      auto *QuerriedAAs = QueryMap.lookup(InvalidAA);
+      if (!QuerriedAAs)
+        continue;
+
       LLVM_DEBUG(dbgs() << "[Attributor] InvalidAA: " << *InvalidAA << " has "
-                        << QuerriedAAs.RequiredAAs.size() << "/"
-                        << QuerriedAAs.OptionalAAs.size()
+                        << QuerriedAAs->RequiredAAs.size() << "/"
+                        << QuerriedAAs->OptionalAAs.size()
                         << " required/optional dependences\n");
-      for (AbstractAttribute *DepOnInvalidAA : QuerriedAAs.RequiredAAs) {
+      for (AbstractAttribute *DepOnInvalidAA : QuerriedAAs->RequiredAAs) {
         AbstractState &DOIAAState = DepOnInvalidAA->getState();
         DOIAAState.indicatePessimisticFixpoint();
         ++NumAttributesFixedDueToRequiredDependences;
@@ -929,30 +943,21 @@ ChangeStatus Attributor::run() {
         else
           ChangedAAs.push_back(DepOnInvalidAA);
       }
-      if (!RecomputeDependences)
-        Worklist.insert(QuerriedAAs.OptionalAAs.begin(),
-                        QuerriedAAs.OptionalAAs.end());
-    }
-
-    // If dependences (=QueryMap) are recomputed we have to look at all abstract
-    // attributes again, regardless of what changed in the last iteration.
-    if (RecomputeDependences) {
-      LLVM_DEBUG(
-          dbgs() << "[Attributor] Run all AAs to recompute dependences\n");
-      QueryMap.clear();
-      ChangedAAs.clear();
-      Worklist.insert(AllAbstractAttributes.begin(),
-                      AllAbstractAttributes.end());
+      Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
+                      QuerriedAAs->OptionalAAs.end());
+      QuerriedAAs->clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
     for (AbstractAttribute *ChangedAA : ChangedAAs) {
-      auto &QuerriedAAs = QueryMap[ChangedAA];
-      Worklist.insert(QuerriedAAs.OptionalAAs.begin(),
-                      QuerriedAAs.OptionalAAs.end());
-      Worklist.insert(QuerriedAAs.RequiredAAs.begin(),
-                      QuerriedAAs.RequiredAAs.end());
+      if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
+        Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
+                        QuerriedAAs->OptionalAAs.end());
+        Worklist.insert(QuerriedAAs->RequiredAAs.begin(),
+                        QuerriedAAs->RequiredAAs.end());
+        QuerriedAAs->clear();
+      }
     }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
@@ -980,9 +985,6 @@ ChangeStatus Attributor::run() {
         }
       }
 
-    // Check if we recompute the dependences in the next iteration.
-    RecomputeDependences = (DepRecomputeInterval > 0 &&
-                            IterationCounter % DepRecomputeInterval == 0);
 
     // Add attributes to the changed set if they have been created in the last
     // iteration.
@@ -1021,11 +1023,14 @@ ChangeStatus Attributor::run() {
       NumAttributesTimedOut++;
     }
 
-    auto &QuerriedAAs = QueryMap[ChangedAA];
-    ChangedAAs.append(QuerriedAAs.OptionalAAs.begin(),
-                      QuerriedAAs.OptionalAAs.end());
-    ChangedAAs.append(QuerriedAAs.RequiredAAs.begin(),
-                      QuerriedAAs.RequiredAAs.end());
+    if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
+      ChangedAAs.append(QuerriedAAs->OptionalAAs.begin(),
+                        QuerriedAAs->OptionalAAs.end());
+      ChangedAAs.append(QuerriedAAs->RequiredAAs.begin(),
+                        QuerriedAAs->RequiredAAs.end());
+      // Release the memory early.
+      QuerriedAAs->clear();
+    }
   }
 
   LLVM_DEBUG({
@@ -1617,8 +1622,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     // Note: There are no concrete attributes now so this is initially empty.
     switch (I.getOpcode()) {
     default:
-      assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
-             "New call site/base instruction type needs to be known in the "
+      assert(!isa<CallBase>(&I) &&
+             "New call base instruction type needs to be known in the "
              "Attributor.");
       break;
     case Instruction::Call:
@@ -1649,8 +1654,12 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // The alignment of a pointer is interesting for stores.
       IsInterestingOpcode = true;
     }
-    if (IsInterestingOpcode)
-      FI.OpcodeInstMap[I.getOpcode()].push_back(&I);
+    if (IsInterestingOpcode) {
+      auto *&Insts = FI.OpcodeInstMap[I.getOpcode()];
+      if (!Insts)
+        Insts = new (Allocator) InstructionVectorTy();
+      Insts->push_back(&I);
+    }
     if (I.mayReadOrWriteMemory())
       FI.RWInsts.push_back(&I);
   }
@@ -1660,18 +1669,27 @@ void InformationCache::initializeInformationCache(const Function &CF,
     InlineableFunctions.insert(&F);
 }
 
+InformationCache::FunctionInfo::~FunctionInfo() {
+  // The instruction vectors are allocated using a BumpPtrAllocator, we need to
+  // manually destroy them.
+  for (auto &It : OpcodeInstMap)
+    It.getSecond()->~InstructionVectorTy();
+}
+
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {
   if (FromAA.getState().isAtFixpoint())
     return;
 
+  QueryMapValueTy *&DepAAs = QueryMap[&FromAA];
+  if (!DepAAs)
+    DepAAs = new (Allocator) QueryMapValueTy();
+
   if (DepClass == DepClassTy::REQUIRED)
-    QueryMap[&FromAA].RequiredAAs.insert(
-        const_cast<AbstractAttribute *>(&ToAA));
+    DepAAs->RequiredAAs.insert(const_cast<AbstractAttribute *>(&ToAA));
   else
-    QueryMap[&FromAA].OptionalAAs.insert(
-        const_cast<AbstractAttribute *>(&ToAA));
+    DepAAs->OptionalAAs.insert(const_cast<AbstractAttribute *>(&ToAA));
   QueriedNonFixAA = true;
 }
 
@@ -1687,8 +1705,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   InformationCache::FunctionInfo &FI = InfoCache.getFunctionInfo(F);
   if (!isModulePass() && !FI.CalledViaMustTail) {
     for (const Use &U : F.uses())
-      if (ImmutableCallSite ICS = ImmutableCallSite(U.getUser()))
-        if (ICS.isCallee(&U) && ICS.isMustTailCall())
+      if (const auto *CB = dyn_cast<CallBase>(U.getUser()))
+        if (CB->isCallee(&U) && CB->isMustTailCall())
           FI.CalledViaMustTail = true;
   }
 
@@ -1800,14 +1818,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   }
 
   auto CallSitePred = [&](Instruction &I) -> bool {
-    CallSite CS(&I);
-    IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+    auto *CB = dyn_cast<CallBase>(&I);
+    IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
 
     // Call sites might be dead if they do not have side effects and no live
     // users. The return value might be dead if there are no live users.
-    getOrCreateAAFor<AAIsDead>(CSRetPos);
+    getOrCreateAAFor<AAIsDead>(CBRetPos);
 
-    Function *Callee = CS.getCalledFunction();
+    Function *Callee = CB->getCalledFunction();
     // TODO: Even if the callee is not known now we might be able to simplify
     //       the call/callee.
     if (!Callee)
@@ -1819,46 +1837,46 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         !Callee->hasMetadata(LLVMContext::MD_callback))
       return true;
 
-    if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
+    if (!Callee->getReturnType()->isVoidTy() && !CB->use_empty()) {
 
-      IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+      IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
 
       // Call site return integer values might be limited by a constant range.
       if (Callee->getReturnType()->isIntegerTy())
-        getOrCreateAAFor<AAValueConstantRange>(CSRetPos);
+        getOrCreateAAFor<AAValueConstantRange>(CBRetPos);
     }
 
-    for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
+    for (int I = 0, E = CB->getNumArgOperands(); I < E; ++I) {
 
-      IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
+      IRPosition CBArgPos = IRPosition::callsite_argument(*CB, I);
 
       // Every call site argument might be dead.
-      getOrCreateAAFor<AAIsDead>(CSArgPos);
+      getOrCreateAAFor<AAIsDead>(CBArgPos);
 
       // Call site argument might be simplified.
-      getOrCreateAAFor<AAValueSimplify>(CSArgPos);
+      getOrCreateAAFor<AAValueSimplify>(CBArgPos);
 
-      if (!CS.getArgument(i)->getType()->isPointerTy())
+      if (!CB->getArgOperand(I)->getType()->isPointerTy())
         continue;
 
       // Call site argument attribute "non-null".
-      getOrCreateAAFor<AANonNull>(CSArgPos);
+      getOrCreateAAFor<AANonNull>(CBArgPos);
 
       // Call site argument attribute "no-alias".
-      getOrCreateAAFor<AANoAlias>(CSArgPos);
+      getOrCreateAAFor<AANoAlias>(CBArgPos);
 
       // Call site argument attribute "dereferenceable".
-      getOrCreateAAFor<AADereferenceable>(CSArgPos);
+      getOrCreateAAFor<AADereferenceable>(CBArgPos);
 
       // Call site argument attribute "align".
-      getOrCreateAAFor<AAAlign>(CSArgPos);
+      getOrCreateAAFor<AAAlign>(CBArgPos);
 
       // Call site argument attribute
       // "readnone/readonly/writeonly/..."
-      getOrCreateAAFor<AAMemoryBehavior>(CSArgPos);
+      getOrCreateAAFor<AAMemoryBehavior>(CBArgPos);
 
       // Call site argument attribute "nofree".
-      getOrCreateAAFor<AANoFree>(CSArgPos);
+      getOrCreateAAFor<AANoFree>(CBArgPos);
     }
     return true;
   };
@@ -1964,7 +1982,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  Attributor A(Functions, InfoCache, CGUpdater, DepRecInterval);
+  Attributor A(Functions, InfoCache, CGUpdater);
 
   // Create shallow wrappers for all functions that are not IPO amendable
   if (AllowShallowWrappers)
@@ -1983,9 +2001,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     // do it eagerly.
     if (F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
-            ImmutableCallSite ICS(U.getUser());
-            return ICS && ICS.isCallee(&U) &&
-                   Functions.count(const_cast<Function *>(ICS.getCaller()));
+            const auto *CB = dyn_cast<CallBase>(U.getUser());
+            return CB && CB->isCallee(&U) &&
+                   Functions.count(const_cast<Function *>(CB->getCaller()));
           }))
         continue;
     }
@@ -2011,7 +2029,8 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
-  InformationCache InfoCache(M, AG, /* CGSCC */ nullptr);
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -2037,7 +2056,8 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   Module &M = *Functions.back()->getParent();
   CallGraphUpdater CGUpdater;
   CGUpdater.initialize(CG, C, AM, UR);
-  InformationCache InfoCache(M, AG, /* CGSCC */ &Functions);
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -2064,7 +2084,8 @@ struct AttributorLegacyPass : public ModulePass {
       Functions.insert(&F);
 
     CallGraphUpdater CGUpdater;
-    InformationCache InfoCache(M, AG, /* CGSCC */ nullptr);
+    BumpPtrAllocator Allocator;
+    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
   }
 
@@ -2099,7 +2120,8 @@ struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
     CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
     CGUpdater.initialize(CG, SCC);
     Module &M = *Functions.back()->getParent();
-    InformationCache InfoCache(M, AG, /* CGSCC */ &Functions);
+    BumpPtrAllocator Allocator;
+    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
   }
 

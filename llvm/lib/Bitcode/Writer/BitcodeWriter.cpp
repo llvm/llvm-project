@@ -1529,12 +1529,32 @@ void ModuleBitcodeWriter::writeDISubrange(const DISubrange *N,
   Record.clear();
 }
 
+static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
+  if ((int64_t)V >= 0)
+    Vals.push_back(V << 1);
+  else
+    Vals.push_back((-V << 1) | 1);
+}
+
+static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
+  // We have an arbitrary precision integer value to write whose
+  // bit width is > 64. However, in canonical unsigned integer
+  // format it is likely that the high bits are going to be zero.
+  // So, we only write the number of active words.
+  unsigned NumWords = A.getActiveWords();
+  const uint64_t *RawData = A.getRawData();
+  for (unsigned i = 0; i < NumWords; i++)
+    emitSignedInt64(Vals, RawData[i]);
+}
+
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
-  Record.push_back((N->isUnsigned() << 1) | N->isDistinct());
-  Record.push_back(rotateSign(N->getValue()));
+  const uint64_t IsBigInt = 1 << 2;
+  Record.push_back(IsBigInt | (N->isUnsigned() << 1) | N->isDistinct());
+  Record.push_back(N->getValue().getBitWidth());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  emitWideAPInt(Record, N->getValue());
 
   Stream.EmitRecord(bitc::METADATA_ENUMERATOR, Record, Abbrev);
   Record.clear();
@@ -2269,13 +2289,6 @@ void ModuleBitcodeWriter::writeSyncScopeNames() {
   Stream.ExitBlock();
 }
 
-static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
-  if ((int64_t)V >= 0)
-    Vals.push_back(V << 1);
-  else
-    Vals.push_back((-V << 1) | 1);
-}
-
 void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                                          bool isGlobal) {
   if (FirstVal == LastVal) return;
@@ -2362,15 +2375,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_INTEGER;
         AbbrevToUse = CONSTANTS_INTEGER_ABBREV;
       } else {                             // Wide integers, > 64 bits in size.
-        // We have an arbitrary precision integer value to write whose
-        // bit width is > 64. However, in canonical unsigned integer
-        // format it is likely that the high bits are going to be zero.
-        // So, we only write the number of active words.
-        unsigned NWords = IV->getValue().getActiveWords();
-        const uint64_t *RawWords = IV->getValue().getRawData();
-        for (unsigned i = 0; i != NWords; ++i) {
-          emitSignedInt64(Record, RawWords[i]);
-        }
+        emitWideAPInt(Record, IV->getValue());
         Code = bitc::CST_CODE_WIDE_INTEGER;
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {

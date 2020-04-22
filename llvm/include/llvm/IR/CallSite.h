@@ -798,10 +798,11 @@ public:
   /// as well as the callee of the abstract call site.
   AbstractCallSite(const Use *U);
 
-  /// Add operand uses of \p ICS that represent callback uses into \p CBUses.
+  /// Add operand uses of \p CB that represent callback uses into
+  /// \p CallbackUses.
   ///
-  /// All uses added to \p CBUses can be used to create abstract call sites for
-  /// which AbstractCallSite::isCallbackCall() will return true.
+  /// All uses added to \p CallbackUses can be used to create abstract call
+  /// sites for which AbstractCallSite::isCallbackCall() will return true.
   static void getCallbackUses(const CallBase &CB,
                               SmallVectorImpl<const Use *> &CallbackUses);
 

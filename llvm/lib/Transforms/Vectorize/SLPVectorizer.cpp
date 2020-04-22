@@ -1400,7 +1400,8 @@ private:
 
   /// \returns the scalarization cost for this type. Scalarization in this
   /// context means the creation of vectors from a group of scalars.
-  int getGatherCost(Type *Ty, const DenseSet<unsigned> &ShuffledIndices) const;
+  int getGatherCost(VectorType *Ty,
+                    const DenseSet<unsigned> &ShuffledIndices) const;
 
   /// \returns the scalarization cost for this list of values. Assuming that
   /// this subtree gets vectorized, we may need to extract the values from the
@@ -3871,10 +3872,10 @@ int BoUpSLP::getTreeCost() {
   return Cost;
 }
 
-int BoUpSLP::getGatherCost(Type *Ty,
+int BoUpSLP::getGatherCost(VectorType *Ty,
                            const DenseSet<unsigned> &ShuffledIndices) const {
   int Cost = 0;
-  for (unsigned i = 0, e = cast<VectorType>(Ty)->getNumElements(); i < e; ++i)
+  for (unsigned i = 0, e = Ty->getNumElements(); i < e; ++i)
     if (!ShuffledIndices.count(i))
       Cost += TTI->getVectorInstrCost(Instruction::InsertElement, Ty, i);
   if (!ShuffledIndices.empty())
@@ -4079,7 +4080,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
 }
 
 static void inversePermutation(ArrayRef<unsigned> Indices,
-                               SmallVectorImpl<unsigned> &Mask) {
+                               SmallVectorImpl<int> &Mask) {
   Mask.clear();
   const unsigned E = Indices.size();
   Mask.resize(E);
@@ -4161,7 +4162,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::ExtractElement: {
       Value *V = E->getSingleOperand(0);
       if (!E->ReorderIndices.empty()) {
-        OrdersType Mask;
+        SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
         Builder.SetInsertPoint(VL0);
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy), Mask,
@@ -4186,7 +4187,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
       if (!E->ReorderIndices.empty()) {
-        OrdersType Mask;
+        SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
         NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy), Mask,
                                            "reorder_shuffle");
@@ -4375,7 +4376,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       LI = Builder.CreateAlignedLoad(VecTy, VecPtr, Alignment);
       Value *V = propagateMetadata(LI, E->Scalars);
       if (IsReorder) {
-        OrdersType Mask;
+        SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
         V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
                                         Mask, "reorder_shuffle");
@@ -4400,10 +4401,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       Value *VecValue = vectorizeTree(E->getOperand(0));
       if (IsReorder) {
-        OrdersType Mask;
-        inversePermutation(E->ReorderIndices, Mask);
+        SmallVector<int, 4> Mask(E->ReorderIndices.begin(),
+                                 E->ReorderIndices.end());
         VecValue = Builder.CreateShuffleVector(
-            VecValue, UndefValue::get(VecValue->getType()), E->ReorderIndices,
+            VecValue, UndefValue::get(VecValue->getType()), Mask,
             "reorder_shuffle");
       }
       Value *ScalarPtr = SI->getPointerOperand();
@@ -6890,7 +6891,7 @@ private:
   int getReductionCost(TargetTransformInfo *TTI, Value *FirstReducedVal,
                        unsigned ReduxWidth) {
     Type *ScalarTy = FirstReducedVal->getType();
-    Type *VecTy = VectorType::get(ScalarTy, ReduxWidth);
+    VectorType *VecTy = VectorType::get(ScalarTy, ReduxWidth);
 
     int PairwiseRdxCost;
     int SplittingRdxCost;
@@ -6907,7 +6908,7 @@ private:
     case RK_Max:
     case RK_UMin:
     case RK_UMax: {
-      Type *VecCondTy = CmpInst::makeCmpResultType(VecTy);
+      auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
       bool IsUnsigned = ReductionData.getKind() == RK_UMin ||
                         ReductionData.getKind() == RK_UMax;
       PairwiseRdxCost =

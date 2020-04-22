@@ -258,6 +258,56 @@ class Refs : public Command {
   }
 };
 
+class Export : public Command {
+  llvm::cl::opt<IndexFileFormat> Format{
+      "format",
+      llvm::cl::desc("Format of index export"),
+      llvm::cl::values(
+          clEnumValN(IndexFileFormat::YAML, "yaml",
+                     "human-readable YAML format"),
+          clEnumValN(IndexFileFormat::RIFF, "binary", "binary RIFF format")),
+      llvm::cl::init(IndexFileFormat::YAML),
+  };
+  llvm::cl::opt<std::string> OutputFile{
+      "output-file",
+      llvm::cl::Positional,
+      llvm::cl::Required,
+      llvm::cl::desc("Output file for export"),
+  };
+
+public:
+  void run() {
+    using namespace clang::clangd;
+    // Read input file (as specified in global option)
+    auto Buffer = llvm::MemoryBuffer::getFile(IndexPath);
+    if (!Buffer) {
+      llvm::errs() << llvm::formatv("Can't open {0}", IndexPath) << "\n";
+      return;
+    }
+
+    // Auto-detects input format when parsing
+    auto IndexIn = clang::clangd::readIndexFile(Buffer->get()->getBuffer());
+    if (!IndexIn) {
+      llvm::errs() << llvm::toString(IndexIn.takeError()) << "\n";
+      return;
+    }
+
+    // Prepare output file
+    std::error_code EC;
+    llvm::raw_fd_ostream OutputStream(OutputFile, EC);
+    if (EC) {
+      llvm::errs() << llvm::formatv("Can't open {0} for writing", OutputFile)
+                   << "\n";
+      return;
+    }
+
+    // Export
+    clang::clangd::IndexFileOut IndexOut(IndexIn.get());
+    IndexOut.Format = Format;
+    OutputStream << IndexOut;
+  }
+};
+
 struct {
   const char *Name;
   const char *Description;
@@ -268,6 +318,7 @@ struct {
      std::make_unique<Lookup>},
     {"refs", "Find references by ID or qualified name",
      std::make_unique<Refs>},
+    {"export", "Export index", std::make_unique<Export>},
 };
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {

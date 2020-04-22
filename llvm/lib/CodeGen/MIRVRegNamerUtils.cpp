@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MIRVRegNamerUtils.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;

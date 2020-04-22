@@ -164,7 +164,8 @@ public:
 
   int getMemcpyCost(const Instruction *I);
 
-  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
+                     VectorType *SubTp);
 
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;

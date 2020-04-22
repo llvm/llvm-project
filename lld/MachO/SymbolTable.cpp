@@ -59,4 +59,14 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return s;
 }
 
+Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name);
+
+  if (wasInserted)
+    replaceSymbol<DylibSymbol>(s, file, name);
+  return s;
+}
+
 SymbolTable *macho::symtab;

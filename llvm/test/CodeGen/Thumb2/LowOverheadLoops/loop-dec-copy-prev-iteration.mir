@@ -410,7 +410,7 @@ body:             |
 
   bb.5.bb28:
     successors: %bb.5(0x7c000000), %bb.6(0x04000000)
-    liveins: $r0, $r1, $r2, $r3, $r8, $r12, $lr
+    liveins: $r0, $r1, $r2, $r3, $r8, $lr
 
     renamable $r5 = tLDRr renamable $r1, $r3, 14, $noreg :: (load 4 from %ir.scevgep617)
     renamable $r7, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14, $noreg

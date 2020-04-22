@@ -19,7 +19,6 @@
 namespace llvm {
   class Value;
   class DataLayout;
-  class TargetLibraryInfo;
   class IRBuilderBase;
 
   /// Analyze the name and prototype of the given function and set any

@@ -58,7 +58,7 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
          isa<ConstantInt>(Ext1->getOperand(1)) &&
          "Expected constant extract indexes");
   Type *ScalarTy = Ext0->getType();
-  Type *VecTy = Ext0->getOperand(0)->getType();
+  auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
   int ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
@@ -259,9 +259,9 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
   return true;
 }
 
-/// If this is a bitcast to narrow elements from a shuffle of wider elements,
-/// try to bitcast the source vector to the narrow type followed by shuffle.
-/// This can enable further transforms by moving bitcasts or shuffles together.
+/// If this is a bitcast of a shuffle, try to bitcast the source vector to the
+/// destination type followed by shuffle. This can enable further transforms by
+/// moving bitcasts or shuffles together.
 static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
   Value *V;
   ArrayRef<int> Mask;
@@ -269,15 +269,11 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
                                                     m_Mask(Mask))))))
     return false;
 
+  // Disallow non-vector casts and length-changing shuffles.
+  // TODO: We could allow any shuffle.
   auto *DestTy = dyn_cast<VectorType>(I.getType());
   auto *SrcTy = cast<VectorType>(V->getType());
   if (!DestTy || I.getOperand(0)->getType() != SrcTy)
-    return false;
-
-  // TODO: Handle bitcast from narrow element type to wide element type.
-  unsigned DestNumElts = DestTy->getNumElements();
-  unsigned SrcNumElts = SrcTy->getNumElements();
-  if (SrcNumElts > DestNumElts)
     return false;
 
   // The new shuffle must not cost more than the old shuffle. The bitcast is
@@ -286,15 +282,26 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy))
     return false;
 
-  // Bitcast the source vector and expand the shuffle mask to the equivalent for
-  // narrow elements.
+  unsigned DestNumElts = DestTy->getNumElements();
+  unsigned SrcNumElts = SrcTy->getNumElements();
+  SmallVector<int, 16> NewMask;
+  if (SrcNumElts <= DestNumElts) {
+    // The bitcast is from wide to narrow/equal elements. The shuffle mask can
+    // always be expanded to the equivalent form choosing narrower elements.
+    assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = DestNumElts / SrcNumElts;
+    narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
+  } else {
+    // The bitcast is from narrow elements to wide elements. The shuffle mask
+    // must choose consecutive elements to allow casting first.
+    assert(SrcNumElts % DestNumElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = SrcNumElts / DestNumElts;
+    if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
+      return false;
+  }
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   IRBuilder<> Builder(&I);
   Value *CastV = Builder.CreateBitCast(V, DestTy);
-  SmallVector<int, 16> NewMask;
-  assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
-  unsigned ScaleFactor = DestNumElts / SrcNumElts;
-  narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   Value *Shuf = Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy),
                                             NewMask);
   I.replaceAllUsesWith(Shuf);

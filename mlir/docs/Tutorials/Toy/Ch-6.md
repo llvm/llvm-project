@@ -239,8 +239,8 @@ define void @main()
 }
 ```
 
-The full code listing for dumping LLVM IR can be found in `Ch6/toy.cpp` in the
-`dumpLLVMIR()` function:
+The full code listing for dumping LLVM IR can be found in 
+`examples/toy/Ch6/toy.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
 
@@ -315,8 +315,11 @@ $ echo 'def main() { print([[1, 2], [3, 4]]); }' | ./bin/toyc-ch6 -emit=jit
 
 You can also play with `-emit=mlir`, `-emit=mlir-affine`, `-emit=mlir-llvm`, and
 `-emit=llvm` to compare the various levels of IR involved. Also try options like
-[`--print-ir-after-all`](../../WritingAPass.md#ir-printing) to track the
+[`--print-ir-after-all`](../../PassManagement.md#ir-printing) to track the
 evolution of the IR throughout the pipeline.
+
+The example code used throughout this section can be found in 
+test/Examples/Toy/Ch6/llvm-lowering.mlir.
 
 So far, we have worked with primitive data types. In the
 [next chapter](Ch-7.md), we will add a composite `struct` type.

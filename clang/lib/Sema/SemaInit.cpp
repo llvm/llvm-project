@@ -5625,7 +5625,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       if (S.CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
                                               DestType, Initializer->getType(),
                                               Initializer) ||
-          S.ConversionToObjCStringLiteralCheck(DestType, Initializer))
+          S.CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
     if (!isa<InitListExpr>(Initializer))
@@ -8782,7 +8782,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   case FK_UTF8StringIntoPlainChar:
     S.Diag(Kind.getLocation(),
            diag::err_array_init_utf8_string_into_char)
-      << S.getLangOpts().CPlusPlus2a;
+      << S.getLangOpts().CPlusPlus20;
     break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:

@@ -215,6 +215,7 @@ def DerivedTypeAttrOp : NS_Op<"derived_type_attr_op", []> {
 // DEF:   if (name == "element_dtype") return true;
 // DEF:   return false;
 // DEF: }
+// DEF: DerivedTypeAttrOp::materializeDerivedAttributes
 
 // Test that only default valued attributes at the end of the arguments
 // list get default values in the builder signature

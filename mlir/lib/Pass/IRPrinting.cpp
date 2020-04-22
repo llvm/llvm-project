@@ -141,7 +141,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     beforePassFingerPrints.try_emplace(pass, op);
 
   config->printBeforeIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump Before {0} ***", pass->getName());
+    out << formatv("// *** IR Dump Before {0} ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
@@ -165,7 +165,7 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   }
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump After {0} ***", pass->getName());
+    out << formatv("// *** IR Dump After {0} ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
@@ -178,7 +178,7 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
     beforePassFingerPrints.erase(pass);
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump After {0} Failed ***", pass->getName());
+    out << formatv("// *** IR Dump After {0} Failed ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out,
             OpPrintingFlags().printGenericOpForm());
     out << "\n\n";

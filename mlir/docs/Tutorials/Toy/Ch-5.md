@@ -39,7 +39,7 @@ framework, we need to provide two things (and an optional third):
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)
 
-    -   This is the set of [patterns](../../QuickstartRewrites.md) used to
+    -   This is the set of [patterns](../QuickstartRewrites.md) used to
         convert *illegal* operations into a set of zero or more *legal* ones.
 
 *   Optionally, a [Type Converter](../../DialectConversion.md#type-conversion).
@@ -86,7 +86,7 @@ After the conversion target has been defined, we can define how to convert the
 *illegal* operations into *legal* ones. Similarly to the canonicalization
 framework introduced in [chapter 3](Ch-3.md), the
 [`DialectConversion` framework](../../DialectConversion.md) also uses
-[RewritePatterns](../../QuickstartRewrites.md) to perform the conversion logic.
+[RewritePatterns](../QuickstartRewrites.md) to perform the conversion logic.
 These patterns may be the `RewritePatterns` seen before or a new type of pattern
 specific to the conversion framework `ConversionPattern`. `ConversionPatterns`
 are different from traditional `RewritePatterns` in that they accept an
@@ -222,7 +222,7 @@ def PrintOp : Toy_Op<"print"> {
 
 ## Complete Toy Example
 
-Looking back at our current working example:
+Let's take a concrete example:
 
 ```mlir
 func @main() {
@@ -336,8 +336,8 @@ func @main() {
 
 Here, we can see that a redundant allocation was removed, the two loop nests
 were fused, and some unnecessary `load`s were removed. You can build `toyc-ch5`
-and try yourself: `toyc-ch5 test/lowering.toy -emit=mlir-affine`. We can also
-check our optimizations by adding `-opt`.
+and try yourself: `toyc-ch5 test/Examples/Toy/Ch5/affine-lowering.mlir 
+-emit=mlir-affine`. We can also check our optimizations by adding `-opt`.
 
 In this chapter we explored some aspects of partial lowering, with the intent to
 optimize. In the [next chapter](Ch-6.md) we will continue the discussion about

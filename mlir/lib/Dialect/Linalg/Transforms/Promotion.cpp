@@ -65,16 +65,21 @@ static Value extractSmallestConstantBoundingSize(OpBuilder &b, Location loc,
 }
 
 static Value allocBuffer(Type elementType, Value size, bool dynamicBuffers,
-                         OperationFolder *folder) {
+                         OperationFolder *folder, int64_t alignment = 0) {
   auto *ctx = size.getContext();
   auto width = llvm::divideCeil(elementType.getIntOrFloatBitWidth(), 8);
+  IntegerAttr alignment_attr;
+  if (alignment)
+    alignment_attr = IntegerAttr::get(IntegerType::get(64, ctx), alignment);
   if (!dynamicBuffers)
     if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp()))
       return std_alloc(
-          MemRefType::get(width * cst.getValue(), IntegerType::get(8, ctx)));
+          MemRefType::get(width * cst.getValue(), IntegerType::get(8, ctx)), {},
+          alignment_attr);
   Value mul =
       folded_std_muli(folder, folded_std_constant_index(folder, width), size);
-  return std_alloc(MemRefType::get(-1, IntegerType::get(8, ctx)), mul);
+  return std_alloc(MemRefType::get(-1, IntegerType::get(8, ctx)), mul,
+                   alignment_attr);
 }
 
 // Performs promotion of a `subView` into a local buffer of the size of the
@@ -97,6 +102,7 @@ static Value allocBuffer(Type elementType, Value size, bool dynamicBuffers,
 static PromotionInfo promoteFullTileBuffer(OpBuilder &b, Location loc,
                                            SubViewOp subView,
                                            bool dynamicBuffers,
+                                           int64_t alignment,
                                            OperationFolder *folder) {
   auto zero = folded_std_constant_index(folder, 0);
   auto one = folded_std_constant_index(folder, 1);
@@ -117,8 +123,8 @@ static PromotionInfo promoteFullTileBuffer(OpBuilder &b, Location loc,
     partialSizes.push_back(folded_std_dim(folder, subView, rank));
   }
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
-  auto buffer =
-      allocBuffer(viewType.getElementType(), allocSize, dynamicBuffers, folder);
+  auto buffer = allocBuffer(viewType.getElementType(), allocSize,
+                            dynamicBuffers, folder, alignment);
   auto fullLocalView = folded_std_view(
       folder, MemRefType::get(dynSizes, viewType.getElementType()), buffer,
       fullSizes);
@@ -132,7 +138,7 @@ static PromotionInfo promoteFullTileBuffer(OpBuilder &b, Location loc,
 SmallVector<PromotionInfo, 8>
 mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
                               ArrayRef<Value> subViews, bool dynamicBuffers,
-                              OperationFolder *folder) {
+                              int64_t alignment, OperationFolder *folder) {
   if (subViews.empty())
     return {};
 
@@ -142,8 +148,8 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   DenseMap<Value, PromotionInfo> promotionInfoMap;
   for (auto v : subViews) {
     SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
-    auto promotionInfo =
-        promoteFullTileBuffer(b, loc, subView, dynamicBuffers, folder);
+    auto promotionInfo = promoteFullTileBuffer(b, loc, subView, dynamicBuffers,
+                                               alignment, folder);
     promotionInfoMap.insert(std::make_pair(subView.getResult(), promotionInfo));
     res.push_back(promotionInfo);
   }
@@ -178,6 +184,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
 LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
                                               SetVector<Value> subViews,
                                               bool dynamicBuffers,
+                                              int64_t alignment,
                                               OperationFolder *folder) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
 
@@ -189,8 +196,9 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
 
   // 1. Promote the specified views and use them in the new op.
   ScopedContext scope(b, op.getLoc());
-  auto promotedBufferAndViews = promoteSubViews(
-      b, op.getLoc(), subViews.getArrayRef(), dynamicBuffers, folder);
+  auto promotedBufferAndViews =
+      promoteSubViews(b, op.getLoc(), subViews.getArrayRef(), dynamicBuffers,
+                      alignment, folder);
   SmallVector<Value, 8> opViews;
   opViews.reserve(op.getNumInputsAndOutputs());
   SmallVector<std::pair<Value, Value>, 8> writebackViews;
@@ -248,7 +256,7 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
         if (sv.getType().getElementType().isSignlessIntOrFloat())
           subViews.insert(sv);
     if (!subViews.empty()) {
-      promoteSubViewOperands(b, op, subViews, dynamicBuffers, &folder);
+      promoteSubViewOperands(b, op, subViews, dynamicBuffers, 0, &folder);
       toErase.push_back(op);
     }
   });

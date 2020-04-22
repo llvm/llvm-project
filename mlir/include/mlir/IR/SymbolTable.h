@@ -9,6 +9,7 @@
 #ifndef MLIR_IR_SYMBOLTABLE_H
 #define MLIR_IR_SYMBOLTABLE_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -106,6 +107,14 @@ public:
   static Operation *lookupNearestSymbolFrom(Operation *from, StringRef symbol);
   static Operation *lookupNearestSymbolFrom(Operation *from,
                                             SymbolRefAttr symbol);
+  template <typename T>
+  static T lookupNearestSymbolFrom(Operation *from, StringRef symbol) {
+    return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
+  }
+  template <typename T>
+  static T lookupNearestSymbolFrom(Operation *from, SymbolRefAttr symbol) {
+    return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
+  }
 
   /// This class represents a specific symbol use.
   class SymbolUse {
@@ -226,6 +235,13 @@ public:
   }
   template <typename T> T lookupSymbol(StringRef name) {
     return dyn_cast_or_null<T>(lookupSymbol(name));
+  }
+  Operation *lookupSymbol(SymbolRefAttr symbol) {
+    return mlir::SymbolTable::lookupSymbolIn(this->getOperation(), symbol);
+  }
+  template <typename T>
+  T lookupSymbol(SymbolRefAttr symbol) {
+    return dyn_cast_or_null<T>(lookupSymbol(symbol));
   }
 };
 

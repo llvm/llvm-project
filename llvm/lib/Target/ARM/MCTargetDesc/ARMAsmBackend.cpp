@@ -328,9 +328,8 @@ bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
   return reasonForFixupRelaxation(Fixup, Value);
 }
 
-void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI,
-                                     MCInst &Res) const {
+void ARMAsmBackend::relaxInstruction(MCInst &Inst,
+                                     const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
 
   // Sanity check w/ diagnostic if we get here w/ a bogus instruction.
@@ -346,17 +345,18 @@ void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
   // have to change the operands too.
   if ((Inst.getOpcode() == ARM::tCBZ || Inst.getOpcode() == ARM::tCBNZ) &&
       RelaxedOp == ARM::tHINT) {
+    MCInst Res;
     Res.setOpcode(RelaxedOp);
     Res.addOperand(MCOperand::createImm(0));
     Res.addOperand(MCOperand::createImm(14));
     Res.addOperand(MCOperand::createReg(0));
+    Inst = std::move(Res);
     return;
   }
 
   // The rest of instructions we're relaxing have the same operands.
   // We just need to update to the proper opcode.
-  Res = Inst;
-  Res.setOpcode(RelaxedOp);
+  Inst.setOpcode(RelaxedOp);
 }
 
 bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {

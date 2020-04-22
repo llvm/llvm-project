@@ -207,8 +207,10 @@ public:
   /// A module with the same name that shadows this module.
   Module *ShadowingModule = nullptr;
 
-  /// Whether this module is missing a feature from \c Requirements.
-  unsigned IsMissingRequirement : 1;
+  /// Whether this module has declared itself unimportable, either because
+  /// it's missing a requirement from \p Requirements or because it's been
+  /// shadowed by another module.
+  unsigned IsUnimportable : 1;
 
   /// Whether we tried and failed to load a module file for this module.
   unsigned HasIncompatibleModuleFile : 1;
@@ -384,6 +386,25 @@ public:
 
   ~Module();
 
+  /// Determine whether this module has been declared unimportable.
+  bool isUnimportable() const { return IsUnimportable; }
+
+  /// Determine whether this module has been declared unimportable.
+  ///
+  /// \param LangOpts The language options used for the current
+  /// translation unit.
+  ///
+  /// \param Target The target options used for the current translation unit.
+  ///
+  /// \param Req If this module is unimportable because of a missing
+  /// requirement, this parameter will be set to one of the requirements that
+  /// is not met for use of this module.
+  ///
+  /// \param ShadowingModule If this module is unimportable because it is
+  /// shadowed, this parameter will be set to the shadowing module.
+  bool isUnimportable(const LangOptions &LangOpts, const TargetInfo &Target,
+                      Requirement &Req, Module *&ShadowingModule) const;
+
   /// Determine whether this module is available for use within the
   /// current translation unit.
   bool isAvailable() const { return IsAvailable; }
@@ -535,7 +556,7 @@ public:
                       const TargetInfo &Target);
 
   /// Mark this module and all of its submodules as unavailable.
-  void markUnavailable(bool MissingRequirement = false);
+  void markUnavailable(bool Unimportable);
 
   /// Find the submodule with the given name.
   ///

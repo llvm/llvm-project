@@ -228,33 +228,25 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
 
-  if (llvm::find(FeaturesVec, "-vsx") != FeaturesVec.end()) {
-    if (llvm::find(FeaturesVec, "+power8-vector") != FeaturesVec.end()) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower8-vector"
-                                                     << "-mno-vsx";
-      return false;
-    }
+  // vsx was not explicitly turned off.
+  if (llvm::find(FeaturesVec, "-vsx") == FeaturesVec.end())
+    return true;
 
-    if (llvm::find(FeaturesVec, "+direct-move") != FeaturesVec.end()) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mdirect-move"
-                                                     << "-mno-vsx";
-      return false;
+  auto FindVSXSubfeature = [&](StringRef Feature, StringRef Option) {
+    if (llvm::find(FeaturesVec, Feature) != FeaturesVec.end()) {
+      Diags.Report(diag::err_opt_not_valid_with_opt) << Option << "-mno-vsx";
+      return true;
     }
+    return false;
+  };
 
-    if (llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128"
-                                                     << "-mno-vsx";
-      return false;
-    }
+  bool Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector");
+  Found |= FindVSXSubfeature("+direct-move", "-mdirect-move");
+  Found |= FindVSXSubfeature("+float128", "-mfloat128");
+  Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector");
 
-    if (llvm::find(FeaturesVec, "+power9-vector") != FeaturesVec.end()) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower9-vector"
-                                                     << "-mno-vsx";
-      return false;
-    }
-  }
-
-  return true;
+  // Return false if any vsx subfeatures was found.
+  return !Found;
 }
 
 bool PPCTargetInfo::initFeatureMap(

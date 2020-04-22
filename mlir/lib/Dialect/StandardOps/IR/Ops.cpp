@@ -481,6 +481,88 @@ static LogicalResult verify(AtomicRMWOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// GenericAtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+void GenericAtomicRMWOp::build(Builder *builder, OperationState &result,
+                               Value memref, ValueRange ivs) {
+  result.addOperands(memref);
+  result.addOperands(ivs);
+
+  if (auto memrefType = memref.getType().dyn_cast<MemRefType>()) {
+    Type elementType = memrefType.getElementType();
+    result.addTypes(elementType);
+
+    Region *bodyRegion = result.addRegion();
+    bodyRegion->push_back(new Block());
+    bodyRegion->front().addArgument(elementType);
+  }
+}
+
+static LogicalResult verify(GenericAtomicRMWOp op) {
+  auto &block = op.body().front();
+  if (block.getNumArguments() != 1)
+    return op.emitOpError("expected single number of entry block arguments");
+
+  if (op.getResult().getType() != block.getArgument(0).getType())
+    return op.emitOpError(
+        "expected block argument of the same type result type");
+
+  bool hasSideEffects =
+      op.body()
+          .walk([&](Operation *nestedOp) {
+            if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
+              return WalkResult::advance();
+            nestedOp->emitError("body of 'generic_atomic_rmw' should contain "
+                                "only operations with no side effects");
+            return WalkResult::interrupt();
+          })
+          .wasInterrupted();
+  return hasSideEffects ? failure() : success();
+}
+
+static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
+                                           OperationState &result) {
+  OpAsmParser::OperandType memref;
+  Type memrefType;
+  SmallVector<OpAsmParser::OperandType, 4> ivs;
+
+  Type indexType = parser.getBuilder().getIndexType();
+  if (parser.parseOperand(memref) ||
+      parser.parseOperandList(ivs, OpAsmParser::Delimiter::Square) ||
+      parser.parseColonType(memrefType) ||
+      parser.resolveOperand(memref, memrefType, result.operands) ||
+      parser.resolveOperands(ivs, indexType, result.operands))
+    return failure();
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, llvm::None, llvm::None))
+    return failure();
+  result.types.push_back(memrefType.cast<MemRefType>().getElementType());
+  return success();
+}
+
+static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
+  p << op.getOperationName() << ' ' << op.memref() << "[" << op.indices()
+    << "] : " << op.memref().getType();
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicYieldOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AtomicYieldOp op) {
+  Type parentType = op.getParentOp()->getResultTypes().front();
+  Type resultType = op.result().getType();
+  if (parentType != resultType)
+    return op.emitOpError() << "types mismatch between yield op: " << resultType
+                            << " and its parent: " << parentType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
 
@@ -525,6 +607,8 @@ Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
 }
 
 bool BranchOp::canEraseSuccessorOperand() { return true; }
+
+Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 
 //===----------------------------------------------------------------------===//
 // CallOp
@@ -791,6 +875,14 @@ Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
 }
 
 bool CondBranchOp::canEraseSuccessorOperand() { return true; }
+
+Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (BoolAttr condAttr = operands.front().dyn_cast_or_null<BoolAttr>())
+    return condAttr.getValue() ? trueDest() : falseDest();
+  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
+    return condAttr.getValue().isOneValue() ? trueDest() : falseDest();
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // Constant*Op

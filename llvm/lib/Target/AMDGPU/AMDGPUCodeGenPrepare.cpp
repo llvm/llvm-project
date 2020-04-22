@@ -28,6 +28,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -40,10 +41,10 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/IntegerDivision.h"
 #include <cassert>
 #include <iterator>
 

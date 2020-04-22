@@ -31,13 +31,12 @@ class AMDGPUFixFunctionBitcasts final
   bool Modified;
 
 public:
-  void visitCallSite(CallSite CS) {
-    if (CS.getCalledFunction())
+  void visitCallBase(CallBase &CB) {
+    if (CB.getCalledFunction())
       return;
-    auto Callee = dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-    if (Callee &&
-        isLegalToPromote(*cast<CallBase>(CS.getInstruction()), Callee)) {
-      promoteCall(*cast<CallBase>(CS.getInstruction()), Callee);
+    auto *Callee = dyn_cast<Function>(CB.getCalledValue()->stripPointerCasts());
+    if (Callee && isLegalToPromote(CB, Callee)) {
+      promoteCall(CB, Callee);
       Modified = true;
     }
   }

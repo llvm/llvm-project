@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86RegisterBankInfo.h"

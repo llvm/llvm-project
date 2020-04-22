@@ -33,8 +33,8 @@ STATISTIC(NumInvalidAbstractCallSitesUnknownCallee,
 STATISTIC(NumInvalidAbstractCallSitesNoCallback,
           "Number of invalid abstract call sites created (no callback)");
 
-void AbstractCallSite::getCallbackUses(const CallBase &CB,
-                                       SmallVectorImpl<const Use *> &CallbackUses) {
+void AbstractCallSite::getCallbackUses(
+    const CallBase &CB, SmallVectorImpl<const Use *> &CallbackUses) {
   const Function *Callee = CB.getCalledFunction();
   if (!Callee)
     return;

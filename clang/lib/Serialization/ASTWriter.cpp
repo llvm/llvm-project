@@ -1729,7 +1729,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     llvm::SmallVector<Module *, 16> Worklist(1, WritingModule);
     while (!Worklist.empty()) {
       Module *M = Worklist.pop_back_val();
-      if (!M->isAvailable())
+      // We don't care about headers in unimportable submodules.
+      if (M->isUnimportable())
         continue;
 
       // Map to disk files where possible, to pick up any missing stat

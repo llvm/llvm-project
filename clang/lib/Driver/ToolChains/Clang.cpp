@@ -4535,6 +4535,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_maix_struct_return,
+                               options::OPT_msvr4_struct_return)) {
+    if (TC.getArch() != llvm::Triple::ppc) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << RawTriple.str();
+    } else if (A->getOption().matches(options::OPT_maix_struct_return)) {
+      CmdArgs.push_back("-maix-struct-return");
+    } else {
+      assert(A->getOption().matches(options::OPT_msvr4_struct_return));
+      CmdArgs.push_back("-msvr4-struct-return");
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_fpcc_struct_return,
                                options::OPT_freg_struct_return)) {
     if (TC.getArch() != llvm::Triple::x86) {

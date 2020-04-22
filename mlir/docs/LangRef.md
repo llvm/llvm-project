@@ -12,7 +12,7 @@ continuous design provides a framework to lower from dataflow graphs to
 high-performance target-specific code.
 
 This document defines and describes the key concepts in MLIR, and is intended to
-be a dry reference document - the [rationale documentation](Rationale.md),
+be a dry reference document - the [rationale documentation](Rationale/Rationale.md),
 [glossary](../getting_started/Glossary.md), and other content are hosted elsewhere.
 
 MLIR is designed to be used in three different forms: a human-readable textual
@@ -432,7 +432,7 @@ cases from the IR compared to traditional "PHI nodes are operations" SSA IRs
 [parallel copy semantics](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.524.5461&rep=rep1&type=pdf)
 of SSA is immediately apparent, and function arguments are no longer a special
 case: they become arguments to the entry block
-[[more rationale](Rationale.md#block-arguments-vs-phi-nodes)].
+[[more rationale](Rationale/Rationale.md#block-arguments-vs-phi-nodes)].
 
 ## Regions
 
@@ -648,7 +648,7 @@ the lighter syntax: `!foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect types.
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
 ### Standard Types
 
@@ -731,10 +731,10 @@ index-type ::= `index`
 ```
 
 The `index` type is a signless integer whose size is equal to the natural
-machine word of the target ([rationale](Rationale.md#signless-types)) and is
+machine word of the target ([rationale](Rationale/Rationale.md#signless-types)) and is
 used by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be
 used as an element of vector, tensor or memref type
-([rationale](Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
+([rationale](Rationale/Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
 
 **Rationale:** integers of platform-specific bit widths are practical to express
 sizes, dimensionalities and subscripts.
@@ -762,7 +762,7 @@ hardware synthesis (where a 13 bit multiplier is a lot cheaper/smaller than a 16
 bit one).
 
 TODO: Need to decide on a representation for quantized integers
-([initial thoughts](Rationale.md#quantized-integer-operations)).
+([initial thoughts](Rationale/Rationale.md#quantized-integer-operations)).
 
 #### Memref Type
 
@@ -1109,7 +1109,7 @@ each element may be of a different type.
 
 **Rationale:** Though this type is first class in the type system, MLIR provides
 no standard operations for operating on `tuple` types
-([rationale](Rationale.md#tuple-types)).
+([rationale](Rationale/Rationale.md#tuple-types)).
 
 Examples:
 
@@ -1243,7 +1243,7 @@ the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
 attribute values.
 
 ### Standard Attribute Values

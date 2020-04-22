@@ -1083,27 +1083,35 @@ def fsanitize_hwaddress_abi_EQ
     : Joined<["-"], "fsanitize-hwaddress-abi=">,
       Group<f_clang_Group>,
       HelpText<"Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor). This option is currently unused.">;
-def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>;
-def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,
-                           Flags<[CoreOption, DriverOption]>,
-                           Group<f_clang_Group>;
 def fsanitize_recover_EQ : CommaJoined<["-"], "fsanitize-recover=">,
                            Group<f_clang_Group>,
                            HelpText<"Enable recovery for specified sanitizers">;
-def fno_sanitize_recover_EQ
-    : CommaJoined<["-"], "fno-sanitize-recover=">,
-      Group<f_clang_Group>,
-      Flags<[CoreOption, DriverOption]>,
-      HelpText<"Disable recovery for specified sanitizers">;
+def fno_sanitize_recover_EQ : CommaJoined<["-"], "fno-sanitize-recover=">,
+                              Group<f_clang_Group>, Flags<[CoreOption, DriverOption]>,
+                              HelpText<"Disable recovery for specified sanitizers">;
+def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>,
+                        Alias<fsanitize_recover_EQ>, AliasArgs<["all"]>;
+def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,
+                           Flags<[CoreOption, DriverOption]>, Group<f_clang_Group>,
+                           Alias<fno_sanitize_recover_EQ>, AliasArgs<["all"]>;
 def fsanitize_trap_EQ : CommaJoined<["-"], "fsanitize-trap=">, Group<f_clang_Group>,
                         HelpText<"Enable trapping for specified sanitizers">;
 def fno_sanitize_trap_EQ : CommaJoined<["-"], "fno-sanitize-trap=">, Group<f_clang_Group>,
                            Flags<[CoreOption, DriverOption]>,
                            HelpText<"Disable trapping for specified sanitizers">;
-def fsanitize_undefined_trap_on_error : Flag<["-"], "fsanitize-undefined-trap-on-error">,
-                                        Group<f_clang_Group>;
-def fno_sanitize_undefined_trap_on_error : Flag<["-"], "fno-sanitize-undefined-trap-on-error">,
-                                           Group<f_clang_Group>;
+def fsanitize_trap : Flag<["-"], "fsanitize-trap">, Group<f_clang_Group>,
+                     Alias<fsanitize_trap_EQ>, AliasArgs<["all"]>,
+                     HelpText<"Enable trapping for all sanitizers">;
+def fno_sanitize_trap : Flag<["-"], "fno-sanitize-trap">, Group<f_clang_Group>,
+                        Alias<fno_sanitize_trap_EQ>, AliasArgs<["all"]>,
+                        Flags<[CoreOption, DriverOption]>,
+                        HelpText<"Disable trapping for all sanitizers">;
+def fsanitize_undefined_trap_on_error
+    : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
+      Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
+def fno_sanitize_undefined_trap_on_error
+    : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
+      Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
 def fsanitize_minimal_runtime : Flag<["-"], "fsanitize-minimal-runtime">,
                                         Group<f_clang_Group>;
 def fno_sanitize_minimal_runtime : Flag<["-"], "fno-sanitize-minimal-runtime">,
@@ -1994,7 +2002,6 @@ def fno_unique_section_names : Flag <["-"], "fno-unique-section-names">,
   Group<f_Group>, Flags<[CC1Option]>;
 
 def fstrict_return : Flag<["-"], "fstrict-return">, Group<f_Group>,
-  Flags<[CC1Option]>,
   HelpText<"Always treat control flow paths that fall off the end of a "
            "non-void function as unreachable">;
 def fno_strict_return : Flag<["-"], "fno-strict-return">, Group<f_Group>,
@@ -2007,15 +2014,13 @@ def fno_allow_editor_placeholders : Flag<["-"],
   "fno-allow-editor-placeholders">, Group<f_Group>;
 
 def fdebug_types_section: Flag <["-"], "fdebug-types-section">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Place debug types in their own section (ELF Only)">;
-def fno_debug_types_section: Flag<["-"], "fno-debug-types-section">, Group<f_Group>,
-  Flags<[CC1Option]>;
+  HelpText<"Place debug types in their own section (ELF Only)">;
+def fno_debug_types_section: Flag<["-"], "fno-debug-types-section">, Group<f_Group>;
 def fdebug_ranges_base_address: Flag <["-"], "fdebug-ranges-base-address">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Use DWARF base address selection entries in debug_ranges">;
-def fno_debug_ranges_base_address: Flag <["-"], "fno-debug-ranges-base-address">, Group<f_Group>,
-  Flags<[CC1Option]>;
+def fno_debug_ranges_base_address: Flag <["-"], "fno-debug-ranges-base-address">, Group<f_Group>;
 def fsplit_dwarf_inlining: Flag <["-"], "fsplit-dwarf-inlining">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Provide minimal debug info in the object/executable to facilitate online symbolication/stack traces in the absence of .dwo/.dwp files when using Split DWARF">;
+  HelpText<"Provide minimal debug info in the object/executable to facilitate online symbolication/stack traces in the absence of .dwo/.dwp files when using Split DWARF">;
 def fno_split_dwarf_inlining: Flag<["-"], "fno-split-dwarf-inlining">, Group<f_Group>,
   Flags<[CC1Option]>;
 def fdebug_default_version: Joined<["-"], "fdebug-default-version=">, Group<f_Group>,
@@ -2025,14 +2030,14 @@ def fdebug_prefix_map_EQ
     Flags<[CC1Option,CC1AsOption]>,
     HelpText<"remap file source paths in debug info">;
 def ffile_prefix_map_EQ
-  : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>, Flags<[CC1Option]>,
+  : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>,
     HelpText<"remap file source paths in debug info and predefined preprocessor macros">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<Preprocessor_Group>, Flags<[CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros">;
 def fforce_dwarf_frame : Flag<["-"], "fforce-dwarf-frame">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Always emit a debug frame section">;
-def fno_force_dwarf_frame : Flag<["-"], "fno-force-dwarf-frame">, Group<f_Group>, Flags<[CC1Option]>,
+def fno_force_dwarf_frame : Flag<["-"], "fno-force-dwarf-frame">, Group<f_Group>,
     HelpText<"Don't always emit a debug frame section">;
 def g_Flag : Flag<["-"], "g">, Group<g_Group>,
   HelpText<"Generate source-level debug information">;
@@ -2098,9 +2103,9 @@ def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   HelpText<"Set DWARF fission mode to either 'split' or 'single'">,
   Values<"split,single">;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
-def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
+def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>;
 def gpubnames : Flag<["-"], "gpubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
-def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
+def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
@@ -2502,6 +2507,12 @@ def mlongcall: Flag<["-"], "mlongcall">,
     Group<m_ppc_Features_Group>;
 def mno_longcall : Flag<["-"], "mno-longcall">,
     Group<m_ppc_Features_Group>;
+def maix_struct_return : Flag<["-"], "maix-struct-return">,
+  Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Return all structs in memory (PPC32 only)">;
+def msvr4_struct_return : Flag<["-"], "msvr4-struct-return">,
+  Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Return small structs in registers (PPC32 only)">;
 
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;

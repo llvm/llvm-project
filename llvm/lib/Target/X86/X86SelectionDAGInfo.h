@@ -14,13 +14,8 @@
 #define LLVM_LIB_TARGET_X86_X86SELECTIONDAGINFO_H
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 
 namespace llvm {
-
-class X86TargetLowering;
-class X86TargetMachine;
-class X86Subtarget;
 
 class X86SelectionDAGInfo : public SelectionDAGTargetInfo {
   /// Returns true if it is possible for the base register to conflict with the

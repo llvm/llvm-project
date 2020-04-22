@@ -596,8 +596,9 @@ SBSourceManager SBDebugger::GetSourceManager() {
 }
 
 bool SBDebugger::GetDefaultArchitecture(char *arch_name, size_t arch_name_len) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBDebugger, GetDefaultArchitecture,
-                            (char *, size_t), "", arch_name_len);
+  LLDB_RECORD_CHAR_PTR_STATIC_METHOD(bool, SBDebugger, GetDefaultArchitecture,
+                                     (char *, size_t), arch_name, "",
+                                     arch_name_len);
 
   if (arch_name && arch_name_len) {
     ArchSpec default_arch = Target::GetDefaultArchitecture();
@@ -1374,6 +1375,18 @@ bool SBDebugger::GetUseColor() const {
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
 }
 
+bool SBDebugger::SetUseSourceCache(bool value) {
+  LLDB_RECORD_METHOD(bool, SBDebugger, SetUseSourceCache, (bool), value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetUseSourceCache(value) : false);
+}
+
+bool SBDebugger::GetUseSourceCache() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDebugger, GetUseSourceCache);
+
+  return (m_opaque_sp ? m_opaque_sp->GetUseSourceCache() : false);
+}
+
 bool SBDebugger::GetDescription(SBStream &description) {
   LLDB_RECORD_METHOD(bool, SBDebugger, GetDescription, (lldb::SBStream &),
                      description);
@@ -1629,35 +1642,35 @@ static SBError SetFileRedirect(SBDebugger *, FileSP file) { return SBError(); }
 
 template <> void RegisterMethods<SBDebugger>(Registry &R) {
   // Custom implementation.
-  R.Register(&invoke<void (SBDebugger::*)(
-                 FILE *, bool)>::method<&SBDebugger::SetErrorFileHandle>::doit,
+  R.Register(&invoke<void (SBDebugger::*)(FILE *, bool)>::method<
+                 &SBDebugger::SetErrorFileHandle>::record,
              &SetFileHandleRedirect);
-  R.Register(&invoke<void (SBDebugger::*)(
-                 FILE *, bool)>::method<&SBDebugger::SetOutputFileHandle>::doit,
+  R.Register(&invoke<void (SBDebugger::*)(FILE *, bool)>::method<
+                 &SBDebugger::SetOutputFileHandle>::record,
              &SetFileHandleRedirect);
 
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 SBFile)>::method<&SBDebugger::SetInputFile>::doit,
+                 SBFile)>::method<&SBDebugger::SetInputFile>::record,
              &SetFileRedirect);
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 SBFile)>::method<&SBDebugger::SetOutputFile>::doit,
+                 SBFile)>::method<&SBDebugger::SetOutputFile>::record,
              &SetFileRedirect);
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 SBFile)>::method<&SBDebugger::SetErrorFile>::doit,
+                 SBFile)>::method<&SBDebugger::SetErrorFile>::record,
              &SetFileRedirect);
 
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 FileSP)>::method<&SBDebugger::SetInputFile>::doit,
+                 FileSP)>::method<&SBDebugger::SetInputFile>::record,
              &SetFileRedirect);
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 FileSP)>::method<&SBDebugger::SetOutputFile>::doit,
+                 FileSP)>::method<&SBDebugger::SetOutputFile>::record,
              &SetFileRedirect);
   R.Register(&invoke<SBError (SBDebugger::*)(
-                 FileSP)>::method<&SBDebugger::SetErrorFile>::doit,
+                 FileSP)>::method<&SBDebugger::SetErrorFile>::record,
              &SetFileRedirect);
 
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_STATIC(bool, SBDebugger,
-                                         GetDefaultArchitecture);
+  LLDB_REGISTER_CHAR_PTR_METHOD_STATIC(bool, SBDebugger,
+                                       GetDefaultArchitecture);
 
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, ());
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, (const lldb::DebuggerSP &));

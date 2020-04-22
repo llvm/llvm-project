@@ -81,14 +81,14 @@ public:
                       std::move(Emitter)),
         MappingSymbolCounter(0), LastEMS(EMS_None) {}
 
-  void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override {
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
     LastMappingSymbols[getPreviousSection().first] = LastEMS;
     LastEMS = LastMappingSymbols.lookup(Section);
 
-    MCELFStreamer::ChangeSection(Section, Subsection);
+    MCELFStreamer::changeSection(Section, Subsection);
   }
 
   // Reset state between object emissions
