@@ -27,7 +27,7 @@ module attributes {gpu.container_module} {
   }
 
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
       %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
       %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
@@ -59,7 +59,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) kernel {
       gpu.return
     }
   }

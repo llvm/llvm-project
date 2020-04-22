@@ -158,7 +158,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
+    gpu.func @kernel_1(%arg1 : !llvm<"float*">) kernel {
       gpu.return
     }
   }
@@ -177,7 +177,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : f32) attributes { gpu.kernel } {
+    gpu.func @kernel_1(%arg1 : f32) kernel {
       gpu.return
     }
   }
