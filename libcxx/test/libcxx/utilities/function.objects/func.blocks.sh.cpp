@@ -14,6 +14,8 @@
 // RUN: %{build} -fblocks
 // RUN: %{run}
 
+#if __has_include(<Block.h>)
+
 #include <functional>
 #include <cstdlib>
 #include <cassert>
@@ -140,3 +142,9 @@ int main(int, char**)
 
     return 0;
 }
+
+#else
+
+int main() { }
+
+#endif
