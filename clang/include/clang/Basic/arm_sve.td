@@ -70,6 +70,10 @@
 // o: 4x width elements, 1/4 element count
 //
 // i: constant uint64_t
+// k: int32_t
+// l: int64_t
+// m: uint32_t
+// n: uint64_t
 //
 // I: Predicate Pattern (sv_pattern)
 
@@ -163,6 +167,8 @@ def IsScatterStore            : FlagType<0x00010000>;
 def IsStructLoad              : FlagType<0x00020000>;
 def IsStructStore             : FlagType<0x00040000>;
 def IsZExtReturn              : FlagType<0x00080000>; // Return value is sign-extend by default
+def IsOverloadNone            : FlagType<0x00100000>; // Intrinsic does not take any overloaded types.
+def OverloadKindMask          : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
 //      :                                     :
 //      :                                     :
 def IsByteIndexed             : FlagType<0x02000000>;
@@ -542,6 +548,20 @@ def SVCMLA_M : SInst<"svcmla[_{d}]", "dPdddi", "hfd", MergeOp1,  "aarch64_sve_fc
 def SVQDECH_S : SInst<"svqdech_pat[_{d}]",   "ddIi", "s", MergeNone, "aarch64_sve_sqdech", [], [ImmCheck<2, ImmCheck1_16>]>;
 def SVQDECH_U : SInst<"svqdech_pat[_{d}]",   "ddIi", "Us", MergeNone, "aarch64_sve_uqdech", [], [ImmCheck<2, ImmCheck1_16>]>;
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Predicate creation
+
+def SVPFALSE : SInst<"svpfalse[_b]", "P", "", MergeNone, "", [IsOverloadNone]>;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Counting elements
+
+def SVCNTB_PAT : SInst<"svcntb_pat", "nI", "", MergeNone, "aarch64_sve_cntb", [IsOverloadNone]>;
+def SVCNTH_PAT : SInst<"svcnth_pat", "nI", "", MergeNone, "aarch64_sve_cnth", [IsOverloadNone]>;
+def SVCNTW_PAT : SInst<"svcntw_pat", "nI", "", MergeNone, "aarch64_sve_cntw", [IsOverloadNone]>;
+def SVCNTD_PAT : SInst<"svcntd_pat", "nI", "", MergeNone, "aarch64_sve_cntd", [IsOverloadNone]>;
 ////////////////////////////////////////////////////////////////////////////////
 // Integer arithmetic
 def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
