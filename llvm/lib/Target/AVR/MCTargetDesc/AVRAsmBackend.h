@@ -22,9 +22,6 @@
 namespace llvm {
 
 class MCAssembler;
-class MCObjectWriter;
-class Target;
-
 struct MCFixupKindInfo;
 
 /// Utilities for manipulating generated AVR machine code.
