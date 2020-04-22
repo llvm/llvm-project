@@ -20,28 +20,28 @@ subroutine assign1(lhs, rhs)
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1>, %[[min_len]]
 
   ! Copy of rhs into temp
-  ! CHECK: fir.do_loop [[i:%[[:alnum:]_]+]]
-    ! CHECK-DAG: [[rhs_addr:%[0-9]+]] = fir.coordinate_of [[rhs]]#0, [[i]]
-    ! CHECK-DAG: [[tmp_addr:%[0-9]+]] = fir.coordinate_of [[tmp]], [[i]]
-    ! CHECK-DAG: [[rhs_elt:%[0-9]+]] = fir.load [[rhs_addr]]
-    ! CHECK: fir.store [[rhs_elt]] to [[tmp_addr]]
-  ! CHECK: }
+  ! CHECK: fir.do_loop %[[i:.*]] =
+    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs]]#0, %[[i]]
+    ! CHECK-DAG: %[[rhs_elt:.*]] = fir.load %[[rhs_addr]]
+    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[i]]
+    ! CHECK: fir.store %[[rhs_elt]] to %[[tmp_addr]]
+  ! CHECK-NEXT: }
 
   ! Copy of temp into lhs
-  ! CHECK: fir.do_loop [[i:%[[:alnum:]]+]]
-    ! CHECK-DAG: [[tmp_addr:%[0-9]+]] = fir.coordinate_of [[tmp]], [[i]]
-    ! CHECK-DAG: [[lhs_addr:%[0-9]+]] = fir.coordinate_of [[lhs]]#0, [[i]]
-    ! CHECK-DAG: [[tmp_elt:%[0-9]+]] = fir.load [[tmp_addr]]
-    ! CHECK: fir.store [[tmp_elt]] to [[lhs_addr]]
-  ! CHECK: }
+  ! CHECK: fir.do_loop %[[ii:.*]] =
+    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[ii]]
+    ! CHECK-DAG: %[[tmp_elt:.*]] = fir.load %[[tmp_addr]]
+    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ii]]
+    ! CHECK: fir.store %[[tmp_elt]] to %[[lhs_addr]]
+  ! CHECK-NEXT: }
 
   ! Padding
-  ! CHECK: [[c32:%[[:alnum:]_]+]] = constant 32 : i8
-  ! CHECK: [[blank:%[0-9]+]] = fir.convert [[c32]] : (i8) -> !fir.char<1>
-  ! CHECK: fir.do_loop [[i:%[[:alnum:]_]+]]
-    ! CHECK-DAG: [[lhs_addr:%[0-9]+]] = fir.coordinate_of [[lhs]]#0, [[i]]
-    ! CHECK: fir.store [[blank]] to [[lhs_addr]]
-  ! CHECK: }
+  ! CHECK: %[[c32:.*]] = constant 32 : i8
+  ! CHECK: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
+  ! CHECK: fir.do_loop %[[ij:.*]] =
+    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ij]]
+    ! CHECK: fir.store %[[blank]] to %[[lhs_addr]]
+  ! CHECK-NEXT: }
 end subroutine
 
 ! Test substring assignment
