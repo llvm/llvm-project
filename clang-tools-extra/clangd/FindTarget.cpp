@@ -860,15 +860,17 @@ public:
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
+    llvm::SmallVector<const NamedDecl *, 1> Targets;
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
+      if (const auto *D = A.getArgument()
+                              .getAsTemplateOrTemplatePattern()
+                              .getAsTemplateDecl())
+        Targets.push_back(D);
       reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
                                    A.getTemplateNameLoc(),
-                                   /*IsDecl=*/false,
-                                   {A.getArgument()
-                                        .getAsTemplateOrTemplatePattern()
-                                        .getAsTemplateDecl()}},
+                                   /*IsDecl=*/false, Targets},
                       DynTypedNode::create(A.getArgument()));
       break;
     case TemplateArgument::Declaration:
