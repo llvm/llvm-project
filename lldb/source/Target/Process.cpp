@@ -3396,8 +3396,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
   case eStateExited:
   case eStateUnloaded:
     m_stdio_communication.SynchronizeWithReadThread();
-    m_stdio_communication.Disconnect();
     m_stdio_communication.StopReadThread();
+    m_stdio_communication.Disconnect();
     m_stdin_forward = false;
 
     LLVM_FALLTHROUGH;
