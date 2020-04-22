@@ -2735,6 +2735,8 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
+Accepted for compatibility with GCC. Currently has no effect.
+
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
 .. option:: -municode<arg>
