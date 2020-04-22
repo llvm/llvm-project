@@ -50,3 +50,13 @@ TEST_F(HostInfoTest, GetHostname) {
   std::string s("abc");
   EXPECT_TRUE(HostInfo::GetHostname(s));
 }
+
+#if defined(__APPLE__)
+TEST_F(HostInfoTest, GetXcodeSDK) {
+  EXPECT_FALSE(HostInfo::GetXcodeSDK(XcodeSDK("MacOSX.sdk")).empty());
+  // These are expected to fall back to an available version.
+  EXPECT_FALSE(HostInfo::GetXcodeSDK(XcodeSDK("MacOSX9999.sdk")).empty());
+  // This is expected to fail.
+  EXPECT_TRUE(HostInfo::GetXcodeSDK(XcodeSDK("CeciNestPasUnOS.sdk")).empty());
+}
+#endif
