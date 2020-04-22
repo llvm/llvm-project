@@ -486,3 +486,16 @@ namespace anon_union_default_member_init {
   }
   void g() { f<int>(); }
 }
+
+namespace PR45000 {
+  template <typename T>
+  void f(int x = [](T x = nullptr) -> int { return x; }());
+  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'nullptr_t'}}
+  // expected-note@-2 {{passing argument to parameter 'x' here}}
+  // expected-error@-3 {{no matching function for call}}
+  // expected-note@-4 {{candidate function not viable: requires single argument 'x', but no arguments were provided}}
+  // expected-note@-5 {{conversion candidate of type 'auto (*)(int) -> int'}}
+
+  void g() { f<int>(); }
+  // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}
+}

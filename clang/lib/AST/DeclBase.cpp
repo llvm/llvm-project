@@ -332,13 +332,16 @@ void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,
   }
 }
 
-bool Decl::isLexicallyWithinFunctionOrMethod() const {
+bool Decl::isInLocalScope() const {
   const DeclContext *LDC = getLexicalDeclContext();
   while (true) {
     if (LDC->isFunctionOrMethod())
       return true;
     if (!isa<TagDecl>(LDC))
       return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
     LDC = LDC->getLexicalParent();
   }
   return false;
