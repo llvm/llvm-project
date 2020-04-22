@@ -41,6 +41,7 @@ static void CommonStandaloneInit() {
   AndroidLogInit();
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
   CommonInit();
+  Symbolizer::LateInitialize();
 }
 
 void __ubsan::InitAsStandalone() {
