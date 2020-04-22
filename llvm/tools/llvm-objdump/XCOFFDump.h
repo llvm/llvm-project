@@ -22,8 +22,8 @@ getXCOFFSymbolCsectSMC(const object::XCOFFObjectFile *Obj,
 
 bool isLabel(const object::XCOFFObjectFile *Obj, const object::SymbolRef &Sym);
 
-void printXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
-                                 StringRef SymbolName);
+std::string getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
+                                      StringRef SymbolName);
 
 Error getXCOFFRelocationValueString(const object::XCOFFObjectFile *Obj,
                                     const object::RelocationRef &RelRef,
