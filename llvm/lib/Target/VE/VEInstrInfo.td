@@ -32,6 +32,10 @@ def uimm1 : Operand<i32>, PatLeaf<(imm), [{
 def uimm6 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<6>(N->getZExtValue()); }]>;
 
+// uimm7 - Generic immediate value.
+def uimm7 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<7>(N->getZExtValue()); }]>;
+
 // simm7 - Generic immediate value.
 def LO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
@@ -423,69 +427,27 @@ multiclass RRFm<string opcStr, bits<8>opc,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, null_frag>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, null_frag>;
 
-// Multiclass for RR type instructions
-//   Used by sra, sla, sll, and similar instructions
-//   The order of operands are "$sx, $sz, $sy"
-
+// Generic RR multiclass for shift instructions with 2 arguments.
+//   e.g. SLL, SRL, SLAWSX, and etc.
+let hasSideEffects = 0 in
 multiclass RRIm<string opcStr, bits<8>opc,
                 RegisterClass RC, ValueType Ty,
-                Operand immOp, Operand immOp2,
-                SDPatternOperator OpNode=null_frag> {
-  def rr : RR<
-    opc, (outs RC:$sx), (ins RC:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, $sz, $sy"),
-    [(set Ty:$sx, (OpNode Ty:$sz, i32:$sy))]> {
-    let cy = 1;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def ri : RR<
-    opc, (outs RC:$sx), (ins RC:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, $sz, $sy"),
-    [(set Ty:$sx, (OpNode Ty:$sz, (i32 simm7:$sy)))]> {
-    let cy = 0;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def rm0 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, (${sz})0, $sy")> {
-    let cy = 1;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def rm1 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, (${sz})1, $sy")> {
-    let cy = 1;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def im0 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, (${sz})0, $sy")> {
-    let cy = 0;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def im1 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, (${sz})1, $sy")> {
-    let cy = 0;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def zi : RR<
-    opc, (outs RC:$sx), (ins immOp:$sy),
-    !strconcat(opcStr, " $sx, $sy"),
-    [(set Ty:$sx, (OpNode 0, (i32 simm7:$sy)))]> {
-    let cy = 0;
-    let cz = 0;
-    let sz = 0;
-    let hasSideEffects = 0;
-  }
+                SDPatternOperator OpNode = null_frag> {
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set Ty:$sx, (OpNode Ty:$sz, i32:$sy))]>;
+  let cz = 0 in
+  def mr : RR<opc, (outs RC:$sx), (ins mimm:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set Ty:$sx, (OpNode (Ty mimm:$sz), i32:$sy))]>;
+  let cy = 0 in
+  def ri : RR<opc, (outs RC:$sx), (ins RC:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set Ty:$sx, (OpNode Ty:$sz, (i32 uimm7:$sy)))]>;
+  let cy = 0, cz = 0 in
+  def mi : RR<opc, (outs RC:$sx), (ins mimm:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set Ty:$sx, (OpNode (Ty mimm:$sz), (i32 uimm7:$sy)))]>;
 }
 
 // Generic RR multiclass with an argument.
@@ -898,23 +860,32 @@ let cw = 1, cw2 = 0 in defm CMOVW : RRCMOVm<"cmov.w.${cfw}", 0x3B, I32, i32>;
 let cw = 0, cw2 = 1 in defm CMOVD : RRCMOVm<"cmov.d.${cfw}", 0x3B, I64, f64>;
 let cw = 1, cw2 = 1 in defm CMOVS : RRCMOVm<"cmov.s.${cfw}", 0x3B, F32, f32>;
 
-// 5.3.2.4 Shift Instructions
+//-----------------------------------------------------------------------------
+// Section 8.6 - Shift Operation Instructions
+//-----------------------------------------------------------------------------
 
-let cx = 0 in
-defm SRAX : RRIm<"sra.l", 0x77, I64, i64, simm7, uimm6, sra>;
-let cx = 0 in
-defm SRA : RRIm<"sra.w.sx", 0x76, I32, i32, simm7, uimm6, sra>;
-let cx = 1 in
-defm SRAU : RRIm<"sra.w.zx", 0x76, I32, i32, simm7, uimm6>;
+// Section 8.6.1 - SLL (Shift Left Logical)
+defm SLL : RRIm<"sll", 0x65, I64, i64, shl>;
 
-let cx = 0 in
-defm SLL : RRIm<"sll", 0x65, I64, i64, simm7, uimm6, shl>;
-let cx = 0 in
-defm SLA : RRIm<"sla.w.sx", 0x66, I32, i32, simm7, uimm6, shl>;
-let cx = 1 in
-defm SLAU : RRIm<"sla.w.zx", 0x66, I32, i32, simm7, uimm6>;
-let cx = 0 in
-defm SRL : RRIm<"srl", 0x75, I64, i64, simm7, uimm6, srl>;
+// Section 8.6.2 - SLD (Shift Left Double)
+
+// Section 8.6.3 - SRL (Shift Right Logical)
+defm SRL : RRIm<"srl", 0x75, I64, i64, srl>;
+
+// Section 8.6.4 - SRD (Shift Right Double)
+
+// Section 8.6.5 - SLA (Shift Left Arithmetic)
+defm SLAWSX : RRIm<"sla.w.sx", 0x66, I32, i32, shl>;
+let cx = 1 in defm SLAWZX : RRIm<"sla.w.zx", 0x66, I32, i32>;
+
+// Section 8.6.6 - SLAX (Shift Left Arithmetic)
+
+// Section 8.6.7 - SRA (Shift Right Arithmetic)
+defm SRAWSX : RRIm<"sra.w.sx", 0x76, I32, i32, sra>;
+let cx = 1 in defm SRAWZX : RRIm<"sra.w.zx", 0x76, I32, i32>;
+
+// Section 8.6.8 - SRAX (Shift Right Arithmetic)
+defm SRAL : RRIm<"sra.l", 0x77, I64, i64, sra>;
 
 def : Pat<(i32 (srl i32:$src, (i32 simm7:$val))),
           (EXTRACT_SUBREG (SRLri (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
@@ -1113,27 +1084,27 @@ def : Pat<(f64 fpimm:$val),
 
 // Cast to i1
 def : Pat<(sext_inreg I32:$src, i1),
-          (SRAri (SLAri $src, 31), 31)>;
+          (SRAWSXri (SLAWSXri $src, 31), 31)>;
 def : Pat<(sext_inreg I64:$src, i1),
-          (SRAXri (SLLri $src, 63), 63)>;
+          (SRALri (SLLri $src, 63), 63)>;
 
 // Cast to i8
 def : Pat<(sext_inreg I32:$src, i8),
-          (SRAri (SLAri $src, 24), 24)>;
+          (SRAWSXri (SLAWSXri $src, 24), 24)>;
 def : Pat<(sext_inreg I64:$src, i8),
-          (SRAXri (SLLri $src, 56), 56)>;
+          (SRALri (SLLri $src, 56), 56)>;
 def : Pat<(sext_inreg (i32 (trunc i64:$src)), i8),
-          (EXTRACT_SUBREG (SRAXri (SLLri $src, 56), 56), sub_i32)>;
+          (EXTRACT_SUBREG (SRALri (SLLri $src, 56), 56), sub_i32)>;
 def : Pat<(and (trunc i64:$src), 0xff),
           (AND32rm (EXTRACT_SUBREG $src, sub_i32), !add(56, 64))>;
 
 // Cast to i16
 def : Pat<(sext_inreg I32:$src, i16),
-          (SRAri (SLAri $src, 16), 16)>;
+          (SRAWSXri (SLAWSXri $src, 16), 16)>;
 def : Pat<(sext_inreg I64:$src, i16),
-          (SRAXri (SLLri $src, 48), 48)>;
+          (SRALri (SLLri $src, 48), 48)>;
 def : Pat<(sext_inreg (i32 (trunc i64:$src)), i16),
-          (EXTRACT_SUBREG (SRAXri (SLLri $src, 48), 48), sub_i32)>;
+          (EXTRACT_SUBREG (SRALri (SLLri $src, 48), 48), sub_i32)>;
 def : Pat<(and (trunc i64:$src), 0xffff),
           (AND32rm (EXTRACT_SUBREG $src, sub_i32), !add(48, 64))>;
 
@@ -1553,7 +1524,7 @@ def : Pat<(f64 (bitconvert i64:$src)), (COPY_TO_REGCLASS $src, I64)>;
 def : Pat<(i64 (bitconvert f64:$src)), (COPY_TO_REGCLASS $src, I64)>;
 
 def : Pat<(i32 (bitconvert f32:$op)),
-          (EXTRACT_SUBREG (SRAXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+          (EXTRACT_SUBREG (SRALri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
             $op, sub_f32), 32), sub_i32)>;
 def : Pat<(f32 (bitconvert i32:$op)),
           (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
