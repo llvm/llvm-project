@@ -39,6 +39,7 @@ private:
   void writeHeader(raw_ostream &OS);
   void writeLoadCommands(raw_ostream &OS);
   void writeSectionData(raw_ostream &OS);
+  void writeRelocations(raw_ostream &OS);
   void writeLinkEditData(raw_ostream &OS);
 
   void writeBindOpcodes(raw_ostream &OS,
@@ -58,8 +59,11 @@ private:
   MachOYAML::Object &Obj;
   bool is64Bit;
   uint64_t fileStart;
-
   MachO::mach_header_64 Header;
+
+  // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
+  // stuck at the end of the file.
+  bool FoundLinkEditSeg = false;
 };
 
 void MachOWriter::writeMachO(raw_ostream &OS) {
@@ -67,6 +71,9 @@ void MachOWriter::writeMachO(raw_ostream &OS) {
   writeHeader(OS);
   writeLoadCommands(OS);
   writeSectionData(OS);
+  writeRelocations(OS);
+  if (!FoundLinkEditSeg)
+    writeLinkEditData(OS);
 }
 
 void MachOWriter::writeHeader(raw_ostream &OS) {
@@ -255,7 +262,6 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
 }
 
 void MachOWriter::writeSectionData(raw_ostream &OS) {
-  bool FoundLinkEditSeg = false;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
@@ -315,10 +321,60 @@ void MachOWriter::writeSectionData(raw_ostream &OS) {
       break;
     }
   }
-  // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
-  // stuck at the end of the file.
-  if (!FoundLinkEditSeg)
-    writeLinkEditData(OS);
+}
+
+// The implementation of makeRelocationInfo and makeScatteredRelocationInfo is
+// consistent with how libObject parses MachO binary files. For the reference
+// see getStruct, getRelocation, getPlainRelocationPCRel,
+// getPlainRelocationLength and related methods in MachOObjectFile.cpp
+static MachO::any_relocation_info
+makeRelocationInfo(const MachOYAML::Relocation &R, bool IsLE) {
+  assert(!R.is_scattered && "non-scattered relocation expected");
+  MachO::any_relocation_info MRE;
+  MRE.r_word0 = R.address;
+  if (IsLE)
+    MRE.r_word1 = ((unsigned)R.symbolnum << 0) | ((unsigned)R.is_pcrel << 24) |
+                  ((unsigned)R.length << 25) | ((unsigned)R.is_extern << 27) |
+                  ((unsigned)R.type << 28);
+  else
+    MRE.r_word1 = ((unsigned)R.symbolnum << 8) | ((unsigned)R.is_pcrel << 7) |
+                  ((unsigned)R.length << 5) | ((unsigned)R.is_extern << 4) |
+                  ((unsigned)R.type << 0);
+  return MRE;
+}
+
+static MachO::any_relocation_info
+makeScatteredRelocationInfo(const MachOYAML::Relocation &R) {
+  assert(R.is_scattered && "scattered relocation expected");
+  MachO::any_relocation_info MRE;
+  MRE.r_word0 = (((unsigned)R.address << 0) | ((unsigned)R.type << 24) |
+                 ((unsigned)R.length << 28) | ((unsigned)R.is_pcrel << 30) |
+                 MachO::R_SCATTERED);
+  MRE.r_word1 = R.value;
+  return MRE;
+}
+
+void MachOWriter::writeRelocations(raw_ostream &OS) {
+  for (const MachOYAML::LoadCommand &LC : Obj.LoadCommands) {
+    switch (LC.Data.load_command_data.cmd) {
+    case MachO::LC_SEGMENT:
+    case MachO::LC_SEGMENT_64:
+      for (const MachOYAML::Section &Sec : LC.Sections) {
+        if (Sec.relocations.empty())
+          continue;
+        ZeroToOffset(OS, Sec.reloff);
+        for (const MachOYAML::Relocation &R : Sec.relocations) {
+          MachO::any_relocation_info MRE =
+              R.is_scattered ? makeScatteredRelocationInfo(R)
+                             : makeRelocationInfo(R, Obj.IsLittleEndian);
+          if (Obj.IsLittleEndian != sys::IsLittleEndianHost)
+            MachO::swapStruct(MRE);
+          OS.write(reinterpret_cast<const char *>(&MRE),
+                   sizeof(MachO::any_relocation_info));
+        }
+      }
+    }
+  }
 }
 
 void MachOWriter::writeBindOpcodes(
