@@ -772,7 +772,7 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
 #define CXX11_KEYWORD(NAME, FLAGS)                                             \
         .Case(#NAME, diag::warn_cxx11_keyword)
 #define CXX20_KEYWORD(NAME, FLAGS)                                             \
-        .Case(#NAME, diag::warn_cxx2a_keyword)
+        .Case(#NAME, diag::warn_cxx20_keyword)
 #include "clang/Basic/TokenKinds.def"
         ;
 

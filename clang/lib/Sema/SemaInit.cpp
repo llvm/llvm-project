@@ -1093,7 +1093,7 @@ void InitListChecker::CheckImplicitInitList(const InitializedEntity &Entity,
     auto *CXXRD = T->getAsCXXRecordDecl();
     if (!VerifyOnly && CXXRD && CXXRD->hasUserDeclaredConstructor()) {
       SemaRef.Diag(StructuredSubobjectInitList->getBeginLoc(),
-                   diag::warn_cxx2a_compat_aggregate_init_with_ctors)
+                   diag::warn_cxx20_compat_aggregate_init_with_ctors)
           << StructuredSubobjectInitList->getSourceRange() << T;
     }
   }
@@ -1236,7 +1236,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
 
       if (!HasEquivCtor) {
         SemaRef.Diag(IList->getBeginLoc(),
-                     diag::warn_cxx2a_compat_aggregate_init_with_ctors)
+                     diag::warn_cxx20_compat_aggregate_init_with_ctors)
             << IList->getSourceRange() << T;
       }
     }
