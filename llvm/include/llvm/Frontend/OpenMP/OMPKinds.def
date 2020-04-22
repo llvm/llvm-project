@@ -389,24 +389,16 @@ __OMP_ATTRS_SET(SetterAttrs,
 #define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
   OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
 
-__OMP_RTL_ATTRS(__kmpc_barrier,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_barrier, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_cancel,
                 AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_cancel_barrier,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_flush,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_cancel_barrier, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_flush, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_omp_taskwait,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_taskwait, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_omp_taskyield,
                 AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
                 AttributeSet(), {})
