@@ -131,11 +131,11 @@ static cl::alias DisassembleAllShort("D",
                                      cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(DisassembleAll));
 
-static cl::opt<bool>
-    SymbolDescription("symbol-description",
-                      cl::desc("Add symbol description for disassembly. This "
-                               "option is for XCOFF files only"),
-                      cl::init(false), cl::cat(ObjdumpCat));
+cl::opt<bool> objdump::SymbolDescription(
+    "symbol-description",
+    cl::desc("Add symbol description for disassembly. This "
+             "option is for XCOFF files only"),
+    cl::init(false), cl::cat(ObjdumpCat));
 
 static cl::list<std::string>
     DisassembleSymbols("disassemble-symbols", cl::CommaSeparated,
@@ -1422,8 +1422,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
       if (Obj->isXCOFF() && SymbolDescription) {
-        printXCOFFSymbolDescription(Symbols[SI], SymbolName);
-        outs() << ":\n";
+        outs() << getXCOFFSymbolDescription(Symbols[SI], SymbolName) << ":\n";
       } else
         outs() << '<' << SymbolName << ">:\n";
 
