@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -222,16 +221,15 @@ static bool PropagateConstantReturn(Function &F) {
   // constant.
   bool MadeChange = false;
   for (Use &U : F.uses()) {
-    CallSite CS(U.getUser());
-    Instruction* Call = CS.getInstruction();
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
 
     // Not a call instruction or a call instruction that's not calling F
     // directly?
-    if (!Call || !CS.isCallee(&U))
+    if (!CB || !CB->isCallee(&U))
       continue;
 
     // Call result not used?
-    if (Call->use_empty())
+    if (CB->use_empty())
       continue;
 
     MadeChange = true;
@@ -241,12 +239,12 @@ static bool PropagateConstantReturn(Function &F) {
       if (Argument *A = dyn_cast<Argument>(New))
         // Was an argument returned? Then find the corresponding argument in
         // the call instruction and use that.
-        New = CS.getArgument(A->getArgNo());
-      Call->replaceAllUsesWith(New);
+        New = CB->getArgOperand(A->getArgNo());
+      CB->replaceAllUsesWith(New);
       continue;
     }
 
-    for (auto I = Call->user_begin(), E = Call->user_end(); I != E;) {
+    for (auto I = CB->user_begin(), E = CB->user_end(); I != E;) {
       Instruction *Ins = cast<Instruction>(*I);
 
       // Increment now, so we can remove the use
@@ -266,7 +264,7 @@ static bool PropagateConstantReturn(Function &F) {
           if (Argument *A = dyn_cast<Argument>(New))
             // Was an argument returned? Then find the corresponding argument in
             // the call instruction and use that.
-            New = CS.getArgument(A->getArgNo());
+            New = CB->getArgOperand(A->getArgNo());
           Ins->replaceAllUsesWith(New);
           Ins->eraseFromParent();
         }

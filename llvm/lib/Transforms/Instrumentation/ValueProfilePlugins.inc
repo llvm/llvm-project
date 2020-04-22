@@ -59,7 +59,7 @@ public:
   void run(std::vector<CandidateInfo> &Candidates) {
     std::vector<Instruction *> Result = findIndirectCalls(F);
     for (Instruction *I : Result) {
-      Value *Callee = CallSite(I).getCalledValue();
+      Value *Callee = cast<CallBase>(I)->getCalledValue();
       Instruction *InsertPt = I;
       Instruction *AnnotatedInst = I;
       Candidates.emplace_back(CandidateInfo{Callee, InsertPt, AnnotatedInst});

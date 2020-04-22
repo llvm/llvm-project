@@ -27,7 +27,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -728,10 +727,6 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
     if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::lifetime_start)
       return false;
 
-  // Deliberately get the source and destination with bitcasts stripped away,
-  // because we'll need to do type comparisons based on the underlying type.
-  CallSite CS(C);
-
   // Require that src be an alloca.  This simplifies the reasoning considerably.
   AllocaInst *srcAlloca = dyn_cast<AllocaInst>(cpySrc);
   if (!srcAlloca)
@@ -831,8 +826,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
 
   // Check that src isn't captured by the called function since the
   // transformation can cause aliasing issues in that case.
-  for (unsigned i = 0, e = CS.arg_size(); i != e; ++i)
-    if (CS.getArgument(i) == cpySrc && !CS.doesNotCapture(i))
+  for (unsigned ArgI = 0, E = C->arg_size(); ArgI != E; ++ArgI)
+    if (C->getArgOperand(ArgI) == cpySrc && !C->doesNotCapture(ArgI))
       return false;
 
   // Since we're changing the parameter to the callsite, we need to make sure
@@ -859,25 +854,26 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   if (cpySrc->getType()->getPointerAddressSpace() !=
       cpyDest->getType()->getPointerAddressSpace())
     return false;
-  for (unsigned i = 0; i < CS.arg_size(); ++i)
-    if (CS.getArgument(i)->stripPointerCasts() == cpySrc &&
+  for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
+    if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc &&
         cpySrc->getType()->getPointerAddressSpace() !=
-        CS.getArgument(i)->getType()->getPointerAddressSpace())
+            C->getArgOperand(ArgI)->getType()->getPointerAddressSpace())
       return false;
 
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
-  for (unsigned i = 0; i < CS.arg_size(); ++i)
-    if (CS.getArgument(i)->stripPointerCasts() == cpySrc) {
+  for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
+    if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc) {
       Value *Dest = cpySrc->getType() == cpyDest->getType() ?  cpyDest
         : CastInst::CreatePointerCast(cpyDest, cpySrc->getType(),
                                       cpyDest->getName(), C);
       changedArgument = true;
-      if (CS.getArgument(i)->getType() == Dest->getType())
-        CS.setArgument(i, Dest);
+      if (C->getArgOperand(ArgI)->getType() == Dest->getType())
+        C->setArgOperand(ArgI, Dest);
       else
-        CS.setArgument(i, CastInst::CreatePointerCast(Dest,
-                          CS.getArgument(i)->getType(), Dest->getName(), C));
+        C->setArgOperand(ArgI, CastInst::CreatePointerCast(
+                                   Dest, C->getArgOperand(ArgI)->getType(),
+                                   Dest->getName(), C));
     }
 
   if (!changedArgument)

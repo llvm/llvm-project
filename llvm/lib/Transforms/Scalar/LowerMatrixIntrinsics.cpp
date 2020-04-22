@@ -1612,8 +1612,7 @@ public:
       if (auto *CI = dyn_cast<CallInst>(I)) {
         writeFnName(CI);
 
-        Ops.append(CallSite(CI).arg_begin(),
-                   CallSite(CI).arg_end() - getNumShapeArgs(CI));
+        Ops.append(CI->arg_begin(), CI->arg_end() - getNumShapeArgs(CI));
       } else if (isa<BitCastInst>(Expr)) {
         // Special case bitcasts, which are used to materialize matrixes from
         // non-matrix ops.

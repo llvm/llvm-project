@@ -11,7 +11,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
@@ -49,16 +48,15 @@ PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
       if (!BBCount)
         continue;
       for (auto &I : BB) {
-        CallSite CS(&I);
-        if (!CS)
+        CallBase *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
           continue;
-        if (CS.isIndirectCall()) {
+        if (CB->isIndirectCall()) {
           InstrProfValueData ValueData[8];
           uint32_t ActualNumValueData;
           uint64_t TotalC;
-          if (!getValueProfDataFromInst(*CS.getInstruction(),
-                                        IPVK_IndirectCallTarget, 8, ValueData,
-                                        ActualNumValueData, TotalC))
+          if (!getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget, 8,
+                                        ValueData, ActualNumValueData, TotalC))
             continue;
           for (const auto &VD :
                ArrayRef<InstrProfValueData>(ValueData, ActualNumValueData)) {
@@ -66,7 +64,7 @@ PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
           }
           continue;
         }
-        UpdateCounts(TTI, &F, CS.getCalledFunction(), *BBCount);
+        UpdateCounts(TTI, &F, CB->getCalledFunction(), *BBCount);
       }
     }
   }
