@@ -3,8 +3,6 @@ ______________
 
 [Eric]
 
-  error: 'fir.coordinate_of' op cannot find coordinate with unknown extents
-  
 [Varun]
 
   DATA statement
@@ -24,6 +22,8 @@ ______________
 FIXED
 _____
 
+error: 'fir.coordinate_of' op cannot find coordinate with unknown extents
+  
 Lowering globals in general
 
 Handle adjusted arrays of CHARACTER with adjusted LEN
