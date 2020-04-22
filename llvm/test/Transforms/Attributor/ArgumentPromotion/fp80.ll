@@ -72,22 +72,22 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval %a) {
 ; IS__CGSCC_OPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* [[A]], i64 0
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP]]
 ;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]]
-; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]]
-; IS__CGSCC_NPM-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]]
-; IS__CGSCC_NPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*
-; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__CGSCC_NPM:       loop:
-; IS__CGSCC_NPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
-; IS__CGSCC_NPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
-; IS__CGSCC_NPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0
-; IS__CGSCC_NPM-NEXT:    br label [[LOOP]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@CaptureAStruct
+; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]]
+; IS__CGSCC____-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
+; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]]
+; IS__CGSCC____-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
+; IS__CGSCC____-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]]
+; IS__CGSCC____-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*
+; IS__CGSCC____-NEXT:    br label [[LOOP:%.*]]
+; IS__CGSCC____:       loop:
+; IS__CGSCC____-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
+; IS__CGSCC____-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
+; IS__CGSCC____-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0
+; IS__CGSCC____-NEXT:    br label [[LOOP]]
 ;
 entry:
   %a_ptr = alloca %struct.Foo*
