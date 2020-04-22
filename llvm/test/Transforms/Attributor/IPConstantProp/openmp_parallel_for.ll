@@ -83,66 +83,66 @@ entry:
 }
 
 define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %N, float* dereferenceable(4) %p, i64 %q) {
-; IS________OPM-LABEL: define {{[^@]+}}@.omp_outlined.
-; IS________OPM-SAME: (i32* noalias nocapture readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]])
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
-; IS________OPM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    store i64 4617315517961601024, i64* [[Q_ADDR]], align 8
-; IS________OPM-NEXT:    [[CONV:%.*]] = bitcast i64* [[Q_ADDR]] to double*
-; IS________OPM-NEXT:    [[TMP:%.*]] = load i32, i32* [[N]], align 4
-; IS________OPM-NEXT:    [[SUB3:%.*]] = add nsw i32 [[TMP]], -3
-; IS________OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP]], 2
-; IS________OPM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
-; IS________OPM:       omp.precond.then:
-; IS________OPM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-; IS________OPM-NEXT:    store i32 [[SUB3]], i32* [[DOTOMP_UB]], align 4
-; IS________OPM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
-; IS________OPM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-; IS________OPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS________OPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
-; IS________OPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS________OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
-; IS________OPM-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; IS________OPM:       cond.true:
-; IS________OPM-NEXT:    br label [[COND_END:%.*]]
-; IS________OPM:       cond.false:
-; IS________OPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS________OPM-NEXT:    br label [[COND_END]]
-; IS________OPM:       cond.end:
-; IS________OPM-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB3]], [[COND_TRUE]] ], [ [[TMP7]], [[COND_FALSE]] ]
-; IS________OPM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-; IS________OPM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-; IS________OPM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
-; IS________OPM:       omp.inner.for.cond:
-; IS________OPM-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
-; IS________OPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS________OPM-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TMP9]]
-; IS________OPM-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]], label [[OMP_INNER_FOR_BODY:%.*]]
-; IS________OPM:       omp.inner.for.cond.cleanup:
-; IS________OPM-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
-; IS________OPM:       omp.inner.for.body:
-; IS________OPM-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
-; IS________OPM-NEXT:    [[TMP10:%.*]] = load float, float* [[P]], align 4
-; IS________OPM-NEXT:    [[TMP11:%.*]] = load double, double* [[CONV]], align 8
-; IS________OPM-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double [[TMP11]])
-; IS________OPM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
-; IS________OPM:       omp.body.continue:
-; IS________OPM-NEXT:    br label [[OMP_INNER_FOR_INC]]
-; IS________OPM:       omp.inner.for.inc:
-; IS________OPM-NEXT:    [[ADD11]] = add nsw i32 [[DOTOMP_IV_0]], 1
-; IS________OPM-NEXT:    br label [[OMP_INNER_FOR_COND]]
-; IS________OPM:       omp.inner.for.end:
-; IS________OPM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
-; IS________OPM:       omp.loop.exit:
-; IS________OPM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS________OPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP12]])
-; IS________OPM-NEXT:    br label [[OMP_PRECOND_END]]
-; IS________OPM:       omp.precond.end:
-; IS________OPM-NEXT:    ret void
+; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@.omp_outlined.
+; NOT_TUNIT_NPM-SAME: (i32* noalias nocapture readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]])
+; NOT_TUNIT_NPM-NEXT:  entry:
+; NOT_TUNIT_NPM-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
+; NOT_TUNIT_NPM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+; NOT_TUNIT_NPM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+; NOT_TUNIT_NPM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+; NOT_TUNIT_NPM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+; NOT_TUNIT_NPM-NEXT:    store i64 4617315517961601024, i64* [[Q_ADDR]], align 8
+; NOT_TUNIT_NPM-NEXT:    [[CONV:%.*]] = bitcast i64* [[Q_ADDR]] to double*
+; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load i32, i32* [[N]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[SUB3:%.*]] = add nsw i32 [[TMP]], -3
+; NOT_TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP]], 2
+; NOT_TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
+; NOT_TUNIT_NPM:       omp.precond.then:
+; NOT_TUNIT_NPM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
+; NOT_TUNIT_NPM-NEXT:    store i32 [[SUB3]], i32* [[DOTOMP_UB]], align 4
+; NOT_TUNIT_NPM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
+; NOT_TUNIT_NPM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
+; NOT_TUNIT_NPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
+; NOT_TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; NOT_TUNIT_NPM:       cond.true:
+; NOT_TUNIT_NPM-NEXT:    br label [[COND_END:%.*]]
+; NOT_TUNIT_NPM:       cond.false:
+; NOT_TUNIT_NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+; NOT_TUNIT_NPM-NEXT:    br label [[COND_END]]
+; NOT_TUNIT_NPM:       cond.end:
+; NOT_TUNIT_NPM-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB3]], [[COND_TRUE]] ], [ [[TMP7]], [[COND_FALSE]] ]
+; NOT_TUNIT_NPM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+; NOT_TUNIT_NPM:       omp.inner.for.cond:
+; NOT_TUNIT_NPM-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
+; NOT_TUNIT_NPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TMP9]]
+; NOT_TUNIT_NPM-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]], label [[OMP_INNER_FOR_BODY:%.*]]
+; NOT_TUNIT_NPM:       omp.inner.for.cond.cleanup:
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
+; NOT_TUNIT_NPM:       omp.inner.for.body:
+; NOT_TUNIT_NPM-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
+; NOT_TUNIT_NPM-NEXT:    [[TMP10:%.*]] = load float, float* [[P]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[TMP11:%.*]] = load double, double* [[CONV]], align 8
+; NOT_TUNIT_NPM-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double [[TMP11]])
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+; NOT_TUNIT_NPM:       omp.body.continue:
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_INNER_FOR_INC]]
+; NOT_TUNIT_NPM:       omp.inner.for.inc:
+; NOT_TUNIT_NPM-NEXT:    [[ADD11]] = add nsw i32 [[DOTOMP_IV_0]], 1
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_INNER_FOR_COND]]
+; NOT_TUNIT_NPM:       omp.inner.for.end:
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+; NOT_TUNIT_NPM:       omp.loop.exit:
+; NOT_TUNIT_NPM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP12]])
+; NOT_TUNIT_NPM-NEXT:    br label [[OMP_PRECOND_END]]
+; NOT_TUNIT_NPM:       omp.precond.end:
+; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@.omp_outlined.
 ; IS__TUNIT_NPM-SAME: (i32* noalias nocapture readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]])
@@ -204,67 +204,6 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; IS__TUNIT_NPM-NEXT:    br label [[OMP_PRECOND_END]]
 ; IS__TUNIT_NPM:       omp.precond.end:
 ; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@.omp_outlined.
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* nocapture nonnull readonly dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
-; IS__CGSCC_NPM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i64 4617315517961601024, i64* [[Q_ADDR]], align 8
-; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = bitcast i64* [[Q_ADDR]] to double*
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load i32, i32* [[N]], align 4
-; IS__CGSCC_NPM-NEXT:    [[SUB3:%.*]] = add nsw i32 [[TMP]], -3
-; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP]], 2
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
-; IS__CGSCC_NPM:       omp.precond.then:
-; IS__CGSCC_NPM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[SUB3]], i32* [[DOTOMP_UB]], align 4
-; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
-; IS__CGSCC_NPM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS__CGSCC_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; IS__CGSCC_NPM:       cond.true:
-; IS__CGSCC_NPM-NEXT:    br label [[COND_END:%.*]]
-; IS__CGSCC_NPM:       cond.false:
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[COND_END]]
-; IS__CGSCC_NPM:       cond.end:
-; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB3]], [[COND_TRUE]] ], [ [[TMP7]], [[COND_FALSE]] ]
-; IS__CGSCC_NPM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
-; IS__CGSCC_NPM:       omp.inner.for.cond:
-; IS__CGSCC_NPM-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-; IS__CGSCC_NPM-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TMP9]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]], label [[OMP_INNER_FOR_BODY:%.*]]
-; IS__CGSCC_NPM:       omp.inner.for.cond.cleanup:
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
-; IS__CGSCC_NPM:       omp.inner.for.body:
-; IS__CGSCC_NPM-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = load float, float* [[P]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP11:%.*]] = load double, double* [[CONV]], align 8
-; IS__CGSCC_NPM-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double [[TMP11]])
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
-; IS__CGSCC_NPM:       omp.body.continue:
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_INNER_FOR_INC]]
-; IS__CGSCC_NPM:       omp.inner.for.inc:
-; IS__CGSCC_NPM-NEXT:    [[ADD11]] = add nsw i32 [[DOTOMP_IV_0]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_INNER_FOR_COND]]
-; IS__CGSCC_NPM:       omp.inner.for.end:
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
-; IS__CGSCC_NPM:       omp.loop.exit:
-; IS__CGSCC_NPM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP12]])
-; IS__CGSCC_NPM-NEXT:    br label [[OMP_PRECOND_END]]
-; IS__CGSCC_NPM:       omp.precond.end:
-; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
   %q.addr = alloca i64, align 8

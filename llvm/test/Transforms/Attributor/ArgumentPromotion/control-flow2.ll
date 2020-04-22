@@ -28,12 +28,12 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee
-; IS__CGSCC____-SAME: (i32* nocapture nofree readonly [[P:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
 ; IS__CGSCC____-NEXT:    br label [[F:%.*]]
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = load i32, i32* [[P]]
+; IS__CGSCC____-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   br i1 %C, label %T, label %F
