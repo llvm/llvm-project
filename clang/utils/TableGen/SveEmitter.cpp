@@ -481,6 +481,11 @@ void SVEType::applyModifier(char Mod) {
     Signed = false;
     Float = false;
     break;
+  case 'x':
+    Predicate = false;
+    Signed = true;
+    Float = false;
+    break;
   case 'i':
     Predicate = false;
     Float = false;

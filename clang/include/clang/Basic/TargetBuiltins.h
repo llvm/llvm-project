@@ -222,6 +222,7 @@ namespace clang {
     bool isStructLoad() const { return Flags & IsStructLoad; }
     bool isStructStore() const { return Flags & IsStructStore; }
     bool isZExtReturn() const { return Flags & IsZExtReturn; }
+    bool isByteIndexed() const { return Flags & IsByteIndexed; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
