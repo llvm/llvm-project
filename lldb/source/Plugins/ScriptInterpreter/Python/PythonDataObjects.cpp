@@ -44,15 +44,7 @@ template <>
 Expected<long long> python::As<long long>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
-  return obj->AsLongLong();
-}
-
-template <>
-Expected<unsigned long long>
-python::As<unsigned long long>(Expected<PythonObject> &&obj) {
-  if (!obj)
-    return obj.takeError();
-  return obj->AsUnsignedLongLong();
+  return obj.get().AsLongLong();
 }
 
 template <>
@@ -471,22 +463,32 @@ void PythonInteger::Convert(PyRefType &type, PyObject *&py_obj) {
 #endif
 }
 
+int64_t PythonInteger::GetInteger() const {
+  if (m_py_obj) {
+    assert(PyLong_Check(m_py_obj) &&
+           "PythonInteger::GetInteger has a PyObject that isn't a PyLong");
+
+    int overflow = 0;
+    int64_t result = PyLong_AsLongLongAndOverflow(m_py_obj, &overflow);
+    if (overflow != 0) {
+      // We got an integer that overflows, like 18446744072853913392L we can't
+      // use PyLong_AsLongLong() as it will return 0xffffffffffffffff. If we
+      // use the unsigned long long it will work as expected.
+      const uint64_t uval = PyLong_AsUnsignedLongLong(m_py_obj);
+      result = static_cast<int64_t>(uval);
+    }
+    return result;
+  }
+  return UINT64_MAX;
+}
+
 void PythonInteger::SetInteger(int64_t value) {
   *this = Take<PythonInteger>(PyLong_FromLongLong(value));
 }
 
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
   StructuredData::IntegerSP result(new StructuredData::Integer);
-  // FIXME this is really not ideal.   Errors are silently converted to 0
-  // and overflows are silently wrapped.   But we'd need larger changes
-  // to StructuredData to fix it, so that's how it is for now.
-  llvm::Expected<unsigned long long> value = AsModuloUnsignedLongLong();
-  if (!value) {
-    llvm::consumeError(value.takeError());
-    result->SetValue(0);
-  } else { 
-    result->SetValue(value.get());
-  }
+  result->SetValue(GetInteger());
   return result;
 }
 

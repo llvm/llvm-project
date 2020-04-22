@@ -444,7 +444,6 @@ LLDBSwigPythonCallBreakpointResolver
     if (PyErr_Occurred())
     {
         PyErr_Print();
-        PyErr_Clear();
         return 0;
     }
 
@@ -458,13 +457,11 @@ LLDBSwigPythonCallBreakpointResolver
           return 1;
     }
 
-    long long ret_val = unwrapOrSetPythonException(As<long long>(result));
-
-    if (PyErr_Occurred()) {
-        PyErr_Print();
-        PyErr_Clear();
+    PythonInteger int_result = result.AsType<PythonInteger>();
+    if (!int_result.IsAllocated())
         return 0;
-    }
+
+    unsigned int ret_val = int_result.GetInteger();
 
     return ret_val;
 }
@@ -518,17 +515,26 @@ LLDBSwigPython_CalculateNumChildren
         return 0;
     }
 
-    size_t ret_val;
-    if (arg_info.get().max_positional_args < 1)
-        ret_val = unwrapOrSetPythonException(As<long long>(pfunc.Call()));
-    else
-        ret_val = unwrapOrSetPythonException(As<long long>(pfunc.Call(PythonInteger(max))));
+    PythonObject result;
 
-    if (PyErr_Occurred())
+    if (arg_info.get().max_positional_args < 1)
+        result = pfunc();
+    else
+        result = pfunc(PythonInteger(max));
+
+    if (!result.IsAllocated())
+        return 0;
+
+    PythonInteger int_result = result.AsType<PythonInteger>();
+    if (!int_result.IsAllocated())
+        return 0;
+
+    size_t ret_val = int_result.GetInteger();
+
+    if (PyErr_Occurred()) //FIXME use Expected to catch python exceptions
     {
         PyErr_Print();
         PyErr_Clear();
-        return 0;
     }
 
     if (arg_info.get().max_positional_args < 1)
@@ -582,15 +588,16 @@ LLDBSwigPython_GetIndexOfChildWithName
     if (!pfunc.IsAllocated())
         return UINT32_MAX;
 
-    llvm::Expected<PythonObject> result = pfunc.Call(PythonString(child_name));
+    PythonObject result = pfunc(PythonString(child_name));
 
-    long long retval = unwrapOrSetPythonException(As<long long>(std::move(result)));
-
-    if (PyErr_Occurred()) { 
-        PyErr_Clear(); // FIXME print this? do something else
+    if (!result.IsAllocated())
         return UINT32_MAX;
-    }
 
+    PythonInteger int_result = result.AsType<PythonInteger>();
+    if (!int_result.IsAllocated())
+        return UINT32_MAX;
+
+    int64_t retval = int_result.GetInteger();
     if (retval >= 0)
         return (uint32_t)retval;
 

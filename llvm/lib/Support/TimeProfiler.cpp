@@ -75,9 +75,9 @@ struct Entry {
 
 struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
-      : StartTime(steady_clock::now()), ProcName(ProcName),
-        Pid(sys::Process::getProcessId()), Tid(llvm::get_threadid()),
-        TimeTraceGranularity(TimeTraceGranularity) {
+      : BeginningOfTime(system_clock::now()), StartTime(steady_clock::now()),
+        ProcName(ProcName), Pid(sys::Process::getProcessId()),
+        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {
     llvm::get_thread_name(ThreadName);
   }
 
@@ -234,12 +234,22 @@ struct llvm::TimeTraceProfiler {
 
     J.arrayEnd();
     J.attributeEnd();
+
+    // Emit the absolute time when this TimeProfiler started.
+    // This can be used to combine the profiling data from
+    // multiple processes and preserve actual time intervals.
+    J.attribute("beginningOfTime",
+                time_point_cast<microseconds>(BeginningOfTime)
+                    .time_since_epoch()
+                    .count());
+
     J.objectEnd();
   }
 
   SmallVector<Entry, 16> Stack;
   SmallVector<Entry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
+  const time_point<system_clock> BeginningOfTime;
   const TimePointType StartTime;
   const std::string ProcName;
   const sys::Process::Pid Pid;
