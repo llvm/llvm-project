@@ -57,6 +57,7 @@ void test() {
     typedef std::basic_string<CharT, trait<CharT> > str_t;
     std::hash<str_t>
         h; // expected-error-re 4 {{{{call to implicitly-deleted default constructor of 'std::hash<str_t>'|implicit instantiation of undefined template}} {{.+}}}}}}
+    (void)h;
 }
 
 int main(int, char**) {
