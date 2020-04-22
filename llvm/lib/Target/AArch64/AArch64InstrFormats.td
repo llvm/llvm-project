@@ -483,6 +483,19 @@ def uimm6s16 : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm6s16Operand;
 }
 
+def SImmS2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N), MVT::i64);
+}]>;
+def SImmS3XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 3, SDLoc(N), MVT::i64);
+}]>;
+def SImmS4XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 4, SDLoc(N), MVT::i64);
+}]>;
+def SImmS16XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 16, SDLoc(N), MVT::i64);
+}]>;
+
 // simm6sN predicate - True if the immediate is a multiple of N in the range
 // [-32 * N, 31 * N].
 def SImm6s1Operand : SImmScaledMemoryIndexed<6, 1>;
@@ -506,27 +519,27 @@ def simm4s1 : Operand<i64>, ImmLeaf<i64,
 }
 
 def simm4s2 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-16  && Imm <= 14 && (Imm % 2) == 0x0; }]> {
+[{ return Imm >=-16  && Imm <= 14 && (Imm % 2) == 0x0; }], SImmS2XForm> {
   let PrintMethod = "printImmScale<2>";
   let ParserMatchClass = SImm4s2Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 
 def simm4s3 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-24  && Imm <= 21 && (Imm % 3) == 0x0; }]> {
+[{ return Imm >=-24  && Imm <= 21 && (Imm % 3) == 0x0; }], SImmS3XForm> {
   let PrintMethod = "printImmScale<3>";
   let ParserMatchClass = SImm4s3Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 
 def simm4s4 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-32  && Imm <= 28 && (Imm % 4) == 0x0; }]> {
+[{ return Imm >=-32  && Imm <= 28 && (Imm % 4) == 0x0; }], SImmS4XForm> {
   let PrintMethod = "printImmScale<4>";
   let ParserMatchClass = SImm4s4Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 def simm4s16 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }]> {
+[{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }], SImmS16XForm> {
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = SImm4s16Operand;
   let DecoderMethod = "DecodeSImm<4>";

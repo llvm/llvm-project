@@ -31,6 +31,16 @@ def AArch64ldff1 : SDNode<"AArch64ISD::LDFF1", SDT_AArch64_LD1, [SDNPHasChain, S
 def AArch64ldnf1s : SDNode<"AArch64ISD::LDNF1S", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64ldff1s : SDNode<"AArch64ISD::LDFF1S", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Contiguous load and replicate - node definitions
+//
+
+def SDT_AArch64_LD1RQ : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
+]>;
+
+def AArch64ld1rq  : SDNode<"AArch64ISD::LD1RQ",  SDT_AArch64_LD1RQ, [SDNPHasChain, SDNPMayLoad]>;
+
 // Gather loads - node definitions
 //
 def SDT_AArch64_GATHER_SV : SDTypeProfile<1, 4, [
@@ -1316,6 +1326,25 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
             (PTEST_PP PPR:$pg, PPR:$src)>;
   def : Pat<(AArch64ptest (nxv2i1 PPR:$pg), (nxv2i1 PPR:$src)),
             (PTEST_PP PPR:$pg, PPR:$src)>;
+
+  // LD1R of 128-bit masked data
+  def : Pat<(nxv16i8 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+            (LD1RQ_B_IMM $gp, $base, (i64 0))>;
+  def : Pat<(nxv8i16 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+            (LD1RQ_H_IMM $gp, $base, (i64 0))>;
+  def : Pat<(nxv4i32 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+            (LD1RQ_W_IMM $gp, $base, (i64 0))>;
+  def : Pat<(nxv2i64 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+            (LD1RQ_D_IMM $gp, $base, (i64 0))>;
+
+  def : Pat<(nxv16i8 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+            (LD1RQ_B_IMM $gp, $base, simm4s16:$imm)>;
+  def : Pat<(nxv8i16 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+            (LD1RQ_H_IMM $gp, $base, simm4s16:$imm)>;
+  def : Pat<(nxv4i32 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+            (LD1RQ_W_IMM $gp, $base, simm4s16:$imm)>;
+  def : Pat<(nxv2i64 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+            (LD1RQ_D_IMM $gp, $base, simm4s16:$imm)>;
 
   def : Pat<(sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (SXTW_ZPmZ_D (IMPLICIT_DEF), (PTRUE_D 31), ZPR:$Zs)>;
   def : Pat<(sext_inreg (nxv2i64 ZPR:$Zs), nxv2i16), (SXTH_ZPmZ_D (IMPLICIT_DEF), (PTRUE_D 31), ZPR:$Zs)>;
