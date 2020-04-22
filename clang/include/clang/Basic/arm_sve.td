@@ -63,6 +63,7 @@
 // d: default
 // c: const pointer type
 // P: predicate type
+// a: scalar of element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
 // h: 1/2 width elements, 2x element count
 // q: 1/4 width elements, 4x element count
@@ -149,6 +150,12 @@ def FirstMergeTypeMask        : FlagType<0x00000080>;
 //      :                                     :
 //      :                                     :
 def MergeTypeMask             : FlagType<0x00000380>;
+def FirstSplatOperand         : FlagType<0x00000400>;
+//      :                                     :
+// These flags are used to specify which scalar operand
+// needs to be duplicated/splatted into a vector.
+//      :                                     :
+def SplatOperandMask          : FlagType<0x00001C00>;
 def IsLoad                    : FlagType<0x00002000>;
 def IsStore                   : FlagType<0x00004000>;
 def IsGatherLoad              : FlagType<0x00008000>;
@@ -473,6 +480,10 @@ multiclass SInstZPZZ<string name, string types, string intrinsic, list<FlagType>
   def _M   : SInst<name # "[_{d}]",   "dPdd", types, MergeOp1,  intrinsic, flags>;
   def _X   : SInst<name # "[_{d}]",   "dPdd", types, MergeAny,  intrinsic, flags>;
   def _Z   : SInst<name # "[_{d}]",   "dPdd", types, MergeZero, intrinsic, flags>;
+
+  def _N_M : SInst<name # "[_n_{d}]", "dPda", types, MergeOp1,  intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPda", types, MergeAny,  intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", "dPda", types, MergeZero, intrinsic, flags>;
 }
 
 defm SVABD_S  : SInstZPZZ<"svabd",  "csil",         "aarch64_sve_sabd">;
