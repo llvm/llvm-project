@@ -6010,13 +6010,17 @@ std::string AAMemoryLocation::getMemoryLocationsAsStr(
 struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   AAMemoryLocationImpl(const IRPosition &IRP, Attributor &A)
-      : AAMemoryLocation(IRP, A), Allocator(A.Allocator) {}
+      : AAMemoryLocation(IRP, A), Allocator(A.Allocator) {
+    for (unsigned u = 0; u < llvm::CTLog2<VALID_STATE>(); ++u)
+      AccessKind2Accesses[u] = nullptr;
+  }
 
   ~AAMemoryLocationImpl() {
     // The AccessSets are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
-    for (auto &It : AccessKind2Accesses)
-      It.getSecond()->~AccessSet();
+    for (unsigned u = 0; u < llvm::CTLog2<VALID_STATE>(); ++u)
+      if (AccessKind2Accesses[u])
+        AccessKind2Accesses[u]->~AccessSet();
   }
 
   /// See AbstractAttribute::initialize(...).
@@ -6106,11 +6110,13 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     if (AssumedMLK == NO_LOCATIONS)
       return true;
 
-    for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
+    unsigned Idx = 0;
+    for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS;
+         CurMLK *= 2, ++Idx) {
       if (CurMLK & RequestedMLK)
         continue;
 
-      if (const AccessSet *Accesses = AccessKind2Accesses.lookup(CurMLK))
+      if (const AccessSet *Accesses = AccessKind2Accesses[Idx])
         for (const AccessInfo &AI : *Accesses)
           if (!Pred(AI.I, AI.Ptr, AI.Kind, CurMLK))
             return false;
@@ -6163,9 +6169,8 @@ protected:
 
   /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
   /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
-  using AccessSet = SmallSet<AccessInfo, 8, AccessInfo>;
-  using AccessKind2AccessSetTy = DenseMap<unsigned, AccessSet *>;
-  AccessKind2AccessSetTy AccessKind2Accesses;
+  using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
+  AccessSet *AccessKind2Accesses[llvm::CTLog2<VALID_STATE>()];
 
   /// Return the kind(s) of location that may be accessed by \p V.
   AAMemoryLocation::MemoryLocationsKind
@@ -6185,7 +6190,7 @@ protected:
     }
 
     assert(isPowerOf2_32(MLK) && "Expected a single location set!");
-    auto *&Accesses = AccessKind2Accesses[MLK];
+    auto *&Accesses = AccessKind2Accesses[llvm::Log2_32(MLK)];
     if (!Accesses)
       Accesses = new (Allocator) AccessSet();
     Changed |= Accesses->insert(AccessInfo{I, Ptr, Kind}).second;
