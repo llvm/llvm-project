@@ -1029,6 +1029,30 @@ func @cmpxchg(%F : memref<10xf32>, %fval : f32, %i : index) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @generic_atomic_rmw
+// CHECK32-LABEL: func @generic_atomic_rmw
+func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
+  %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%old_value : f32):
+      %c1 = constant 1.0 : f32
+      atomic_yield %c1 : f32
+  }
+  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm<"float*">
+  // CHECK-NEXT: llvm.br ^bb1([[init]] : !llvm.float)
+  // CHECK-NEXT: ^bb1([[loaded:%.*]]: !llvm.float):
+  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1.000000e+00 : f32)
+  // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[c1]]
+  // CHECK-SAME:                    acq_rel monotonic : !llvm.float
+  // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
+  // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
+  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.float)
+  // CHECK-NEXT: ^bb2:
+  return %x : f32
+  // CHECK-NEXT: llvm.return [[new]]
+}
+
+// -----
+
 // CHECK-LABEL: func @assume_alignment
 func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK: %[[PTR:.*]] = llvm.extractvalue %[[MEMREF:.*]][1] : !llvm<"{ half*, half*, i64, [2 x i64], [2 x i64] }">

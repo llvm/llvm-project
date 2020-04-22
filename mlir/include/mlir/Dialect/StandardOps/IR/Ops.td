@@ -539,6 +539,9 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
     Value getCurrentValue() {
       return body().front().getArgument(0);
     }
+    MemRefType getMemRefType() {
+      return memref().getType().cast<MemRefType>();
+    }
   }];
 }
 
