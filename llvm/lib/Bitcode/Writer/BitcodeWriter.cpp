@@ -949,7 +949,8 @@ void ModuleBitcodeWriter::writeTypeTable() {
       AbbrevToUse = ArrayAbbrev;
       break;
     }
-    case Type::VectorTyID: {
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID: {
       VectorType *VT = cast<VectorType>(T);
       // VECTOR [numelts, eltty] or
       //        [numelts, eltty, scalable]

@@ -73,13 +73,10 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
     return getPrimitiveSizeInBits() == Ty->getPrimitiveSizeInBits();
 
   //  64-bit fixed width vector types can be losslessly converted to x86mmx.
-  if (((isa<VectorType>(this) &&
-        !cast<VectorType>(this)->getElementCount().Scalable) &&
-       Ty->isX86_MMXTy()) &&
+  if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
       getPrimitiveSizeInBits().getFixedSize() == 64)
     return true;
-  if ((isX86_MMXTy() && (isa<VectorType>(Ty) &&
-                         !cast<VectorType>(Ty)->getElementCount().Scalable)) &&
+  if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
       Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
     return true;
 
@@ -123,7 +120,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::X86_MMXTyID: return TypeSize::Fixed(64);
   case Type::IntegerTyID:
     return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     const VectorType *VTy = cast<VectorType>(this);
     ElementCount EC = VTy->getElementCount();
     TypeSize ETS = VTy->getElementType()->getPrimitiveSizeInBits();
@@ -586,30 +584,65 @@ bool ArrayType::isValidElementType(Type *ElemTy) {
 //                          VectorType Implementation
 //===----------------------------------------------------------------------===//
 
-VectorType::VectorType(Type *ElType, ElementCount EC)
-    : Type(ElType->getContext(), VectorTyID), ContainedType(ElType),
-      NumElements(EC.Min), Scalable(EC.Scalable) {
+VectorType::VectorType(Type *ElType, ElementCount EC, Type::TypeID TID)
+    : Type(ElType->getContext(), TID), ContainedType(ElType), EC(EC) {
   ContainedTys = &ContainedType;
   NumContainedTys = 1;
 }
 
 VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
-  assert(EC.Min > 0 && "#Elements of a VectorType must be greater than 0");
-  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
-                                            "be an integer, floating point, or "
-                                            "pointer type.");
-
-  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
-  VectorType *&Entry = ElementType->getContext().pImpl
-                                 ->VectorTypes[std::make_pair(ElementType, EC)];
-  if (!Entry)
-    Entry = new (pImpl->Alloc) VectorType(ElementType, EC);
-  return Entry;
+  if (EC.Scalable)
+    return ScalableVectorType::get(ElementType, EC.Min);
+  else
+    return FixedVectorType::get(ElementType, EC.Min);
 }
 
 bool VectorType::isValidElementType(Type *ElemTy) {
   return ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
-    ElemTy->isPointerTy();
+         ElemTy->isPointerTy();
+}
+
+//===----------------------------------------------------------------------===//
+//                        FixedVectorType Implementation
+//===----------------------------------------------------------------------===//
+
+FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
+  assert(NumElts > 0 && "#Elements of a VectorType must be greater than 0");
+  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
+                                            "be an integer, floating point, or "
+                                            "pointer type.");
+
+  ElementCount EC(NumElts, false);
+
+  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
+  VectorType *&Entry = ElementType->getContext()
+                           .pImpl->VectorTypes[std::make_pair(ElementType, EC)];
+
+  if (!Entry)
+    Entry = new (pImpl->Alloc) FixedVectorType(ElementType, NumElts);
+  return cast<FixedVectorType>(Entry);
+}
+
+//===----------------------------------------------------------------------===//
+//                       ScalableVectorType Implementation
+//===----------------------------------------------------------------------===//
+
+ScalableVectorType *ScalableVectorType::get(Type *ElementType,
+                                            unsigned MinNumElts) {
+  assert(MinNumElts > 0 && "#Elements of a VectorType must be greater than 0");
+  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
+                                            "be an integer, floating point, or "
+                                            "pointer type.");
+
+  ElementCount EC(MinNumElts, true);
+
+  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
+  VectorType *&Entry = ElementType->getContext()
+                           .pImpl->VectorTypes[std::make_pair(ElementType, EC)];
+
+  if (!Entry)
+    Entry = new (pImpl->Alloc) ScalableVectorType(ElementType, MinNumElts);
+  return cast<ScalableVectorType>(Entry);
 }
 
 //===----------------------------------------------------------------------===//
