@@ -159,6 +159,5 @@ define void @struct2_caller() {
   %c.4 = icmp ugt i64 %v2, 250
   call void @use(i1 %c.4)
 
-
   ret void
 }
