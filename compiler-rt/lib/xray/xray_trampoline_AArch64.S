@@ -27,10 +27,10 @@ __xray_FunctionEntry:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionEntry_restore
@@ -72,10 +72,10 @@ __xray_FunctionExit:
     STP X5, X6, [SP, #-16]!
     STP X7, X30, [SP, #-16]!
     STR Q0, [SP, #-16]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionExit_restore
@@ -117,10 +117,10 @@ __xray_FunctionTailExit:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionTailExit_restore
