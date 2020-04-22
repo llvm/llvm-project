@@ -7,6 +7,7 @@
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionEntry
+    .hidden __xray_FunctionEntry
     .type __xray_FunctionEntry, %function
     /* In C++ it is void extern "C" __xray_FunctionEntry(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -54,6 +55,7 @@ FunctionEntry_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionExit
+    .hidden __xray_FunctionExit
     .type __xray_FunctionExit, %function
     /* In C++ it is void extern "C" __xray_FunctionExit(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -94,6 +96,7 @@ FunctionExit_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionTailExit
+    .hidden __xray_FunctionTailExit
     .type __xray_FunctionTailExit, %function
     /* In C++ it is void extern "C" __xray_FunctionTailExit(uint32_t FuncId)
          with FuncId passed in W0 register. */
