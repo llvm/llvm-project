@@ -51,11 +51,6 @@ mlir::Value createSomeExpression(mlir::Location loc,
                                  const evaluate::Expr<evaluate::SomeType> &expr,
                                  SymMap &symMap);
 
-mlir::Value
-createI1LogicalExpression(mlir::Location loc, AbstractConverter &converter,
-                          const evaluate::Expr<evaluate::SomeType> &expr,
-                          SymMap &symMap);
-
 /// Create an address.
 /// Lowers `expr` to the FIR dialect of MLIR. The expression must be an entity
 /// and the address of the entity is returned.

@@ -15,9 +15,10 @@ subroutine assign1(lhs, rhs)
 
   ! CHECK: %[[cmp_len:[0-9]+]] = cmpi "slt", %[[lhs:.*]]#1, %[[rhs:.*]]#1
   ! CHECK-NEXT: %[[min_len:[0-9]+]] = select %[[cmp_len]], %[[lhs]]#1, %[[rhs]]#1
+  ! CHECK-NEXT: %[[minIdxLen:.*]] = fir.convert %[[min_len]]
 
   ! Allocate temp in case rhs and lhs may overlap
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1>, %[[min_len]]
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1>, %[[minIdxLen]]
 
   ! Copy of rhs into temp
   ! CHECK: fir.do_loop %[[i:.*]] =

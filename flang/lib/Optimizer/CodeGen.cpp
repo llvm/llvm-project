@@ -1008,46 +1008,88 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
       return success();
     }
     auto loc = convert.getLoc();
-    mlir::Value v;
+    auto convertFpToFp = [&](mlir::Value val, unsigned fromBits,
+                             unsigned toBits, mlir::Type toTy) -> mlir::Value {
+      // FIXME: what if different reps (F16, BF16) are the same size?
+      assert(fromBits != toBits);
+      if (fromBits > toBits)
+        return rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, val);
+      return rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, val);
+    };
+    if (fir::isa_complex(convert.value().getType()) &&
+        fir::isa_complex(convert.res().getType())) {
+      // Special case: handle the conversion of a complex such that both the
+      // real and imaginary parts are converted together.
+      auto zero = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0),
+                                       convert.getContext());
+      auto one = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1),
+                                      convert.getContext());
+      auto rp =
+          rewriter.create<mlir::LLVM::ExtractValueOp>(loc, fromTy_, op0, zero);
+      auto ip =
+          rewriter.create<mlir::LLVM::ExtractValueOp>(loc, fromTy_, op0, one);
+      auto ty = convertType(getComplexEleTy(convert.value().getType()));
+      auto nt = convertType(getComplexEleTy(convert.res().getType()));
+      auto fromBits = unwrap(ty).getUnderlyingType()->getPrimitiveSizeInBits();
+      auto toBits = unwrap(nt).getUnderlyingType()->getPrimitiveSizeInBits();
+      auto rc = convertFpToFp(rp, fromBits, toBits, nt);
+      auto ic = convertFpToFp(ip, fromBits, toBits, nt);
+      auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, toTy_);
+      auto i1 =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, toTy_, un, rc, zero);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(convert, toTy_, i1,
+                                                             ic, one);
+      return mlir::success();
+    }
     if (fromLLVMTy->isFloatingPointTy()) {
       if (toLLVMTy->isFloatingPointTy()) {
-        std::size_t fromBits{fromLLVMTy->getPrimitiveSizeInBits()};
-        std::size_t toBits{toLLVMTy->getPrimitiveSizeInBits()};
-        // FIXME: what if different reps (F16, BF16) are the same size?
-        assert(fromBits != toBits);
-        if (fromBits > toBits)
-          v = rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, op0);
-        else
-          v = rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, op0);
-      } else if (toLLVMTy->isIntegerTy()) {
-        v = rewriter.create<mlir::LLVM::FPToSIOp>(loc, toTy, op0);
+        auto fromBits = fromLLVMTy->getPrimitiveSizeInBits();
+        auto toBits = toLLVMTy->getPrimitiveSizeInBits();
+        auto v = convertFpToFp(op0, fromBits, toBits, toTy);
+        rewriter.replaceOp(convert, v);
+        return mlir::success();
+      }
+      if (toLLVMTy->isIntegerTy()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        return mlir::success();
       }
     } else if (fromLLVMTy->isIntegerTy()) {
       if (toLLVMTy->isIntegerTy()) {
         std::size_t fromBits{fromLLVMTy->getIntegerBitWidth()};
         std::size_t toBits{toLLVMTy->getIntegerBitWidth()};
         assert(fromBits != toBits);
-        if (fromBits > toBits)
-          v = rewriter.create<mlir::LLVM::TruncOp>(loc, toTy, op0);
-        else
-          v = rewriter.create<mlir::LLVM::SExtOp>(loc, toTy, op0);
-      } else if (toLLVMTy->isFloatingPointTy()) {
-        v = rewriter.create<mlir::LLVM::SIToFPOp>(loc, toTy, op0);
-      } else if (toLLVMTy->isPointerTy()) {
-        v = rewriter.create<mlir::LLVM::IntToPtrOp>(loc, toTy, op0);
+        if (fromBits > toBits) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
+          return mlir::success();
+        }
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      if (toLLVMTy->isFloatingPointTy()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      if (toLLVMTy->isPointerTy()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(convert, toTy, op0);
+        return mlir::success();
       }
     } else if (fromLLVMTy->isPointerTy()) {
       if (toLLVMTy->isIntegerTy()) {
-        v = rewriter.create<mlir::LLVM::PtrToIntOp>(loc, toTy, op0);
-      } else if (toLLVMTy->isPointerTy()) {
-        v = rewriter.create<mlir::LLVM::BitcastOp>(loc, toTy, op0);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      if (toLLVMTy->isPointerTy()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
+        return mlir::success();
       }
     }
-    if (v)
-      rewriter.replaceOp(convert, v);
-    else
-      emitError(loc) << "cannot convert " << fromTy_ << " to " << toTy_;
-    return success();
+    return emitError(loc) << "cannot convert " << fromTy_ << " to " << toTy_;
+  }
+
+  static mlir::Type getComplexEleTy(mlir::Type complex) {
+    if (auto cc = complex.dyn_cast<mlir::ComplexType>())
+      return cc.getElementType();
+    return complex.cast<fir::CplxType>().getElementType();
   }
 };
 
@@ -1226,7 +1268,8 @@ struct ExtractValueOpConversion
   mlir::LogicalResult
   doRewrite(fir::ExtractValueOp extractVal, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
-    assert(fir::allConstants(operands.drop_front(1)));
+    if (!fir::allConstants(operands.drop_front(1)))
+      llvm_unreachable("fir.extract_value incorrectly formed");
     // since all indices are constants use LLVM's extractvalue instruction
     SmallVector<mlir::Attribute, 8> attrs;
     for (std::size_t i = 1, end{operands.size()}; i < end; ++i)
