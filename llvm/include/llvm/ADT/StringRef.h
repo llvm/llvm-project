@@ -56,7 +56,7 @@ namespace llvm {
   /// general safe to store a StringRef.
   class LLVM_GSL_POINTER StringRef {
   public:
-    static const size_t npos = ~size_t(0);
+    static constexpr size_t npos = ~size_t(0);
 
     using iterator = const char *;
     using const_iterator = const char *;
