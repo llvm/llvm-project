@@ -6513,22 +6513,24 @@ static bool ObjCPropertyFlagConflicts(unsigned Attributes, unsigned NewFlag) {
   Attributes |= NewFlag;
 
   // Check for collisions with "readonly".
-  if ((Attributes & ObjCDeclSpec::DQ_PR_readonly) &&
-      (Attributes & ObjCDeclSpec::DQ_PR_readwrite))
+  if ((Attributes & ObjCPropertyAttribute::kind_readonly) &&
+      (Attributes & ObjCPropertyAttribute::kind_readwrite))
     return true;
 
   // Check for more than one of { assign, copy, retain, strong, weak }.
   unsigned AssignCopyRetMask =
       Attributes &
-      (ObjCDeclSpec::DQ_PR_assign | ObjCDeclSpec::DQ_PR_unsafe_unretained |
-       ObjCDeclSpec::DQ_PR_copy | ObjCDeclSpec::DQ_PR_retain |
-       ObjCDeclSpec::DQ_PR_strong | ObjCDeclSpec::DQ_PR_weak);
-  if (AssignCopyRetMask && AssignCopyRetMask != ObjCDeclSpec::DQ_PR_assign &&
-      AssignCopyRetMask != ObjCDeclSpec::DQ_PR_unsafe_unretained &&
-      AssignCopyRetMask != ObjCDeclSpec::DQ_PR_copy &&
-      AssignCopyRetMask != ObjCDeclSpec::DQ_PR_retain &&
-      AssignCopyRetMask != ObjCDeclSpec::DQ_PR_strong &&
-      AssignCopyRetMask != ObjCDeclSpec::DQ_PR_weak)
+      (ObjCPropertyAttribute::kind_assign |
+       ObjCPropertyAttribute::kind_unsafe_unretained |
+       ObjCPropertyAttribute::kind_copy | ObjCPropertyAttribute::kind_retain |
+       ObjCPropertyAttribute::kind_strong | ObjCPropertyAttribute::kind_weak);
+  if (AssignCopyRetMask &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_assign &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_unsafe_unretained &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_copy &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_retain &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_strong &&
+      AssignCopyRetMask != ObjCPropertyAttribute::kind_weak)
     return true;
 
   return false;
@@ -6544,32 +6546,41 @@ void Sema::CodeCompleteObjCPropertyFlags(Scope *S, ObjCDeclSpec &ODS) {
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
   Results.EnterNewScope();
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_readonly))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_readonly))
     Results.AddResult(CodeCompletionResult("readonly"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_assign))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_assign))
     Results.AddResult(CodeCompletionResult("assign"));
   if (!ObjCPropertyFlagConflicts(Attributes,
-                                 ObjCDeclSpec::DQ_PR_unsafe_unretained))
+                                 ObjCPropertyAttribute::kind_unsafe_unretained))
     Results.AddResult(CodeCompletionResult("unsafe_unretained"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_readwrite))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_readwrite))
     Results.AddResult(CodeCompletionResult("readwrite"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_retain))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_retain))
     Results.AddResult(CodeCompletionResult("retain"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_strong))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_strong))
     Results.AddResult(CodeCompletionResult("strong"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_copy))
+  if (!ObjCPropertyFlagConflicts(Attributes, ObjCPropertyAttribute::kind_copy))
     Results.AddResult(CodeCompletionResult("copy"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_nonatomic))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_nonatomic))
     Results.AddResult(CodeCompletionResult("nonatomic"));
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_atomic))
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_atomic))
     Results.AddResult(CodeCompletionResult("atomic"));
 
   // Only suggest "weak" if we're compiling for ARC-with-weak-references or GC.
   if (getLangOpts().ObjCWeak || getLangOpts().getGC() != LangOptions::NonGC)
-    if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_weak))
+    if (!ObjCPropertyFlagConflicts(Attributes,
+                                   ObjCPropertyAttribute::kind_weak))
       Results.AddResult(CodeCompletionResult("weak"));
 
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_setter)) {
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_setter)) {
     CodeCompletionBuilder Setter(Results.getAllocator(),
                                  Results.getCodeCompletionTUInfo());
     Setter.AddTypedTextChunk("setter");
@@ -6577,7 +6588,8 @@ void Sema::CodeCompleteObjCPropertyFlags(Scope *S, ObjCDeclSpec &ODS) {
     Setter.AddPlaceholderChunk("method");
     Results.AddResult(CodeCompletionResult(Setter.TakeString()));
   }
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_getter)) {
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_getter)) {
     CodeCompletionBuilder Getter(Results.getAllocator(),
                                  Results.getCodeCompletionTUInfo());
     Getter.AddTypedTextChunk("getter");
@@ -6585,7 +6597,8 @@ void Sema::CodeCompleteObjCPropertyFlags(Scope *S, ObjCDeclSpec &ODS) {
     Getter.AddPlaceholderChunk("method");
     Results.AddResult(CodeCompletionResult(Getter.TakeString()));
   }
-  if (!ObjCPropertyFlagConflicts(Attributes, ObjCDeclSpec::DQ_PR_nullability)) {
+  if (!ObjCPropertyFlagConflicts(Attributes,
+                                 ObjCPropertyAttribute::kind_nullability)) {
     Results.AddResult(CodeCompletionResult("nonnull"));
     Results.AddResult(CodeCompletionResult("nullable"));
     Results.AddResult(CodeCompletionResult("null_unspecified"));

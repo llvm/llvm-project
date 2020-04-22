@@ -941,9 +941,10 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
 
   unsigned Attributes = PD->getPropertyAttributes();
   if (mustSynthesizeSetterGetterMethod(IMD, PD, true /*getter*/)) {
-    bool GenGetProperty = !(Attributes & ObjCPropertyDecl::OBJC_PR_nonatomic) &&
-                          (Attributes & (ObjCPropertyDecl::OBJC_PR_retain |
-                                         ObjCPropertyDecl::OBJC_PR_copy));
+    bool GenGetProperty =
+        !(Attributes & ObjCPropertyAttribute::kind_nonatomic) &&
+        (Attributes & (ObjCPropertyAttribute::kind_retain |
+                       ObjCPropertyAttribute::kind_copy));
     std::string Getr;
     if (GenGetProperty && !objcGetPropertyDefined) {
       objcGetPropertyDefined = true;
@@ -1002,8 +1003,8 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
 
   // Generate the 'setter' function.
   std::string Setr;
-  bool GenSetProperty = Attributes & (ObjCPropertyDecl::OBJC_PR_retain |
-                                      ObjCPropertyDecl::OBJC_PR_copy);
+  bool GenSetProperty = Attributes & (ObjCPropertyAttribute::kind_retain |
+                                      ObjCPropertyAttribute::kind_copy);
   if (GenSetProperty && !objcSetPropertyDefined) {
     objcSetPropertyDefined = true;
     // FIXME. Is this attribute correct in all cases?
@@ -1022,11 +1023,11 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
     Setr += ", (id)";
     Setr += PD->getName();
     Setr += ", ";
-    if (Attributes & ObjCPropertyDecl::OBJC_PR_nonatomic)
+    if (Attributes & ObjCPropertyAttribute::kind_nonatomic)
       Setr += "0, ";
     else
       Setr += "1, ";
-    if (Attributes & ObjCPropertyDecl::OBJC_PR_copy)
+    if (Attributes & ObjCPropertyAttribute::kind_copy)
       Setr += "1)";
     else
       Setr += "0)";

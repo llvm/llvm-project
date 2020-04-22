@@ -762,7 +762,7 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
       return nullptr;
 
     // Ignore weak variables, which have special behavior.
-    if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
+    if (Prop->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak)
       return nullptr;
 
     // Look to see if Sema has synthesized a body for us. This happens in
