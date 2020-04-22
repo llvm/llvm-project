@@ -3074,9 +3074,9 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
   return false;
 }
 
-Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
+Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
                                             const TargetLibraryInfo *TLI) {
-  const Function *F = ICS.getCalledFunction();
+  const Function *F = CB.getCalledFunction();
   if (!F)
     return Intrinsic::not_intrinsic;
 
@@ -3093,7 +3093,7 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(*F, Func))
     return Intrinsic::not_intrinsic;
 
-  if (!ICS.onlyReadsMemory())
+  if (!CB.onlyReadsMemory())
     return Intrinsic::not_intrinsic;
 
   // Otherwise check if we have a call to a function that can be turned into a
@@ -3214,7 +3214,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
     return true;
 
   if (auto *Call = dyn_cast<CallInst>(Op)) {
-    Intrinsic::ID IID = getIntrinsicForCallSite(Call, TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(*Call, TLI);
     switch (IID) {
     default:
       break;
@@ -3311,7 +3311,7 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
                                            Depth + 1);
   case Instruction::Call:
     const auto *CI = cast<CallInst>(I);
-    Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(*CI, TLI);
     switch (IID) {
     default:
       break;
