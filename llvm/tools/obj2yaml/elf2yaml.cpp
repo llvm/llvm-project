@@ -305,17 +305,25 @@ static bool isInSegment(const ELFYAML::Section &Sec,
       SHdr.sh_offset >= Phdr.p_offset &&
       (SHdr.sh_offset + SHdr.sh_size <= Phdr.p_offset + Phdr.p_filesz);
 
-  if (FileOffsetsMatch)
+  bool VirtualAddressesMatch = SHdr.sh_addr >= Phdr.p_vaddr &&
+                               SHdr.sh_addr <= Phdr.p_vaddr + Phdr.p_memsz;
+
+  if (FileOffsetsMatch) {
+    // An empty section on the edges of a program header can be outside of the
+    // virtual address space of the segment. This means it is not included in
+    // the segment and we should ignore it.
+    if (SHdr.sh_size == 0 && (SHdr.sh_offset == Phdr.p_offset ||
+                              SHdr.sh_offset == Phdr.p_offset + Phdr.p_filesz))
+      return VirtualAddressesMatch;
     return true;
+  }
 
   // SHT_NOBITS sections usually occupy no physical space in a file. Such
   // sections belong to a segment when they reside in the segment's virtual
   // address space.
   if (Sec.Type != ELF::SHT_NOBITS)
     return false;
-
-  return SHdr.sh_addr >= Phdr.p_vaddr &&
-         SHdr.sh_addr <= Phdr.p_vaddr + Phdr.p_memsz;
+  return VirtualAddressesMatch;
 }
 
 template <class ELFT>
