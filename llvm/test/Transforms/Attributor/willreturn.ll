@@ -11,8 +11,8 @@ target datalayout = "e-m:e-i54:64-f80:128-n8:16:32:64-S128"
 
 
 ; TEST 1 (positive case)
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 define void @only_return() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@only_return()
 ; CHECK-NEXT:    ret void
@@ -70,8 +70,8 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; }
 ; fact_maybe_not(-1) doesn't stop.
 
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; CHECK-NOT: willreturn
 define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@fact_maybe_not_halt
@@ -120,8 +120,8 @@ define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
 ;   return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@fact_loop
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr
@@ -274,8 +274,8 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 ; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; CHECK_CGSCC:  Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____:  Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 define void @call_floor(float %a) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@call_floor
 ; CHECK-SAME: (float [[A:%.*]])
@@ -324,8 +324,8 @@ define void @call_maybe_noreturn() #0 {
 ; CHECK-NEXT: declare void @will_return()
 declare void @will_return() willreturn norecurse
 
-; CHECK_MODULE: Function Attrs: noinline nounwind uwtable willreturn
-; CHECK_CGSCC: Function Attrs: noinline norecurse nounwind uwtable willreturn
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable willreturn
+; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
 define void @f1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@f1()
 ; CHECK-NEXT:    tail call void @will_return()
@@ -335,10 +335,10 @@ define void @f1() #0 {
   ret void
 }
 
-; CHECK_MODULE: Function Attrs: noinline nounwind uwtable
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
 ; FIXME: Because we do not derive norecurse in the module run anymore, willreturn is missing as well.
-; CHECK_MODULE-NOT: willreturn
-; CHECK_CGSCC: Function Attrs: noinline norecurse nounwind uwtable willreturn
+; IS__TUNIT____-NOT: willreturn
+; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
 define void @f2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@f2()
 ; CHECK-NEXT:    tail call void @f1()
@@ -352,8 +352,8 @@ define void @f2() #0 {
 ; TEST 9 (negative case)
 ; call willreturn function in endless loop.
 
-; CHECK_MODULE: Function Attrs: noinline noreturn nounwind uwtable
-; CHECK_CGSCC: Function Attrs: noinline norecurse noreturn nounwind uwtable
+; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
+; IS__CGSCC____: Function Attrs: noinline norecurse noreturn nounwind uwtable
 ; CHECK-NOT: willreturn
 define void @call_will_return_but_has_loop() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@call_will_return_but_has_loop()
@@ -425,8 +425,8 @@ declare i32 @__gxx_personality_v0(...)
 ;    return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
-; CHECK_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@loop_constant_trip_count
 ; CHECK-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]])
@@ -470,8 +470,8 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;     }
 ;     return ans;
 ; }
-; CHECK_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; CHECK_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; CHECK-NOT: willreturn
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_count_unbound
@@ -523,9 +523,8 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 ;  }
 
 
-; CHECK_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
-; CHECK_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
-
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_dec
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr
@@ -572,8 +571,8 @@ define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ; TEST 14 (positive case)
 ; multiple return
 
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 define i32 @multiple_return(i32 %a) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_return
 ; CHECK-SAME: (i32 [[A:%.*]])
@@ -597,8 +596,8 @@ f:
 ; unreachable exit
 
 ; 15.1 (positive case)
-; CHECK_MODULE: Function Attrs: noinline nounwind uwtable willreturn
-; CHECK_CGSCC: Function Attrs: noinline norecurse nounwind uwtable willreturn
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
+; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
 define void @unreachable_exit_positive1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@unreachable_exit_positive1()
 ; CHECK-NEXT:    tail call void @will_return()
@@ -614,8 +613,8 @@ unreachable_label:
   unreachable
 }
 
-; CHECK_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 define i32 @unreachable_exit_positive2(i32) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@unreachable_exit_positive2
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr
@@ -674,8 +673,8 @@ unreachable_label:
   unreachable
 }
 
-; CHECK_MODULE: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
-; CHECK_CGSCC: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
+; IS__TUNIT____: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; CHECK-NOT: willreturn
 define void @unreachable_exit_negative2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@unreachable_exit_negative2()
@@ -725,8 +724,8 @@ define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
 ;   return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs:  nofree nosync nounwind readnone
-; CHECK_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; CHECK-NOT: willreturn
 define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
@@ -788,8 +787,8 @@ for.end:                                          ; preds = %for.cond.cleanup
 ;   return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs:  nofree nosync nounwind readnone willreturn
-; CHECK_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 define i32 @bounded_nested_loops(i32 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@bounded_nested_loops
 ; CHECK-SAME: (i32 [[N:%.*]])
@@ -866,8 +865,8 @@ for.end:                                          ; preds = %for.cond.cleanup
 ;   return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs:  nofree nosync nounwind readnone
-; CHECK_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; CHECK-NOT: willreturn
 define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
@@ -952,8 +951,8 @@ while.end:                                        ; preds = %while.cond
 ;   return ans;
 ; }
 
-; CHECK_MODULE: Function Attrs:  nofree nosync nounwind readnone
-; CHECK_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; CHECK-NOT: willreturn
 define i32 @nested_unbounded_loops(i32 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@nested_unbounded_loops
@@ -1044,8 +1043,8 @@ while.end11:                                      ; preds = %while.cond
 ;      return;
 ;    }
 
-; CHECK_MODULE: Function Attrs:  nofree nosync nounwind readnone
-; CHECK_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; CHECK-NOT: willreturn
 define void @non_loop_cycle(i32 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@non_loop_cycle

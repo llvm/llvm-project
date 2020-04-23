@@ -205,7 +205,7 @@ define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr "null-pointer-is-val
 }
 
 ; Call an unknown function in a dead block.
-; CHECK_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 declare void @unknown()
 define i32 @call_unknown_in_dead_block() local_unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@call_unknown_in_dead_block() local_unnamed_addr
