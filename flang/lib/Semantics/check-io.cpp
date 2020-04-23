@@ -283,15 +283,17 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   flags_.set(Flag::DataList);
   if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
     const parser::Name &name{GetLastName(*var)};
-    if (auto *details{name.symbol->detailsIf<ObjectEntityDetails>()}) {
-      // TODO: Determine if this check is needed at all, and if so, replace
-      // the false subcondition with a check for a whole array.  Otherwise,
-      // the check incorrectly flags array element and section references.
-      if (details->IsAssumedSize() && false) {
-        // This check may be superseded by C928 or C1002.
-        context_.Say(name.source,
-            "'%s' must not be a whole assumed size array"_err_en_US,
-            name.source); // C1231
+    if (name.symbol) {
+      if (auto *details{name.symbol->detailsIf<ObjectEntityDetails>()}) {
+        // TODO: Determine if this check is needed at all, and if so, replace
+        // the false subcondition with a check for a whole array.  Otherwise,
+        // the check incorrectly flags array element and section references.
+        if (details->IsAssumedSize() && false) {
+          // This check may be superseded by C928 or C1002.
+          context_.Say(name.source,
+              "'%s' must not be a whole assumed size array"_err_en_US,
+              name.source); // C1231
+        }
       }
     }
   }
