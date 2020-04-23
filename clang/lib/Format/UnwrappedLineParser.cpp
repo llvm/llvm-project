@@ -1334,7 +1334,7 @@ void UnwrappedLineParser::parseStructuralElement() {
         parseChildBlock();
       break;
     case tok::l_brace:
-      if (!tryToParseBracedList()) {
+      if (!tryToParsePropertyAccessor() && !tryToParseBracedList()) {
         // A block outside of parentheses must be the last part of a
         // structural element.
         // FIXME: Figure out cases where this is not true, and add projections
@@ -1485,6 +1485,75 @@ void UnwrappedLineParser::parseStructuralElement() {
       break;
     }
   } while (!eof());
+}
+
+bool UnwrappedLineParser::tryToParsePropertyAccessor() {
+  assert(FormatTok->is(tok::l_brace));
+  if (!Style.isCSharp())
+    return false;
+  // See if it's a property accessor.
+  if (FormatTok->Previous->isNot(tok::identifier))
+    return false;
+
+  // Try to parse the property accessor braces and contents:
+  // `{ get; set; } = new MyType(defaultValue);`
+  //  ^^^^^^^^^^^^^
+  //
+  // Record the current tokenPosition so that we can advance and
+  // reset the current token. `Next` is not set yet so we need
+  // another way to advance along the token stream.
+  unsigned int StoredPosition = Tokens->getPosition();
+  FormatToken *Tok = Tokens->getNextToken();
+
+  bool HasGetOrSet = false;
+  while (!eof()) {
+    if (Tok->isOneOf(tok::semi, tok::kw_public, tok::kw_private,
+                     tok::kw_protected, Keywords.kw_internal, Keywords.kw_get,
+                     Keywords.kw_set)) {
+      if (Tok->isOneOf(Keywords.kw_get, Keywords.kw_set))
+        HasGetOrSet = true;
+      Tok = Tokens->getNextToken();
+      continue;
+    }
+    if (Tok->is(tok::r_brace))
+      break;
+    Tokens->setPosition(StoredPosition);
+    return false;
+  }
+
+  if (!HasGetOrSet) {
+    Tokens->setPosition(StoredPosition);
+    return false;
+  }
+
+  Tokens->setPosition(StoredPosition);
+  while (FormatTok->isNot(tok::r_brace)) {
+    nextToken();
+  }
+
+  // Try to parse (optional) assignment to default value:
+  // `{ get; set; } = new MyType(defaultValue);`
+  //                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  // There may be some very complicated expressions inside default value
+  // assignment, the simple parse block below will not handle them.
+  // The parse block below would need extending to handle opening parens etc.
+  StoredPosition = Tokens->getPosition();
+  Tok = Tokens->getNextToken();
+  bool NextTokenIsEqual = Tok->is(tok::equal);
+  Tokens->setPosition(StoredPosition);
+
+  if (NextTokenIsEqual) {
+    do {
+      nextToken();
+      if (FormatTok->is(tok::semi))
+        break;
+    } while (!eof());
+  }
+
+  // Add an unwrapped line for the whole property accessor.
+  nextToken();
+  addUnwrappedLine();
+  return true;
 }
 
 bool UnwrappedLineParser::tryToParseLambda() {

@@ -316,7 +316,7 @@ name:            image_clause
 tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
-  - { id: 1, class: sreg_256 }
+  - { id: 1, class: sgpr_256 }
   - { id: 2, class: sgpr_128 }
   - { id: 3, class: vreg_128 }
   - { id: 4, class: vreg_128 }
@@ -345,7 +345,7 @@ name:            mixed_clause
 tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
-  - { id: 1, class: sreg_256 }
+  - { id: 1, class: sgpr_256 }
   - { id: 2, class: sgpr_128 }
   - { id: 3, class: vreg_128 }
   - { id: 4, class: vreg_128 }

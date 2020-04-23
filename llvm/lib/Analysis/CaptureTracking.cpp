@@ -28,6 +28,21 @@
 
 using namespace llvm;
 
+/// The default value for MaxUsesToExplore argument. It's relatively small to
+/// keep the cost of analysis reasonable for clients like BasicAliasAnalysis,
+/// where the results can't be cached.
+/// TODO: we should probably introduce a caching CaptureTracking analysis and
+/// use it where possible. The caching version can use much higher limit or
+/// don't have this cap at all.
+static cl::opt<unsigned>
+DefaultMaxUsesToExplore("capture-tracking-max-uses-to-explore", cl::Hidden,
+                        cl::desc("Maximal number of uses to explore."),
+                        cl::init(20));
+
+unsigned llvm::getDefaultMaxUsesToExploreForCaptureTracking() {
+  return DefaultMaxUsesToExplore;
+}
+
 CaptureTracker::~CaptureTracker() {}
 
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
@@ -215,8 +230,9 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                                 unsigned MaxUsesToExplore) {
   assert(V->getType()->isPointerTy() && "Capture is for pointers only!");
-  SmallVector<const Use *, DefaultMaxUsesToExplore> Worklist;
-  SmallSet<const Use *, DefaultMaxUsesToExplore> Visited;
+  SmallVector<const Use *, 20> Worklist;
+  Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
+  SmallSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     unsigned Count = 0;

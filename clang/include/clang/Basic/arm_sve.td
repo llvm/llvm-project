@@ -74,10 +74,13 @@
 // l: int64_t
 // m: uint32_t
 // n: uint64_t
-//
-// I: Predicate Pattern (sv_pattern)
 
-// l: int64_t
+// t: svint32_t
+// z: svuint32_t
+// g: svuint64_t
+// O: svfloat16_t
+// M: svfloat32_t
+// N: svfloat64_t
 
 // A: pointer to int8_t
 // B: pointer to int16_t
@@ -173,7 +176,6 @@ def IsOverloadWhileRW         : FlagType<0x00400000>; // Use {pred(default type)
 def IsOverloadCvt             : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
 def OverloadKindMask          : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
 def IsByteIndexed             : FlagType<0x01000000>;
-def IsFPConvert               : FlagType<0x02000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -558,7 +560,7 @@ def SVCMLA_LANE : SInst<"svcmla_lane[_{d}]", "ddddii", "hf",  MergeNone, "aarch6
 
 multiclass SInstCvtMXZ<
     string name, string m_types, string xz_types, string types,
-    string intrinsic, list<FlagType> flags = [IsFPConvert, IsOverloadNone]> {
+    string intrinsic, list<FlagType> flags = [IsOverloadNone]> {
   def _M : SInst<name, m_types,  types, MergeOp1,     intrinsic, flags>;
   def _X : SInst<name, xz_types, types, MergeAnyExp,  intrinsic, flags>;
   def _Z : SInst<name, xz_types, types, MergeZeroExp, intrinsic, flags>;
@@ -566,7 +568,7 @@ multiclass SInstCvtMXZ<
 
 multiclass SInstCvtMX<string name, string m_types, string xz_types,
                       string types, string intrinsic,
-                      list<FlagType> flags = [IsFPConvert, IsOverloadNone]> {
+                      list<FlagType> flags = [IsOverloadNone]> {
   def _M : SInst<name, m_types,  types, MergeOp1,     intrinsic, flags>;
   def _X : SInst<name, xz_types, types, MergeAnyExp,  intrinsic, flags>;
 }
@@ -581,7 +583,7 @@ defm SVFCVTZS_S32_F32 : SInstCvtMXZ<"svcvt_s32[_f32]", "ddPM", "dPM", "i",  "aar
 defm SVFCVTZS_S64_F32 : SInstCvtMXZ<"svcvt_s64[_f32]", "ddPM", "dPM", "l",  "aarch64_sve_fcvtzs_i64f32">;
 
 // svcvt_s##_f64
-defm SVFCVTZS_S32_F64 : SInstCvtMXZ<"svcvt_s32[_f64]", "ddPN", "dPN", "i",  "aarch64_sve_fcvtzs_i32f64">;
+defm SVFCVTZS_S32_F64 : SInstCvtMXZ<"svcvt_s32[_f64]", "ttPd", "tPd", "d",  "aarch64_sve_fcvtzs_i32f64">;
 defm SVFCVTZS_S64_F64 : SInstCvtMXZ<"svcvt_s64[_f64]", "ddPN", "dPN", "l",  "aarch64_sve_fcvtzs", [IsOverloadCvt]>;
 
 // svcvt_u##_f16
@@ -594,7 +596,7 @@ defm SVFCVTZU_U32_F32 : SInstCvtMXZ<"svcvt_u32[_f32]", "ddPM", "dPM", "Ui", "aar
 defm SVFCVTZU_U64_F32 : SInstCvtMXZ<"svcvt_u64[_f32]", "ddPM", "dPM", "Ul", "aarch64_sve_fcvtzu_i64f32">;
 
 // svcvt_u##_f64
-defm SVFCVTZU_U32_F64 : SInstCvtMXZ<"svcvt_u32[_f64]", "ddPN", "dPN", "Ui", "aarch64_sve_fcvtzu_i32f64">;
+defm SVFCVTZU_U32_F64 : SInstCvtMXZ<"svcvt_u32[_f64]", "zzPd", "zPd", "d",  "aarch64_sve_fcvtzu_i32f64">;
 defm SVFCVTZU_U64_F64 : SInstCvtMXZ<"svcvt_u64[_f64]", "ddPN", "dPN", "Ul", "aarch64_sve_fcvtzu", [IsOverloadCvt]>;
 
 // svcvt_f16_s##
@@ -607,7 +609,7 @@ defm SVFCVTZS_F32_S32 : SInstCvtMXZ<"svcvt_f32[_s32]", "MMPd", "MPd", "i",  "aar
 defm SVFCVTZS_F32_S64 : SInstCvtMXZ<"svcvt_f32[_s64]", "MMPd", "MPd", "l",  "aarch64_sve_scvtf_f32i64">;
 
 // svcvt_f64_s##
-defm SVFCVTZS_F64_S32 : SInstCvtMXZ<"svcvt_f64[_s32]", "NNPd", "NPd", "i",  "aarch64_sve_scvtf_f64i32">;
+defm SVFCVTZS_F64_S32 : SInstCvtMXZ<"svcvt_f64[_s32]", "ddPt", "dPt", "d",  "aarch64_sve_scvtf_f64i32">;
 defm SVFCVTZS_F64_S64 : SInstCvtMXZ<"svcvt_f64[_s64]", "NNPd", "NPd", "l",  "aarch64_sve_scvtf", [IsOverloadCvt]>;
 
 // svcvt_f16_u##
@@ -620,7 +622,7 @@ defm SVFCVTZU_F32_U32 : SInstCvtMXZ<"svcvt_f32[_u32]", "MMPd", "MPd", "Ui", "aar
 defm SVFCVTZU_F32_U64 : SInstCvtMXZ<"svcvt_f32[_u64]", "MMPd", "MPd", "Ul", "aarch64_sve_ucvtf_f32i64">;
 
 // svcvt_f64_u##
-defm SVFCVTZU_F64_U32 : SInstCvtMXZ<"svcvt_f64[_u32]", "NNPd", "NPd", "Ui", "aarch64_sve_ucvtf_f64i32">;
+defm SVFCVTZU_F64_U32 : SInstCvtMXZ<"svcvt_f64[_u32]", "ddPz", "dPz", "d",  "aarch64_sve_ucvtf_f64i32">;
 defm SVFCVTZU_F64_U64 : SInstCvtMXZ<"svcvt_f64[_u64]", "NNPd", "NPd", "Ul", "aarch64_sve_ucvtf", [IsOverloadCvt]>;
 
 // svcvt_f16_f##
@@ -628,12 +630,12 @@ defm SVFCVT_F16_F32   : SInstCvtMXZ<"svcvt_f16[_f32]", "OOPd", "OPd", "f", "aarc
 defm SVFCVT_F16_F64   : SInstCvtMXZ<"svcvt_f16[_f64]", "OOPd", "OPd", "d", "aarch64_sve_fcvt_f16f64">;
 
 // svcvt_f32_f##
-defm SVFCVT_F32_F16   : SInstCvtMXZ<"svcvt_f32[_f16]", "MMPd", "MPd", "h", "aarch64_sve_fcvt_f32f16">;
+defm SVFCVT_F32_F16   : SInstCvtMXZ<"svcvt_f32[_f16]", "ddPO", "dPO", "f", "aarch64_sve_fcvt_f32f16">;
 defm SVFCVT_F32_F64   : SInstCvtMXZ<"svcvt_f32[_f64]", "MMPd", "MPd", "d", "aarch64_sve_fcvt_f32f64">;
 
 // svcvt_f64_f##
-defm SVFCVT_F64_F16   : SInstCvtMXZ<"svcvt_f64[_f16]", "NNPd", "NPd", "h", "aarch64_sve_fcvt_f64f16">;
-defm SVFCVT_F64_F32   : SInstCvtMXZ<"svcvt_f64[_f32]", "NNPd", "NPd", "f", "aarch64_sve_fcvt_f64f32">;
+defm SVFCVT_F64_F16   : SInstCvtMXZ<"svcvt_f64[_f16]", "ddPO", "dPO", "d", "aarch64_sve_fcvt_f64f16">;
+defm SVFCVT_F64_F32   : SInstCvtMXZ<"svcvt_f64[_f32]", "ddPM", "dPM", "d", "aarch64_sve_fcvt_f64f32">;
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 defm SVCVTLT_F32    : SInstCvtMX<"svcvtlt_f32[_f16]",  "ddPh", "dPh", "f", "aarch64_sve_fcvtlt_f32f16">;
@@ -641,11 +643,11 @@ defm SVCVTLT_F64    : SInstCvtMX<"svcvtlt_f64[_f32]",  "ddPh", "dPh", "d", "aarc
 
 defm SVCVTX_F32     : SInstCvtMXZ<"svcvtx_f32[_f64]",  "MMPd", "MPd", "d", "aarch64_sve_fcvtx_f32f64">;
 
-def SVCVTNT_F32     : SInst<"svcvtnt_f16[_f32]",  "hhPd", "f", MergeOp1, "aarch64_sve_fcvtnt_f16f32">;
-def SVCVTNT_F64     : SInst<"svcvtnt_f32[_f64]",  "hhPd", "d", MergeOp1, "aarch64_sve_fcvtnt_f32f64">;
+def SVCVTNT_F32     : SInst<"svcvtnt_f16[_f32]",  "hhPd", "f", MergeOp1, "aarch64_sve_fcvtnt_f16f32", [IsOverloadNone]>;
+def SVCVTNT_F64     : SInst<"svcvtnt_f32[_f64]",  "hhPd", "d", MergeOp1, "aarch64_sve_fcvtnt_f32f64", [IsOverloadNone]>;
 //  SVCVTNT_X       : Implemented as macro by SveEmitter.cpp
 
-def SVCVTXNT_F32    : SInst<"svcvtxnt_f32[_f64]", "MMPd", "d", MergeOp1, "aarch64_sve_fcvtxnt_f32f64">;
+def SVCVTXNT_F32    : SInst<"svcvtxnt_f32[_f64]", "MMPd", "d", MergeOp1, "aarch64_sve_fcvtxnt_f32f64", [IsOverloadNone]>;
 //  SVCVTXNT_X_F32  : Implemented as macro by SveEmitter.cpp
 
 }

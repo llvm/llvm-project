@@ -4170,7 +4170,8 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   // defined in AACaptureUseTracker, that can look at in-flight abstract
   // attributes and directly updates the assumed state.
   SmallVector<const Value *, 4> PotentialCopies;
-  unsigned RemainingUsesToExplore = DefaultMaxUsesToExplore;
+  unsigned RemainingUsesToExplore =
+      getDefaultMaxUsesToExploreForCaptureTracking();
   AACaptureUseTracker Tracker(A, *this, IsDeadAA, T, PotentialCopies,
                               RemainingUsesToExplore);
 

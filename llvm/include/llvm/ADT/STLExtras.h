@@ -1123,9 +1123,13 @@ public:
   }
 
   /// Compare this range with another.
-  template <typename OtherT> bool operator==(const OtherT &other) {
-    return size() == std::distance(other.begin(), other.end()) &&
+  template <typename OtherT> bool operator==(const OtherT &other) const {
+    return size() ==
+               static_cast<size_t>(std::distance(other.begin(), other.end())) &&
            std::equal(begin(), end(), other.begin());
+  }
+  template <typename OtherT> bool operator!=(const OtherT &other) const {
+    return !(*this == other);
   }
 
   /// Return the size of this range.

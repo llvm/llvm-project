@@ -281,25 +281,19 @@ func @func_with_ops(i1, i32, i64) {
 
 // -----
 
-func @func_with_ops(i1, vector<42xi32>, vector<42xi32>) {
-^bb0(%cond : i1, %t : vector<42xi32>, %f : vector<42xi32>):
-  // expected-error@+1 {{requires the same shape for all operands and results}}
-  %r = "std.select"(%cond, %t, %f) : (i1, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
+func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
+^bb0(%cond : vector<12xi1>, %t : vector<42xi32>, %f : vector<42xi32>):
+  // expected-error@+1 {{expected condition type to have the same shape as the result type, expected 'vector<42xi1>', but got 'vector<12xi1>'}}
+  %r = "std.select"(%cond, %t, %f) : (vector<12xi1>, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
 }
 
 // -----
 
-func @func_with_ops(i1, tensor<42xi32>, tensor<?xi32>) {
-^bb0(%cond : i1, %t : tensor<42xi32>, %f : tensor<?xi32>):
-  // expected-error@+1 {{ op requires the same shape for all operands and results}}
-  %r = "std.select"(%cond, %t, %f) : (i1, tensor<42xi32>, tensor<?xi32>) -> tensor<42xi32>
+func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
+^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
+  // expected-error@+1 {{expected condition type to have the same shape as the result type, expected 'tensor<42xi1>', but got 'tensor<12xi1>'}}
+  %r = "std.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
 }
-
-// -----
-
-func @invalid_select_shape(%cond : i1, %idx : () -> ()) {
-  // expected-error@+1 {{'result' must be signless-integer-like or floating-point-like, but got '() -> ()'}}
-  %sel = select %cond, %idx, %idx : () -> ()
 
 // -----
 
