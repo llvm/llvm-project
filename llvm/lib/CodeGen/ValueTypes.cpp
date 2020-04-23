@@ -103,11 +103,11 @@ bool EVT::isExtended2048BitVector() const {
 }
 
 bool EVT::isExtendedFixedLengthVector() const {
-  return isExtendedVector() && !cast<VectorType>(LLVMTy)->isScalable();
+  return isExtendedVector() && isa<FixedVectorType>(LLVMTy);
 }
 
 bool EVT::isExtendedScalableVector() const {
-  return isExtendedVector() && cast<VectorType>(LLVMTy)->isScalable();
+  return isExtendedVector() && isa<ScalableVectorType>(LLVMTy);
 }
 
 EVT EVT::getExtendedVectorElementType() const {
