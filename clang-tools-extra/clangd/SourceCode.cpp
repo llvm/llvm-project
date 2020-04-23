@@ -855,6 +855,96 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
   return Result;
 }
 
+static bool isLikelyIdentifier(llvm::StringRef Word, llvm::StringRef Before,
+                               llvm::StringRef After) {
+  // `foo` is an identifier.
+  if (Before.endswith("`") && After.startswith("`"))
+    return true;
+  // In foo::bar, both foo and bar are identifiers.
+  if (Before.endswith("::") || After.startswith("::"))
+    return true;
+  // Doxygen tags like \c foo indicate identifiers.
+  // Don't search too far back.
+  // This duplicates clang's doxygen parser, revisit if it gets complicated.
+  Before = Before.take_back(100); // Don't search too far back.
+  auto Pos = Before.find_last_of("\\@");
+  if (Pos != llvm::StringRef::npos) {
+    llvm::StringRef Tag = Before.substr(Pos + 1).rtrim(' ');
+    if (Tag == "p" || Tag == "c" || Tag == "class" || Tag == "tparam" ||
+        Tag == "param" || Tag == "param[in]" || Tag == "param[out]" ||
+        Tag == "param[in,out]" || Tag == "retval" || Tag == "throw" ||
+        Tag == "throws" || Tag == "link")
+      return true;
+  }
+
+  // Word contains underscore.
+  // This handles things like snake_case and MACRO_CASE.
+  if (Word.contains('_')) {
+    return true;
+  }
+  // Word contains capital letter other than at beginning.
+  // This handles things like lowerCamel and UpperCamel.
+  // The check for also containing a lowercase letter is to rule out
+  // initialisms like "HTTP".
+  bool HasLower = Word.find_if(clang::isLowercase) != StringRef::npos;
+  bool HasUpper = Word.substr(1).find_if(clang::isUppercase) != StringRef::npos;
+  if (HasLower && HasUpper) {
+    return true;
+  }
+  // FIXME: consider mid-sentence Capitalization?
+  return false;
+}
+
+llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
+                                                  const syntax::TokenBuffer &TB,
+                                                  const LangOptions &LangOpts) {
+  const auto &SM = TB.sourceManager();
+  auto Touching = syntax::spelledTokensTouching(SpelledLoc, TB);
+  for (const auto &T : Touching) {
+    // If the token is an identifier or a keyword, don't use any heuristics.
+    if (tok::isAnyIdentifier(T.kind()) || tok::getKeywordSpelling(T.kind())) {
+      SpelledWord Result;
+      Result.Location = T.location();
+      Result.Text = T.text(SM);
+      Result.LikelyIdentifier = tok::isAnyIdentifier(T.kind());
+      Result.PartOfSpelledToken = &T;
+      Result.SpelledToken = &T;
+      auto Expanded =
+          TB.expandedTokens(SM.getMacroArgExpandedLocation(T.location()));
+      if (Expanded.size() == 1 && Expanded.front().text(SM) == Result.Text)
+        Result.ExpandedToken = &Expanded.front();
+      return Result;
+    }
+  }
+  FileID File;
+  unsigned Offset;
+  std::tie(File, Offset) = SM.getDecomposedLoc(SpelledLoc);
+  bool Invalid = false;
+  llvm::StringRef Code = SM.getBufferData(File, &Invalid);
+  if (Invalid)
+    return llvm::None;
+  unsigned B = Offset, E = Offset;
+  while (B > 0 && isIdentifierBody(Code[B - 1]))
+    --B;
+  while (E < Code.size() && isIdentifierBody(Code[E]))
+    ++E;
+  if (B == E)
+    return llvm::None;
+
+  SpelledWord Result;
+  Result.Location = SM.getComposedLoc(File, B);
+  Result.Text = Code.slice(B, E);
+  Result.LikelyIdentifier =
+      isLikelyIdentifier(Result.Text, Code.substr(0, B), Code.substr(E)) &&
+      // should not be a keyword
+      tok::isAnyIdentifier(
+          IdentifierTable(LangOpts).get(Result.Text).getTokenID());
+  for (const auto &T : Touching)
+    if (T.location() <= Result.Location)
+      Result.PartOfSpelledToken = &T;
+  return Result;
+}
+
 llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
   SourceLocation Loc = SpelledTok.location();

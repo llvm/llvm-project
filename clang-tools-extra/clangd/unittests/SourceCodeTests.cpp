@@ -12,6 +12,7 @@
 #include "TestTU.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -326,6 +327,101 @@ TEST(SourceCodeTests, CollectWords) {
                                        "comment", "string", "some", "text",
                                        "return",  "magic",  "word"};
   EXPECT_EQ(ActualWords, ExpectedWords);
+}
+
+class SpelledWordsTest : public ::testing::Test {
+  llvm::Optional<ParsedAST> AST;
+
+  llvm::Optional<SpelledWord> tryWord(const char *Text) {
+    llvm::Annotations A(Text);
+    auto TU = TestTU::withCode(A.code());
+    AST = TU.build();
+    auto SW = SpelledWord::touching(
+        AST->getSourceManager().getComposedLoc(
+            AST->getSourceManager().getMainFileID(), A.point()),
+        AST->getTokens(), AST->getLangOpts());
+    if (A.ranges().size()) {
+      llvm::StringRef Want = A.code().slice(A.range().Begin, A.range().End);
+      EXPECT_EQ(Want, SW->Text) << Text;
+    }
+    return SW;
+  }
+
+protected:
+  SpelledWord word(const char *Text) {
+    auto Result = tryWord(Text);
+    EXPECT_TRUE(Result) << Text;
+    return Result.getValueOr(SpelledWord());
+  }
+
+  void noWord(const char *Text) { EXPECT_FALSE(tryWord(Text)) << Text; }
+};
+
+TEST_F(SpelledWordsTest, HeuristicBoundaries) {
+  word("// [[^foo]] ");
+  word("// [[f^oo]] ");
+  word("// [[foo^]] ");
+  word("// [[foo^]]+bar ");
+  noWord("//^ foo ");
+  noWord("// foo ^");
+}
+
+TEST_F(SpelledWordsTest, LikelyIdentifier) {
+  EXPECT_FALSE(word("// ^foo ").LikelyIdentifier);
+  EXPECT_TRUE(word("// [[^foo_bar]] ").LikelyIdentifier);
+  EXPECT_TRUE(word("// [[^fooBar]] ").LikelyIdentifier);
+  EXPECT_FALSE(word("// H^TTP ").LikelyIdentifier);
+  EXPECT_TRUE(word("// \\p [[^foo]] ").LikelyIdentifier);
+  EXPECT_TRUE(word("// @param[in] [[^foo]] ").LikelyIdentifier);
+  EXPECT_TRUE(word("// `[[f^oo]]` ").LikelyIdentifier);
+  EXPECT_TRUE(word("// bar::[[f^oo]] ").LikelyIdentifier);
+  EXPECT_TRUE(word("// [[f^oo]]::bar ").LikelyIdentifier);
+}
+
+TEST_F(SpelledWordsTest, Comment) {
+  auto W = word("// [[^foo]]");
+  EXPECT_FALSE(W.PartOfSpelledToken);
+  EXPECT_FALSE(W.SpelledToken);
+  EXPECT_FALSE(W.ExpandedToken);
+}
+
+TEST_F(SpelledWordsTest, PartOfString) {
+  auto W = word(R"( auto str = "foo [[^bar]] baz"; )");
+  ASSERT_TRUE(W.PartOfSpelledToken);
+  EXPECT_EQ(W.PartOfSpelledToken->kind(), tok::string_literal);
+  EXPECT_FALSE(W.SpelledToken);
+  EXPECT_FALSE(W.ExpandedToken);
+}
+
+TEST_F(SpelledWordsTest, DisabledSection) {
+  auto W = word(R"cpp(
+    #if 0
+    foo [[^bar]] baz
+    #endif
+    )cpp");
+  ASSERT_TRUE(W.SpelledToken);
+  EXPECT_EQ(W.SpelledToken->kind(), tok::identifier);
+  EXPECT_EQ(W.SpelledToken, W.PartOfSpelledToken);
+  EXPECT_FALSE(W.ExpandedToken);
+}
+
+TEST_F(SpelledWordsTest, Macros) {
+  auto W = word(R"cpp(
+    #define ID(X) X
+    ID(int [[^i]]);
+    )cpp");
+  ASSERT_TRUE(W.SpelledToken);
+  EXPECT_EQ(W.SpelledToken->kind(), tok::identifier);
+  EXPECT_EQ(W.SpelledToken, W.PartOfSpelledToken);
+  ASSERT_TRUE(W.ExpandedToken);
+  EXPECT_EQ(W.ExpandedToken->kind(), tok::identifier);
+
+  W = word(R"cpp(
+    #define OBJECT Expansion;
+    int [[^OBJECT]];
+    )cpp");
+  EXPECT_TRUE(W.SpelledToken);
+  EXPECT_FALSE(W.ExpandedToken) << "Expanded token is spelled differently";
 }
 
 TEST(SourceCodeTests, VisibleNamespaces) {
