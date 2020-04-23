@@ -693,6 +693,10 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       if (isTargetSpecificOpcode(MI.getOpcode()) && !MI.isPreISelOpcode())
         continue;
 
+      // Ignore debug info.
+      if (MI.isDebugInstr())
+        continue;
+
       if (!assignInstr(MI)) {
         reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);

@@ -45,7 +45,10 @@ struct StripDebugMachineModule : public ModulePass {
 
     bool Changed = false;
     for (Function &F : M.functions()) {
-      MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
+      MachineFunction *MaybeMF = MMI.getMachineFunction(F);
+      if (!MaybeMF)
+        continue;
+      MachineFunction &MF = *MaybeMF;
       for (MachineBasicBlock &MBB : MF) {
         for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
              I != E;) {
