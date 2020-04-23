@@ -91,6 +91,8 @@ TEST(PreamblePatchTest, IncludeParsing) {
     PreamblePatch::create(FileName, PI, *EmptyPreamble).apply(*CI);
     EXPECT_THAT(CI->getPreprocessorOpts().RemappedFileBuffers,
                 Contains(Pair(_, HasContents(ExpectedBuffer))));
+    for (const auto &RB : CI->getPreprocessorOpts().RemappedFileBuffers)
+      delete RB.second;
   }
 }
 
@@ -120,6 +122,8 @@ TEST(PreamblePatchTest, ContainsNewIncludes) {
   PreamblePatch::create(FileName, PI, *FullPreamble).apply(*CI);
   EXPECT_THAT(CI->getPreprocessorOpts().RemappedFileBuffers,
               Contains(Pair(_, HasContents(Patch))));
+  for (const auto &RB : CI->getPreprocessorOpts().RemappedFileBuffers)
+    delete RB.second;
 }
 
 } // namespace
