@@ -132,6 +132,7 @@ private:
   void parseCSharpGenericTypeConstraint();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();
+  bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
   void addUnwrappedLine();
   bool eof() const;
