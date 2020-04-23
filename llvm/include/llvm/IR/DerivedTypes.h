@@ -417,7 +417,21 @@ public:
   /// Get the number of elements in this vector. It does not make sense to call
   /// this function on a scalable vector, and this will be moved into
   /// FixedVectorType in a future commit
-  unsigned getNumElements() const { return EC.Min; }
+  unsigned getNumElements() const {
+    ElementCount EC = getElementCount();
+#ifdef STRICT_FIXED_SIZE_VECTORS
+    assert(!EC.Scalable &&
+           "Request for fixed number of elements from scalable vector");
+    return EC.Min;
+#else
+    if (EC.Scalable)
+      WithColor::warning()
+          << "The code that requested the fixed number of elements has made "
+             "the assumption that this vector is not scalable. This assumption "
+             "was not correct, and this may lead to broken code\n";
+    return EC.Min;
+#endif
+  }
 
   Type *getElementType() const { return ContainedType; }
 
