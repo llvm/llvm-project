@@ -555,11 +555,11 @@ define i64 @test_neg_shl_sub(i64 %a, i64 %b) {
 
 define i64 @test_neg_shl_sub_extra_use1(i64 %a, i64 %b, i64* %p) {
 ; CHECK-LABEL: @test_neg_shl_sub_extra_use1(
-; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    store i64 [[SUB]], i64* [[P:%.*]], align 8
-; CHECK-NEXT:    [[MUL_NEG:%.*]] = shl i64 [[SUB_NEG]], 2
-; CHECK-NEXT:    ret i64 [[MUL_NEG]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[SUB]], 2
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
 ;
   %sub = sub i64 %a, %b
   store i64 %sub, i64* %p
