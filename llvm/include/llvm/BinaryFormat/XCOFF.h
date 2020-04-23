@@ -13,10 +13,11 @@
 #ifndef LLVM_BINARYFORMAT_XCOFF_H
 #define LLVM_BINARYFORMAT_XCOFF_H
 
-#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
 namespace llvm {
+class StringRef;
+
 namespace XCOFF {
 
 // Constants used in the XCOFF definition.
