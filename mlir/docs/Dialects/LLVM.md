@@ -32,7 +32,7 @@ llvm-canonical-type ::= <canonical textual representation defined by LLVM>
 
 For example, one can use primitive types `!llvm.i32`, pointer types
 `!llvm<"i8*">`, vector types `!llvm<"<4 x float>">` or structure types
-`!llvm<"{i32, float}">`. The parsing and printing of the canonical form is
+`!llvm<"{i32, float}">`. The parsing and printing of the canonical form are
 delegated to the LLVM assembly parser and printer.
 
 LLVM IR dialect types contain an `llvm::Type*` object that can be obtained by
@@ -346,7 +346,7 @@ constants must be created as SSA values before being used in other operations.
 `llvm.mlir.constant` creates such values for scalars and vectors. It has a
 mandatory `value` attribute, which may be an integer, floating point attribute;
 dense or sparse attribute containing integers or floats. The type of the
-attribute is one the corresponding MLIR standard types. It may be omitted for
+attribute is one of the corresponding MLIR standard types. It may be omitted for
 `i64` and `f64` types that are implied. The operation produces a new SSA value
 of the specified LLVM IR dialect type. The type of that value _must_ correspond
 to the attribute type converted to LLVM IR.
