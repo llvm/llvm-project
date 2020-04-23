@@ -32,10 +32,9 @@
 
 extern "C" inline void EmptyCallback() {}
 
-#if SCUDO_ANDROID && __ANDROID_API__ == 10000
+#ifdef HAVE_ANDROID_UNSAFE_FRAME_POINTER_CHASE
 // This function is not part of the NDK so it does not appear in any public
-// header files. We only declare/use it when targeting the platform (i.e. API
-// level 10000).
+// header files. We only declare/use it when targeting the platform.
 extern "C" size_t android_unsafe_frame_pointer_chase(scudo::uptr *buf,
                                                      size_t num_entries);
 #endif
@@ -232,7 +231,7 @@ public:
   }
 
   NOINLINE u32 collectStackTrace() {
-#if SCUDO_ANDROID && __ANDROID_API__ == 10000
+#ifdef HAVE_ANDROID_UNSAFE_FRAME_POINTER_CHASE
     // Discard collectStackTrace() frame and allocator function frame.
     constexpr uptr DiscardFrames = 2;
     uptr Stack[MaxTraceSize + DiscardFrames];
