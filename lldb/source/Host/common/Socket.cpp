@@ -147,71 +147,65 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
-Status Socket::TcpConnect(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&socket) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
-  LLDB_LOGF(log, "Socket::%s (host/port = %s)", __FUNCTION__,
-            host_and_port.str().c_str());
+llvm::Expected<std::unique_ptr<Socket>>
+Socket::TcpConnect(llvm::StringRef host_and_port,
+                   bool child_processes_inherit) {
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   Status error;
   std::unique_ptr<Socket> connect_socket(
       Create(ProtocolTcp, child_processes_inherit, error));
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   error = connect_socket->Connect(host_and_port);
   if (error.Success())
-    socket = connect_socket.release();
+    return std::move(connect_socket);
 
-  return error;
+  return error.ToError();
 }
 
-Status Socket::TcpListen(llvm::StringRef host_and_port,
-                         bool child_processes_inherit, Socket *&socket,
-                         Predicate<uint16_t> *predicate, int backlog) {
+llvm::Expected<std::unique_ptr<TCPSocket>>
+Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
+                  Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  LLDB_LOGF(log, "Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
+  LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   Status error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;
   if (!DecodeHostAndPort(host_and_port, host_str, port_str, port, &error))
-    return error;
+    return error.ToError();
 
   std::unique_ptr<TCPSocket> listen_socket(
       new TCPSocket(true, child_processes_inherit));
-  if (error.Fail())
-    return error;
 
   error = listen_socket->Listen(host_and_port, backlog);
-  if (error.Success()) {
-    // We were asked to listen on port zero which means we must now read the
-    // actual port that was given to us as port zero is a special code for
-    // "find an open port for me".
-    if (port == 0)
-      port = listen_socket->GetLocalPortNumber();
+  if (error.Fail())
+    return error.ToError();
 
-    // Set the port predicate since when doing a listen://<host>:<port> it
-    // often needs to accept the incoming connection which is a blocking system
-    // call. Allowing access to the bound port using a predicate allows us to
-    // wait for the port predicate to be set to a non-zero value from another
-    // thread in an efficient manor.
-    if (predicate)
-      predicate->SetValue(port, eBroadcastAlways);
-    socket = listen_socket.release();
-  }
+  // We were asked to listen on port zero which means we must now read the
+  // actual port that was given to us as port zero is a special code for
+  // "find an open port for me".
+  if (port == 0)
+    port = listen_socket->GetLocalPortNumber();
 
-  return error;
+  // Set the port predicate since when doing a listen://<host>:<port> it
+  // often needs to accept the incoming connection which is a blocking system
+  // call. Allowing access to the bound port using a predicate allows us to
+  // wait for the port predicate to be set to a non-zero value from another
+  // thread in an efficient manor.
+  if (predicate)
+    predicate->SetValue(port, eBroadcastAlways);
+  return std::move(listen_socket);
 }
 
-Status Socket::UdpConnect(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&socket) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  LLDB_LOGF(log, "Socket::%s (host/port = %s)", __FUNCTION__,
-            host_and_port.str().c_str());
-
-  return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
+llvm::Expected<std::unique_ptr<UDPSocket>>
+Socket::UdpConnect(llvm::StringRef host_and_port,
+                   bool child_processes_inherit) {
+  return UDPSocket::Connect(host_and_port, child_processes_inherit);
 }
 
 Status Socket::UnixDomainConnect(llvm::StringRef name,
