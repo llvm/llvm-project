@@ -304,10 +304,10 @@ define i1 @ugt_swap_or_not_min_commute(i823* %x, i823* %y)  {
 
 define i1 @sgt_and_min(i9* %x, i9* %y)  {
 ; CHECK-LABEL: @sgt_and_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i9* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i9* [[X]], null
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i9* [[X:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i9* [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp = icmp sgt i9* %x, %y
   %cmpeq = icmp eq i9* %x, null
@@ -317,10 +317,10 @@ define i1 @sgt_and_min(i9* %x, i9* %y)  {
 
 define i1 @sle_or_not_min(i427* %x, i427* %y)  {
 ; CHECK-LABEL: @sle_or_not_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i427* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i427* [[X]], null
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i427* [[X:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i427* [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp = icmp sle i427* %x, %y
   %cmpeq = icmp ne i427* %x, null
@@ -330,10 +330,10 @@ define i1 @sle_or_not_min(i427* %x, i427* %y)  {
 
 define i1 @sle_and_min(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @sle_and_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X]], null
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i8* [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp = icmp sle i8* %x, %y
   %cmpeq = icmp eq i8* %x, null
@@ -356,10 +356,10 @@ define i1 @sgt_and_not_min(i8* %x, i8* %y)  {
 
 define i1 @sgt_or_not_min(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @sgt_or_not_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X]], null
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8* [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp = icmp sgt i8* %x, %y
   %cmpeq = icmp ne i8* %x, null
@@ -370,9 +370,9 @@ define i1 @sgt_or_not_min(i8* %x, i8* %y)  {
 define i1 @slt_and_min(i8* %a, i8* %b) {
 ; CHECK-LABEL: @slt_and_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[A:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8* [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8* [[B:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmpeq = icmp eq i8* %a, null
   %cmp = icmp slt i8* %a, %b

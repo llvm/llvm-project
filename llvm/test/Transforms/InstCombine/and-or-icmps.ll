@@ -382,9 +382,9 @@ define i1 @PR42691_10(i32 %x) {
 define i1 @substitute_constant_and_eq_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_eq(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %x, 42
   %c2 = icmp eq i8 %x, %y
@@ -395,9 +395,9 @@ define i1 @substitute_constant_and_eq_eq(i8 %x, i8 %y) {
 define i1 @substitute_constant_and_eq_eq_commute(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_eq_commute(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %x, 42
   %c2 = icmp eq i8 %x, %y
@@ -408,9 +408,9 @@ define i1 @substitute_constant_and_eq_eq_commute(i8 %x, i8 %y) {
 define i1 @substitute_constant_and_eq_ugt_swap(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_ugt_swap(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %x, 42
   %c2 = icmp ugt i8 %y, %x
@@ -421,9 +421,9 @@ define i1 @substitute_constant_and_eq_ugt_swap(i8 %x, i8 %y) {
 define <2 x i1> @substitute_constant_and_eq_ne_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_ne_vec(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 42, i8 97>
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne <2 x i8> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[C1]], [[C2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[Y:%.*]], <i8 42, i8 97>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %c1 = icmp eq <2 x i8> %x, <i8 42, i8 97>
   %c2 = icmp ne <2 x i8> %x, %y
@@ -435,9 +435,9 @@ define i1 @substitute_constant_and_eq_sgt_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_sgt_use(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %x, 42
   call void @use(i1 %c1)
@@ -445,6 +445,8 @@ define i1 @substitute_constant_and_eq_sgt_use(i8 %x, i8 %y) {
   %r = and i1 %c2, %c1
   ret i1 %r
 }
+
+; Negative test - extra use
 
 define i1 @substitute_constant_and_eq_sgt_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_sgt_use2(
@@ -461,15 +463,14 @@ define i1 @substitute_constant_and_eq_sgt_use2(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; Extra use does not prevent transform if the expression simplifies:
 ; X == MAX && X < Y --> false
 
 define i1 @slt_and_max(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_and_max(
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c1 = icmp eq i8 %x, 127
   %c2 = icmp slt i8 %x, %y
@@ -478,6 +479,7 @@ define i1 @slt_and_max(i8 %x, i8 %y)  {
   ret i1 %r
 }
 
+; Extra use does not prevent transform if the expression simplifies:
 ; X == MAX && X >= Y --> X == MAX
 
 define i1 @sge_and_max(i8 %x, i8 %y)  {
@@ -485,8 +487,7 @@ define i1 @sge_and_max(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 127
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp eq i8 %x, 127
   %c2 = icmp sge i8 %x, %y
@@ -511,9 +512,9 @@ define i1 @substitute_constant_and_ne_ugt_swap(i8 %x, i8 %y) {
 define i1 @substitute_constant_or_ne_swap_sle(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_swap_sle(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 43
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp ne i8 %x, 42
   %c2 = icmp sle i8 %y, %x
@@ -524,15 +525,17 @@ define i1 @substitute_constant_or_ne_swap_sle(i8 %x, i8 %y) {
 define i1 @substitute_constant_or_ne_uge_commute(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_uge_commute(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[Y:%.*]], 43
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp ne i8 %x, 42
   %c2 = icmp uge i8 %x, %y
   %r = or i1 %c2, %c1
   ret i1 %r
 }
+
+; Negative test - not safe to substitute vector constant with undef element
 
 define <2 x i1> @substitute_constant_or_ne_slt_swap_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec(
@@ -564,9 +567,9 @@ define i1 @substitute_constant_or_ne_sge_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_sge_use(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[C2]], [[C1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 43
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp ne i8 %x, 42
   call void @use(i1 %c1)
@@ -574,6 +577,8 @@ define i1 @substitute_constant_or_ne_sge_use(i8 %x, i8 %y) {
   %r = or i1 %c2, %c1
   ret i1 %r
 }
+
+; Negative test - extra use
 
 define i1 @substitute_constant_or_ne_ule_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_ule_use2(
