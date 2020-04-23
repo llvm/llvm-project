@@ -1,4 +1,4 @@
-; RUN: llc -mtriple armv7 %s -stop-before=livedebugvalues -o - | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe=0 -mtriple armv7 %s -stop-before=livedebugvalues -o - | FileCheck %s
 
 define <4 x i8> @i(<4 x i8>*, <4 x i8>) !dbg !8 {
   %3 = load <4 x i8>, <4 x i8>* %0, align 4, !dbg !14
