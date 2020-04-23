@@ -3505,7 +3505,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   if (!Ty->isRecordType())
     return nullptr;
   const ObjCPropertyDecl *PD = PID->getPropertyDecl();
-  if ((!(PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_atomic)))
+  if ((!(PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_atomic)))
     return nullptr;
   llvm::Constant *HelperFn = nullptr;
   if (hasTrivialSetExpr(PID))
@@ -3589,7 +3589,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   QualType Ty = PD->getType();
   if (!Ty->isRecordType())
     return nullptr;
-  if ((!(PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_atomic)))
+  if ((!(PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_atomic)))
     return nullptr;
   llvm::Constant *HelperFn = nullptr;
   if (hasTrivialGetExpr(PID))
