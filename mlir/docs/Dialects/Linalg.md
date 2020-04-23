@@ -29,7 +29,7 @@ performed on the Linalg IR and that have influenced its design:
 1. Tiled Producer-Consumer Fusion with Parametric Tile-And-Fuse.
 1. Map to Parallel and Reduction Loops and Hardware.
 1. Vectorization: Rewrite in Vector Form.
-1. Lower to Loops (Affine, Generic and Parallel).
+1. Lower to Loops (Affine, Generic, and Parallel).
 1. Lower to Library Calls or Special Instructions, Intrinsics or ISA.
 1. Partially Lower to Iterations Over a Finer-Grained Linalg Op.
 
