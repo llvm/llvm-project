@@ -1740,16 +1740,15 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
-  bool IsGEPSrcEleScalable =
-      GEPEltType->isVectorTy() && cast<VectorType>(GEPEltType)->isScalable();
+  bool IsGEPSrcEleScalable = isa<ScalableVectorType>(GEPEltType);
   if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.
   // Skip if GEP return type is scalable. The number of elements is unknown at
   // compile-time.
-  if (GEPType->isVectorTy() && !cast<VectorType>(GEPType)->isScalable()) {
-    auto VWidth = cast<VectorType>(GEPType)->getNumElements();
+  if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
+    auto VWidth = GEPFVTy->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
