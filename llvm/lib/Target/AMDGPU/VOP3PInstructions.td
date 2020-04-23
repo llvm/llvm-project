@@ -1,4 +1,4 @@
-//===-- VOP3PInstructions.td - Vector Instruction Defintions --------------===//
+//===-- VOP3PInstructions.td - Vector Instruction Definitions -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
          // FIXME: clampmod0 misbehaves with the non-default vdst_in
          // following it. For now workaround this by requiring clamp
          // in tied patterns. This should use undef_tied_input, but it
-         // seems underdeveloped and doesns't apply the right register
+         // seems underdeveloped and doesn't apply the right register
          // class constraints.
          !if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
                             (ins clampmod0:$clamp))),

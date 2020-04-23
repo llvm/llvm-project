@@ -166,7 +166,7 @@ let ExeDomain = SSEPackedDouble in {
 }
 
 // All source register operands of FMA opcodes defined in fma3s_rm multiclass
-// can be commuted. In many cases such commute transformation requres an opcode
+// can be commuted. In many cases such commute transformation requires an opcode
 // adjustment, for example, commuting the operands 1 and 2 in FMA*132 form
 // would require an opcode change to FMA*231:
 //     FMA*132* reg1, reg2, reg3; // reg1 * reg3 + reg2;
@@ -283,7 +283,7 @@ multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         []>, Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
-// The FMA 213 form is created for lowering of scalar FMA intrinscis
+// The FMA 213 form is created for lowering of scalar FMA intrinsics
 // to machine instructions.
 // The FMA 132 form can trivially be get by commuting the 2nd and 3rd operands
 // of FMA 213 form.

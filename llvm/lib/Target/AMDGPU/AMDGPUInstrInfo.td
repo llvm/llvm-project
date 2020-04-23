@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains DAG node defintions for the AMDGPU target.
+// This file contains DAG node definitions for the AMDGPU target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -287,7 +287,7 @@ def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
-// when performing the mulitply. The result is a 32-bit value.
+// when performing the multiply. The result is a 32-bit value.
 def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", SDTIntBinOp,
   [SDNPCommutative, SDNPAssociative]
 >;
@@ -375,7 +375,7 @@ def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTypeProfile<0, 1, [SDTCisPt
 
 
 //===----------------------------------------------------------------------===//
-// Intrinsic/Custom node compatability PatFrags
+// Intrinsic/Custom node compatibility PatFrags
 //===----------------------------------------------------------------------===//
 
 def AMDGPUrcp : PatFrags<(ops node:$src), [(int_amdgcn_rcp node:$src),

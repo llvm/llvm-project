@@ -1833,7 +1833,7 @@ def int_aarch64_sve_ld1_gather_scalar_offset : AdvSIMD_GatherLoad_VS_Intrinsic;
 // First-faulting gather loads: scalar base + vector offsets
 //
 
-// 64 bit unscalled offsets
+// 64 bit unscaled offsets
 def int_aarch64_sve_ldff1_gather : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
 
 // 64 bit scaled offsets

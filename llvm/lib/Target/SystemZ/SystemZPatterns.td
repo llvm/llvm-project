@@ -167,7 +167,7 @@ class FPConversion<Instruction insn, SDPatternOperator operator, TypedReg tr1,
   : Pat<(tr1.vt (operator (tr2.vt tr2.op:$vec))),
         (insn tr2.op:$vec, suppress, mode)>;
 
-// Use INSN to perform mininum/maximum operation OPERATOR on type TR.
+// Use INSN to perform minimum/maximum operation OPERATOR on type TR.
 // FUNCTION is the type of minimum/maximum function to perform.
 class FPMinMax<Instruction insn, SDPatternOperator operator, TypedReg tr,
                bits<4> function>
