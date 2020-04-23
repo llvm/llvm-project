@@ -462,7 +462,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
 /// True if an instruction is in tail position in its caller. Intended for
 /// legalizing libcalls as tail calls when possible.
 static bool isLibCallInTailPosition(MachineInstr &MI) {
-  const Function &F = MI.getParent()->getParent()->getFunction();
+  MachineBasicBlock &MBB = *MI.getParent();
+  const Function &F = MBB.getParent()->getFunction();
 
   // Conservatively require the attributes of the call to match those of
   // the return. Ignore NoAlias and NonNull because they don't affect the
@@ -481,8 +482,8 @@ static bool isLibCallInTailPosition(MachineInstr &MI) {
 
   // Only tail call if the following instruction is a standard return.
   auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-  MachineInstr *Next = MI.getNextNode();
-  if (!Next || TII.isTailCall(*Next) || !Next->isReturn())
+  auto Next = next_nodbg(MI.getIterator(), MBB.instr_end());
+  if (Next == MBB.instr_end() || TII.isTailCall(*Next) || !Next->isReturn())
     return false;
 
   return true;
@@ -584,14 +585,16 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
 
   if (Info.LoweredTailCall) {
     assert(Info.IsTailCall && "Lowered tail call when it wasn't a tail call?");
-    // We must have a return following the call to get past
+    // We must have a return following the call (or debug insts) to get past
     // isLibCallInTailPosition.
-    assert(MI.getNextNode() && MI.getNextNode()->isReturn() &&
-           "Expected instr following MI to be a return?");
-
-    // We lowered a tail call, so the call is now the return from the block.
-    // Delete the old return.
-    MI.getNextNode()->eraseFromParent();
+    do {
+      MachineInstr *Next = MI.getNextNode();
+      assert(Next && (Next->isReturn() || Next->isDebugInstr()) &&
+             "Expected instr following MI to be return or debug inst?");
+      // We lowered a tail call, so the call is now the return from the block.
+      // Delete the old return.
+      Next->eraseFromParent();
+    } while (MI.getNextNode());
   }
 
   return LegalizerHelper::Legalized;
