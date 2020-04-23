@@ -1,5 +1,8 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
-# RUN: llc -debugify-and-strip-all-safe -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# Strip out debug info, then run ldst-opt with limit=1.
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -run-pass mir-strip-debug,aarch64-ldst-opt -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
+#
+# Run ldst-opt with limit=1, then strip out debug info.
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt,mir-strip-debug -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 
 ### STG and its offset limits
@@ -12,7 +15,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -24,7 +31,11 @@ body: |
     liveins: $x0, $x1
 
     STGOffset $x1, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -37,7 +48,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 8, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -49,7 +64,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = SUBXri $x0, 4096, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -62,7 +81,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = SUBXri $x0, 4112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -74,7 +97,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 4080, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -87,7 +114,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 4096, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -101,7 +132,11 @@ body: |
     liveins: $x0
 
     STZGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -113,7 +148,11 @@ body: |
     liveins: $x0
 
     ST2GOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -125,7 +164,11 @@ body: |
     liveins: $x0
 
     STZ2GOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -139,7 +182,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -151,7 +198,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = SUBXri $x0, 1024, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -164,7 +215,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = SUBXri $x0, 1040, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -176,7 +231,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 1008, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -189,7 +248,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 1024, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -203,7 +266,11 @@ body: |
     liveins: $x0
 
     STGOffset $x0, $x0, 10
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 160, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -215,7 +282,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     STGPi $x1, $x2, $x0, 10
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 160, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -229,7 +300,11 @@ body: |
     liveins: $x0
 
     $x0 = ADDXri $x0, 32, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     STGOffset $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -241,7 +316,11 @@ body: |
     liveins: $x0, $x1, $x2
 
     $x0 = SUBXri $x0, 48, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -255,7 +334,11 @@ body: |
     liveins: $x0
 
     STGPi $x0, $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -267,7 +350,11 @@ body: |
     liveins: $x0
 
     STGPi $x0, $x0, $x0, 7
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...
 
@@ -281,6 +368,10 @@ body: |
     liveins: $x0
 
     $x0 = SUBXri $x0, 48, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     STGPi $x0, $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
     RET_ReallyLR implicit $x0
 ...

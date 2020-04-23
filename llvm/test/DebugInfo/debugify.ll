@@ -76,11 +76,13 @@ define i32 @boom() {
 
 ; --- DILocalVariables
 ; CHECK-DAG: ![[TY32:.*]] = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
-; CHECK-DAG: !DILocalVariable(name: "1", scope: {{.*}}, file: {{.*}}, line: 3, type: ![[TY32]])
+; CHECK-DAG: !DILocalVariable(name: "1", scope: {{.*}}, file: {{.*}}, line: 1, type: ![[TY32]])
+; CHECK-DAG: !DILocalVariable(name: "2", scope: {{.*}}, file: {{.*}}, line: 3, type: ![[TY32]])
+; CHECK-DAG: !DILocalVariable(name: "3", scope: {{.*}}, file: {{.*}}, line: 5, type: ![[TY32]])
 
 ; --- Metadata counts
 ; CHECK-DAG: ![[NUM_INSTS]] = !{i32 6}
-; CHECK-DAG: ![[NUM_VARS]] = !{i32 1}
+; CHECK-DAG: ![[NUM_VARS]] = !{i32 3}
 
 ; --- Repeat case
 ; CHECK-REPEAT: ModuleDebugify: Skipping module with debug info

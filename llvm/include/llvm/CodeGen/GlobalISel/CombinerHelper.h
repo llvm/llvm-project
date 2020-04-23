@@ -82,7 +82,7 @@ public:
 
   /// Returns true if \p DefMI precedes \p UseMI or they are the same
   /// instruction. Both must be in the same basic block.
-  bool isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool isPredecessor(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// Returns true if \p DefMI dominates \p UseMI. By definition an
   /// instruction dominates itself.
@@ -90,7 +90,7 @@ public:
   /// If we haven't been provided with a MachineDominatorTree during
   /// construction, this function returns a conservative result that tracks just
   /// a single basic block.
-  bool dominates(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool dominates(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
