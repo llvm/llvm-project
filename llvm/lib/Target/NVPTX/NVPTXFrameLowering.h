@@ -16,7 +16,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
-class NVPTXSubtarget;
+
 class NVPTXFrameLowering : public TargetFrameLowering {
 public:
   explicit NVPTXFrameLowering();
