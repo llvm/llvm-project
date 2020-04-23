@@ -7798,17 +7798,9 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   Value *Offset = Ops.size() > 2 ? Ops[2] : Builder.getInt32(0);
   BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Offset);
 
-  Value *Splat0 = Constant::getNullValue(MemoryTy);
-
-  Value *Load = nullptr;
-  if (!BuiltinID)
-    // Regular masked loads take a different path from the SVE-specific ones.
-    Load = Builder.CreateMaskedLoad(BasePtr, llvm::Align(1), Predicate, Splat0);
-  else {
-    BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
-    Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
-    Load = Builder.CreateCall(F, {Predicate, BasePtr});
-  }
+  BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
+  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  Value *Load = Builder.CreateCall(F, {Predicate, BasePtr});
 
   return IsZExtReturn ? Builder.CreateZExt(Load, VectorTy)
                      : Builder.CreateSExt(Load, VectorTy);
@@ -7833,9 +7825,6 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
 
   // Last value is always the data
   llvm::Value *Val = Builder.CreateTrunc(Ops.back(), MemoryTy);
-
-  if (!BuiltinID)
-    return Builder.CreateMaskedStore(Val, BasePtr, llvm::Align(1), Predicate);
 
   BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
   Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);

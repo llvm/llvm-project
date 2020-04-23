@@ -14,9 +14,8 @@ void test_svst1w_s64(svbool_t pg, int32_t *base, svint64_t data)
 {
   // CHECK-LABEL: test_svst1w_s64
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
-  // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
   // CHECK-DAG: %[[DATA:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i32>
-  // CHECK: call void @llvm.masked.store.nxv2i32.p0nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i32>* %[[BASE]], i32 1, <vscale x 2 x i1> %[[PG]])
+  // CHECK: call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i1> %[[PG]], i32* %base)
   // CHECK: ret void
   return SVE_ACLE_FUNC(svst1w,_s64,,)(pg, base, data);
 }
@@ -25,9 +24,8 @@ void test_svst1w_u64(svbool_t pg, uint32_t *base, svuint64_t data)
 {
   // CHECK-LABEL: test_svst1w_u64
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
-  // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
   // CHECK-DAG: %[[DATA:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i32>
-  // CHECK: call void @llvm.masked.store.nxv2i32.p0nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i32>* %[[BASE]], i32 1, <vscale x 2 x i1> %[[PG]])
+  // CHECK: call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i1> %[[PG]], i32* %base)
   // CHECK: ret void
   return SVE_ACLE_FUNC(svst1w,_u64,,)(pg, base, data);
 }
@@ -38,8 +36,8 @@ void test_svst1w_vnum_s64(svbool_t pg, int32_t *base, int64_t vnum, svint64_t da
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
   // CHECK-DAG: %[[DATA:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i32>
-  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum
-  // CHECK: call void @llvm.masked.store.nxv2i32.p0nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i32>* %[[GEP]], i32 1, <vscale x 2 x i1> %[[PG]])
+  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum, i64 0
+  // CHECK: call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i1> %[[PG]], i32* %[[GEP]])
   // CHECK: ret void
   return SVE_ACLE_FUNC(svst1w_vnum,_s64,,)(pg, base, vnum, data);
 }
@@ -50,8 +48,8 @@ void test_svst1w_vnum_u64(svbool_t pg, uint32_t *base, int64_t vnum, svuint64_t 
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
   // CHECK-DAG: %[[DATA:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i32>
-  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum
-  // CHECK: call void @llvm.masked.store.nxv2i32.p0nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i32>* %[[GEP]], i32 1, <vscale x 2 x i1> %[[PG]])
+  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum, i64 0
+  // CHECK: call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> %[[DATA]], <vscale x 2 x i1> %[[PG]], i32* %[[GEP]])
   // CHECK: ret void
   return SVE_ACLE_FUNC(svst1w_vnum,_u64,,)(pg, base, vnum, data);
 }
