@@ -336,4 +336,30 @@ TEST(ProgramTest, TestWriteWithSystemEncoding) {
   ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
 }
 
+TEST_F(ProgramEnvTest, TestExecuteAndWaitStatistics) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_STATISTICS"))
+    exit(0);
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable, "--gtest_filter=ProgramEnvTest.TestExecuteAndWaitStatistics"};
+
+  // Add LLVM_PROGRAM_TEST_STATISTICS to the environment of the child.
+  addEnvVar("LLVM_PROGRAM_TEST_STATISTICS=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  Optional<ProcessStatistics> ProcStat;
+  int RetCode = ExecuteAndWait(Executable, argv, getEnviron(), {}, 0, 0, &Error,
+                               &ExecutionFailed, &ProcStat);
+  ASSERT_EQ(0, RetCode);
+  ASSERT_TRUE(ProcStat);
+  ASSERT_GT(ProcStat->PeakMemory, 0);
+  ASSERT_GE(ProcStat->UserTime, std::chrono::microseconds(0));
+  ASSERT_GE(ProcStat->TotalTime, ProcStat->UserTime);
+}
+
 } // end anonymous namespace
