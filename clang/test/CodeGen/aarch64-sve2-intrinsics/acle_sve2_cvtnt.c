@@ -15,7 +15,8 @@
 svfloat16_t test_svcvtnt_f16_f32_m(svfloat16_t inactive, svbool_t pg, svfloat32_t op)
 {
   // CHECK-LABEL: test_svcvtnt_f16_f32_m
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fcvtnt.f16f32(<vscale x 8 x half> %inactive, <vscale x 16 x i1> %pg, <vscale x 4 x float> %op)
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fcvtnt.f16f32(<vscale x 8 x half> %inactive, <vscale x 4 x i1> %[[PG]], <vscale x 4 x float> %op)
   // CHECK: ret <vscale x 8 x half> %[[INTRINSIC]]
   // overload-warning@+2 {{implicit declaration of function 'svcvtnt_f16_m'}}
   // expected-warning@+1 {{implicit declaration of function 'svcvtnt_f16_f32_m'}}
@@ -25,7 +26,8 @@ svfloat16_t test_svcvtnt_f16_f32_m(svfloat16_t inactive, svbool_t pg, svfloat32_
 svfloat32_t test_svcvtnt_f32_f64_m(svfloat32_t inactive, svbool_t pg, svfloat64_t op)
 {
   // CHECK-LABEL: test_svcvtnt_f32_f64_m
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %inactive, <vscale x 16 x i1> %pg, <vscale x 2 x double> %op)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %inactive, <vscale x 2 x i1> %[[PG]], <vscale x 2 x double> %op)
   // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
   // overload-warning@+2 {{implicit declaration of function 'svcvtnt_f32_m'}}
   // expected-warning@+1 {{implicit declaration of function 'svcvtnt_f32_f64_m'}}
@@ -35,7 +37,8 @@ svfloat32_t test_svcvtnt_f32_f64_m(svfloat32_t inactive, svbool_t pg, svfloat64_
 svfloat16_t test_svcvtnt_f16_f32_x(svfloat16_t even, svbool_t pg, svfloat32_t op)
 {
   // CHECK-LABEL: test_svcvtnt_f16_f32_x
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fcvtnt.f16f32(<vscale x 8 x half> %even, <vscale x 16 x i1> %pg, <vscale x 4 x float> %op)
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fcvtnt.f16f32(<vscale x 8 x half> %even, <vscale x 4 x i1> %[[PG]], <vscale x 4 x float> %op)
   // CHECK: ret <vscale x 8 x half> %[[INTRINSIC]]
   // overload-warning@+2 {{implicit declaration of function 'svcvtnt_f16_x'}}
   // expected-warning@+1 {{implicit declaration of function 'svcvtnt_f16_f32_x'}}
@@ -45,7 +48,8 @@ svfloat16_t test_svcvtnt_f16_f32_x(svfloat16_t even, svbool_t pg, svfloat32_t op
 svfloat32_t test_svcvtnt_f32_f64_x(svfloat32_t even, svbool_t pg, svfloat64_t op)
 {
   // CHECK-LABEL: test_svcvtnt_f32_f64_x
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %even, <vscale x 16 x i1> %pg, <vscale x 2 x double> %op)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %even, <vscale x 2 x i1> %[[PG]], <vscale x 2 x double> %op)
   // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
   // overload-warning@+2 {{implicit declaration of function 'svcvtnt_f32_x'}}
   // expected-warning@+1 {{implicit declaration of function 'svcvtnt_f32_f64_x'}}
