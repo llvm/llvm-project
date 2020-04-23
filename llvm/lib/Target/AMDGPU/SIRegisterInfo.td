@@ -680,7 +680,6 @@ def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32,
 
 def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
                              (add SGPR_128, TTMP_128)> {
-  let AllocationPriority = 15;
   let isAllocatable = 0;
 }
 
@@ -695,12 +694,18 @@ def SGPR_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
 
 def SReg_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
                              (add SGPR_160)> {
-  let AllocationPriority = 16;
+  // FIXME: Should be isAllocatable = 0, but that causes all TableGen-generated
+  // subclasses of SGPR_160 to be marked unallocatable too.
 }
 
-def SReg_192 : RegisterClass<"AMDGPU", [untyped], 32, (add SGPR_192Regs)> {
+def SGPR_192 : RegisterClass<"AMDGPU", [untyped], 32, (add SGPR_192Regs)> {
   let Size = 192;
   let AllocationPriority = 17;
+}
+
+def SReg_192 : RegisterClass<"AMDGPU", [untyped], 32, (add SGPR_192)> {
+  let Size = 192;
+  let isAllocatable = 0;
 }
 
 def SGPR_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64], 32, (add SGPR_256Regs)> {
@@ -715,7 +720,7 @@ def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64], 32,
                              (add SGPR_256, TTMP_256)> {
   // Requires 4 s_mov_b64 to copy
   let CopyCost = 4;
-  let AllocationPriority = 18;
+  let isAllocatable = 0;
 }
 
 def SGPR_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
@@ -732,7 +737,7 @@ def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
                              (add SGPR_512, TTMP_512)> {
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
-  let AllocationPriority = 19;
+  let isAllocatable = 0;
 }
 
 def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
@@ -748,7 +753,7 @@ def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
 def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
                               (add SGPR_1024)> {
   let CopyCost = 16;
-  let AllocationPriority = 20;
+  let isAllocatable = 0;
 }
 
 // Register class for all vector registers (VGPRs + Interpolation Registers)

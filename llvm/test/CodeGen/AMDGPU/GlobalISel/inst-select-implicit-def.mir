@@ -194,7 +194,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_s1024_sgpr
-    ; GCN: [[DEF:%[0-9]+]]:sreg_1024 = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sgpr_1024 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(s1024) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0
