@@ -85,4 +85,5 @@ expected-note {{when looking up 'end' function for range expression of type 'Del
 
   for (Data *p : pt) { } // expected-error {{invalid range expression of type 'T *'; did you mean to dereference it with '*'?}}
   // expected-error@-1 {{no viable conversion from 'Data' to 'Data *'}}
+  // expected-note@4 {{selected 'begin' function with iterator type 'Data *'}}
 }
