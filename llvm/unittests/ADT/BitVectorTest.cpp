@@ -297,6 +297,18 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(-1, A.find_last_unset());
 
   A.resize(20);
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(-1, A.find_last());
+  EXPECT_EQ(-1, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(-1, A.find_prev(5));
+  EXPECT_EQ(-1, A.find_prev(20));
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(19, A.find_last_unset());
+  EXPECT_EQ(6, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
+
   A.set(3);
   A.set(4);
   A.set(16);
@@ -319,6 +331,19 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(5, A.find_next_unset(4));
   EXPECT_EQ(13, A.find_next_unset(12));
   EXPECT_EQ(17, A.find_next_unset(15));
+
+  A.set();
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(0, A.find_first());
+  EXPECT_EQ(19, A.find_last());
+  EXPECT_EQ(6, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(4, A.find_prev(5));
+  EXPECT_EQ(19, A.find_prev(20));
+  EXPECT_EQ(-1, A.find_first_unset());
+  EXPECT_EQ(-1, A.find_last_unset());
+  EXPECT_EQ(-1, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
 }
 
 TEST(BitVectorTest, FindInRangeMultiWord) {
