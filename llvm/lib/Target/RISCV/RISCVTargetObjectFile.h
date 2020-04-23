@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class RISCVTargetMachine;
 
 /// This implementation is used for RISCV ELF targets.
 class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
