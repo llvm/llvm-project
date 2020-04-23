@@ -196,7 +196,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       for (const auto &ArgIndex : ArgIndices) {
         // not allowed to dereference ->begin() if size() is 0
         Params.push_back(GetElementPtrInst::getIndexedType(
-            cast<PointerType>(I->getType()->getScalarType())->getElementType(),
+            cast<PointerType>(I->getType())->getElementType(),
             ArgIndex.second));
         ArgAttrVec.push_back(AttributeSet());
         assert(Params.back());
