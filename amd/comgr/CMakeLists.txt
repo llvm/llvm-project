@@ -64,6 +64,8 @@ else()
   endif()
 endif()
 
+option(BUILD_SHARED_LIBS "Build the shared library" ON)
+
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
 message("---LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
@@ -103,7 +105,7 @@ if (UNIX)
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
     _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
-  if (NOT APPLE)
+  if (NOT APPLE AND BUILD_SHARED_LIBS)
     list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
       "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap")
     # When building a shared library with -fsanitize=address we can't be
@@ -130,7 +132,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
 
 file(GLOB SOURCES "src/*.cpp")
-add_library(amd_comgr SHARED ${SOURCES})
+add_library(amd_comgr ${SOURCES})
 
 include(bc2h)
 include(opencl_pch)
@@ -243,9 +245,9 @@ target_link_libraries(amd_comgr
     ${AMD_COMGR_PUBLIC_LINKER_OPTIONS}
   PRIVATE
     ${AMD_COMGR_PRIVATE_LINKER_OPTIONS}
-    ${CLANG_LIBS}
     ${LLD_LIBS}
     ${LLVM_LIBS}
+    ${CLANG_LIBS}
 )
 
 if (NOT UNIX)
