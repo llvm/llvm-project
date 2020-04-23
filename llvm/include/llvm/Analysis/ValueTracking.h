@@ -17,10 +17,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <cstdint>
@@ -33,6 +32,7 @@ class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
+class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -210,7 +210,7 @@ class Value;
 
   /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
   /// intrinsics are treated as-if they were intrinsics.
-  Intrinsic::ID getIntrinsicForCallSite(ImmutableCallSite ICS,
+  Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
                                         const TargetLibraryInfo *TLI);
 
   /// Return true if we can prove that the specified FP value is never equal to
