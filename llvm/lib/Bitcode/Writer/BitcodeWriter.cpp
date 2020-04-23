@@ -957,8 +957,8 @@ void ModuleBitcodeWriter::writeTypeTable() {
       Code = bitc::TYPE_CODE_VECTOR;
       TypeVals.push_back(VT->getNumElements());
       TypeVals.push_back(VE.getTypeID(VT->getElementType()));
-      if (VT->isScalable())
-        TypeVals.push_back(VT->isScalable());
+      if (isa<ScalableVectorType>(VT))
+        TypeVals.push_back(true);
       break;
     }
     }
