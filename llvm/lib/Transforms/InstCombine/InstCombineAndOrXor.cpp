@@ -1137,6 +1137,51 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
+/// Reduce logic-of-compares with equality to a constant by substituting a
+/// common operand with the constant. Callers are expected to call this with
+/// Cmp0/Cmp1 switched to handle logic op commutativity.
+static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                          BinaryOperator &Logic,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &Q) {
+  bool IsAnd = Logic.getOpcode() == Instruction::And;
+  assert(IsAnd || Logic.getOpcode() == Instruction::Or && "Wrong logic op");
+
+  // Match an equality compare with a non-poison constant as Cmp0.
+  ICmpInst::Predicate Pred0;
+  Value *X;
+  Constant *C;
+  if (!match(Cmp0, m_ICmp(Pred0, m_Value(X), m_Constant(C))) ||
+      !isGuaranteedNotToBeUndefOrPoison(C))
+    return nullptr;
+  if ((IsAnd && Pred0 != ICmpInst::ICMP_EQ) ||
+      (!IsAnd && Pred0 != ICmpInst::ICMP_NE))
+    return nullptr;
+
+  // The other compare must include a common operand (X). Canonicalize the
+  // common operand as operand 1 (Pred1 is swapped if the common operand was
+  // operand 0).
+  Value *Y;
+  ICmpInst::Predicate Pred1;
+  if (!match(Cmp1, m_c_ICmp(Pred1, m_Value(Y), m_Deferred(X))))
+    return nullptr;
+
+  // Replace variable with constant value equivalence to remove a variable use:
+  // (X == C) && (Y Pred1 X) --> (X == C) && (Y Pred1 C)
+  // (X != C) || (Y Pred1 X) --> (X != C) || (Y Pred1 C)
+  // Can think of the 'or' substitution with the 'and' bool equivalent:
+  // A || B --> A || (!A && B)
+  Value *SubstituteCmp = SimplifyICmpInst(Pred1, Y, C, Q);
+  if (!SubstituteCmp) {
+    // If we need to create a new instruction, require that the old compare can
+    // be removed.
+    if (!Cmp1->hasOneUse())
+      return nullptr;
+    SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
+  }
+  return Builder.CreateBinOp(Logic.getOpcode(), Cmp0, SubstituteCmp);
+}
+
 /// Fold (icmp)&(icmp) if possible.
 Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                     BinaryOperator &And) {
@@ -1165,6 +1210,11 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // handle (roughly):  (icmp eq (A & B), C) & (icmp eq (A & D), E)
   if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, true, Builder))
+    return V;
+
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, And, Builder, Q))
+    return V;
+  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, And, Builder, Q))
     return V;
 
   // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
@@ -2294,6 +2344,11 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           ICmpInst::ICMP_UGE,
           Builder.CreateAdd(B, ConstantInt::getSigned(B->getType(), -1)), A);
   }
+
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, Or, Builder, Q))
+    return V;
+  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, Or, Builder, Q))
+    return V;
 
   // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
   if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/true))
