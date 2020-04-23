@@ -188,6 +188,11 @@ Renamed checks
 - The 'fuchsia-restrict-system-headers' check was renamed to :doc:`portability-restrict-system-includes
   <clang-tidy/checks/portability-restrict-system-includes>`
 
+Other improvements
+^^^^^^^^^^^^^^^^^^
+
+- For 'run-clang-tidy.py' add option to use alpha checkers from clang-analyzer.
+
 Improvements to include-fixer
 -----------------------------
 
@@ -210,4 +215,3 @@ The improvements are...
 
 Clang-tidy visual studio plugin
 -------------------------------
-
