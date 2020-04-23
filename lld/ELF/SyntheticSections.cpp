@@ -3363,14 +3363,14 @@ void ARMExidxSyntheticSection::finalizeContents() {
 
   // Sort the executable sections that may or may not have associated
   // .ARM.exidx sections by order of ascending address. This requires the
-  // relative positions of InputSections to be known.
+  // relative positions of InputSections and OutputSections to be known.
   auto compareByFilePosition = [](const InputSection *a,
                                   const InputSection *b) {
     OutputSection *aOut = a->getParent();
     OutputSection *bOut = b->getParent();
 
     if (aOut != bOut)
-      return aOut->sectionIndex < bOut->sectionIndex;
+      return aOut->addr < bOut->addr;
     return a->outSecOff < b->outSecOff;
   };
   llvm::stable_sort(executableSections, compareByFilePosition);
