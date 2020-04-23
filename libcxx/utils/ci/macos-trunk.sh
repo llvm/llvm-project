@@ -4,7 +4,7 @@ set -ue
 
 function usage() {
   cat <<EOM
-$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> [--lit-args <ARGS...>]
+$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> --libcxx-exceptions <ON|OFF> [--lit-args <ARGS...>]
 
 This script is used to continually test libc++ and libc++abi trunk on MacOS.
 
@@ -129,4 +129,29 @@ echo "@@@@@@"
 
 echo "@@@ Running tests for libc++abi @@@"
 ninja -C "${LLVM_BUILD_DIR}" check-cxxabi
+echo "@@@@@@"
+
+
+# TODO: In the future, we should only build that way, and we should run the
+#       test suite against those.
+echo "@@@ Building libc++ and libc++abi using the Apple script (to make sure they work) @@@"
+"${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh"      \
+    --llvm-root "${MONOREPO_ROOT}"                              \
+    --build-dir "${LLVM_BUILD_DIR}/apple-build-cxx"             \
+    --install-dir "${LLVM_BUILD_DIR}/apple-install-cxx"         \
+    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols-cxx"         \
+    --sdk macosx                                                \
+    --architectures "x86_64"                                    \
+    --version 999.99.99                                         \
+    --cache "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
+
+"${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxxabi.sh"   \
+    --llvm-root "${MONOREPO_ROOT}"                              \
+    --build-dir "${LLVM_BUILD_DIR}/apple-build-cxxabi"          \
+    --install-dir "${LLVM_BUILD_DIR}/apple-install-cxxabi"      \
+    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols-cxxabi"      \
+    --sdk macosx                                                \
+    --architectures "x86_64"                                    \
+    --version 999.99.99                                         \
+    --cache "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
 echo "@@@@@@"
