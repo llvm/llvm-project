@@ -34,7 +34,6 @@
 namespace llvm {
 
 class Function;
-class LLVMContext;
 
 namespace objcarc {
 

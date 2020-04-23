@@ -35,10 +35,6 @@
 #include "llvm/Transforms/ObjCARC.h"
 
 namespace llvm {
-class raw_ostream;
-}
-
-namespace llvm {
 namespace objcarc {
 
 /// Erase the given instruction.
