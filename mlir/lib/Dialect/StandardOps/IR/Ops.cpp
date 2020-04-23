@@ -566,6 +566,54 @@ static LogicalResult verify(AtomicYieldOp op) {
 // BranchOp
 //===----------------------------------------------------------------------===//
 
+/// Given a successor, try to collapse it to a new destination if it only
+/// contains a passthrough unconditional branch. If the successor is
+/// collapsable, `successor` and `successorOperands` are updated to reference
+/// the new destination and values. `argStorage` is an optional storage to use
+/// if operands to the collapsed successor need to be remapped.
+static LogicalResult collapseBranch(Block *&successor,
+                                    ValueRange &successorOperands,
+                                    SmallVectorImpl<Value> &argStorage) {
+  // Check that the successor only contains a unconditional branch.
+  if (std::next(successor->begin()) != successor->end())
+    return failure();
+  // Check that the terminator is an unconditional branch.
+  BranchOp successorBranch = dyn_cast<BranchOp>(successor->getTerminator());
+  if (!successorBranch)
+    return failure();
+  // Check that the arguments are only used within the terminator.
+  for (BlockArgument arg : successor->getArguments()) {
+    for (Operation *user : arg.getUsers())
+      if (user != successorBranch)
+        return failure();
+  }
+  // Don't try to collapse branches to infinite loops.
+  Block *successorDest = successorBranch.getDest();
+  if (successorDest == successor)
+    return failure();
+
+  // Update the operands to the successor. If the branch parent has no
+  // arguments, we can use the branch operands directly.
+  OperandRange operands = successorBranch.getOperands();
+  if (successor->args_empty()) {
+    successor = successorDest;
+    successorOperands = operands;
+    return success();
+  }
+
+  // Otherwise, we need to remap any argument operands.
+  for (Value operand : operands) {
+    BlockArgument argOperand = operand.dyn_cast<BlockArgument>();
+    if (argOperand && argOperand.getOwner() == successor)
+      argStorage.push_back(successorOperands[argOperand.getArgNumber()]);
+    else
+      argStorage.push_back(operand);
+  }
+  successor = successorDest;
+  successorOperands = argStorage;
+  return success();
+}
+
 namespace {
 /// Simplify a branch to a block that has a single predecessor. This effectively
 /// merges the two blocks.
@@ -586,6 +634,33 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
     return success();
   }
 };
+
+///   br ^bb1
+/// ^bb1
+///   br ^bbN(...)
+///
+///  -> br ^bbN(...)
+///
+struct SimplifyPassThroughBr : public OpRewritePattern<BranchOp> {
+  using OpRewritePattern<BranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BranchOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *dest = op.getDest();
+    ValueRange destOperands = op.getOperands();
+    SmallVector<Value, 4> destOperandStorage;
+
+    // Try to collapse the successor if it points somewhere other than this
+    // block.
+    if (dest == op.getOperation()->getBlock() ||
+        failed(collapseBranch(dest, destOperands, destOperandStorage)))
+      return failure();
+
+    // Create a new branch with the collapsed successor.
+    rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
+    return success();
+  }
+};
 } // end anonymous namespace.
 
 Block *BranchOp::getDest() { return getSuccessor(); }
@@ -598,7 +673,8 @@ void BranchOp::eraseOperand(unsigned index) {
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
-  results.insert<SimplifyBrToBlockWithSinglePred>(context);
+  results.insert<SimplifyBrToBlockWithSinglePred, SimplifyPassThroughBr>(
+      context);
 }
 
 Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
@@ -887,53 +963,6 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
     rewriter.replaceOpWithNewOp<CondBranchOp>(condbr, condbr.getCondition(),
                                               trueDest, trueDestOperands,
                                               falseDest, falseDestOperands);
-    return success();
-  }
-
-  /// Given a successor, try to collapse it to a new destination if it only
-  /// contains a passthrough unconditional branch. If the successor is
-  /// collapsable, `successor` and `successorOperands` are updated to reference
-  /// the new destination and values. `argStorage` is an optional storage to use
-  /// if operands to the collapsed successor need to be remapped.
-  LogicalResult collapseBranch(Block *&successor, ValueRange &successorOperands,
-                               SmallVectorImpl<Value> &argStorage) const {
-    // Check that the successor only contains a unconditional branch.
-    if (std::next(successor->begin()) != successor->end())
-      return failure();
-    // Check that the terminator is an unconditional branch.
-    BranchOp successorBranch = dyn_cast<BranchOp>(successor->getTerminator());
-    if (!successorBranch)
-      return failure();
-    // Check that the arguments are only used within the terminator.
-    for (BlockArgument arg : successor->getArguments()) {
-      for (Operation *user : arg.getUsers())
-        if (user != successorBranch)
-          return failure();
-    }
-    // Don't try to collapse branches to infinite loops.
-    Block *successorDest = successorBranch.getDest();
-    if (successorDest == successor)
-      return failure();
-
-    // Update the operands to the successor. If the branch parent has no
-    // arguments, we can use the branch operands directly.
-    OperandRange operands = successorBranch.getOperands();
-    if (successor->args_empty()) {
-      successor = successorBranch.getDest();
-      successorOperands = operands;
-      return success();
-    }
-
-    // Otherwise, we need to remap any argument operands.
-    for (Value operand : operands) {
-      BlockArgument argOperand = operand.dyn_cast<BlockArgument>();
-      if (argOperand && argOperand.getOwner() == successor)
-        argStorage.push_back(successorOperands[argOperand.getArgNumber()]);
-      else
-        argStorage.push_back(operand);
-    }
-    successor = successorBranch.getDest();
-    successorOperands = argStorage;
     return success();
   }
 };
