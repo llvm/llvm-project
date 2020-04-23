@@ -3759,13 +3759,11 @@ const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
   // We can bypass creating a target-independent
   // constant expression and then folding it back into a ConstantInt.
   // This is just a compile-time optimization.
-  if (auto *VecTy = dyn_cast<VectorType>(AllocTy)) {
-    if (VecTy->isScalable()) {
-      Constant *NullPtr = Constant::getNullValue(AllocTy->getPointerTo());
-      Constant *One = ConstantInt::get(IntTy, 1);
-      Constant *GEP = ConstantExpr::getGetElementPtr(AllocTy, NullPtr, One);
-      return getSCEV(ConstantExpr::getPtrToInt(GEP, IntTy));
-    }
+  if (isa<ScalableVectorType>(AllocTy)) {
+    Constant *NullPtr = Constant::getNullValue(AllocTy->getPointerTo());
+    Constant *One = ConstantInt::get(IntTy, 1);
+    Constant *GEP = ConstantExpr::getGetElementPtr(AllocTy, NullPtr, One);
+    return getSCEV(ConstantExpr::getPtrToInt(GEP, IntTy));
   }
   return getConstant(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
 }
