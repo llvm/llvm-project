@@ -31,6 +31,8 @@
 
 namespace llvm {
 
+class LoopVectorizationLegality;
+class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 
 /// VPlan-based builder utility analogous to IRBuilder.

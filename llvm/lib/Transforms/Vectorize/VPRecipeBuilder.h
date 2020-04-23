@@ -18,7 +18,6 @@ namespace llvm {
 
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
-class TargetTransformInfo;
 class TargetLibraryInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
