@@ -277,7 +277,7 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   verifyFormat("var x = aaaaaaaaaaaaaaaaaaaaaaaaa() in\n"
                "    aaaa.aaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;");
   FormatStyle Style = getGoogleJSStyleWithColumns(80);
-  Style.AlignOperands = FormatStyle::OAS_Align;
+  Style.AlignOperands = true;
   verifyFormat("var x = aaaaaaaaaaaaaaaaaaaaaaaaa() in\n"
                "        aaaa.aaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
                Style);
