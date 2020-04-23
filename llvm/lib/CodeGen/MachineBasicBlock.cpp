@@ -1329,8 +1329,8 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
   if (MBBI == instr_begin()) return {};
-  // Skip debug declarations, we don't want a DebugLoc from them.
-  MBBI = skipDebugInstructionsBackward(std::prev(MBBI), instr_begin());
+  // Skip debug instructions, we don't want a DebugLoc from them.
+  MBBI = prev_nodbg(MBBI, instr_begin());
   if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
   return {};
 }
