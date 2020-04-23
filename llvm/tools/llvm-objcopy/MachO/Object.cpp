@@ -26,19 +26,22 @@ void SymbolTable::removeSymbols(
 
 Error Object::removeSections(
     function_ref<bool(const std::unique_ptr<Section> &)> ToRemove) {
-  std::unordered_set<uint32_t> RemovedSectionsIndices;
+  DenseMap<uint32_t, const Section *> OldIndexToSection;
+  uint32_t NextSectionIndex = 1;
   for (LoadCommand &LC : LoadCommands) {
     auto It = std::stable_partition(
         std::begin(LC.Sections), std::end(LC.Sections),
         [&](const std::unique_ptr<Section> &Sec) { return !ToRemove(Sec); });
-    for (auto I = It, End = LC.Sections.end(); I != End; ++I)
-      RemovedSectionsIndices.insert((*I)->Index);
+    for (auto I = LC.Sections.begin(), End = It; I != End; ++I) {
+      OldIndexToSection[(*I)->Index] = I->get();
+      (*I)->Index = NextSectionIndex++;
+    }
     LC.Sections.erase(It, LC.Sections.end());
   }
 
   auto IsDead = [&](const std::unique_ptr<SymbolEntry> &S) -> bool {
     Optional<uint32_t> Section = S->section();
-    return (Section && RemovedSectionsIndices.count(*Section));
+    return (Section && !OldIndexToSection.count(*Section));
   };
 
   SmallPtrSet<const SymbolEntry *, 2> DeadSymbols;
@@ -58,6 +61,9 @@ Error Object::removeSections(
                                    *(R.Symbol->section()),
                                    Sec->CanonicalName.c_str());
   SymTable.removeSymbols(IsDead);
+  for (std::unique_ptr<SymbolEntry> &S : SymTable.Symbols)
+    if (S->section())
+      S->n_sect = OldIndexToSection[S->n_sect]->Index;
   return Error::success();
 }
 
