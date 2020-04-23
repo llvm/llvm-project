@@ -275,11 +275,11 @@ void SIBufMemMerge::processSubSection(const SmallVector<SimpleMI, 8> &Candidates
           llvm_unreachable_internal();
           break;
         case 16:
-          SuperRC = &AMDGPU::SReg_512RegClass;
+          SuperRC = &AMDGPU::SGPR_512RegClass;
           MergeInstr = &TII->get(AMDGPU::S_BUFFER_LOAD_DWORDX16_IMM);
           break;
         case 8:
-          SuperRC = &AMDGPU::SReg_256RegClass;
+          SuperRC = &AMDGPU::SGPR_256RegClass;
           MergeInstr = &TII->get(AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM);
           break;
         case 4:

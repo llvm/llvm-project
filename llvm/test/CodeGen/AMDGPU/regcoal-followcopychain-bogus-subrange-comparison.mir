@@ -75,14 +75,14 @@ body:             |
   bb.3:
     successors: %bb.5(0x80000000)
   
-    undef %39.sub0:sreg_256 = COPY %38
-    %39.sub1:sreg_256 = COPY %38
-    %39.sub2:sreg_256 = COPY %38
-    %39.sub3:sreg_256 = COPY %38
-    %39.sub4:sreg_256 = COPY %38
-    %39.sub5:sreg_256 = COPY %38
-    %39.sub6:sreg_256 = COPY %38
-    %39.sub7:sreg_256 = COPY %38
+    undef %39.sub0:sgpr_256 = COPY %38
+    %39.sub1:sgpr_256 = COPY %38
+    %39.sub2:sgpr_256 = COPY %38
+    %39.sub3:sgpr_256 = COPY %38
+    %39.sub4:sgpr_256 = COPY %38
+    %39.sub5:sgpr_256 = COPY %38
+    %39.sub6:sgpr_256 = COPY %38
+    %39.sub7:sgpr_256 = COPY %38
     dead %40:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V4 undef %41:vreg_128, killed %39, undef %42:sgpr_128, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, addrspace 4)
     S_BRANCH %bb.5
   
@@ -156,14 +156,14 @@ body:             |
     %106.sub2:vreg_128 = COPY %77
     %106.sub3:vreg_128 = COPY killed %77
     %79:sreg_32_xm0 = S_MOV_B32 0
-    undef %80.sub0:sreg_256 = COPY %79
-    %80.sub1:sreg_256 = COPY %79
-    %80.sub2:sreg_256 = COPY %79
-    %80.sub3:sreg_256 = COPY %79
-    %80.sub4:sreg_256 = COPY %79
-    %80.sub5:sreg_256 = COPY %79
-    %80.sub6:sreg_256 = COPY %79
-    %80.sub7:sreg_256 = COPY killed %79
+    undef %80.sub0:sgpr_256 = COPY %79
+    %80.sub1:sgpr_256 = COPY %79
+    %80.sub2:sgpr_256 = COPY %79
+    %80.sub3:sgpr_256 = COPY %79
+    %80.sub4:sgpr_256 = COPY %79
+    %80.sub5:sgpr_256 = COPY %79
+    %80.sub6:sgpr_256 = COPY %79
+    %80.sub7:sgpr_256 = COPY killed %79
     IMAGE_STORE_V4_V2 killed %106, undef %82:vreg_64, killed %80, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into constant-pool, addrspace 4)
     S_ENDPGM 0
 
