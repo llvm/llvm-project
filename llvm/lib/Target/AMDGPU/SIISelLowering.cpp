@@ -141,10 +141,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
   addRegisterClass(MVT::v5f32, &AMDGPU::VReg_160RegClass);
 
-  addRegisterClass(MVT::v8i32, &AMDGPU::SReg_256RegClass);
+  addRegisterClass(MVT::v8i32, &AMDGPU::SGPR_256RegClass);
   addRegisterClass(MVT::v8f32, &AMDGPU::VReg_256RegClass);
 
-  addRegisterClass(MVT::v16i32, &AMDGPU::SReg_512RegClass);
+  addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
   addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
 
   if (Subtarget->has16BitInsts()) {
@@ -10600,22 +10600,22 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         RC = &AMDGPU::SGPR_64RegClass;
         break;
       case 96:
-        RC = &AMDGPU::SReg_96RegClass;
+        RC = &AMDGPU::SGPR_96RegClass;
         break;
       case 128:
         RC = &AMDGPU::SGPR_128RegClass;
         break;
       case 160:
-        RC = &AMDGPU::SReg_160RegClass;
+        RC = &AMDGPU::SGPR_160RegClass;
         break;
       case 192:
-        RC = &AMDGPU::SReg_192RegClass;
+        RC = &AMDGPU::SGPR_192RegClass;
         break;
       case 256:
-        RC = &AMDGPU::SReg_256RegClass;
+        RC = &AMDGPU::SGPR_256RegClass;
         break;
       case 512:
-        RC = &AMDGPU::SReg_512RegClass;
+        RC = &AMDGPU::SGPR_512RegClass;
         break;
       }
       break;

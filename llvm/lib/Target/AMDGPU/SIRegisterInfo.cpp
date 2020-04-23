@@ -1340,19 +1340,19 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   case 64:
     return &AMDGPU::SReg_64RegClass;
   case 96:
-    return &AMDGPU::SReg_96RegClass;
+    return &AMDGPU::SGPR_96RegClass;
   case 128:
-    return &AMDGPU::SReg_128RegClass;
+    return &AMDGPU::SGPR_128RegClass;
   case 160:
-    return &AMDGPU::SReg_160RegClass;
+    return &AMDGPU::SGPR_160RegClass;
   case 192:
-    return &AMDGPU::SReg_192RegClass;
+    return &AMDGPU::SGPR_192RegClass;
   case 256:
-    return &AMDGPU::SReg_256RegClass;
+    return &AMDGPU::SGPR_256RegClass;
   case 512:
-    return &AMDGPU::SReg_512RegClass;
+    return &AMDGPU::SGPR_512RegClass;
   case 1024:
-    return &AMDGPU::SReg_1024RegClass;
+    return &AMDGPU::SGPR_1024RegClass;
   default:
     return nullptr;
   }
@@ -1455,8 +1455,6 @@ SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
   unsigned Size = getRegSizeInBits(*VRC);
   if (Size == 32)
     return &AMDGPU::SGPR_32RegClass;
-  if (Size == 128)
-    return &AMDGPU::SGPR_128RegClass;
   const TargetRegisterClass *SRC = getSGPRClassForBitWidth(Size);
   assert(SRC && "Invalid register class size");
   return SRC;
@@ -1472,8 +1470,6 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
   if (isSGPRClass(RC)) {
     if (Size == 32)
       RC = &AMDGPU::SGPR_32RegClass;
-    else if (Size == 128)
-      RC = &AMDGPU::SGPR_128RegClass;
     else
       RC = getSGPRClassForBitWidth(Size);
   } else if (hasAGPRs(RC)) {
@@ -1698,8 +1694,6 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
     return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
                     : &AMDGPU::SReg_64_XEXECRegClass;
   case AMDGPU::SGPRRegBankID:
-    if (Size == 128)
-      return &AMDGPU::SGPR_128RegClass;
     return getSGPRClassForBitWidth(std::max(32u, Size));
   default:
     llvm_unreachable("unknown register bank");
