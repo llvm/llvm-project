@@ -110,6 +110,11 @@ public:
   /// the operation with an offending use.
   bool isIsolatedFromAbove(Optional<Location> noteLoc = llvm::None);
 
+  /// Returns 'block' if 'block' lies in this region, or otherwise finds the
+  /// ancestor of 'block' that lies in this region. Returns nullptr if the
+  /// latter fails.
+  Block *findAncestorBlockInRegion(Block &block);
+
   /// Drop all operand uses from operations within this region, which is
   /// an essential step in breaking cyclic dependences between references when
   /// they are to be deleted.
