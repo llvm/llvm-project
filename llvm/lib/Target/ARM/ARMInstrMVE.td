@@ -4256,7 +4256,7 @@ let Predicates = [HasMVEFloat] in {
 }
 
 
-// Extra "worst case" and/or/xor partterns, going into and out of GRP
+// Extra "worst case" and/or/xor patterns, going into and out of GRP
 multiclass two_predops<SDPatternOperator opnode, Instruction insn> {
   def v16i1 : Pat<(v16i1 (opnode (v16i1 VCCR:$p1), (v16i1 VCCR:$p2))),
                   (v16i1 (COPY_TO_REGCLASS
@@ -4986,7 +4986,7 @@ multiclass MVE_vec_scalar_fp_pat_m<SDNode unpred_op, Intrinsic pred_int,
               (v8f16 (instr_f16 (v8f16 MQPR:$Qm), (i32 rGPR:$val),
                                 ARMVCCThen, (v8i1 VCCR:$mask),
                                 (v8f16 MQPR:$inactive)))>;
-    // Preicated F32
+    // Predicated F32
     def : Pat<(v4f32 (pred_int (v4f32 MQPR:$Qm), (v4f32 (ARMvdup rGPR:$val)),
                                (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive))),
               (v4f32 (instr_f32 (v4f32 MQPR:$Qm), (i32 rGPR:$val),

@@ -136,7 +136,7 @@ TableGen's top-level production consists of "objects".
    TemplateArgList: "<" `Declaration` ("," `Declaration`)* ">"
 
 A ``class`` declaration creates a record which other records can inherit
-from. A class can be parametrized by a list of "template arguments", whose
+from. A class can be parameterized by a list of "template arguments", whose
 values can be used in the class body.
 
 A given class can only be defined once. A ``class`` declaration is

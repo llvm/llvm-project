@@ -1080,7 +1080,7 @@ def int_arm_mve_vmull_poly: Intrinsic<
 
 // The first two parameters are compile-time constants:
 // * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq) 
-//            instruction. Note: the flag is inverted to match the corresonding
+//            instruction. Note: the flag is inverted to match the corresponding
 //            bit in the instruction encoding
 // * Rotation angle: 0 mean 90 deg, 1 means 180 deg
 defm int_arm_mve_vcaddq : MVEMXPredicated<

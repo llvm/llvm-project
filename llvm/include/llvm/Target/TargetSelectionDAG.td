@@ -729,7 +729,7 @@ def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 /// PatFrags - Represents a set of pattern fragments.  Each single fragment
 /// can match something on the DAG, from a single node to multiple nested other
 /// fragments.   The whole set of fragments matches if any of the single
-/// fragemnts match.  This allows e.g. matching and "add with overflow" and
+/// fragments match.  This allows e.g. matching and "add with overflow" and
 /// a regular "add" with the same fragment set.
 ///
 class PatFrags<dag ops, list<dag> frags, code pred = [{}],

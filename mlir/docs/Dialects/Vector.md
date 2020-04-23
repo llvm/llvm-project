@@ -44,7 +44,7 @@ bottom-up abstractions:
 intrinsics. This is referred to as the `LLVM` level.
 2. Set of machine-specific operations and types that are built to translate
 almost 1-1 with the HW ISA. This is referred to as the Hardware Vector level;
-a.k.a `HWV`. For instance, we have (a) a `NVVM` dialect (for `CUDA`) with
+a.k.a `HWV`. For instance, we have (a) the `NVVM` dialect (for `CUDA`) with
 tensor core ops, (b) accelerator-specific dialects (internal), a potential
 (future) `CPU` dialect to capture `LLVM` intrinsics more closely and other
 dialects for specific hardware. Ideally this should be auto-generated as much

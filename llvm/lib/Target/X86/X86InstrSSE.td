@@ -3232,7 +3232,7 @@ def PAUSE : I<0x90, RawFrm, (outs), (ins),
 
 let SchedRW = [WriteFence] in {
 // Load, store, and memory fence
-// TODO: As with mfence, we may want to ease the availablity of sfence/lfence
+// TODO: As with mfence, we may want to ease the availability of sfence/lfence
 // to include any 64-bit target.
 def SFENCE : I<0xAE, MRM_F8, (outs), (ins), "sfence", [(int_x86_sse_sfence)]>,
                PS, Requires<[HasSSE1]>;
@@ -7434,7 +7434,7 @@ def : Pat<(X86Blendi (loadv2i64 addr:$src2), VR128:$src1, timm:$src3),
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
-// NOTE: We're using FP instructions here, but exeuction domain fixing should
+// NOTE: We're using FP instructions here, but execution domain fixing should
 // take care of using integer instructions when profitable.
 let Predicates = [HasAVX] in {
 def : Pat<(insert_subvector (v8i32 VR256:$src1), (v4i32 VR128:$src2), (iPTR 0)),

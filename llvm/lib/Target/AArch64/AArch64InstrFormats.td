@@ -883,7 +883,7 @@ def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
 }
 
 // timm0_31 predicate - same ass imm0_31, but use TargetConstant (TimmLeaf)
-// instead of Contant (ImmLeaf)
+// instead of Constant (ImmLeaf)
 def timm0_31 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;
 }]> {
