@@ -44,14 +44,14 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
                             MemRefBoundsCapture &bounds, Value from, Value to) {
   // Create EDSC handles for bounds.
   unsigned rank = bounds.rank();
-  SmallVector<ValueHandle, 4> lbs, ubs, steps;
+  SmallVector<Value, 4> lbs, ubs, steps;
 
   // Make sure we have enough loops to use all thread dimensions, these trivial
   // loops should be outermost and therefore inserted first.
   if (rank < GPUDialect::getNumWorkgroupDimensions()) {
     unsigned extraLoops = GPUDialect::getNumWorkgroupDimensions() - rank;
-    ValueHandle zero = std_constant_index(0);
-    ValueHandle one = std_constant_index(1);
+    Value zero = std_constant_index(0);
+    Value one = std_constant_index(1);
     lbs.resize(extraLoops, zero);
     ubs.resize(extraLoops, one);
     steps.resize(extraLoops, one);
@@ -78,9 +78,8 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
   }
 
   // Produce the loop nest with copies.
-  SmallVector<ValueHandle, 8> ivs(lbs.size(), ValueHandle(indexType));
-  auto ivPtrs = makeHandlePointers(MutableArrayRef<ValueHandle>(ivs));
-  LoopNestBuilder(ivPtrs, lbs, ubs, steps)([&]() {
+  SmallVector<Value, 8> ivs(lbs.size());
+  LoopNestBuilder(ivs, lbs, ubs, steps)([&]() {
     auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
     StdIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
@@ -90,8 +89,8 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
   for (auto en :
        llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
-    auto loop = cast<loop::ForOp>(
-        en.value().getValue().getParentRegion()->getParentOp());
+    Value v = en.value();
+    auto loop = cast<loop::ForOp>(v.getParentRegion()->getParentOp());
     mapLoopToProcessorIds(loop, {threadIds[en.index()]},
                           {blockDims[en.index()]});
   }

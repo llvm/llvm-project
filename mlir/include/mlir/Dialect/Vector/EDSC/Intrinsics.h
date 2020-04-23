@@ -18,6 +18,7 @@ using vector_broadcast = ValueBuilder<vector::BroadcastOp>;
 using vector_contract = ValueBuilder<vector::ContractionOp>;
 using vector_matmul = ValueBuilder<vector::MatmulOp>;
 using vector_print = OperationBuilder<vector::PrintOp>;
+using vector_type_cast = ValueBuilder<vector::TypeCastOp>;
 
 } // namespace intrinsics
 } // namespace edsc

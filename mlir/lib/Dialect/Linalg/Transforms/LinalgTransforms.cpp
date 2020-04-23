@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
@@ -219,10 +220,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
 
 SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
                                                       Operation *op) {
-  using vector_contract = edsc::intrinsics::ValueBuilder<vector::ContractionOp>;
-  using vector_broadcast = edsc::intrinsics::ValueBuilder<vector::BroadcastOp>;
-  using vector_type_cast = edsc::intrinsics::ValueBuilder<vector::TypeCastOp>;
-
   assert(succeeded(vectorizeLinalgOpPrecondition(op)) &&
          "DRR failure case must be a precondition");
   auto linalgOp = cast<linalg::LinalgOp>(op);
@@ -242,8 +239,8 @@ SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
                          "]: Rewrite linalg.fill as vector.broadcast: "
                       << *op << ":\n");
     auto dstMemrefVec = vector_type_cast(fillOp.getOutputBuffer(0));
-    auto dstVec = std_load(dstMemrefVec);
-    auto resVec = vector_broadcast(dstVec, fillOp.value());
+    Value dstVec = std_load(dstMemrefVec);
+    auto resVec = vector_broadcast(dstVec.getType(), fillOp.value());
     std_store(resVec, dstMemrefVec);
   } else {
     // Vectorize other ops as vector contraction (currently only matmul).
