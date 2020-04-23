@@ -357,8 +357,7 @@ enum Constants {
 };
 
 /// Constants for the DW_APPLE_PROPERTY_attributes attribute.
-/// Keep this list in sync with clang's DeclObjCCommon.h
-/// ObjCPropertyAttribute::Kind!
+/// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
 enum ApplePropertyAttributes {
 #define HANDLE_DW_APPLE_PROPERTY(ID, NAME) DW_APPLE_PROPERTY_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"

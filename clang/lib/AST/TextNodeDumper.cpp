@@ -1958,35 +1958,35 @@ void TextNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
   else if (D->getPropertyImplementation() == ObjCPropertyDecl::Optional)
     OS << " optional";
 
-  ObjCPropertyAttribute::Kind Attrs = D->getPropertyAttributes();
-  if (Attrs != ObjCPropertyAttribute::kind_noattr) {
-    if (Attrs & ObjCPropertyAttribute::kind_readonly)
+  ObjCPropertyDecl::PropertyAttributeKind Attrs = D->getPropertyAttributes();
+  if (Attrs != ObjCPropertyDecl::OBJC_PR_noattr) {
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_readonly)
       OS << " readonly";
-    if (Attrs & ObjCPropertyAttribute::kind_assign)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_assign)
       OS << " assign";
-    if (Attrs & ObjCPropertyAttribute::kind_readwrite)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_readwrite)
       OS << " readwrite";
-    if (Attrs & ObjCPropertyAttribute::kind_retain)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_retain)
       OS << " retain";
-    if (Attrs & ObjCPropertyAttribute::kind_copy)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_copy)
       OS << " copy";
-    if (Attrs & ObjCPropertyAttribute::kind_nonatomic)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_nonatomic)
       OS << " nonatomic";
-    if (Attrs & ObjCPropertyAttribute::kind_atomic)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_atomic)
       OS << " atomic";
-    if (Attrs & ObjCPropertyAttribute::kind_weak)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_weak)
       OS << " weak";
-    if (Attrs & ObjCPropertyAttribute::kind_strong)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_strong)
       OS << " strong";
-    if (Attrs & ObjCPropertyAttribute::kind_unsafe_unretained)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained)
       OS << " unsafe_unretained";
-    if (Attrs & ObjCPropertyAttribute::kind_class)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
       OS << " class";
-    if (Attrs & ObjCPropertyAttribute::kind_direct)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_direct)
       OS << " direct";
-    if (Attrs & ObjCPropertyAttribute::kind_getter)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
       dumpDeclRef(D->getGetterMethodDecl(), "getter");
-    if (Attrs & ObjCPropertyAttribute::kind_setter)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
       dumpDeclRef(D->getSetterMethodDecl(), "setter");
   }
 }

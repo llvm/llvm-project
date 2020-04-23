@@ -740,8 +740,7 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
 
         // Map a nullability property attribute to a context-sensitive keyword
         // attribute.
-        if (OCDS.getPropertyAttributes() &
-            ObjCPropertyAttribute::kind_nullability)
+        if (OCDS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
           addContextSensitiveTypeNullability(*this, FD.D, OCDS.getNullability(),
                                              OCDS.getNullabilityLoc(),
                                              addedToDeclSpec);
@@ -861,25 +860,25 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
     SourceLocation AttrName = ConsumeToken(); // consume last attribute name
 
     if (II->isStr("readonly"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_readonly);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_readonly);
     else if (II->isStr("assign"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_assign);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_assign);
     else if (II->isStr("unsafe_unretained"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_unsafe_unretained);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_unsafe_unretained);
     else if (II->isStr("readwrite"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_readwrite);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_readwrite);
     else if (II->isStr("retain"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_retain);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_retain);
     else if (II->isStr("strong"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_strong);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_strong);
     else if (II->isStr("copy"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_copy);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_copy);
     else if (II->isStr("nonatomic"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nonatomic);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nonatomic);
     else if (II->isStr("atomic"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_atomic);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_atomic);
     else if (II->isStr("weak"))
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_weak);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_weak);
     else if (II->isStr("getter") || II->isStr("setter")) {
       bool IsSetter = II->getNameStart()[0] == 's';
 
@@ -911,7 +910,7 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
       }
 
       if (IsSetter) {
-        DS.setPropertyAttributes(ObjCPropertyAttribute::kind_setter);
+        DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_setter);
         DS.setSetterName(SelIdent, SelLoc);
 
         if (ExpectAndConsume(tok::colon,
@@ -920,44 +919,44 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
           return;
         }
       } else {
-        DS.setPropertyAttributes(ObjCPropertyAttribute::kind_getter);
+        DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_getter);
         DS.setGetterName(SelIdent, SelLoc);
       }
     } else if (II->isStr("nonnull")) {
-      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
+      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::NonNull,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::NonNull);
     } else if (II->isStr("nullable")) {
-      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
+      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Nullable,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Nullable);
     } else if (II->isStr("null_unspecified")) {
-      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
+      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Unspecified,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Unspecified);
     } else if (II->isStr("null_resettable")) {
-      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
+      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Unspecified,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Unspecified);
 
       // Also set the null_resettable bit.
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_null_resettable);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_null_resettable);
     } else if (II->isStr("class")) {
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_class);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_class);
     } else if (II->isStr("direct")) {
-      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_direct);
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_direct);
     } else {
       Diag(AttrName, diag::err_objc_expected_property_attr) << II;
       SkipUntil(tok::r_paren, StopAtSemi);
