@@ -56,6 +56,21 @@ define i1 @ugt_swap_and_min_commute(i8* %x, i8* %y)  {
   ret i1 %r
 }
 
+; Negative test - signed compare
+
+define i1 @sgt_and_min(i9* %x, i9* %y)  {
+; CHECK-LABEL: @sgt_and_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i9* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i9* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sgt i9* %x, %y
+  %cmpeq = icmp eq i9* %x, null
+  %r = and i1 %cmp, %cmpeq
+  ret i1 %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; (X != null) || (X <= Y) --> true
@@ -99,6 +114,21 @@ define i1 @ule_swap_or_not_min_commute(i8* %x, i8* %y)  {
   %cmp = icmp uge i8* %y, %x
   %cmpeq = icmp ne i8* %x, null
   %r = or i1 %cmpeq, %cmp
+  ret i1 %r
+}
+
+; Negative test - signed compare
+
+define i1 @sle_or_not_min(i427* %x, i427* %y)  {
+; CHECK-LABEL: @sle_or_not_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i427* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i427* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sle i427* %x, %y
+  %cmpeq = icmp ne i427* %x, null
+  %r = or i1 %cmp, %cmpeq
   ret i1 %r
 }
 
@@ -152,6 +182,21 @@ define i1 @ule_swap_and_min_commute(i8* %x, i8* %y)  {
   ret i1 %r
 }
 
+; Negative test - signed compare
+
+define i1 @sle_and_min(i8* %x, i8* %y)  {
+; CHECK-LABEL: @sle_and_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sle i8* %x, %y
+  %cmpeq = icmp eq i8* %x, null
+  %r = and i1 %cmp, %cmpeq
+  ret i1 %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; (X == null) || (X <= Y) --> X <= Y
@@ -199,6 +244,21 @@ define i1 @ule_swap_or_min_commute(i8* %x, i8* %y)  {
   %cmp = icmp uge i8* %y, %x
   %cmpeq = icmp eq i8* %x, null
   %r = or i1 %cmpeq, %cmp
+  ret i1 %r
+}
+
+; Negative test - signed compare
+
+define i1 @sle_or_min(i8* %x, i8* %y)  {
+; CHECK-LABEL: @sle_or_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sle i8* %x, %y
+  %cmpeq = icmp eq i8* %x, null
+  %r = or i1 %cmp, %cmpeq
   ret i1 %r
 }
 
@@ -252,6 +312,21 @@ define i1 @ugt_swap_and_not_min_commute(i8* %x, i8* %y)  {
   ret i1 %r
 }
 
+; Negative test - signed compare
+
+define i1 @sgt_and_not_min(i8* %x, i8* %y)  {
+; CHECK-LABEL: @sgt_and_not_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sgt i8* %x, %y
+  %cmpeq = icmp ne i8* %x, null
+  %r = and i1 %cmp, %cmpeq
+  ret i1 %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; (X != null) || (X > Y) --> X != null
@@ -299,5 +374,20 @@ define i1 @ugt_swap_or_not_min_commute(i823* %x, i823* %y)  {
   %cmp = icmp ult i823* %y, %x
   %cmpeq = icmp ne i823* %x, null
   %r = or i1 %cmpeq, %cmp
+  ret i1 %r
+}
+
+; Negative test - signed compare
+
+define i1 @sgt_or_not_min(i8* %x, i8* %y)  {
+; CHECK-LABEL: @sgt_or_not_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8* [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sgt i8* %x, %y
+  %cmpeq = icmp ne i8* %x, null
+  %r = or i1 %cmp, %cmpeq
   ret i1 %r
 }
