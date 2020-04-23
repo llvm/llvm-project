@@ -37,7 +37,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -199,8 +198,8 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
       return true;
     }
   }
-  if (auto CS = CallSite(I)) {
-    if (Function *F = CS.getCalledFunction()) {
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (Function *F = CB->getCalledFunction()) {
       LibFunc LF;
       if (TLI.getLibFunc(*F, LF) && TLI.has(LF)) {
         switch (LF) {
@@ -244,10 +243,10 @@ static MemoryLocation getLocForWrite(Instruction *Inst) {
     }
     }
   }
-  if (auto CS = CallSite(Inst))
+  if (auto *CB = dyn_cast<CallBase>(Inst))
     // All the supported TLI functions so far happen to have dest as their
     // first argument.
-    return MemoryLocation(CS.getArgument(0));
+    return MemoryLocation(CB->getArgOperand(0));
   return MemoryLocation();
 }
 
@@ -294,8 +293,8 @@ static bool isRemovable(Instruction *I) {
   }
 
   // note: only get here for calls with analyzable writes - i.e. libcalls
-  if (auto CS = CallSite(I))
-    return CS.getInstruction()->use_empty();
+  if (auto *CB = dyn_cast<CallBase>(I))
+    return CB->use_empty();
 
   return false;
 }
@@ -1448,8 +1447,8 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   Instruction *DI = D->getMemoryInst();
   // Calls that only access inaccessible memory cannot read or write any memory
   // locations we consider for elimination.
-  if (auto CS = CallSite(DI))
-    if (CS.onlyAccessesInaccessibleMemory())
+  if (auto *CB = dyn_cast<CallBase>(DI))
+    if (CB->onlyAccessesInaccessibleMemory())
       return true;
 
   // We can eliminate stores to locations not visible to the caller across
@@ -1560,17 +1559,17 @@ struct DSEState {
     if (auto *MTI = dyn_cast<AnyMemIntrinsic>(I))
       return {MemoryLocation::getForDest(MTI)};
 
-    if (auto CS = CallSite(I)) {
-      if (Function *F = CS.getCalledFunction()) {
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (Function *F = CB->getCalledFunction()) {
         StringRef FnName = F->getName();
         if (TLI.has(LibFunc_strcpy) && FnName == TLI.getName(LibFunc_strcpy))
-          return {MemoryLocation(CS.getArgument(0))};
+          return {MemoryLocation(CB->getArgOperand(0))};
         if (TLI.has(LibFunc_strncpy) && FnName == TLI.getName(LibFunc_strncpy))
-          return {MemoryLocation(CS.getArgument(0))};
+          return {MemoryLocation(CB->getArgOperand(0))};
         if (TLI.has(LibFunc_strcat) && FnName == TLI.getName(LibFunc_strcat))
-          return {MemoryLocation(CS.getArgument(0))};
+          return {MemoryLocation(CB->getArgOperand(0))};
         if (TLI.has(LibFunc_strncat) && FnName == TLI.getName(LibFunc_strncat))
-          return {MemoryLocation(CS.getArgument(0))};
+          return {MemoryLocation(CB->getArgOperand(0))};
       }
       return None;
     }
@@ -1586,8 +1585,8 @@ struct DSEState {
     if (!UseInst->mayWriteToMemory())
       return false;
 
-    if (auto CS = CallSite(UseInst))
-      if (CS.onlyAccessesInaccessibleMemory())
+    if (auto *CB = dyn_cast<CallBase>(UseInst))
+      if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
     ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
@@ -1606,8 +1605,8 @@ struct DSEState {
     if (!UseInst->mayReadFromMemory())
       return false;
 
-    if (auto CS = CallSite(UseInst))
-      if (CS.onlyAccessesInaccessibleMemory())
+    if (auto *CB = dyn_cast<CallBase>(UseInst))
+      if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
     ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
