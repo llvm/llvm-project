@@ -14,6 +14,7 @@
 // CHECK-NEXT: "ts":
 // CHECK: "name": "clang{{.*}}"
 // CHECK: "name": "process_name"
+// CHECK: "name": "thread_name"
 
 template <typename T>
 struct Struct {
