@@ -316,6 +316,12 @@ private:
   unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
 };
 
+/// Return true if there is an instruction /after/ \p DefMI and before \p UseMI
+/// which either reads or clobbers NZCV.
+bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
+                                     const MachineInstr &UseMI,
+                                     const TargetRegisterInfo *TRI);
+
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog
 /// insertion (PEI) pass, where a virtual scratch register may be allocated

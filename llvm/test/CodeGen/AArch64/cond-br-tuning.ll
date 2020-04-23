@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -mtriple=aarch64-eabi -verify-machineinstrs | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe < %s -O3 -mtriple=aarch64-eabi -verify-machineinstrs | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linaro-linux-gnueabi"
