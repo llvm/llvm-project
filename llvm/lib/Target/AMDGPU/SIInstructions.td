@@ -1,4 +1,4 @@
-//===-- SIInstructions.td - SI Instruction Defintions ---------------------===//
+//===-- SIInstructions.td - SI Instruction Definitions --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,7 +66,7 @@ def VINTRPDst : VINTRPDstOperand <VGPR_32>;
 
 let Uses = [M0, EXEC] in {
 
-// FIXME: Specify SchedRW for VINTRP insturctions.
+// FIXME: Specify SchedRW for VINTRP instructions.
 
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,

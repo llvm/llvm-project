@@ -490,7 +490,7 @@ def TFRI64_V4 : InstHexagon<(outs DoubleRegs:$dst),
     A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // Hexagon doesn't have a vector multiply with C semantics.
-// Instead, generate a pseudo instruction that gets expaneded into two
+// Instead, generate a pseudo instruction that gets expanded into two
 // scalar MPYI instructions.
 // This is expanded by ExpandPostRAPseudos.
 let isPseudo = 1 in

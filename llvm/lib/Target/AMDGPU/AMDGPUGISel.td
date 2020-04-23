@@ -265,7 +265,7 @@ multiclass GISelVop2IntrPat <
 
   def : GISelVop2Pat <node, inst, dst_vt, src_vt>;
 
-  // FIXME: Intrinsics aren't marked as commutable, so we need to add an explcit
+  // FIXME: Intrinsics aren't marked as commutable, so we need to add an explicit
   // pattern to handle commuting.  This is another reason why legalizing to a
   // generic machine instruction may be better that matching the intrinsic
   // directly.

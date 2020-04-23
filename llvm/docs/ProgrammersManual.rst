@@ -3664,7 +3664,7 @@ Important Subclasses of the ``Instruction`` class
 * ``CmpInst``
 
   This subclass represents the two comparison instructions,
-  `ICmpInst <LangRef.html#i_icmp>`_ (integer opreands), and
+  `ICmpInst <LangRef.html#i_icmp>`_ (integer operands), and
   `FCmpInst <LangRef.html#i_fcmp>`_ (floating point operands).
 
 .. _m_Instruction:
@@ -3966,7 +3966,7 @@ Important Public Members of the ``GlobalVariable`` class
 
 * ``bool hasInitializer()``
 
-  Returns true if this ``GlobalVariable`` has an intializer.
+  Returns true if this ``GlobalVariable`` has an initializer.
 
 * ``Constant *getInitializer()``
 

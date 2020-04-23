@@ -244,7 +244,7 @@ def FeaturePCRelativeMemops :
 //         !listconcat(FutureProcessorInheritableFeatures,
 //                     FutureProcessorSpecificFeatures)
 
-// Makes it explicit and obvious what is new in FutureProcesor vs. Power8 as
+// Makes it explicit and obvious what is new in FutureProcessor vs. Power8 as
 // well as providing a single point of definition if the feature set will be
 // used elsewhere.
 def ProcessorFeatures {

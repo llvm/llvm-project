@@ -498,7 +498,7 @@ class MADD4 {
   list<Predicate> AdditionalPredicates = [HasMadd4];
 }
 
-// Classses used for separating expansions that differ based on the ABI in
+// Classes used for separating expansions that differ based on the ABI in
 // use.
 class ABI_N64 {
   list<Predicate> AdditionalPredicates = [IsN64];
@@ -1286,7 +1286,7 @@ def LUiORiPred  : PatLeaf<(imm), [{
   return isInt<32>(SVal) && (SVal & 0xffff);
 }]>;
 
-// Mips Address Mode! SDNode frameindex could possibily be a match
+// Mips Address Mode! SDNode frameindex could possibly be a match
 // since load and store instructions from stack used it.
 def addr :
   ComplexPattern<iPTR, 2, "selectIntAddr", [frameindex]>;

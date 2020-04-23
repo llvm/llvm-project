@@ -6603,8 +6603,8 @@ after the source language arguments in the following order:
     The values come from the initial kernel execution state. See
     :ref:`amdgpu-amdhsa-vgpr-register-set-up-order-table`.
 
-    .. table:: Work-item implict argument layout
-      :name: amdgpu-amdhsa-workitem-implict-argument-layout-table
+    .. table:: Work-item implicit argument layout
+      :name: amdgpu-amdhsa-workitem-implicit-argument-layout-table
 
       ======= ======= ==============
       Bits    Size    Field Name

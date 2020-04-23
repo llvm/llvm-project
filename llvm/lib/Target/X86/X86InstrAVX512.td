@@ -248,7 +248,7 @@ multiclass AVX512_maskable_common<bits<8> O, Format F, X86VectorVTInfo _,
 
 // This multiclass generates the unconditional/non-masking, the masking and
 // the zero-masking variant of the vector instruction.  In the masking case, the
-// perserved vector elements come from a new dummy input operand tied to $dst.
+// preserved vector elements come from a new dummy input operand tied to $dst.
 // This version uses a separate dag for non-masking and masking.
 multiclass AVX512_maskable_split<bits<8> O, Format F, X86VectorVTInfo _,
                            dag Outs, dag Ins, string OpcodeStr,
@@ -270,7 +270,7 @@ multiclass AVX512_maskable_split<bits<8> O, Format F, X86VectorVTInfo _,
 
 // This multiclass generates the unconditional/non-masking, the masking and
 // the zero-masking variant of the vector instruction.  In the masking case, the
-// perserved vector elements come from a new dummy input operand tied to $dst.
+// preserved vector elements come from a new dummy input operand tied to $dst.
 multiclass AVX512_maskable<bits<8> O, Format F, X86VectorVTInfo _,
                            dag Outs, dag Ins, string OpcodeStr,
                            string AttSrcAsm, string IntelSrcAsm,
@@ -5673,7 +5673,7 @@ multiclass avx512_vptest<bits<8> opc, string OpcodeStr,
                          X86FoldableSchedWrite sched, X86VectorVTInfo _,
                          string Name> {
   // NOTE: Patterns are omitted in favor of manual selection in X86ISelDAGToDAG.
-  // There are just too many permuations due to commutability and bitcasts.
+  // There are just too many permutations due to commutability and bitcasts.
   let ExeDomain = _.ExeDomain, hasSideEffects = 0 in {
   defm rr : AVX512_maskable_cmp<opc, MRMSrcReg, _, (outs _.KRC:$dst),
                    (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
@@ -7493,7 +7493,7 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
   }
 }
 
-// Scalar Coversion with SAE - suppress all exceptions
+// Scalar Conversion with SAE - suppress all exceptions
 multiclass avx512_cvt_fp_sae_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                                     X86VectorVTInfo _Src, SDNode OpNodeSAE,
                                     X86FoldableSchedWrite sched> {
@@ -7634,7 +7634,7 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
                          EVEX, EVEX_B, Sched<[sched.Folded]>;
   }
 }
-// Coversion with SAE - suppress all exceptions
+// Conversion with SAE - suppress all exceptions
 multiclass avx512_vcvt_fp_sae<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                               X86VectorVTInfo _Src, SDNode OpNodeSAE,
                               X86FoldableSchedWrite sched> {
@@ -12256,7 +12256,7 @@ multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
 
 let ExeDomain = SSEPackedSingle in
 defm VCVTNE2PS2BF16 : avx512_binop_all2<0x72, "vcvtne2ps2bf16",
-                                        SchedWriteCvtPD2PS, //FIXME: Shoulod be SchedWriteCvtPS2BF
+                                        SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
                                         avx512vl_f32_info, avx512vl_i16_info,
                                         X86cvtne2ps2bf16, HasBF16, 0>, T8XD;
 

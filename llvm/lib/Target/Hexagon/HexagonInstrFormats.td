@@ -37,7 +37,7 @@ def HVXVectorAccess  : MemAccessSize<5>;
 //                         Instruction Class Declaration +
 //===----------------------------------------------------------------------===//
 
-// "Parse" bits are explicity NOT defined in the opcode space to prevent
+// "Parse" bits are explicitly NOT defined in the opcode space to prevent
 //  TableGen from using them for generation of the decoder tables.
 class OpcodeHexagon {
   field bits<32> Inst = ?; // Default to an invalid insn.

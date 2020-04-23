@@ -784,7 +784,7 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 //
 // Naming convention: For 'generic' pattern classes, we use the naming
 // convention PatTy1Ty2. For pattern classes which offer a more complex
-// expension, prefix the class name, e.g. BccPat.
+// expansion, prefix the class name, e.g. BccPat.
 //===----------------------------------------------------------------------===//
 
 /// Generic pattern classes

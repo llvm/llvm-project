@@ -751,7 +751,7 @@ def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
   let AllocationPriority = 20;
 }
 
-// Register class for all vector registers (VGPRs + Interploation Registers)
+// Register class for all vector registers (VGPRs + Interpolation Registers)
 class VRegClass<int numRegs, list<ValueType> regTypes, dag regList> :
     RegisterClass<"AMDGPU", regTypes, 32, regList> {
   let Size = !mul(numRegs, 32);

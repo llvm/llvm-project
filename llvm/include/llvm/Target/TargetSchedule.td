@@ -99,7 +99,7 @@ class SchedMachineModel {
   bit CompleteModel = 1;
 
   // Indicates that we should do full overlap checking for multiple InstrRWs
-  // definining the same instructions within the same SchedMachineModel.
+  // defining the same instructions within the same SchedMachineModel.
   // FIXME: Remove when all in tree targets are clean with the full check
   // enabled.
   bit FullInstRWOverlapCheck = 1;
@@ -163,7 +163,7 @@ class ProcResourceKind;
 // differently. Here we refer to stage between decoding into micro-ops
 // and moving them into a reservation station.) Normally NumMicroOps
 // is sufficient to limit dispatch/issue groups. However, some
-// processors can form groups of with only certain combinitions of
+// processors can form groups of with only certain combinations of
 // instruction types. e.g. POWER7.
 //
 // Use BufferSize = 1 for in-order execution units. This is used for
