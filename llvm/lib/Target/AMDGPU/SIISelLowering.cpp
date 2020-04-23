@@ -10584,105 +10584,49 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                MVT VT) const {
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
+    const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:
       return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     case 's':
     case 'r':
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::SReg_32RegClass;
         break;
       case 64:
         RC = &AMDGPU::SGPR_64RegClass;
         break;
-      case 96:
-        RC = &AMDGPU::SGPR_96RegClass;
-        break;
-      case 128:
-        RC = &AMDGPU::SGPR_128RegClass;
-        break;
-      case 160:
-        RC = &AMDGPU::SGPR_160RegClass;
-        break;
-      case 192:
-        RC = &AMDGPU::SGPR_192RegClass;
-        break;
-      case 256:
-        RC = &AMDGPU::SGPR_256RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::SGPR_512RegClass;
+      default:
+        RC = SIRegisterInfo::getSGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
       }
       break;
     case 'v':
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::VGPR_32RegClass;
         break;
-      case 64:
-        RC = &AMDGPU::VReg_64RegClass;
-        break;
-      case 96:
-        RC = &AMDGPU::VReg_96RegClass;
-        break;
-      case 128:
-        RC = &AMDGPU::VReg_128RegClass;
-        break;
-      case 160:
-        RC = &AMDGPU::VReg_160RegClass;
-        break;
-      case 192:
-        RC = &AMDGPU::VReg_192RegClass;
-        break;
-      case 256:
-        RC = &AMDGPU::VReg_256RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::VReg_512RegClass;
+      default:
+        RC = SIRegisterInfo::getVGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
       }
       break;
     case 'a':
       if (!Subtarget->hasMAIInsts())
         break;
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
         break;
-      case 64:
-        RC = &AMDGPU::AReg_64RegClass;
-        break;
-      case 96:
-        RC = &AMDGPU::AReg_96RegClass;
-        break;
-      case 128:
-        RC = &AMDGPU::AReg_128RegClass;
-        break;
-      case 160:
-        RC = &AMDGPU::AReg_160RegClass;
-        break;
-      case 192:
-        RC = &AMDGPU::AReg_192RegClass;
-        break;
-      case 256:
-        RC = &AMDGPU::AReg_256RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::AReg_512RegClass;
-        break;
-      case 1024:
-        RC = &AMDGPU::AReg_1024RegClass;
+      default:
+        RC = SIRegisterInfo::getAGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
       }
       break;
