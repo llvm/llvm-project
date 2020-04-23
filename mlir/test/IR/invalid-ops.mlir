@@ -297,12 +297,6 @@ func @func_with_ops(i1, tensor<42xi32>, tensor<?xi32>) {
 
 // -----
 
-func @invalid_select_shape(%cond : i1, %idx : () -> ()) {
-  // expected-error@+1 {{'result' must be signless-integer-like or floating-point-like, but got '() -> ()'}}
-  %sel = select %cond, %idx, %idx : () -> ()
-
-// -----
-
 func @invalid_cmp_shape(%idx : () -> ()) {
   // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
   %cmp = cmpi "eq", %idx, %idx : () -> ()

@@ -1951,9 +1951,9 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
   }];
 
   let arguments = (ins BoolLike:$condition,
-                       SignlessIntegerOrFloatLike:$true_value,
-                       SignlessIntegerOrFloatLike:$false_value);
-  let results = (outs SignlessIntegerOrFloatLike:$result);
+                       AnyType:$true_value,
+                       AnyType:$false_value);
+  let results = (outs AnyType:$result);
   let verifier = ?;
 
   let builders = [OpBuilder<
