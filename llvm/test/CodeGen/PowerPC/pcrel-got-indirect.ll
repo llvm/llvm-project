@@ -219,14 +219,12 @@ define dso_local void @ReadFuncPtr() local_unnamed_addr  {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r2, 24(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    pld r3, ptrfunc@got@pcrel(0), 1
 ; CHECK-NEXT:    ld r12, 0(r3)
 ; CHECK-NEXT:    mtctr r12
 ; CHECK-NEXT:    bctrl
-; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
