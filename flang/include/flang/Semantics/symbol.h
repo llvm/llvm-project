@@ -659,9 +659,6 @@ public:
   // for a parameterized derived type instantiation with the instance's scope.
   const DerivedTypeSpec *GetParentTypeSpec(const Scope * = nullptr) const;
 
-  // Clones the Symbol into a parameterized derived type instance.
-  Symbol &InstantiateComponent(Scope &, SemanticsContext &) const;
-
 private:
   const Scope *owner_;
   SourceName name_;
