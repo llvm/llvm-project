@@ -2173,8 +2173,8 @@ public:
 
     if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
       Type *PtrTy = cast<Operator>(V)->getOperand(0)->getType();
-      auto *DerefTy = dyn_cast<VectorType>(PtrTy->getPointerElementType());
-      if (DerefTy && DerefTy->isScalable() &&
+      auto *DerefTy = PtrTy->getPointerElementType();
+      if (isa<ScalableVectorType>(DerefTy) &&
           DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
         return true;
     }
