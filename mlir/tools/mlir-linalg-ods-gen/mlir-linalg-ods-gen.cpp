@@ -1601,7 +1601,7 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                               printExpr(subExprsStringStream, *e);
                             });
       subExprsStringStream.flush();
-      const char *tensorExprFmt = "\n    ValueHandle _{0} = {1}({2});";
+      const char *tensorExprFmt = "\n    Value _{0} = {1}({2});";
       os << llvm::formatv(tensorExprFmt, ++count, pTensorExpr->operationName,
                           subExprs);
       subExprsMap[pTensorExpr] = count;
@@ -1613,7 +1613,7 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
     using namespace edsc;
     using namespace intrinsics;
     auto args = block.getArguments();
-    ValueHandle {1};
+    Value {1};
     {2}
     (linalg_yield(ValueRange{ {3} }));
   })FMT";

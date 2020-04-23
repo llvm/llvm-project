@@ -65,25 +65,8 @@ MLIRContext *mlir::edsc::ScopedContext::getContext() {
   return getBuilder().getContext();
 }
 
-ValueHandle &mlir::edsc::ValueHandle::operator=(const ValueHandle &other) {
-  assert(t == other.t && "Wrong type capture");
-  assert(!v && "ValueHandle has already been captured, use a new name!");
-  v = other.v;
-  return *this;
-}
-
-ValueHandle ValueHandle::create(StringRef name, ArrayRef<ValueHandle> operands,
-                                ArrayRef<Type> resultTypes,
-                                ArrayRef<NamedAttribute> attributes) {
-  Operation *op =
-      OperationHandle::create(name, operands, resultTypes, attributes);
-  if (op->getNumResults() == 1)
-    return ValueHandle(op->getResult(0));
-  llvm_unreachable("unsupported operation, use an OperationHandle instead");
-}
-
 OperationHandle OperationHandle::create(StringRef name,
-                                        ArrayRef<ValueHandle> operands,
+                                        ArrayRef<Value> operands,
                                         ArrayRef<Type> resultTypes,
                                         ArrayRef<NamedAttribute> attributes) {
   OperationState state(ScopedContext::getLocation(), name);
@@ -156,37 +139,32 @@ mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle bh, Append) {
   enter(bh.getBlock());
 }
 
-mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh,
-                                       ArrayRef<ValueHandle *> args) {
+mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh, ArrayRef<Type> types,
+                                       MutableArrayRef<Value> args) {
   assert(!*bh && "BlockHandle already captures a block, use "
                  "the explicit BockBuilder(bh, Append())({}) syntax instead.");
-  SmallVector<Type, 8> types;
-  for (auto *a : args) {
-    assert(!a->hasValue() &&
-           "Expected delayed ValueHandle that has not yet captured.");
-    types.push_back(a->getType());
-  }
+  assert((args.empty() || args.size() == types.size()) &&
+         "if args captures are specified, their number must match the number "
+         "of types");
   *bh = BlockHandle::create(types);
-  for (auto it : llvm::zip(args, bh->getBlock()->getArguments())) {
-    *(std::get<0>(it)) = ValueHandle(std::get<1>(it));
-  }
+  if (!args.empty())
+    for (auto it : llvm::zip(args, bh->getBlock()->getArguments()))
+      std::get<0>(it) = Value(std::get<1>(it));
   enter(bh->getBlock());
 }
 
 mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh, Region &region,
-                                       ArrayRef<ValueHandle *> args) {
+                                       ArrayRef<Type> types,
+                                       MutableArrayRef<Value> args) {
   assert(!*bh && "BlockHandle already captures a block, use "
                  "the explicit BockBuilder(bh, Append())({}) syntax instead.");
-  SmallVector<Type, 8> types;
-  for (auto *a : args) {
-    assert(!a->hasValue() &&
-           "Expected delayed ValueHandle that has not yet captured.");
-    types.push_back(a->getType());
-  }
+  assert((args.empty() || args.size() == types.size()) &&
+         "if args captures are specified, their number must match the number "
+         "of types");
   *bh = BlockHandle::createInRegion(region, types);
-  for (auto it : llvm::zip(args, bh->getBlock()->getArguments())) {
-    *(std::get<0>(it)) = ValueHandle(std::get<1>(it));
-  }
+  if (!args.empty())
+    for (auto it : llvm::zip(args, bh->getBlock()->getArguments()))
+      std::get<0>(it) = Value(std::get<1>(it));
   enter(bh->getBlock());
 }
 
