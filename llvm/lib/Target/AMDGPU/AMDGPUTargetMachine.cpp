@@ -265,6 +265,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegBankReassignPass(*PR);
   initializeGCNNSAReassignPass(*PR);
   initializeSIAddIMGInitPass(*PR);
+  initializeSIInsertScratchBoundsPass(*PR);
+  initializeSIFixScratchSizePass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
