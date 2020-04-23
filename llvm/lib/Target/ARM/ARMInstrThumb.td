@@ -1513,7 +1513,7 @@ def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
 // tromped upon when we get here from a longjmp(). We force everything out of
 // registers except for our own input by listing the relevant registers in
 // Defs. By doing so, we also cause the prologue/epilogue code to actively
-// preserve all of the callee-saved resgisters, which is exactly what we want.
+// preserve all of the callee-saved registers, which is exactly what we want.
 // $val is a scratch register for our use.
 let Defs = [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7, R12, CPSR ],
     hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,

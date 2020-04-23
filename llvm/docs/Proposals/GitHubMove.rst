@@ -712,7 +712,7 @@ clang's tree actually looks like in ``Lclang1``.
 Even so, the edge ``U3 -> Llld1`` could be problematic for future
 merges from upstream.  git will think that we've already merged from
 ``U3``, and we have, except for the state of the clang tree.  One
-possible migitation strategy is to manually diff clang between ``U2``
+possible mitigation strategy is to manually diff clang between ``U2``
 and ``U3`` and apply those updates to ``local/zip``.  Another,
 possibly simpler strategy is to freeze local work on downstream
 branches and merge all submodules from the latest upstream before
@@ -921,7 +921,7 @@ ecosystem, essentially extending it with new tools.  If such
 repositories are tightly coupled with LLVM, it may make sense to
 import them into your local mirror of the monorepo.
 
-If such repositores participated in the umbrella repository used
+If such repositories participated in the umbrella repository used
 during the zipping process above, they will automatically be added to
 the monorepo.  For downstream repositories that don't participate in
 an umbrella setup, the ``import-downstream-repo.py`` tool at

@@ -4379,7 +4379,7 @@ class TernaryVRRdGeneric<string mnemonic, bits<16> opcode>
 }
 
 // Ternary operation where the assembler mnemonic has an extra operand to
-// optionally allow specifiying arbitrary M6 values.
+// optionally allow specifying arbitrary M6 values.
 multiclass TernaryExtraVRRd<string mnemonic, bits<16> opcode,
                              SDPatternOperator operator,
                              TypedReg tr1, TypedReg tr2, bits<4> type> {
@@ -5135,7 +5135,7 @@ multiclass MemorySS<string mnemonic, bits<8> opcode,
   }
 }
 
-// The same, but setting a CC result as comparion operator.
+// The same, but setting a CC result as comparison operator.
 multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
                           SDPatternOperator sequence, SDPatternOperator loop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;

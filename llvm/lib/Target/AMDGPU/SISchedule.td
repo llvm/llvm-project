@@ -1,4 +1,4 @@
-//===-- SISchedule.td - SI Scheduling definitons -------------------------===//
+//===-- SISchedule.td - SI Scheduling definitions -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -136,9 +136,9 @@ multiclass SICommonWriteRes {
   def : ReadAdvance<MIVGPRRead, -2>;
   def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32$")>;
 
-  // Technicaly mfma reads can be from 0 to 4 cycles but that does not make
+  // Technically mfma reads can be from 0 to 4 cycles but that does not make
   // sense to model because its register setup is huge. In particular if we
-  // properly model read advanice as -2 for a vgpr read it will result in a
+  // properly model read advance as -2 for a vgpr read it will result in a
   // bad scheduling of acc writes before that mfma. To avoid it we would
   // need to consume 2 or 4 more vgprs to be initialized before the acc
   // write sequence. Just assume worst case here.
