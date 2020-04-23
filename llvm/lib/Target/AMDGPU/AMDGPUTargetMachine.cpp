@@ -916,6 +916,12 @@ bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(&SIFixSGPRCopiesID);
   addPass(createSILowerI1CopiesPass());
+  // TODO: We have to add FinalizeISel
+  // to expand V_ADD/SUB_U64_PSEUDO before SIFixupVectorISel
+  // that expects V_ADD/SUB -> A_ADDC/SUBB pairs expanded.
+  // Will be removed as soon as SIFixupVectorISel is changed
+  // to work with V_ADD/SUB_U64_PSEUDO instead.
+  addPass(&FinalizeISelID);
   addPass(createSIFixupVectorISelPass());
   addPass(createSIAddIMGInitPass());
   return false;
