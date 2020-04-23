@@ -12,6 +12,26 @@ func @br_folding() -> i32 {
   return %x : i32
 }
 
+/// Test that pass-through successors of BranchOp get folded.
+
+// CHECK-LABEL: func @br_passthrough(
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
+  "foo.switch"() [^bb1, ^bb2, ^bb3] : () -> ()
+
+^bb1:
+  // CHECK: ^bb1:
+  // CHECK-NEXT: br ^bb3(%[[ARG0]], %[[ARG1]] : i32, i32)
+
+  br ^bb2(%arg0 : i32)
+
+^bb2(%arg2 : i32):
+  br ^bb3(%arg2, %arg1 : i32, i32)
+
+^bb3(%arg4 : i32, %arg5 : i32):
+  return %arg4, %arg5 : i32, i32
+}
+
 /// Test the folding of CondBranchOp with a constant condition.
 
 // CHECK-LABEL: func @cond_br_folding(
@@ -103,9 +123,9 @@ func @cond_br_and_br_folding(%a : i32) {
 
 /// Test that pass-through successors of CondBranchOp get folded.
 
-// CHECK-LABEL: func @cond_br_pass_through(
+// CHECK-LABEL: func @cond_br_passthrough(
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[COND:.*]]: i1
-func @cond_br_pass_through(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {
+func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {
   // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG2]]
   // CHECK: %[[RES2:.*]] = select %[[COND]], %[[ARG1]], %[[ARG2]]
   // CHECK: return %[[RES]], %[[RES2]]
