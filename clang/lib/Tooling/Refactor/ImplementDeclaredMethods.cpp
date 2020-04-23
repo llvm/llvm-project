@@ -170,7 +170,7 @@ llvm::Expected<RefactoringResult>
 ImplementDeclaredCXXMethodsOperation::perform(
     ASTContext &Context, const Preprocessor &ThePreprocessor,
     const RefactoringOptionSet &Options, unsigned SelectedCandidateIndex) {
-  if (Container->isLexicallyWithinFunctionOrMethod()) {
+  if (Container->isInLocalScope()) {
     // Local methods can be implemented inline.
     std::vector<RefactoringReplacement> Replacements;
     for (const CXXMethodDecl *MD : SelectedMethods)
