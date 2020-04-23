@@ -69,39 +69,18 @@ func @cond_br_same_successor(%cond : i1, %a : i32) {
 
 // CHECK-LABEL: func @cond_br_same_successor_insert_select(
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
-func @cond_br_same_successor_insert_select(%cond : i1, %a : i32, %b : i32) -> i32 {
+// CHECK-SAME: %[[ARG2:.*]]: tensor<2xi32>, %[[ARG3:.*]]: tensor<2xi32>
+func @cond_br_same_successor_insert_select(
+      %cond : i1, %a : i32, %b : i32, %c : tensor<2xi32>, %d : tensor<2xi32>
+    ) -> (i32, tensor<2xi32>)  {
   // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
-  // CHECK: return %[[RES]]
+  // CHECK: %[[RES2:.*]] = select %[[COND]], %[[ARG2]], %[[ARG3]]
+  // CHECK: return %[[RES]], %[[RES2]]
 
-  cond_br %cond, ^bb1(%a : i32), ^bb1(%b : i32)
+  cond_br %cond, ^bb1(%a, %c : i32, tensor<2xi32>), ^bb1(%b, %d : i32, tensor<2xi32>)
 
-^bb1(%result : i32):
-  return %result : i32
-}
-
-/// Check that we don't generate a select if the type requires a splat.
-/// TODO: SelectOp should allow for matching a vector/tensor with i1.
-
-// CHECK-LABEL: func @cond_br_same_successor_no_select_tensor(
-func @cond_br_same_successor_no_select_tensor(%cond : i1, %a : tensor<2xi32>,
-                                              %b : tensor<2xi32>) -> tensor<2xi32>{
-  // CHECK: cond_br
-
-  cond_br %cond, ^bb1(%a : tensor<2xi32>), ^bb1(%b : tensor<2xi32>)
-
-^bb1(%result : tensor<2xi32>):
-  return %result : tensor<2xi32>
-}
-
-// CHECK-LABEL: func @cond_br_same_successor_no_select_vector(
-func @cond_br_same_successor_no_select_vector(%cond : i1, %a : vector<2xi32>,
-                                              %b : vector<2xi32>) -> vector<2xi32> {
-  // CHECK: cond_br
-
-  cond_br %cond, ^bb1(%a : vector<2xi32>), ^bb1(%b : vector<2xi32>)
-
-^bb1(%result : vector<2xi32>):
-  return %result : vector<2xi32>
+^bb1(%result : i32, %result2 : tensor<2xi32>):
+  return %result, %result2 : i32, tensor<2xi32>
 }
 
 /// Test the compound folding of BranchOp and CondBranchOp.
