@@ -245,13 +245,11 @@ TEST_F(FormatTestCSharp, Attributes) {
                "}");
 
   verifyFormat("[TestMethod]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
