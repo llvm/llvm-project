@@ -2814,7 +2814,7 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
   if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
-    if (Subtarget.hasPCRelativeMemops()) {
+    if (Subtarget.isUsingPCRelativeCalls()) {
       SDLoc DL(CP);
       EVT Ty = getPointerTy(DAG.getDataLayout());
       SDValue ConstPool = DAG.getTargetConstantPool(C, Ty,
