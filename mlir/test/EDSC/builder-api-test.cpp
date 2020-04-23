@@ -470,13 +470,16 @@ TEST_FUNC(operator_and) {
   ScopedContext scope(builder, f.getLoc());
 
   using op::operator&&;
+  using op::negate;
   Value lhs(f.getArgument(0));
   Value rhs(f.getArgument(1));
-  lhs &&rhs;
+  negate(lhs && rhs);
 
   // CHECK-LABEL: @operator_and
   //       CHECK: [[ARG0:%.*]]: i1, [[ARG1:%.*]]: i1
-  //       CHECK: and [[ARG0]], [[ARG1]]
+  //       CHECK: [[AND:%.*]] = and [[ARG0]], [[ARG1]]
+  //       CHECK: [[TRUE:%.*]] = constant 1 : i1
+  //       CHECK: subi [[TRUE]], [[AND]] : i1
   f.print(llvm::outs());
   f.erase();
 }
