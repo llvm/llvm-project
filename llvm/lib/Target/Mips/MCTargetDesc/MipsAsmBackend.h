@@ -22,9 +22,7 @@ namespace llvm {
 
 class MCAssembler;
 struct MCFixupKindInfo;
-class MCObjectWriter;
 class MCRegisterInfo;
-class MCSymbolELF;
 class Target;
 
 class MipsAsmBackend : public MCAsmBackend {
