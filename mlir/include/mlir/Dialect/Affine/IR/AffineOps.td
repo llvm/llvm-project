@@ -114,7 +114,7 @@ def AffineForOp : Affine_Op<"for",
 
     The `affine.for` operation represents an affine loop nest. It has one region
     containing its body. This region must contain one block that terminates with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when
+    [`affine.terminator`](#affineterminator-affineterminatorop). *Note:* when
     `affine.for` is printed in custom format, the terminator is omitted. The
     block has one argument of [`index`](../LangRef.md#index-type) type that
     represents the induction variable of the loop.
@@ -292,7 +292,7 @@ def AffineIfOp : Affine_Op<"if",
     clauses. The latter may be empty (i.e. contain no blocks), meaning the
     absence of the else clause. When non-empty, both regions must contain
     exactly one block terminating with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when `affine.if`
+    [`affine.terminator`](#affineterminator-affineterminatorop). *Note:* when `affine.if`
     is printed in custom format, the terminator is omitted. These blocks must
     not have any arguments.
 
@@ -592,8 +592,8 @@ def AffineTerminatorOp :
     ```
 
     Affine terminator is a special terminator operation for blocks inside affine
-    loops ([`affine.for`](#affinefor-operation)) and branches
-    ([`affine.if`](#affineif-operation)). It unconditionally transmits the
+    loops ([`affine.for`](#affinefor-affineforop)) and branches
+    ([`affine.if`](#affineif-affineifop)). It unconditionally transmits the
     control flow to the successor of the operation enclosing the region.
 
     *Rationale*: bodies of affine operations are [blocks](../LangRef.md#blocks)
