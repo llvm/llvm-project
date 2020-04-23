@@ -270,9 +270,11 @@ def SignalAPI : PublicAPI<"signal.h"> {
   let Functions = [
     "raise",
     "sigaction",
+    "sigdelset",
     "sigprocmask",
     "sigemptyset",
     "sigaddset",
+    "sigfillset",
     "signal",
   ];
 }
