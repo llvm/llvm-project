@@ -2588,6 +2588,11 @@ bool PPCTargetLowering::SelectAddressRegRegOnly(SDValue N, SDValue &Base,
   return true;
 }
 
+template <typename Ty> static bool isValidPCRelNode(SDValue N) {
+  Ty *PCRelCand = dyn_cast<Ty>(N);
+  return PCRelCand && (PCRelCand->getTargetFlags() & PPCII::MO_PCREL_FLAG);
+}
+
 /// Returns true if this address is a PC Relative address.
 /// PC Relative addresses are marked with the flag PPCII::MO_PCREL_FLAG
 /// or if the node opcode is PPCISD::MAT_PCREL_ADDR.
@@ -2596,15 +2601,11 @@ bool PPCTargetLowering::SelectAddressPCRel(SDValue N, SDValue &Base) const {
   Base = N;
   if (N.getOpcode() == PPCISD::MAT_PCREL_ADDR)
     return true;
-  if (ConstantPoolSDNode *CPN = dyn_cast<ConstantPoolSDNode>(N))
-    if (CPN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
-      return true;
-  if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(N))
-    if (GAN->getTargetFlags() & PPCII::MO_PCREL_FLAG)
-      return true;
-  if (JumpTableSDNode *JT = dyn_cast<JumpTableSDNode>(N))
-    if (JT->getTargetFlags() & PPCII::MO_PCREL_FLAG)
-      return true;
+  if (isValidPCRelNode<ConstantPoolSDNode>(N) ||
+      isValidPCRelNode<GlobalAddressSDNode>(N) ||
+      isValidPCRelNode<JumpTableSDNode>(N) ||
+      isValidPCRelNode<BlockAddressSDNode>(N))
+    return true;
   return false;
 }
 
@@ -2935,6 +2936,16 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
   EVT PtrVT = Op.getValueType();
   BlockAddressSDNode *BASDN = cast<BlockAddressSDNode>(Op);
   const BlockAddress *BA = BASDN->getBlockAddress();
+
+  // isUsingPCRelativeCalls() returns true when PCRelative is enabled
+  if (Subtarget.isUsingPCRelativeCalls()) {
+    SDLoc DL(BASDN);
+    EVT Ty = getPointerTy(DAG.getDataLayout());
+    SDValue GA = DAG.getTargetBlockAddress(BA, Ty, BASDN->getOffset(),
+                                           PPCII::MO_PCREL_FLAG);
+    SDValue MatAddr = DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
+    return MatAddr;
+  }
 
   // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual BlockAddress is stored in the TOC.
