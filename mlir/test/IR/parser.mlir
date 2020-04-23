@@ -1224,10 +1224,3 @@ func @pretty_names() {
   // CHECK: return
   return
 }
-
-// CHECK-LABEL: func @zero_whitespace() {
-// CHECK-NEXT: return
-func @zero_whitespace() {
-     // This is a \0 byte.
-  return
-}
