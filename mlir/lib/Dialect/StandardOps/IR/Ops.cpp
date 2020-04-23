@@ -862,11 +862,93 @@ struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
     return failure();
   }
 };
-} // end anonymous namespace.
+
+///   cond_br %cond, ^bb1, ^bb2
+/// ^bb1
+///   br ^bbN(...)
+/// ^bb2
+///   br ^bbK(...)
+///
+///   cond_br %cond, ^bbN(...), ^bbK(...)
+///
+struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    Block *trueDest = condbr.trueDest(), *falseDest = condbr.falseDest();
+    ValueRange trueDestOperands = condbr.getTrueOperands();
+    ValueRange falseDestOperands = condbr.getFalseOperands();
+    SmallVector<Value, 4> trueDestOperandStorage, falseDestOperandStorage;
+
+    // Try to collapse one of the current successors.
+    LogicalResult collapsedTrue =
+        collapseBranch(trueDest, trueDestOperands, trueDestOperandStorage);
+    LogicalResult collapsedFalse =
+        collapseBranch(falseDest, falseDestOperands, falseDestOperandStorage);
+    if (failed(collapsedTrue) && failed(collapsedFalse))
+      return failure();
+
+    // Create a new branch with the collapsed successors.
+    rewriter.replaceOpWithNewOp<CondBranchOp>(condbr, condbr.getCondition(),
+                                              trueDest, trueDestOperands,
+                                              falseDest, falseDestOperands);
+    return success();
+  }
+
+  /// Given a successor, try to collapse it to a new destination if it only
+  /// contains a passthrough unconditional branch. If the successor is
+  /// collapsable, `successor` and `successorOperands` are updated to reference
+  /// the new destination and values. `argStorage` is an optional storage to use
+  /// if operands to the collapsed successor need to be remapped.
+  LogicalResult collapseBranch(Block *&successor, ValueRange &successorOperands,
+                               SmallVectorImpl<Value> &argStorage) const {
+    // Check that the successor only contains a unconditional branch.
+    if (std::next(successor->begin()) != successor->end())
+      return failure();
+    // Check that the terminator is an unconditional branch.
+    BranchOp successorBranch = dyn_cast<BranchOp>(successor->getTerminator());
+    if (!successorBranch)
+      return failure();
+    // Check that the arguments are only used within the terminator.
+    for (BlockArgument arg : successor->getArguments()) {
+      for (Operation *user : arg.getUsers())
+        if (user != successorBranch)
+          return failure();
+    }
+    // Don't try to collapse branches to infinite loops.
+    Block *successorDest = successorBranch.getDest();
+    if (successorDest == successor)
+      return failure();
+
+    // Update the operands to the successor. If the branch parent has no
+    // arguments, we can use the branch operands directly.
+    OperandRange operands = successorBranch.getOperands();
+    if (successor->args_empty()) {
+      successor = successorBranch.getDest();
+      successorOperands = operands;
+      return success();
+    }
+
+    // Otherwise, we need to remap any argument operands.
+    for (Value operand : operands) {
+      BlockArgument argOperand = operand.dyn_cast<BlockArgument>();
+      if (argOperand && argOperand.getOwner() == successor)
+        argStorage.push_back(successorOperands[argOperand.getArgNumber()]);
+      else
+        argStorage.push_back(operand);
+    }
+    successor = successorBranch.getDest();
+    successorOperands = argStorage;
+    return success();
+  }
+};
+} // end anonymous namespace
 
 void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyConstCondBranchPred>(context);
+  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch>(
+      context);
 }
 
 Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
