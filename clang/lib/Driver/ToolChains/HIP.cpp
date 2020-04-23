@@ -98,7 +98,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
     LldArgs.push_back(Input.getFilename());
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Lld, LldArgs, Inputs));
+                                         Lld, LldArgs, Inputs, Output));
 }
 
 // Construct a clang-offload-bundler command to bundle code objects for
@@ -127,14 +127,16 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
   BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
 
-  auto BundlerOutputArg = Args.MakeArgString(
-      std::string("-outputs=").append(std::string(OutputFileName)));
+  std::string Output = std::string(OutputFileName);
+  auto BundlerOutputArg =
+      Args.MakeArgString(std::string("-outputs=").append(Output));
   BundlerArgs.push_back(BundlerOutputArg);
 
   const char *Bundler = Args.MakeArgString(
       T.getToolChain().GetProgramPath("clang-offload-bundler"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         Bundler, BundlerArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, T, ResponseFileSupport::None(), Bundler, BundlerArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(Output))));
 }
 
 /// Add Generated HIP Object File which has device images embedded into the
@@ -205,7 +207,7 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
                        McinFile,  "--filetype=obj"};
   const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Mc, McArgs, Inputs));
+                                         Mc, McArgs, Inputs, Output));
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
