@@ -114,7 +114,7 @@ TEST(ScalableVectorMVTsTest, VTToIRTranslation) {
 
   Type *Ty = Enxv4f64.getTypeForEVT(Ctx);
   VectorType *ScV4Float64Ty = cast<VectorType>(Ty);
-  ASSERT_TRUE(ScV4Float64Ty->isScalable());
+  ASSERT_TRUE(isa<ScalableVectorType>(ScV4Float64Ty));
   ASSERT_EQ(Enxv4f64.getVectorElementCount(), ScV4Float64Ty->getElementCount());
   ASSERT_EQ(Enxv4f64.getScalarType().getTypeForEVT(Ctx),
             ScV4Float64Ty->getElementType());
