@@ -31,7 +31,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -374,7 +373,7 @@ private:
   void writeModuleConstants();
   bool pushValueAndType(const Value *V, unsigned InstID,
                         SmallVectorImpl<unsigned> &Vals);
-  void writeOperandBundles(ImmutableCallSite CS, unsigned InstID);
+  void writeOperandBundles(const CallBase &CB, unsigned InstID);
   void pushValue(const Value *V, unsigned InstID,
                  SmallVectorImpl<unsigned> &Vals);
   void pushValueSigned(const Value *V, unsigned InstID,
@@ -2583,10 +2582,10 @@ bool ModuleBitcodeWriter::pushValueAndType(const Value *V, unsigned InstID,
   return false;
 }
 
-void ModuleBitcodeWriter::writeOperandBundles(ImmutableCallSite CS,
+void ModuleBitcodeWriter::writeOperandBundles(const CallBase &CS,
                                               unsigned InstID) {
   SmallVector<unsigned, 64> Record;
-  LLVMContext &C = CS.getInstruction()->getContext();
+  LLVMContext &C = CS.getContext();
 
   for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
     const auto &Bundle = CS.getOperandBundleAt(i);
@@ -2778,7 +2777,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     FunctionType *FTy = II->getFunctionType();
 
     if (II->hasOperandBundles())
-      writeOperandBundles(II, InstID);
+      writeOperandBundles(*II, InstID);
 
     Code = bitc::FUNC_CODE_INST_INVOKE;
 
@@ -2854,7 +2853,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     FunctionType *FTy = CBI->getFunctionType();
 
     if (CBI->hasOperandBundles())
-      writeOperandBundles(CBI, InstID);
+      writeOperandBundles(*CBI, InstID);
 
     Code = bitc::FUNC_CODE_INST_CALLBR;
 
@@ -3011,7 +3010,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     FunctionType *FTy = CI.getFunctionType();
 
     if (CI.hasOperandBundles())
-      writeOperandBundles(&CI, InstID);
+      writeOperandBundles(CI, InstID);
 
     Code = bitc::FUNC_CODE_INST_CALL;
 
