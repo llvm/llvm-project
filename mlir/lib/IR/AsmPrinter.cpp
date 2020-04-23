@@ -1462,7 +1462,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
   bool isSigned = !type.getElementType().isUnsignedInteger();
 
   // The function used to print elements of this attribute.
-  auto printEltFn = type.getElementType().isa<IntegerType>()
+  auto printEltFn = type.getElementType().isIntOrIndex()
                         ? printDenseIntElement
                         : printDenseFloatElement;
 

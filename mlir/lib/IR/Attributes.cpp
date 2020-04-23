@@ -275,7 +275,7 @@ IntegerAttr IntegerAttr::get(Type type, const APInt &value) {
 IntegerAttr IntegerAttr::get(Type type, int64_t value) {
   // This uses 64 bit APInts by default for index type.
   if (type.isIndex())
-    return get(type, APInt(64, value));
+    return get(type, APInt(IndexType::kInternalStorageBitWidth, value));
 
   auto intType = type.cast<IntegerType>();
   return get(type, APInt(intType.getWidth(), value, intType.isSignedInteger()));
@@ -483,12 +483,6 @@ uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
 // DenseElementAttr Utilities
 //===----------------------------------------------------------------------===//
 
-static size_t getDenseElementBitwidth(Type eltType) {
-  // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
-  // with double semantics.
-  return eltType.isBF16() ? 64 : eltType.getIntOrFloatBitWidth();
-}
-
 /// Get the bitwidth of a dense element type within the buffer.
 /// DenseElementsAttr requires bitwidths greater than 1 to be aligned by 8.
 static size_t getDenseElementStorageWidth(size_t origWidth) {
@@ -592,7 +586,7 @@ DenseElementsAttr::IntElementIterator::IntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
     : DenseElementIndexedIteratorImpl<IntElementIterator, APInt, APInt, APInt>(
           attr.getRawData().data(), attr.isSplat(), dataIndex),
-      bitWidth(getDenseElementBitwidth(attr.getType().getElementType())) {}
+      bitWidth(getDenseElementBitWidth(attr.getType().getElementType())) {}
 
 /// Accesses the raw APInt value at this iterator position.
 APInt DenseElementsAttr::IntElementIterator::operator*() const {
@@ -613,12 +607,12 @@ DenseElementsAttr::FloatElementIterator::FloatElementIterator(
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(type.getElementType().isIntOrFloat() &&
-         "expected int or float element type");
+  assert(type.getElementType().isIntOrIndexOrFloat() &&
+         "expected int or index or float element type");
   assert(hasSameElementsOrSplat(type, values));
 
   auto eltType = type.getElementType();
-  size_t bitWidth = getDenseElementBitwidth(eltType);
+  size_t bitWidth = getDenseElementBitWidth(eltType);
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
 
   // Compress the attribute values into a character buffer.
@@ -637,6 +631,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
       break;
     case StandardTypes::Integer:
+    case StandardTypes::Index:
       intVal = values[i].isa<BoolAttr>()
                    ? APInt(1, values[i].cast<BoolAttr>().getValue() ? 1 : 0)
                    : values[i].cast<IntegerAttr>().getValue();
@@ -667,7 +662,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 /// element type of 'type'.
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<APInt> values) {
-  assert(type.getElementType().isa<IntegerType>());
+  assert(type.getElementType().isIntOrIndex());
   return getRaw(type, values);
 }
 
@@ -701,7 +696,7 @@ DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
                                             ArrayRef<APInt> values) {
   assert(hasSameElementsOrSplat(type, values));
 
-  size_t bitWidth = getDenseElementBitwidth(type.getElementType());
+  size_t bitWidth = getDenseElementBitWidth(type.getElementType());
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
   std::vector<char> elementData(llvm::divideCeil(storageBitWidth, CHAR_BIT) *
                                 values.size());
@@ -727,13 +722,16 @@ DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
 static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
                               bool isSigned) {
   // Make sure that the data element size is the same as the type element width.
-  if (getDenseElementBitwidth(type.getElementType()) !=
+  if (getDenseElementBitWidth(type.getElementType()) !=
       static_cast<size_t>(dataEltSize * CHAR_BIT))
     return false;
 
-  // Check that the element type is either float or integer.
+  // Check that the element type is either float or integer or index.
   if (!isInt)
     return type.getElementType().isa<FloatType>();
+
+  if (type.getElementType().isIndex())
+    return true;
 
   auto intType = type.getElementType().dyn_cast<IntegerType>();
   if (!intType)
@@ -798,18 +796,15 @@ auto DenseElementsAttr::getBoolValues() const
 /// this attribute must be of integer type.
 auto DenseElementsAttr::getIntValues() const
     -> llvm::iterator_range<IntElementIterator> {
-  assert(getType().getElementType().isa<IntegerType>() &&
-         "expected integer type");
+  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
   return {raw_int_begin(), raw_int_end()};
 }
 auto DenseElementsAttr::int_value_begin() const -> IntElementIterator {
-  assert(getType().getElementType().isa<IntegerType>() &&
-         "expected integer type");
+  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
   return raw_int_begin();
 }
 auto DenseElementsAttr::int_value_end() const -> IntElementIterator {
-  assert(getType().getElementType().isa<IntegerType>() &&
-         "expected integer type");
+  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
   return raw_int_end();
 }
 
@@ -870,7 +865,7 @@ template <typename Fn, typename Attr>
 static ShapedType mappingHelper(Fn mapping, Attr &attr, ShapedType inType,
                                 Type newElementType,
                                 llvm::SmallVectorImpl<char> &data) {
-  size_t bitWidth = getDenseElementBitwidth(newElementType);
+  size_t bitWidth = getDenseElementBitWidth(newElementType);
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
 
   ShapedType newArrayType;
@@ -937,7 +932,7 @@ DenseElementsAttr DenseIntElementsAttr::mapValues(
 /// Method for supporting type inquiry through isa, cast and dyn_cast.
 bool DenseIntElementsAttr::classof(Attribute attr) {
   return attr.isa<DenseElementsAttr>() &&
-         attr.getType().cast<ShapedType>().getElementType().isa<IntegerType>();
+         attr.getType().cast<ShapedType>().getElementType().isIntOrIndex();
 }
 
 //===----------------------------------------------------------------------===//
