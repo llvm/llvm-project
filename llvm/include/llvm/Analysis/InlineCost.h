@@ -236,6 +236,16 @@ getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
               function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
               ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE);
 
+/// Returns InlineResult::success() if the call site should be always inlined
+/// because of user directives, and the inlining is viable. Returns
+/// InlineResult::failure() if the inlining may never happen because of user
+/// directives or incompatibilities detectable without needing callee traversal.
+/// Otherwise returns None, meaning that inlining should be decided based on
+/// other criteria (e.g. cost modeling).
+Optional<InlineResult> getAttributeBasedInliningDecision(
+    CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+
 /// Minimal filter to detect invalid constructs for inlining.
 InlineResult isInlineViable(Function &Callee);
 } // namespace llvm
