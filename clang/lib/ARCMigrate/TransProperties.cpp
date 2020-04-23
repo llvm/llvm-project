@@ -168,22 +168,22 @@ private:
   }
 
   void rewriteProperty(PropsTy &props, SourceLocation atLoc) {
-    ObjCPropertyAttribute::Kind propAttrs = getPropertyAttrs(props);
+    ObjCPropertyDecl::PropertyAttributeKind propAttrs = getPropertyAttrs(props);
 
-    if (propAttrs &
-        (ObjCPropertyAttribute::kind_copy |
-         ObjCPropertyAttribute::kind_unsafe_unretained |
-         ObjCPropertyAttribute::kind_strong | ObjCPropertyAttribute::kind_weak))
+    if (propAttrs & (ObjCPropertyDecl::OBJC_PR_copy |
+                     ObjCPropertyDecl::OBJC_PR_unsafe_unretained |
+                     ObjCPropertyDecl::OBJC_PR_strong |
+                     ObjCPropertyDecl::OBJC_PR_weak))
       return;
 
-    if (propAttrs & ObjCPropertyAttribute::kind_retain) {
+    if (propAttrs & ObjCPropertyDecl::OBJC_PR_retain) {
       // strong is the default.
       return doPropAction(PropAction_RetainReplacedWithStrong, props, atLoc);
     }
 
     bool HasIvarAssignedAPlusOneObject = hasIvarAssignedAPlusOneObject(props);
 
-    if (propAttrs & ObjCPropertyAttribute::kind_assign) {
+    if (propAttrs & ObjCPropertyDecl::OBJC_PR_assign) {
       if (HasIvarAssignedAPlusOneObject)
         return doPropAction(PropAction_AssignRemoved, props, atLoc);
       return doPropAction(PropAction_AssignRewritten, props, atLoc);
@@ -354,10 +354,11 @@ private:
     return ty;
   }
 
-  ObjCPropertyAttribute::Kind getPropertyAttrs(PropsTy &props) const {
+  ObjCPropertyDecl::PropertyAttributeKind
+  getPropertyAttrs(PropsTy &props) const {
     assert(!props.empty());
-    ObjCPropertyAttribute::Kind attrs =
-        props[0].PropD->getPropertyAttributesAsWritten();
+    ObjCPropertyDecl::PropertyAttributeKind
+      attrs = props[0].PropD->getPropertyAttributesAsWritten();
 
 #ifndef NDEBUG
     for (PropsTy::iterator I = props.begin(), E = props.end(); I != E; ++I)

@@ -6770,11 +6770,11 @@ ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
 
   if (PD->isReadOnly()) {
     S += ",R";
-    if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_copy)
+    if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_copy)
       S += ",C";
-    if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_retain)
+    if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_retain)
       S += ",&";
-    if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak)
+    if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
       S += ",W";
   } else {
     switch (PD->getSetterKind()) {
@@ -6790,15 +6790,15 @@ ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
   if (Dynamic)
     S += ",D";
 
-  if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_nonatomic)
+  if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_nonatomic)
     S += ",N";
 
-  if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_getter) {
+  if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_getter) {
     S += ",G";
     S += PD->getGetterName().getAsString();
   }
 
-  if (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_setter) {
+  if (PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_setter) {
     S += ",S";
     S += PD->getSetterName().getAsString();
   }

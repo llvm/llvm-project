@@ -1280,9 +1280,10 @@ void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
   QualType T = Record.readType();
   TypeSourceInfo *TSI = readTypeSourceInfo();
   D->setType(T, TSI);
-  D->setPropertyAttributes((ObjCPropertyAttribute::Kind)Record.readInt());
+  D->setPropertyAttributes(
+      (ObjCPropertyDecl::PropertyAttributeKind)Record.readInt());
   D->setPropertyAttributesAsWritten(
-      (ObjCPropertyAttribute::Kind)Record.readInt());
+      (ObjCPropertyDecl::PropertyAttributeKind)Record.readInt());
   D->setPropertyImplementation(
       (ObjCPropertyDecl::PropertyControl)Record.readInt());
   DeclarationName GetterName = Record.readDeclarationName();

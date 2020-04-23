@@ -1953,8 +1953,7 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
       if (const ObjCPropertyDecl *PDecl = Setter->findPropertyDecl()) {
         // Do not warn if user is using property-dot syntax to make call to
         // user named setter.
-        if (!(PDecl->getPropertyAttributes() &
-              ObjCPropertyAttribute::kind_setter))
+        if (!(PDecl->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_setter))
           Diag(MemberLoc,
                diag::warn_property_access_suggest)
           << MemberName << QualType(OPT, 0) << PDecl->getName()
@@ -3259,7 +3258,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
     if (!isImplicit && Method) {
       if (const ObjCPropertyDecl *Prop = Method->findPropertyDecl()) {
         bool IsWeak =
-            Prop->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak;
+          Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak;
         if (!IsWeak && Sel.isUnarySelector())
           IsWeak = ReturnType.getObjCLifetime() & Qualifiers::OCL_Weak;
         if (IsWeak && !isUnevaluatedContext() &&

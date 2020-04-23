@@ -999,32 +999,31 @@ void JSONNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
   case ObjCPropertyDecl::Optional: JOS.attribute("control", "optional"); break;
   }
 
-  ObjCPropertyAttribute::Kind Attrs = D->getPropertyAttributes();
-  if (Attrs != ObjCPropertyAttribute::kind_noattr) {
-    if (Attrs & ObjCPropertyAttribute::kind_getter)
+  ObjCPropertyDecl::PropertyAttributeKind Attrs = D->getPropertyAttributes();
+  if (Attrs != ObjCPropertyDecl::OBJC_PR_noattr) {
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
       JOS.attribute("getter", createBareDeclRef(D->getGetterMethodDecl()));
-    if (Attrs & ObjCPropertyAttribute::kind_setter)
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
       JOS.attribute("setter", createBareDeclRef(D->getSetterMethodDecl()));
-    attributeOnlyIfTrue("readonly",
-                        Attrs & ObjCPropertyAttribute::kind_readonly);
-    attributeOnlyIfTrue("assign", Attrs & ObjCPropertyAttribute::kind_assign);
+    attributeOnlyIfTrue("readonly", Attrs & ObjCPropertyDecl::OBJC_PR_readonly);
+    attributeOnlyIfTrue("assign", Attrs & ObjCPropertyDecl::OBJC_PR_assign);
     attributeOnlyIfTrue("readwrite",
-                        Attrs & ObjCPropertyAttribute::kind_readwrite);
-    attributeOnlyIfTrue("retain", Attrs & ObjCPropertyAttribute::kind_retain);
-    attributeOnlyIfTrue("copy", Attrs & ObjCPropertyAttribute::kind_copy);
+                        Attrs & ObjCPropertyDecl::OBJC_PR_readwrite);
+    attributeOnlyIfTrue("retain", Attrs & ObjCPropertyDecl::OBJC_PR_retain);
+    attributeOnlyIfTrue("copy", Attrs & ObjCPropertyDecl::OBJC_PR_copy);
     attributeOnlyIfTrue("nonatomic",
-                        Attrs & ObjCPropertyAttribute::kind_nonatomic);
-    attributeOnlyIfTrue("atomic", Attrs & ObjCPropertyAttribute::kind_atomic);
-    attributeOnlyIfTrue("weak", Attrs & ObjCPropertyAttribute::kind_weak);
-    attributeOnlyIfTrue("strong", Attrs & ObjCPropertyAttribute::kind_strong);
+                        Attrs & ObjCPropertyDecl::OBJC_PR_nonatomic);
+    attributeOnlyIfTrue("atomic", Attrs & ObjCPropertyDecl::OBJC_PR_atomic);
+    attributeOnlyIfTrue("weak", Attrs & ObjCPropertyDecl::OBJC_PR_weak);
+    attributeOnlyIfTrue("strong", Attrs & ObjCPropertyDecl::OBJC_PR_strong);
     attributeOnlyIfTrue("unsafe_unretained",
-                        Attrs & ObjCPropertyAttribute::kind_unsafe_unretained);
-    attributeOnlyIfTrue("class", Attrs & ObjCPropertyAttribute::kind_class);
-    attributeOnlyIfTrue("direct", Attrs & ObjCPropertyAttribute::kind_direct);
+                        Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained);
+    attributeOnlyIfTrue("class", Attrs & ObjCPropertyDecl::OBJC_PR_class);
+    attributeOnlyIfTrue("direct", Attrs & ObjCPropertyDecl::OBJC_PR_direct);
     attributeOnlyIfTrue("nullability",
-                        Attrs & ObjCPropertyAttribute::kind_nullability);
+                        Attrs & ObjCPropertyDecl::OBJC_PR_nullability);
     attributeOnlyIfTrue("null_resettable",
-                        Attrs & ObjCPropertyAttribute::kind_null_resettable);
+                        Attrs & ObjCPropertyDecl::OBJC_PR_null_resettable);
   }
 }
 

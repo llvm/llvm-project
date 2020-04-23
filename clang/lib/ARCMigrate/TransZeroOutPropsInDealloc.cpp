@@ -118,11 +118,13 @@ public:
         ObjCPropertyDecl *PD = PID->getPropertyDecl();
         ObjCMethodDecl *setterM = PD->getSetterMethodDecl();
         if (!(setterM && setterM->isDefined())) {
-          ObjCPropertyAttribute::Kind AttrKind = PD->getPropertyAttributes();
-          if (AttrKind & (ObjCPropertyAttribute::kind_retain |
-                          ObjCPropertyAttribute::kind_copy |
-                          ObjCPropertyAttribute::kind_strong))
-            SynthesizedProperties[PD] = PID;
+          ObjCPropertyDecl::PropertyAttributeKind AttrKind =
+            PD->getPropertyAttributes();
+            if (AttrKind &
+                (ObjCPropertyDecl::OBJC_PR_retain |
+                  ObjCPropertyDecl::OBJC_PR_copy   |
+                  ObjCPropertyDecl::OBJC_PR_strong))
+              SynthesizedProperties[PD] = PID;
         }
       }
     }
