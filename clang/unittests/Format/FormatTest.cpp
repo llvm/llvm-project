@@ -5975,6 +5975,124 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "                     // comment\n"
                "                     ? a = b\n"
                "                     : a;");
+
+  // Chained conditionals
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 70;
+  Style.AlignOperands = true;
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                        : 3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "       : bbbbbbbbbb     ? 2222222222222222\n"
+               "                        : 3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaa         ? 1111111111111111\n"
+               "       : bbbbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                          : 3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 222222\n"
+               "                        : 333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+               "       : cccccccccccccc ? 3333333333333333\n"
+               "                        : 4444444444444444;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? (aaa ? bbb : ccc)\n"
+               "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                        : 3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                        : (aaa ? bbb : ccc);",
+               Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : cccccccccccccccccc)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : cccccccccccccccccc)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? a = (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : dddddddddddddddddd)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : dddddddddddddddddd)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? 1111111111111111\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : dddddddddddddddddd)\n",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : cccccccccccccccccc);",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                           : ccccccccccccccc ? dddddddddddddddddd\n"
+      "                                             : eeeeeeeeeeeeeeeeee)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaa    ? bbbbbbbbbbbbbbbbbb\n"
+      "                           : ccccccccccccccc ? dddddddddddddddddd\n"
+      "                                             : eeeeeeeeeeeeeeeeee)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                           : cccccccccccc    ? dddddddddddddddddd\n"
+      "                                             : eeeeeeeeeeeeeeeeee)\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                                             : cccccccccccccccccc\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+      "                          : cccccccccccccccc ? dddddddddddddddddd\n"
+      "                                             : eeeeeeeeeeeeeeeeee\n"
+      "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaa\n"
+               "           ? (aaaaaaaaaaaaaaaaaa   ? bbbbbbbbbbbbbbbbbb\n"
+               "              : cccccccccccccccccc ? dddddddddddddddddd\n"
+               "                                   : eeeeeeeeeeeeeeeeee)\n"
+               "       : bbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                             : 3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "           ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+               "             : cccccccccccccccc ? dddddddddddddddddd\n"
+               "                                : eeeeeeeeeeeeeeeeee\n"
+               "       : bbbbbbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                                 : 3333333333333333;",
+               Style);
 }
 
 TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
@@ -6079,6 +6197,121 @@ TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
   verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ?\n"
                "           aaaaa :\n"
                "           bbbbbbbbbbbbbbb + cccccccccccccccc;",
+               Style);
+
+  // Chained conditionals
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+               "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                          3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+               "       bbbbbbbbbb       ? 2222222222222222 :\n"
+               "                          3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaa       ? 1111111111111111 :\n"
+               "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                          3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+               "       bbbbbbbbbbbbbbbb ? 222222 :\n"
+               "                          333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+               "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "       cccccccccccccccc ? 3333333333333333 :\n"
+               "                          4444444444444444;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? (aaa ? bbb : ccc) :\n"
+               "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                          3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+               "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                          (aaa ? bbb : ccc);",
+               Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               cccccccccccccccccc) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               cccccccccccccccccc) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? a = (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               dddddddddddddddddd) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               dddddddddddddddddd) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaa        ? 1111111111111111 :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               dddddddddddddddddd)\n",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? 1111111111111111 :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               cccccccccccccccccc);",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                           ccccccccccccccccc ? dddddddddddddddddd :\n"
+      "                                               eeeeeeeeeeeeeeeeee) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                           ccccccccccccc     ? dddddddddddddddddd :\n"
+      "                                               eeeeeeeeeeeeeeeeee) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaa     ? bbbbbbbbbbbbbbbbbb :\n"
+      "                           ccccccccccccccccc ? dddddddddddddddddd :\n"
+      "                                               eeeeeeeeeeeeeeeeee) :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                                               cccccccccccccccccc :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+      "                          cccccccccccccccccc ? dddddddddddddddddd :\n"
+      "                                               eeeeeeeeeeeeeeeeee :\n"
+      "       bbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+      "                          3333333333333333;",
+      Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaa ?\n"
+               "           (aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+               "            cccccccccccccccccc ? dddddddddddddddddd :\n"
+               "                                 eeeeeeeeeeeeeeeeee) :\n"
+               "       bbbbbbbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                               3333333333333333;",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaa ?\n"
+               "           aaaaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb :\n"
+               "           cccccccccccccccccccc ? dddddddddddddddddd :\n"
+               "                                  eeeeeeeeeeeeeeeeee :\n"
+               "       bbbbbbbbbbbbbbbbbbbbb ? 2222222222222222 :\n"
+               "                               3333333333333333;",
                Style);
 }
 

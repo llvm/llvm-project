@@ -209,7 +209,8 @@ struct ParenState {
         ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
         AlignColons(true), ObjCSelectorNameFound(false),
         HasMultipleNestedBlocks(false), NestedBlockInlined(false),
-        IsInsideObjCArrayLiteral(false), IsCSharpGenericTypeConstraint(false) {}
+        IsInsideObjCArrayLiteral(false), IsCSharpGenericTypeConstraint(false),
+        IsChainedConditional(false), IsWrappedConditional(false) {}
 
   /// \brief The token opening this parenthesis level, or nullptr if this level
   /// is opened by fake parenthesis.
@@ -335,6 +336,14 @@ struct ParenState {
 
   bool IsCSharpGenericTypeConstraint : 1;
 
+  /// \brief true if the current \c ParenState represents the false branch of
+  /// a chained conditional expression (e.g. else-if)
+  bool IsChainedConditional : 1;
+
+  /// \brief true if there conditionnal was wrapped on the first operator (the
+  /// question mark)
+  bool IsWrappedConditional : 1;
+
   bool operator<(const ParenState &Other) const {
     if (Indent != Other.Indent)
       return Indent < Other.Indent;
@@ -376,6 +385,10 @@ struct ParenState {
       return NestedBlockInlined;
     if (IsCSharpGenericTypeConstraint != Other.IsCSharpGenericTypeConstraint)
       return IsCSharpGenericTypeConstraint;
+    if (IsChainedConditional != Other.IsChainedConditional)
+      return IsChainedConditional;
+    if (IsWrappedConditional != Other.IsWrappedConditional)
+      return IsWrappedConditional;
     return false;
   }
 };
