@@ -28,10 +28,11 @@ void MachOReader::readHeader(Object &O) const {
 }
 
 template <typename SectionType>
-Section constructSectionCommon(SectionType Sec) {
+Section constructSectionCommon(SectionType Sec, uint32_t Index) {
   StringRef SegName(Sec.segname, strnlen(Sec.segname, sizeof(Sec.segname)));
   StringRef SectName(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)));
   Section S(SegName, SectName);
+  S.Index = Index;
   S.Addr = Sec.addr;
   S.Size = Sec.size;
   S.Offset = Sec.offset;
@@ -45,14 +46,15 @@ Section constructSectionCommon(SectionType Sec) {
   return S;
 }
 
-template <typename SectionType> Section constructSection(SectionType Sec);
+template <typename SectionType>
+Section constructSection(SectionType Sec, uint32_t Index);
 
-template <> Section constructSection(MachO::section Sec) {
-  return constructSectionCommon(Sec);
+template <> Section constructSection(MachO::section Sec, uint32_t Index) {
+  return constructSectionCommon(Sec, Index);
 }
 
-template <> Section constructSection(MachO::section_64 Sec) {
-  Section S = constructSectionCommon(Sec);
+template <> Section constructSection(MachO::section_64 Sec, uint32_t Index) {
+  Section S = constructSectionCommon(Sec, Index);
   S.Reserved3 = Sec.reserved3;
   return S;
 }
@@ -62,7 +64,7 @@ template <typename SectionType, typename SegmentType>
 std::vector<std::unique_ptr<Section>>
 extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
                 const object::MachOObjectFile &MachOObj,
-                size_t &NextSectionIndex) {
+                uint32_t &NextSectionIndex) {
   auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
   const SectionType *Curr =
       reinterpret_cast<const SectionType *>(LoadCmd.Ptr + sizeof(SegmentType));
@@ -72,9 +74,11 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
       SectionType Sec;
       memcpy((void *)&Sec, Curr, sizeof(SectionType));
       MachO::swapStruct(Sec);
-      Sections.push_back(std::make_unique<Section>(constructSection(Sec)));
+      Sections.push_back(
+          std::make_unique<Section>(constructSection(Sec, NextSectionIndex)));
     } else {
-      Sections.push_back(std::make_unique<Section>(constructSection(*Curr)));
+      Sections.push_back(
+          std::make_unique<Section>(constructSection(*Curr, NextSectionIndex)));
     }
 
     Section &S = *Sections.back();
@@ -110,7 +114,7 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
 
 void MachOReader::readLoadCommands(Object &O) const {
   // For MachO sections indices start from 1.
-  size_t NextSectionIndex = 1;
+  uint32_t NextSectionIndex = 1;
   for (auto LoadCmd : MachOObj.load_commands()) {
     LoadCommand LC;
     switch (LoadCmd.C.cmd) {
@@ -189,12 +193,10 @@ void MachOReader::readSymbolTable(Object &O) const {
   for (auto Symbol : MachOObj.symbols()) {
     SymbolEntry SE =
         (MachOObj.is64Bit()
-             ? constructSymbolEntry(
-                   StrTable,
-                   MachOObj.getSymbol64TableEntry(Symbol.getRawDataRefImpl()))
-             : constructSymbolEntry(
-                   StrTable,
-                   MachOObj.getSymbolTableEntry(Symbol.getRawDataRefImpl())));
+             ? constructSymbolEntry(StrTable, MachOObj.getSymbol64TableEntry(
+                                                  Symbol.getRawDataRefImpl()))
+             : constructSymbolEntry(StrTable, MachOObj.getSymbolTableEntry(
+                                                  Symbol.getRawDataRefImpl())));
 
     O.SymTable.Symbols.push_back(std::make_unique<SymbolEntry>(SE));
   }

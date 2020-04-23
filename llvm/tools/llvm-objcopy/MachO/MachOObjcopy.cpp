@@ -20,7 +20,7 @@ namespace macho {
 using namespace object;
 using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
 
-static void removeSections(const CopyConfig &Config, Object &Obj) {
+static Error removeSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const std::unique_ptr<Section> &) { return false; };
 
   if (!Config.ToRemove.empty()) {
@@ -180,7 +180,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for MachO");
   }
-  removeSections(Config, Obj);
+
+  if (Error E = removeSections(Config, Obj))
+    return E;
 
   // Mark symbols to determine which symbols are still needed.
   if (Config.StripAll)

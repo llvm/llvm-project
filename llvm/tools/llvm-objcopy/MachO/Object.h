@@ -37,6 +37,7 @@ struct MachHeader {
 
 struct RelocationInfo;
 struct Section {
+  uint32_t Index;
   std::string Segname;
   std::string Sectname;
   // CanonicalName is a string formatted as “<Segname>,<Sectname>".
@@ -83,7 +84,7 @@ struct LoadCommand {
   // The raw content of the payload of the load command (located right after the
   // corresponding struct). In some cases it is either empty or can be
   // copied-over without digging into its structure.
-  std::vector<uint8_t> Payload; 
+  std::vector<uint8_t> Payload;
 
   // Some load commands can contain (inside the payload) an array of sections,
   // though the contents of the sections are stored separately. The struct
@@ -114,6 +115,10 @@ struct SymbolEntry {
 
   bool isUndefinedSymbol() const {
     return (n_type & MachO::N_TYPE) == MachO::N_UNDF;
+  }
+
+  Optional<uint32_t> section() const {
+    return n_sect == MachO::NO_SECT ? None : Optional<uint32_t>(n_sect);
   }
 };
 
@@ -306,7 +311,8 @@ struct Object {
 
   Object() : NewSectionsContents(Alloc) {}
 
-  void removeSections(function_ref<bool(const std::unique_ptr<Section> &)> ToRemove);
+  Error
+  removeSections(function_ref<bool(const std::unique_ptr<Section> &)> ToRemove);
   void addLoadCommand(LoadCommand LC);
 
   /// Creates a new segment load command in the object and returns a reference
