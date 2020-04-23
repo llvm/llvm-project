@@ -47,3 +47,41 @@ entry:
   %tmp4.0.insert.ext = zext i16 %2 to i32
   ret i32 %tmp4.0.insert.ext
 }
+
+define half @load_i16(i16 *%hp) {
+; CHECK-VFPV4-LABEL: load_i16:
+; CHECK-VFPV4:       @ %bb.0: @ %entry
+; CHECK-VFPV4-NEXT:    vmov.f32 s0, #1.000000e+00
+; CHECK-VFPV4-NEXT:    ldrh r0, [r0]
+; CHECK-VFPV4-NEXT:    vmov s2, r0
+; CHECK-VFPV4-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-VFPV4-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-VFPV4-NEXT:    vmov r0, s0
+; CHECK-VFPV4-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: load_i16:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    vldr.16 s2, [r1]
+; CHECK-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
+; CHECK-FP16-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-FP16-NEXT:    vstr.16 s0, [r0]
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  %h = load i16, i16 *%hp, align 2
+  %hc = bitcast i16 %h to half
+  %add = fadd half %hc, 1.0
+  ret half %add
+}
+
+define i16 @load_f16(half *%hp) {
+; CHECK-LABEL: load_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    adds r0, #1
+; CHECK-NEXT:    bx lr
+entry:
+  %h = load half, half *%hp, align 2
+  %hc = bitcast half %h to i16
+  %add = add i16 %hc, 1
+  ret i16 %add
+}
