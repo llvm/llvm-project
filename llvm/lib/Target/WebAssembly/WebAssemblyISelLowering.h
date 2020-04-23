@@ -39,7 +39,6 @@ enum NodeType : unsigned {
 } // end namespace WebAssemblyISD
 
 class WebAssemblySubtarget;
-class WebAssemblyTargetMachine;
 
 class WebAssemblyTargetLowering final : public TargetLowering {
 public:
