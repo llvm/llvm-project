@@ -120,8 +120,7 @@ static Instruction::BinaryOps mapBinOpcode(unsigned Opcode) {
 
 // Find the roots - instructions that convert from the FP domain to
 // integer domain.
-void Float2IntPass::findRoots(Function &F, const DominatorTree &DT,
-                              SmallPtrSet<Instruction*,8> &Roots) {
+void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
   for (BasicBlock &BB : F) {
     // Unreachable code can take on strange forms that we are not prepared to
     // handle. For example, an instruction may have itself as an operand.
@@ -184,7 +183,7 @@ ConstantRange Float2IntPass::validateRange(ConstantRange R) {
 
 // Breadth-first walk of the use-def graph; determine the set of nodes
 // we care about and eagerly determine if some of them are poisonous.
-void Float2IntPass::walkBackwards(const SmallPtrSetImpl<Instruction*> &Roots) {
+void Float2IntPass::walkBackwards() {
   std::deque<Instruction*> Worklist(Roots.begin(), Roots.end());
   while (!Worklist.empty()) {
     Instruction *I = Worklist.back();
@@ -525,9 +524,9 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
 
   Ctx = &F.getParent()->getContext();
 
-  findRoots(F, DT, Roots);
+  findRoots(F, DT);
 
-  walkBackwards(Roots);
+  walkBackwards();
   walkForwards();
 
   bool Modified = validateAndTransform();

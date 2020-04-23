@@ -11,7 +11,7 @@ else()
   if (SWIG_FOUND)
     if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
       # Use PYTHON_HOME as a hint to find Python 3.
-      set(Python3_ROOT_DIR PYTHON_HOME)
+      set(Python3_ROOT_DIR "${PYTHON_HOME}")
       find_package(Python3 COMPONENTS Interpreter Development)
       if (Python3_FOUND AND Python3_Interpreter_FOUND)
         set(PYTHON_LIBRARIES ${Python3_LIBRARIES})

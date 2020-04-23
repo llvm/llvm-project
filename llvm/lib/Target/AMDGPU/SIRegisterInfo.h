@@ -116,6 +116,10 @@ public:
     return getEncodingValue(Reg) & 0xff;
   }
 
+  static const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth);
+  static const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth);
+  static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
+
   /// Return the 'base' register class for this register.
   /// e.g. SGPR0 => SReg_32, VGPR => VGPR_32 SGPR0_SGPR1 -> SReg_32, etc.
   const TargetRegisterClass *getPhysRegClass(MCRegister Reg) const;
@@ -156,16 +160,16 @@ public:
   }
 
   /// \returns A VGPR reg class with the same width as \p SRC
-  const TargetRegisterClass *getEquivalentVGPRClass(
-                                          const TargetRegisterClass *SRC) const;
+  const TargetRegisterClass *
+  getEquivalentVGPRClass(const TargetRegisterClass *SRC) const;
 
   /// \returns An AGPR reg class with the same width as \p SRC
-  const TargetRegisterClass *getEquivalentAGPRClass(
-                                          const TargetRegisterClass *SRC) const;
+  const TargetRegisterClass *
+  getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
 
   /// \returns A SGPR reg class with the same width as \p SRC
-  const TargetRegisterClass *getEquivalentSGPRClass(
-                                           const TargetRegisterClass *VRC) const;
+  const TargetRegisterClass *
+  getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
 
   /// \returns The register class that is used for a sub-register of \p RC for
   /// the given \p SubIdx.  If \p SubIdx equals NoSubRegister, \p RC will

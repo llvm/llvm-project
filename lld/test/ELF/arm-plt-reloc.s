@@ -22,68 +22,68 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <func1>:
-// CHECK-NEXT:   110b4:       bx      lr
+// CHECK-NEXT:   200b4:       bx      lr
 // CHECK: <func2>:
-// CHECK-NEXT:   110b8:       bx      lr
+// CHECK-NEXT:   200b8:       bx      lr
 // CHECK: <func3>:
-// CHECK-NEXT:   110bc:       bx      lr
+// CHECK-NEXT:   200bc:       bx      lr
 // CHECK: <_start>:
-// CHECK-NEXT:   110c0:       b       #-20 <func1>
-// CHECK-NEXT:   110c4:       bl      #-20 <func2>
-// CHECK-NEXT:   110c8:       beq     #-20 <func3>
+// CHECK-NEXT:   200c0:       b       #-20 <func1>
+// CHECK-NEXT:   200c4:       bl      #-20 <func2>
+// CHECK-NEXT:   200c8:       beq     #-20 <func3>
 
 // Expect PLT entries as symbols can be preempted
 // The .got.plt and .plt displacement is small so we can use small PLT entries.
 // DSO: Disassembly of section .text:
 // DSO-EMPTY:
 // DSO-NEXT: <func1>:
-// DSO-NEXT:     1214:       bx      lr
+// DSO-NEXT:     10214:       bx      lr
 // DSO: <func2>:
-// DSO-NEXT:     1218:       bx      lr
+// DSO-NEXT:     10218:       bx      lr
 // DSO: <func3>:
-// DSO-NEXT:     121c:       bx      lr
+// DSO-NEXT:     1021c:       bx      lr
 // DSO: <_start>:
-// S(0x1214) - P(0x1220) + A(-8) = 0x2c = 32
-// DSO-NEXT:     1220:       b       #40
-// S(0x1218) - P(0x1224) + A(-8) = 0x38 = 56
-// DSO-NEXT:     1224:       bl      #52
-// S(0x121c) - P(0x1228) + A(-8) = 0x44 = 68
-// DSO-NEXT:     1228:       beq     #64
+// S(0x10214) - P(0x10220) + A(-8) = 0x2c = 32
+// DSO-NEXT:     10220:       b       #40
+// S(0x10218) - P(0x10224) + A(-8) = 0x38 = 56
+// DSO-NEXT:     10224:       bl      #52
+// S(0x1021c) - P(0x10228) + A(-8) = 0x44 = 68
+// DSO-NEXT:     10228:       beq     #64
 // DSO-EMPTY:
 // DSO-NEXT: Disassembly of section .plt:
 // DSO-EMPTY:
 // DSO-NEXT: <$a>:
-// DSO-NEXT:     1230:       str     lr, [sp, #-4]!
-// (0x1234 + 8) + (0 RoR 12) + 8192 + 164 = 0x32e0 = .got.plt[2]
-// DSO-NEXT:     1234:       add     lr, pc, #0, #12
-// DSO-NEXT:     1238:       add     lr, lr, #8192
-// DSO-NEXT:     123c:       ldr     pc, [lr, #164]!
+// DSO-NEXT:     10230:       str     lr, [sp, #-4]!
+// (0x10234 + 8) + (0 RoR 12) + 8192 + 164 = 0x32e0 = .got.plt[2]
+// DSO-NEXT:     10234:       add     lr, pc, #0, #12
+// DSO-NEXT:     10238:       add     lr, lr, #32
+// DSO-NEXT:     1023c:       ldr     pc, [lr, #164]!
 // DSO: <$d>:
-// DSO-NEXT:     1240:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO-NEXT:     1244:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO-NEXT:     1248:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO-NEXT:     124c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     10240:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     10244:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     10248:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1024c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: <$a>:
-// (0x1250 + 8) + (0 RoR 12) + 8192 + 140 = 0x32e4
-// DSO-NEXT:     1250:       add     r12, pc, #0, #12
-// DSO-NEXT:     1254:       add     r12, r12, #8192
-// DSO-NEXT:     1258:       ldr     pc, [r12, #140]!
+// (0x10250 + 8) + (0 RoR 12) + 8192 + 140 = 0x32e4
+// DSO-NEXT:     10250:       add     r12, pc, #0, #12
+// DSO-NEXT:     10254:       add     r12, r12, #32
+// DSO-NEXT:     10258:       ldr     pc, [r12, #140]!
 // DSO: <$d>:
-// DSO-NEXT:     125c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1025c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: <$a>:
-// (0x1260 + 8) + (0 RoR 12) + 8192 + 128 = 0x32e8
-// DSO-NEXT:     1260:       add     r12, pc, #0, #12
-// DSO-NEXT:     1264:       add     r12, r12, #8192
-// DSO-NEXT:     1268:       ldr     pc, [r12, #128]!
+// (0x10260 + 8) + (0 RoR 12) + 8192 + 128 = 0x32e8
+// DSO-NEXT:     10260:       add     r12, pc, #0, #12
+// DSO-NEXT:     10264:       add     r12, r12, #32
+// DSO-NEXT:     10268:       ldr     pc, [r12, #128]!
 // DSO: <$d>:
-// DSO-NEXT:     126c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1026c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: <$a>:
-// (0x1270 + 8) + (0 RoR 12) + 8192 + 116 = 0x32ec
-// DSO-NEXT:     1270:       add     r12, pc, #0, #12
-// DSO-NEXT:     1274:       add     r12, r12, #8192
-// DSO-NEXT:     1278:       ldr     pc, [r12, #116]!
+// (0x10270 + 8) + (0 RoR 12) + 8192 + 116 = 0x32ec
+// DSO-NEXT:     10270:       add     r12, pc, #0, #12
+// DSO-NEXT:     10274:       add     r12, r12, #32
+// DSO-NEXT:     10278:       ldr     pc, [r12, #116]!
 // DSO: <$d>:
-// DSO-NEXT:     127c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1027c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 
 
 // DSOREL:    Name: .got.plt
@@ -92,7 +92,7 @@ _start:
 // DSOREL-NEXT:      SHF_ALLOC
 // DSOREL-NEXT:      SHF_WRITE
 // DSOREL-NEXT:    ]
-// DSOREL-NEXT:    Address: 0x32D8
+// DSOREL-NEXT:    Address: 0x302D8
 // DSOREL-NEXT:    Offset:
 // DSOREL-NEXT:    Size: 24
 // DSOREL-NEXT:    Link:
@@ -101,9 +101,9 @@ _start:
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
 // DSOREL-NEXT:  Section {{.*}} .rel.plt {
-// DSOREL-NEXT:    0x32E4 R_ARM_JUMP_SLOT func1 0x0
-// DSOREL-NEXT:    0x32E8 R_ARM_JUMP_SLOT func2 0x0
-// DSOREL-NEXT:    0x32EC R_ARM_JUMP_SLOT func3 0x0
+// DSOREL-NEXT:    0x302E4 R_ARM_JUMP_SLOT func1 0x0
+// DSOREL-NEXT:    0x302E8 R_ARM_JUMP_SLOT func2 0x0
+// DSOREL-NEXT:    0x302EC R_ARM_JUMP_SLOT func3 0x0
 
 // Test a large separation between the .plt and .got.plt
 // The .got.plt and .plt displacement is large but still within the range

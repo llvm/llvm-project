@@ -46,6 +46,7 @@ def CharType : NamedType<"char">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
+def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
 def FloatPtr : PtrType<FloatType>;
 

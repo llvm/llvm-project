@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -debugify-and-strip-all-safe -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 
 ### STG and its offset limits

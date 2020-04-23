@@ -55,6 +55,7 @@ enum DiagnosticKind {
   DK_ResourceLimit,
   DK_StackSize,
   DK_Linker,
+  DK_Lowering,
   DK_DebugMetadataVersion,
   DK_DebugMetadataInvalid,
   DK_ISelFallback,

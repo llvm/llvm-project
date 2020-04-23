@@ -73,16 +73,15 @@ public:
   /// can be set in the PassBuilder when using a LLVM as a library.
   PipelineTuningOptions();
 
-  /// Tuning option to set loop interleaving on/off. Its default value is that
-  /// of the flag: `-interleave-loops`.
+  /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
 
-  /// Tuning option to enable/disable loop vectorization. Its default value is
-  /// that of the flag: `-vectorize-loops`.
+  /// Tuning option to enable/disable loop vectorization, set based on opt
+  /// level.
   bool LoopVectorization;
 
-  /// Tuning option to enable/disable slp loop vectorization. Its default value
-  /// is that of the flag: `vectorize-slp`.
+  /// Tuning option to enable/disable slp loop vectorization, set based on opt
+  /// level.
   bool SLPVectorization;
 
   /// Tuning option to enable/disable loop unrolling. Its default value is true.

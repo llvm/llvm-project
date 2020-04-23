@@ -393,7 +393,8 @@ namespace ARMII {
     // in an IT block).
     ThumbArithFlagSetting = 1 << 19,
 
-    // Whether an instruction can be included in an MVE tail-predicated loop.
+    // Whether an instruction can be included in an MVE tail-predicated loop,
+    // though extra validity checks may need to be performed too.
     ValidForTailPredication = 1 << 20,
 
     // Whether an instruction writes to the top/bottom half of a vector element

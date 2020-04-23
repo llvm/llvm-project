@@ -94,7 +94,9 @@ Symbolizer *Symbolizer::PlatformInit() {
   return new (symbolizer_allocator_) Symbolizer({});
 }
 
-void Symbolizer::LateInitialize() { Symbolizer::GetOrInit(); }
+void Symbolizer::LateInitialize() {
+  Symbolizer::GetOrInit()->LateInitializeTools();
+}
 
 void StartReportDeadlySignal() {}
 void ReportDeadlySignal(const SignalContext &sig, u32 tid,

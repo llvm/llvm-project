@@ -32,23 +32,33 @@ public:
 
   void Preload() override {}
 
-  void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
-  void GetGlobalVariables(const RegularExpression &regex,
-                          DIEArray &offsets) override;
-  void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;
-  void GetObjCMethods(ConstString class_name, DIEArray &offsets) override;
-  void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
-                            DIEArray &offsets) override;
-  void GetTypes(ConstString name, DIEArray &offsets) override;
-  void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
-  void GetNamespaces(ConstString name, DIEArray &offsets) override;
+  void
+  GetGlobalVariables(ConstString basename,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const RegularExpression &regex,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const DWARFUnit &cu,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(ConstString class_name,
+                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetCompleteObjCClass(
+      ConstString class_name, bool must_be_implementation,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypes(ConstString name,
+                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypes(const DWARFDeclContext &context,
+                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetNamespaces(ConstString name,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
-                    std::vector<DWARFDIE> &dies) override;
-  void GetFunctions(const RegularExpression &regex, DIEArray &offsets) override;
+                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetFunctions(const RegularExpression &regex,
+                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
-  void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) override;
   void Dump(Stream &s) override;
 
 private:

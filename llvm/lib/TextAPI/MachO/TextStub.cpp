@@ -412,8 +412,10 @@ template <> struct ScalarTraits<Target> {
 
   static StringRef input(StringRef Scalar, void *, Target &Value) {
     auto Result = Target::create(Scalar);
-    if (!Result)
-      return toString(Result.takeError());
+    if (!Result) {
+      consumeError(Result.takeError());
+      return "unparsable target";
+    }
 
     Value = *Result;
     if (Value.Arch == AK_unknown)

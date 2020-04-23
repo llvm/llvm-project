@@ -262,6 +262,11 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
 bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
     llvm::AMDGPU::GPUKind Kind) {
+
+  // Assume nothing without a specific target.
+  if (Kind == llvm::AMDGPU::GK_NONE)
+    return false;
+
   const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
 
   // Default to enabling f32 denormals by default on subtargets where fma is

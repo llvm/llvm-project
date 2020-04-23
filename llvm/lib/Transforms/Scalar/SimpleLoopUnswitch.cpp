@@ -2656,8 +2656,8 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
 
       if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
         return false;
-      if (auto CS = CallSite(&I))
-        if (CS.isConvergent() || CS.cannotDuplicate())
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isConvergent() || CB->cannotDuplicate())
           return false;
 
       Cost += TTI.getUserCost(&I);

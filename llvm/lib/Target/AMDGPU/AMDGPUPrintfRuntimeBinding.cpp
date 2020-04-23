@@ -408,8 +408,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         Value *Arg = CI->getArgOperand(ArgCount);
         Type *ArgType = Arg->getType();
         SmallVector<Value *, 32> WhatToStore;
-        if (ArgType->isFPOrFPVectorTy() &&
-            (ArgType->getTypeID() != Type::VectorTyID)) {
+        if (ArgType->isFPOrFPVectorTy() && !isa<VectorType>(ArgType)) {
           Type *IType = (ArgType->isFloatTy()) ? Int32Ty : Int64Ty;
           if (OpConvSpecifiers[ArgCount - 1] == 'f') {
             ConstantFP *fpCons = dyn_cast<ConstantFP>(Arg);
@@ -478,18 +477,14 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
             Arg = new PtrToIntInst(Arg, DstType, "PrintArgPtr", Brnch);
             WhatToStore.push_back(Arg);
           }
-        } else if (ArgType->getTypeID() == Type::VectorTyID) {
+        } else if (isa<FixedVectorType>(ArgType)) {
           Type *IType = NULL;
           uint32_t EleCount = cast<VectorType>(ArgType)->getNumElements();
           uint32_t EleSize = ArgType->getScalarSizeInBits();
           uint32_t TotalSize = EleCount * EleSize;
           if (EleCount == 3) {
-            IntegerType *Int32Ty = Type::getInt32Ty(ArgType->getContext());
-            Constant *Indices[4] = {
-                ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 1),
-                ConstantInt::get(Int32Ty, 2), ConstantInt::get(Int32Ty, 2)};
-            Constant *Mask = ConstantVector::get(Indices);
-            ShuffleVectorInst *Shuffle = new ShuffleVectorInst(Arg, Arg, Mask);
+            ShuffleVectorInst *Shuffle =
+                new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
             Shuffle->insertBefore(Brnch);
             Arg = Shuffle;
             ArgType = Arg->getType();

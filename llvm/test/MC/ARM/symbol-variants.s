@@ -96,8 +96,16 @@ bl f05(plt)
 @CHECK: 70 R_ARM_TLS_LDM32 f28
 @CHECK: 74 R_ARM_TLS_LDM32 f29
 
+@ relative
+.word f30 - (.Lsym+8)
+@CHECK: 78 R_ARM_REL32 f30
+
+@ _GLOBAL_OFFSET_TABLE_ relative
+.word _GLOBAL_OFFSET_TABLE_ - (.Lsym+8)
+@CHECK: 7c R_ARM_BASE_PREL _GLOBAL_OFFSET_TABLE_
+
 @ got_prel
-.word	f30(GOT_PREL) + (. - .Lsym)
-	ldr r3, =f31(GOT_PREL)
-@ CHECK: 78 R_ARM_GOT_PREL f30
-@ CHECK: 80 R_ARM_GOT_PREL f31
+.word   f31(GOT_PREL) + (. - .Lsym)
+        ldr r3, =f32(GOT_PREL)
+@CHECK: 80 R_ARM_GOT_PREL f31
+@CHECK: 88 R_ARM_GOT_PREL f32

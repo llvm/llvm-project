@@ -33,10 +33,10 @@ void lldb_private::CreateConnectedSockets(
   Status error;
   std::unique_ptr<SocketType> listen_socket_up(
       new SocketType(true, child_processes_inherit));
-  EXPECT_FALSE(error.Fail());
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = listen_socket_up->Listen(listen_remote_address, 5);
-  EXPECT_FALSE(error.Fail());
-  EXPECT_TRUE(listen_socket_up->IsValid());
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
 
   Status accept_error;
   Socket *accept_socket;
@@ -47,21 +47,19 @@ void lldb_private::CreateConnectedSockets(
   std::string connect_remote_address = get_connect_addr(*listen_socket_up);
   std::unique_ptr<SocketType> connect_socket_up(
       new SocketType(true, child_processes_inherit));
-  EXPECT_FALSE(error.Fail());
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = connect_socket_up->Connect(connect_remote_address);
-  EXPECT_FALSE(error.Fail());
-  EXPECT_TRUE(connect_socket_up->IsValid());
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(connect_socket_up->IsValid());
 
   a_up->swap(connect_socket_up);
-  EXPECT_TRUE(error.Success());
-  EXPECT_NE(nullptr, a_up->get());
-  EXPECT_TRUE((*a_up)->IsValid());
+  ASSERT_TRUE((*a_up)->IsValid());
 
   accept_thread.join();
   b_up->reset(static_cast<SocketType *>(accept_socket));
-  EXPECT_TRUE(accept_error.Success());
-  EXPECT_NE(nullptr, b_up->get());
-  EXPECT_TRUE((*b_up)->IsValid());
+  ASSERT_THAT_ERROR(accept_error.ToError(), llvm::Succeeded());
+  ASSERT_NE(nullptr, b_up->get());
+  ASSERT_TRUE((*b_up)->IsValid());
 
   listen_socket_up.reset();
 }

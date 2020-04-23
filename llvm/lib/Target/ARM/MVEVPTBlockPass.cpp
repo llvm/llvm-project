@@ -194,7 +194,7 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
 
   // Remove VPNOTs while there's still room in the block, so we can make the
   // largest block possible.
-  ARMVCC::VPTCodes CurrentPredicate = ARMVCC::Then;
+  ARMVCC::VPTCodes CurrentPredicate = ARMVCC::Else;
   while (BlockSize < 4 && Iter != EndIter &&
          Iter->getOpcode() == ARM::MVE_VPNOT) {
 
@@ -222,28 +222,19 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
     DeadInstructions.push_back(&*Iter);
     ++Iter;
 
-    // Replace "then" by "elses" in the block until we find an instruction that
-    // defines VPR, then after that leave everything to "t".
+    // Replace the predicates of the instructions we're adding.
     // Note that we are using "Iter" to iterate over the block so we can update
     // it at the same time.
-    bool ChangeToElse = (CurrentPredicate == ARMVCC::Then);
     for (; Iter != VPNOTBlockEndIter; ++Iter) {
       // Find the register in which the predicate is
       int OpIdx = findFirstVPTPredOperandIdx(*Iter);
       assert(OpIdx != -1);
 
-      // Update the mask + change the predicate to an else if needed.
-      if (ChangeToElse) {
-        // Change the predicate and update the mask
-        Iter->getOperand(OpIdx).setImm(ARMVCC::Else);
-        BlockMask = ExpandBlockMask(BlockMask, ARMVCC::Else);
-        // Reset back to a "then" predicate if this instruction defines VPR.
-        if (Iter->definesRegister(ARM::VPR))
-          ChangeToElse = false;
-      } else
-        BlockMask = ExpandBlockMask(BlockMask, ARMVCC::Then);
+      // Change the predicate and update the mask
+      Iter->getOperand(OpIdx).setImm(CurrentPredicate);
+      BlockMask = ExpandBlockMask(BlockMask, CurrentPredicate);
 
-      LLVM_DEBUG(dbgs() << "  adding: "; Iter->dump());
+      LLVM_DEBUG(dbgs() << "  adding : "; Iter->dump());
     }
 
     CurrentPredicate =

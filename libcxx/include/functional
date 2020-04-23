@@ -508,6 +508,10 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 #include <__functional_base>
 
+#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && !defined(_LIBCPP_HAS_OBJC_ARC) && __has_include(<Block.h>)
+#include <Block.h>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -1484,6 +1488,12 @@ template <class _Fp>
 _LIBCPP_INLINE_VISIBILITY
 bool __not_null(function<_Fp> const& __f) { return !!__f; }
 
+#ifdef _LIBCPP_HAS_EXTENSION_BLOCKS
+template <class _Rp, class ..._Args>
+_LIBCPP_INLINE_VISIBILITY
+bool __not_null(_Rp (^__p)(_Args...)) { return __p; }
+#endif
+
 } // namespace __function
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2244,6 +2254,72 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
     }
 #endif // _LIBCPP_NO_RTTI
 };
+
+#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && !defined(_LIBCPP_HAS_OBJC_ARC) && __has_include(<Block.h>)
+
+template<class _Rp1, class ..._ArgTypes1, class _Alloc, class _Rp, class ..._ArgTypes>
+class __func<_Rp1(^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)>
+    : public  __base<_Rp(_ArgTypes...)>
+{
+    typedef _Rp1(^__block_type)(_ArgTypes1...);
+    __block_type __f_;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __func(__block_type const& __f)
+        : __f_(__f ? Block_copy(__f) : (__block_type)0)
+    { }
+
+    // [TODO] add && to save on a retain
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __func(__block_type __f, const _Alloc& /* unused */)
+        : __f_(__f ? Block_copy(__f) : (__block_type)0)
+    { }
+
+    virtual __base<_Rp(_ArgTypes...)>* __clone() const {
+        _LIBCPP_ASSERT(false,
+            "Block pointers are just pointers, so they should always fit into "
+            "std::function's small buffer optimization. This function should "
+            "never be invoked.");
+        return nullptr;
+    }
+
+    virtual void __clone(__base<_Rp(_ArgTypes...)>* __p) const {
+        ::new (__p) __func(__f_);
+    }
+
+    virtual void destroy() _NOEXCEPT {
+        if (__f_)
+            Block_release(__f_);
+        __f_ = 0;
+    }
+
+    virtual void destroy_deallocate() _NOEXCEPT {
+        _LIBCPP_ASSERT(false,
+            "Block pointers are just pointers, so they should always fit into "
+            "std::function's small buffer optimization. This function should "
+            "never be invoked.");
+    }
+
+    virtual _Rp operator()(_ArgTypes&& ... __arg) {
+        return __invoke(__f_, _VSTD::forward<_ArgTypes>(__arg)...);
+    }
+
+#ifndef _LIBCPP_NO_RTTI
+    virtual const void* target(type_info const& __ti) const _NOEXCEPT {
+        if (__ti == typeid(__func::__block_type))
+            return &__f_;
+        return (const void*)nullptr;
+    }
+
+    virtual const std::type_info& target_type() const _NOEXCEPT {
+        return typeid(__func::__block_type);
+    }
+#endif  // _LIBCPP_NO_RTTI
+};
+
+#endif  // _LIBCPP_HAS_EXTENSION_BLOCKS && !_LIBCPP_HAS_OBJC_ARC
 
 }  // __function
 

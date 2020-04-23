@@ -7,6 +7,7 @@
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionEntry
+    .hidden __xray_FunctionEntry
     .type __xray_FunctionEntry, %function
     /* In C++ it is void extern "C" __xray_FunctionEntry(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -26,10 +27,10 @@ __xray_FunctionEntry:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionEntry_restore
@@ -54,6 +55,7 @@ FunctionEntry_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionExit
+    .hidden __xray_FunctionExit
     .type __xray_FunctionExit, %function
     /* In C++ it is void extern "C" __xray_FunctionExit(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -70,10 +72,10 @@ __xray_FunctionExit:
     STP X5, X6, [SP, #-16]!
     STP X7, X30, [SP, #-16]!
     STR Q0, [SP, #-16]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionExit_restore
@@ -94,6 +96,7 @@ FunctionExit_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionTailExit
+    .hidden __xray_FunctionTailExit
     .type __xray_FunctionTailExit, %function
     /* In C++ it is void extern "C" __xray_FunctionTailExit(uint32_t FuncId)
          with FuncId passed in W0 register. */
@@ -114,10 +117,10 @@ __xray_FunctionTailExit:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionTailExit_restore

@@ -193,9 +193,9 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc), Kind(Kind),
-      UseParensForSymbolVariant(MAI->useParensForSymbolVariant()),
-      HasSubsectionsViaSymbols(MAI->hasSubsectionsViaSymbols()),
+    : MCExpr(MCExpr::SymbolRef, Loc,
+             encodeSubclassData(Kind, MAI->useParensForSymbolVariant(),
+                                MAI->hasSubsectionsViaSymbols())),
       Symbol(Symbol) {
   assert(Symbol);
 }
@@ -317,6 +317,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
+  case VK_PPC_GOT_PCREL:
+    return "got@pcrel";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
   case VK_PPC_NOTOC: return "notoc";
@@ -464,7 +466,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
 }
 
 void MCSymbolRefExpr::printVariantKind(raw_ostream &OS) const {
-  if (UseParensForSymbolVariant)
+  if (useParensForSymbolVariant())
     OS << '(' << MCSymbolRefExpr::getVariantKindName(getKind()) << ')';
   else
     OS << '@' << MCSymbolRefExpr::getVariantKindName(getKind());

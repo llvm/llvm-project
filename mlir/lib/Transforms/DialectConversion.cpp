@@ -1250,7 +1250,7 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
     auto &os = rewriterImpl.logger;
     os.getOStream() << "\n";
     os.startLine() << "* Pattern : '" << pattern->getRootKind() << " -> (";
-    interleaveComma(pattern->getGeneratedOps(), llvm::dbgs());
+    llvm::interleaveComma(pattern->getGeneratedOps(), llvm::dbgs());
     os.getOStream() << ")' {\n";
     os.indent();
   });

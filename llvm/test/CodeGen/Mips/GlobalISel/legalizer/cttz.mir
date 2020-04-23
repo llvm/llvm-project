@@ -57,10 +57,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s32), [[ADD1]], [[SUB1]]
-    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[C]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; MIPS32: $v0 = COPY [[UV]](s32)
-    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: $v0 = COPY [[SELECT]](s32)
+    ; MIPS32: $v1 = COPY [[C]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
@@ -142,25 +140,23 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s32), [[ADD1]], [[SUB1]]
-    ; MIPS32: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[C1]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV1]](s64)
-    ; MIPS32: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UV]], [[C]]
+    ; MIPS32: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[SELECT]], [[C]]
     ; MIPS32: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD3]](s32), [[C]]
-    ; MIPS32: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[UV1]], [[C1]]
+    ; MIPS32: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[C1]], [[C1]]
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
     ; MIPS32: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
     ; MIPS32: [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[ADD4]], [[AND3]]
-    ; MIPS32: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ADD3]](s32), [[ADD5]](s32)
+    ; MIPS32: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ADD3]](s32), [[ADD5]](s32)
     ; MIPS32: [[XOR2:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C1]]
     ; MIPS32: [[XOR3:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[C1]]
     ; MIPS32: [[OR:%[0-9]+]]:_(s32) = G_OR [[XOR2]], [[XOR3]]
     ; MIPS32: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s32), [[C1]]
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP2]](s32)
     ; MIPS32: [[AND4:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
-    ; MIPS32: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[AND4]](s32), [[MV]], [[MV2]]
-    ; MIPS32: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT1]](s64)
-    ; MIPS32: $v0 = COPY [[UV2]](s32)
-    ; MIPS32: $v1 = COPY [[UV3]](s32)
+    ; MIPS32: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[AND4]](s32), [[MV]], [[MV1]]
+    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT1]](s64)
+    ; MIPS32: $v0 = COPY [[UV]](s32)
+    ; MIPS32: $v1 = COPY [[UV1]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1

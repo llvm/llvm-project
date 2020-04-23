@@ -64,10 +64,10 @@ static Loop *getInnerMostLoop(const LoopVectorTy &Loops) {
     return LastLoop;
   }
 
-  return (std::is_sorted(Loops.begin(), Loops.end(),
-                         [](const Loop *L1, const Loop *L2) {
-                           return L1->getLoopDepth() < L2->getLoopDepth();
-                         }))
+  return (llvm::is_sorted(Loops,
+                          [](const Loop *L1, const Loop *L2) {
+                            return L1->getLoopDepth() < L2->getLoopDepth();
+                          }))
              ? LastLoop
              : nullptr;
 }

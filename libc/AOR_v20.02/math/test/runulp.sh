@@ -93,25 +93,25 @@ t log2f  0    0xffff0000   10000
 t log2f  0x1p-4    0x1p4   50000
 t log2f  0         inf     50000
 
-L=0.06
-t sinf  0    0xffff0000    10000
-t sinf  0x1p-14  0x1p54    50000
-t sinf -0x1p-14 -0x1p54    50000
-
-L=0.06
-t cosf  0    0xffff0000    10000
-t cosf  0x1p-14  0x1p54    50000
-t cosf -0x1p-14 -0x1p54    50000
-
-L=0.06
-t sincosf_sinf  0    0xffff0000    10000
-t sincosf_sinf  0x1p-14  0x1p54    50000
-t sincosf_sinf -0x1p-14 -0x1p54    50000
-
-L=0.06
-t sincosf_cosf  0    0xffff0000    10000
-t sincosf_cosf  0x1p-14  0x1p54    50000
-t sincosf_cosf -0x1p-14 -0x1p54    50000
+#L=0.06
+#t sinf  0    0xffff0000    10000
+#t sinf  0x1p-14  0x1p54    50000
+#t sinf -0x1p-14 -0x1p54    50000
+#
+#L=0.06
+#t cosf  0    0xffff0000    10000
+#t cosf  0x1p-14  0x1p54    50000
+#t cosf -0x1p-14 -0x1p54    50000
+#
+#L=0.06
+#t sincosf_sinf  0    0xffff0000    10000
+#t sincosf_sinf  0x1p-14  0x1p54    50000
+#t sincosf_sinf -0x1p-14 -0x1p54    50000
+#
+#L=0.06
+#t sincosf_cosf  0    0xffff0000    10000
+#t sincosf_cosf  0x1p-14  0x1p54    50000
+#t sincosf_cosf -0x1p-14 -0x1p54    50000
 
 L=0.4
 t powf  0x1p-1   0x1p1  x  0x1p-7 0x1p7   50000

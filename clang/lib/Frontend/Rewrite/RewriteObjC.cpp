@@ -2995,10 +2995,9 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
                                                    llvm::APInt(IntSize, 8),
                                                    Context->IntTy,
                                                    SourceLocation());
-    BinaryOperator *lessThanExpr =
-      new (Context) BinaryOperator(sizeofExpr, limit, BO_LE, Context->IntTy,
-                                   VK_RValue, OK_Ordinary, SourceLocation(),
-                                   FPOptions());
+    BinaryOperator *lessThanExpr = BinaryOperator::Create(
+        *Context, sizeofExpr, limit, BO_LE, Context->IntTy, VK_RValue,
+        OK_Ordinary, SourceLocation(), FPOptions(Context->getLangOpts()));
     // (sizeof(returnType) <= 8 ? objc_msgSend(...) : objc_msgSend_stret(...))
     ConditionalOperator *CondExpr =
       new (Context) ConditionalOperator(lessThanExpr,

@@ -3645,7 +3645,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                         (EXTRACT_SUBREG (VEXTRACTUB Idx, $src), sub_64)))>;
     }
 
-    // Unsiged int in vsx register -> QP
+    // Unsigned int in vsx register -> QP
     def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
               (f128 (XSCVUDQP
                       (XXEXTRACTUW (SUBREG_TO_REG (i64 1), $src, sub_64), 4)))>;
@@ -3716,7 +3716,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                           (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
     }
 
-    // Unsiged int in vsx register -> QP
+    // Unsigned int in vsx register -> QP
     def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
               (f128 (XSCVUDQP
                       (XXEXTRACTUW (SUBREG_TO_REG (i64 1), $src, sub_64), 8)))>;

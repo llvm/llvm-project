@@ -247,17 +247,20 @@ An overview of all the command-line options:
   Configuration files:
     clang-tidy attempts to read configuration for each source file from a
     .clang-tidy file located in the closest parent directory of the source
-    file. If any configuration options have a corresponding command-line
-    option, command-line option takes precedence. The effective
-    configuration can be inspected using -dump-config:
+    file. If InheritParentConfig is true in a config file, the configuration file
+    in the parent directory (if any exists) will be taken and current config file
+    will be applied on top of the parent one. If any configuration options have
+    a corresponding command-line option, command-line option takes precedence.
+    The effective configuration can be inspected using -dump-config:
 
       $ clang-tidy -dump-config
       ---
-      Checks:          '-*,some-check'
-      WarningsAsErrors: ''
-      HeaderFilterRegex: ''
-      FormatStyle:     none
-      User:            user
+      Checks:              '-*,some-check'
+      WarningsAsErrors:    ''
+      HeaderFilterRegex:   ''
+      FormatStyle:         none
+      InheritParentConfig: true
+      User:                user
       CheckOptions:
         - key:             some-check.SomeOption
           value:           'some value'

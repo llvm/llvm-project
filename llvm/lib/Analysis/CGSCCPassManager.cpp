@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -456,8 +455,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   // because if there is a single call edge, whether there are ref edges is
   // irrelevant.
   for (Instruction &I : instructions(F))
-    if (auto CS = CallSite(&I))
-      if (Function *Callee = CS.getCalledFunction())
+    if (auto *CB = dyn_cast<CallBase>(&I))
+      if (Function *Callee = CB->getCalledFunction())
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
           Node &CalleeN = *G.lookup(*Callee);
           Edge *E = N->lookup(CalleeN);

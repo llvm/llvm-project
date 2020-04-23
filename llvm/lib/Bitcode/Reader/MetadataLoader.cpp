@@ -1277,14 +1277,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_ENUMERATOR: {
-    if (Record.size() != 3)
+    if (Record.size() < 3)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool IsUnsigned = Record[0] & 2;
+    bool IsBigInt = Record[0] & 4;
+    APInt Value;
+
+    if (IsBigInt) {
+      const uint64_t BitWidth = Record[1];
+      const size_t NumWords = Record.size() - 3;
+      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+    } else
+      Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
+
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIEnumerator, (Context, unrotateSign(Record[1]),
-                                       IsUnsigned, getMDString(Record[2]))),
+        GET_OR_DISTINCT(DIEnumerator,
+                        (Context, Value, IsUnsigned, getMDString(Record[2]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1473,8 +1483,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 16 ? true : Record[16],
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
-        false, // FIXME: https://reviews.llvm.org/rGc51b45e32ef7f35c11891f60871aa9c2c04cd991
-               // Record.size() <= 19 ? 0 : Record[19],
+        Record.size() <= 19 ? 0 : Record[19],
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 

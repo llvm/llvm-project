@@ -32,7 +32,7 @@ llvm-canonical-type ::= <canonical textual representation defined by LLVM>
 
 For example, one can use primitive types `!llvm.i32`, pointer types
 `!llvm<"i8*">`, vector types `!llvm<"<4 x float>">` or structure types
-`!llvm<"{i32, float}">`. The parsing and printing of the canonical form is
+`!llvm<"{i32, float}">`. The parsing and printing of the canonical form are
 delegated to the LLVM assembly parser and printer.
 
 LLVM IR dialect types contain an `llvm::Type*` object that can be obtained by
@@ -104,6 +104,14 @@ llvm.func @func() attributes {
 
 If the attribute is not known to LLVM IR, it will be attached as a string
 attribute.
+
+#### Linkage
+
+An LLVM IR dialect function has a linkage attribute derived from LLVM IR
+[linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
+specified by the same keyword as in LLVM IR and is located between `llvm.func`
+and the symbol name. If no linkage keyword is present, `external` linkage is
+assumed by default.
 
 ### LLVM IR operations
 
@@ -338,7 +346,7 @@ constants must be created as SSA values before being used in other operations.
 `llvm.mlir.constant` creates such values for scalars and vectors. It has a
 mandatory `value` attribute, which may be an integer, floating point attribute;
 dense or sparse attribute containing integers or floats. The type of the
-attribute is one the corresponding MLIR standard types. It may be omitted for
+attribute is one of the corresponding MLIR standard types. It may be omitted for
 `i64` and `f64` types that are implied. The operation produces a new SSA value
 of the specified LLVM IR dialect type. The type of that value _must_ correspond
 to the attribute type converted to LLVM IR.
@@ -421,6 +429,21 @@ llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
   %2 = llvm.getelementptr %0[%1] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
   llvm.return %2 : !llvm<"i32*">
 }
+```
+
+Similarly to functions, globals have a linkage attribute. In the custom syntax,
+this attribute is placed between `llvm.mlir.global` and the optional `constant`
+keyword. If the attribute is omitted, `external` linkage is assumed by default.
+
+Examples:
+
+```mlir
+// A constant with internal linkage will not participate in linking.
+llvm.mlir.global internal constant @cst(42 : i32) : !llvm.i32
+
+// By default, "external" linkage is assumed and the global participates in
+// symbol resolution at link-time.
+llvm.mlir.global @glob(0 : f32) : !llvm.float
 ```
 
 #### `llvm.mlir.null`

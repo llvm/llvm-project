@@ -7320,7 +7320,7 @@ def : Pat<(arm_vmovsr GPR:$a),
         Requires<[HasNEON, DontUseVMOVSR]>;
 
 //===----------------------------------------------------------------------===//
-// Non-Instruction Patterns or Endiness - Revert Patterns
+// Non-Instruction Patterns or Endianess - Revert Patterns
 //===----------------------------------------------------------------------===//
 
 // bit_convert

@@ -48,6 +48,7 @@ template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
+template <typename T, typename ResultT> class TypeSwitch;
 
 // Other common classes.
 class raw_ostream;
@@ -88,6 +89,8 @@ using llvm::StringLiteral;
 using llvm::StringRef;
 using llvm::TinyPtrVector;
 using llvm::Twine;
+template <typename T, typename ResultT = void>
+using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
 
 // Other common classes.
 using llvm::APFloat;

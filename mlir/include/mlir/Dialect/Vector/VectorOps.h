@@ -55,6 +55,7 @@ void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
 ///   ContractionOpLowering,
 ///   ShapeCastOp2DDownCastRewritePattern,
 ///   ShapeCastOp2DUpCastRewritePattern
+///   BroadcastOpLowering,
 ///   TransposeOpLowering
 ///   OuterproductOpLowering
 /// These transformation express higher level vector ops in terms of more

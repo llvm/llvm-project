@@ -209,6 +209,9 @@ class Symbolizer final {
    private:
     const Symbolizer *sym_;
   };
+
+  // Calls `LateInitialize()` on all items in `tools_`.
+  void LateInitializeTools();
 };
 
 #ifdef SANITIZER_WINDOWS

@@ -181,7 +181,7 @@ enum class Command {
   Frame,
 };
 
-static bool parseCommand(StringRef InputString, Command &Cmd,
+static bool parseCommand(bool IsAddr2Line, StringRef InputString, Command &Cmd,
                          std::string &ModuleName, uint64_t &ModuleOffset) {
   const char kDelimiters[] = " \n\r";
   ModuleName = "";
@@ -218,15 +218,21 @@ static bool parseCommand(StringRef InputString, Command &Cmd,
   // Skip delimiters and parse module offset.
   Pos += strspn(Pos, kDelimiters);
   int OffsetLength = strcspn(Pos, kDelimiters);
-  return !StringRef(Pos, OffsetLength).getAsInteger(0, ModuleOffset);
+  StringRef Offset(Pos, OffsetLength);
+  // GNU addr2line assumes the offset is hexadecimal and allows a redundant
+  // "0x" or "0X" prefix; do the same for compatibility.
+  if (IsAddr2Line)
+    Offset.consume_front("0x") || Offset.consume_front("0X");
+  return !Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset);
 }
 
-static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
-                           DIPrinter &Printer) {
+static void symbolizeInput(bool IsAddr2Line, StringRef InputString,
+                           LLVMSymbolizer &Symbolizer, DIPrinter &Printer) {
   Command Cmd;
   std::string ModuleName;
   uint64_t Offset = 0;
-  if (!parseCommand(StringRef(InputString), Cmd, ModuleName, Offset)) {
+  if (!parseCommand(IsAddr2Line, StringRef(InputString), Cmd, ModuleName,
+                    Offset)) {
     outs() << InputString << "\n";
     return;
   }
@@ -340,12 +346,12 @@ int main(int argc, char **argv) {
           std::remove_if(StrippedInputString.begin(), StrippedInputString.end(),
                          [](char c) { return c == '\r' || c == '\n'; }),
           StrippedInputString.end());
-      symbolizeInput(StrippedInputString, Symbolizer, Printer);
+      symbolizeInput(IsAddr2Line, StrippedInputString, Symbolizer, Printer);
       outs().flush();
     }
   } else {
     for (StringRef Address : ClInputAddresses)
-      symbolizeInput(Address, Symbolizer, Printer);
+      symbolizeInput(IsAddr2Line, Address, Symbolizer, Printer);
   }
 
   return 0;

@@ -116,6 +116,12 @@ public:
     return getOperation()->getParentOfType<OpTy>();
   }
 
+  /// Returns the closest surrounding parent operation with trait `Trait`.
+  template <template <typename T> class Trait>
+  Operation *getParentWithTrait() {
+    return getOperation()->getParentWithTrait<Trait>();
+  }
+
   /// Return the context this operation belongs to.
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
@@ -1298,16 +1304,16 @@ private:
     /// If 'T' is the same interface as 'interfaceID' return the concept
     /// instance.
     template <typename T>
-    static typename std::enable_if<is_detected<has_get_interface_id, T>::value,
-                                   void *>::type
+    static typename std::enable_if<
+        llvm::is_detected<has_get_interface_id, T>::value, void *>::type
     lookup(TypeID interfaceID) {
       return (T::getInterfaceID() == interfaceID) ? &T::instance() : nullptr;
     }
 
     /// 'T' is known to not be an interface, return nullptr.
     template <typename T>
-    static typename std::enable_if<!is_detected<has_get_interface_id, T>::value,
-                                   void *>::type
+    static typename std::enable_if<
+        !llvm::is_detected<has_get_interface_id, T>::value, void *>::type
     lookup(TypeID) {
       return nullptr;
     }

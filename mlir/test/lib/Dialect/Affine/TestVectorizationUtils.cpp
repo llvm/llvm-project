@@ -19,7 +19,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -120,7 +119,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
       opInst->emitRemark("NOT MATCHED");
     } else {
       outs << "\nmatched: " << *opInst << " with shape ratio: ";
-      interleaveComma(MutableArrayRef<int64_t>(*ratio), outs);
+      llvm::interleaveComma(MutableArrayRef<int64_t>(*ratio), outs);
     }
   }
 }

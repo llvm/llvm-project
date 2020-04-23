@@ -237,6 +237,13 @@ public:
     return nullptr;
   }
 
+  /// Targets that have a special convention for their symbols could use
+  /// this hook to return a specialized symbol.
+  virtual MCSymbol *getTargetSymbol(const GlobalValue *GV,
+                                    const TargetMachine &TM) const {
+    return nullptr;
+  }
+
 protected:
   virtual MCSection *SelectSectionForGlobal(const GlobalObject *GO,
                                             SectionKind Kind,

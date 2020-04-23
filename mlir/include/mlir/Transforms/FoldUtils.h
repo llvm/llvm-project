@@ -119,6 +119,11 @@ public:
   /// Clear out any constants cached inside of the folder.
   void clear();
 
+  /// Get or create a constant using the given builder. On success this returns
+  /// the constant operation, nullptr otherwise.
+  Value getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
+                            Attribute value, Type type, Location loc);
+
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.
   /// A constant operation materializes an attribute with a type. Dialects may

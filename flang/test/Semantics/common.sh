@@ -4,8 +4,6 @@
 # to the full path of the single source argument; and $USER_OPTIONS to the
 # option list given in the $src file after string "OPTIONS:"
 
-PATH=/usr/bin:/bin
-
 function die {
   echo "$(basename $0): $*" >&2
   exit 1

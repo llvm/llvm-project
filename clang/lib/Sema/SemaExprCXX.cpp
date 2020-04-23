@@ -704,11 +704,11 @@ getUuidAttrOfType(Sema &SemaRef, QualType QT,
 }
 
 /// Build a Microsoft __uuidof expression with a type operand.
-ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
+ExprResult Sema::BuildCXXUuidof(QualType Type,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
-  StringRef UuidStr;
+  MSGuidDecl *Guid = nullptr;
   if (!Operand->getType()->isDependentType()) {
     llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
     getUuidAttrOfType(*this, Operand->getType(), UuidAttrs);
@@ -716,22 +716,21 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
       return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
     if (UuidAttrs.size() > 1)
       return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-    UuidStr = UuidAttrs.back()->getGuid();
+    Guid = UuidAttrs.back()->getGuidDecl();
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), Operand, UuidStr,
-                                     SourceRange(TypeidLoc, RParenLoc));
+  return new (Context)
+      CXXUuidofExpr(Type, Operand, Guid, SourceRange(TypeidLoc, RParenLoc));
 }
 
 /// Build a Microsoft __uuidof expression with an expression operand.
-ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
-                                SourceLocation TypeidLoc,
-                                Expr *E,
-                                SourceLocation RParenLoc) {
-  StringRef UuidStr;
+ExprResult Sema::BuildCXXUuidof(QualType Type, SourceLocation TypeidLoc,
+                                Expr *E, SourceLocation RParenLoc) {
+  MSGuidDecl *Guid = nullptr;
   if (!E->getType()->isDependentType()) {
     if (E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
-      UuidStr = "00000000-0000-0000-0000-000000000000";
+      // A null pointer results in {00000000-0000-0000-0000-000000000000}.
+      Guid = Context.getMSGuidDecl(MSGuidDecl::Parts{});
     } else {
       llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
       getUuidAttrOfType(*this, E->getType(), UuidAttrs);
@@ -739,29 +738,20 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
         return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
       if (UuidAttrs.size() > 1)
         return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-      UuidStr = UuidAttrs.back()->getGuid();
+      Guid = UuidAttrs.back()->getGuidDecl();
     }
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), E, UuidStr,
-                                     SourceRange(TypeidLoc, RParenLoc));
+  return new (Context)
+      CXXUuidofExpr(Type, E, Guid, SourceRange(TypeidLoc, RParenLoc));
 }
 
 /// ActOnCXXUuidof - Parse __uuidof( type-id ) or __uuidof (expression);
 ExprResult
 Sema::ActOnCXXUuidof(SourceLocation OpLoc, SourceLocation LParenLoc,
                      bool isType, void *TyOrExpr, SourceLocation RParenLoc) {
-  // If MSVCGuidDecl has not been cached, do the lookup.
-  if (!MSVCGuidDecl) {
-    IdentifierInfo *GuidII = &PP.getIdentifierTable().get("_GUID");
-    LookupResult R(*this, GuidII, SourceLocation(), LookupTagName);
-    LookupQualifiedName(R, Context.getTranslationUnitDecl());
-    MSVCGuidDecl = R.getAsSingle<RecordDecl>();
-    if (!MSVCGuidDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_ms_uuidof));
-  }
-
-  QualType GuidType = Context.getTypeDeclType(MSVCGuidDecl);
+  QualType GuidType = Context.getMSGuidType();
+  GuidType.addConst();
 
   if (isType) {
     // The operand is a type; handle it as such.
@@ -5694,7 +5684,7 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
         // C++2a allows functions with ref-qualifier & if their cv-qualifier-seq
         // is (exactly) 'const'.
         if (Proto->isConst() && !Proto->isVolatile())
-          Diag(Loc, getLangOpts().CPlusPlus2a
+          Diag(Loc, getLangOpts().CPlusPlus20
                         ? diag::warn_cxx17_compat_pointer_to_const_ref_member_on_rvalue
                         : diag::ext_pointer_to_const_ref_member_on_rvalue);
         else
@@ -7001,9 +6991,10 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
         return ExprError();
       if (RHS.get() == BO->getRHS())
         return E;
-      return new (Context) BinaryOperator(
-          BO->getLHS(), RHS.get(), BO_Comma, BO->getType(), BO->getValueKind(),
-          BO->getObjectKind(), BO->getOperatorLoc(), BO->getFPFeatures());
+      return BinaryOperator::Create(Context, BO->getLHS(), RHS.get(), BO_Comma,
+                                    BO->getType(), BO->getValueKind(),
+                                    BO->getObjectKind(), BO->getOperatorLoc(),
+                                    BO->getFPFeatures(getLangOpts()));
     }
   }
 

@@ -75,6 +75,21 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
+const
+DILocation *DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
+  if (Locs.empty())
+    return nullptr;
+  if (Locs.size() == 1)
+    return Locs[0];
+  auto *Merged = Locs[0];
+  for (auto I = std::next(Locs.begin()), E = Locs.end(); I != E; ++I) {
+    Merged = getMergedLocation(Merged, *I);
+    if (Merged == nullptr)
+      break;
+  }
+  return Merged;
+}
+
 const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
                                                 const DILocation *LocB) {
   if (!LocA || !LocB)
@@ -332,7 +347,7 @@ DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
   DEFINE_GETIMPL_STORE(DISubrange, (CountNode, Lo), Ops);
 }
 
-DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
+DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, APInt Value,
                                     bool IsUnsigned, MDString *Name,
                                     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");

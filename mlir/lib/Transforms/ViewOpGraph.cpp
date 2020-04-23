@@ -11,7 +11,6 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace mlir;
@@ -65,7 +64,7 @@ std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
   }
 
   // Print resultant types
-  interleaveComma(op->getResultTypes(), os);
+  llvm::interleaveComma(op->getResultTypes(), os);
   os << "\n";
 
   // A value used to elide large container attribute.

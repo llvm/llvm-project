@@ -750,7 +750,7 @@ struct SIModeRegisterDefaults {
   /// Returns true if a flag is compatible if it's enabled in the callee, but
   /// disabled in the caller.
   static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
-    return CallerMode == CalleeMode || (CallerMode && !CalleeMode);
+    return CallerMode == CalleeMode || (!CallerMode && CalleeMode);
   }
 
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should

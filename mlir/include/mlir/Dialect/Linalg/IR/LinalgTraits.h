@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
@@ -119,7 +120,8 @@ public:
       return it - getInputs().begin();
     return llvm::None;
   }
-  /// Return the `i`-th input buffer type.
+  /// Return the `i`-th input shaped type, irrespective of buffer or tensor
+  /// type.
   ShapedType getInputShapedType(unsigned i) {
     return getInput(i).getType().template cast<ShapedType>();
   }
@@ -342,6 +344,17 @@ public:
       return failure();
     return success();
   }
+};
+
+/// This class provides the API for named Linalg StructuredOps.
+template <typename ConcreteType>
+class NamedStructuredOpTraits
+    : public OpTrait::TraitBase<ConcreteType, NamedStructuredOpTraits> {
+public:
+  llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
+  llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
+  std::function<void(OpBuilder &, Location, ArrayRef<Value>)>
+  emitScalarImplementation();
 };
 
 } // namespace linalg

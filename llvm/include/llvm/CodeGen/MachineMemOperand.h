@@ -58,8 +58,8 @@ struct MachinePointerInfo {
     AddrSpace = v ? v->getAddressSpace() : 0;
   }
 
-  explicit MachinePointerInfo(unsigned AddressSpace = 0)
-      : V((const Value *)nullptr), Offset(0), StackID(0),
+  explicit MachinePointerInfo(unsigned AddressSpace = 0, int64_t offset = 0)
+      : V((const Value *)nullptr), Offset(offset), StackID(0),
         AddrSpace(AddressSpace) {}
 
   explicit MachinePointerInfo(
@@ -77,10 +77,10 @@ struct MachinePointerInfo {
 
   MachinePointerInfo getWithOffset(int64_t O) const {
     if (V.isNull())
-      return MachinePointerInfo(AddrSpace);
+      return MachinePointerInfo(AddrSpace, Offset + O);
     if (V.is<const Value*>())
-      return MachinePointerInfo(V.get<const Value*>(), Offset+O, StackID);
-    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O,
+      return MachinePointerInfo(V.get<const Value*>(), Offset + O, StackID);
+    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset + O,
                               StackID);
   }
 

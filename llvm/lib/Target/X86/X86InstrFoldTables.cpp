@@ -5529,53 +5529,45 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
   // Make sure the tables are sorted.
   static std::atomic<bool> FoldTablesChecked(false);
   if (!FoldTablesChecked.load(std::memory_order_relaxed)) {
-    assert(std::is_sorted(std::begin(MemoryFoldTable2Addr),
-                          std::end(MemoryFoldTable2Addr)) &&
+    assert(llvm::is_sorted(MemoryFoldTable2Addr) &&
            std::adjacent_find(std::begin(MemoryFoldTable2Addr),
                               std::end(MemoryFoldTable2Addr)) ==
-           std::end(MemoryFoldTable2Addr) &&
+               std::end(MemoryFoldTable2Addr) &&
            "MemoryFoldTable2Addr is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable0),
-                          std::end(MemoryFoldTable0)) &&
+    assert(llvm::is_sorted(MemoryFoldTable0) &&
            std::adjacent_find(std::begin(MemoryFoldTable0),
                               std::end(MemoryFoldTable0)) ==
-           std::end(MemoryFoldTable0) &&
+               std::end(MemoryFoldTable0) &&
            "MemoryFoldTable0 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable1),
-                          std::end(MemoryFoldTable1)) &&
+    assert(llvm::is_sorted(MemoryFoldTable1) &&
            std::adjacent_find(std::begin(MemoryFoldTable1),
                               std::end(MemoryFoldTable1)) ==
-           std::end(MemoryFoldTable1) &&
+               std::end(MemoryFoldTable1) &&
            "MemoryFoldTable1 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable2),
-                          std::end(MemoryFoldTable2)) &&
+    assert(llvm::is_sorted(MemoryFoldTable2) &&
            std::adjacent_find(std::begin(MemoryFoldTable2),
                               std::end(MemoryFoldTable2)) ==
-           std::end(MemoryFoldTable2) &&
+               std::end(MemoryFoldTable2) &&
            "MemoryFoldTable2 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable3),
-                          std::end(MemoryFoldTable3)) &&
+    assert(llvm::is_sorted(MemoryFoldTable3) &&
            std::adjacent_find(std::begin(MemoryFoldTable3),
                               std::end(MemoryFoldTable3)) ==
-           std::end(MemoryFoldTable3) &&
+               std::end(MemoryFoldTable3) &&
            "MemoryFoldTable3 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable4),
-                          std::end(MemoryFoldTable4)) &&
+    assert(llvm::is_sorted(MemoryFoldTable4) &&
            std::adjacent_find(std::begin(MemoryFoldTable4),
                               std::end(MemoryFoldTable4)) ==
-           std::end(MemoryFoldTable4) &&
+               std::end(MemoryFoldTable4) &&
            "MemoryFoldTable4 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(BroadcastFoldTable2),
-                          std::end(BroadcastFoldTable2)) &&
+    assert(llvm::is_sorted(BroadcastFoldTable2) &&
            std::adjacent_find(std::begin(BroadcastFoldTable2),
                               std::end(BroadcastFoldTable2)) ==
-           std::end(BroadcastFoldTable2) &&
+               std::end(BroadcastFoldTable2) &&
            "BroadcastFoldTable2 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(BroadcastFoldTable3),
-                          std::end(BroadcastFoldTable3)) &&
+    assert(llvm::is_sorted(BroadcastFoldTable3) &&
            std::adjacent_find(std::begin(BroadcastFoldTable3),
                               std::end(BroadcastFoldTable3)) ==
-           std::end(BroadcastFoldTable3) &&
+               std::end(BroadcastFoldTable3) &&
            "BroadcastFoldTable3 is not sorted and unique!");
     FoldTablesChecked.store(true, std::memory_order_relaxed);
   }

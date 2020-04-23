@@ -3,14 +3,9 @@
 
 %struct.S = type { [65 x i8] }
 
-define void @bar() {
+define void @foo(%struct.S* byval(%struct.S) align 1 %s) {
 entry:
-  %s1 = alloca %struct.S, align 1
-  %agg.tmp = alloca %struct.S, align 1
-  call void @foo(%struct.S* byval(%struct.S) align 1 %agg.tmp)
   ret void
 }
 
-declare void @foo(%struct.S* byval(%struct.S) align 1)
-
-; CHECK: LLVM ERROR: Pass-by-value arguments are only supported in registers.
+; CHECK: LLVM ERROR: Passing ByVals split between registers and stack not yet implemented.

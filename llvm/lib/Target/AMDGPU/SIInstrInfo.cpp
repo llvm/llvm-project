@@ -510,11 +510,10 @@ bool SIInstrInfo::shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1,
 static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, MCRegister DestReg,
-                              MCRegister SrcReg, bool KillSrc) {
+                              MCRegister SrcReg, bool KillSrc,
+                              const char *Msg = "illegal SGPR to VGPR copy") {
   MachineFunction *MF = MBB.getParent();
-  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(),
-                                        "illegal SGPR to VGPR copy",
-                                        DL, DS_Error);
+  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(), Msg, DL, DS_Error);
   LLVMContext &C = MF->getFunction().getContext();
   C.diagnose(IllegalCopy);
 
@@ -679,72 +678,63 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == &AMDGPU::VGPR_LO16RegClass || RC == &AMDGPU::VGPR_HI16RegClass) {
+  if (RC == &AMDGPU::VGPR_LO16RegClass || RC == &AMDGPU::VGPR_HI16RegClass ||
+      RC == &AMDGPU::SGPR_LO16RegClass) {
     assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-           AMDGPU::VGPR_HI16RegClass.contains(SrcReg));
+           AMDGPU::VGPR_HI16RegClass.contains(SrcReg) ||
+           AMDGPU::SGPR_LO16RegClass.contains(SrcReg));
 
-    //          d          s
-    // l -> l : hhhhxxxx : xxxxllll -> v_alignbyte_b32 d, s, d, 2
-    //          llllhhhh : xxxxllll -> v_alignbyte_b32 d, d, d, 2
-    // l -> h : xxxxllll : xxxxhhhh -> v_lshlrev_b32 d, 16, d
-    //          llll0000 : xxxxhhhh -> v_alignbyte_b32 d, s, d, 2
-    // h -> l : hhhhxxxx : llllxxxx -> v_lshrrev_b32 d, 16, d
-    //          0000hhhh : llllxxxx -> v_alignbyte_b32 d, d, s, 2
-    // h -> h : xxxxllll : hhhhxxxx -> v_alignbyte_b32 d, d, s, 2
-    //          llllhhhh : hhhhxxxx -> v_alignbyte_b32 d, d, d, 2
+    bool IsSGPRDst = AMDGPU::SGPR_LO16RegClass.contains(DestReg);
+    bool IsSGPRSrc = AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    bool DstLow = (RC == &AMDGPU::VGPR_LO16RegClass ||
+                   RC == &AMDGPU::SGPR_LO16RegClass);
+    bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
+                  AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    const TargetRegisterClass *DstRC = IsSGPRDst ? &AMDGPU::SGPR_32RegClass
+                                                 : &AMDGPU::VGPR_32RegClass;
+    const TargetRegisterClass *SrcRC = IsSGPRSrc ? &AMDGPU::SGPR_32RegClass
+                                                 : &AMDGPU::VGPR_32RegClass;
+    MCRegister NewDestReg =
+      RI.getMatchingSuperReg(DestReg, DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
+                             DstRC);
+    MCRegister NewSrcReg =
+      RI.getMatchingSuperReg(SrcReg, SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
+                             SrcRC);
 
-    bool DstLow = RC == &AMDGPU::VGPR_LO16RegClass;
-    bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg);
-    DestReg = RI.getMatchingSuperReg(DestReg,
-                                     DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                                     &AMDGPU::VGPR_32RegClass);
-    SrcReg = RI.getMatchingSuperReg(SrcReg,
-                                    SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                                    &AMDGPU::VGPR_32RegClass);
-
-    if (DestReg == SrcReg) {
-      // l -> h : v_pk_add_u16 v1, v1, 0 op_sel_hi:[0,0]
-      // h -> l : v_pk_add_u16 v1, v1, 0 op_sel:[1,0] op_sel_hi:[1,0]
-      if (DstLow == SrcLow)
+    if (IsSGPRDst) {
+      if (!IsSGPRSrc) {
+        reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
         return;
-      BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_ADD_U16), DestReg)
-        .addImm(DstLow ? SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1 : 0)
-        .addReg(DestReg, RegState::Undef)
-        .addImm(0) // src1_mod
-        .addImm(0) // src1
-        .addImm(0)
-        .addImm(0)
-        .addImm(0)
-        .addImm(0)
-        .addImm(0);
+      }
 
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), NewDestReg)
+        .addReg(NewSrcReg, getKillRegState(KillSrc));
       return;
     }
 
-    // Last instruction first:
-    auto Last = BuildMI(MBB, MI, DL, get(AMDGPU::V_ALIGNBYTE_B32), DestReg)
-      .addReg((SrcLow && !DstLow) ? SrcReg : DestReg,
-              (SrcLow && !DstLow) ? getKillRegState(KillSrc) : 0)
-      .addReg((!SrcLow && DstLow) ? SrcReg : DestReg,
-              (!SrcLow && DstLow) ? getKillRegState(KillSrc) : 0)
-      .addImm(2);
+    if (IsSGPRSrc && !ST.hasSDWAScalar()) {
+      if (!DstLow || !SrcLow) {
+        reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
+                          "Cannot use hi16 subreg on VI!");
+      }
 
-    unsigned OpcFirst = (DstLow == SrcLow) ? AMDGPU::V_ALIGNBYTE_B32
-                                           : SrcLow ? AMDGPU::V_LSHRREV_B32_e32
-                                                    : AMDGPU::V_LSHLREV_B32_e32;
-    auto First = BuildMI(MBB, &*Last, DL, get(OpcFirst), DestReg);
-    if (DstLow == SrcLow) { // alignbyte
-      First
-          .addReg(SrcLow ? SrcReg : DestReg,
-                  SrcLow ? getKillRegState(KillSrc) : unsigned(RegState::Undef))
-          .addReg(SrcLow ? DestReg : SrcReg,
-                  SrcLow ? unsigned(RegState::Undef) : getKillRegState(KillSrc))
-          .addImm(2);
-    } else {
-      First.addImm(16)
-           .addReg(DestReg, RegState::Undef);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), NewDestReg)
+        .addReg(NewSrcReg, getKillRegState(KillSrc));
+      return;
     }
 
+    auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
+      .addImm(0) // src0_modifiers
+      .addReg(NewSrcReg)
+      .addImm(0) // clamp
+      .addImm(DstLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                     : AMDGPU::SDWA::SdwaSel::WORD_1)
+      .addImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+      .addImm(SrcLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                     : AMDGPU::SDWA::SdwaSel::WORD_1)
+      .addReg(NewDestReg, RegState::Implicit | RegState::Undef);
+    // First implicit operand is $exec.
+    MIB->tieOperands(0, MIB->getNumOperands() - 1);
     return;
   }
 

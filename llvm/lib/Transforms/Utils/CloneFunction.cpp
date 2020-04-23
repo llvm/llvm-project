@@ -367,8 +367,8 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
     hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
 
     if (CodeInfo)
-      if (auto CS = ImmutableCallSite(&*II))
-        if (CS.hasOperandBundles())
+      if (auto *CB = dyn_cast<CallBase>(&*II))
+        if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
@@ -424,8 +424,8 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
     VMap[OldTI] = NewInst;             // Add instruction map to value.
 
     if (CodeInfo)
-      if (auto CS = ImmutableCallSite(OldTI))
-        if (CS.hasOperandBundles())
+      if (auto *CB = dyn_cast<CallBase>(OldTI))
+        if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
@@ -619,8 +619,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
     // Skip over non-intrinsic callsites, we don't want to remove any nodes from
     // the CGSCC.
-    CallSite CS = CallSite(I);
-    if (CS && CS.getCalledFunction() && !CS.getCalledFunction()->isIntrinsic())
+    CallBase *CB = dyn_cast<CallBase>(I);
+    if (CB && CB->getCalledFunction() &&
+        !CB->getCalledFunction()->isIntrinsic())
       continue;
 
     // See if this instruction simplifies.

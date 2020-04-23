@@ -14,6 +14,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -379,5 +380,40 @@ TEST_F(MemoryBufferTest, writeThroughFile) {
   auto &MB = **MBOrError;
   ASSERT_EQ(16u, MB.getBufferSize());
   EXPECT_EQ("xxxxxxxxxxxxxxxx", MB.getBuffer());
+}
+
+TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
+  // Verify that `MemoryBuffer::getOpenFile` will use mmap when
+  // `RequiresNullTerminator = false`, `IsVolatile = true`, and the file is
+  // large enough to use mmap.
+  //
+  // This is done because Clang should use this mode to open module files, and
+  // falling back to malloc for them causes a huge memory usage increase.
+
+  int FD;
+  SmallString<64> TestPath;
+  ASSERT_NO_ERROR(sys::fs::createTemporaryFile(
+      "MemoryBufferTest_mmapVolatileNoNull", "temp", FD, TestPath));
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, true);
+  // Create a file large enough to mmap. 4 pages should be enough.
+  unsigned PageSize = sys::Process::getPageSizeEstimate();
+  unsigned FileWrites = (PageSize * 4) / 8;
+  for (unsigned i = 0; i < FileWrites; ++i)
+    OF << "01234567";
+  OF.close();
+
+  Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  auto OnExit =
+      make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+
+  auto MBOrError = MemoryBuffer::getOpenFile(*File, TestPath,
+      /*FileSize=*/-1, /*RequiresNullTerminator=*/false, /*IsVolatile=*/true);
+  ASSERT_NO_ERROR(MBOrError.getError())
+  OwningBuffer MB = std::move(*MBOrError);
+  EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
+  EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
+  EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
 }
 }

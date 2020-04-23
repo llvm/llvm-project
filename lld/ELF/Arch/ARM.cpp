@@ -65,6 +65,7 @@ ARM::ARM() {
   ipltEntrySize = 16;
   trapInstr = {0xd4, 0xd4, 0xd4, 0xd4};
   needsThunks = true;
+  defaultMaxPageSize = 65536;
 }
 
 uint32_t ARM::calcEFlags() const {

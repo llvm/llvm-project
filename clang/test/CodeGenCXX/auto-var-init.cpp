@@ -748,7 +748,7 @@ TEST_UNINIT(paddedpacked, paddedpacked);
 // PATTERN-LABEL: @test_paddedpacked_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddedpacked_uninit.uninit
 // PATTERN-O1:  %[[C:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 0
-// PATTERN-O1  store i8 [[I8]], i8* %[[C]], align
+// PATTERN-O1:  store i8 [[I8]], i8* %[[C]], align
 // PATTERN-O1:  %[[I:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
 // PATTERN-O1: store i32 [[I32]], i32* %[[I]], align
 
@@ -1175,7 +1175,7 @@ TEST_UNINIT(complexfloat, _Complex float);
 // PATTERN-LABEL: @test_complexfloat_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_complexfloat_uninit.uninit
 // PATTERN-O1:  %[[F1:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 0
-// PATTERN-O1  store float 0xFFFFFFFFE0000000, float* %[[F1]], align
+// PATTERN-O1: store float 0xFFFFFFFFE0000000, float* %[[F1]], align
 // PATTERN-O1:  %[[F2:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
 // PATTERN-O1: store float 0xFFFFFFFFE0000000, float* %[[F2]], align
 

@@ -32,6 +32,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <string>
@@ -88,6 +89,31 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 bool isPreambleCompatible(const PreambleData &Preamble,
                           const ParseInputs &Inputs, PathRef FileName,
                           const CompilerInvocation &CI);
+
+/// Stores information required to parse a TU using a (possibly stale) Baseline
+/// preamble. Updates compiler invocation to approximately reflect additions to
+/// the preamble section of Modified contents, e.g. new include directives.
+class PreamblePatch {
+public:
+  // With an empty patch, the preamble is used verbatim.
+  PreamblePatch() = default;
+  /// Builds a patch that contains new PP directives introduced to the preamble
+  /// section of \p Modified compared to \p Baseline.
+  /// FIXME: This only handles include directives, we should at least handle
+  /// define/undef.
+  static PreamblePatch create(llvm::StringRef FileName,
+                              const ParseInputs &Modified,
+                              const PreambleData &Baseline);
+  /// Adjusts CI (which compiles the modified inputs) to be used with the
+  /// baseline preamble. This is done by inserting an artifical include to the
+  /// \p CI that contains new directives calculated in create.
+  void apply(CompilerInvocation &CI) const;
+
+private:
+  std::string PatchContents;
+  std::string PatchFileName;
+};
+
 } // namespace clangd
 } // namespace clang
 

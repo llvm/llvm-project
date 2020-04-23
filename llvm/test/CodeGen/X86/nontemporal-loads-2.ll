@@ -921,44 +921,24 @@ define <32 x i16> @test_v32i16_align16(<32 x i16>* %src) nounwind {
 ; AVX2-NEXT:    popq %rbp
 ; AVX2-NEXT:    retq
 ;
-; AVX512DQ-LABEL: test_v32i16_align16:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:    movq %rsp, %rbp
-; AVX512DQ-NEXT:    andq $-32, %rsp
-; AVX512DQ-NEXT:    subq $96, %rsp
-; AVX512DQ-NEXT:    vmovntdqa 16(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, (%rsp)
-; AVX512DQ-NEXT:    vmovntdqa 48(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovntdqa 32(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovaps (%rsp), %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, {{[0-9]+}}(%rsp), %zmm0, %zmm0
-; AVX512DQ-NEXT:    movq %rbp, %rsp
-; AVX512DQ-NEXT:    popq %rbp
-; AVX512DQ-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v32i16_align16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
-; AVX512BW-NEXT:    vmovntdqa 48(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa 32(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa 16(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, (%rsp)
-; AVX512BW-NEXT:    vmovaps (%rsp), %zmm0
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_v32i16_align16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    movq %rsp, %rbp
+; AVX512-NEXT:    andq $-64, %rsp
+; AVX512-NEXT:    subq $128, %rsp
+; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa 16(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsp)
+; AVX512-NEXT:    vmovaps (%rsp), %zmm0
+; AVX512-NEXT:    movq %rbp, %rsp
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
   %1 = load <32 x i16>, <32 x i16>* %src, align 16, !nontemporal !1
   ret <32 x i16> %1
 }
@@ -1020,44 +1000,24 @@ define <64 x i8> @test_v64i8_align16(<64 x i8>* %src) nounwind {
 ; AVX2-NEXT:    popq %rbp
 ; AVX2-NEXT:    retq
 ;
-; AVX512DQ-LABEL: test_v64i8_align16:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:    movq %rsp, %rbp
-; AVX512DQ-NEXT:    andq $-32, %rsp
-; AVX512DQ-NEXT:    subq $96, %rsp
-; AVX512DQ-NEXT:    vmovntdqa 16(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, (%rsp)
-; AVX512DQ-NEXT:    vmovntdqa 48(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovntdqa 32(%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512DQ-NEXT:    vmovaps (%rsp), %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, {{[0-9]+}}(%rsp), %zmm0, %zmm0
-; AVX512DQ-NEXT:    movq %rbp, %rsp
-; AVX512DQ-NEXT:    popq %rbp
-; AVX512DQ-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v64i8_align16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
-; AVX512BW-NEXT:    vmovntdqa 48(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa 32(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa 16(%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa %xmm0, (%rsp)
-; AVX512BW-NEXT:    vmovaps (%rsp), %zmm0
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_v64i8_align16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    movq %rsp, %rbp
+; AVX512-NEXT:    andq $-64, %rsp
+; AVX512-NEXT:    subq $128, %rsp
+; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa 16(%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsp)
+; AVX512-NEXT:    vmovaps (%rsp), %zmm0
+; AVX512-NEXT:    movq %rbp, %rsp
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %src, align 16, !nontemporal !1
   ret <64 x i8> %1
 }
@@ -1299,27 +1259,20 @@ define <32 x i16> @test_v32i16_align32(<32 x i16>* %src) nounwind {
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512DQ-LABEL: test_v32i16_align32:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512DQ-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512DQ-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v32i16_align32:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
-; AVX512BW-NEXT:    vmovntdqa 32(%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX512BW-NEXT:    vmovaps (%rsp), %zmm0
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_v32i16_align32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    movq %rsp, %rbp
+; AVX512-NEXT:    andq $-64, %rsp
+; AVX512-NEXT:    subq $128, %rsp
+; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rsp)
+; AVX512-NEXT:    vmovaps (%rsp), %zmm0
+; AVX512-NEXT:    movq %rbp, %rsp
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
   %1 = load <32 x i16>, <32 x i16>* %src, align 32, !nontemporal !1
   ret <32 x i16> %1
 }
@@ -1357,27 +1310,20 @@ define <64 x i8> @test_v64i8_align32(<64 x i8>* %src) nounwind {
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512DQ-LABEL: test_v64i8_align32:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512DQ-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512DQ-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v64i8_align32:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
-; AVX512BW-NEXT:    vmovntdqa 32(%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX512BW-NEXT:    vmovaps (%rsp), %zmm0
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: test_v64i8_align32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    movq %rsp, %rbp
+; AVX512-NEXT:    andq $-64, %rsp
+; AVX512-NEXT:    subq $128, %rsp
+; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rsp)
+; AVX512-NEXT:    vmovaps (%rsp), %zmm0
+; AVX512-NEXT:    movq %rbp, %rsp
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %src, align 32, !nontemporal !1
   ret <64 x i8> %1
 }

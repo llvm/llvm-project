@@ -1,5 +1,6 @@
 include "config/public_api.td"
 
+include "spec/gnu_ext.td"
 include "spec/linux.td"
 include "spec/posix.td"
 include "spec/stdc.td"
@@ -11,10 +12,23 @@ def SizeT : TypeDecl<"size_t"> {
   }];
 }
 
+def SSizeT : TypeDecl<"ssize_t"> {
+  let Decl = [{
+    #define __need_ssize_t
+    #include <__posix-types.h>
+  }];
+}
+
 def OffT : TypeDecl<"off_t"> {
   let Decl = [{
     #define __need_off_t
     #include <__posix-types.h>
+  }];
+}
+
+def FILE : TypeDecl<"FILE"> {
+  let Decl = [{
+    typedef struct FILE FILE;
   }];
 }
 
@@ -117,7 +131,10 @@ def MathAPI : PublicAPI<"math.h"> {
     IsNanMacro,
   ];
   let Functions = [
+   "cosf",
    "round",
+   "sincosf",
+   "sinf",
   ];
 }
 
@@ -159,10 +176,11 @@ def StringAPI : PublicAPI<"string.h"> {
 def StdIOAPI : PublicAPI<"stdio.h"> {
   let TypeDeclarations = [
     SizeT,
+    FILE,
   ];
 
   let Functions = [
-    "snprintf",
+    "fwrite",
   ];
 }
 
@@ -295,5 +313,16 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
     "mtx_unlock",
     "thrd_create",
     "thrd_join",
+  ];
+}
+
+def UniStdAPI : PublicAPI<"unistd.h"> {
+  let TypeDeclarations = [
+    SSizeT,
+    SizeT,
+  ];
+
+  let Functions = [
+    "write",
   ];
 }

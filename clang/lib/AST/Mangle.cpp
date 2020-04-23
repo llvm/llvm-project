@@ -57,7 +57,9 @@ enum CCMangling {
 static bool isExternC(const NamedDecl *ND) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
     return FD->isExternC();
-  return cast<VarDecl>(ND)->isExternC();
+  if (const VarDecl *VD = dyn_cast<VarDecl>(ND))
+    return VD->isExternC();
+  return false;
 }
 
 static CCMangling getCallingConvMangling(const ASTContext &Context,
@@ -122,6 +124,10 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   if (D->hasAttr<AsmLabelAttr>())
     return true;
 
+  // Declarations that don't have identifier names always need to be mangled.
+  if (isa<MSGuidDecl>(D))
+    return true;
+
   return shouldMangleCXXName(D);
 }
 
@@ -152,6 +158,9 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     Out << ALA->getLabel();
     return;
   }
+
+  if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    return mangleMSGuidDecl(GD, Out);
 
   const ASTContext &ASTContext = getASTContext();
   CCMangling CC = getCallingConvMangling(ASTContext, D);
@@ -207,6 +216,20 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
         llvm::alignTo(ASTContext.getTypeSize(AT), TI.getPointerWidth(0)) /
         TI.getPointerWidth(0);
   Out << ((TI.getPointerWidth(0) / 8) * ArgWords);
+}
+
+void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &Out) {
+  // For now, follow the MSVC naming convention for GUID objects on all
+  // targets.
+  MSGuidDecl::Parts P = GD->getParts();
+  Out << llvm::format("_GUID_%08" PRIx32 "_%04" PRIx32 "_%04" PRIx32 "_",
+                      P.Part1, P.Part2, P.Part3);
+  unsigned I = 0;
+  for (uint8_t C : P.Part4And5) {
+    Out << llvm::format("%02" PRIx8, C);
+    if (++I == 2)
+      Out << "_";
+  }
 }
 
 void MangleContext::mangleGlobalBlock(const BlockDecl *BD,

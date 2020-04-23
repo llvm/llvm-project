@@ -14,7 +14,6 @@
 #define MLIR_IR_DIAGNOSTICS_H
 
 #include "mlir/IR/Location.h"
-#include "mlir/Support/STLExtras.h"
 #include <functional>
 
 namespace llvm {
@@ -232,9 +231,8 @@ public:
   /// is ','.
   template <typename T, template <typename> class Container>
   Diagnostic &appendRange(const Container<T> &c, const char *delim = ", ") {
-    interleave(
-        c, [&](const detail::ValueOfRange<Container<T>> &a) { *this << a; },
-        [&]() { *this << delim; });
+    llvm::interleave(
+        c, [this](const auto &a) { *this << a; }, [&]() { *this << delim; });
     return *this;
   }
 

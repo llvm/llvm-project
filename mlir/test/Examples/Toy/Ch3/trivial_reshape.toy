@@ -1,0 +1,16 @@
+# RUN: toyc-ch3 %s -emit=mlir -opt 2>&1 | FileCheck %s
+
+def main() {
+  var a<2,1> = [1, 2];
+  var b<2,1> = a;
+  var c<2,1> = b;
+  print(c);
+}
+
+# CHECK-LABEL: func @main()
+# CHECK-NEXT:    [[VAL_0:%.*]] = toy.constant
+# CHECK-SAME: 		dense<[
+# CHECK-SAME: 	 	[1.000000e+00], [2.000000e+00]
+# CHECK-SAME: 		]> : tensor<2x1xf64>
+# CHECK-NEXT:    toy.print [[VAL_0]] : tensor<2x1xf64>
+# CHECK-NEXT:    toy.return

@@ -787,7 +787,7 @@ def Z30   : AArch64Reg<30, "z30", [Q30, Z30_HI]>, DwarfRegNum<[126]>;
 def Z31   : AArch64Reg<31, "z31", [Q31, Z31_HI]>, DwarfRegNum<[127]>;
 }
 
-// Enum descibing the element size for destructive
+// Enum describing the element size for destructive
 // operations.
 class ElementSizeEnum<bits<3> val> {
   bits<3> Value = val;

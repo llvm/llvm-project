@@ -1515,6 +1515,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
+    case Type::ExtInt:
       if (TDF & TDF_SkipNonDependent)
         return Sema::TDK_Success;
 
@@ -2104,6 +2105,33 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
                                              true, Info, Deduced);
       }
 
+      return Sema::TDK_NonDeducedMismatch;
+    }
+    case Type::DependentExtInt: {
+      const auto *IntParam = cast<DependentExtIntType>(Param);
+
+      if (const auto *IntArg = dyn_cast<ExtIntType>(Arg)){
+        if (IntParam->isUnsigned() != IntArg->isUnsigned())
+          return Sema::TDK_NonDeducedMismatch;
+
+        NonTypeTemplateParmDecl *NTTP =
+            getDeducedParameterFromExpr(Info, IntParam->getNumBitsExpr());
+        if (!NTTP)
+          return Sema::TDK_Success;
+
+        llvm::APSInt ArgSize(S.Context.getTypeSize(S.Context.IntTy), false);
+        ArgSize = IntArg->getNumBits();
+
+        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP, ArgSize,
+                                             S.Context.IntTy, true, Info,
+                                             Deduced);
+      }
+
+      if (const auto *IntArg = dyn_cast<DependentExtIntType>(Arg)) {
+        if (IntParam->isUnsigned() != IntArg->isUnsigned())
+          return Sema::TDK_NonDeducedMismatch;
+        return Sema::TDK_Success;
+      }
       return Sema::TDK_NonDeducedMismatch;
     }
 
@@ -5850,6 +5878,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                cast<DeducedType>(T)->getDeducedType(),
                                OnlyDeduced, Depth, Used);
     break;
+  case Type::DependentExtInt:
+    MarkUsedTemplateParameters(Ctx,
+                               cast<DependentExtIntType>(T)->getNumBitsExpr(),
+                               OnlyDeduced, Depth, Used);
+    break;
 
   // None of these types have any template parameters in them.
   case Type::Builtin:
@@ -5862,6 +5895,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::ObjCObjectPointer:
   case Type::UnresolvedUsing:
   case Type::Pipe:
+  case Type::ExtInt:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

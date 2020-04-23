@@ -25,7 +25,6 @@ template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
 class ConstantExpr;
-class ConstantVector;
 class DataLayout;
 class Function;
 class GlobalValue;

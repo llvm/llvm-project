@@ -5,9 +5,9 @@
   source_filename = "test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   define <2 x double> @stack_fold_addpd(<2 x double> %a0, <2 x double> %a1) {
-    %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-    %2 = fadd <2 x double> %a0, %a1
-    ret <2 x double> %2
+    tail call void asm sideeffect "nop", "~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+    %1 = fadd <2 x double> %a0, %a1
+    ret <2 x double> %1
   }
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #0
@@ -23,7 +23,6 @@ registers:
   - { id: 0, class: vr128 }
   - { id: 1, class: vr128 }
   - { id: 2, class: vr128 }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$xmm0', virtual-reg: '%0' }
   - { reg: '$xmm1', virtual-reg: '%1' }
@@ -38,15 +37,15 @@ body:             |
     ; CHECK: liveins: $xmm0, $xmm1
     ; CHECK: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, $xmm1 :: (store 16 into %stack.0)
     ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: INLINEASM &nop, 1, 7405578, def dead %2, 12, implicit-def dead early-clobber $xmm2, 12, implicit-def dead early-clobber $xmm3, 12, implicit-def dead early-clobber $xmm4, 12, implicit-def dead early-clobber $xmm5, 12, implicit-def dead early-clobber $xmm6, 12, implicit-def dead early-clobber $xmm7, 12, implicit-def dead early-clobber $xmm8, 12, implicit-def dead early-clobber $xmm9, 12, implicit-def dead early-clobber $xmm10, 12, implicit-def dead early-clobber $xmm11, 12, implicit-def dead early-clobber $xmm12, 12, implicit-def dead early-clobber $xmm13, 12, implicit-def dead early-clobber $xmm14, 12, implicit-def dead early-clobber $xmm15, 12, implicit-def dead early-clobber $eflags
+    ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $xmm1, 12 /* clobber */, implicit-def dead early-clobber $xmm2, 12 /* clobber */, implicit-def dead early-clobber $xmm3, 12 /* clobber */, implicit-def dead early-clobber $xmm4, 12 /* clobber */, implicit-def dead early-clobber $xmm5, 12 /* clobber */, implicit-def dead early-clobber $xmm6, 12 /* clobber */, implicit-def dead early-clobber $xmm7, 12 /* clobber */, implicit-def dead early-clobber $xmm8, 12 /* clobber */, implicit-def dead early-clobber $xmm9, 12 /* clobber */, implicit-def dead early-clobber $xmm10, 12 /* clobber */, implicit-def dead early-clobber $xmm11, 12 /* clobber */, implicit-def dead early-clobber $xmm12, 12 /* clobber */, implicit-def dead early-clobber $xmm13, 12 /* clobber */, implicit-def dead early-clobber $xmm14, 12 /* clobber */, implicit-def dead early-clobber $xmm15, 12 /* clobber */, implicit-def dead early-clobber $eflags
     ; CHECK: [[COPY]]:vr128 = nofpexcept ADDPDrm [[COPY]], %stack.0, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load 16 from %stack.0)
     ; CHECK: $xmm0 = COPY [[COPY]]
     ; CHECK: RET 0, $xmm0
     %1:vr128 = COPY $xmm1
-    %3:vr128 = COPY $xmm0
-    INLINEASM &nop, 1, 7405578, def dead %2, 12, implicit-def dead early-clobber $xmm2, 12, implicit-def dead early-clobber $xmm3, 12, implicit-def dead early-clobber $xmm4, 12, implicit-def dead early-clobber $xmm5, 12, implicit-def dead early-clobber $xmm6, 12, implicit-def dead early-clobber $xmm7, 12, implicit-def dead early-clobber $xmm8, 12, implicit-def dead early-clobber $xmm9, 12, implicit-def dead early-clobber $xmm10, 12, implicit-def dead early-clobber $xmm11, 12, implicit-def dead early-clobber $xmm12, 12, implicit-def dead early-clobber $xmm13, 12, implicit-def dead early-clobber $xmm14, 12, implicit-def dead early-clobber $xmm15, 12, implicit-def dead early-clobber $eflags
-    %3:vr128 = nofpexcept ADDPDrr %3, %1, implicit $mxcsr
-    $xmm0 = COPY %3
+    %2:vr128 = COPY $xmm0
+    INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $xmm1, 12 /* clobber */, implicit-def dead early-clobber $xmm2, 12 /* clobber */, implicit-def dead early-clobber $xmm3, 12 /* clobber */, implicit-def dead early-clobber $xmm4, 12 /* clobber */, implicit-def dead early-clobber $xmm5, 12 /* clobber */, implicit-def dead early-clobber $xmm6, 12 /* clobber */, implicit-def dead early-clobber $xmm7, 12 /* clobber */, implicit-def dead early-clobber $xmm8, 12 /* clobber */, implicit-def dead early-clobber $xmm9, 12 /* clobber */, implicit-def dead early-clobber $xmm10, 12 /* clobber */, implicit-def dead early-clobber $xmm11, 12 /* clobber */, implicit-def dead early-clobber $xmm12, 12 /* clobber */, implicit-def dead early-clobber $xmm13, 12 /* clobber */, implicit-def dead early-clobber $xmm14, 12 /* clobber */, implicit-def dead early-clobber $xmm15, 12 /* clobber */, implicit-def dead early-clobber $eflags
+    %2:vr128 = nofpexcept ADDPDrr %2, %1, implicit $mxcsr
+    $xmm0 = COPY %2
     RET 0, $xmm0
 
 ...

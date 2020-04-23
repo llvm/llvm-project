@@ -5,10 +5,10 @@
 // RUN: ld.lld %t1.so %t.o -o %t
 // RUN: llvm-objdump -s --triple=armv7a-linux-gnueabi %t | FileCheck %s
 
-// This tls Initial Exec sequence is with respect to a non-preemptible symbol
-// so a relaxation would normally be possible. This would result in an assertion
-// failure on ARM as the relaxation functions can't be implemented on ARM.
-// Check that the sequence is handled as initial exec
+/// This tls Initial Exec sequence is with respect to a non-preemptible symbol
+/// so a relaxation would normally be possible. This would result in an assertion
+/// failure on ARM as the relaxation functions can't be implemented on ARM.
+/// Check that the sequence is handled as initial exec
  .text
  .syntax unified
  .globl  func
@@ -37,5 +37,5 @@ x2:
  .type x2, %object
 
 // CHECK: Contents of section .got:
-// x1 at offset 8 from TP, x2 at offset 0xc from TP. Offsets include TCB size of 8
-// CHECK-NEXT: 1227c 08000000 0c000000
+/// x1 at offset 8 from TP, x2 at offset 0xc from TP. Offsets include TCB size of 8
+// CHECK-NEXT: 3027c 08000000 0c000000

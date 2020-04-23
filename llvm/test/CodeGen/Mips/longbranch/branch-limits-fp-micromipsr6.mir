@@ -77,7 +77,7 @@ body:             |
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit $v0
   ; MM: bb.3.return:
@@ -102,7 +102,7 @@ body:             |
   ; PIC:   $sp = ADDiu $sp, 8
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit $v0
   ; PIC: bb.4.return:
@@ -169,7 +169,7 @@ body:             |
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit $v0
   ; MM: bb.3.return:
@@ -194,7 +194,7 @@ body:             |
   ; PIC:   $sp = ADDiu $sp, 8
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit $v0
   ; PIC: bb.4.return:

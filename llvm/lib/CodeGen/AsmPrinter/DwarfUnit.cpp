@@ -1449,8 +1449,7 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
       addString(Enumerator, dwarf::DW_AT_name, Name);
-      auto Value = static_cast<uint64_t>(Enum->getValue());
-      addConstantValue(Enumerator, IsUnsigned, Value);
+      addConstantValue(Enumerator, Enum->getValue(), IsUnsigned);
       if (IndexEnumerators)
         addGlobalName(Name, Enumerator, Context);
     }

@@ -833,3 +833,28 @@ let Class = PipeType in {
     return ctx.getPipeType(elementType, isReadOnly);
   }]>;
 }
+
+let Class = ExtIntType in {
+  def : Property<"isUnsigned", Bool> {
+    let Read = [{ node->isUnsigned() }];
+  }
+  def : Property <"numBits", UInt32> {
+    let Read = [{ node->getNumBits() }];
+  }
+
+  def : Creator<[{
+    return ctx.getExtIntType(isUnsigned, numBits);
+  }]>;
+}
+
+let Class = DependentExtIntType in {
+  def : Property<"isUnsigned", Bool> {
+    let Read = [{ node->isUnsigned() }];
+  }
+  def : Property <"numBitsExpr", ExprRef> {
+    let Read = [{ node->getNumBitsExpr() }];
+  }
+  def : Creator<[{
+    return ctx.getDependentExtIntType(isUnsigned, numBitsExpr);
+  }]>;
+}

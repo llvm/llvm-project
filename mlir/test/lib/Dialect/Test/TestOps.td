@@ -199,6 +199,7 @@ def I64EnumAttrOp : TEST_Op<"i64_enum_attr"> {
 def IntAttrOp : TEST_Op<"int_attrs"> {
   let arguments = (ins
     AnyI32Attr:$any_i32_attr,
+    IndexAttr:$index_attr,
     UI32Attr:$ui32_attr,
     SI32Attr:$si32_attr
   );
@@ -233,6 +234,15 @@ def RankedIntElementsAttrOp : TEST_Op<"ranked_int_elements_attr"> {
       RankedI32ElementsAttr<[2]>:$vector_i32_attr,
       RankedI64ElementsAttr<[4, 8]>:$matrix_i64_attr
   );
+}
+
+def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
+  let results = (outs AnyTensor:$output);
+  DerivedTypeAttr element_dtype =
+    DerivedTypeAttr<"return getElementTypeOrSelf(output().getType());">;
+  DerivedAttr size = DerivedAttr<"int",
+    "return output().getType().cast<ShapedType>().getSizeInBits();",
+    "$_builder.getI32IntegerAttr($_self)">;
 }
 
 //===----------------------------------------------------------------------===//

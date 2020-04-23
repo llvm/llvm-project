@@ -142,8 +142,8 @@ void ThreadPlanStack::PushPlan(lldb::ThreadPlanSP new_plan_sp) {
   // If the thread plan doesn't already have a tracer, give it its parent's
   // tracer:
   // The first plan has to be a base plan:
-  assert(m_plans.size() > 0 ||
-         new_plan_sp->IsBasePlan() && "Zeroth plan must be a base plan");
+  assert((m_plans.size() > 0 || new_plan_sp->IsBasePlan()) &&
+         "Zeroth plan must be a base plan");
 
   if (!new_plan_sp->GetThreadPlanTracer()) {
     assert(!m_plans.empty());

@@ -122,8 +122,6 @@ public:
                                      const DominatorTree *DT,
                                      const Loop *CurLoop) const;
 
-  SimpleLoopSafetyInfo() : LoopSafetyInfo() {};
-
   virtual ~SimpleLoopSafetyInfo() {};
 };
 
@@ -170,8 +168,6 @@ public:
   /// from its block. It will make all cache updates to keep it correct after
   /// this removal.
   void removeInstruction(const Instruction *Inst);
-
-  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT), MW(DT) {};
 
   virtual ~ICFLoopSafetyInfo() {};
 };
@@ -468,8 +464,8 @@ struct MustBeExecutedContextExplorer {
   /// This method will evaluate \p Pred and return
   /// true if \p Pred holds in every instruction.
   bool checkForAllContext(const Instruction *PP,
-                          const function_ref<bool(const Instruction *)> &Pred) {
-    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; EIt++)
+                          function_ref<bool(const Instruction *)> Pred) {
+    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; ++EIt)
       if (!Pred(*EIt))
         return false;
     return true;

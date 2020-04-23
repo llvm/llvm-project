@@ -30,11 +30,11 @@ def main():
     if len(remaining) < 2:
         sys.stderr.write('Missing actual commands to run')
         exit(1)
-    remaining = remaining[1:] # Skip the '--'
+    commandLine = remaining[1:] # Skip the '--'
 
     # Do any necessary codesigning.
     if args.codesign_identity:
-        exe = remaining[0]
+        exe = commandLine[0]
         rc = subprocess.call(['xcrun', 'codesign', '-f', '-s', args.codesign_identity, exe], env={})
         if rc != 0:
             sys.stderr.write('Failed to codesign: ' + exe)
@@ -45,7 +45,7 @@ def main():
 
     # Create the execution directory, and make sure we remove it at the end.
     try:
-        os.mkdir(args.execdir)
+        os.makedirs(args.execdir)
 
         # Ensure the file dependencies exist and copy them to the execution directory.
         for dep in args.dependencies:
@@ -57,8 +57,8 @@ def main():
             else:
                 shutil.copy2(dep, args.execdir)
 
-        # Run the executable with the given environment in the execution directory.
-        return subprocess.call(' '.join(remaining), cwd=args.execdir, env=env, shell=True)
+        # Run the command line with the given environment in the execution directory.
+        return subprocess.call(subprocess.list2cmdline(commandLine), cwd=args.execdir, env=env, shell=True)
     finally:
         shutil.rmtree(args.execdir)
 

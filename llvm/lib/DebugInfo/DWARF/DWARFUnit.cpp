@@ -527,14 +527,20 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
 
     // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
     // Setting LocSectionBase to point past the table header.
-    if (IsDWO)
-      setLocSection(&Context.getDWARFObj().getLoclistsDWOSection(),
+    if (IsDWO) {
+      auto &DWOSection = Context.getDWARFObj().getLoclistsDWOSection();
+      if (DWOSection.Data.empty())
+        return Error::success();
+      setLocSection(&DWOSection,
                     DWARFListTableHeader::getHeaderSize(Header.getFormat()));
-    else
+    } else if (auto X = UnitDie.find(DW_AT_loclists_base)) {
       setLocSection(&Context.getDWARFObj().getLoclistsSection(),
-                    toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0));
+                    toSectionOffset(X, 0));
+    } else {
+      return Error::success();
+    }
 
-    if (LocSection->Data.size()) {
+    if (LocSection) {
       if (IsDWO)
         LoclistTableHeader.emplace(".debug_loclists.dwo", "locations");
       else
@@ -956,18 +962,12 @@ parseDWARFStringOffsetsTableHeader(DWARFDataExtractor &DA,
 
 Expected<Optional<StrOffsetsContributionDescriptor>>
 DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
-  uint64_t Offset;
-  if (IsDWO) {
-    Offset = 0;
-    if (DA.getData().data() == nullptr)
-      return None;
-  } else {
-    auto OptOffset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base));
-    if (!OptOffset)
-      return None;
-    Offset = *OptOffset;
-  }
-  auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+  assert(!IsDWO);
+  auto OptOffset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base));
+  if (!OptOffset)
+    return None;
+  auto DescOrError =
+      parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), *OptOffset);
   if (!DescOrError)
     return DescOrError.takeError();
   return *DescOrError;
@@ -975,6 +975,7 @@ DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
 
 Expected<Optional<StrOffsetsContributionDescriptor>>
 DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
+  assert(IsDWO);
   uint64_t Offset = 0;
   auto IndexEntry = Header.getIndexEntry();
   const auto *C =

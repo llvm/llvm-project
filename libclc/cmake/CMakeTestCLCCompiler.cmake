@@ -24,7 +24,7 @@ if(NOT CMAKE_CLC_COMPILER_WORKS)
   try_compile(CMAKE_CLC_COMPILER_WORKS ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testCLCCompiler.cl
     # We never generate executable so bypass the link step
-    CMAKE_FLAGS -DCMAKE_CLC_LINK_EXECUTABLE='true'
+    CMAKE_FLAGS -DCMAKE_CLC_LINK_EXECUTABLE='echo'
     OUTPUT_VARIABLE __CMAKE_CLC_COMPILER_OUTPUT)
   # Move result from cache to normal variable.
   set(CMAKE_CLC_COMPILER_WORKS ${CMAKE_CLC_COMPILER_WORKS})

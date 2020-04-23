@@ -853,120 +853,6 @@ Value *InstCombiner::dyn_castNegVal(Value *V) const {
   return nullptr;
 }
 
-/// Get negated V (that is 0-V) without increasing instruction count,
-/// assuming that the original V will become unused.
-Value *InstCombiner::freelyNegateValue(Value *V) {
-  if (Value *NegV = dyn_castNegVal(V))
-    return NegV;
-
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return nullptr;
-
-  unsigned BitWidth = I->getType()->getScalarSizeInBits();
-  switch (I->getOpcode()) {
-  // 0-(zext i1 A)  =>  sext i1 A
-  case Instruction::ZExt:
-    if (I->getOperand(0)->getType()->isIntOrIntVectorTy(1))
-      return Builder.CreateSExtOrBitCast(
-          I->getOperand(0), I->getType(), I->getName() + ".neg");
-    return nullptr;
-
-  // 0-(sext i1 A)  =>  zext i1 A
-  case Instruction::SExt:
-    if (I->getOperand(0)->getType()->isIntOrIntVectorTy(1))
-      return Builder.CreateZExtOrBitCast(
-          I->getOperand(0), I->getType(), I->getName() + ".neg");
-    return nullptr;
-
-  // 0-(A lshr (BW-1))  =>  A ashr (BW-1)
-  case Instruction::LShr:
-    if (match(I->getOperand(1), m_SpecificInt(BitWidth - 1)))
-      return Builder.CreateAShr(
-          I->getOperand(0), I->getOperand(1),
-          I->getName() + ".neg", cast<BinaryOperator>(I)->isExact());
-    return nullptr;
-
-  // 0-(A ashr (BW-1))  =>  A lshr (BW-1)
-  case Instruction::AShr:
-    if (match(I->getOperand(1), m_SpecificInt(BitWidth - 1)))
-      return Builder.CreateLShr(
-          I->getOperand(0), I->getOperand(1),
-          I->getName() + ".neg", cast<BinaryOperator>(I)->isExact());
-    return nullptr;
-
-  // Negation is equivalent to bitwise-not + 1.
-  case Instruction::Xor: {
-    // Special case for negate of 'not' - replace with increment:
-    // 0 - (~A)  =>  ((A ^ -1) ^ -1) + 1  =>  A + 1
-    Value *A;
-    if (match(I, m_Not(m_Value(A))))
-      return Builder.CreateAdd(A, ConstantInt::get(A->getType(), 1),
-                               I->getName() + ".neg");
-
-    // General case xor (not a 'not') requires creating a new xor, so this has a
-    // one-use limitation:
-    // 0 - (A ^ C)  =>  ((A ^ C) ^ -1) + 1  =>  A ^ ~C + 1
-    Constant *C;
-    if (match(I, m_OneUse(m_Xor(m_Value(A), m_Constant(C))))) {
-      Value *Xor = Builder.CreateXor(A, ConstantExpr::getNot(C));
-      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
-                               I->getName() + ".neg");
-    }
-    return nullptr;
-  }
-
-  default:
-    break;
-  }
-
-  // TODO: The "sub" pattern below could also be applied without the one-use
-  // restriction. Not allowing it for now in line with existing behavior.
-  if (!I->hasOneUse())
-    return nullptr;
-
-  switch (I->getOpcode()) {
-  // 0-(A-B)  =>  B-A
-  case Instruction::Sub:
-    return Builder.CreateSub(
-        I->getOperand(1), I->getOperand(0), I->getName() + ".neg");
-
-  // 0-(A sdiv C)  =>  A sdiv (0-C)  provided the negation doesn't overflow.
-  case Instruction::SDiv: {
-    Constant *C = dyn_cast<Constant>(I->getOperand(1));
-    if (C && !C->containsUndefElement() && C->isNotMinSignedValue() &&
-        C->isNotOneValue())
-      return Builder.CreateSDiv(I->getOperand(0), ConstantExpr::getNeg(C),
-          I->getName() + ".neg", cast<BinaryOperator>(I)->isExact());
-    return nullptr;
-  }
-
-  // 0-(A<<B)  =>  (0-A)<<B
-  case Instruction::Shl:
-    if (Value *NegA = freelyNegateValue(I->getOperand(0)))
-      return Builder.CreateShl(NegA, I->getOperand(1), I->getName() + ".neg");
-    return nullptr;
-
-  // 0-(trunc A)  =>  trunc (0-A)
-  case Instruction::Trunc:
-    if (Value *NegA = freelyNegateValue(I->getOperand(0)))
-      return Builder.CreateTrunc(NegA, I->getType(), I->getName() + ".neg");
-    return nullptr;
-
-  // 0-(A*B)  =>  (0-A)*B
-  // 0-(A*B)  =>  A*(0-B)
-  case Instruction::Mul:
-    if (Value *NegA = freelyNegateValue(I->getOperand(0)))
-      return Builder.CreateMul(NegA, I->getOperand(1), V->getName() + ".neg");
-    if (Value *NegB = freelyNegateValue(I->getOperand(1)))
-      return Builder.CreateMul(I->getOperand(0), NegB, V->getName() + ".neg");
-    return nullptr;
-
-  default:
-    return nullptr;
-  }
-}
-
 static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
                                              InstCombiner::BuilderTy &Builder) {
   if (auto *Cast = dyn_cast<CastInst>(&I))
@@ -1854,12 +1740,16 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
+  bool IsGEPSrcEleScalable =
+      GEPEltType->isVectorTy() && cast<VectorType>(GEPEltType)->isScalable();
   if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.
-  if (auto *GEPVTy = dyn_cast<VectorType>(GEP.getType())) {
-    auto VWidth = GEPVTy->getNumElements();
+  // Skip if GEP return type is scalable. The number of elements is unknown at
+  // compile-time.
+  if (GEPType->isVectorTy() && !cast<VectorType>(GEPType)->isScalable()) {
+    auto VWidth = cast<VectorType>(GEPType)->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
@@ -1896,7 +1786,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *NewIndexType =
         IndexTy->isVectorTy()
             ? VectorType::get(NewScalarIndexTy,
-                              cast<VectorType>(IndexTy)->getNumElements())
+                              cast<VectorType>(IndexTy)->getElementCount())
             : NewScalarIndexTy;
 
     // If the element type has zero size then any index over it is equivalent
@@ -2146,11 +2036,13 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                              GEP.getName());
   }
 
-  if (GEP.getNumIndices() == 1) {
+  // Skip if GEP source element type is scalable. The type alloc size is unknown
+  // at compile-time.
+  if (GEP.getNumIndices() == 1 && !IsGEPSrcEleScalable) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType);
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
 
       bool Matched = false;
       uint64_t C;
@@ -2263,10 +2155,12 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
         }
       }
-    } else if (GEP.getNumOperands() == 2) {
-      // Transform things like:
-      // %t = getelementptr i32* bitcast ([2 x i32]* %str to i32*), i32 %V
-      // into:  %t1 = getelementptr [2 x i32]* %str, i32 0, i32 %V; bitcast
+    } else if (GEP.getNumOperands() == 2 && !IsGEPSrcEleScalable) {
+      // Skip if GEP source element type is scalable. The type alloc size is
+      // unknown at compile-time.
+      // Transform things like: %t = getelementptr i32*
+      // bitcast ([2 x i32]* %str to i32*), i32 %V into:  %t1 = getelementptr [2
+      // x i32]* %str, i32 0, i32 %V; bitcast
       if (StrippedPtrEltTy->isArrayTy() &&
           DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType()) ==
               DL.getTypeAllocSize(GEPEltType)) {
@@ -2290,8 +2184,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
-        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy).getFixedSize();
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2330,9 +2224,10 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           StrippedPtrEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType);
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
         uint64_t ArrayEltSize =
-            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType());
+            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
+                .getFixedSize();
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2480,7 +2375,9 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (auto *AI = dyn_cast<AllocaInst>(UnderlyingPtrOp)) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
-        APInt AllocSize(IdxWidth, DL.getTypeAllocSize(AI->getAllocatedType()));
+        APInt AllocSize(
+            IdxWidth,
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, makeArrayRef(Ops).slice(1),

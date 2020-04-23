@@ -342,7 +342,7 @@ public:
 
   /// Emit location information expressed via WebAssembly location + offset
   /// The Index is an identifier for locals, globals or operand stack.
-  void addWasmLocation(unsigned Index, int64_t Offset);
+  void addWasmLocation(unsigned Index, uint64_t Offset);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.

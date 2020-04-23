@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpFormatGen.h"
-#include "mlir/Support/STLExtras.h"
-#include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/OpClass.h"
@@ -398,21 +396,66 @@ void OpEmitter::genAttrGetters() {
     }
   }
 
-  // Generate helper method to query whether a named attribute is a derived
-  // attribute. This enables, for example, avoiding adding an attribute that
-  // overlaps with a derived attribute.
-  auto derivedAttr = make_filter_range(op.getAttributes(),
-                                       [](const NamedAttribute &namedAttr) {
-                                         return namedAttr.attr.isDerivedAttr();
-                                       });
-  if (!derivedAttr.empty()) {
+  auto derivedAttrs = make_filter_range(op.getAttributes(),
+                                        [](const NamedAttribute &namedAttr) {
+                                          return namedAttr.attr.isDerivedAttr();
+                                        });
+  if (!derivedAttrs.empty()) {
     opClass.addTrait("DerivedAttributeOpInterface::Trait");
-    auto &method = opClass.newMethod("bool", "isDerivedAttribute",
-                                     "StringRef name", OpMethod::MP_Static);
-    auto &body = method.body();
-    for (auto namedAttr : derivedAttr)
-      body << "    if (name == \"" << namedAttr.name << "\") return true;\n";
-    body << " return false;";
+    // Generate helper method to query whether a named attribute is a derived
+    // attribute. This enables, for example, avoiding adding an attribute that
+    // overlaps with a derived attribute.
+    {
+      auto &method = opClass.newMethod("bool", "isDerivedAttribute",
+                                       "StringRef name", OpMethod::MP_Static);
+      auto &body = method.body();
+      for (auto namedAttr : derivedAttrs)
+        body << "  if (name == \"" << namedAttr.name << "\") return true;\n";
+      body << " return false;";
+    }
+    // Generate method to materialize derived attributes as a DictionaryAttr.
+    {
+      OpMethod &method =
+          opClass.newMethod("DictionaryAttr", "materializeDerivedAttributes");
+      auto &body = method.body();
+
+      auto nonMaterializable =
+          make_filter_range(derivedAttrs, [](const NamedAttribute &namedAttr) {
+            return namedAttr.attr.getConvertFromStorageCall().empty();
+          });
+      if (!nonMaterializable.empty()) {
+        std::string attrs;
+        llvm::raw_string_ostream os(attrs);
+        interleaveComma(nonMaterializable, os,
+                        [&](const NamedAttribute &attr) { os << attr.name; });
+        PrintWarning(
+            op.getLoc(),
+            formatv(
+                "op has non-materialzable derived attributes '{0}', skipping",
+                os.str()));
+        body << formatv("  emitOpError(\"op has non-materializable derived "
+                        "attributes '{0}'\");\n",
+                        attrs);
+        body << "  return nullptr;";
+        return;
+      }
+
+      body << "  MLIRContext* ctx = getContext();\n";
+      body << "  Builder odsBuilder(ctx); (void)odsBuilder;\n";
+      body << "  return DictionaryAttr::get({\n";
+      interleave(
+          derivedAttrs, body,
+          [&](const NamedAttribute &namedAttr) {
+            auto tmpl = namedAttr.attr.getConvertFromStorageCall();
+            body << "    {Identifier::get(\"" << namedAttr.name << "\", ctx),\n"
+                 << tgfmt(tmpl, &fctx.withSelf(namedAttr.name + "()")
+                                     .withBuilder("odsBuilder")
+                                     .addSubst("_ctx", "ctx"))
+                 << "}";
+          },
+          ",\n");
+      body << "\n    }, ctx);";
+    }
   }
 }
 
@@ -687,6 +730,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
     auto &m =
         opClass.newMethod("void", "build", paramList, OpMethod::MP_Static);
     auto &body = m.body();
+
     genCodeForAddingArgAndRegionForBuilder(
         body, /*isRawValueAttr=*/attrType == AttrParamKind::UnwrappedValue);
 
@@ -764,7 +808,9 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   auto &body = m.body();
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -845,7 +891,10 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   }
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
+
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
 
@@ -931,7 +980,9 @@ void OpEmitter::genCollectiveParamBuilder() {
          << (numVariadicOperands != 0 ? " >= " : " == ")
          << numNonVariadicOperands
          << "u && \"mismatched number of parameters\");\n";
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -1101,6 +1152,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
       body << "  if (" << argName << ")\n  ";
     body << "  " << builderOpState << ".addOperands(" << argName << ");\n";
   }
+  if (op.hasResizableOperandList())
+    body << formatv("  {0}.setOperandListToResizable();\n", builderOpState);
 
   // If the operation has the operand segment size attribute, add it here.
   if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
@@ -1212,10 +1265,10 @@ void OpEmitter::genOpInterfaceMethods() {
         continue;
       std::string args;
       llvm::raw_string_ostream os(args);
-      mlir::interleaveComma(method.getArguments(), os,
-                            [&](const OpInterfaceMethod::Argument &arg) {
-                              os << arg.type << " " << arg.name;
-                            });
+      interleaveComma(method.getArguments(), os,
+                      [&](const OpInterfaceMethod::Argument &arg) {
+                        os << arg.type << " " << arg.name;
+                      });
       opClass.newMethod(method.getReturnType(), method.getName(), os.str(),
                         method.isStatic() ? OpMethod::MP_Static
                                           : OpMethod::MP_None,

@@ -13,7 +13,7 @@ import os
 import unittest
 from copy import copy
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from dex.utils.Exceptions import CommandParseError
 
@@ -26,7 +26,8 @@ from dex.command.commands.DexExpectWatchValue import DexExpectWatchValue
 from dex.command.commands.DexLabel import DexLabel
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
-
+from dex.utils import Timer
+from dex.utils.Exceptions import CommandParseError, DebuggerException
 
 def _get_valid_commands():
     """Return all top level DExTer test commands.
@@ -262,9 +263,7 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
         raise format_parse_err(msg, path, file_lines, err_point)
     return dict(commands)
 
-
-
-def find_all_commands(source_files):
+def _find_all_commands(source_files):
     commands = defaultdict(dict)
     valid_commands = _get_valid_commands()
     for source_file in source_files:
@@ -277,6 +276,21 @@ def find_all_commands(source_files):
 
     return dict(commands)
 
+def get_command_infos(source_files):
+  with Timer('parsing commands'):
+      try:
+          commands = _find_all_commands(source_files)
+          command_infos = OrderedDict()
+          for command_type in commands:
+              for command in commands[command_type].values():
+                  if command_type not in command_infos:
+                      command_infos[command_type] = []
+                  command_infos[command_type].append(command)
+          return OrderedDict(command_infos)
+      except CommandParseError as e:
+          msg = 'parser error: <d>{}({}):</> {}\n{}\n{}\n'.format(
+                e.filename, e.lineno, e.info, e.src, e.caret)
+          raise DebuggerException(msg)
 
 class TestParseCommand(unittest.TestCase):
     class MockCmd(CommandBase):

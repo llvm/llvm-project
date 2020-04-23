@@ -399,6 +399,14 @@ public:
         {}
   // FIXME: Use getDefaultFEnvAccessMode() when available.
 
+  /// Return the default value of FPOptions that's used when trailing
+  /// storage isn't required.
+  static FPOptions defaultWithoutTrailingStorage(const LangOptions &LO);
+
+  /// Does this FPOptions require trailing storage when stored in various
+  /// AST nodes, or can it be recreated using `defaultWithoutTrailingStorage`?
+  bool requiresTrailingStorage(const LangOptions &LO);
+
   bool allowFPContractWithinStatement() const {
     return fp_contract == LangOptions::FPC_On;
   }
@@ -450,9 +458,9 @@ public:
   }
 
   /// Used to serialize this.
-  unsigned getInt() const {
-    return fp_contract | (fenv_access << 2) | (rounding << 3)
-        | (exceptions << 6);
+  unsigned getAsOpaqueInt() const {
+    return fp_contract | (fenv_access << 2) | (rounding << 3) |
+           (exceptions << 6);
   }
 
 private:

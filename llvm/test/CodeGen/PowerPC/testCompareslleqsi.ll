@@ -198,7 +198,6 @@ define void @test_lleqsi_z_store(i32 signext %a) {
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
-; CHECKNEXT:    blr
 ; CHECK-BE-LABEL: test_lleqsi_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha

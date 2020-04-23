@@ -429,8 +429,8 @@ namespace dr330 { // dr330: 7
 
 namespace dr331 { // dr331: yes
   struct A {
-    A(volatile A&); // expected-note {{candidate}}
-  } const a, b(a); // expected-error {{no matching constructor}}
+    A(volatile A&); // expected-note 2{{candidate}}
+  } const a, b(a); // expected-error 2{{no matching constructor}}
 }
 
 namespace dr332 { // dr332: dup 577

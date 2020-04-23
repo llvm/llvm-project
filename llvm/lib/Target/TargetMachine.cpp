@@ -258,6 +258,10 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
 
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
+  // XCOFF symbols could have special naming convention.
+  if (MCSymbol *TargetSymbol = TLOF->getTargetSymbol(GV, *this))
+    return TargetSymbol;
+
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   return TLOF->getContext().getOrCreateSymbol(NameStr);

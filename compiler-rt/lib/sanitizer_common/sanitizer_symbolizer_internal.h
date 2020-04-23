@@ -69,6 +69,11 @@ class SymbolizerTool {
   virtual const char *Demangle(const char *name) {
     return nullptr;
   }
+
+  // Called during the LateInitialize phase of Sanitizer initialization.
+  // Usually this is a safe place to call code that might need to use user
+  // memory allocators.
+  virtual void LateInitialize() {}
 };
 
 // SymbolizerProcess encapsulates communication between the tool and

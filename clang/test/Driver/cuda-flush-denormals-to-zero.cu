@@ -22,6 +22,8 @@
 // RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=FTZ %s
 // RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx900 -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=NOFTZ %s
 
+// Test no subtarget, which should get the denormal setting of the default gfx803
+// RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=FTZ %s
 
 // Test multiple offload archs with different defaults.
 // RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=MIXED-DEFAULT-MODE %s

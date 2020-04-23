@@ -44,6 +44,5 @@ unittest("IRTests") {
     "ValueTest.cpp",
     "VectorTypesTest.cpp",
     "VerifierTest.cpp",
-    "WaymarkTest.cpp",
   ]
 }

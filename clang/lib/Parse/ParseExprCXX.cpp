@@ -1261,7 +1261,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
                                 /*EnteredScope=*/HasExplicitTemplateParams);
   if (HasExplicitTemplateParams) {
-    Diag(Tok, getLangOpts().CPlusPlus2a
+    Diag(Tok, getLangOpts().CPlusPlus20
                   ? diag::warn_cxx17_compat_lambda_template_parameter_list
                   : diag::ext_lambda_template_parameter_list);
 
@@ -2152,6 +2152,19 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.SetRangeEnd(Tok.getAnnotationEndLoc());
     ConsumeAnnotationToken();
 
+    DS.Finish(Actions, Policy);
+    return;
+  }
+
+  case tok::kw__ExtInt: {
+    ExprResult ER = ParseExtIntegerArgument();
+    if (ER.isInvalid())
+      DS.SetTypeSpecError();
+    else
+      DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+
+    // Do this here because we have already consumed the close paren.
+    DS.SetRangeEnd(PrevTokLocation);
     DS.Finish(Actions, Policy);
     return;
   }

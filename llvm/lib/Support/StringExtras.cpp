@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cctype>
+
 using namespace llvm;
 
 /// StrInStrNoCase - Portable version of strcasestr.  Locates the first
@@ -89,4 +91,47 @@ void llvm::printHTMLEscaped(StringRef String, raw_ostream &Out) {
 void llvm::printLowerCase(StringRef String, raw_ostream &Out) {
   for (const char C : String)
     Out << toLower(C);
+}
+
+std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
+  if (input.empty())
+    return "";
+
+  std::string snakeCase;
+  snakeCase.reserve(input.size());
+  for (char c : input) {
+    if (!std::isupper(c)) {
+      snakeCase.push_back(c);
+      continue;
+    }
+
+    if (!snakeCase.empty() && snakeCase.back() != '_')
+      snakeCase.push_back('_');
+    snakeCase.push_back(llvm::toLower(c));
+  }
+  return snakeCase;
+}
+
+std::string llvm::convertToCamelFromSnakeCase(StringRef input,
+                                              bool capitalizeFirst) {
+  if (input.empty())
+    return "";
+
+  std::string output;
+  output.reserve(input.size());
+
+  // Push the first character, capatilizing if necessary.
+  if (capitalizeFirst && std::islower(input.front()))
+    output.push_back(llvm::toUpper(input.front()));
+  else
+    output.push_back(input.front());
+
+  // Walk the input converting any `*_[a-z]` snake case into `*[A-Z]` camelCase.
+  for (size_t pos = 1, e = input.size(); pos < e; ++pos) {
+    if (input[pos] == '_' && pos != (e - 1) && std::islower(input[pos + 1]))
+      output.push_back(llvm::toUpper(input[++pos]));
+    else
+      output.push_back(input[pos]);
+  }
+  return output;
 }

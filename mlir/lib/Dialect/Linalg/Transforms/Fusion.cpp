@@ -13,7 +13,7 @@
 #include "PassDetail.h"
 #include "mlir/Analysis/Dominance.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -23,7 +23,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -36,7 +35,7 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
-using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
+using folded_std_constant_index = FoldedValueBuilder<ConstantIndexOp>;
 
 using llvm::dbgs;
 
@@ -98,7 +97,25 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
   }
   auto operands = getAssumedNonViewOperands(op);
   clonedViews.append(operands.begin(), operands.end());
-  return op.clone(b, loc, clonedViews);
+
+  Operation *clonedOp = op.clone(b, loc, clonedViews);
+  // When the producer is an IndexedGenercOp, we have to transform its block
+  // IV arguments according to the tiling of the consumer, i.e. offset them by
+  // the values computed in `loopRanges`.
+  if (auto indexedGenericOp = dyn_cast<IndexedGenericOp>(clonedOp)) {
+    auto &block = indexedGenericOp.region().front();
+
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPointToStart(&block);
+    for (unsigned i = 0, e = indexedGenericOp.getNumLoops(); i < e; ++i) {
+      Value oldIndex = block.getArgument(i);
+      AddIOp newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
+                                         loopRanges[i].offset);
+      oldIndex.replaceAllUsesExcept(newIndex,
+                                    SmallPtrSet<Operation *, 1>{newIndex});
+    }
+  }
+  return clonedOp;
 }
 
 struct ViewDimension {
@@ -285,10 +302,6 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
     LLVM_DEBUG(dbgs() << "\n***Consider producer:\t"
                       << *dependence.dependentOpView.op << "\n");
     auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
-    if (isa<linalg::IndexedGenericOp>(dependence.dependentOpView.op)) {
-      LLVM_DEBUG(dbgs() << "Not fusing indexed_generic producer");
-      continue;
-    }
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;
@@ -367,8 +380,7 @@ static bool areTensorOpsFusible(LinalgOp producer, LinalgOp consumer,
   // - only handle ops that use regions for specifying the scalar operations.
   if (!producerOp || !consumerOp || producerOp.getNumOutputs() != 1 ||
       producerOp.getResult(0) != consumerOp.getOperand(consumerIdx) ||
-      producerOp.getNumParallelLoops() != producerOp.getNumLoops() ||
-      producerOp.fun() || consumerOp.fun())
+      producerOp.getNumParallelLoops() != producerOp.getNumLoops())
     return false;
 
   // Get the consumer index map. The number of results of the consumer index map
@@ -416,6 +428,8 @@ Optional<LinalgOp> mlir::linalg::fuseTensorOps(OpBuilder &b, LinalgOp producer,
   AffineMap consumerIndexMap = consumerOp.getIndexingMap(consumerIdx);
   AffineMap invProducerResultIndexMap =
       inversePermutation(producerOp.getOutputIndexingMap(0));
+  if (!invProducerResultIndexMap)
+    return {};
 
   // Compute the fused op operandslist by replacing the operand corresponding to
   // the result of the producer, with the operands of the producer.
@@ -455,7 +469,6 @@ Optional<LinalgOp> mlir::linalg::fuseTensorOps(OpBuilder &b, LinalgOp producer,
       b.getI64IntegerAttr(fusedArgsIn), b.getI64IntegerAttr(fusedArgsOut),
       b.getArrayAttr(fusedIndexingMapAttrs), consumerOp.iterator_types(),
       /*doc=*/nullptr,
-      /*fun=*/nullptr,
       /*library_call=*/nullptr);
 
   // Build the region of the fused op.
@@ -559,6 +572,9 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
       if (!fusedOp)
         continue;
       rewriter.replaceOp(op, fusedOp.getValue().getOperation()->getResults());
+      if (llvm::all_of(definingOp.getResults(),
+                       [](Value val) -> bool { return val.use_empty(); }))
+        rewriter.eraseOp(definingOp);
       return success();
     }
     return failure();

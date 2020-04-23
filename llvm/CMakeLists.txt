@@ -2,6 +2,14 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
+if ("${CMAKE_VERSION}" VERSION_LESS "3.13.4")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 12.0.0, the "
+    "minimum version of CMake required to build LLVM will become 3.13.4, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.13.4 now to avoid issues in the future!")
+endif()
+
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
@@ -415,15 +423,16 @@ endif()
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
 # While adding scalable vector support to LLVM, we temporarily want to
-# allow an implicit conversion of TypeSize to uint64_t. This CMake flag
-# enables a more strict conversion where it asserts that the type is not
-# a scalable vector type.
+# allow an implicit conversion of TypeSize to uint64_t, and to allow
+# code to get the fixed number of elements from a possibly scalable vector.
+# This CMake flag enables a more strict mode where it asserts that the type
+# is not a scalable vector type.
 #
 # Enabling this flag makes it easier to find cases where the compiler makes
 # assumptions on the size being 'fixed size', when building tests for
 # SVE/SVE2 or other scalable vector architectures.
 option(LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS
-       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t" OFF)
+       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t and calls to getNumElements" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")

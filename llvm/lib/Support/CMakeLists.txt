@@ -138,7 +138,6 @@ add_llvm_component_library(LLVMSupport
   Statistic.cpp
   StringExtras.cpp
   StringMap.cpp
-  StringPool.cpp
   StringSaver.cpp
   StringRef.cpp
   SymbolRemappingReader.cpp

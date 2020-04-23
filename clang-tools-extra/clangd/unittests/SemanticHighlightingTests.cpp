@@ -660,6 +660,20 @@ sizeof...($TemplateParameter[[Elements]]);
             ::$DependentType[[Resolver]]::$DependentName[[Value]];
       };
     )cpp",
+      // Dependent name with heuristic target
+      R"cpp(
+      template <typename>
+      struct $Class[[Foo]] {
+        int $Field[[Waldo]];
+        void $Method[[bar]]() {
+          $Class[[Foo]]().$Field[[Waldo]];
+        }
+        template <typename $TemplateParameter[[U]]>
+        void $Method[[bar1]]() {
+          $Class[[Foo]]<$TemplateParameter[[U]]>().$Field[[Waldo]];
+        }
+      };
+    )cpp",
       // Concepts
       R"cpp(
       template <typename $TemplateParameter[[T]]>

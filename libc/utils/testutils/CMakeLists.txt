@@ -1,5 +1,6 @@
 if(CMAKE_HOST_UNIX)
   set(EFFile ExecuteFunctionUnix.cpp)
+  set(FDReaderFile FDReaderUnix.cpp)
 endif()
 
 add_llvm_library(
@@ -8,6 +9,8 @@ add_llvm_library(
   StreamWrapper.h
   ${EFFile}
   ExecuteFunction.h
+  ${FDReaderFile}
+  FDReader.h
   LINK_COMPONENTS
     Support
 )

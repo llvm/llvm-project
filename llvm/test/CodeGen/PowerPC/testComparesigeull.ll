@@ -14,7 +14,7 @@
 define signext i32 @test_igeull(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_igeull:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subfc r3, r4, r3
+; CHECK-NEXT:    subc r3, r3, r4
 ; CHECK-NEXT:    subfe r3, r4, r4
 ; CHECK-NEXT:    addi r3, r3, 1
 ; CHECK-NEXT:    blr
@@ -28,7 +28,7 @@ entry:
 define signext i32 @test_igeull_sext(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_igeull_sext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subfc r3, r4, r3
+; CHECK-NEXT:    subc r3, r3, r4
 ; CHECK-NEXT:    subfe r3, r4, r4
 ; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    blr
@@ -67,7 +67,7 @@ define void @test_igeull_store(i64 %a, i64 %b) {
 ; BE-LABEL: test_igeull_store:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subfc r3, r4, r3
+; BE-NEXT:    subc r3, r3, r4
 ; BE-NEXT:    ld r3, .LC0@toc@l(r5)
 ; BE-NEXT:    subfe r4, r4, r4
 ; BE-NEXT:    addi r4, r4, 1
@@ -76,7 +76,7 @@ define void @test_igeull_store(i64 %a, i64 %b) {
 ;
 ; LE-LABEL: test_igeull_store:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    subfc r3, r4, r3
+; LE-NEXT:    subc r3, r3, r4
 ; LE-NEXT:    addis r5, r2, glob@toc@ha
 ; LE-NEXT:    subfe r3, r4, r4
 ; LE-NEXT:    addi r3, r3, 1
@@ -94,7 +94,7 @@ define void @test_igeull_sext_store(i64 %a, i64 %b) {
 ; BE-LABEL: test_igeull_sext_store:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subfc r3, r4, r3
+; BE-NEXT:    subc r3, r3, r4
 ; BE-NEXT:    ld r3, .LC0@toc@l(r5)
 ; BE-NEXT:    subfe r4, r4, r4
 ; BE-NEXT:    not r4, r4
@@ -103,7 +103,7 @@ define void @test_igeull_sext_store(i64 %a, i64 %b) {
 ;
 ; LE-LABEL: test_igeull_sext_store:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    subfc r3, r4, r3
+; LE-NEXT:    subc r3, r3, r4
 ; LE-NEXT:    addis r5, r2, glob@toc@ha
 ; LE-NEXT:    subfe r3, r4, r4
 ; LE-NEXT:    not r3, r3

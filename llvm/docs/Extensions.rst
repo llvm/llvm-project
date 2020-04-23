@@ -417,7 +417,7 @@ Introduces a function ID that can be used with ``.cv_loc``. Includes
 caller, whether the caller is a real function or another inlined call site.
 
 Syntax:
-  ``.cv_inline_site_id`` *FunctionId* ``within`` *Function* ``inlined_at`` *FileNumber Line* [ *Colomn* ]
+  ``.cv_inline_site_id`` *FunctionId* ``within`` *Function* ``inlined_at`` *FileNumber Line* [ *Column* ]
 
 ``.cv_loc`` Directive
 ^^^^^^^^^^^^^^^^^^^^^

@@ -107,11 +107,11 @@ class ExprCommandWithFixits(TestBase):
         struct S1 : public T {
           using T::TypeDef;
           int f() {
-            Data d;
-            d.m = 123;
+            Data data;
+            data.m = 123;
             // The first error as the using above requires a 'typename '.
             // Will trigger a Fix-It that puts 'typename' in the right place.
-            typename S1<T>::TypeDef i = &d;
+            typename S1<T>::TypeDef i = &data;
             // i has the type "Data *", so this should be i.m.
             // The second run will change the . to -> via the Fix-It.
             return i.m;

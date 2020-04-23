@@ -1230,7 +1230,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   // Create the final SVIs and replace all uses.
   int i = 0;
   for (auto &VI : InterleavedLoad) {
-    SmallVector<uint32_t, 4> Mask;
+    SmallVector<int, 4> Mask;
     for (unsigned j = 0; j < ElementsPerSVI; j++)
       Mask.push_back(i + j * Factor);
 

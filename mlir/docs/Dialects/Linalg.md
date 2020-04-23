@@ -10,7 +10,7 @@ Linalg is designed to solve the High-level Hierarchical Optimization
 (HHO box) in MLIR and to interoperate nicely within a
 *Mixture Of Expert Compilers* environment (i.e. the *CGSel* box).
 
-The [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect)
+The [Rationale Document](../Rationale/RationaleLinalgDialect.md)
 goes into significantly more design and architectural decision details.
 
 ## Set of Key Transformations<a name="key_transformations"></a>
@@ -29,7 +29,7 @@ performed on the Linalg IR and that have influenced its design:
 1. Tiled Producer-Consumer Fusion with Parametric Tile-And-Fuse.
 1. Map to Parallel and Reduction Loops and Hardware.
 1. Vectorization: Rewrite in Vector Form.
-1. Lower to Loops (Affine, Generic and Parallel).
+1. Lower to Loops (Affine, Generic, and Parallel).
 1. Lower to Library Calls or Special Instructions, Intrinsics or ISA.
 1. Partially Lower to Iterations Over a Finer-Grained Linalg Op.
 
@@ -49,7 +49,7 @@ https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0e
 `linalg.generic` (resp. `linalg.indexed_generic`) that can express custom
 operations with *index-free semantics* (resp. *indexing semantics*).
 The properties of these generic ops are the result of applying the
-guiding principles described in the [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect).
+guiding principles described in the [Rationale Document](../Rationale/RationaleLinalgDialect.md).
 They are listed next, with a brief example and discussion for each.
 
 #### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
@@ -531,9 +531,9 @@ llvm::Optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
 void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
   using namespace edsc;
   using namespace intrinsics;
-  ValueHandle _0(args[0]), _1(args[1]), _2(args[2]);
-  ValueHandle _4 = std_mulf(_0, _1);
-  ValueHandle _5 = std_addf(_2, _4);
+  Value _0(args[0]), _1(args[1]), _2(args[2]);
+  Value _4 = std_mulf(_0, _1);
+  Value _5 = std_addf(_2, _4);
   (linalg_yield(ValueRange{ _5 }));
 }
 ```

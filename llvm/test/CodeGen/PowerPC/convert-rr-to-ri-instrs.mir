@@ -3728,7 +3728,7 @@ body:             |
     %3 = LI 37
     %4 = RLDCL_rec %0, killed %3, 0, implicit-def $cr0
     ; CHECK: RLDICL_rec %0, 37, 0, implicit-def $cr0
-    ; CHECK-LATE: rldicl. 5, 3, 37, 0
+    ; CHECK-LATE: rotldi. 5, 3, 37
     %5 = COPY killed $cr0
     %6 = ISEL8 %2, %0, %5.sub_eq
     $x3 = COPY %6

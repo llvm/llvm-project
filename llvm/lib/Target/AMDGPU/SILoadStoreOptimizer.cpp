@@ -1541,9 +1541,9 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
     case 4:
       return &AMDGPU::SGPR_128RegClass;
     case 8:
-      return &AMDGPU::SReg_256RegClass;
+      return &AMDGPU::SGPR_256RegClass;
     case 16:
-      return &AMDGPU::SReg_512RegClass;
+      return &AMDGPU::SGPR_512RegClass;
     }
   } else {
     switch (CI.Width + Paired.Width) {

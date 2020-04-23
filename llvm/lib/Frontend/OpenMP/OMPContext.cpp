@@ -91,8 +91,8 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 /// expected to be sorted.
 template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
 #ifdef EXPENSIVE_CHECKS
-  assert(std::is_sorted(C0.begin(), C0.end()) &&
-         std::is_sorted(C1.begin(), C1.end()) && "Expected sorted arrays!");
+  assert(llvm::is_sorted(C0) && llvm::is_sorted(C1) &&
+         "Expected sorted arrays!");
 #endif
   if (C0.size() > C1.size())
     return false;

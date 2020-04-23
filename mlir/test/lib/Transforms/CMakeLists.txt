@@ -37,7 +37,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
 
 target_link_libraries(MLIRTestTransforms
   PUBLIC
-  MLIRAffine
+  MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
   MLIRGPU

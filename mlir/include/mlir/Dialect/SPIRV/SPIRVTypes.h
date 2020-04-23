@@ -290,16 +290,16 @@ public:
 
   /// Range class for element types.
   class ElementTypeRange
-      : public ::mlir::detail::indexed_accessor_range_base<
+      : public ::llvm::detail::indexed_accessor_range_base<
             ElementTypeRange, const Type *, Type, Type, Type> {
   private:
     using RangeBaseT::RangeBaseT;
 
-    /// See `mlir::detail::indexed_accessor_range_base` for details.
+    /// See `llvm::detail::indexed_accessor_range_base` for details.
     static const Type *offset_base(const Type *object, ptrdiff_t index) {
       return object + index;
     }
-    /// See `mlir::detail::indexed_accessor_range_base` for details.
+    /// See `llvm::detail::indexed_accessor_range_base` for details.
     static Type dereference_iterator(const Type *object, ptrdiff_t index) {
       return object[index];
     }

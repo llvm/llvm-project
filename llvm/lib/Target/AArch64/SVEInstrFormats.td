@@ -2012,22 +2012,22 @@ multiclass sve2_fp_convert_down_narrow<string asm, string op> {
   def _StoH : sve2_fp_convert_precision<0b1000, asm, ZPR16, ZPR32>;
   def _DtoS : sve2_fp_convert_precision<0b1110, asm, ZPR32, ZPR64>;
 
-  def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv16i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
-  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
+  def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 multiclass sve2_fp_convert_up_long<string asm, string op> {
   def _HtoS : sve2_fp_convert_precision<0b1001, asm, ZPR32, ZPR16>;
   def _StoD : sve2_fp_convert_precision<0b1111, asm, ZPR64, ZPR32>;
 
-  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv16i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
-  def : SVE_3_Op_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv16i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_3_Op_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
 }
 
 multiclass sve2_fp_convert_down_odd_rounding_top<string asm, string op> {
   def _DtoS : sve2_fp_convert_precision<0b0010, asm, ZPR32, ZPR64>;
 
-  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2271,7 +2271,7 @@ multiclass sve2_fp_flogb<string asm, SDPatternOperator op> {
 
 multiclass sve2_fp_convert_down_odd_rounding<string asm, string op> {
   def _DtoS : sve_fp_2op_p_zd<0b0001010, asm, ZPR64, ZPR32, ElementSizeD>;
-  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv16i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4772,18 +4772,38 @@ multiclass sve_int_bin_pred_shift_imm_left<bits<4> opc, string asm, string psNam
 }
 
 multiclass sve2_int_bin_pred_shift_imm_left<bits<4> opc, string asm,
+                                            string psName,
                                             SDPatternOperator op> {
-  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
-  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
+
+  def _B : SVEPseudo2Instr<psName # _B, 1>, sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : SVEPseudo2Instr<psName # _H, 1>,
+           sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{8} = imm{3};
   }
-  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
+  def _S : SVEPseudo2Instr<psName # _S, 1>,
+           sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
     let Inst{9-8} = imm{4-3};
   }
-  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
+  def _D : SVEPseudo2Instr<psName # _D, 1>,
+           sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
     let Inst{22}  = imm{5};
     let Inst{9-8} = imm{4-3};
   }
+
+  def _B_Z_UNDEF : PredTwoOpImmPseudo<psName # _B, ZPR8,  tvecshiftL8,  FalseLanesUndef>;
+  def _H_Z_UNDEF : PredTwoOpImmPseudo<psName # _H, ZPR16, tvecshiftL16, FalseLanesUndef>;
+  def _S_Z_UNDEF : PredTwoOpImmPseudo<psName # _S, ZPR32, tvecshiftL32, FalseLanesUndef>;
+  def _D_Z_UNDEF : PredTwoOpImmPseudo<psName # _D, ZPR64, tvecshiftL64, FalseLanesUndef>;
+
+  def _B_Z_ZERO : PredTwoOpImmPseudo<psName # _B, ZPR8,  tvecshiftL8,  FalseLanesZero>;
+  def _H_Z_ZERO : PredTwoOpImmPseudo<psName # _H, ZPR16, tvecshiftL16, FalseLanesZero>;
+  def _S_Z_ZERO : PredTwoOpImmPseudo<psName # _S, ZPR32, tvecshiftL32, FalseLanesZero>;
+  def _D_Z_ZERO : PredTwoOpImmPseudo<psName # _D, ZPR64, tvecshiftL64, FalseLanesZero>;
+
+  def : SVE_3_Op_Pat_Shift_Imm_SelZero<nxv16i8, op, nxv16i1, nxv16i8, tvecshiftL8,  !cast<Pseudo>(NAME # _B_Z_ZERO)>;
+  def : SVE_3_Op_Pat_Shift_Imm_SelZero<nxv8i16, op, nxv8i1,  nxv8i16, tvecshiftL16, !cast<Pseudo>(NAME # _H_Z_ZERO)>;
+  def : SVE_3_Op_Pat_Shift_Imm_SelZero<nxv4i32, op, nxv4i1,  nxv4i32, tvecshiftL32, !cast<Pseudo>(NAME # _S_Z_ZERO)>;
+  def : SVE_3_Op_Pat_Shift_Imm_SelZero<nxv2i64, op, nxv2i1,  nxv2i64, tvecshiftL64, !cast<Pseudo>(NAME # _D_Z_ZERO)>;
 
   def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i1, nxv16i8, i32, tvecshiftL8,  !cast<Instruction>(NAME # _B)>;
   def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i1,  nxv8i16, i32, tvecshiftL16, !cast<Instruction>(NAME # _H)>;

@@ -522,7 +522,8 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
          "Unexpected number of concatenated symbols");
   auto numDims = dimValueToPosition.size();
   auto numSymbols = concatenatedSymbols.size() - map.getNumSymbols();
-  auto auxiliaryMap = AffineMap::get(numDims, numSymbols, auxiliaryExprs);
+  auto auxiliaryMap =
+      AffineMap::get(numDims, numSymbols, auxiliaryExprs, map.getContext());
 
   LLVM_DEBUG(map.print(dbgs() << "\nCompose map: "));
   LLVM_DEBUG(auxiliaryMap.print(dbgs() << "\nWith map: "));
@@ -1407,7 +1408,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
   LogicalResult matchAndRewrite(AffineForOp forOp,
                                 PatternRewriter &rewriter) const override {
     // Check that the body only contains a terminator.
-    if (!has_single_element(*forOp.getBody()))
+    if (!llvm::hasSingleElement(*forOp.getBody()))
       return failure();
     rewriter.eraseOp(forOp);
     return success();
@@ -1576,7 +1577,8 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
 
   LogicalResult matchAndRewrite(AffineIfOp ifOp,
                                 PatternRewriter &rewriter) const override {
-    if (ifOp.elseRegion().empty() || !has_single_element(*ifOp.getElseBlock()))
+    if (ifOp.elseRegion().empty() ||
+        !llvm::hasSingleElement(*ifOp.getElseBlock()))
       return failure();
 
     rewriter.startRootUpdate(ifOp);
@@ -2162,19 +2164,13 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 
 void AffineParallelOp::build(Builder *builder, OperationState &result,
                              ArrayRef<int64_t> ranges) {
-  // Default initialize empty maps.
-  auto lbMap = AffineMap::get(builder->getContext());
-  auto ubMap = AffineMap::get(builder->getContext());
-  // If there are ranges, set each to [0, N).
-  if (ranges.size()) {
-    SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
-                                       builder->getAffineConstantExpr(0));
-    lbMap = AffineMap::get(0, 0, lbExprs);
-    SmallVector<AffineExpr, 8> ubExprs;
-    for (int64_t range : ranges)
-      ubExprs.push_back(builder->getAffineConstantExpr(range));
-    ubMap = AffineMap::get(0, 0, ubExprs);
-  }
+  SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
+                                     builder->getAffineConstantExpr(0));
+  auto lbMap = AffineMap::get(0, 0, lbExprs, builder->getContext());
+  SmallVector<AffineExpr, 8> ubExprs;
+  for (int64_t range : ranges)
+    ubExprs.push_back(builder->getAffineConstantExpr(range));
+  auto ubMap = AffineMap::get(0, 0, ubExprs, builder->getContext());
   build(builder, result, lbMap, {}, ubMap, {});
 }
 
@@ -2303,7 +2299,7 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
   }
   if (!elideSteps) {
     p << " step (";
-    interleaveComma(steps, p);
+    llvm::interleaveComma(steps, p);
     p << ')';
   }
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,

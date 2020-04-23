@@ -1011,3 +1011,9 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
 
   return Broken;
 }
+
+AntiDepBreaker *llvm::createAggressiveAntiDepBreaker(
+    MachineFunction &MFi, const RegisterClassInfo &RCI,
+    TargetSubtargetInfo::RegClassVector &CriticalPathRCs) {
+  return new AggressiveAntiDepBreaker(MFi, RCI, CriticalPathRCs);
+}

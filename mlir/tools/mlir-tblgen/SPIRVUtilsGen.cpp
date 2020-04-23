@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
-#include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -1112,7 +1110,7 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
                 enumName);
   os << "  "
      << formatv("static constexpr const char attrName[] = \"{0}\";\n",
-                mlir::convertToSnakeCase(enumName));
+                llvm::convertToSnakeFromCamelCase(enumName));
   os << "  return attrName;\n";
   os << "}\n";
 }
@@ -1305,7 +1303,7 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
     os << "  case Capability::" << enumerant.getSymbol()
        << ": {static const Capability implies[" << impliedCapsDefs.size()
        << "] = {";
-    mlir::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
+    llvm::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
       os << "Capability::" << EnumAttrCase(capDef).getSymbol();
     });
     os << "}; return ArrayRef<Capability>(implies, " << impliedCapsDefs.size()

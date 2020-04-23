@@ -43,7 +43,7 @@ body:             |
     ; GCN:   DS_WRITE_B32_gfx9 $vgpr0, $vgpr3, 4, 0, implicit killed $m0, implicit $exec
     ; GCN: }
     ; GCN: S_NOP 0
-    ; GCN: BUNDLE implicit-def $sgpr2, implicit-def $sgpr3, implicit undef $sgpr0_sgpr1, implicit undef $sgpr10 {
+    ; GCN: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit undef $sgpr0_sgpr1, implicit undef $sgpr10 {
     ; GCN:   $sgpr2 = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0, 0
     ; GCN:   $sgpr3 = S_LOAD_DWORD_SGPR undef $sgpr0_sgpr1, undef $sgpr10, 0, 0
     ; GCN: }

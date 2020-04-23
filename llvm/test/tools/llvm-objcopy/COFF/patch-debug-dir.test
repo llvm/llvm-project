@@ -17,8 +17,8 @@
 # SECTIONS-NEXT:      VirtualSize:
 # SECTIONS-NEXT:      VirtualAddress:
 # SECTIONS-NEXT:      RawDataSize:
-# SECTIONS-NEXT-PRE:  PointerToRawData: 0x800
-# SECTIONS-NEXT-POST: PointerToRawData: 0x400
+# SECTIONS-PRE-NEXT:  PointerToRawData: 0x600
+# SECTIONS-POST-NEXT: PointerToRawData: 0x400
 
 --- !COFF
 OptionalHeader:  

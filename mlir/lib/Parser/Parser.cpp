@@ -25,7 +25,6 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
@@ -3133,12 +3132,8 @@ AffineParser::parseAffineMapOfSSAIds(AffineMap &map,
                                    /*allowEmptyList=*/true))
     return failure();
   // Parsed a valid affine map.
-  if (exprs.empty())
-    map = AffineMap::get(numDimOperands, dimsAndSymbols.size() - numDimOperands,
-                         getContext());
-  else
-    map = AffineMap::get(numDimOperands, dimsAndSymbols.size() - numDimOperands,
-                         exprs);
+  map = AffineMap::get(numDimOperands, dimsAndSymbols.size() - numDimOperands,
+                       exprs, getContext());
   return success();
 }
 
@@ -3167,11 +3162,8 @@ AffineMap AffineParser::parseAffineMapRange(unsigned numDims,
   if (parseCommaSeparatedListUntil(Token::r_paren, parseElt, true))
     return AffineMap();
 
-  if (exprs.empty())
-    return AffineMap::get(numDims, numSymbols, getContext());
-
   // Parsed a valid affine map.
-  return AffineMap::get(numDims, numSymbols, exprs);
+  return AffineMap::get(numDims, numSymbols, exprs, getContext());
 }
 
 /// Parse an affine constraint.

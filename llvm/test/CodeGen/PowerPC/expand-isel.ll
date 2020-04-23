@@ -11,7 +11,7 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELToIfElse
 ; CHECK: addi r5, r3, 1
-; CHECK-NEXT: cmpwi cr0, r3, 0
+; CHECK-NEXT: cmpwi r3, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
@@ -101,7 +101,7 @@ entry:
   ret i32 %add
 
 ; CHECK-LABEL: @testExpandISELsTo2ORIs1ADDI
-; CHECK: cmpwi cr0, r7, 0
+; CHECK: cmpwi r7, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: ori r4, r6, 0
@@ -127,7 +127,7 @@ entry:
   ret i32 %add2
 
 ; CHECK-LABEL: @testExpandISELsTo1ORI1ADDI
-; CHECK: cmpwi cr0, r7, 0
+; CHECK: cmpwi r7, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r5, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
@@ -154,7 +154,7 @@ entry:
   ret i32 %sub1
 
 ; CHECK-LABEL: @testExpandISELsTo0ORI2ADDIs
-; CHECK: cmpwi cr0, r7, 0
+; CHECK: cmpwi r7, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT:  [[TRUE]]

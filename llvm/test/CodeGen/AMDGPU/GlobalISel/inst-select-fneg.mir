@@ -206,10 +206,10 @@ body: |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
-    ; GCN: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FNEG %0
-    $sgpr0_sgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
 ...
 
 ---
@@ -229,10 +229,10 @@ body: |
     ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
     ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_XOR_B32_e32_]], %subreg.sub1
-    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FNEG %0
-    $vgpr0_vgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
 ...
 
 ---
@@ -247,11 +247,12 @@ body: |
     ; GCN-LABEL: name: fneg_s64_vs
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FNEG:%[0-9]+]]:vreg_64(s64) = G_FNEG [[COPY]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
+    ; GCN: S_ENDPGM 0, implicit [[FNEG]](s64)
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_FNEG %0
-    $vgpr0_vgpr1 = COPY %1
+    S_ENDPGM 0, implicit %1
+
 ...
 
 ---
@@ -268,11 +269,11 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GCN: $sgpr0 = COPY [[S_OR_B32_]]
+    ; GCN: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_FABS %0
     %2:sgpr(s32) = G_FNEG %1
-    $sgpr0 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...
 
 ---
@@ -289,11 +290,11 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[S_MOV_B32_]], [[COPY]], implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_XOR_B32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_XOR_B32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FABS %0
     %2:vgpr(s32) = G_FNEG %0
-    $vgpr0 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...
 
 ---
@@ -311,11 +312,11 @@ body: |
     ; GCN: [[FABS:%[0-9]+]]:vgpr_32(s32) = G_FABS [[COPY]]
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32(s16) = S_MOV_B32 2147483648
     ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_XOR_B32_e32 [[S_MOV_B32_]](s16), [[FABS]](s32), implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_XOR_B32_e32_]](s32)
+    ; GCN: S_ENDPGM 0, implicit [[V_XOR_B32_e32_]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FABS %0
     %2:vgpr(s32) = G_FNEG %1
-    $vgpr0 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...
 
 ---
@@ -472,11 +473,11 @@ body: |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
-    ; GCN: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FABS %0
     %2:sgpr(s64) = G_FNEG %1
-    $sgpr0_sgpr1 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...
 
 ---
@@ -496,11 +497,11 @@ body: |
     ; GCN: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
     ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_OR_B32_e32_]], %subreg.sub1
-    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FABS %0
     %2:vgpr(s64) = G_FNEG %1
-    $vgpr0_vgpr1 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...
 
 ---
@@ -521,9 +522,9 @@ body: |
     ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32(s16) = V_XOR_B32_e32 [[COPY1]](s32), [[V_MOV_B32_e32_]](s32), implicit $exec
     ; GCN: [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY [[FABS]].sub0(s64)
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64(s64) = REG_SEQUENCE [[COPY2]](s32), %subreg.sub0, [[V_XOR_B32_e32_]](s16), %subreg.sub1
-    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]](s64)
+    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]](s64)
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_FABS %0
     %2:vgpr(s64) = G_FNEG %1
-    $vgpr0_vgpr1 = COPY %2
+    S_ENDPGM 0, implicit %2
 ...

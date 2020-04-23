@@ -139,10 +139,10 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   }
 }
 
-void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI,
-                                       MCInst &Res) const {
+void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
+                                       const MCSubtargetInfo &STI) const {
   // TODO: replace this with call to auto generated uncompressinstr() function.
+  MCInst Res;
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
@@ -173,6 +173,7 @@ void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
     Res.addOperand(Inst.getOperand(0));
     break;
   }
+  Inst = std::move(Res);
 }
 
 // Given a compressed control flow instruction this function returns

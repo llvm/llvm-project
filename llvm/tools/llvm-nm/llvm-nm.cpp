@@ -306,13 +306,17 @@ struct NMSymbol {
 
 static bool compareSymbolAddress(const NMSymbol &A, const NMSymbol &B) {
   bool ADefined;
+  // Symbol flags have been checked in the caller.
+  uint32_t AFlags = cantFail(A.Sym.getFlags());
   if (A.Sym.getRawDataRefImpl().p)
-    ADefined = !(A.Sym.getFlags() & SymbolRef::SF_Undefined);
+    ADefined = !(AFlags & SymbolRef::SF_Undefined);
   else
     ADefined = A.TypeChar != 'U';
   bool BDefined;
+  // Symbol flags have been checked in the caller.
+  uint32_t BFlags = cantFail(B.Sym.getFlags());
   if (B.Sym.getRawDataRefImpl().p)
-    BDefined = !(B.Sym.getFlags() & SymbolRef::SF_Undefined);
+    BDefined = !(BFlags & SymbolRef::SF_Undefined);
   else
     BDefined = B.TypeChar != 'U';
   return std::make_tuple(ADefined, A.Address, A.Name, A.Size) <
@@ -366,7 +370,7 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
   uint64_t NValue = 0;
   MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
   if (Obj.isIR()) {
-    uint32_t SymFlags = S.Sym.getFlags();
+    uint32_t SymFlags = cantFail(S.Sym.getFlags());
     if (SymFlags & SymbolRef::SF_Global)
       NType |= MachO::N_EXT;
     if (SymFlags & SymbolRef::SF_Hidden)
@@ -794,9 +798,15 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
       if (Optional<std::string> Opt = demangle(S.Name, MachO))
         Name = *Opt;
     }
-    if (S.Sym.getRawDataRefImpl().p)
-      SymFlags = S.Sym.getFlags();
-    else
+    if (S.Sym.getRawDataRefImpl().p) {
+      Expected<uint32_t> SymFlagsOrErr = S.Sym.getFlags();
+      if (!SymFlagsOrErr) {
+        // TODO: Test this error.
+        error(SymFlagsOrErr.takeError(), Obj.getFileName());
+        return;
+      }
+      SymFlags = *SymFlagsOrErr;
+    } else
       SymFlags = S.SymFlags;
 
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
@@ -1037,14 +1047,14 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static char getSymbolNMTypeChar(WasmObjectFile &Obj, basic_symbol_iterator I) {
-  uint32_t Flags = I->getFlags();
+  uint32_t Flags = cantFail(I->getFlags());
   if (Flags & SymbolRef::SF_Executable)
     return 't';
   return 'd';
 }
 
 static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
-  uint32_t Flags = I->getFlags();
+  uint32_t Flags = cantFail(I->getFlags());
   // FIXME: should we print 'b'? At the IR level we cannot be sure if this
   // will be in bss or not, but we could approximate.
   if (Flags & SymbolRef::SF_Executable)
@@ -1076,7 +1086,8 @@ static StringRef getNMTypeName(SymbolicFile &Obj, basic_symbol_iterator I) {
 // section and name, to be used in format=sysv output.
 static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
                                    StringRef &SecName) {
-  uint32_t Symflags = I->getFlags();
+  // Symbol Flags have been checked in the caller.
+  uint32_t Symflags = cantFail(I->getFlags());
   if (ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
     if (Symflags & object::SymbolRef::SF_Absolute)
       SecName = "*ABS*";
@@ -1205,10 +1216,15 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
   }
   if (!(MachO && DyldInfoOnly)) {
     for (BasicSymbolRef Sym : Symbols) {
-      uint32_t SymFlags = Sym.getFlags();
-      if (!DebugSyms && (SymFlags & SymbolRef::SF_FormatSpecific))
+      Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+      if (!SymFlagsOrErr) {
+        // TODO: Test this error.
+        error(SymFlagsOrErr.takeError(), Obj.getFileName());
+        return;
+      }
+      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;
-      if (WithoutAliases && (SymFlags & SymbolRef::SF_Indirect))
+      if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;
       // If a "-s segname sectname" option was specified and this is a Mach-O
       // file and this section appears in this file, Nsect will be non-zero then

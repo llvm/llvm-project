@@ -24,6 +24,7 @@ def LLVM_Dialect : Dialect {
     ~LLVMDialect();
     llvm::LLVMContext &getLLVMContext();
     llvm::Module &getLLVMModule();
+    llvm::sys::SmartMutex<true> &getLLVMContextMutex();
 
   private:
     friend LLVMType;

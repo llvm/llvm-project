@@ -208,7 +208,6 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"

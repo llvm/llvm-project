@@ -993,6 +993,10 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(bmi_bextr_64,         INTR_TYPE_2OP, X86ISD::BEXTR, 0),
   X86_INTRINSIC_DATA(bmi_bzhi_32,          INTR_TYPE_2OP, X86ISD::BZHI, 0),
   X86_INTRINSIC_DATA(bmi_bzhi_64,          INTR_TYPE_2OP, X86ISD::BZHI, 0),
+  X86_INTRINSIC_DATA(bmi_pdep_32,          INTR_TYPE_2OP, X86ISD::PDEP, 0),
+  X86_INTRINSIC_DATA(bmi_pdep_64,          INTR_TYPE_2OP, X86ISD::PDEP, 0),
+  X86_INTRINSIC_DATA(bmi_pext_32,          INTR_TYPE_2OP, X86ISD::PEXT, 0),
+  X86_INTRINSIC_DATA(bmi_pext_64,          INTR_TYPE_2OP, X86ISD::PEXT, 0),
   X86_INTRINSIC_DATA(fma_vfmaddsub_pd,     INTR_TYPE_3OP, X86ISD::FMADDSUB, 0),
   X86_INTRINSIC_DATA(fma_vfmaddsub_pd_256, INTR_TYPE_3OP, X86ISD::FMADDSUB, 0),
   X86_INTRINSIC_DATA(fma_vfmaddsub_ps,     INTR_TYPE_3OP, X86ISD::FMADDSUB, 0),
@@ -1155,10 +1159,8 @@ static const IntrinsicData* getIntrinsicWithoutChain(unsigned IntNo) {
 }
 
 static void verifyIntrinsicTables() {
-  assert(std::is_sorted(std::begin(IntrinsicsWithoutChain),
-                        std::end(IntrinsicsWithoutChain)) &&
-         std::is_sorted(std::begin(IntrinsicsWithChain),
-                        std::end(IntrinsicsWithChain)) &&
+  assert(llvm::is_sorted(IntrinsicsWithoutChain) &&
+         llvm::is_sorted(IntrinsicsWithChain) &&
          "Intrinsic data tables should be sorted by Intrinsic ID");
   assert((std::adjacent_find(std::begin(IntrinsicsWithoutChain),
                              std::end(IntrinsicsWithoutChain)) ==

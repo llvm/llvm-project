@@ -654,11 +654,18 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   /*IsDecl=*/false,
                                   {E->getNamedConcept()}});
     }
+
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
                                   E->getNameInfo().getLoc(),
                                   /*IsDecl=*/false,
                                   {E->getFoundDecl()}});
+    }
+
+    void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
+      Refs.push_back(ReferenceLoc{
+          E->getQualifierLoc(), E->getNameInfo().getLoc(), /*IsDecl=*/false,
+          explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
 
     void VisitMemberExpr(const MemberExpr *E) {
@@ -670,6 +677,14 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   E->getMemberNameInfo().getLoc(),
                                   /*IsDecl=*/false,
                                   {E->getFoundDecl()}});
+    }
+
+    void
+    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
+      Refs.push_back(
+          ReferenceLoc{E->getQualifierLoc(), E->getMemberNameInfo().getLoc(),
+                       /*IsDecl=*/false,
+                       explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
 
     void VisitOverloadExpr(const OverloadExpr *E) {
@@ -699,10 +714,12 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
       for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                    D.getFieldLoc(),
-                                    /*IsDecl=*/false,
-                                    {D.getField()}});
+
+        llvm::SmallVector<const NamedDecl *, 1> Targets;
+        if (D.getField())
+          Targets.push_back(D.getField());
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), D.getFieldLoc(),
+                                    /*IsDecl=*/false, std::move(Targets)});
       }
     }
   };
@@ -843,15 +860,17 @@ public:
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
+    llvm::SmallVector<const NamedDecl *, 1> Targets;
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
+      if (const auto *D = A.getArgument()
+                              .getAsTemplateOrTemplatePattern()
+                              .getAsTemplateDecl())
+        Targets.push_back(D);
       reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
                                    A.getTemplateNameLoc(),
-                                   /*IsDecl=*/false,
-                                   {A.getArgument()
-                                        .getAsTemplateOrTemplatePattern()
-                                        .getAsTemplateDecl()}},
+                                   /*IsDecl=*/false, Targets},
                       DynTypedNode::create(A.getArgument()));
       break;
     case TemplateArgument::Declaration:

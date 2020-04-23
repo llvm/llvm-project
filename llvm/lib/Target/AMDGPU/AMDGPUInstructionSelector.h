@@ -92,6 +92,7 @@ private:
   bool selectG_SZA_EXT(MachineInstr &I) const;
   bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_FNEG(MachineInstr &I) const;
+  bool selectG_FABS(MachineInstr &I) const;
   bool selectG_AND_OR_XOR(MachineInstr &I) const;
   bool selectG_ADD_SUB(MachineInstr &I) const;
   bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;

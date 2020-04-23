@@ -58,3 +58,23 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
 // CHECK-NEXT: odsState.addOperands(input1);
 // CHECK-NEXT: odsState.addOperands(input2);
 // CHECK-NEXT: odsState.addOperands(input3);
+// CHECK-NOT: odsState.setOperandListToResizable
+
+// Check that resizable operand list flag is set up correctly in all generated
+// builders and in the parser.
+def OpE : NS_Op<"resizable_operand_list", [ResizableOperandList]> {
+  let arguments = (ins Variadic<AnyType>:$input);
+  let assemblyFormat = "$input attr-dict `:` type($input)";
+}
+
+// CHECK-LABEL: OpE::build(Builder *odsBuilder, OperationState &odsState, ValueRange
+// CHECK: odsState.setOperandListToResizable()
+
+// CHECK-LABEL: OpE::build(Builder *odsBuilder, OperationState &odsState, ArrayRef<Type>
+// CHECK: odsState.setOperandListToResizable()
+
+// CHECK-LABEL: OpE::build(Builder *, OperationState
+// CHECK: odsState.setOperandListToResizable()
+
+// CHECK-LABEL: OpE::parse
+// CHECK: result.setOperandListToResizable()

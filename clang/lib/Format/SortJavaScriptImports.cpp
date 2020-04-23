@@ -144,7 +144,7 @@ public:
     llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       return References[LHSI] < References[RHSI];
     });
-    bool ReferencesInOrder = std::is_sorted(Indices.begin(), Indices.end());
+    bool ReferencesInOrder = llvm::is_sorted(Indices);
 
     std::string ReferencesText;
     bool SymbolsInOrder = true;

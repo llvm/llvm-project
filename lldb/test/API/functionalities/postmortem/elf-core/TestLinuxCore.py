@@ -210,6 +210,44 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_x86_64_sysroot(self):
+        """Test that sysroot has more priority then local filesystem."""
+
+        # Copy wrong executable to the location outside of sysroot
+        exe_outside = os.path.join(self.getBuildDir(), "bin", "a.out")
+        lldbutil.mkdir_p(os.path.dirname(exe_outside))
+        shutil.copyfile("altmain.out", exe_outside)
+
+        # Copy correct executable to the location inside sysroot
+        tmp_sysroot = os.path.join(self.getBuildDir(), "mock_sysroot")
+        exe_inside = os.path.join(tmp_sysroot, os.path.relpath(exe_outside, "/"))
+        lldbutil.mkdir_p(os.path.dirname(exe_inside))
+        shutil.copyfile("linux-x86_64.out", exe_inside)
+
+        # Prepare patched core file
+        core_file = os.path.join(self.getBuildDir(), "patched.core")
+        with open("linux-x86_64.core", "rb") as f:
+            core = f.read()
+        core = replace_path(core, "/test" * 817 + "/a.out", exe_outside)
+        with open(core_file, "wb") as f:
+            f.write(core)
+
+        # Set sysroot and load core
+        self.runCmd("platform select remote-linux --sysroot '%s'" % tmp_sysroot)
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore(core_file)
+
+        # Check that we found executable from the sysroot
+        mod_path = str(target.GetModuleAtIndex(0).GetFileSpec())
+        self.assertEqual(mod_path, exe_inside)
+        self.check_all(process, self._x86_64_pid, self._x86_64_regions, "a.out")
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("ARM")
     def test_arm_core(self):
         # check 32 bit ARM core file
@@ -369,3 +407,9 @@ class LinuxCoreTestCase(TestBase):
         self.check_all(process, pid, region_count, thread_name)
 
         self.dbg.DeleteTarget(target)
+
+def replace_path(binary, replace_from, replace_to):
+    src = replace_from.encode()
+    dst = replace_to.encode()
+    dst += b"\0" * (len(src) - len(dst))
+    return binary.replace(src, dst)

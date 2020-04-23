@@ -13,6 +13,8 @@ add_mlir_dialect_library(MLIRLLVMIR
 target_link_libraries(MLIRLLVMIR
   PUBLIC
   LLVMAsmParser
+  LLVMBitReader
+  LLVMBitWriter
   LLVMCore
   LLVMSupport
   LLVMFrontendOpenMP

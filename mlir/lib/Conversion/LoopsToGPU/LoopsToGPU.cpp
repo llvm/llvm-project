@@ -506,16 +506,36 @@ struct ParallelToGpuLaunchLowering : public OpRewritePattern<ParallelOp> {
 /// `upperBound`.
 static Value deriveStaticUpperBound(Value upperBound,
                                     PatternRewriter &rewriter) {
-  if (AffineMinOp minOp =
-          dyn_cast_or_null<AffineMinOp>(upperBound.getDefiningOp())) {
+  if (auto op = dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp())) {
+    return op;
+  }
+
+  if (auto minOp = dyn_cast_or_null<AffineMinOp>(upperBound.getDefiningOp())) {
     for (const AffineExpr &result : minOp.map().getResults()) {
-      if (AffineConstantExpr constExpr =
-              result.dyn_cast<AffineConstantExpr>()) {
+      if (auto constExpr = result.dyn_cast<AffineConstantExpr>()) {
         return rewriter.create<ConstantIndexOp>(minOp.getLoc(),
                                                 constExpr.getValue());
       }
     }
   }
+
+  if (auto multiplyOp = dyn_cast_or_null<MulIOp>(upperBound.getDefiningOp())) {
+    if (auto lhs = dyn_cast_or_null<ConstantIndexOp>(
+            deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
+                .getDefiningOp()))
+      if (auto rhs = dyn_cast_or_null<ConstantIndexOp>(
+              deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
+                  .getDefiningOp())) {
+        // Assumptions about the upper bound of minimum computations no longer
+        // work if multiplied by a negative value, so abort in this case.
+        if (lhs.getValue() < 0 || rhs.getValue() < 0)
+          return {};
+
+        return rewriter.create<ConstantIndexOp>(
+            multiplyOp.getLoc(), lhs.getValue() * rhs.getValue());
+      }
+  }
+
   return {};
 }
 

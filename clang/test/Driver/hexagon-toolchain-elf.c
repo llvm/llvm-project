@@ -514,7 +514,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK051 %s
 // CHECK051:      "-cc1"
-// CHECK051       {{hexagon-link|ld}}
+// CHECK051:      {{hexagon-link|ld}}
 // CHECK051-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
@@ -531,7 +531,7 @@
 // CHECK060:      "-cc1"
 // CHECK060-NEXT: llvm-mc
 // CHECK060:      "--noexecstack" "--trap" "--keep-locals"
-// CHECK060       {{hexagon-link|ld}}
+// CHECK060:      {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
 // ffixed-r19

@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +44,7 @@ extern cl::opt<bool> PrivateHeaders;
 extern cl::opt<bool> Relocations;
 extern cl::opt<bool> SectionHeaders;
 extern cl::opt<bool> SectionContents;
+extern cl::opt<bool> SymbolDescription;
 extern cl::opt<bool> SymbolTable;
 extern cl::opt<std::string> TripleName;
 extern cl::opt<bool> UnwindInfo;
@@ -118,9 +120,6 @@ SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
 Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
                                   const object::RelocationRef &Rel,
                                   llvm::SmallVectorImpl<char> &Result);
-Error getWasmRelocationValueString(const object::WasmObjectFile *Obj,
-                                   const object::RelocationRef &RelRef,
-                                   llvm::SmallVectorImpl<char> &Result);
 
 uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
 
@@ -128,7 +127,6 @@ bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void printELFFileHeader(const object::ObjectFile *O);
 void printELFDynamicSection(const object::ObjectFile *Obj);
 void printELFSymbolVersionInfo(const object::ObjectFile *Obj);
-void printWasmFileHeader(const object::ObjectFile *O);
 void printRawClangAST(const object::ObjectFile *O);
 void printRelocations(const object::ObjectFile *O);
 void printDynamicRelocations(const object::ObjectFile *O);
@@ -155,6 +153,8 @@ T unwrapOrError(Expected<T> EO, Ts &&... Args) {
 
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
+SymbolInfoTy createSymbolInfo(const object::ObjectFile *Obj,
+                              const object::SymbolRef &Symbol);
 
 } // end namespace llvm
 

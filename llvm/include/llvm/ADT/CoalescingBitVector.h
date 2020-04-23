@@ -384,10 +384,10 @@ private:
     for (IntervalMapOverlaps<MapT, MapT> I(Intervals, Other.Intervals);
          I.valid(); ++I)
       Overlaps.emplace_back(I.start(), I.stop());
-    assert(std::is_sorted(Overlaps.begin(), Overlaps.end(),
-                          [](IntervalT LHS, IntervalT RHS) {
-                            return LHS.second < RHS.first;
-                          }) &&
+    assert(llvm::is_sorted(Overlaps,
+                           [](IntervalT LHS, IntervalT RHS) {
+                             return LHS.second < RHS.first;
+                           }) &&
            "Overlaps must be sorted");
     return !Overlaps.empty();
   }

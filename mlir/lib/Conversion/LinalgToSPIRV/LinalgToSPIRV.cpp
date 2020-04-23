@@ -99,11 +99,11 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
       genericOp.indexing_maps().getValue()[1].cast<AffineMapAttr>();
   // The indexing map for the input should be `(i) -> (i)`.
   if (inputMap.getValue() !=
-      AffineMap::get(1, 0, {getAffineDimExpr(0, op->getContext())}))
+      AffineMap::get(1, 0, getAffineDimExpr(0, op->getContext())))
     return llvm::None;
   // The indexing map for the input should be `(i) -> (0)`.
   if (outputMap.getValue() !=
-      AffineMap::get(1, 0, {getAffineConstantExpr(0, op->getContext())}))
+      AffineMap::get(1, 0, getAffineConstantExpr(0, op->getContext())))
     return llvm::None;
 
   return linalg::RegionMatcher::matchAsScalarBinaryOp(genericOp);

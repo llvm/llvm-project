@@ -125,8 +125,16 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
         return;
       }
 
+      Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+      if (!SymFlagsOrErr) {
+        // TODO: Test this error.
+        ES.reportError(SymFlagsOrErr.takeError());
+        R.failMaterialization();
+        return;
+      }
+
       // Don't include symbols that aren't global.
-      if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global)) {
+      if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global)) {
         if (auto SymName = Sym.getName())
           InternalSymbols->insert(*SymName);
         else {
@@ -200,7 +208,9 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     // check whether the symbol is in a comdat section and if so mark it as
     // weak.
     for (auto &Sym : COFFObj->symbols()) {
-      if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+      // getFlags() on COFF symbols can't fail.
+      uint32_t SymFlags = cantFail(Sym.getFlags());
+      if (SymFlags & object::BasicSymbolRef::SF_Undefined)
         continue;
       auto Name = Sym.getName();
       if (!Name)

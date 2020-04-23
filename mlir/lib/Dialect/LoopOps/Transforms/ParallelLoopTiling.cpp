@@ -66,7 +66,8 @@ void mlir::loop::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
       /*dimCount=*/3, /*symbolCount=*/0,
       {getAffineDimExpr(/*position=*/0, b.getContext()),
        getAffineDimExpr(/*position=*/1, b.getContext()) -
-           getAffineDimExpr(/*position=*/2, b.getContext())});
+           getAffineDimExpr(/*position=*/2, b.getContext())},
+      b.getContext());
 
   // Create the inner loop with adjusted bounds.
   SmallVector<Value, 2> newBounds;

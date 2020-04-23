@@ -215,11 +215,6 @@ public:
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);
 
-  /// Legalize a simple vector instruction where all operands are the same type
-  /// by splitting into multiple components.
-  LegalizeResult fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
-                                          LLT NarrowTy);
-
   /// Legalize a instruction with a vector type where each operand may have a
   /// different element type. All type indexes must have the same number of
   /// elements.
@@ -250,6 +245,16 @@ public:
 
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+
+  /// Legalize an instruction by reducing the operation width, either by
+  /// narrowing the type of the operation or by reducing the number of elements
+  /// of a vector.
+  /// The used strategy (narrow vs. fewerElements) is decided by \p NarrowTy.
+  /// Narrow is used if the scalar type of \p NarrowTy and \p DstTy differ,
+  /// fewerElements is used when the scalar type is the same but the number of
+  /// elements between \p NarrowTy and \p DstTy differ.
+  LegalizeResult reduceOperationWidth(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT NarrowTy);
 
   LegalizeResult fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
                                               LLT NarrowTy);

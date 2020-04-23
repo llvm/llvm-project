@@ -285,13 +285,13 @@ public:
   }
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::TypeFormatImplSP &entry, uint32_t *reason = nullptr);
+           lldb::TypeFormatImplSP &entry);
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::TypeSummaryImplSP &entry, uint32_t *reason = nullptr);
+           lldb::TypeSummaryImplSP &entry);
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::SyntheticChildrenSP &entry, uint32_t *reason = nullptr);
+           lldb::SyntheticChildrenSP &entry);
 
   void Clear(FormatCategoryItems items = ALL_ITEM_TYPES);
 

@@ -166,7 +166,7 @@ public:
   // Set the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
   void setFPFeatures(FPOptions F) {
-    CXXOperatorCallExprBits.FPFeatures = F.getInt();
+    CXXOperatorCallExprBits.FPFeatures = F.getAsOpaqueInt();
   }
   FPOptions getFPFeatures() const {
     return FPOptions(CXXOperatorCallExprBits.FPFeatures);
@@ -778,6 +778,8 @@ public:
 ///
 /// This represents code like \c typeid(int) or \c typeid(*objPtr)
 class CXXTypeidExpr : public Expr {
+  friend class ASTStmtReader;
+
 private:
   llvm::PointerUnion<Stmt *, TypeSourceInfo *> Operand;
   SourceRange Range;
@@ -818,20 +820,9 @@ public:
     assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
     return Operand.get<TypeSourceInfo *>();
   }
-
-  void setTypeOperandSourceInfo(TypeSourceInfo *TSI) {
-    assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
-    Operand = TSI;
-  }
-
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for typeid(type)");
     return static_cast<Expr*>(Operand.get<Stmt *>());
-  }
-
-  void setExprOperand(Expr *E) {
-    assert(!isTypeOperand() && "Cannot call getExprOperand for typeid(type)");
-    Operand = E;
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
@@ -1000,22 +991,24 @@ public:
 ///
 /// This represents code like @c __uuidof(COMTYPE) or @c __uuidof(*comPtr)
 class CXXUuidofExpr : public Expr {
+  friend class ASTStmtReader;
+
 private:
   llvm::PointerUnion<Stmt *, TypeSourceInfo *> Operand;
-  StringRef UuidStr;
+  MSGuidDecl *Guid;
   SourceRange Range;
 
 public:
-  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, StringRef UuidStr,
+  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, MSGuidDecl *Guid,
                 SourceRange R)
       : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary), Operand(Operand),
-        UuidStr(UuidStr), Range(R) {
+        Guid(Guid), Range(R) {
     setDependence(computeDependence(this));
   }
 
-  CXXUuidofExpr(QualType Ty, Expr *Operand, StringRef UuidStr, SourceRange R)
+  CXXUuidofExpr(QualType Ty, Expr *Operand, MSGuidDecl *Guid, SourceRange R)
       : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary), Operand(Operand),
-        UuidStr(UuidStr), Range(R) {
+        Guid(Guid), Range(R) {
     setDependence(computeDependence(this));
   }
 
@@ -1038,24 +1031,12 @@ public:
     assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
     return Operand.get<TypeSourceInfo *>();
   }
-
-  void setTypeOperandSourceInfo(TypeSourceInfo *TSI) {
-    assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
-    Operand = TSI;
-  }
-
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for __uuidof(type)");
     return static_cast<Expr*>(Operand.get<Stmt *>());
   }
 
-  void setExprOperand(Expr *E) {
-    assert(!isTypeOperand() && "Cannot call getExprOperand for __uuidof(type)");
-    Operand = E;
-  }
-
-  void setUuidStr(StringRef US) { UuidStr = US; }
-  StringRef getUuidStr() const { return UuidStr; }
+  MSGuidDecl *getGuidDecl() const { return Guid; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }

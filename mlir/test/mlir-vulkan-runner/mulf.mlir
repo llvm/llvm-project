@@ -10,7 +10,7 @@ module attributes {
 } {
   gpu.module @kernels {
     gpu.func @kernel_mul(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<4x4xf32>)
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32>}} {
+      kernel attributes { spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32> }} {
       %x = "gpu.block_id"() {dimension = "x"} : () -> index
       %y = "gpu.block_id"() {dimension = "y"} : () -> index
       %1 = load %arg0[%x, %y] : memref<4x4xf32>
@@ -40,7 +40,7 @@ module attributes {
 
     %cst1 = constant 1 : index
     %cst4 = constant 4 : index
-    "gpu.launch_func"(%cst4, %cst4, %cst1, %cst1, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = "kernel_mul", kernel_module = @kernels }
+    "gpu.launch_func"(%cst4, %cst4, %cst1, %cst1, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = @kernels::@kernel_mul }
         : (index, index, index, index, index, index, memref<4x4xf32>, memref<4x4xf32>, memref<4x4xf32>) -> ()
     %arg6 = memref_cast %arg5 : memref<?x?xf32> to memref<*xf32>
     call @print_memref_f32(%arg6) : (memref<*xf32>) -> ()

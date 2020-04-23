@@ -16,8 +16,8 @@
 #ifndef LLVM_LIB_CODEGEN_AGGRESSIVEANTIDEPBREAKER_H
 #define LLVM_LIB_CODEGEN_AGGRESSIVEANTIDEPBREAKER_H
 
-#include "AntiDepBreaker.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/AntiDepBreaker.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <map>

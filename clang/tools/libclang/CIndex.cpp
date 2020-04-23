@@ -1793,6 +1793,8 @@ DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
 DEFAULT_TYPELOC_IMPL(Auto, Type)
+DEFAULT_TYPELOC_IMPL(ExtInt, Type)
+DEFAULT_TYPELOC_IMPL(DependentExtInt, Type)
 
 bool CursorVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // Visit the nested-name-specifier, if present.
@@ -6322,6 +6324,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Field:
   case Decl::Binding:
   case Decl::MSProperty:
+  case Decl::MSGuid:
   case Decl::IndirectField:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:

@@ -66,6 +66,12 @@ static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsage
 #endif
 }
 
+Process::Pid Process::getProcessId() {
+  static_assert(sizeof(Pid) >= sizeof(pid_t),
+                "Process::Pid should be big enough to store pid_t");
+  return Pid(::getpid());
+}
+
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
 Expected<unsigned> Process::getPageSize() {

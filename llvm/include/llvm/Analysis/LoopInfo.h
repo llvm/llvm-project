@@ -780,10 +780,11 @@ public:
   bool isCanonical(ScalarEvolution &SE) const;
 
   /// Return true if the Loop is in LCSSA form.
-  bool isLCSSAForm(DominatorTree &DT) const;
+  bool isLCSSAForm(const DominatorTree &DT) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form.
-  bool isRecursivelyLCSSAForm(DominatorTree &DT, const LoopInfo &LI) const;
+  bool isRecursivelyLCSSAForm(const DominatorTree &DT,
+                              const LoopInfo &LI) const;
 
   /// Return true if the Loop is in the form that the LoopSimplify form
   /// transforms loops to, which is sometimes called normal form.
@@ -961,6 +962,12 @@ public:
     const LoopT *L = getLoopFor(BB);
     return L && L->getHeader() == BB;
   }
+
+  /// Return the top-level loops.
+  const std::vector<LoopT *> &getTopLevelLoops() const { return TopLevelLoops; }
+
+  /// Return the top-level loops.
+  std::vector<LoopT *> &getTopLevelLoopsVector() { return TopLevelLoops; }
 
   /// This removes the specified top-level loop from this loop info object.
   /// The loop is not deleted, as it will presumably be inserted into

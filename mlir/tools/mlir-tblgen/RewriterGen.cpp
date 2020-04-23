@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -500,7 +499,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   llvm::sort(sortedResultOps, [&](const Operator *lhs, const Operator *rhs) {
     return lhs->getOperationName() < rhs->getOperationName();
   });
-  interleaveComma(sortedResultOps, os, [&](const Operator *op) {
+  llvm::interleaveComma(sortedResultOps, os, [&](const Operator *op) {
     os << '"' << op->getOperationName() << '"';
   });
   os << formatv(R"(}, {0}, context) {{})", pattern.getBenefit()) << "\n";

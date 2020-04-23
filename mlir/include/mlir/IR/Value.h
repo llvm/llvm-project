@@ -138,6 +138,13 @@ public:
   /// there are zero uses of 'this'.
   void replaceAllUsesWith(Value newValue) const;
 
+  /// Replace all uses of 'this' value with 'newValue', updating anything in the
+  /// IR that uses 'this' to use the other value instead except if the user is
+  /// listed in 'exceptions' .
+  void
+  replaceAllUsesExcept(Value newValue,
+                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+
   //===--------------------------------------------------------------------===//
   // Uses
 

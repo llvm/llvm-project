@@ -117,16 +117,16 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
 }
 
 Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
-  unsigned DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
-  unsigned CopyDstAlign = MI->getDestAlignment();
-  if (CopyDstAlign < DstAlign){
+  Align DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
+  MaybeAlign CopyDstAlign = MI->getDestAlign();
+  if (!CopyDstAlign || *CopyDstAlign < DstAlign) {
     MI->setDestAlignment(DstAlign);
     return MI;
   }
 
-  unsigned SrcAlign = getKnownAlignment(MI->getRawSource(), DL, MI, &AC, &DT);
-  unsigned CopySrcAlign = MI->getSourceAlignment();
-  if (CopySrcAlign < SrcAlign) {
+  Align SrcAlign = getKnownAlignment(MI->getRawSource(), DL, MI, &AC, &DT);
+  MaybeAlign CopySrcAlign = MI->getSourceAlign();
+  if (!CopySrcAlign || *CopySrcAlign < SrcAlign) {
     MI->setSourceAlignment(SrcAlign);
     return MI;
   }
@@ -234,9 +234,10 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 }
 
 Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
-  const unsigned KnownAlignment =
+  const Align KnownAlignment =
       getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
-  if (MI->getDestAlignment() < KnownAlignment) {
+  MaybeAlign MemSetAlign = MI->getDestAlign();
+  if (!MemSetAlign || *MemSetAlign < KnownAlignment) {
     MI->setDestAlignment(KnownAlignment);
     return MI;
   }
@@ -416,7 +417,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
         Amt, DemandedUpper, II.getModule()->getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
-      SmallVector<uint32_t, 16> ZeroSplat(VWidth, 0);
+      SmallVector<int, 16> ZeroSplat(VWidth, 0);
       Amt = Builder.CreateShuffleVector(Amt, Amt, ZeroSplat);
       return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                         : Builder.CreateLShr(Vec, Amt))
@@ -663,7 +664,7 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   Arg1 = Builder.CreateSelect(Builder.CreateICmpSGT(Arg1, MaxC), MaxC, Arg1);
 
   // Shuffle clamped args together at the lane level.
-  SmallVector<unsigned, 32> PackMask;
+  SmallVector<int, 32> PackMask;
   for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
     for (unsigned Elt = 0; Elt != NumSrcEltsPerLane; ++Elt)
       PackMask.push_back(Elt + (Lane * NumSrcEltsPerLane));
@@ -760,7 +761,7 @@ static Value *simplifyX86insertps(const IntrinsicInst &II,
     return ZeroVector;
 
   // Initialize by passing all of the first source bits through.
-  uint32_t ShuffleMask[4] = { 0, 1, 2, 3 };
+  int ShuffleMask[4] = {0, 1, 2, 3};
 
   // We may replace the second operand with the zero vector.
   Value *V1 = II.getArgOperand(1);
@@ -840,22 +841,19 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
       Index /= 8;
 
       Type *IntTy8 = Type::getInt8Ty(II.getContext());
-      Type *IntTy32 = Type::getInt32Ty(II.getContext());
       VectorType *ShufTy = VectorType::get(IntTy8, 16);
 
-      SmallVector<Constant *, 16> ShuffleMask;
+      SmallVector<int, 16> ShuffleMask;
       for (int i = 0; i != (int)Length; ++i)
-        ShuffleMask.push_back(
-            Constant::getIntegerValue(IntTy32, APInt(32, i + Index)));
+        ShuffleMask.push_back(i + Index);
       for (int i = Length; i != 8; ++i)
-        ShuffleMask.push_back(
-            Constant::getIntegerValue(IntTy32, APInt(32, i + 16)));
+        ShuffleMask.push_back(i + 16);
       for (int i = 8; i != 16; ++i)
-        ShuffleMask.push_back(UndefValue::get(IntTy32));
+        ShuffleMask.push_back(-1);
 
       Value *SV = Builder.CreateShuffleVector(
           Builder.CreateBitCast(Op0, ShufTy),
-          ConstantAggregateZero::get(ShufTy), ConstantVector::get(ShuffleMask));
+          ConstantAggregateZero::get(ShufTy), ShuffleMask);
       return Builder.CreateBitCast(SV, II.getType());
     }
 
@@ -920,23 +918,21 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Index /= 8;
 
     Type *IntTy8 = Type::getInt8Ty(II.getContext());
-    Type *IntTy32 = Type::getInt32Ty(II.getContext());
     VectorType *ShufTy = VectorType::get(IntTy8, 16);
 
-    SmallVector<Constant *, 16> ShuffleMask;
+    SmallVector<int, 16> ShuffleMask;
     for (int i = 0; i != (int)Index; ++i)
-      ShuffleMask.push_back(Constant::getIntegerValue(IntTy32, APInt(32, i)));
+      ShuffleMask.push_back(i);
     for (int i = 0; i != (int)Length; ++i)
-      ShuffleMask.push_back(
-          Constant::getIntegerValue(IntTy32, APInt(32, i + 16)));
+      ShuffleMask.push_back(i + 16);
     for (int i = Index + Length; i != 8; ++i)
-      ShuffleMask.push_back(Constant::getIntegerValue(IntTy32, APInt(32, i)));
+      ShuffleMask.push_back(i);
     for (int i = 8; i != 16; ++i)
-      ShuffleMask.push_back(UndefValue::get(IntTy32));
+      ShuffleMask.push_back(-1);
 
     Value *SV = Builder.CreateShuffleVector(Builder.CreateBitCast(Op0, ShufTy),
                                             Builder.CreateBitCast(Op1, ShufTy),
-                                            ConstantVector::get(ShuffleMask));
+                                            ShuffleMask);
     return Builder.CreateBitCast(SV, II.getType());
   }
 
@@ -988,13 +984,12 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
     return nullptr;
 
   auto *VecTy = cast<VectorType>(II.getType());
-  auto *MaskEltTy = Type::getInt32Ty(II.getContext());
   unsigned NumElts = VecTy->getNumElements();
   assert((NumElts == 16 || NumElts == 32 || NumElts == 64) &&
          "Unexpected number of elements in shuffle mask!");
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[64] = {nullptr};
+  int Indexes[64];
 
   // Each byte in the shuffle control mask forms an index to permute the
   // corresponding byte in the destination operand.
@@ -1004,7 +999,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
       return nullptr;
 
     if (isa<UndefValue>(COp)) {
-      Indexes[I] = UndefValue::get(MaskEltTy);
+      Indexes[I] = -1;
       continue;
     }
 
@@ -1018,13 +1013,12 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
     // The value of each index for the high 128-bit lane is the least
     // significant 4 bits of the respective shuffle control byte.
     Index = ((Index < 0) ? NumElts : Index & 0x0F) + (I & 0xF0);
-    Indexes[I] = ConstantInt::get(MaskEltTy, Index);
+    Indexes[I] = Index;
   }
 
-  auto ShuffleMask = ConstantVector::get(makeArrayRef(Indexes, NumElts));
   auto V1 = II.getArgOperand(0);
   auto V2 = Constant::getNullValue(VecTy);
-  return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
+  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermilvar* to shufflevector if the mask is constant.
@@ -1035,14 +1029,13 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
     return nullptr;
 
   auto *VecTy = cast<VectorType>(II.getType());
-  auto *MaskEltTy = Type::getInt32Ty(II.getContext());
   unsigned NumElts = VecTy->getNumElements();
   bool IsPD = VecTy->getScalarType()->isDoubleTy();
   unsigned NumLaneElts = IsPD ? 2 : 4;
   assert(NumElts == 16 || NumElts == 8 || NumElts == 4 || NumElts == 2);
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[16] = {nullptr};
+  int Indexes[16];
 
   // The intrinsics only read one or two bits, clear the rest.
   for (unsigned I = 0; I < NumElts; ++I) {
@@ -1051,7 +1044,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
       return nullptr;
 
     if (isa<UndefValue>(COp)) {
-      Indexes[I] = UndefValue::get(MaskEltTy);
+      Indexes[I] = -1;
       continue;
     }
 
@@ -1068,13 +1061,12 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
     // shuffle, we have to make that explicit.
     Index += APInt(32, (I / NumLaneElts) * NumLaneElts);
 
-    Indexes[I] = ConstantInt::get(MaskEltTy, Index);
+    Indexes[I] = Index.getZExtValue();
   }
 
-  auto ShuffleMask = ConstantVector::get(makeArrayRef(Indexes, NumElts));
   auto V1 = II.getArgOperand(0);
   auto V2 = UndefValue::get(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
+  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermd/vpermps to shufflevector if the mask is constant.
@@ -1085,13 +1077,12 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
     return nullptr;
 
   auto *VecTy = cast<VectorType>(II.getType());
-  auto *MaskEltTy = Type::getInt32Ty(II.getContext());
   unsigned Size = VecTy->getNumElements();
   assert((Size == 4 || Size == 8 || Size == 16 || Size == 32 || Size == 64) &&
          "Unexpected shuffle mask size");
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[64] = {nullptr};
+  int Indexes[64];
 
   for (unsigned I = 0; I < Size; ++I) {
     Constant *COp = V->getAggregateElement(I);
@@ -1099,19 +1090,18 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
       return nullptr;
 
     if (isa<UndefValue>(COp)) {
-      Indexes[I] = UndefValue::get(MaskEltTy);
+      Indexes[I] = -1;
       continue;
     }
 
     uint32_t Index = cast<ConstantInt>(COp)->getZExtValue();
     Index &= Size - 1;
-    Indexes[I] = ConstantInt::get(MaskEltTy, Index);
+    Indexes[I] = Index;
   }
 
-  auto ShuffleMask = ConstantVector::get(makeArrayRef(Indexes, Size));
   auto V1 = II.getArgOperand(0);
   auto V2 = UndefValue::get(VecTy);
-  return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
+  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, Size));
 }
 
 // TODO, Obvious Missing Transforms:
@@ -1487,7 +1477,7 @@ static Value *simplifyNeonTbl1(const IntrinsicInst &II,
   if (!VecTy->getElementType()->isIntegerTy(8) || NumElts != 8)
     return nullptr;
 
-  uint32_t Indexes[8];
+  int Indexes[8];
 
   for (unsigned I = 0; I < NumElts; ++I) {
     Constant *COp = C->getAggregateElement(I);
@@ -1498,15 +1488,13 @@ static Value *simplifyNeonTbl1(const IntrinsicInst &II,
     Indexes[I] = cast<ConstantInt>(COp)->getLimitedValue();
 
     // Make sure the mask indices are in range.
-    if (Indexes[I] >= NumElts)
+    if ((unsigned)Indexes[I] >= NumElts)
       return nullptr;
   }
 
-  auto *ShuffleMask = ConstantDataVector::get(II.getContext(),
-                                              makeArrayRef(Indexes));
   auto *V1 = II.getArgOperand(0);
   auto *V2 = Constant::getNullValue(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
+  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes));
 }
 
 /// Convert a vector load intrinsic into a simple llvm load instruction.
@@ -2469,7 +2457,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -2486,7 +2474,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
     // Turn stvx -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -2503,7 +2491,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *VTy =
           VectorType::get(Builder.getFloatTy(),
@@ -2516,7 +2504,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvlfd:
     // Turn PPC QPX qvlfd -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), Align(32), DL, II, &AC,
                                    &DT) >= 32) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -2525,7 +2513,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfs:
     // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(16), DL, II, &AC,
                                    &DT) >= 16) {
       Type *VTy = VectorType::get(
           Builder.getFloatTy(),
@@ -2538,7 +2526,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfd:
     // Turn PPC QPX qvstfd -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), Align(32), DL, II, &AC,
                                    &DT) >= 32) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -3362,9 +3350,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
 
   case Intrinsic::arm_neon_vld1: {
-    unsigned MemAlign = getKnownAlignment(II->getArgOperand(0),
-                                          DL, II, &AC, &DT);
-    if (Value *V = simplifyNeonVld1(*II, MemAlign, Builder))
+    Align MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    if (Value *V = simplifyNeonVld1(*II, MemAlign.value(), Builder))
       return replaceInstUsesWith(*II, V);
     break;
   }
@@ -3382,14 +3369,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_vst2lane:
   case Intrinsic::arm_neon_vst3lane:
   case Intrinsic::arm_neon_vst4lane: {
-    unsigned MemAlign =
-        getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    Align MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
     unsigned AlignArg = II->getNumArgOperands() - 1;
     ConstantInt *IntrAlign = dyn_cast<ConstantInt>(II->getArgOperand(AlignArg));
-    if (IntrAlign && IntrAlign->getZExtValue() < MemAlign)
+    if (IntrAlign && IntrAlign->getZExtValue() < MemAlign.value())
       return replaceOperand(*II, AlignArg,
                             ConstantInt::get(Type::getInt32Ty(II->getContext()),
-                                             MemAlign, false));
+                                             MemAlign.value(), false));
     break;
   }
 
@@ -4654,8 +4640,13 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
   }
 
   if (!Call.use_empty() && !Call.isMustTailCall())
-    if (Value *ReturnedArg = Call.getReturnedArgOperand())
-      return replaceInstUsesWith(Call, ReturnedArg);
+    if (Value *ReturnedArg = Call.getReturnedArgOperand()) {
+      Type *CallTy = Call.getType();
+      Type *RetArgTy = ReturnedArg->getType();
+      if (RetArgTy->canLosslesslyBitCastTo(CallTy))
+        return replaceInstUsesWith(
+            Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
+    }
 
   if (isAllocLikeFn(&Call, &TLI))
     return visitAllocSite(Call);

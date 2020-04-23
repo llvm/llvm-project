@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_SUPPORT_FILECHECKIMPL_H
 #define LLVM_LIB_SUPPORT_FILECHECKIMPL_H
 
+#include "llvm/Support/FileCheck.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,9 +39,6 @@ struct ExpressionFormat {
     /// Denote absence of format. Used for implicit format of literals and
     /// empty expressions.
     NoFormat,
-    /// Used when there are several conflicting implicit formats in an
-    /// expression.
-    Conflict,
     /// Value is an unsigned integer and should be printed as a decimal number.
     Unsigned,
     /// Value should be printed as an uppercase hex number.
@@ -54,9 +52,7 @@ private:
 
 public:
   /// Evaluates a format to true if it can be used in a match.
-  explicit operator bool() const {
-    return Value != Kind::NoFormat && Value != Kind::Conflict;
-  }
+  explicit operator bool() const { return Value != Kind::NoFormat; }
 
   /// Define format equality: formats are equal if neither is NoFormat and
   /// their kinds are the same.
@@ -72,16 +68,19 @@ public:
 
   bool operator!=(Kind OtherValue) const { return !(*this == OtherValue); }
 
+  /// \returns the format specifier corresponding to this format as a string.
+  StringRef toString() const;
+
   ExpressionFormat() : Value(Kind::NoFormat){};
   explicit ExpressionFormat(Kind Value) : Value(Value){};
 
   /// \returns a wildcard regular expression StringRef that matches any value
   /// in the format represented by this instance, or an error if the format is
-  /// NoFormat or Conflict.
+  /// NoFormat.
   Expected<StringRef> getWildcardRegex() const;
 
   /// \returns the string representation of \p Value in the format represented
-  /// by this instance, or an error if the format is NoFormat or Conflict.
+  /// by this instance, or an error if the format is NoFormat.
   Expected<std::string> getMatchingString(uint64_t Value) const;
 
   /// \returns the value corresponding to string representation \p StrVal
@@ -94,17 +93,26 @@ public:
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
+private:
+  StringRef ExpressionStr;
+
 public:
+  ExpressionAST(StringRef ExpressionStr) : ExpressionStr(ExpressionStr) {}
+
   virtual ~ExpressionAST() = default;
+
+  StringRef getExpressionStr() const { return ExpressionStr; }
 
   /// Evaluates and \returns the value of the expression represented by this
   /// AST or an error if evaluation fails.
   virtual Expected<uint64_t> eval() const = 0;
 
-  /// \returns either the implicit format of this AST, FormatConflict if
-  /// implicit formats of the AST's components conflict, or NoFormat if the AST
-  /// has no implicit format (e.g. AST is made up of a single literal).
-  virtual ExpressionFormat getImplicitFormat() const {
+  /// \returns either the implicit format of this AST, a diagnostic against
+  /// \p SM if implicit formats of the AST's components conflict, or NoFormat
+  /// if the AST has no implicit format (e.g. AST is made up of a single
+  /// literal).
+  virtual Expected<ExpressionFormat>
+  getImplicitFormat(const SourceMgr &SM) const {
     return ExpressionFormat();
   }
 };
@@ -116,8 +124,10 @@ private:
   uint64_t Value;
 
 public:
-  /// Constructs a literal with the specified value.
-  ExpressionLiteral(uint64_t Val) : Value(Val) {}
+  /// Constructs a literal with the specified value parsed from
+  /// \p ExpressionStr.
+  ExpressionLiteral(StringRef ExpressionStr, uint64_t Val)
+      : ExpressionAST(ExpressionStr), Value(Val) {}
 
   /// \returns the literal's value.
   Expected<uint64_t> eval() const override { return Value; }
@@ -221,21 +231,18 @@ public:
 /// expression.
 class NumericVariableUse : public ExpressionAST {
 private:
-  /// Name of the numeric variable.
-  StringRef Name;
-
   /// Pointer to the class instance for the variable this use is about.
   NumericVariable *Variable;
 
 public:
   NumericVariableUse(StringRef Name, NumericVariable *Variable)
-      : Name(Name), Variable(Variable) {}
-
+      : ExpressionAST(Name), Variable(Variable) {}
   /// \returns the value of the variable referenced by this instance.
   Expected<uint64_t> eval() const override;
 
   /// \returns implicit format of this numeric variable.
-  ExpressionFormat getImplicitFormat() const override {
+  Expected<ExpressionFormat>
+  getImplicitFormat(const SourceMgr &SM) const override {
     return Variable->getImplicitFormat();
   }
 };
@@ -256,9 +263,10 @@ private:
   binop_eval_t EvalBinop;
 
 public:
-  BinaryOperation(binop_eval_t EvalBinop, std::unique_ptr<ExpressionAST> LeftOp,
+  BinaryOperation(StringRef ExpressionStr, binop_eval_t EvalBinop,
+                  std::unique_ptr<ExpressionAST> LeftOp,
                   std::unique_ptr<ExpressionAST> RightOp)
-      : EvalBinop(EvalBinop) {
+      : ExpressionAST(ExpressionStr), EvalBinop(EvalBinop) {
     LeftOperand = std::move(LeftOp);
     RightOperand = std::move(RightOp);
   }
@@ -269,10 +277,12 @@ public:
   /// variable is used in one of the operands.
   Expected<uint64_t> eval() const override;
 
-  /// \returns the implicit format of this AST, if any, a format conflict if
-  /// the implicit formats of the AST's components conflict, or no format if
-  /// the AST has no implicit format (e.g. AST is made of a single literal).
-  ExpressionFormat getImplicitFormat() const override;
+  /// \returns the implicit format of this AST, if any, a diagnostic against
+  /// \p SM if the implicit formats of the AST's components conflict, or no
+  /// format if the AST has no implicit format (e.g. AST is made of a single
+  /// literal).
+  Expected<ExpressionFormat>
+  getImplicitFormat(const SourceMgr &SM) const override;
 };
 
 class FileCheckPatternContext;
@@ -397,7 +407,7 @@ public:
   /// command line, passed as a vector of [#]VAR=VAL strings in
   /// \p CmdlineDefines. \returns an error list containing diagnostics against
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
-  Error defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
+  Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
                                SourceMgr &SM);
 
   /// Create @LINE pseudo variable. Value is set when pattern are being
@@ -662,17 +672,20 @@ private:
   parseNumericOperand(StringRef &Expr, AllowedOperand AO,
                       Optional<size_t> LineNumber,
                       FileCheckPatternContext *Context, const SourceMgr &SM);
-  /// Parses \p Expr for a binary operation at line \p LineNumber, or before
-  /// input is parsed if \p LineNumber is None. The left operand of this binary
-  /// operation is given in \p LeftOp and \p IsLegacyLineExpr indicates whether
-  /// we are parsing a legacy @LINE expression. Parameter \p Context points to
-  /// the class instance holding the live string and numeric variables.
-  /// \returns the class representing the binary operation in the AST of the
-  /// expression, or an error holding a diagnostic against \p SM otherwise.
+  /// Parses and updates \p RemainingExpr for a binary operation at line
+  /// \p LineNumber, or before input is parsed if \p LineNumber is None. The
+  /// left operand of this binary operation is given in \p LeftOp and \p Expr
+  /// holds the string for the full expression, including the left operand.
+  /// Parameter \p IsLegacyLineExpr indicates whether we are parsing a legacy
+  /// @LINE expression. Parameter \p Context points to the class instance
+  /// holding the live string and numeric variables. \returns the class
+  /// representing the binary operation in the AST of the expression, or an
+  /// error holding a diagnostic against \p SM otherwise.
   static Expected<std::unique_ptr<ExpressionAST>>
-  parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
-             bool IsLegacyLineExpr, Optional<size_t> LineNumber,
-             FileCheckPatternContext *Context, const SourceMgr &SM);
+  parseBinop(StringRef Expr, StringRef &RemainingExpr,
+             std::unique_ptr<ExpressionAST> LeftOp, bool IsLegacyLineExpr,
+             Optional<size_t> LineNumber, FileCheckPatternContext *Context,
+             const SourceMgr &SM);
 };
 
 //===----------------------------------------------------------------------===//

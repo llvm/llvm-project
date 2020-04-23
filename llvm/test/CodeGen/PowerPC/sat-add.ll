@@ -24,7 +24,7 @@ define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 24, 31
+; CHECK-NEXT:    clrlwi 3, 3, 24
 ; CHECK-NEXT:    addi 3, 3, 42
 ; CHECK-NEXT:    andi. 4, 3, 256
 ; CHECK-NEXT:    li 4, -1
@@ -69,7 +69,7 @@ define i16 @unsigned_sat_constant_i16_using_min(i16 %x) {
 define i16 @unsigned_sat_constant_i16_using_cmp_sum(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 16, 31
+; CHECK-NEXT:    clrlwi 3, 3, 16
 ; CHECK-NEXT:    addi 3, 3, 42
 ; CHECK-NEXT:    andis. 4, 3, 1
 ; CHECK-NEXT:    li 4, -1
@@ -115,7 +115,7 @@ define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi 5, 3, 42
 ; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    cmplw 0, 5, 3
+; CHECK-NEXT:    cmplw 5, 3
 ; CHECK-NEXT:    isel 3, 4, 5, 0
 ; CHECK-NEXT:    blr
   %a = add i32 %x, 42
@@ -129,7 +129,7 @@ define i32 @unsigned_sat_constant_i32_using_cmp_notval(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, -43
 ; CHECK-NEXT:    addi 5, 3, 42
-; CHECK-NEXT:    cmplw 0, 3, 4
+; CHECK-NEXT:    cmplw 3, 4
 ; CHECK-NEXT:    li 3, -1
 ; CHECK-NEXT:    isel 3, 3, 5, 1
 ; CHECK-NEXT:    blr
@@ -202,8 +202,8 @@ define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i8_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 0, 24, 31
-; CHECK-NEXT:    rlwinm 3, 3, 0, 24, 31
+; CHECK-NEXT:    clrlwi 4, 4, 24
+; CHECK-NEXT:    clrlwi 3, 3, 24
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    andi. 4, 3, 256
 ; CHECK-NEXT:    li 4, -1
@@ -253,8 +253,8 @@ define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 define i16 @unsigned_sat_variable_i16_using_cmp_sum(i16 %x, i16 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i16_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 0, 16, 31
-; CHECK-NEXT:    rlwinm 3, 3, 0, 16, 31
+; CHECK-NEXT:    clrlwi 4, 4, 16
+; CHECK-NEXT:    clrlwi 3, 3, 16
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    andis. 4, 3, 1
 ; CHECK-NEXT:    li 4, -1
@@ -304,7 +304,7 @@ define i32 @unsigned_sat_variable_i32_using_cmp_sum(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add 4, 3, 4
 ; CHECK-NEXT:    li 5, -1
-; CHECK-NEXT:    cmplw 0, 4, 3
+; CHECK-NEXT:    cmplw 4, 3
 ; CHECK-NEXT:    isel 3, 5, 4, 0
 ; CHECK-NEXT:    blr
   %a = add i32 %x, %y

@@ -246,66 +246,6 @@ TEST_F(TUSchedulerTests, Debounce) {
   EXPECT_EQ(2, CallbackCount);
 }
 
-static std::vector<std::string> includes(const PreambleData *Preamble) {
-  std::vector<std::string> Result;
-  if (Preamble)
-    for (const auto &Inclusion : Preamble->Includes.MainFileIncludes)
-      Result.push_back(Inclusion.Written);
-  return Result;
-}
-
-TEST_F(TUSchedulerTests, PreambleConsistency) {
-  std::atomic<int> CallbackCount(0);
-  {
-    Notification InconsistentReadDone; // Must live longest.
-    TUScheduler S(CDB, optsForTest());
-    auto Path = testPath("foo.cpp");
-    // Schedule two updates (A, B) and two preamble reads (stale, consistent).
-    // The stale read should see A, and the consistent read should see B.
-    // (We recognize the preambles by their included files).
-    auto Inputs = getInputs(Path, "#include <A>");
-    Inputs.Version = "A";
-    updateWithCallback(S, Path, Inputs, WantDiagnostics::Yes, [&]() {
-      // This callback runs in between the two preamble updates.
-
-      // This blocks update B, preventing it from winning the race
-      // against the stale read.
-      // If the first read was instead consistent, this would deadlock.
-      InconsistentReadDone.wait();
-      // This delays update B, preventing it from winning a race
-      // against the consistent read. The consistent read sees B
-      // only because it waits for it.
-      // If the second read was stale, it would usually see A.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    });
-    Inputs.Contents = "#include <B>";
-    Inputs.Version = "B";
-    S.update(Path, Inputs, WantDiagnostics::Yes);
-
-    S.runWithPreamble("StaleRead", Path, TUScheduler::Stale,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "A");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<A>"));
-                        InconsistentReadDone.notify();
-                        ++CallbackCount;
-                      });
-    S.runWithPreamble("ConsistentRead", Path, TUScheduler::Consistent,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "B");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<B>"));
-                        ++CallbackCount;
-                      });
-    S.blockUntilIdle(timeoutSeconds(10));
-  }
-  EXPECT_EQ(2, CallbackCount);
-}
-
 TEST_F(TUSchedulerTests, Cancellation) {
   // We have the following update/read sequence
   //   U0
@@ -608,6 +548,37 @@ TEST_F(TUSchedulerTests, EvictedAST) {
               UnorderedElementsAre(Foo, AnyOf(Bar, Baz)));
 }
 
+// We send "empty" changes to TUScheduler when we think some external event
+// *might* have invalidated current state (e.g. a header was edited).
+// Verify that this doesn't evict our cache entries.
+TEST_F(TUSchedulerTests, NoopChangesDontThrashCache) {
+  auto Opts = optsForTest();
+  Opts.RetentionPolicy.MaxRetainedASTs = 1;
+  TUScheduler S(CDB, Opts);
+
+  auto Foo = testPath("foo.cpp");
+  auto FooInputs = getInputs(Foo, "int x=1;");
+  auto Bar = testPath("bar.cpp");
+  auto BarInputs = getInputs(Bar, "int x=2;");
+
+  // After opening Foo then Bar, AST cache contains Bar.
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  S.update(Bar, BarInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
+
+  // Any number of no-op updates to Foo don't dislodge Bar from the cache.
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  S.update(Foo, FooInputs, WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
+  // In fact each file has been built only once.
+  ASSERT_EQ(S.fileStats().lookup(Foo).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Bar).ASTBuilds, 1u);
+}
+
 TEST_F(TUSchedulerTests, EmptyPreamble) {
   TUScheduler S(CDB, optsForTest());
 
@@ -686,7 +657,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   Files[Header] = "int a;";
   Timestamps[Header] = time_t(0);
 
-  auto SourceContents = R"cpp(
+  std::string SourceContents = R"cpp(
       #include "foo.h"
       int b = a;
     )cpp";
@@ -705,25 +676,32 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
 
   // Test that subsequent updates with the same inputs do not cause rebuilds.
   ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
   ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 1u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
 
   // Update to a header should cause a rebuild, though.
   Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 2u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 2u);
 
   // Update to the contents should cause a rebuild.
-  auto OtherSourceContents = R"cpp(
-      #include "foo.h"
-      int c = d;
-    )cpp";
-  ASSERT_TRUE(DoUpdate(OtherSourceContents));
-  ASSERT_FALSE(DoUpdate(OtherSourceContents));
+  SourceContents += "\nint c = b;";
+  ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 3u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 2u);
 
   // Update to the compile commands should also cause a rebuild.
   CDB.ExtraClangFlags.push_back("-DSOMETHING");
-  ASSERT_TRUE(DoUpdate(OtherSourceContents));
-  ASSERT_FALSE(DoUpdate(OtherSourceContents));
+  ASSERT_TRUE(DoUpdate(SourceContents));
+  ASSERT_FALSE(DoUpdate(SourceContents));
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 4u);
+  ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 3u);
 }
 
 TEST_F(TUSchedulerTests, ForceRebuild) {

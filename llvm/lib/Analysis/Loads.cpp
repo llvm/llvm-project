@@ -148,8 +148,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                               const DominatorTree *DT) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
-  if (!Ty->isSized() ||
-      (Ty->isVectorTy() && cast<VectorType>(Ty)->isScalable()))
+  if (!Ty->isSized() || isa<ScalableVectorType>(Ty))
     return false;
 
   // When dereferenceability information is provided by a dereferenceable

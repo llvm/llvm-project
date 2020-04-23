@@ -97,6 +97,8 @@ public:
 
   void emitDirectiveOptionPush() override;
   void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPIC() override;
+  void emitDirectiveOptionNoPIC() override;
   void emitDirectiveOptionRVC() override;
   void emitDirectiveOptionNoRVC() override;
   void emitDirectiveOptionRelax() override;

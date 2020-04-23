@@ -304,8 +304,15 @@ private:
   private:
     void buildInitialSymbolTable(const OwnedObject &Obj) {
       for (auto &Symbol : Obj.getBinary()->symbols()) {
-        if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
+        if (Expected<uint32_t> SymbolFlagsOrErr = Symbol.getFlags()) {
+          if (*SymbolFlagsOrErr & object::SymbolRef::SF_Undefined)
+            continue;
+        } else {
+          // FIXME: Raise an error for bad symbols.
+          consumeError(SymbolFlagsOrErr.takeError());
           continue;
+        }
+
         Expected<StringRef> SymbolName = Symbol.getName();
         // FIXME: Raise an error for bad symbols.
         if (!SymbolName) {

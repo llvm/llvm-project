@@ -19,6 +19,7 @@ namespace macho {
 
 class InputFile;
 class InputSection;
+class OutputSegment;
 class Symbol;
 
 struct Reloc {
@@ -30,9 +31,12 @@ struct Reloc {
 
 class InputSection {
 public:
-  void writeTo(uint8_t *buf);
+  virtual ~InputSection() = default;
+  virtual void writeTo(uint8_t *buf);
+  virtual size_t getSize() const { return data.size(); }
 
   InputFile *file = nullptr;
+  OutputSegment *parent = nullptr;
   StringRef name;
   StringRef segname;
 

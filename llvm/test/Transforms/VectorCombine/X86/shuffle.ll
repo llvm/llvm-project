@@ -59,13 +59,13 @@ define i128 @bitcast_shuf_narrow_element_wrong_type(<4 x i32> %v) {
   ret i128 %r
 }
 
-; Negative test - but might want to try this
+; Widen shuffle elements
 
 define <4 x i32> @bitcast_shuf_wide_element(<8 x i16> %v) {
 ; CHECK-LABEL: @bitcast_shuf_wide_element(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[V:%.*]], <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = bitcast <8 x i16> [[SHUF]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[V:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %shuf = shufflevector <8 x i16> %v, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3>
   %r = bitcast <8 x i16> %shuf to <4 x i32>

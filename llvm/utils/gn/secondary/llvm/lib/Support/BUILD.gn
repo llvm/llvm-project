@@ -117,7 +117,6 @@ static_library("Support") {
     "Statistic.cpp",
     "StringExtras.cpp",
     "StringMap.cpp",
-    "StringPool.cpp",
     "StringRef.cpp",
     "StringSaver.cpp",
     "SymbolRemappingReader.cpp",

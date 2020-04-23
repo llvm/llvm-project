@@ -49,7 +49,7 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
 
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
-  if (DstTy->isScalable())
+  if (isa<ScalableVectorType>(DstTy))
     return nullptr;
 
   // If this cast changes element count then we can't handle it here:
@@ -139,7 +139,8 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   // and dest type have the same size (otherwise its an illegal cast).
   if (VectorType *DestPTy = dyn_cast<VectorType>(DestTy)) {
     if (VectorType *SrcTy = dyn_cast<VectorType>(V->getType())) {
-      assert(DestPTy->getBitWidth() == SrcTy->getBitWidth() &&
+      assert(DestPTy->getPrimitiveSizeInBits() ==
+                 SrcTy->getPrimitiveSizeInBits() &&
              "Not cast between same sized vectors!");
       SrcTy = nullptr;
       // First, check for null.  Undef is already handled.
@@ -847,7 +848,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
   VectorType *ValTy = cast<VectorType>(Val->getType());
-  if (ValTy->isScalable())
+  if (isa<ScalableVectorType>(ValTy))
     return nullptr;
 
   unsigned NumElts = cast<VectorType>(Val->getType())->getNumElements();
@@ -875,7 +876,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                      ArrayRef<int> Mask) {
   auto *V1VTy = cast<VectorType>(V1->getType());
   unsigned MaskNumElts = Mask.size();
-  ElementCount MaskEltCount = {MaskNumElts, V1VTy->isScalable()};
+  ElementCount MaskEltCount = {MaskNumElts, isa<ScalableVectorType>(V1VTy)};
   Type *EltTy = V1VTy->getElementType();
 
   // Undefined shuffle mask -> undefined value.
@@ -894,7 +895,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   }
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
-  if (V1VTy->isScalable())
+  if (isa<ScalableVectorType>(V1VTy))
     return nullptr;
 
   unsigned SrcNumElts = V1VTy->getNumElements();
@@ -971,8 +972,7 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
 
   // Handle scalar UndefValue and scalable vector UndefValue. Fixed-length
   // vectors are always evaluated per element.
-  bool IsScalableVector = isa<VectorType>(C->getType()) &&
-                          cast<VectorType>(C->getType())->isScalable();
+  bool IsScalableVector = isa<ScalableVectorType>(C->getType());
   bool HasScalarUndefOrScalableVectorUndef =
       (!C->getType()->isVectorTy() || IsScalableVector) && isa<UndefValue>(C);
 
@@ -1045,8 +1045,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 
   // Handle scalar UndefValue and scalable vector UndefValue. Fixed-length
   // vectors are always evaluated per element.
-  bool IsScalableVector = isa<VectorType>(C1->getType()) &&
-                          cast<VectorType>(C1->getType())->isScalable();
+  bool IsScalableVector = isa<ScalableVectorType>(C1->getType());
   bool HasScalarUndefOrScalableVectorUndef =
       (!C1->getType()->isVectorTy() || IsScalableVector) &&
       (isa<UndefValue>(C1) || isa<UndefValue>(C2));
@@ -1999,7 +1998,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
-    if (C1VTy->isScalable())
+    if (isa<ScalableVectorType>(C1VTy))
       return nullptr;
 
     // Fast path for splatted constants.

@@ -8,7 +8,8 @@ add_mlir_conversion_library(MLIRAVX512ToLLVM
   MLIRConversionPassIncGen
 )
 
-set(LIBS
+target_link_libraries(MLIRAVX512ToLLVM
+  PUBLIC
   MLIRAVX512
   MLIRLLVMAVX512
   MLIRLLVMIR
@@ -17,6 +18,3 @@ set(LIBS
   LLVMCore
   LLVMSupport
   )
-
-add_dependencies(MLIRAVX512ToLLVM ${LIBS})
-target_link_libraries(MLIRAVX512ToLLVM PUBLIC ${LIBS})

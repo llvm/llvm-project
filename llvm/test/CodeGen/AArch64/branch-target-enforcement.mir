@@ -340,11 +340,9 @@ body:             |
 
     ; CHECK-LABEL: name: debug_ptr_auth
     ; CHECK-NOT: HINT
-    ; CHECK: DBG_VALUE
     ; CHECK: frame-setup PACIASP
     ; CHECK-NOT: HINT
     ; CHECK: RETAA
-    DBG_VALUE $lr
     frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
     frame-setup CFI_INSTRUCTION negate_ra_sign_state
     early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)

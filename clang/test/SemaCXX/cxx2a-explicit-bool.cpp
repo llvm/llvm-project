@@ -124,7 +124,7 @@ A<true> && a5 = { 0};// expected-error {{chosen constructor is explicit}}
 A<true> && a6{ 0};
 A<true> a7 = { 0}; // expected-error {{chosen constructor is explicit in copy-initialization}}
 
-a0 = 0;
+a0 = 0; // expected-error {{no viable overloaded '='}}
 a1 = { 0}; // expected-error {{no viable overloaded '='}}
 a2 = A<true>( 0);
 a3 = A<true>{ 0};

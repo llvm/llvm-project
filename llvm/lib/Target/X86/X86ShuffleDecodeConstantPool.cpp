@@ -36,17 +36,17 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   //
   //   <4 x i32> <i32 -2147483648, i32 -2147483648,
   //              i32 -2147483648, i32 -2147483648>
-  Type *CstTy = C->getType();
-  if (!CstTy->isVectorTy())
+  auto *CstTy = dyn_cast<VectorType>(C->getType());
+  if (!CstTy)
     return false;
 
-  Type *CstEltTy = CstTy->getVectorElementType();
+  Type *CstEltTy = CstTy->getElementType();
   if (!CstEltTy->isIntegerTy())
     return false;
 
   unsigned CstSizeInBits = CstTy->getPrimitiveSizeInBits();
   unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
-  unsigned NumCstElts = CstTy->getVectorNumElements();
+  unsigned NumCstElts = CstTy->getNumElements();
 
   assert((CstSizeInBits % MaskEltSizeInBits) == 0 &&
          "Unaligned shuffle mask size");

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1565,37 +1566,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   return false;
 }
 
-bool IRTranslator::translateInlineAsm(const CallInst &CI,
+bool IRTranslator::translateInlineAsm(const CallBase &CB,
                                       MachineIRBuilder &MIRBuilder) {
-  const InlineAsm &IA = cast<InlineAsm>(*CI.getCalledValue());
-  StringRef ConstraintStr = IA.getConstraintString();
 
-  bool HasOnlyMemoryClobber = false;
-  if (!ConstraintStr.empty()) {
-    // Until we have full inline assembly support, we just try to handle the
-    // very simple case of just "~{memory}" to avoid falling back so often.
-    if (ConstraintStr != "~{memory}")
-      return false;
-    HasOnlyMemoryClobber = true;
+  const InlineAsmLowering *ALI = MF->getSubtarget().getInlineAsmLowering();
+
+  if (!ALI) {
+    LLVM_DEBUG(
+        dbgs() << "Inline asm lowering is not supported for this target yet\n");
+    return false;
   }
 
-  unsigned ExtraInfo = 0;
-  if (IA.hasSideEffects())
-    ExtraInfo |= InlineAsm::Extra_HasSideEffects;
-  if (IA.getDialect() == InlineAsm::AD_Intel)
-    ExtraInfo |= InlineAsm::Extra_AsmDialect;
-
-  // HACK: special casing for ~memory.
-  if (HasOnlyMemoryClobber)
-    ExtraInfo |= (InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore);
-
-  auto Inst = MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
-                  .addExternalSymbol(IA.getAsmString().c_str())
-                  .addImm(ExtraInfo);
-  if (const MDNode *SrcLoc = CI.getMetadata("srcloc"))
-    Inst.addMetadata(SrcLoc);
-
-  return true;
+  return ALI->lowerInlineAsm(MIRBuilder, CB);
 }
 
 bool IRTranslator::translateCallBase(const CallBase &CB,
@@ -2100,6 +2082,21 @@ bool IRTranslator::translateFence(const User &U,
   const FenceInst &Fence = cast<FenceInst>(U);
   MIRBuilder.buildFence(static_cast<unsigned>(Fence.getOrdering()),
                         Fence.getSyncScopeID());
+  return true;
+}
+
+bool IRTranslator::translateFreeze(const User &U,
+                                   MachineIRBuilder &MIRBuilder) {
+  const ArrayRef<Register> DstRegs = getOrCreateVRegs(U);
+  const ArrayRef<Register> SrcRegs = getOrCreateVRegs(*U.getOperand(0));
+
+  assert(DstRegs.size() == SrcRegs.size() &&
+         "Freeze with different source and destination type?");
+
+  for (unsigned I = 0; I < DstRegs.size(); ++I) {
+    MIRBuilder.buildFreeze(DstRegs[I], SrcRegs[I]);
+  }
+
   return true;
 }
 

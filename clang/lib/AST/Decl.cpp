@@ -892,6 +892,10 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     if (!TD->getAnonDeclWithTypedefName(/*AnyRedecl*/true))
       return LinkageInfo::none();
 
+  } else if (isa<MSGuidDecl>(D)) {
+    // A GUID behaves like an inline variable with external linkage. Fall
+    // through.
+
   // Everything not covered here has no linkage.
   } else {
     return LinkageInfo::none();
@@ -1542,10 +1546,19 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName() || isa<DecompositionDecl>(this))
+  if (getDeclName())
     OS << *this;
-  else
-    OS << "(anonymous)";
+  else {
+    // Give the printName override a chance to pick a different name before we
+    // fall back to "(anonymous)".
+    SmallString<64> NameBuffer;
+    llvm::raw_svector_ostream NameOS(NameBuffer);
+    printName(NameOS);
+    if (NameBuffer.empty())
+      OS << "(anonymous)";
+    else
+      OS << NameBuffer;
+  }
 }
 
 void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {

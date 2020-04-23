@@ -123,7 +123,7 @@ define i64 @setb5(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: isel
@@ -133,7 +133,7 @@ define i64 @setb5(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8: isel
@@ -153,7 +153,7 @@ define i64 @setb6(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: isel
@@ -163,7 +163,7 @@ define i64 @setb6(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8: isel
@@ -183,7 +183,7 @@ define i64 @setb7(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: isel
@@ -193,7 +193,7 @@ define i64 @setb7(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8: isel
@@ -213,7 +213,7 @@ define i64 @setb8(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: isel
@@ -223,7 +223,7 @@ define i64 @setb8(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8: isel
@@ -347,7 +347,7 @@ define i64 @setb13(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: neg
@@ -358,7 +358,7 @@ define i64 @setb13(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8-DAG: neg
@@ -379,7 +379,7 @@ define i64 @setb14(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: neg
@@ -390,7 +390,7 @@ define i64 @setb14(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8-DAG: neg
@@ -411,7 +411,7 @@ define i64 @setb15(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: neg
@@ -422,7 +422,7 @@ define i64 @setb15(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8-DAG: neg
@@ -443,7 +443,7 @@ define i64 @setb16(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: neg
@@ -454,7 +454,7 @@ define i64 @setb16(i64 %a, i64 %b) {
 ; CHECK-PWR8-DAG: rldicl
 ; CHECK-PWR8-DAG: li
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8-DAG: xori
 ; CHECK-PWR8-DAG: neg
@@ -769,14 +769,14 @@ define i64 @setb29(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpd {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: adde
 ; CHECK-NOT: xori
 ; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb29
 ; CHECK-PWR8-DAG: cmpd
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: adde
 ; CHECK-PWR8: isel
 ; CHECK-PWR8: blr
@@ -1013,13 +1013,13 @@ define i64 @setbud1(i64 %a, i64 %b) {
 ; CHECK-NOT: li
 ; CHECK: cmpld {{c?r?(0, )?}}r3, r4
 ; CHECK-NEXT: setb r3, cr0
-; CHECK-NOT: subfc
+; CHECK-NOT: subc
 ; CHECK-NOT: subfe
 ; CHECK-NOT: neg
 ; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbud1
-; CHECK-PWR8-DAG: subfc
+; CHECK-PWR8-DAG: subc
 ; CHECK-PWR8-DAG: subfe
 ; CHECK-PWR8-DAG: cmpld
 ; CHECK-PWR8-DAG: neg
@@ -1138,8 +1138,8 @@ define i64 @setbuh(i16 %a, i16 %b) {
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
 ; CHECK-LABEL: setbuh:
-; CHECK-DAG: rlwinm [[RA:r[0-9]+]], r3, 0, 16, 31
-; CHECK-DAG: rlwinm [[RB:r[0-9]+]], r4, 0, 16, 31
+; CHECK-DAG: clrlwi [[RA:r[0-9]+]], r3, 16
+; CHECK-DAG: clrlwi [[RB:r[0-9]+]], r4, 16
 ; CHECK-NOT: li
 ; CHECK-NOT: xor
 ; CHECK: cmplw {{c?r?(0, )?}}[[RA]], [[RB]]
@@ -1151,8 +1151,8 @@ define i64 @setbuh(i16 %a, i16 %b) {
 ; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuh
-; CHECK-PWR8: rlwinm
-; CHECK-PWR8: rlwinm
+; CHECK-PWR8: clrlwi
+; CHECK-PWR8: clrlwi
 ; CHECK-PWR8-DAG: cmplw
 ; CHECK-PWR8-DAG: cntlzw
 ; CHECK-PWR8: srwi
@@ -1170,8 +1170,8 @@ define i64 @setbuc(i8 %a, i8 %b) {
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
 ; CHECK-LABEL: setbuc:
-; CHECK-DAG: rlwinm [[RA:r[0-9]+]], r3, 0, 24, 31
-; CHECK-DAG: rlwinm [[RB:r[0-9]+]], r4, 0, 24, 31
+; CHECK-DAG: clrlwi [[RA:r[0-9]+]], r3, 24
+; CHECK-DAG: clrlwi [[RB:r[0-9]+]], r4, 24
 ; CHECK-NOT: li
 ; CHECK-NOT: clrldi
 ; CHECK: cmplw {{c?r?(0, )?}}[[RA]], [[RB]]
@@ -1181,8 +1181,8 @@ define i64 @setbuc(i8 %a, i8 %b) {
 ; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuc
-; CHECK-PWR8: rlwinm
-; CHECK-PWR8: rlwinm
+; CHECK-PWR8: clrlwi
+; CHECK-PWR8: clrlwi
 ; CHECK-PWR8-DAG: clrldi
 ; CHECK-PWR8-DAG: clrldi
 ; CHECK-PWR8-DAG: cmplw

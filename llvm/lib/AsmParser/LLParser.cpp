@@ -70,6 +70,11 @@ bool LLParser::Run() {
         Lex.getLoc(),
         "Can't read textual IR with a Context that discards named Values");
 
+  if (M) {
+    if (ParseTargetDefinitions())
+      return true;
+  }
+
   return ParseTopLevelEntities() || ValidateEndOfModule() ||
          ValidateEndOfIndex();
 }
@@ -294,6 +299,23 @@ bool LLParser::ValidateEndOfIndex() {
 // Top-Level Entities
 //===----------------------------------------------------------------------===//
 
+bool LLParser::ParseTargetDefinitions() {
+  while (true) {
+    switch (Lex.getKind()) {
+    case lltok::kw_target:
+      if (ParseTargetDefinition())
+        return true;
+      break;
+    case lltok::kw_source_filename:
+      if (ParseSourceFileName())
+        return true;
+      break;
+    default:
+      return false;
+    }
+  }
+}
+
 bool LLParser::ParseTopLevelEntities() {
   // If there is no Module, then parse just the summary index entries.
   if (!M) {
@@ -322,11 +344,6 @@ bool LLParser::ParseTopLevelEntities() {
     case lltok::kw_declare: if (ParseDeclare()) return true; break;
     case lltok::kw_define:  if (ParseDefine()) return true; break;
     case lltok::kw_module:  if (ParseModuleAsm()) return true; break;
-    case lltok::kw_target:  if (ParseTargetDefinition()) return true; break;
-    case lltok::kw_source_filename:
-      if (ParseSourceFileName())
-        return true;
-      break;
     case lltok::kw_deplibs: if (ParseDepLibs()) return true; break;
     case lltok::LocalVarID: if (ParseUnnamedType()) return true; break;
     case lltok::LocalVar:   if (ParseNamedType()) return true; break;
@@ -3872,6 +3889,10 @@ struct DISPFlagField : public MDFieldImpl<DISubprogram::DISPFlags> {
   DISPFlagField() : MDFieldImpl(DISubprogram::SPFlagZero) {}
 };
 
+struct MDAPSIntField : public MDFieldImpl<APSInt> {
+  MDAPSIntField() : ImplTy(APSInt()) {}
+};
+
 struct MDSignedField : public MDFieldImpl<int64_t> {
   int64_t Min;
   int64_t Max;
@@ -3949,6 +3970,16 @@ struct MDSignedOrUnsignedField
 } // end anonymous namespace
 
 namespace llvm {
+
+template <>
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name, MDAPSIntField &Result) {
+  if (Lex.getKind() != lltok::APSInt)
+    return TokError("expected integer");
+
+  Result.assign(Lex.getAPSIntVal());
+  Lex.Lex();
+  return false;
+}
 
 template <>
 bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
@@ -4282,27 +4313,6 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
 }
 
 template <>
-bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
-                            MDSignedOrUnsignedField &Result) {
-  if (Lex.getKind() != lltok::APSInt)
-    return false;
-
-  if (Lex.getAPSIntVal().isSigned()) {
-    MDSignedField Res = Result.A;
-    if (ParseMDField(Loc, Name, Res))
-      return true;
-    Result.assign(Res);
-    return false;
-  }
-
-  MDUnsignedField Res = Result.B;
-  if (ParseMDField(Loc, Name, Res))
-    return true;
-  Result.assign(Res);
-  return false;
-}
-
-template <>
 bool LLParser::ParseMDField(LocTy Loc, StringRef Name, MDStringField &Result) {
   LocTy ValueLoc = Lex.getLoc();
   std::string S;
@@ -4475,17 +4485,20 @@ bool LLParser::ParseDISubrange(MDNode *&Result, bool IsDistinct) {
 bool LLParser::ParseDIEnumerator(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(name, MDStringField, );                                             \
-  REQUIRED(value, MDSignedOrUnsignedField, );                                  \
+  REQUIRED(value, MDAPSIntField, );                                            \
   OPTIONAL(isUnsigned, MDBoolField, (false));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  if (isUnsigned.Val && value.isMDSignedField())
+  if (isUnsigned.Val && value.Val.isNegative())
     return TokError("unsigned enumerator with negative value");
 
-  int64_t Value = value.isMDSignedField()
-                      ? value.getMDSignedValue()
-                      : static_cast<int64_t>(value.getMDUnsignedValue());
+  APSInt Value(value.Val);
+  // Add a leading zero so that unsigned values with the msb set are not
+  // mistaken for negative values when used for signed enumerators.
+  if (!isUnsigned.Val && value.Val.isUnsigned() && value.Val.isSignBitSet())
+    Value = Value.zext(Value.getBitWidth() + 1);
+
   Result =
       GET_OR_DISTINCT(DIEnumerator, (Context, Value, isUnsigned.Val, name.Val));
 
@@ -4662,7 +4675,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(splitDebugInlining, MDBoolField, = true);                           \
   OPTIONAL(debugInfoForProfiling, MDBoolField, = false);                       \
   OPTIONAL(nameTableKind, NameTableKindField, );                               \
-  OPTIONAL(debugBaseAddress, MDBoolField, = false);                            \
+  OPTIONAL(rangesBaseAddress, MDBoolField, = false);                           \
   OPTIONAL(sysroot, MDStringField, );                                          \
   OPTIONAL(sdk, MDStringField, );
   PARSE_MD_FIELDS();
@@ -4673,7 +4686,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
       retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
       splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      debugBaseAddress.Val, sysroot.Val, sdk.Val);
+      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
   return false;
 }
 

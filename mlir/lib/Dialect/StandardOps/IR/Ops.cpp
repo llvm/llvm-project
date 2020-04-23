@@ -21,7 +21,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -325,14 +324,11 @@ static LogicalResult verify(AllocLikeOp op) {
     return success();
 
   // An alloca op needs to have an ancestor with an allocation scope trait.
-  auto *parentOp = op.getParentOp();
-  while (parentOp) {
-    if (parentOp->template hasTrait<OpTrait::AutomaticAllocationScope>())
-      return success();
-    parentOp = parentOp->getParentOp();
-  }
-  return op.emitOpError(
-      "requires an ancestor op with AutomaticAllocationScope trait");
+  if (!op.template getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return op.emitOpError(
+        "requires an ancestor op with AutomaticAllocationScope trait");
+
+  return success();
 }
 
 namespace {
@@ -485,8 +481,138 @@ static LogicalResult verify(AtomicRMWOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// GenericAtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+void GenericAtomicRMWOp::build(Builder *builder, OperationState &result,
+                               Value memref, ValueRange ivs) {
+  result.addOperands(memref);
+  result.addOperands(ivs);
+
+  if (auto memrefType = memref.getType().dyn_cast<MemRefType>()) {
+    Type elementType = memrefType.getElementType();
+    result.addTypes(elementType);
+
+    Region *bodyRegion = result.addRegion();
+    bodyRegion->push_back(new Block());
+    bodyRegion->front().addArgument(elementType);
+  }
+}
+
+static LogicalResult verify(GenericAtomicRMWOp op) {
+  auto &block = op.body().front();
+  if (block.getNumArguments() != 1)
+    return op.emitOpError("expected single number of entry block arguments");
+
+  if (op.getResult().getType() != block.getArgument(0).getType())
+    return op.emitOpError(
+        "expected block argument of the same type result type");
+
+  bool hasSideEffects =
+      op.body()
+          .walk([&](Operation *nestedOp) {
+            if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
+              return WalkResult::advance();
+            nestedOp->emitError("body of 'generic_atomic_rmw' should contain "
+                                "only operations with no side effects");
+            return WalkResult::interrupt();
+          })
+          .wasInterrupted();
+  return hasSideEffects ? failure() : success();
+}
+
+static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
+                                           OperationState &result) {
+  OpAsmParser::OperandType memref;
+  Type memrefType;
+  SmallVector<OpAsmParser::OperandType, 4> ivs;
+
+  Type indexType = parser.getBuilder().getIndexType();
+  if (parser.parseOperand(memref) ||
+      parser.parseOperandList(ivs, OpAsmParser::Delimiter::Square) ||
+      parser.parseColonType(memrefType) ||
+      parser.resolveOperand(memref, memrefType, result.operands) ||
+      parser.resolveOperands(ivs, indexType, result.operands))
+    return failure();
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, llvm::None, llvm::None))
+    return failure();
+  result.types.push_back(memrefType.cast<MemRefType>().getElementType());
+  return success();
+}
+
+static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
+  p << op.getOperationName() << ' ' << op.memref() << "[" << op.indices()
+    << "] : " << op.memref().getType();
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicYieldOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AtomicYieldOp op) {
+  Type parentType = op.getParentOp()->getResultTypes().front();
+  Type resultType = op.result().getType();
+  if (parentType != resultType)
+    return op.emitOpError() << "types mismatch between yield op: " << resultType
+                            << " and its parent: " << parentType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
+
+/// Given a successor, try to collapse it to a new destination if it only
+/// contains a passthrough unconditional branch. If the successor is
+/// collapsable, `successor` and `successorOperands` are updated to reference
+/// the new destination and values. `argStorage` is an optional storage to use
+/// if operands to the collapsed successor need to be remapped.
+static LogicalResult collapseBranch(Block *&successor,
+                                    ValueRange &successorOperands,
+                                    SmallVectorImpl<Value> &argStorage) {
+  // Check that the successor only contains a unconditional branch.
+  if (std::next(successor->begin()) != successor->end())
+    return failure();
+  // Check that the terminator is an unconditional branch.
+  BranchOp successorBranch = dyn_cast<BranchOp>(successor->getTerminator());
+  if (!successorBranch)
+    return failure();
+  // Check that the arguments are only used within the terminator.
+  for (BlockArgument arg : successor->getArguments()) {
+    for (Operation *user : arg.getUsers())
+      if (user != successorBranch)
+        return failure();
+  }
+  // Don't try to collapse branches to infinite loops.
+  Block *successorDest = successorBranch.getDest();
+  if (successorDest == successor)
+    return failure();
+
+  // Update the operands to the successor. If the branch parent has no
+  // arguments, we can use the branch operands directly.
+  OperandRange operands = successorBranch.getOperands();
+  if (successor->args_empty()) {
+    successor = successorDest;
+    successorOperands = operands;
+    return success();
+  }
+
+  // Otherwise, we need to remap any argument operands.
+  for (Value operand : operands) {
+    BlockArgument argOperand = operand.dyn_cast<BlockArgument>();
+    if (argOperand && argOperand.getOwner() == successor)
+      argStorage.push_back(successorOperands[argOperand.getArgNumber()]);
+    else
+      argStorage.push_back(operand);
+  }
+  successor = successorDest;
+  successorOperands = argStorage;
+  return success();
+}
 
 namespace {
 /// Simplify a branch to a block that has a single predecessor. This effectively
@@ -499,12 +625,39 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
     // Check that the successor block has a single predecessor.
     Block *succ = op.getDest();
     Block *opParent = op.getOperation()->getBlock();
-    if (succ == opParent || !has_single_element(succ->getPredecessors()))
+    if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
       return failure();
 
     // Merge the successor into the current block and erase the branch.
     rewriter.mergeBlocks(succ, opParent, op.getOperands());
     rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+///   br ^bb1
+/// ^bb1
+///   br ^bbN(...)
+///
+///  -> br ^bbN(...)
+///
+struct SimplifyPassThroughBr : public OpRewritePattern<BranchOp> {
+  using OpRewritePattern<BranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BranchOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *dest = op.getDest();
+    ValueRange destOperands = op.getOperands();
+    SmallVector<Value, 4> destOperandStorage;
+
+    // Try to collapse the successor if it points somewhere other than this
+    // block.
+    if (dest == op.getOperation()->getBlock() ||
+        failed(collapseBranch(dest, destOperands, destOperandStorage)))
+      return failure();
+
+    // Create a new branch with the collapsed successor.
+    rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
     return success();
   }
 };
@@ -520,7 +673,8 @@ void BranchOp::eraseOperand(unsigned index) {
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
-  results.insert<SimplifyBrToBlockWithSinglePred>(context);
+  results.insert<SimplifyBrToBlockWithSinglePred, SimplifyPassThroughBr>(
+      context);
 }
 
 Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
@@ -529,6 +683,8 @@ Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
 }
 
 bool BranchOp::canEraseSuccessorOperand() { return true; }
+
+Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 
 //===----------------------------------------------------------------------===//
 // CallOp
@@ -604,23 +760,15 @@ void CallIndirectOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 // Return the type of the same shape (scalar, vector or tensor) containing i1.
-static Type getCheckedI1SameShape(Type type) {
+static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(1, type.getContext());
-  if (type.isSignlessIntOrIndexOrFloat())
-    return i1Type;
   if (auto tensorType = type.dyn_cast<RankedTensorType>())
     return RankedTensorType::get(tensorType.getShape(), i1Type);
   if (type.isa<UnrankedTensorType>())
     return UnrankedTensorType::get(i1Type);
   if (auto vectorType = type.dyn_cast<VectorType>())
     return VectorType::get(vectorType.getShape(), i1Type);
-  return Type();
-}
-
-static Type getI1SameShape(Type type) {
-  Type res = getCheckedI1SameShape(type);
-  assert(res && "expected type with valid i1 shape");
-  return res;
+  return i1Type;
 }
 
 //===----------------------------------------------------------------------===//
@@ -760,8 +908,10 @@ OpFoldResult CmpFOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// cond_br true, ^bb1, ^bb2 -> br ^bb1
-/// cond_br false, ^bb1, ^bb2 -> br ^bb2
+/// cond_br true, ^bb1, ^bb2
+///  -> br ^bb1
+/// cond_br false, ^bb1, ^bb2
+///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
   using OpRewritePattern<CondBranchOp>::OpRewritePattern;
@@ -782,11 +932,95 @@ struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
     return failure();
   }
 };
-} // end anonymous namespace.
+
+///   cond_br %cond, ^bb1, ^bb2
+/// ^bb1
+///   br ^bbN(...)
+/// ^bb2
+///   br ^bbK(...)
+///
+///  -> cond_br %cond, ^bbN(...), ^bbK(...)
+///
+struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    Block *trueDest = condbr.trueDest(), *falseDest = condbr.falseDest();
+    ValueRange trueDestOperands = condbr.getTrueOperands();
+    ValueRange falseDestOperands = condbr.getFalseOperands();
+    SmallVector<Value, 4> trueDestOperandStorage, falseDestOperandStorage;
+
+    // Try to collapse one of the current successors.
+    LogicalResult collapsedTrue =
+        collapseBranch(trueDest, trueDestOperands, trueDestOperandStorage);
+    LogicalResult collapsedFalse =
+        collapseBranch(falseDest, falseDestOperands, falseDestOperandStorage);
+    if (failed(collapsedTrue) && failed(collapsedFalse))
+      return failure();
+
+    // Create a new branch with the collapsed successors.
+    rewriter.replaceOpWithNewOp<CondBranchOp>(condbr, condbr.getCondition(),
+                                              trueDest, trueDestOperands,
+                                              falseDest, falseDestOperands);
+    return success();
+  }
+};
+
+/// cond_br %cond, ^bb1(A, ..., N), ^bb1(A, ..., N)
+///  -> br ^bb1(A, ..., N)
+///
+/// cond_br %cond, ^bb1(A), ^bb1(B)
+///  -> %select = select %cond, A, B
+///     br ^bb1(%select)
+///
+struct SimplifyCondBranchIdenticalSuccessors
+    : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    // Check that the true and false destinations are the same and have the same
+    // operands.
+    Block *trueDest = condbr.trueDest();
+    if (trueDest != condbr.falseDest())
+      return failure();
+
+    // If all of the operands match, no selects need to be generated.
+    OperandRange trueOperands = condbr.getTrueOperands();
+    OperandRange falseOperands = condbr.getFalseOperands();
+    if (trueOperands == falseOperands) {
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, trueOperands);
+      return success();
+    }
+
+    // Otherwise, if the current block is the only predecessor insert selects
+    // for any mismatched branch operands.
+    if (trueDest->getUniquePredecessor() != condbr.getOperation()->getBlock())
+      return failure();
+
+    // Generate a select for any operands that differ between the two.
+    SmallVector<Value, 8> mergedOperands;
+    mergedOperands.reserve(trueOperands.size());
+    Value condition = condbr.getCondition();
+    for (auto it : llvm::zip(trueOperands, falseOperands)) {
+      if (std::get<0>(it) == std::get<1>(it))
+        mergedOperands.push_back(std::get<0>(it));
+      else
+        mergedOperands.push_back(rewriter.create<SelectOp>(
+            condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
+    }
+
+    rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, mergedOperands);
+    return success();
+  }
+};
+} // end anonymous namespace
 
 void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyConstCondBranchPred>(context);
+  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
+                 SimplifyCondBranchIdenticalSuccessors>(context);
 }
 
 Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
@@ -795,6 +1029,14 @@ Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
 }
 
 bool CondBranchOp::canEraseSuccessorOperand() { return true; }
+
+Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (BoolAttr condAttr = operands.front().dyn_cast_or_null<BoolAttr>())
+    return condAttr.getValue() ? trueDest() : falseDest();
+  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
+    return condAttr.getValue().isOneValue() ? trueDest() : falseDest();
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // Constant*Op
@@ -1672,6 +1914,59 @@ OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(condition, m_Zero()))
     return getFalseValue();
   return nullptr;
+}
+
+static void print(OpAsmPrinter &p, SelectOp op) {
+  p << "select " << op.getOperands();
+  p.printOptionalAttrDict(op.getAttrs());
+  p << " : ";
+  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
+    p << condType << ", ";
+  p << op.getType();
+}
+
+static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
+  Type conditionType, resultType;
+  SmallVector<OpAsmParser::OperandType, 3> operands;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
+    return failure();
+
+  // Check for the explicit condition type if this is a masked tensor or vector.
+  if (succeeded(parser.parseOptionalComma())) {
+    conditionType = resultType;
+    if (parser.parseType(resultType))
+      return failure();
+  } else {
+    conditionType = parser.getBuilder().getI1Type();
+  }
+
+  result.addTypes(resultType);
+  return parser.resolveOperands(operands,
+                                {conditionType, resultType, resultType},
+                                parser.getNameLoc(), result.operands);
+}
+
+static LogicalResult verify(SelectOp op) {
+  Type conditionType = op.getCondition().getType();
+  if (conditionType.isSignlessInteger(1))
+    return success();
+
+  // If the result type is a vector or tensor, the type can be a mask with the
+  // same elements.
+  Type resultType = op.getType();
+  if (!resultType.isa<TensorType>() && !resultType.isa<VectorType>())
+    return op.emitOpError()
+           << "expected condition to be a signless i1, but got "
+           << conditionType;
+  Type shapedConditionType = getI1SameShape(resultType);
+  if (conditionType != shapedConditionType)
+    return op.emitOpError()
+           << "expected condition type to have the same shape "
+              "as the result type, expected "
+           << shapedConditionType << ", but got " << conditionType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

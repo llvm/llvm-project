@@ -43,15 +43,13 @@ define i32* @f1(i32 %n) nounwind {
 ; PPC64-LINUX-LABEL: f1
 ; PPC64-LINUX:      std 31, -8(1)
 ; PPC64-LINUX-NEXT: stdu 1, -64(1)
-; PPC64-LINUX-NEXT: lis 4, 32767
 ; PPC64-LINUX-NEXT: rldic 3, 3, 2, 30
-; PPC64-LINUX-NEXT: ori 4, 4, 65535
-; PPC64-LINUX-NEXT: addi 3, 3, 15
-; PPC64-LINUX-NEXT: sldi 4, 4, 4
 ; PPC64-LINUX-NEXT: mr 31, 1
-; PPC64-LINUX-NEXT: and 3, 3, 4
-; PPC64-LINUX-NEXT: neg 3, 3
+; PPC64-LINUX-NEXT: addi 3, 3, 15
+; PPC64-LINUX-NEXT: rldicl 3, 3, 60, 4
 ; PPC64-LINUX-NEXT: addi 4, 31, 64
+; PPC64-LINUX-NEXT: rldicl 3, 3, 4, 29
+; PPC64-LINUX-NEXT: neg 3, 3
 ; PPC64-LINUX-NEXT: stdux 4, 1, 3
 
 ; The linkage area is always put on the top of the stack.
@@ -82,14 +80,12 @@ define i32* @f1(i32 %n) nounwind {
 ; PPC64-AIX-LABEL: f1
 ; PPC64-AIX:      std 31, -8(1)
 ; PPC64-AIX-NEXT: stdu 1, -64(1)
-; PPC64-AIX-NEXT: lis 4, 32767
 ; PPC64-AIX-NEXT: rldic 3, 3, 2, 30
-; PPC64-AIX-NEXT: ori 4, 4, 65535
-; PPC64-AIX-NEXT: addi 3, 3, 15
-; PPC64-AIX-NEXT: sldi 4, 4, 4
 ; PPC64-AIX-NEXT: mr 31, 1
-; PPC64-AIX-NEXT: and 3, 3, 4
+; PPC64-AIX-NEXT: addi 3, 3, 15
 ; PPC64-AIX-NEXT: addi 4, 31, 64
+; PPC64-AIX-NEXT: rldicl 3, 3, 60, 4 
+; PPC64-AIX-NEXT: rldicl 3, 3, 4, 29
 ; PPC64-AIX-NEXT: neg 3, 3
 ; PPC64-AIX-NEXT: stdux 4, 1, 3
 

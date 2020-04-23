@@ -176,7 +176,8 @@ struct PromotionInfo {
 /// full and partial views indexing into the buffer.
 SmallVector<PromotionInfo, 8>
 promoteSubViews(OpBuilder &b, Location loc, ArrayRef<Value> subViews,
-                bool dynamicBuffers = false, OperationFolder *folder = nullptr);
+                bool dynamicBuffers = false, int64_t alignment = 0,
+                OperationFolder *folder = nullptr);
 
 /// Returns all the operands of `linalgOp` that are not views.
 /// Asserts that these operands are value types to allow transformations like
@@ -204,6 +205,7 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
 LinalgOp promoteSubViewOperands(OpBuilder &b, LinalgOp op,
                                 llvm::SetVector<Value> subViews,
                                 bool dynamicBuffers = false,
+                                int64_t alignment = 0,
                                 OperationFolder *folder = nullptr);
 
 } // namespace linalg

@@ -2733,6 +2733,9 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   SchedModel = DAG->getSchedModel();
   TRI = DAG->TRI;
 
+  if (RegionPolicy.ComputeDFSResult)
+    DAG->computeDFSResult();
+
   Rem.init(DAG, SchedModel);
   Top.init(DAG, SchedModel, &Rem);
   Bot.init(DAG, SchedModel, &Rem);

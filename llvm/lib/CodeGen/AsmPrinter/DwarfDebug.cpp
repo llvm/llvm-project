@@ -2400,7 +2400,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     TargetIndexLocation Loc = Value.getTargetIndexLocation();
     // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
     // encoding is supported.
-    DwarfExpr.addWasmLocation(Loc.Index, Loc.Offset);
+    DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.addUnsignedConstant(RawBytes);
@@ -2424,8 +2424,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
     assert(llvm::all_of(Values, [](DbgValueLoc P) {
           return P.isFragment();
         }) && "all values are expected to be fragments");
-    assert(std::is_sorted(Values.begin(), Values.end()) &&
-           "fragments are expected to be sorted");
+    assert(llvm::is_sorted(Values) && "fragments are expected to be sorted");
 
     for (auto Fragment : Values)
       DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr);

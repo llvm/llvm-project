@@ -255,7 +255,7 @@ class CDE_FP_Vec_Instr<bit vec, bit acc, dag oops, dag iops, string asm, string 
   let Inst{6} = vec;
 }
 
-// Base class for floating-point variants of CDE VCX* intructions
+// Base class for floating-point variants of CDE VCX* instructions
 class CDE_FP_Instr<bit acc, bit sz, dag oops, dag iops, string asm, string cstr>
   : CDE_FP_Vec_Instr<0b0, acc, oops, iops, asm, cstr> {
   let Inst{24} = sz;

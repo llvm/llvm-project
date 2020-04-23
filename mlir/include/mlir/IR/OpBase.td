@@ -582,6 +582,7 @@ def I8Tensor   : TensorOf<[I8]>;
 def I16Tensor  : TensorOf<[I16]>;
 def I32Tensor  : TensorOf<[I32]>;
 def I64Tensor  : TensorOf<[I64]>;
+def IndexTensor: TensorOf<[Index]>;
 
 def BF16Tensor : TensorOf<[BF16]>;
 def F16Tensor  : TensorOf<[F16]>;
@@ -842,6 +843,16 @@ def BoolAttr : Attr<CPred<"$_self.isa<BoolAttr>()">, "bool attribute"> {
   let returnType = [{ bool }];
   let valueType = I1;
   let constBuilderCall = "$_builder.getBoolAttr($0)";
+}
+
+// Index attribute.
+def IndexAttr :
+    TypedAttrBase<
+      Index, "IntegerAttr",
+      And<[CPred<"$_self.isa<IntegerAttr>()">,
+           CPred<"$_self.cast<IntegerAttr>().getType().isa<IndexType>()">]>,
+      "index attribute"> {
+  let returnType = [{ APInt }];
 }
 
 // Base class for any integer (regardless of signedness semantics) attributes
@@ -1408,13 +1419,29 @@ def SymbolRefArrayAttr :
 // Note: All derived attributes should be materializable as an Attribute. E.g.,
 // do not use DerivedAttr for things that could not have been stored as
 // Attribute.
-class DerivedAttr<code ret, code b> : Attr<CPred<"true">, "derived attribute"> {
+//
+class DerivedAttr<code ret, code b, code convert = ""> :
+    Attr<CPred<"true">, "derived attribute"> {
   let returnType = ret;
   code body = b;
+
+  // Specify how to convert from the derived attribute to an attibute.
+  //
+  // ## Special placeholders
+  //
+  // Special placeholders can be used to refer to entities during conversion:
+  //
+  // * `$_builder` will be replaced by a mlir::Builder instance.
+  // * `$_ctx` will be replaced by the MLIRContext* instance.
+  // * `$_self` will be replaced with the derived attribute (value produces
+  //    `returnType`).
+  let convertFromStorage = convert;
 }
 
 // Derived attribute that returns a mlir::Type.
-class DerivedTypeAttr<code body> : DerivedAttr<"Type", body>;
+class DerivedTypeAttr<code body> : DerivedAttr<"Type", body> {
+  let convertFromStorage = "TypeAttr::get($_self)";
+}
 
 //===----------------------------------------------------------------------===//
 // Constant attribute kinds
@@ -1641,6 +1668,10 @@ class HasParent<string op>
 // attribute content is used.
 def FirstAttrDerivedResultType :
   GenInternalOpTrait<"FirstAttrDerivedResultType">;
+
+// Op has a resizable operand list. Auto-generated build and parse functions
+// should construct it as such.
+def ResizableOperandList : GenInternalOpTrait<"ResizableOperandList">;
 
 // TODO(antiagainst): Turn the following into normal traits and generate
 // verification for them.

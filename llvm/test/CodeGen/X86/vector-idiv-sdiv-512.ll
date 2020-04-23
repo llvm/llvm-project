@@ -447,15 +447,16 @@ define <32 x i16> @test_rem7_32i16(<32 x i16> %a) nounwind {
 ; AVX512F-NEXT:    vpsrlw $15, %ymm3, %ymm4
 ; AVX512F-NEXT:    vpsraw $1, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpaddw %ymm4, %ymm3, %ymm3
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX512F-NEXT:    vpmullw %ymm4, %ymm3, %ymm3
-; AVX512F-NEXT:    vpsubw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsllw $3, %ymm3, %ymm4
+; AVX512F-NEXT:    vpsubw %ymm4, %ymm3, %ymm3
+; AVX512F-NEXT:    vpaddw %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmulhw %ymm2, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpsrlw $15, %ymm2, %ymm3
 ; AVX512F-NEXT:    vpsraw $1, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddw %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpmullw %ymm4, %ymm2, %ymm2
-; AVX512F-NEXT:    vpsubw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm3
+; AVX512F-NEXT:    vpsubw %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;

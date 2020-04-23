@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-checker=debug.ExprInspection -verify %s
+
+typedef unsigned long size_t;
+size_t clang_analyzer_getExtent(void *);
+void clang_analyzer_eval(int);
 
 // Zero-sized VLAs.
 void check_zero_sized_VLA(int x) {
@@ -83,4 +87,42 @@ static void check_negative_sized_VLA_11_sub(int x)
 void check_negative_sized_VLA_11(int x) {
   if (x > 0)
     check_negative_sized_VLA_11_sub(x);
+}
+
+// Multi-dimensional arrays.
+
+void check_zero_sized_VLA_multi1(int x) {
+  if (x)
+    return;
+
+  int vla[10][x]; // expected-warning{{Declared variable-length array (VLA) has zero size}}
+}
+
+void check_zero_sized_VLA_multi2(int x, int y) {
+  if (x)
+    return;
+
+  int vla[y][x]; // expected-warning{{Declared variable-length array (VLA) has zero size}}
+}
+
+// Check the extent.
+
+void check_VLA_extent() {
+  int x = 3;
+
+  int vla1[x];
+  clang_analyzer_eval(clang_analyzer_getExtent(&vla1) == x * sizeof(int));
+  // expected-warning@-1{{TRUE}}
+
+  int vla2[x][2];
+  clang_analyzer_eval(clang_analyzer_getExtent(&vla2) == x * 2 * sizeof(int));
+  // expected-warning@-1{{TRUE}}
+
+  int vla2m[2][x];
+  clang_analyzer_eval(clang_analyzer_getExtent(&vla2m) == 2 * x * sizeof(int));
+  // expected-warning@-1{{TRUE}}
+
+  int vla3m[2][x][4];
+  clang_analyzer_eval(clang_analyzer_getExtent(&vla3m) == 2 * x * 4 * sizeof(int));
+  // expected-warning@-1{{TRUE}}
 }

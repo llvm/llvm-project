@@ -42,10 +42,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[ADD]], [[CTLZ1]]
-    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[C]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; MIPS32: $v0 = COPY [[UV]](s32)
-    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: $v0 = COPY [[SELECT]](s32)
+    ; MIPS32: $v1 = COPY [[C]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1

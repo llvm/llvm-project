@@ -11,6 +11,7 @@
 #include "Compiler.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -127,6 +128,7 @@ protected:
 MATCHER_P(Written, Name, "") { return arg.Written == Name; }
 MATCHER_P(Resolved, Name, "") { return arg.Resolved == Name; }
 MATCHER_P(IncludeLine, N, "") { return arg.R.start.line == N; }
+MATCHER_P(Directive, D, "") { return arg.Directive == D; }
 
 MATCHER_P2(Distance, File, D, "") {
   if (arg.getKey() != File)
@@ -199,6 +201,21 @@ TEST_F(HeadersTest, UnResolvedInclusion) {
               UnorderedElementsAre(AllOf(Written("\"foo.h\""), Resolved(""))));
   EXPECT_THAT(collectIncludes().includeDepth(MainFile),
               UnorderedElementsAre(Distance(MainFile, 0u)));
+}
+
+TEST_F(HeadersTest, IncludeDirective) {
+  FS.Files[MainFile] = R"cpp(
+#include "foo.h"
+#import "foo.h"
+#include_next "foo.h"
+)cpp";
+
+  // ms-compatibility changes meaning of #import, make sure it is turned off.
+  CDB.ExtraClangFlags.push_back("-fno-ms-compatibility");
+  EXPECT_THAT(collectIncludes().MainFileIncludes,
+              UnorderedElementsAre(Directive(tok::pp_include),
+                                   Directive(tok::pp_import),
+                                   Directive(tok::pp_include_next)));
 }
 
 TEST_F(HeadersTest, InsertInclude) {

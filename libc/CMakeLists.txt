@@ -19,6 +19,28 @@ string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
 set(LIBC_TARGET_MACHINE ${CMAKE_SYSTEM_PROCESSOR})
 
+option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" ON)
+if(LLVM_LIBC_ENABLE_LINTING)
+  if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
+             AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    add_custom_target(lint-libc)
+  else()
+    message(FATAL_ERROR "
+      'clang' and 'clang-tools-extra' are required in LLVM_LIBC_ENABLE_PROJECTS to
+      lint llvm-libc. The linting step performs important checks to help prevent
+      the introduction of subtle bugs, but it may increase build times.
+
+      To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+      (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+  endif()
+else()
+  message(WARNING "
+    Linting for libc is currently disabled.
+
+    This is not recommended, to enable set LLVM_LIBC_ENABLE_LINTING to ON
+    (pass -DLLVM_LIBC_ENABLE_LINTING=ON to cmake).")
+endif()
+
 include(CMakeParseArguments)
 include(LLVMLibCRules)
 include(LLVMLibCCheckCpuFeatures)

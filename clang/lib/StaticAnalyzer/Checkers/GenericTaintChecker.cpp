@@ -110,7 +110,9 @@ private:
 
     static Optional<FunctionData> create(const CallEvent &Call,
                                          const CheckerContext &C) {
-      assert(Call.getDecl());
+      if (!Call.getDecl())
+        return None;
+
       const FunctionDecl *FDecl = Call.getDecl()->getAsFunction();
       if (!FDecl || (FDecl->getKind() != Decl::Function &&
                      FDecl->getKind() != Decl::CXXMethod))

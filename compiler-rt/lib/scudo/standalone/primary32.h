@@ -206,6 +206,15 @@ public:
   bool useMemoryTagging() { return false; }
   void disableMemoryTagging() {}
 
+  const char *getRegionInfoArrayAddress() const { return nullptr; }
+  static uptr getRegionInfoArraySize() { return 0; }
+
+  static BlockInfo findNearestBlock(const char *RegionInfoData, uptr Ptr) {
+    (void)RegionInfoData;
+    (void)Ptr;
+    return {};
+  }
+
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr RegionSize = 1UL << RegionSizeLog;

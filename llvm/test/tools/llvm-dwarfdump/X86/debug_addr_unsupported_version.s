@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
 # ERR: address table at offset 0x0 has unsupported version 6

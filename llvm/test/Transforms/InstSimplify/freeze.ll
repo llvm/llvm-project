@@ -51,12 +51,9 @@ define i32()* @make_const_fn() {
   ret i32()* %k
 }
 
-; TODO: This is not poison.
-
 define i32* @make_const_null() {
 ; CHECK-LABEL: @make_const_null(
-; CHECK-NEXT:    [[K:%.*]] = freeze i32* null
-; CHECK-NEXT:    ret i32* [[K]]
+; CHECK-NEXT:    ret i32* null
 ;
   %k = freeze i32* null
   ret i32* %k
@@ -208,8 +205,7 @@ define i8* @gep_inbounds_noopt(i32 %arg) {
 
 define i32* @gep_inbounds_null() {
 ; CHECK-LABEL: @gep_inbounds_null(
-; CHECK-NEXT:    [[K:%.*]] = freeze i32* null
-; CHECK-NEXT:    ret i32* [[K]]
+; CHECK-NEXT:    ret i32* null
 ;
   %p = getelementptr inbounds i32, i32* null, i32 0
   %k = freeze i32* %p

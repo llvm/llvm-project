@@ -87,7 +87,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
   )");
   ASSERT_TRUE(!!Options2);
-  ClangTidyOptions Options = Options1->mergeWith(*Options2);
+  ClangTidyOptions Options = Options1->mergeWith(*Options2, 0);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
   EXPECT_EQ("user2", *Options.User);

@@ -119,7 +119,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   // a macro. They get unpoisoned where it is allowed.
   (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
   SetPoisonReason(Ident__VA_ARGS__,diag::ext_pp_bad_vaargs_use);
-  if (getLangOpts().CPlusPlus2a) {
+  if (getLangOpts().CPlusPlus20) {
     (Ident__VA_OPT__ = getIdentifierInfo("__VA_OPT__"))->setIsPoisoned();
     SetPoisonReason(Ident__VA_OPT__,diag::ext_pp_bad_vaopt_use);
   } else {
@@ -771,8 +771,8 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
     return llvm::StringSwitch<diag::kind>(II.getName())
 #define CXX11_KEYWORD(NAME, FLAGS)                                             \
         .Case(#NAME, diag::warn_cxx11_keyword)
-#define CXX2A_KEYWORD(NAME, FLAGS)                                             \
-        .Case(#NAME, diag::warn_cxx2a_keyword)
+#define CXX20_KEYWORD(NAME, FLAGS)                                             \
+        .Case(#NAME, diag::warn_cxx20_keyword)
 #include "clang/Basic/TokenKinds.def"
         ;
 

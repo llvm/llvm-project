@@ -152,6 +152,7 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
     return reloc.Index;
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_I32:
   case R_WASM_EVENT_INDEX_LEB: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return sym.Info.ElementIndex;
@@ -199,6 +200,7 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_INDEX_LEB:
     return getFunctionSymbol(reloc.Index)->getFunctionIndex();
   case R_WASM_GLOBAL_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_I32:
     if (auto gs = dyn_cast<GlobalSymbol>(sym))
       return gs->getGlobalIndex();
     return sym->getGOTIndex();
@@ -223,14 +225,13 @@ static void setRelocs(const std::vector<T *> &chunks,
     return;
 
   ArrayRef<WasmRelocation> relocs = section->Relocations;
-  assert(std::is_sorted(relocs.begin(), relocs.end(),
-                        [](const WasmRelocation &r1, const WasmRelocation &r2) {
-                          return r1.Offset < r2.Offset;
-                        }));
-  assert(std::is_sorted(
-      chunks.begin(), chunks.end(), [](InputChunk *c1, InputChunk *c2) {
-        return c1->getInputSectionOffset() < c2->getInputSectionOffset();
+  assert(llvm::is_sorted(
+      relocs, [](const WasmRelocation &r1, const WasmRelocation &r2) {
+        return r1.Offset < r2.Offset;
       }));
+  assert(llvm::is_sorted(chunks, [](InputChunk *c1, InputChunk *c2) {
+    return c1->getInputSectionOffset() < c2->getInputSectionOffset();
+  }));
 
   auto relocsNext = relocs.begin();
   auto relocsEnd = relocs.end();

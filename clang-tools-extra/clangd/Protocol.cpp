@@ -1002,7 +1002,7 @@ static llvm::json::Value encodeTokens(llvm::ArrayRef<SemanticToken> Toks) {
     Result.push_back(Tok.tokenModifiers);
   }
   assert(Result.size() == SemanticTokenEncodingSize * Toks.size());
-  return Result;
+  return std::move(Result);
 }
 
 bool operator==(const SemanticToken &L, const SemanticToken &R) {
@@ -1030,7 +1030,7 @@ llvm::json::Value toJSON(const SemanticTokensOrEdits &TE) {
     Result["edits"] = *TE.edits;
   if (TE.tokens)
     Result["data"] = encodeTokens(*TE.tokens);
-  return Result;
+  return std::move(Result);
 }
 
 bool fromJSON(const llvm::json::Value &Params, SemanticTokensParams &R) {

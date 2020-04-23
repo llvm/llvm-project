@@ -516,13 +516,23 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     isLdStMul = true;
     break;
   }
-  case ARM::t2STMIA:
-    // If the base register is killed, we don't care what its value is after the
-    // instruction, so we can use an updating STMIA.
+  case ARM::t2STMIA: {
+    // t2STMIA is reduced to tSTMIA_UPD which has writeback. We can only do this
+    // if the base register is killed, as then it doesn't matter what its value
+    // is after the instruction.
     if (!MI->getOperand(0).isKill())
       return false;
 
+    // If the base register is in the register list and isn't the lowest
+    // numbered register (i.e. it's in operand 4 onwards) then with writeback
+    // the stored value is unknown, so we can't convert to tSTMIA_UPD.
+    Register BaseReg = MI->getOperand(0).getReg();
+    for (unsigned i = 4; i < MI->getNumOperands(); ++i)
+      if (MI->getOperand(i).getReg() == BaseReg)
+        return false;
+
     break;
+  }
   case ARM::t2LDMIA_RET: {
     Register BaseReg = MI->getOperand(1).getReg();
     if (BaseReg != ARM::SP)

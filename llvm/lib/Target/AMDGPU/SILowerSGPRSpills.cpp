@@ -100,7 +100,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       unsigned Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+        TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
       TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
                               TRI);
@@ -133,7 +134,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       unsigned Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+        TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
       TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
       assert(I != RestoreBlock.begin() &&
@@ -206,7 +208,8 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
     for (unsigned I = 0; CSRegs[I]; ++I) {
       unsigned Reg = CSRegs[I];
       if (SavedRegs.test(Reg)) {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC =
+          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlignment(*RC),
                                            true);

@@ -116,11 +116,8 @@ static void verifyTables() {
 #ifndef NDEBUG
   static std::atomic<bool> TableChecked(false);
   if (!TableChecked.load(std::memory_order_relaxed)) {
-    assert(std::is_sorted(std::begin(Groups), std::end(Groups)) &&
-           std::is_sorted(std::begin(RoundGroups), std::end(RoundGroups)) &&
-           std::is_sorted(std::begin(BroadcastGroups),
-                          std::end(BroadcastGroups)) &&
-           "FMA3 tables not sorted!");
+    assert(llvm::is_sorted(Groups) && llvm::is_sorted(RoundGroups) &&
+           llvm::is_sorted(BroadcastGroups) && "FMA3 tables not sorted!");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif

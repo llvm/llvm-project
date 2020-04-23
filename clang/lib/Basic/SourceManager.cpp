@@ -1800,15 +1800,23 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
       return;
     if (Entry.isFile()) {
       SourceLocation IncludeLoc = Entry.getFile().getIncludeLoc();
-      if (IncludeLoc.isInvalid())
+      bool IncludedInFID =
+          (IncludeLoc.isValid() && isInFileID(IncludeLoc, FID)) ||
+          // Predefined header doesn't have a valid include location in main
+          // file, but any files created by it should still be skipped when
+          // computing macro args expanded in the main file.
+          (FID == MainFileID && Entry.getFile().Filename == "<built-in>");
+      if (IncludedInFID) {
+        // Skip the files/macros of the #include'd file, we only care about
+        // macros that lexed macro arguments from our file.
+        if (Entry.getFile().NumCreatedFIDs)
+          ID += Entry.getFile().NumCreatedFIDs - 1 /*because of next ++ID*/;
         continue;
-      if (!isInFileID(IncludeLoc, FID))
-        return; // No more files/macros that may be "contained" in this file.
-
-      // Skip the files/macros of the #include'd file, we only care about macros
-      // that lexed macro arguments from our file.
-      if (Entry.getFile().NumCreatedFIDs)
-        ID += Entry.getFile().NumCreatedFIDs - 1/*because of next ++ID*/;
+      } else if (IncludeLoc.isValid()) {
+        // If file was included but not from FID, there is no more files/macros
+        // that may be "contained" in this file.
+        return;
+      }
       continue;
     }
 

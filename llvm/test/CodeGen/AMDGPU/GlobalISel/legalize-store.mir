@@ -148,7 +148,7 @@ body: |
     ; SI: G_STORE [[EXTRACT]](<2 x s32>), [[COPY]](p1) :: (store 8, align 4, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p1) :: (store 4, addrspace 1)
+    ; SI: G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p1) :: (store 4 + 8, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s32
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr2_vgpr3_vgpr4
@@ -332,7 +332,7 @@ body: |
     ; SI: G_STORE [[EXTRACT]](s64), [[COPY1]](p1) :: (store 8, align 16, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p1) :: (store 4, align 8, addrspace 1)
+    ; SI: G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p1) :: (store 4 + 8, align 8, addrspace 1)
     ; VI-LABEL: name: test_store_global_96
     ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4

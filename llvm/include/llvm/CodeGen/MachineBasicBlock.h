@@ -1046,7 +1046,7 @@ public:
 template<typename IterT>
 inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
   while (It != End && It->isDebugInstr())
-    It++;
+    ++It;
   return It;
 }
 
@@ -1057,8 +1057,37 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 template<class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   while (It != Begin && It->isDebugInstr())
-    It--;
+    --It;
   return It;
+}
+
+/// Increment \p It, then continue incrementing it while it points to a debug
+/// instruction. A replacement for std::next.
+template <typename IterT> inline IterT next_nodbg(IterT It, IterT End) {
+  return skipDebugInstructionsForward(std::next(It), End);
+}
+
+/// Decrement \p It, then continue decrementing it while it points to a debug
+/// instruction. A replacement for std::prev.
+template <typename IterT> inline IterT prev_nodbg(IterT It, IterT Begin) {
+  return skipDebugInstructionsBackward(std::prev(It), Begin);
+}
+
+/// Construct a range iterator which begins at \p It and moves forwards until
+/// \p End is reached, skipping any debug instructions.
+template <typename IterT>
+inline auto instructionsWithoutDebug(IterT It, IterT End) {
+  return make_filter_range(make_range(It, End), [](const MachineInstr &MI) {
+    return !MI.isDebugInstr();
+  });
+}
+
+/// Construct a range iterator which begins at \p It and moves backwards until
+/// \p Begin is reached, skipping any debug instructions.
+template <typename IterT>
+inline auto reversedInstructionsWithoutDebug(IterT It, IterT Begin) {
+  return instructionsWithoutDebug(make_reverse_iterator(It),
+                                  make_reverse_iterator(Begin));
 }
 
 } // end namespace llvm

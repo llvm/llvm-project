@@ -10,6 +10,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
+#include "llvm/ADT/SmallPtrSet.h"
 using namespace mlir;
 
 /// Construct a value.
@@ -119,6 +120,17 @@ void Value::replaceAllUsesWith(Value newValue) const {
   if (owner->hasSingleResult)
     return useList->replaceAllUsesWith(newValue);
   useList->replaceAllUsesWith(*this, newValue);
+}
+
+/// Replace all uses of 'this' value with the new value, updating anything in
+/// the IR that uses 'this' to use the other value instead except if the user is
+/// listed in 'exceptions' .
+void Value::replaceAllUsesExcept(
+    Value newValue, const SmallPtrSetImpl<Operation *> &exceptions) const {
+  for (auto &use : llvm::make_early_inc_range(getUses())) {
+    if (exceptions.count(use.getOwner()) == 0)
+      use.set(newValue);
+  }
 }
 
 //===--------------------------------------------------------------------===//

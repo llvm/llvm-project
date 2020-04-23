@@ -215,8 +215,8 @@ public:
 
   unsigned getVectorSplitCost() { return 0; }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-                          Type *SubTp);
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
+                          VectorType *SubTp);
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
@@ -226,7 +226,7 @@ public:
   int getInlinerVectorBonusPercent() { return 0; }
 
   int getArithmeticReductionCost(unsigned Opcode,
-                                 Type *Ty,
+                                 VectorType *Ty,
                                  bool IsPairwise);
   template <typename T>
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy, ArrayRef<T *> Args,
@@ -239,7 +239,7 @@ public:
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Value *> Args, FastMathFlags FMF,
                             unsigned VF = 1, const Instruction *I = nullptr);
-  int getMinMaxReductionCost(Type *Ty, Type *CondTy,
+  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                              bool IsPairwiseForm,
                              bool IsUnsigned);
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);

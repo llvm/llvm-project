@@ -537,7 +537,7 @@ void ToyDialect::printType(mlir::Type type,
 
   // Print the struct type according to the parser format.
   printer << "struct<";
-  mlir::interleaveComma(structType.getElementTypes(), printer);
+  llvm::interleaveComma(structType.getElementTypes(), printer);
   printer << '>';
 }
 

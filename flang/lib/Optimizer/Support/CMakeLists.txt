@@ -1,10 +1,10 @@
-add_llvm_library(FIRSupport
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
+add_flang_library(FIRSupport
   KindMapping.cpp
-)
 
-target_link_libraries(FIRSupport FIRDialect)
-
-install (TARGETS FIRSupport
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
+  DEPENDS
+  ${dialect_libs}
+  LINK_LIBS
+  ${dialect_libs}
 )

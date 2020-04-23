@@ -18,7 +18,7 @@ namespace lld {
 namespace macho {
 
 class InputSection;
-class InputFile;
+class DylibFile;
 class ArchiveFile;
 
 struct StringRefZ {
@@ -34,6 +34,7 @@ public:
   enum Kind {
     DefinedKind,
     UndefinedKind,
+    DylibKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -42,11 +43,8 @@ public:
 
   uint64_t getVA() const;
 
-  InputFile *file;
-
 protected:
-  Symbol(Kind k, InputFile *file, StringRefZ name)
-      : file(file), symbolKind(k), name(name) {}
+  Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
 
   Kind symbolKind;
   StringRefZ name;
@@ -55,7 +53,7 @@ protected:
 class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputSection *isec, uint32_t value)
-      : Symbol(DefinedKind, nullptr, name), isec(isec), value(value) {}
+      : Symbol(DefinedKind, name), isec(isec), value(value) {}
 
   InputSection *isec;
   uint32_t value;
@@ -65,9 +63,20 @@ public:
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name) : Symbol(UndefinedKind, nullptr, name) {}
+  Undefined(StringRefZ name) : Symbol(UndefinedKind, name) {}
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
+};
+
+class DylibSymbol : public Symbol {
+public:
+  DylibSymbol(DylibFile *file, StringRefZ name)
+      : Symbol(DylibKind, name), file(file) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
+
+  DylibFile *file;
+  uint32_t gotIndex = UINT32_MAX;
 };
 
 inline uint64_t Symbol::getVA() const {
@@ -79,6 +88,7 @@ inline uint64_t Symbol::getVA() const {
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
+  alignas(DylibSymbol) char c[sizeof(DylibSymbol)];
 };
 
 template <typename T, typename... ArgT>

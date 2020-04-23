@@ -184,7 +184,7 @@ void detail::PassOptions::print(raw_ostream &os) {
 
   // Interleave the options with ' '.
   os << '{';
-  interleave(
+  llvm::interleave(
       orderedOps, os, [&](OptionBase *option) { option->print(os); }, " ");
   os << '}';
 }

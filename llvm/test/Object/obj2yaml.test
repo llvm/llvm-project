@@ -664,7 +664,6 @@ Symbols:
 # ELF-AVR-NEXT:    Flags: [ PF_X, PF_R ]
 # ELF-AVR-NEXT:    Sections:
 # ELF-AVR-NEXT:     - Section: .text
-# ELF-AVR-NEXT:     - Section: .data
 # ELF-AVR-NEXT:    Align: 0x0000000000000002
 # ELF-AVR-NEXT:  - Type:  PT_LOAD
 # ELF-AVR-NEXT:    Flags: [ PF_W, PF_R ]

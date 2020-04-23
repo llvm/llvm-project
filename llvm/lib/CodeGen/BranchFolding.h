@@ -13,8 +13,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MBFIWrapper.h"
-#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
@@ -22,14 +20,13 @@
 namespace llvm {
 
 class BasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineLoopInfo;
 class MachineModuleInfo;
 class MachineRegisterInfo;
+class MBFIWrapper;
 class ProfileSummaryInfo;
-class raw_ostream;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 

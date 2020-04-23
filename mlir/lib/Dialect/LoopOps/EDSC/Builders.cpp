@@ -14,8 +14,8 @@ using namespace mlir;
 using namespace mlir::edsc;
 
 mlir::edsc::ParallelLoopNestBuilder::ParallelLoopNestBuilder(
-    ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
-    ArrayRef<ValueHandle> ubs, ArrayRef<ValueHandle> steps) {
+    MutableArrayRef<Value> ivs, ArrayRef<Value> lbs, ArrayRef<Value> ubs,
+    ArrayRef<Value> steps) {
   assert(ivs.size() == lbs.size() && "Mismatch in number of arguments");
   assert(ivs.size() == ubs.size() && "Mismatch in number of arguments");
   assert(ivs.size() == steps.size() && "Mismatch in number of arguments");
@@ -36,57 +36,77 @@ void mlir::edsc::ParallelLoopNestBuilder::operator()(
     (*lit)();
 }
 
-mlir::edsc::LoopNestBuilder::LoopNestBuilder(ArrayRef<ValueHandle *> ivs,
-                                             ArrayRef<ValueHandle> lbs,
-                                             ArrayRef<ValueHandle> ubs,
-                                             ArrayRef<ValueHandle> steps) {
+mlir::edsc::LoopNestBuilder::LoopNestBuilder(MutableArrayRef<Value> ivs,
+                                             ArrayRef<Value> lbs,
+                                             ArrayRef<Value> ubs,
+                                             ArrayRef<Value> steps) {
   assert(ivs.size() == lbs.size() && "expected size of ivs and lbs to match");
   assert(ivs.size() == ubs.size() && "expected size of ivs and ubs to match");
   assert(ivs.size() == steps.size() &&
          "expected size of ivs and steps to match");
   loops.reserve(ivs.size());
-  for (auto it : llvm::zip(ivs, lbs, ubs, steps)) {
-    loops.emplace_back(makeLoopBuilder(std::get<0>(it), std::get<1>(it),
+  for (auto it : llvm::zip(ivs, lbs, ubs, steps))
+    loops.emplace_back(makeLoopBuilder(&std::get<0>(it), std::get<1>(it),
                                        std::get<2>(it), std::get<3>(it)));
-  }
   assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
 }
 
-void mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
+mlir::edsc::LoopNestBuilder::LoopNestBuilder(
+    Value *iv, Value lb, Value ub, Value step,
+    MutableArrayRef<Value> iterArgsHandles, ValueRange iterArgsInitValues) {
+  assert(iterArgsInitValues.size() == iterArgsHandles.size() &&
+         "expected size of arguments and argument_handles to match");
+  loops.emplace_back(
+      makeLoopBuilder(iv, lb, ub, step, iterArgsHandles, iterArgsInitValues));
+}
+
+mlir::edsc::LoopNestBuilder::LoopNestBuilder(Value *iv, Value lb, Value ub,
+                                             Value step) {
+  SmallVector<Value, 0> noArgs;
+  loops.emplace_back(makeLoopBuilder(iv, lb, ub, step, noArgs, {}));
+}
+
+Operation::result_range
+mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
     std::function<void(void)> fun) {
   if (fun)
     fun();
+
   for (auto &lit : reverse(loops))
     lit({});
+
+  return loops[0].getOp()->getResults();
 }
 
-LoopBuilder mlir::edsc::makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
-                                                ArrayRef<ValueHandle> lbHandles,
-                                                ArrayRef<ValueHandle> ubHandles,
-                                                ArrayRef<ValueHandle> steps) {
+LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
+                                                ArrayRef<Value> lbs,
+                                                ArrayRef<Value> ubs,
+                                                ArrayRef<Value> steps) {
   LoopBuilder result;
-  auto opHandle = OperationHandle::create<loop::ParallelOp>(
-      SmallVector<Value, 4>(lbHandles.begin(), lbHandles.end()),
-      SmallVector<Value, 4>(ubHandles.begin(), ubHandles.end()),
-      SmallVector<Value, 4>(steps.begin(), steps.end()));
+  auto opHandle = OperationHandle::create<loop::ParallelOp>(lbs, ubs, steps);
 
   loop::ParallelOp parallelOp =
       cast<loop::ParallelOp>(*opHandle.getOperation());
   for (size_t i = 0, e = ivs.size(); i < e; ++i)
-    *ivs[i] = ValueHandle(parallelOp.getBody()->getArgument(i));
+    ivs[i] = parallelOp.getBody()->getArgument(i);
   result.enter(parallelOp.getBody(), /*prev=*/1);
   return result;
 }
 
-mlir::edsc::LoopBuilder mlir::edsc::makeLoopBuilder(ValueHandle *iv,
-                                                    ValueHandle lbHandle,
-                                                    ValueHandle ubHandle,
-                                                    ValueHandle stepHandle) {
+mlir::edsc::LoopBuilder
+mlir::edsc::makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
+                            MutableArrayRef<Value> iterArgsHandles,
+                            ValueRange iterArgsInitValues) {
   mlir::edsc::LoopBuilder result;
   auto forOp =
-      OperationHandle::createOp<loop::ForOp>(lbHandle, ubHandle, stepHandle);
-  *iv = ValueHandle(forOp.getInductionVar());
-  auto *body = loop::getForInductionVarOwner(iv->getValue()).getBody();
+      OperationHandle::createOp<loop::ForOp>(lb, ub, step, iterArgsInitValues);
+  *iv = forOp.getInductionVar();
+  auto *body = loop::getForInductionVarOwner(*iv).getBody();
+  for (size_t i = 0, e = iterArgsHandles.size(); i < e; ++i) {
+    // Skipping the induction variable.
+    iterArgsHandles[i] = body->getArgument(i + 1);
+  }
+  result.setOp(forOp);
   result.enter(body, /*prev=*/1);
   return result;
 }

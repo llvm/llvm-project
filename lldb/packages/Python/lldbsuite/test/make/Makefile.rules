@@ -474,7 +474,7 @@ endif
 # Additional system libraries
 #----------------------------------------------------------------------
 ifeq (1,$(USE_LIBDL))
-	ifneq ($(OS),NetBSD)
+	ifeq (,$(filter $(OS), NetBSD Windows_NT))
 		LDFLAGS += -ldl
 	endif
 endif

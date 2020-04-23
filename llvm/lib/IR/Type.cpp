@@ -68,20 +68,17 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
     return false;
 
   // Vector -> Vector conversions are always lossless if the two vector types
-  // have the same size, otherwise not.  Also, 64-bit vector types can be
-  // converted to x86mmx.
-  if (auto *thisPTy = dyn_cast<VectorType>(this)) {
-    if (auto *thatPTy = dyn_cast<VectorType>(Ty))
-      return thisPTy->getBitWidth() == thatPTy->getBitWidth();
-    if (Ty->getTypeID() == Type::X86_MMXTyID &&
-        thisPTy->getBitWidth() == 64)
-      return true;
-  }
+  // have the same size, otherwise not.
+  if (isa<VectorType>(this) && isa<VectorType>(Ty))
+    return getPrimitiveSizeInBits() == Ty->getPrimitiveSizeInBits();
 
-  if (this->getTypeID() == Type::X86_MMXTyID)
-    if (auto *thatPTy = dyn_cast<VectorType>(Ty))
-      if (thatPTy->getBitWidth() == 64)
-        return true;
+  //  64-bit fixed width vector types can be losslessly converted to x86mmx.
+  if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
+      getPrimitiveSizeInBits().getFixedSize() == 64)
+    return true;
+  if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
+      Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
+    return true;
 
   // At this point we have only various mismatches of the first class types
   // remaining and ptr->ptr. Just select the lossless conversions. Everything
@@ -123,9 +120,13 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::X86_MMXTyID: return TypeSize::Fixed(64);
   case Type::IntegerTyID:
     return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     const VectorType *VTy = cast<VectorType>(this);
-    return TypeSize(VTy->getBitWidth(), VTy->isScalable());
+    ElementCount EC = VTy->getElementCount();
+    TypeSize ETS = VTy->getElementType()->getPrimitiveSizeInBits();
+    assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
+    return {ETS.getFixedSize() * EC.Min, EC.Scalable};
   }
   default: return TypeSize::Fixed(0);
   }
@@ -510,11 +511,9 @@ StringRef StructType::getName() const {
 }
 
 bool StructType::isValidElementType(Type *ElemTy) {
-  if (auto *VTy = dyn_cast<VectorType>(ElemTy))
-    return !VTy->isScalable();
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy();
+         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
 }
 
 bool StructType::isLayoutIdentical(StructType *Other) const {
@@ -572,41 +571,74 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 }
 
 bool ArrayType::isValidElementType(Type *ElemTy) {
-  if (auto *VTy = dyn_cast<VectorType>(ElemTy))
-    return !VTy->isScalable();
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy();
+         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
 }
 
 //===----------------------------------------------------------------------===//
 //                          VectorType Implementation
 //===----------------------------------------------------------------------===//
 
-VectorType::VectorType(Type *ElType, ElementCount EC)
-    : Type(ElType->getContext(), VectorTyID), ContainedType(ElType),
-      NumElements(EC.Min), Scalable(EC.Scalable) {
+VectorType::VectorType(Type *ElType, ElementCount EC, Type::TypeID TID)
+    : Type(ElType->getContext(), TID), ContainedType(ElType), EC(EC) {
   ContainedTys = &ContainedType;
   NumContainedTys = 1;
 }
 
 VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
-  assert(EC.Min > 0 && "#Elements of a VectorType must be greater than 0");
-  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
-                                            "be an integer, floating point, or "
-                                            "pointer type.");
-
-  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
-  VectorType *&Entry = ElementType->getContext().pImpl
-                                 ->VectorTypes[std::make_pair(ElementType, EC)];
-  if (!Entry)
-    Entry = new (pImpl->Alloc) VectorType(ElementType, EC);
-  return Entry;
+  if (EC.Scalable)
+    return ScalableVectorType::get(ElementType, EC.Min);
+  else
+    return FixedVectorType::get(ElementType, EC.Min);
 }
 
 bool VectorType::isValidElementType(Type *ElemTy) {
   return ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
-    ElemTy->isPointerTy();
+         ElemTy->isPointerTy();
+}
+
+//===----------------------------------------------------------------------===//
+//                        FixedVectorType Implementation
+//===----------------------------------------------------------------------===//
+
+FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
+  assert(NumElts > 0 && "#Elements of a VectorType must be greater than 0");
+  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
+                                            "be an integer, floating point, or "
+                                            "pointer type.");
+
+  ElementCount EC(NumElts, false);
+
+  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
+  VectorType *&Entry = ElementType->getContext()
+                           .pImpl->VectorTypes[std::make_pair(ElementType, EC)];
+
+  if (!Entry)
+    Entry = new (pImpl->Alloc) FixedVectorType(ElementType, NumElts);
+  return cast<FixedVectorType>(Entry);
+}
+
+//===----------------------------------------------------------------------===//
+//                       ScalableVectorType Implementation
+//===----------------------------------------------------------------------===//
+
+ScalableVectorType *ScalableVectorType::get(Type *ElementType,
+                                            unsigned MinNumElts) {
+  assert(MinNumElts > 0 && "#Elements of a VectorType must be greater than 0");
+  assert(isValidElementType(ElementType) && "Element type of a VectorType must "
+                                            "be an integer, floating point, or "
+                                            "pointer type.");
+
+  ElementCount EC(MinNumElts, true);
+
+  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
+  VectorType *&Entry = ElementType->getContext()
+                           .pImpl->VectorTypes[std::make_pair(ElementType, EC)];
+
+  if (!Entry)
+    Entry = new (pImpl->Alloc) ScalableVectorType(ElementType, MinNumElts);
+  return cast<ScalableVectorType>(Entry);
 }
 
 //===----------------------------------------------------------------------===//

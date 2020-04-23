@@ -628,3 +628,22 @@ define i8 @nabs_different_constants(i8 %a) {
   %m2 = select i1 %cmp2, i8 %neg, i8 %a
   ret i8 %m2
 }
+
+@g = external global i64
+
+; PR45539 - https://bugs.llvm.org/show_bug.cgi?id=45539
+
+define i64 @infinite_loop_constant_expression_abs(i64 %arg) {
+; CHECK-LABEL: @infinite_loop_constant_expression_abs(
+; CHECK-NEXT:    [[T:%.*]] = sub i64 ptrtoint (i64* @g to i64), [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i64 [[T]], 0
+; CHECK-NEXT:    [[T2:%.*]] = sub nsw i64 0, [[T]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T1]], i64 [[T2]], i64 [[T]]
+; CHECK-NEXT:    ret i64 [[T3]]
+;
+  %t = sub i64 ptrtoint (i64* @g to i64), %arg
+  %t1 = icmp slt i64 %t, 0
+  %t2 = sub nsw i64 0, %t
+  %t3 = select i1 %t1, i64 %t2, i64 %t
+  ret i64 %t3
+}

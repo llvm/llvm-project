@@ -312,8 +312,8 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
-  LLDB_RECORD_METHOD(size_t, SBThread, GetStopDescription, (char *, size_t), "",
-                     dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD(size_t, SBThread, GetStopDescription,
+                              (char *, size_t), dst, "", dst_len);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1448,7 +1448,7 @@ void RegisterMethods<SBThread>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBThread, SBThread, GetCurrentExceptionBacktrace,
                        ());
   LLDB_REGISTER_METHOD(bool, SBThread, SafeToCallFunctions, ());
-  LLDB_REGISTER_CHAR_PTR_REDIRECT(size_t, SBThread, GetStopDescription);
+  LLDB_REGISTER_CHAR_PTR_METHOD(size_t, SBThread, GetStopDescription);
 }
 
 }

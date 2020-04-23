@@ -41,6 +41,7 @@ add_entrypoint_object(
     libc.config.linux.linux_syscall_h
     libc.include.signal
     libc.include.sys_syscall
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(

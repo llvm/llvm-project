@@ -23,7 +23,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include <numeric>
 
@@ -1512,7 +1511,7 @@ static void print(OpAsmPrinter &p, TupleOp op) {
   p.printOperands(op.getOperands());
   p.printOptionalAttrDict(op.getAttrs());
   p << " : ";
-  interleaveComma(op.getOperation()->getOperandTypes(), p);
+  llvm::interleaveComma(op.getOperation()->getOperandTypes(), p);
 }
 
 static LogicalResult verify(TupleOp op) { return success(); }

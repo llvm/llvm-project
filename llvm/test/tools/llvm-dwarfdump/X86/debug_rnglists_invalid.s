@@ -1,5 +1,5 @@
 # RUN: llvm-mc %S/Inputs/debug_rnglists_short_section.s -filetype obj -triple x86_64-pc-linux -o - | \
-# RUN: llvm-dwarfdump --debug-rnglists - 2>&1 | FileCheck %s --check-prefix=SHORT
+# RUN: not llvm-dwarfdump --debug-rnglists - 2>&1 | FileCheck %s --check-prefix=SHORT
 # SHORT-NOT: error:
 # SHORT-NOT: range list header
 # SHORT: error: parsing .debug_rnglists table at offset 0x0: unexpected end of data at offset 0x0
@@ -7,7 +7,7 @@
 # SHORT-NOT: error:
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o - | \
-# RUN: llvm-dwarfdump --debug-rnglists - 2> %t.err | FileCheck %s --check-prefix=GOOD
+# RUN: not llvm-dwarfdump --debug-rnglists - 2> %t.err | FileCheck %s --check-prefix=GOOD
 # RUN: FileCheck %s --input-file %t.err
 
 # GOOD: .debug_rnglists contents:

@@ -495,10 +495,17 @@ bool ARMBaseInstrInfo::isPredicated(const MachineInstr &MI) const {
   return PIdx != -1 && MI.getOperand(PIdx).getImm() != ARMCC::AL;
 }
 
-std::string ARMBaseInstrInfo::createMIROperandComment(const MachineInstr &MI,
-                                                      const MachineOperand &Op,
-                                                      unsigned OpIdx) const {
-  // Only support immediates for now.
+std::string ARMBaseInstrInfo::createMIROperandComment(
+    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
+    const TargetRegisterInfo *TRI) const {
+
+  // First, let's see if there is a generic comment for this operand
+  std::string GenericComment =
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+  if (!GenericComment.empty())
+    return GenericComment;
+
+  // If not, check if we have an immediate operand.
   if (Op.getType() != MachineOperand::MO_Immediate)
     return std::string();
 

@@ -148,11 +148,10 @@ public:
 class ShuffleVectorConstantExpr : public ConstantExpr {
 public:
   ShuffleVectorConstantExpr(Constant *C1, Constant *C2, ArrayRef<int> Mask)
-      : ConstantExpr(
-            VectorType::get(cast<VectorType>(C1->getType())->getElementType(),
-                            Mask.size(),
-                            cast<VectorType>(C1->getType())->isScalable()),
-            Instruction::ShuffleVector, &Op<0>(), 2) {
+      : ConstantExpr(VectorType::get(
+                         cast<VectorType>(C1->getType())->getElementType(),
+                         Mask.size(), isa<ScalableVectorType>(C1->getType())),
+                     Instruction::ShuffleVector, &Op<0>(), 2) {
     assert(ShuffleVectorInst::isValidOperands(C1, C2, Mask) &&
            "Invalid shuffle vector instruction operands!");
     Op<0>() = C1;

@@ -5451,7 +5451,7 @@ llvm::Constant *IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
     // This isn't a stable sort, but our algorithm should handle it fine.
     llvm::array_pod_sort(IvarsInfo.begin(), IvarsInfo.end());
   } else {
-    assert(std::is_sorted(IvarsInfo.begin(), IvarsInfo.end()));
+    assert(llvm::is_sorted(IvarsInfo));
   }
   assert(IvarsInfo.back().Offset < InstanceEnd);
 

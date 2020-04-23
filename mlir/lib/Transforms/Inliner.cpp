@@ -455,12 +455,16 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   // here as more calls may be added during inlining.
   bool inlinedAnyCalls = false;
   for (unsigned i = 0; i != calls.size(); ++i) {
-    ResolvedCall &it = calls[i];
+    ResolvedCall it = calls[i];
+    bool doInline = shouldInline(it);
     LLVM_DEBUG({
-      llvm::dbgs() << "* Considering inlining call: ";
+      if (doInline)
+        llvm::dbgs() << "* Inlining call: ";
+      else
+        llvm::dbgs() << "* Not inlining call: ";
       it.call.dump();
     });
-    if (!shouldInline(it))
+    if (!doInline)
       continue;
     CallOpInterface call = it.call;
     Region *targetRegion = it.targetNode->getCallableRegion();
@@ -518,7 +522,8 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
 
     // We also won't apply canonicalizations for nodes that are not
     // isolated. This avoids potentially mutating the regions of nodes defined
-    // above, this is also a stipulation of the 'applyPatternsGreedily' driver.
+    // above, this is also a stipulation of the 'applyPatternsAndFoldGreedily'
+    // driver.
     auto *region = node->getCallableRegion();
     if (!region->getParentOp()->isKnownIsolatedFromAbove())
       continue;

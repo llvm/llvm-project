@@ -26,10 +26,10 @@ body:             |
   ; CHECK:   $r0 = t2MOVi 2, 1 /* CC::ne */, $cpsr, $noreg
   ; CHECK:   $r0 = t2MOVi 3, 0 /* CC::eq */, killed $cpsr, $noreg, implicit killed $r0
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @fn2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def dead $r0
-  ; CHECK:   INLINEASM_BR &"", 9, 13, 0, 13, blockaddress(@fn1, %ir-block.l_yes)
+  ; CHECK:   INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 0, 13 /* imm */, blockaddress(@fn1, %ir-block.l_yes)
   ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
   ; CHECK: bb.1:
-  ; CHECK:   INLINEASM &"", 1
+  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */
   ; CHECK:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
   ; CHECK: bb.2.l_yes (address-taken):
   ; CHECK:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc

@@ -1,7 +1,9 @@
-; RUN: llc  -verify-machineinstrs < %s | grep -F -A 10000 .llvm_stackmaps | wc -l | FileCheck %s
+; RUN: llc  -verify-machineinstrs < %s | FileCheck %s
 
 ; Without removal of duplicate entries, the size is 62 lines
-; CHECK: 50
+;      CHECK:	.section	.llvm_stackmaps,{{.*$}}
+; CHECK-NEXT:{{(.+$[[:space:]]){48}[[:space:]]}}
+;  CHECK-NOT:{{.|[[:space:]]}}
 
 target triple = "x86_64-pc-linux-gnu"
 

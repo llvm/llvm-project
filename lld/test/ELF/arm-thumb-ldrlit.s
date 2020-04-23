@@ -31,14 +31,14 @@ target2:
  nop
  bx lr
 
-// CHECK: 000110b4 <_start>:
-// CHECK-NEXT: 110b4: ldr     r0, [pc, #0]
-// CHECK-NEXT: 110b6: ldr     r1, [pc, #1020]
+// CHECK: 000200b4 <_start>:
+// CHECK-NEXT: 200b4: ldr     r0, [pc, #0]
+// CHECK-NEXT: 200b6: ldr     r1, [pc, #1020]
 
-// CHECK: 000110b8 <target1>:
-// CHECK-NEXT: 110b8: nop
-// CHECK-NEXT: 110ba: bx      lr
+// CHECK: 000200b8 <target1>:
+// CHECK-NEXT: 200b8: nop
+// CHECK-NEXT: 200ba: bx      lr
 
-// CHECK: 000114b4 <target2>:
-// CHECK-NEXT: 114b4: nop
-// CHECK-NEXT: 114b6: bx      lr
+// CHECK: 000204b4 <target2>:
+// CHECK-NEXT: 204b4: nop
+// CHECK-NEXT: 204b6: bx      lr

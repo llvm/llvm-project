@@ -114,7 +114,7 @@ def AffineForOp : Affine_Op<"for",
 
     The `affine.for` operation represents an affine loop nest. It has one region
     containing its body. This region must contain one block that terminates with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when
+    [`affine.terminator`](#affineterminator-affineterminatorop). *Note:* when
     `affine.for` is printed in custom format, the terminator is omitted. The
     block has one argument of [`index`](../LangRef.md#index-type) type that
     represents the induction variable of the loop.
@@ -292,7 +292,7 @@ def AffineIfOp : Affine_Op<"if",
     clauses. The latter may be empty (i.e. contain no blocks), meaning the
     absence of the else clause. When non-empty, both regions must contain
     exactly one block terminating with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when `affine.if`
+    [`affine.terminator`](#affineterminator-affineterminatorop). *Note:* when `affine.if`
     is printed in custom format, the terminator is omitted. These blocks must
     not have any arguments.
 
@@ -337,13 +337,16 @@ def AffineIfOp : Affine_Op<"if",
     /// list of AffineIf is not resizable.
     void setConditional(IntegerSet set, ValueRange operands);
 
+    /// Returns true if an else block exists.
+    bool hasElse() { return !elseRegion().empty(); }
+
     Block *getThenBlock() {
       assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
       return &thenRegion().front();
     }
 
     Block *getElseBlock() {
-      assert(!elseRegion().empty() && "Empty 'else' region.");
+      assert(hasElse() && "Empty 'else' region.");
       return &elseRegion().front();
     }
 
@@ -353,7 +356,7 @@ def AffineIfOp : Affine_Op<"if",
       return OpBuilder(&body, std::prev(body.end()));
     }
     OpBuilder getElseBodyBuilder() {
-      assert(!elseRegion().empty() && "Unexpected empty 'else' region.");
+      assert(hasElse() && "No 'else' block");
       Block &body = elseRegion().front();
       return OpBuilder(&body, std::prev(body.end()));
     }
@@ -491,6 +494,9 @@ def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
 
     Block *getBody();
     OpBuilder getBodyBuilder();
+    MutableArrayRef<BlockArgument> getIVs() {
+      return getBody()->getArguments();
+    }
     void setSteps(ArrayRef<int64_t> newSteps);
 
     static StringRef getLowerBoundsMapAttrName() { return "lowerBoundsMap"; }
@@ -586,8 +592,8 @@ def AffineTerminatorOp :
     ```
 
     Affine terminator is a special terminator operation for blocks inside affine
-    loops ([`affine.for`](#affinefor-operation)) and branches
-    ([`affine.if`](#affineif-operation)). It unconditionally transmits the
+    loops ([`affine.for`](#affinefor-affineforop)) and branches
+    ([`affine.if`](#affineif-affineifop)). It unconditionally transmits the
     control flow to the successor of the operation enclosing the region.
 
     *Rationale*: bodies of affine operations are [blocks](../LangRef.md#blocks)

@@ -16,7 +16,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -85,7 +84,7 @@ static const char *const SanCovPCsInitName = "__sanitizer_cov_pcs_init";
 
 static const char *const SanCovGuardsSectionName = "sancov_guards";
 static const char *const SanCovCountersSectionName = "sancov_cntrs";
-static const char *const SanCovBoolFlagSectionName = "sancov_bool_flag";
+static const char *const SanCovBoolFlagSectionName = "sancov_bools";
 static const char *const SanCovPCsSectionName = "sancov_pcs";
 
 static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
@@ -661,8 +660,8 @@ void ModuleSanitizerCoverage::instrumentFunction(
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
-        CallSite CS(&Inst);
-        if (CS && !CS.getCalledFunction())
+        CallBase *CB = dyn_cast<CallBase>(&Inst);
+        if (CB && !CB->getCalledFunction())
           IndirCalls.push_back(&Inst);
       }
       if (Options.TraceCmp) {
@@ -786,8 +785,8 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
          Options.Inline8bitCounters || Options.InlineBoolFlag);
   for (auto I : IndirCalls) {
     IRBuilder<> IRB(I);
-    CallSite CS(I);
-    Value *Callee = CS.getCalledValue();
+    CallBase &CB = cast<CallBase>(*I);
+    Value *Callee = CB.getCalledValue();
     if (isa<InlineAsm>(Callee))
       continue;
     IRB.CreateCall(SanCovTracePCIndir, IRB.CreatePointerCast(Callee, IntptrTy));

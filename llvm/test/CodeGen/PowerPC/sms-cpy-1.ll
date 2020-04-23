@@ -13,7 +13,7 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 4, 3, 32
-; CHECK-NEXT:    cmplwi 0, 3, 1
+; CHECK-NEXT:    cmplwi 3, 1
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    isel 3, 4, 3, 1
 ; CHECK-NEXT:    li 4, 2

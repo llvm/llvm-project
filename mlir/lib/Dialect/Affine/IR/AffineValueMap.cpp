@@ -51,8 +51,9 @@ void AffineValueMap::difference(const AffineValueMap &a,
     diffExprs.push_back(normalizer.getAffineMap().getResult(i) -
                         bMap.getResult(i));
 
-  auto diffMap = AffineMap::get(normalizer.getNumDims(),
-                                normalizer.getNumSymbols(), diffExprs);
+  auto diffMap =
+      AffineMap::get(normalizer.getNumDims(), normalizer.getNumSymbols(),
+                     diffExprs, aMap.getContext());
   canonicalizeMapAndOperands(&diffMap, &bOperands);
   diffMap = simplifyAffineMap(diffMap);
   res->reset(diffMap, bOperands);

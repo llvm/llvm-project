@@ -429,6 +429,17 @@ def parseOptionsAndInitTestdirs():
         configuration.results_formatter_name = (
             "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
 
+    # Reproducer arguments
+    if args.capture_path and args.replay_path:
+        logging.error('Cannot specify both a capture and a replay path.')
+        sys.exit(-1)
+
+    if args.capture_path:
+        configuration.capture_path = args.capture_path
+
+    if args.replay_path:
+        configuration.replay_path = args.replay_path
+
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
 
@@ -455,6 +466,9 @@ def parseOptionsAndInitTestdirs():
 
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
+
+    if args.enabled_plugins:
+        configuration.enabled_plugins = args.enabled_plugins
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -955,7 +969,18 @@ def run_suite():
     setupSysPath()
 
     import lldbconfig
+    if configuration.capture_path or configuration.replay_path:
+        lldbconfig.INITIALIZE = False
     import lldb
+
+    if configuration.capture_path:
+        lldb.SBReproducer.Capture(configuration.capture_path)
+        lldb.SBReproducer.SetAutoGenerate(True)
+    elif configuration.replay_path:
+        lldb.SBReproducer.PassiveReplay(configuration.replay_path)
+
+    if not lldbconfig.INITIALIZE:
+        lldb.SBDebugger.Initialize()
 
     # Use host platform by default.
     lldb.selected_platform = lldb.SBPlatform.GetHostPlatform()

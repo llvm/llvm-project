@@ -530,11 +530,11 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
     : CallExpr(CXXOperatorCallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                OperatorLoc, /*MinNumArgs=*/0, UsesADL) {
   CXXOperatorCallExprBits.OperatorKind = OpKind;
-  CXXOperatorCallExprBits.FPFeatures = FPFeatures.getInt();
+  CXXOperatorCallExprBits.FPFeatures = FPFeatures.getAsOpaqueInt();
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
-  assert((CXXOperatorCallExprBits.FPFeatures == FPFeatures.getInt()) &&
+  assert((CXXOperatorCallExprBits.FPFeatures == FPFeatures.getAsOpaqueInt()) &&
          "FPFeatures overflow!");
   Range = getSourceRangeImpl();
 }

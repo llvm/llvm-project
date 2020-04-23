@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -2298,12 +2297,11 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   if (CI->isTailCall()) return false;
 
   // Check the calling convention.
-  ImmutableCallSite CS(CI);
-  CallingConv::ID CC = CS.getCallingConv();
+  CallingConv::ID CC = CI->getCallingConv();
 
   // TODO: Avoid some calling conventions?
 
-  FunctionType *FTy = CS.getFunctionType();
+  FunctionType *FTy = CI->getFunctionType();
   bool isVarArg = FTy->isVarArg();
 
   // Handle *simple* calls for now.
@@ -2330,47 +2328,46 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   SmallVector<Register, 8> ArgRegs;
   SmallVector<MVT, 8> ArgVTs;
   SmallVector<ISD::ArgFlagsTy, 8> ArgFlags;
-  unsigned arg_size = CS.arg_size();
+  unsigned arg_size = CI->arg_size();
   Args.reserve(arg_size);
   ArgRegs.reserve(arg_size);
   ArgVTs.reserve(arg_size);
   ArgFlags.reserve(arg_size);
-  for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
-       i != e; ++i) {
+  for (auto ArgI = CI->arg_begin(), ArgE = CI->arg_end(); ArgI != ArgE; ++ArgI) {
     // If we're lowering a memory intrinsic instead of a regular call, skip the
     // last argument, which shouldn't be passed to the underlying function.
-    if (IntrMemName && e - i <= 1)
+    if (IntrMemName && ArgE - ArgI <= 1)
       break;
 
     ISD::ArgFlagsTy Flags;
-    unsigned ArgIdx = i - CS.arg_begin();
-    if (CS.paramHasAttr(ArgIdx, Attribute::SExt))
+    unsigned ArgIdx = ArgI - CI->arg_begin();
+    if (CI->paramHasAttr(ArgIdx, Attribute::SExt))
       Flags.setSExt();
-    if (CS.paramHasAttr(ArgIdx, Attribute::ZExt))
+    if (CI->paramHasAttr(ArgIdx, Attribute::ZExt))
       Flags.setZExt();
 
     // FIXME: Only handle *easy* calls for now.
-    if (CS.paramHasAttr(ArgIdx, Attribute::InReg) ||
-        CS.paramHasAttr(ArgIdx, Attribute::StructRet) ||
-        CS.paramHasAttr(ArgIdx, Attribute::SwiftSelf) ||
-        CS.paramHasAttr(ArgIdx, Attribute::SwiftError) ||
-        CS.paramHasAttr(ArgIdx, Attribute::Nest) ||
-        CS.paramHasAttr(ArgIdx, Attribute::ByVal))
+    if (CI->paramHasAttr(ArgIdx, Attribute::InReg) ||
+        CI->paramHasAttr(ArgIdx, Attribute::StructRet) ||
+        CI->paramHasAttr(ArgIdx, Attribute::SwiftSelf) ||
+        CI->paramHasAttr(ArgIdx, Attribute::SwiftError) ||
+        CI->paramHasAttr(ArgIdx, Attribute::Nest) ||
+        CI->paramHasAttr(ArgIdx, Attribute::ByVal))
       return false;
 
-    Type *ArgTy = (*i)->getType();
+    Type *ArgTy = (*ArgI)->getType();
     MVT ArgVT;
     if (!isTypeLegal(ArgTy, ArgVT) && ArgVT != MVT::i16 && ArgVT != MVT::i8 &&
         ArgVT != MVT::i1)
       return false;
 
-    Register Arg = getRegForValue(*i);
+    Register Arg = getRegForValue(*ArgI);
     if (!Arg.isValid())
       return false;
 
     Flags.setOrigAlign(Align(DL.getABITypeAlignment(ArgTy)));
 
-    Args.push_back(*i);
+    Args.push_back(*ArgI);
     ArgRegs.push_back(Arg);
     ArgVTs.push_back(ArgVT);
     ArgFlags.push_back(Flags);

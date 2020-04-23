@@ -570,10 +570,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   LoggingSession LoggingSession(Logger);
   // Write some initial logs before we start doing any real work.
   log("{0}", clang::getClangToolFullVersion("clangd"));
-// FIXME: abstract this better, and print PID on windows too.
-#ifndef _WIN32
-  log("PID: {0}", getpid());
-#endif
+  log("PID: {0}", llvm::sys::Process::getProcessId());
   {
     SmallString<128> CWD;
     if (auto Err = llvm::sys::fs::current_path(CWD))

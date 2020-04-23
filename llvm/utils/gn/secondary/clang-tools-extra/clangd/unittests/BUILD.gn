@@ -64,6 +64,7 @@ unittest("ClangdTests") {
     "LSPClient.cpp",
     "ParsedASTTests.cpp",
     "PathMappingTests.cpp",
+    "PreambleTests.cpp",
     "PrintASTTests.cpp",
     "QualityTests.cpp",
     "RIFFTests.cpp",

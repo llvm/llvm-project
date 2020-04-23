@@ -677,17 +677,13 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
 /// Attempt to look through various unimportant expressions to find a
 /// cast of the given kind.
-static Expr *findPeephole(Expr *op, CastKind kind) {
-  while (true) {
-    op = op->IgnoreParens();
-    if (CastExpr *castE = dyn_cast<CastExpr>(op)) {
-      if (castE->getCastKind() == kind)
-        return castE->getSubExpr();
-      if (castE->getCastKind() == CK_NoOp)
-        continue;
-    }
-    return nullptr;
+static Expr *findPeephole(Expr *op, CastKind kind, const ASTContext &ctx) {
+  op = op->IgnoreParenNoopCasts(ctx);
+  if (auto castE = dyn_cast<CastExpr>(op)) {
+    if (castE->getCastKind() == kind)
+      return castE->getSubExpr();
   }
+  return nullptr;
 }
 
 void AggExprEmitter::VisitCastExpr(CastExpr *E) {
@@ -776,7 +772,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       (isToAtomic ? CK_AtomicToNonAtomic : CK_NonAtomicToAtomic);
 
     // These two cases are reverses of each other; try to peephole them.
-    if (Expr *op = findPeephole(E->getSubExpr(), peepholeTarget)) {
+    if (Expr *op =
+            findPeephole(E->getSubExpr(), peepholeTarget, CGF.getContext())) {
       assert(CGF.getContext().hasSameUnqualifiedType(op->getType(),
                                                      E->getType()) &&
            "peephole significantly changed types?");

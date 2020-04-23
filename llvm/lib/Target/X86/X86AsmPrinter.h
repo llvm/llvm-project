@@ -9,12 +9,9 @@
 #ifndef LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 #define LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 
-#include "X86Subtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/StackMaps.h"
-#include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/Target/TargetMachine.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -22,8 +19,10 @@ namespace {
 }
 
 namespace llvm {
+class MCCodeEmitter;
 class MCStreamer;
-class MCSymbol;
+class X86Subtarget;
+class TargetMachine;
 
 class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   const X86Subtarget *Subtarget = nullptr;

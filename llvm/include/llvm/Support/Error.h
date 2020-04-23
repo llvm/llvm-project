@@ -440,7 +440,7 @@ template <class T> class LLVM_NODISCARD Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
 
-  static const bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference<T>::value;
 
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 

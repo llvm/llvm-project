@@ -248,14 +248,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits =[]> :
     p << getOperationName() << ' ' << getAttr(inType());
     if (hasLenParams()) {
       // print the LEN parameters to a derived type in parens
-      p << '(';
-      p.printOperands(getLenParams());
-      p << " : ";
-      mlir::interleaveComma(getLenParams(), p.getStream(),
-                            [&](const auto &opnd) {
-                                p.printType(opnd.getType());
-                            });
-      p << ')';
+      p << '(' << getLenParams() << " : " << getLenParams().getTypes() << ')';
     }
     // print the shape of the allocation (if any); all must be index type
     for (auto sh : getShapeOperands()) {
@@ -2467,8 +2460,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     TypeAttr:$type
   );
 
-  let results = (outs fir_ReferenceType:$resultType);
-
   let regions = (region AtMostRegion<1>:$region);
 
   let parser = [{
@@ -2508,9 +2499,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
         return failure();
     }
 
-    auto refTy = AllocaOp::wrapResultType(globalType);
-    if (parser.addTypeToList(refTy, result.types))
-      return failure();
     return success();
   }];
 

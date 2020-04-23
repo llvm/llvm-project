@@ -129,6 +129,16 @@ void CallGraph::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
 #endif
 
+void CallGraph::ReplaceExternalCallEdge(CallGraphNode *Old,
+                                        CallGraphNode *New) {
+  for (auto &CR : ExternalCallingNode->CalledFunctions)
+    if (CR.second == Old) {
+      CR.second->DropRef();
+      CR.second = New;
+      CR.second->AddRef();
+    }
+}
+
 // removeFunctionFromModule - Unlink the function from this module, returning
 // it.  Because this removes the function from the module, the call graph node
 // is destroyed.  This is only valid if the function does not call any other

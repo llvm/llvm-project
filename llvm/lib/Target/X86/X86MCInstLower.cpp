@@ -19,6 +19,7 @@
 #include "X86AsmPrinter.h"
 #include "X86RegisterInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
+#include "X86Subtarget.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1507,10 +1508,10 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
   OutStreamer->AddComment("xray custom event end.");
 
-  // Record the sled version. Older versions of this sled were spelled
-  // differently, so we let the runtime handle the different offsets we're
-  // using.
-  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT, 1);
+  // Record the sled version. Version 0 of this sled was spelled differently, so
+  // we let the runtime handle the different offsets we're using. Version 2
+  // changed the absolute address to a PC-relative address.
+  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT, 2);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
@@ -1611,7 +1612,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   OutStreamer->AddComment("xray typed event end.");
 
   // Record the sled version.
-  recordSled(CurSled, MI, SledKind::TYPED_EVENT, 0);
+  recordSled(CurSled, MI, SledKind::TYPED_EVENT, 2);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
@@ -1651,7 +1652,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   // FIXME: Find another less hacky way do force the relative jump.
   OutStreamer->emitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
-  recordSled(CurSled, MI, SledKind::FUNCTION_ENTER);
+  recordSled(CurSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
@@ -1683,7 +1684,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
       Ret.addOperand(MaybeOperand.getValue());
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
   EmitNops(*OutStreamer, 10, Subtarget->is64Bit(), getSubtargetInfo());
-  recordSled(CurSled, MI, SledKind::FUNCTION_EXIT);
+  recordSled(CurSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
@@ -1707,7 +1708,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   OutStreamer->emitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
   OutStreamer->emitLabel(Target);
-  recordSled(CurSled, MI, SledKind::TAIL_CALL);
+  recordSled(CurSled, MI, SledKind::TAIL_CALL, 2);
 
   unsigned OpCode = MI.getOperand(0).getImm();
   OpCode = convertTailJumpOpcode(OpCode);

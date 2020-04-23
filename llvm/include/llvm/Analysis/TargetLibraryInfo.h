@@ -13,8 +13,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -287,11 +287,11 @@ public:
     return Impl->getLibFunc(FDecl, F);
   }
 
-  /// If a callsite does not have the 'nobuiltin' attribute, return if the
+  /// If a callbase does not have the 'nobuiltin' attribute, return if the
   /// called function is a known library function and set F to that function.
-  bool getLibFunc(ImmutableCallSite CS, LibFunc &F) const {
-    return !CS.isNoBuiltin() && CS.getCalledFunction() &&
-           getLibFunc(*(CS.getCalledFunction()), F);
+  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
+    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
+           getLibFunc(*(CB.getCalledFunction()), F);
   }
 
   /// Disables all builtins.

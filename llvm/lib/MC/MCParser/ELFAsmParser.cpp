@@ -637,7 +637,11 @@ EndStmt:
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, Type, Flags, Size, GroupName, UniqueID, LinkedToSym);
   getStreamer().SwitchSection(Section, Subsection);
-  if (Section->getType() != Type)
+  // x86-64 psABI names SHT_X86_64_UNWIND as the canonical type for .eh_frame,
+  // but GNU as emits SHT_PROGBITS .eh_frame for .cfi_* directives. Don't error
+  // for SHT_PROGBITS .eh_frame
+  if (Section->getType() != Type &&
+      !(SectionName == ".eh_frame" && Type == ELF::SHT_PROGBITS))
     Error(loc, "changed section type for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getType()));
   if (Section->getFlags() != Flags)

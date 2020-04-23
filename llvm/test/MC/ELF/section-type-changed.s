@@ -9,3 +9,11 @@
 .pushsection .foo,"a",@nobits
 
 .pushsection .foo,"a",@progbits
+
+## GNU as emits SHT_PROGBITS .eh_frame for .cfi_* directives. Don't error.
+.section .eh_frame,"a",@progbits
+.section .eh_frame,"a",@unwind
+.pushsection .eh_frame,"a",@progbits
+
+# CHECK: {{.*}}.s:[[# @LINE+1]]:1: error: changed section type for .eh_frame, expected: 0x70000001
+.section .eh_frame,"a",@nobits

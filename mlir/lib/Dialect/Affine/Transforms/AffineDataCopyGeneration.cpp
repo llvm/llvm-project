@@ -211,20 +211,25 @@ void AffineDataCopyGeneration::runOnFunction() {
   for (auto &block : f)
     runOnBlock(&block, copyNests);
 
-  // Promote any single iteration loops in the copy nests.
+  // Promote any single iteration loops in the copy nests and collect
+  // load/stores to simplify.
+  SmallVector<Operation *, 4> copyOps;
   for (auto nest : copyNests)
-    nest->walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
+    // With a post order walk, the erasure of loops does not affect
+    // continuation of the walk or the collection of load/store ops.
+    nest->walk([&](Operation *op) {
+      if (auto forOp = dyn_cast<AffineForOp>(op))
+        promoteIfSingleIteration(forOp);
+      else if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op))
+        copyOps.push_back(op);
+    });
 
   // Promoting single iteration loops could lead to simplification of
-  // load's/store's. We will run canonicalization patterns on load/stores.
-  // TODO: this whole function load/store canonicalization should be replaced by
-  // canonicalization that is limited to only the load/store ops
-  // introduced/touched by this pass (those inside 'copyNests'). This would be
-  // possible once the necessary support is available in the pattern rewriter.
-  if (!copyNests.empty()) {
-    OwningRewritePatternList patterns;
-    AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
-    AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
-    applyPatternsAndFoldGreedily(f, std::move(patterns));
-  }
+  // contained load's/store's, and the latter could anyway also be
+  // canonicalized.
+  OwningRewritePatternList patterns;
+  AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
+  AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
+  for (auto op : copyOps)
+    applyOpPatternsAndFold(op, std::move(patterns));
 }

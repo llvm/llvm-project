@@ -203,6 +203,12 @@ def G_DYN_STACKALLOC : GenericInstruction {
   let hasSideEffects = 1;
 }
 
+def G_FREEZE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------

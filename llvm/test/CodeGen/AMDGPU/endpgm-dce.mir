@@ -331,7 +331,7 @@ body:             |
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %2:sreg_64 = IMPLICIT_DEF
-    INLINEASM &"", 0, 0
+    INLINEASM &"", 0
     S_ENDPGM 0
 ...
 
@@ -353,6 +353,6 @@ body:             |
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %2:sreg_64 = IMPLICIT_DEF
-    INLINEASM &"", 1, 0
+    INLINEASM &"", 1
     S_ENDPGM 0
 ...

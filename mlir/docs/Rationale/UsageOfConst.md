@@ -257,8 +257,8 @@ As we can see above, there is very little benefit to our const design and
 significant cost, and given that the primary purpose of an IR is to represent
 transformations of code, const is providing very little benefit.
 
-As such, we propose eliminating support for const references in MLIR. This
-implies the following changes to the codebase:
+As such, we propose eliminating support for const references to IR objects in
+MLIR.  This implies the following changes to the codebase:
 
 1.  All of the const-duplicated accessors would be eliminated, e.g.
     `Operation::getParent() const` would be removed. This is expected to remove

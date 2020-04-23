@@ -119,13 +119,13 @@ static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast
   if (LookThroughBitCast)
     V = V->stripPointerCasts();
 
-  ImmutableCallSite CS(V);
-  if (!CS.getInstruction())
+  const auto *CB = dyn_cast<CallBase>(V);
+  if (!CB)
     return nullptr;
 
-  IsNoBuiltin = CS.isNoBuiltin();
+  IsNoBuiltin = CB->isNoBuiltin();
 
-  if (const Function *Callee = CS.getCalledFunction())
+  if (const Function *Callee = CB->getCalledFunction())
     return Callee;
   return nullptr;
 }
@@ -227,8 +227,9 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
 }
 
 static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
-  ImmutableCallSite CS(LookThroughBitCast ? V->stripPointerCasts() : V);
-  return CS && CS.hasRetAttr(Attribute::NoAlias);
+  const auto *CB =
+      dyn_cast<CallBase>(LookThroughBitCast ? V->stripPointerCasts() : V);
+  return CB && CB->hasRetAttr(Attribute::NoAlias);
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -649,8 +650,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return unknown();
 
-  if (I.getAllocatedType()->isVectorTy() &&
-      cast<VectorType>(I.getAllocatedType())->isScalable())
+  if (isa<ScalableVectorType>(I.getAllocatedType()))
     return unknown();
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));
@@ -682,21 +682,21 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   return std::make_pair(align(Size, A.getParamAlignment()), Zero);
 }
 
-SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
-  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
+SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
+  Optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
   if (!FnData)
     return unknown();
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    APInt Size(IntTyBits, GetStringLength(CS.getArgument(0)));
+    APInt Size(IntTyBits, GetStringLength(CB.getArgOperand(0)));
     if (!Size)
       return unknown();
 
     // Strndup limits strlen.
     if (FnData->FstParam > 0) {
       ConstantInt *Arg =
-          dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
+          dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
       if (!Arg)
         return unknown();
 
@@ -707,7 +707,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
     return std::make_pair(Size, Zero);
   }
 
-  ConstantInt *Arg = dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
+  ConstantInt *Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
   if (!Arg)
     return unknown();
 
@@ -719,7 +719,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
   if (FnData->SndParam < 0)
     return std::make_pair(Size, Zero);
 
-  Arg = dyn_cast<ConstantInt>(CS.getArgument(FnData->SndParam));
+  Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->SndParam));
   if (!Arg)
     return unknown();
 
@@ -947,8 +947,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   return std::make_pair(Size, Zero);
 }
 
-SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
-  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
+SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
+  Optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
   if (!FnData)
     return unknown();
 
@@ -958,12 +958,12 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
     return unknown();
   }
 
-  Value *FirstArg = CS.getArgument(FnData->FstParam);
+  Value *FirstArg = CB.getArgOperand(FnData->FstParam);
   FirstArg = Builder.CreateZExtOrTrunc(FirstArg, IntTy);
   if (FnData->SndParam < 0)
     return std::make_pair(FirstArg, Zero);
 
-  Value *SecondArg = CS.getArgument(FnData->SndParam);
+  Value *SecondArg = CB.getArgOperand(FnData->SndParam);
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);

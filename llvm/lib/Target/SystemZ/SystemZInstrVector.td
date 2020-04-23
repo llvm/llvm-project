@@ -1564,7 +1564,7 @@ def : VectorReplicateScalar<v16i8, VREPB, 7>;
 def : VectorReplicateScalar<v8i16, VREPH, 3>;
 def : VectorReplicateScalar<v4i32, VREPF, 1>;
 
-// i64 replications are just a single isntruction.
+// i64 replications are just a single instruction.
 def : Pat<(v2i64 (z_replicate GR64:$scalar)),
           (VLVGP GR64:$scalar, GR64:$scalar)>;
 

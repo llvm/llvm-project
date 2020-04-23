@@ -1144,18 +1144,62 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
 using BBPredicates = DenseMap<BasicBlock *, PHINode *>;
 using BBSetVector = SetVector<BasicBlock *>;
 
-// Collect predicates for each outgoing block. If control reaches the
-// Hub from an incoming block InBB, then the predicate for each
-// outgoing block OutBB decides whether control is forwarded to OutBB.
+// Redirects the terminator of the incoming block to the first guard
+// block in the hub. The condition of the original terminator (if it
+// was conditional) and its original successors are returned as a
+// tuple <condition, succ0, succ1>. The function additionally filters
+// out successors that are not in the set of outgoing blocks.
 //
-// These predicates are not orthogonal. The Hub evaluates them in the
-// same order as the Outgoing set-vector, and control branches to the
-// first outgoing block whose predicate evaluates to true.
-static void createGuardPredicates(BasicBlock *FirstGuardBlock,
-                                  BBPredicates &GuardPredicates,
-                                  SmallVectorImpl<WeakVH> &DeletionCandidates,
-                                  const BBSetVector &Incoming,
-                                  const BBSetVector &Outgoing) {
+// - condition is non-null iff the branch is conditional.
+// - Succ1 is non-null iff the sole/taken target is an outgoing block.
+// - Succ2 is non-null iff condition is non-null and the fallthrough
+//         target is an outgoing block.
+static std::tuple<Value *, BasicBlock *, BasicBlock *>
+redirectToHub(BasicBlock *BB, BasicBlock *FirstGuardBlock,
+              const BBSetVector &Outgoing) {
+  auto Branch = cast<BranchInst>(BB->getTerminator());
+  auto Condition = Branch->isConditional() ? Branch->getCondition() : nullptr;
+
+  BasicBlock *Succ0 = Branch->getSuccessor(0);
+  BasicBlock *Succ1 = nullptr;
+  Succ0 = Outgoing.count(Succ0) ? Succ0 : nullptr;
+
+  if (Branch->isUnconditional()) {
+    Branch->setSuccessor(0, FirstGuardBlock);
+    assert(Succ0);
+  } else {
+    Succ1 = Branch->getSuccessor(1);
+    Succ1 = Outgoing.count(Succ1) ? Succ1 : nullptr;
+    assert(Succ0 || Succ1);
+    if (Succ0 && !Succ1) {
+      Branch->setSuccessor(0, FirstGuardBlock);
+    } else if (Succ1 && !Succ0) {
+      Branch->setSuccessor(1, FirstGuardBlock);
+    } else {
+      Branch->eraseFromParent();
+      BranchInst::Create(FirstGuardBlock, BB);
+    }
+  }
+
+  assert(Succ0 || Succ1);
+  return std::make_tuple(Condition, Succ0, Succ1);
+}
+
+// Capture the existing control flow as guard predicates, and redirect
+// control flow from every incoming block to the first guard block in
+// the hub.
+//
+// There is one guard predicate for each outgoing block OutBB. The
+// predicate is a PHINode with one input for each InBB which
+// represents whether the hub should transfer control flow to OutBB if
+// it arrived from InBB. These predicates are NOT ORTHOGONAL. The Hub
+// evaluates them in the same order as the Outgoing set-vector, and
+// control branches to the first outgoing block whose predicate
+// evaluates to true.
+static void convertToGuardPredicates(
+    BasicBlock *FirstGuardBlock, BBPredicates &GuardPredicates,
+    SmallVectorImpl<WeakVH> &DeletionCandidates, const BBSetVector &Incoming,
+    const BBSetVector &Outgoing) {
   auto &Context = Incoming.front()->getContext();
   auto BoolTrue = ConstantInt::getTrue(Context);
   auto BoolFalse = ConstantInt::getFalse(Context);
@@ -1172,30 +1216,11 @@ static void createGuardPredicates(BasicBlock *FirstGuardBlock,
   }
 
   for (auto In : Incoming) {
-    auto Branch = cast<BranchInst>(In->getTerminator());
-    BasicBlock *Succ0 = Branch->getSuccessor(0);
-    BasicBlock *Succ1 = nullptr;
-
-    Succ0 = Outgoing.count(Succ0) ? Succ0 : nullptr;
-
-    if (Branch->isUnconditional()) {
-      Branch->setSuccessor(0, FirstGuardBlock);
-      assert(Succ0);
-    } else {
-      Succ1 = Branch->getSuccessor(1);
-      Succ1 = Outgoing.count(Succ1) ? Succ1 : nullptr;
-      assert(Succ0 || Succ1);
-      if (Succ0 && !Succ1) {
-        Branch->setSuccessor(0, FirstGuardBlock);
-      } else if (Succ1 && !Succ0) {
-        Branch->setSuccessor(1, FirstGuardBlock);
-      } else {
-        Branch->eraseFromParent();
-        BranchInst::Create(FirstGuardBlock, In);
-      }
-    }
-
-    assert(Succ0 || Succ1);
+    Value *Condition;
+    BasicBlock *Succ0;
+    BasicBlock *Succ1;
+    std::tie(Condition, Succ0, Succ1) =
+        redirectToHub(In, FirstGuardBlock, Outgoing);
 
     // Optimization: Consider an incoming block A with both successors
     // Succ0 and Succ1 in the set of outgoing blocks. The predicates
@@ -1205,7 +1230,6 @@ static void createGuardPredicates(BasicBlock *FirstGuardBlock,
     // control must reach Succ1, which means that the predicate for
     // Succ1 is always true.
     bool OneSuccessorDone = false;
-    auto Condition = Branch->getCondition();
     for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
       auto Out = Outgoing[i];
       auto Phi = GuardPredicates[Out];
@@ -1287,8 +1311,8 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   BBPredicates GuardPredicates;
   SmallVector<WeakVH, 8> DeletionCandidates;
-  createGuardPredicates(FirstGuardBlock, GuardPredicates, DeletionCandidates,
-                        Incoming, Outgoing);
+  convertToGuardPredicates(FirstGuardBlock, GuardPredicates, DeletionCandidates,
+                           Incoming, Outgoing);
 
   GuardBlocks.push_back(FirstGuardBlock);
   createGuardBlocks(GuardBlocks, F, Outgoing, GuardPredicates, Prefix);

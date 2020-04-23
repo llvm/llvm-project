@@ -109,7 +109,6 @@ bool PPCLowerMASSVEntries::lowerMASSVCall(CallInst *CI, Function &Func,
   FunctionCallee FCache = M.getOrInsertFunction(
       MASSVEntryName, Func.getFunctionType(), Func.getAttributes());
 
-  CallSite CS(CI);
   CI->setCalledFunction(FCache);  
 
   return true;

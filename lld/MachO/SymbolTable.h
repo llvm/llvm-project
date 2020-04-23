@@ -16,9 +16,9 @@
 namespace lld {
 namespace macho {
 
-class InputFile;
-class InputSection;
 class ArchiveFile;
+class DylibFile;
+class InputSection;
 class Symbol;
 
 class SymbolTable {
@@ -26,6 +26,8 @@ public:
   Symbol *addDefined(StringRef name, InputSection *isec, uint32_t value);
 
   Symbol *addUndefined(StringRef name);
+
+  Symbol *addDylib(StringRef name, DylibFile *file);
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
   Symbol *find(StringRef name);

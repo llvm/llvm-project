@@ -11,7 +11,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 
@@ -724,7 +723,7 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
       simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
   if (expr != simplifiedLayoutExpr)
     return MemRefType::Builder(t).setAffineMaps({AffineMap::get(
-        m.getNumDims(), m.getNumSymbols(), {simplifiedLayoutExpr})});
+        m.getNumDims(), m.getNumSymbols(), simplifiedLayoutExpr)});
   return MemRefType::Builder(t).setAffineMaps({});
 }
 

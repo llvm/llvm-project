@@ -69,6 +69,8 @@ class DWARFDebugMacro {
       uint64_t Line;
       /// Vendor extension constant value.
       uint64_t ExtConstant;
+      /// Macro unit import offset.
+      uint64_t ImportOffset;
     };
 
     union {

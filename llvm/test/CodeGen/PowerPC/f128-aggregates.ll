@@ -343,7 +343,7 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-DAG:     std r7, 64(r1)
 ; CHECK-DAG:     std r6, 56(r1)
 ; CHECK-DAG:     std r4, 40(r1)
-; CHECK-DAG:     cmpwi cr0, r3, 1
+; CHECK-DAG:     cmpwi r3, 1
 ; CHECK-DAG:     std r5, 48(r1)
 ; CHECK-DAG:     addis [[REG:r[0-9]+]], r2, .LCPI17_0@toc@ha
 ; CHECK-DAG:     addi [[REG1:r[0-9]+]], [[REG]], .LCPI17_0@toc@l

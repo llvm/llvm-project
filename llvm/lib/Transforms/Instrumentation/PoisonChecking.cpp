@@ -21,17 +21,15 @@
 // 2) A propagation rule which translates dynamic information about the poison
 //    state of each input to whether the dynamic output of the instruction
 //    produces poison.
-// 3) A flag validation rule which validates any poison producing flags on the
+// 3) A creation rule which validates any poison producing flags on the
 //    instruction itself (e.g. checks for overflow on nsw).
 // 4) A check rule which traps (to a handler function) if this instruction must
 //    execute undefined behavior given the poison state of it's inputs.
 //
-// At the moment, the UB detection is done in a best effort manner; that is,
-// the resulting code may produce a false negative result (not report UB when
-// it actually exists according to the LangRef spec), but should never produce
-// a false positive (report UB where it doesn't exist).  The intention is to
-// eventually support a "strict" mode which never dynamically reports a false
-// negative at the cost of rejecting some valid inputs to translation.
+// This is a must analysis based transform; that is, the resulting code may
+// produce a false negative result (not report UB when actually exists
+// according to the LangRef spec), but should never produce a false positive
+// (report UB where it doesn't exist).
 //
 // Use cases for this pass include:
 // - Understanding (and testing!) the implications of the definition of poison
@@ -103,8 +101,8 @@ static Value *buildOrChain(IRBuilder<> &B, ArrayRef<Value*> Ops) {
   return Accum;
 }
 
-static void generatePoisonChecksForBinOp(Instruction &I,
-                                         SmallVector<Value*, 2> &Checks) {
+static void generateCreationChecksForBinOp(Instruction &I,
+                                           SmallVectorImpl<Value*> &Checks) {
   assert(isa<BinaryOperator>(I));
   
   IRBuilder<> B(&I);
@@ -183,15 +181,20 @@ static void generatePoisonChecksForBinOp(Instruction &I,
   };
 }
 
-static Value* generatePoisonChecks(Instruction &I) {
+/// Given an instruction which can produce poison on non-poison inputs
+/// (i.e. canCreatePoison returns true), generate runtime checks to produce
+/// boolean indicators of when poison would result.
+static void generateCreationChecks(Instruction &I,
+                                   SmallVectorImpl<Value*> &Checks) {
   IRBuilder<> B(&I);
-  SmallVector<Value*, 2> Checks;
   if (isa<BinaryOperator>(I) && !I.getType()->isVectorTy())
-    generatePoisonChecksForBinOp(I, Checks);
+    generateCreationChecksForBinOp(I, Checks);
 
   // Handle non-binops seperately
   switch (I.getOpcode()) {
   default:
+    // Note there are a couple of missing cases here, once implemented, this
+    // should become an llvm_unreachable.
     break;
   case Instruction::ExtractElement: {
     Value *Vec = I.getOperand(0);
@@ -220,7 +223,6 @@ static Value* generatePoisonChecks(Instruction &I) {
     break;
   }
   };
-  return buildOrChain(B, Checks);
 }
 
 static Value *getPoisonFor(DenseMap<Value *, Value *> &ValToPoison, Value *V) {
@@ -281,7 +283,7 @@ static bool rewrite(Function &F) {
       
       // Note: There are many more sources of documented UB, but this pass only
       // attempts to find UB triggered by propagation of poison.
-      if (Value *Op = const_cast<Value*>(getGuaranteedNonFullPoisonOp(&I)))
+      if (Value *Op = const_cast<Value*>(getGuaranteedNonPoisonOp(&I)))
         CreateAssertNot(B, getPoisonFor(ValToPoison, Op));
 
       if (LocalCheck)
@@ -292,12 +294,12 @@ static bool rewrite(Function &F) {
           }
 
       SmallVector<Value*, 4> Checks;
-      if (propagatesFullPoison(&I))
+      if (propagatesPoison(&I))
         for (Value *V : I.operands())
           Checks.push_back(getPoisonFor(ValToPoison, V));
 
-      if (auto *Check = generatePoisonChecks(I))
-        Checks.push_back(Check);
+      if (canCreatePoison(&I))
+        generateCreationChecks(I, Checks);
       ValToPoison[&I] = buildOrChain(B, Checks);
     }
 
@@ -342,7 +344,7 @@ PreservedAnalyses PoisonCheckingPass::run(Function &F,
    - shufflevector - It would seem reasonable for an out of bounds mask element
      to produce poison, but the LangRef does not state.  
    - and/or - It would seem reasonable for poison to propagate from both
-     arguments, but LangRef doesn't state and propagatesFullPoison doesn't
+     arguments, but LangRef doesn't state and propagatesPoison doesn't
      include these two.
    - all binary ops w/vector operands - The likely interpretation would be that
      any element overflowing should produce poison for the entire result, but

@@ -44,7 +44,7 @@ define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    clrlwi 3, 3, 31
 ; CHECK-NEXT:    subfic 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
@@ -57,7 +57,7 @@ define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    clrlwi 3, 3, 31
 ; CHECK-NEXT:    subfic 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
@@ -70,7 +70,7 @@ define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    clrlwi 3, 3, 31
 ; CHECK-NEXT:    subfic 3, 3, 43
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1

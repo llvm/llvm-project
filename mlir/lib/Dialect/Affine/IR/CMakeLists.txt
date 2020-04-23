@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRAffine
+add_mlir_dialect_library(MLIRAffineOps
   AffineOps.cpp
   AffineValueMap.cpp
 
@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRAffine
   DEPENDS
   MLIRAffineOpsIncGen
   )
-target_link_libraries(MLIRAffine
+target_link_libraries(MLIRAffineOps
   PUBLIC
   MLIREDSC
   MLIRIR

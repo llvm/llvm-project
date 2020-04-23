@@ -331,10 +331,11 @@ static Optional<Type> convertTensorType(const spirv::TargetEnv &targetEnv,
 
 static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
                                         MemRefType type) {
-  // TODO(ravishankarm) : Handle dynamic shapes.
-  if (!type.hasStaticShape()) {
+  Optional<spirv::StorageClass> storageClass =
+      SPIRVTypeConverter::getStorageClassForMemorySpace(type.getMemorySpace());
+  if (!storageClass) {
     LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: dynamic shape unimplemented\n");
+               << type << " illegal: cannot convert memory space\n");
     return llvm::None;
   }
 
@@ -345,9 +346,26 @@ static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
     return llvm::None;
   }
 
+  auto arrayElemType = convertScalarType(targetEnv, scalarType, storageClass);
+  if (!arrayElemType)
+    return llvm::None;
+
   Optional<int64_t> scalarSize = getTypeNumBytes(scalarType);
+  if (!scalarSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce element size\n");
+    return llvm::None;
+  }
+
+  if (!type.hasStaticShape()) {
+    auto arrayType = spirv::RuntimeArrayType::get(*arrayElemType, *scalarSize);
+    // Wrap in a struct to satisfy Vulkan interface requirements.
+    auto structType = spirv::StructType::get(arrayType, 0);
+    return spirv::PointerType::get(structType, *storageClass);
+  }
+
   Optional<int64_t> memrefSize = getTypeNumBytes(type);
-  if (!scalarSize || !memrefSize) {
+  if (!memrefSize) {
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: cannot deduce element count\n");
     return llvm::None;
@@ -355,17 +373,6 @@ static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
 
   auto arrayElemCount = *memrefSize / *scalarSize;
 
-  auto storageClass =
-      SPIRVTypeConverter::getStorageClassForMemorySpace(type.getMemorySpace());
-  if (!storageClass) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot convert memory space\n");
-    return llvm::None;
-  }
-
-  auto arrayElemType = convertScalarType(targetEnv, scalarType, storageClass);
-  if (!arrayElemType)
-    return llvm::None;
   Optional<int64_t> arrayElemSize = getTypeNumBytes(*arrayElemType);
   if (!arrayElemSize) {
     LLVM_DEBUG(llvm::dbgs()

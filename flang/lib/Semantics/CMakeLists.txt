@@ -1,5 +1,5 @@
 
-add_library(FortranSemantics
+add_flang_library(FortranSemantics
   assignment.cpp
   attr.cpp
   canonicalize-do.cpp
@@ -35,18 +35,11 @@ add_library(FortranSemantics
   tools.cpp
   type.cpp
   unparse-with-symbols.cpp
-)
 
-target_compile_features(FortranSemantics PUBLIC cxx_std_17)
-
-target_link_libraries(FortranSemantics
+  LINK_LIBS
   FortranCommon
   FortranEvaluate
-  LLVMSupport
-)
 
-install (TARGETS FortranSemantics
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  LINK_COMPONENTS
+  Support
 )

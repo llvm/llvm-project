@@ -134,6 +134,11 @@ clang_tablegen("arm_sve_typeflags") {
   td_file = "arm_sve.td"
 }
 
+clang_tablegen("arm_sve_sema_rangechecks") {
+  args = [ "-gen-arm-sve-sema-rangechecks" ]
+  td_file = "arm_sve.td"
+}
+
 clang_tablegen("arm_cde_builtins") {
   args = [ "-gen-arm-cde-builtin-def" ]
   td_file = "arm_cde.td"

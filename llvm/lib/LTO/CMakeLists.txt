@@ -11,6 +11,8 @@ add_llvm_component_library(LLVMLTO
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/LTO
 
+  ENABLE_PLUGINS
+
   DEPENDS
   intrinsics_gen
   llvm_vcsrevision_h

@@ -614,7 +614,7 @@ define i8 @sel_constants_shl_constant(i1 %cond) {
 define i8 @shl_constant_sel_constants(i1 %cond) {
 ; ALL-LABEL: shl_constant_sel_constants:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    clrlwi 3, 3, 31
 ; ALL-NEXT:    li 4, 1
 ; ALL-NEXT:    subfic 3, 3, 3
 ; ALL-NEXT:    slw 3, 4, 3
@@ -651,7 +651,7 @@ define i8 @sel_constants_lshr_constant(i1 %cond) {
 define i8 @lshr_constant_sel_constants(i1 %cond) {
 ; ALL-LABEL: lshr_constant_sel_constants:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    clrlwi 3, 3, 31
 ; ALL-NEXT:    li 4, 64
 ; ALL-NEXT:    subfic 3, 3, 3
 ; ALL-NEXT:    srw 3, 4, 3
@@ -676,7 +676,7 @@ define i8 @sel_constants_ashr_constant(i1 %cond) {
 define i8 @ashr_constant_sel_constants(i1 %cond) {
 ; ALL-LABEL: ashr_constant_sel_constants:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    clrlwi 3, 3, 31
 ; ALL-NEXT:    li 4, -128
 ; ALL-NEXT:    subfic 3, 3, 3
 ; ALL-NEXT:    sraw 3, 4, 3

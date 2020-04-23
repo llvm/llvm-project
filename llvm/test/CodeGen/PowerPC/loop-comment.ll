@@ -4,7 +4,7 @@
 define void @test(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-LABEL: test:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    rlwinm 4, 4, 0, 24, 31
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
 ; PPC64LE-NEXT:  .LBB0_1:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6

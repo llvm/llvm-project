@@ -353,28 +353,9 @@ public:
   }
 
   IntrinsicTypeSpec *AsIntrinsic();
-  const IntrinsicTypeSpec *AsIntrinsic() const {
-    switch (category_) {
-    case Numeric:
-      return &std::get<NumericTypeSpec>(typeSpec_);
-    case Logical:
-      return &std::get<LogicalTypeSpec>(typeSpec_);
-    case Character:
-      return &std::get<CharacterTypeSpec>(typeSpec_);
-    default:
-      return nullptr;
-    }
-  }
-
-  const DerivedTypeSpec *AsDerived() const {
-    switch (category_) {
-    case TypeDerived:
-    case ClassDerived:
-      return &std::get<DerivedTypeSpec>(typeSpec_);
-    default:
-      return nullptr;
-    }
-  }
+  const IntrinsicTypeSpec *AsIntrinsic() const;
+  DerivedTypeSpec *AsDerived();
+  const DerivedTypeSpec *AsDerived() const;
 
   std::string AsFortran() const;
 

@@ -219,10 +219,16 @@ define <64 x i16> @mulhuw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ;
 ; AVX512F-LABEL: mulhuw_v64i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmulhuw %ymm4, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmulhuw %ymm5, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmulhuw %ymm6, %ymm2, %ymm2
-; AVX512F-NEXT:    vpmulhuw %ymm7, %ymm3, %ymm3
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm4
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512F-NEXT:    vpmulhuw %ymm4, %ymm5, %ymm4
+; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm4, %ymm2
+; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mulhuw_v64i16:
@@ -270,10 +276,16 @@ define <64 x i16> @mulhw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ;
 ; AVX512F-LABEL: mulhw_v64i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmulhw %ymm4, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmulhw %ymm5, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmulhw %ymm6, %ymm2, %ymm2
-; AVX512F-NEXT:    vpmulhw %ymm7, %ymm3, %ymm3
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm4
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512F-NEXT:    vpmulhw %ymm4, %ymm5, %ymm4
+; AVX512F-NEXT:    vpmulhw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; AVX512F-NEXT:    vpmulhw %ymm2, %ymm4, %ymm2
+; AVX512F-NEXT:    vpmulhw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mulhw_v64i16:

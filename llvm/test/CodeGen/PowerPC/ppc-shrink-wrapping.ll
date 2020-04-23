@@ -14,7 +14,7 @@
 ;
 ; Compare the arguments and return
 ; No prologue needed.
-; ENABLE: cmpw 0, 3, 4
+; ENABLE: cmpw 3, 4
 ; ENABLE-NEXT: bgelr 0
 ;
 ; Prologue code.
@@ -24,7 +24,7 @@
 ;
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
-; DISABLE: cmpw 0, 3, 4
+; DISABLE: cmpw 3, 4
 ; DISABLE-NEXT: bge 0, .[[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Store %a on the stack
@@ -75,14 +75,14 @@ declare i32 @doSomething(i32, i32*)
 ; CHECK-LABEL: freqSaveAndRestoreOutsideLoop:
 ;
 ; Shrink-wrapping allows to skip the prologue in the else case.
-; ENABLE: cmplwi 0, 3, 0
+; ENABLE: cmplwi 3, 0
 ; ENABLE: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
 ; Make sure we save the link register
 ; CHECK: mflr {{[0-9]+}}
 ;
-; DISABLE: cmplwi 0, 3, 0
+; DISABLE: cmplwi 3, 0
 ; DISABLE: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Loop preheader
@@ -202,7 +202,7 @@ for.end:                                          ; preds = %for.body
 ; restore outside.
 ; CHECK-LABEL: loopInfoSaveOutsideLoop:
 ;
-; ENABLE: cmplwi 0, 3, 0
+; ENABLE: cmplwi 3, 0
 ; ENABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -211,7 +211,7 @@ for.end:                                          ; preds = %for.body
 ;
 ; DISABLE: std
 ; DISABLE-NEXT: std
-; DISABLE: cmplwi 0, 3, 0
+; DISABLE: cmplwi 3, 0
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Loop preheader
@@ -284,7 +284,7 @@ declare void @somethingElse(...)
 ; save outside.
 ; CHECK-LABEL: loopInfoRestoreOutsideLoop:
 ;
-; ENABLE: cmplwi 0, 3, 0
+; ENABLE: cmplwi 3, 0
 ; ENABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -293,7 +293,7 @@ declare void @somethingElse(...)
 ;
 ; DISABLE: std
 ; DISABLE-NEXT: std
-; DISABLE: cmplwi 0, 3, 0
+; DISABLE: cmplwi 3, 0
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: bl somethingElse
@@ -373,7 +373,7 @@ entry:
 ; Check that we handle inline asm correctly.
 ; CHECK-LABEL: inlineAsm:
 ;
-; ENABLE: cmplwi 0, 3, 0
+; ENABLE: cmplwi 3, 0
 ; ENABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -381,7 +381,7 @@ entry:
 ; ENABLE-DAG: li [[IV:[0-9]+]], 10
 ; ENABLE-DAG: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ;
-; DISABLE: cmplwi 0, 3, 0
+; DISABLE: cmplwi 3, 0
 ; DISABLE-NEXT: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ; DISABLE: li [[IV:[0-9]+]], 10
@@ -438,13 +438,13 @@ if.end:                                           ; preds = %for.body, %if.else
 ; Check that we handle calls to variadic functions correctly.
 ; CHECK-LABEL: callVariadicFunc:
 ;
-; ENABLE: cmplwi 0, 3, 0
+; ENABLE: cmplwi 3, 0
 ; ENABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
 ; CHECK: mflr {{[0-9]+}}
 ; 
-; DISABLE: cmplwi 0, 3, 0
+; DISABLE: cmplwi 3, 0
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Setup of the varags.
@@ -497,7 +497,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ; CHECK-LABEL: noreturn:
 ; DISABLE: mflr {{[0-9]+}}
 ;
-; CHECK: cmplwi 0, 3, 0
+; CHECK: cmplwi 3, 0
 ; CHECK-NEXT: bne{{[-]?}} 0, .[[ABORT:LBB[0-9_]+]]
 ;
 ; CHECK: li 3, 42

@@ -561,10 +561,10 @@ entry:
 define <4 x i32> @_Z10testInsEltILj0EDv4_jjET0_S1_T1_(<4 x i32> %a, i32 zeroext %b) {
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj0EDv4_jjET0_S1_T1_
-; CHECK: mtvsrwz 0, 5
+; CHECK: mtfprwz 0, 5
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z10testInsEltILj0EDv4_jjET0_S1_T1_
-; CHECK-BE: mtvsrwz 0, 5
+; CHECK-BE: mtfprwz 0, 5
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = insertelement <4 x i32> %a, i32 %b, i32 0
   ret <4 x i32> %vecins
@@ -573,10 +573,10 @@ entry:
 define <4 x i32> @_Z10testInsEltILj1EDv4_jjET0_S1_T1_(<4 x i32> %a, i32 zeroext %b) {
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj1EDv4_jjET0_S1_T1_
-; CHECK: mtvsrwz 0, 5
+; CHECK: mtfprwz 0, 5
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z10testInsEltILj1EDv4_jjET0_S1_T1_
-; CHECK-BE: mtvsrwz 0, 5
+; CHECK-BE: mtfprwz 0, 5
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = insertelement <4 x i32> %a, i32 %b, i32 1
   ret <4 x i32> %vecins
@@ -585,10 +585,10 @@ entry:
 define <4 x i32> @_Z10testInsEltILj2EDv4_jjET0_S1_T1_(<4 x i32> %a, i32 zeroext %b) {
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj2EDv4_jjET0_S1_T1_
-; CHECK: mtvsrwz 0, 5
+; CHECK: mtfprwz 0, 5
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z10testInsEltILj2EDv4_jjET0_S1_T1_
-; CHECK-BE: mtvsrwz 0, 5
+; CHECK-BE: mtfprwz 0, 5
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = insertelement <4 x i32> %a, i32 %b, i32 2
   ret <4 x i32> %vecins
@@ -597,10 +597,10 @@ entry:
 define <4 x i32> @_Z10testInsEltILj3EDv4_jjET0_S1_T1_(<4 x i32> %a, i32 zeroext %b) {
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj3EDv4_jjET0_S1_T1_
-; CHECK: mtvsrwz 0, 5
+; CHECK: mtfprwz 0, 5
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z10testInsEltILj3EDv4_jjET0_S1_T1_
-; CHECK-BE: mtvsrwz 0, 5
+; CHECK-BE: mtfprwz 0, 5
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = insertelement <4 x i32> %a, i32 %b, i32 3
   ret <4 x i32> %vecins

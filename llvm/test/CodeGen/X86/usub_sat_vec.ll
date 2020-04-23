@@ -380,10 +380,10 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
 ; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    psubusw (%rsi), %xmm0
 ; SSE-NEXT:    psubusw 16(%rsi), %xmm1
-; SSE-NEXT:    movq %xmm1, 16(%rdx)
+; SSE-NEXT:    psubusw (%rsi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, (%rdx)
+; SSE-NEXT:    movq %xmm1, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: v12i16:

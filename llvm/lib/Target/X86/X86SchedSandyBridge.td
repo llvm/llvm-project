@@ -1106,7 +1106,7 @@ def: InstRW<[SBWriteResGroupVzeroupper], (instrs VZEROUPPER)>;
 
 def: InstRW<[WriteZero], (instrs CLC)>;
 
-// Intruction variants handled by the renamer. These might not need execution
+// Instruction variants handled by the renamer. These might not need execution
 // ports in certain conditions.
 // See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // section "Sandy Bridge and Ivy Bridge Pipeline" > "Register allocation and

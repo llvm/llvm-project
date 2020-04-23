@@ -6,7 +6,8 @@ llvm_update_compile_flags(mlir-edsc-builder-api-test)
 
 target_link_libraries(mlir-edsc-builder-api-test
   PRIVATE
-  MLIRAffine
+  MLIRAffineOps
+  MLIRAffineEDSC
   MLIREDSC
   MLIRIR
   MLIRLinalgEDSC

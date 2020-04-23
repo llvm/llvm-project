@@ -114,21 +114,20 @@ private:
 
 BinaryOperator *ASTMaker::makeAssignment(const Expr *LHS, const Expr *RHS,
                                          QualType Ty) {
- return new (C) BinaryOperator(const_cast<Expr*>(LHS), const_cast<Expr*>(RHS),
-                               BO_Assign, Ty, VK_RValue,
-                               OK_Ordinary, SourceLocation(), FPOptions());
+  return BinaryOperator::Create(
+      C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), BO_Assign, Ty,
+      VK_RValue, OK_Ordinary, SourceLocation(), FPOptions(C.getLangOpts()));
 }
 
 BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
                                          BinaryOperator::Opcode Op) {
   assert(BinaryOperator::isLogicalOp(Op) ||
          BinaryOperator::isComparisonOp(Op));
-  return new (C) BinaryOperator(const_cast<Expr*>(LHS),
-                                const_cast<Expr*>(RHS),
-                                Op,
-                                C.getLogicalOperationType(),
-                                VK_RValue,
-                                OK_Ordinary, SourceLocation(), FPOptions());
+  return BinaryOperator::Create(C, const_cast<Expr *>(LHS),
+                                const_cast<Expr *>(RHS), Op,
+                                C.getLogicalOperationType(), VK_RValue,
+                                OK_Ordinary, SourceLocation(),
+                                FPOptions(C.getLangOpts()));
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
@@ -296,7 +295,8 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
       /*Args=*/CallArgs,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_RValue,
-      /*SourceLocation=*/SourceLocation(), FPOptions());
+      /*SourceLocation=*/SourceLocation(),
+      /*FPFeatures=*/FPOptions(C.getLangOpts()));
 }
 
 /// Create a fake body for std::call_once.

@@ -29,8 +29,7 @@
 # CHECK-NEXT:  [0x0000000000000000, 0x0000000000000001): DW_OP_reg5 RDI
 # CHECK-NEXT:  [0x0000000000000001, 0x0000000000000006): DW_OP_reg0 RAX
 # CHECK:     Variable{{.*}}, name = "x1", {{.*}}, scope = parameter
-# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter, location =
-# CHECK-NEXT:  error: unexpected end of data
+# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter, location = 0x00000000: error: unexpected end of data
 # CHECK:     Variable{{.*}}, name = "x3", {{.*}}, scope = parameter, location =
 # CHECK-NEXT:  [0x0000000000000002, 0x0000000000000003): DW_OP_reg1 RDX
 # LOCLISTS:  Variable{{.*}}, name = "x4", {{.*}}, scope = parameter, location =
@@ -154,6 +153,10 @@ f:                                      # @f
         .byte   14                      # DW_FORM_strp
         .byte   19                      # DW_AT_language
         .byte   5                       # DW_FORM_data2
+        .byte   17                      # DW_AT_low_pc
+        .byte   1                       # DW_FORM_addr
+        .byte   18                      # DW_AT_high_pc
+        .byte   6                       # DW_FORM_data4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   2                       # Abbreviation Code
@@ -211,6 +214,8 @@ f:                                      # @f
         .byte   1                       # Abbrev [1] 0xb:0x50 DW_TAG_compile_unit
         .long   .Linfo_string0          # DW_AT_producer
         .short  12                      # DW_AT_language
+        .quad   .Lfunc_begin0           # DW_AT_low_pc
+        .long   .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
         .byte   2                       # Abbrev [2] 0x2a:0x29 DW_TAG_subprogram
         .quad   .Lfunc_begin0           # DW_AT_low_pc
         .long   .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc

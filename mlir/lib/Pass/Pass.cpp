@@ -52,11 +52,12 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 void Pass::printAsTextualPipeline(raw_ostream &os) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
   if (auto *adaptor = getAdaptorPassBase(this)) {
-    interleaveComma(adaptor->getPassManagers(), os, [&](OpPassManager &pm) {
-      os << pm.getOpName() << "(";
-      pm.printAsTextualPipeline(os);
-      os << ")";
-    });
+    llvm::interleaveComma(adaptor->getPassManagers(), os,
+                          [&](OpPassManager &pm) {
+                            os << pm.getOpName() << "(";
+                            pm.printAsTextualPipeline(os);
+                            os << ")";
+                          });
     return;
   }
   // Otherwise, print the pass argument followed by its options. If the pass
@@ -295,9 +296,10 @@ void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
       impl->passes, [](const std::unique_ptr<Pass> &pass) {
         return !isa<VerifierPass>(pass);
       });
-  interleaveComma(filteredPasses, os, [&](const std::unique_ptr<Pass> &pass) {
-    pass->printAsTextualPipeline(os);
-  });
+  llvm::interleaveComma(filteredPasses, os,
+                        [&](const std::unique_ptr<Pass> &pass) {
+                          pass->printAsTextualPipeline(os);
+                        });
 }
 
 //===----------------------------------------------------------------------===//
@@ -358,7 +360,7 @@ void OpToOpPassAdaptorBase::mergeInto(OpToOpPassAdaptorBase &rhs) {
 std::string OpToOpPassAdaptorBase::getName() {
   std::string name = "Pipeline Collection : [";
   llvm::raw_string_ostream os(name);
-  interleaveComma(getPassManagers(), os, [&](OpPassManager &pm) {
+  llvm::interleaveComma(getPassManagers(), os, [&](OpPassManager &pm) {
     os << '\'' << pm.getOpName() << '\'';
   });
   os << ']';

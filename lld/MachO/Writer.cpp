@@ -13,11 +13,13 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -44,7 +46,10 @@ public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
   void createLoadCommands();
+  void scanRelocations();
   void assignAddresses();
+
+  void createDyldInfoContents();
 
   void openFile();
   void writeHeader();
@@ -83,8 +88,9 @@ public:
     c->cmd = LC_SEGMENT_64;
     c->cmdsize = getSize();
     strcpy(c->segname, "__LINKEDIT");
+    c->vmaddr = addr;
     c->fileoff = fileOff;
-    c->filesize = contents.size();
+    c->filesize = c->vmsize = contents.size();
     c->maxprot = VM_PROT_READ | VM_PROT_WRITE;
     c->initprot = VM_PROT_READ;
   }
@@ -92,6 +98,7 @@ public:
   uint64_t getOffset() const { return fileOff + contents.size(); }
 
   uint64_t fileOff = 0;
+  uint64_t addr = 0;
   SmallVector<char, 128> contents;
 };
 
@@ -103,10 +110,14 @@ public:
     auto *c = reinterpret_cast<dyld_info_command *>(buf);
     c->cmd = LC_DYLD_INFO_ONLY;
     c->cmdsize = getSize();
+    c->bind_off = bindOff;
+    c->bind_size = bindSize;
     c->export_off = exportOff;
     c->export_size = exportSize;
   }
 
+  uint64_t bindOff = 0;
+  uint64_t bindSize = 0;
   uint64_t exportOff = 0;
   uint64_t exportSize = 0;
 };
@@ -139,16 +150,14 @@ public:
     c->cmdsize = getSize();
     memcpy(c->segname, name.data(), name.size());
 
-    InputSection *firstSec = seg->sections.front().second[0];
-    InputSection *lastSec = seg->sections.back().second.back();
-
     // dyld3's MachOLoaded::getSlide() assumes that the __TEXT segment starts
     // from the beginning of the file (i.e. the header).
     // TODO: replace this logic by creating a synthetic __TEXT,__mach_header
     // section instead.
-    c->fileoff = name == "__TEXT" ? 0 : firstSec->addr - ImageBase;
+    c->fileoff = name == "__TEXT" ? 0 : seg->firstSection()->addr - ImageBase;
     c->vmaddr = c->fileoff + ImageBase;
-    c->vmsize = c->filesize = lastSec->addr + lastSec->data.size() - c->vmaddr;
+    c->vmsize = c->filesize =
+        seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
     c->maxprot = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
     c->initprot = seg->perms;
     c->nsects = seg->sections.size();
@@ -171,7 +180,7 @@ public:
         maxAlign = std::max(maxAlign, section->align);
       sectHdr->align = Log2_32(maxAlign);
       sectHdr->flags = sections[0]->flags;
-      sectHdr->size = sections.back()->addr + sections.back()->data.size() -
+      sectHdr->size = sections.back()->addr + sections.back()->getSize() -
                       sections[0]->addr;
     }
   }
@@ -265,13 +274,34 @@ void Writer::createLoadCommands() {
   loadCommands.push_back(make<LCLoadDylinker>());
   loadCommands.push_back(make<LCDysymtab>());
   loadCommands.push_back(make<LCMain>());
+
+  uint8_t segIndex = 1; // LCPagezero is a segment load command
+  for (OutputSegment *seg : outputSegments) {
+    if (!seg->sections.empty()) {
+      loadCommands.push_back(make<LCSegment>(seg->name, seg));
+      seg->index = segIndex++;
+    }
+  }
+
+  uint64_t dylibOrdinal = 1;
+  for (InputFile *file : inputFiles) {
+    if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      loadCommands.push_back(make<LCLoadDylib>(dylibFile->dylibName));
+      dylibFile->ordinal = dylibOrdinal++;
+    }
+  }
+
   // TODO: dyld requires libSystem to be loaded. libSystem is a universal
   // binary and we don't have support for that yet, so mock it out here.
   loadCommands.push_back(make<LCLoadDylib>("/usr/lib/libSystem.B.dylib"));
+}
 
-  for (OutputSegment *seg : outputSegments)
-    if (!seg->sections.empty())
-      loadCommands.push_back(make<LCSegment>(seg->name, seg));
+void Writer::scanRelocations() {
+  for (InputSection *sect : inputSections)
+    for (Reloc &r : sect->relocs)
+      if (auto *s = r.target.dyn_cast<Symbol *>())
+        if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
+          in.got->addEntry(*dylibSymbol);
 }
 
 void Writer::assignAddresses() {
@@ -291,12 +321,54 @@ void Writer::assignAddresses() {
       for (InputSection *isec : sections) {
         addr = alignTo(addr, isec->align);
         isec->addr = addr;
-        addr += isec->data.size();
+        addr += isec->getSize();
       }
     }
   }
 
+  addr = alignTo(addr, PageSize);
+  linkEditSeg->addr = addr;
   linkEditSeg->fileOff = addr - ImageBase;
+}
+
+// LC_DYLD_INFO_ONLY contains symbol import/export information. Imported
+// symbols are described by a sequence of bind opcodes, which allow for a
+// compact encoding. Exported symbols are described using a trie.
+void Writer::createDyldInfoContents() {
+  uint64_t sectionStart = linkEditSeg->getOffset();
+  raw_svector_ostream os{linkEditSeg->contents};
+
+  if (in.got->getSize() != 0) {
+    // Emit bind opcodes, which tell dyld which dylib symbols to load.
+
+    // Tell dyld to write to the section containing the GOT.
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                               in.got->parent->index);
+    encodeULEB128(in.got->addr - in.got->parent->firstSection()->addr, os);
+    for (const DylibSymbol *sym : in.got->getEntries()) {
+      // TODO: Implement compact encoding -- we only need to encode the
+      // differences between consecutive symbol entries.
+      if (sym->file->ordinal <= BIND_IMMEDIATE_MASK) {
+        os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                   sym->file->ordinal);
+      } else {
+        error("TODO: Support larger dylib symbol ordinals");
+        continue;
+      }
+      os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
+         << sym->getName() << '\0'
+         << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
+         << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
+    }
+
+    os << static_cast<uint8_t>(BIND_OPCODE_DONE);
+
+    dyldInfoSeg->bindOff = sectionStart;
+    dyldInfoSeg->bindSize = linkEditSeg->getOffset() - sectionStart;
+  }
+
+  // TODO: emit bind opcodes for lazy symbols.
+  // TODO: Implement symbol export trie.
 }
 
 void Writer::openFile() {
@@ -342,7 +414,11 @@ void Writer::writeSections() {
 
 void Writer::run() {
   createLoadCommands();
+  scanRelocations();
   assignAddresses();
+
+  // Fill __LINKEDIT contents
+  createDyldInfoContents();
   fileSize = linkEditSeg->fileOff + linkEditSeg->contents.size();
 
   openFile();
@@ -357,3 +433,8 @@ void Writer::run() {
 }
 
 void macho::writeResult() { Writer().run(); }
+
+void macho::createSyntheticSections() {
+  in.got = make<GotSection>();
+  inputSections.push_back(in.got);
+}

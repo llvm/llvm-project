@@ -114,6 +114,9 @@ void MCContext::reset() {
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
 
+  ELFEntrySizeMap.clear();
+  ELFSeenGenericMergeableSections.clear();
+
   NextID.clear();
   AllowTemporaryLabels = true;
   DwarfLocSeen = false;
@@ -302,23 +305,25 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
   // diagnosed by the client as an error.
 
   // Form the name to look up.
-  SmallString<64> Name;
-  Name += Segment;
-  Name.push_back(',');
-  Name += Section;
+  assert(Section.size() <= 16 && "section name is too long");
+  assert(!memchr(Section.data(), '\0', Section.size()) &&
+         "section name cannot contain NUL");
 
   // Do the lookup, if we have a hit, return it.
-  MCSectionMachO *&Entry = MachOUniquingMap[Name];
-  if (Entry)
-    return Entry;
+  auto R = MachOUniquingMap.try_emplace((Segment + Twine(',') + Section).str());
+  if (!R.second)
+    return R.first->second;
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
     Begin = createTempSymbol(BeginSymName, false);
 
   // Otherwise, return a new section.
-  return Entry = new (MachOAllocator.Allocate()) MCSectionMachO(
-             Segment, Section, TypeAndAttributes, Reserved2, Kind, Begin);
+  StringRef Name = R.first->first();
+  R.first->second = new (MachOAllocator.Allocate())
+      MCSectionMachO(Segment, Name.substr(Name.size() - Section.size()),
+                     TypeAndAttributes, Reserved2, Kind, Begin);
+  return R.first->second;
 }
 
 void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
@@ -330,7 +335,7 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   // SHF_LINK_ORDER flag.
   unsigned UniqueID = Section->getUniqueID();
   ELFUniquingMap.erase(
-      ELFSectionKey{Section->getSectionName(), GroupName, "", UniqueID});
+      ELFSectionKey{Section->getName(), GroupName, "", UniqueID});
   auto I = ELFUniquingMap
                .insert(std::make_pair(
                    ELFSectionKey{Name, GroupName, "", UniqueID}, Section))
@@ -439,6 +444,10 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
                            UniqueID, LinkedToSym);
   Entry.second = Result;
+
+  recordELFMergeableSectionInfo(Result->getName(), Result->getFlags(),
+                                Result->getUniqueID(), Result->getEntrySize());
+
   return Result;
 }
 
@@ -446,6 +455,40 @@ MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group) {
   return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
                               SectionKind::getReadOnly(), 4, Group,
                               MCSection::NonUniqueID, nullptr);
+}
+
+void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
+                                              unsigned Flags, unsigned UniqueID,
+                                              unsigned EntrySize) {
+  bool IsMergeable = Flags & ELF::SHF_MERGE;
+  if (IsMergeable && (UniqueID == GenericSectionID))
+    ELFSeenGenericMergeableSections.insert(SectionName);
+
+  // For mergeable sections or non-mergeable sections with a generic mergeable
+  // section name we enter their Unique ID into the ELFEntrySizeMap so that
+  // compatible globals can be assigned to the same section.
+  if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
+    ELFEntrySizeMap.insert(std::make_pair(
+        ELFEntrySizeKey{SectionName, Flags, EntrySize}, UniqueID));
+  }
+}
+
+bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
+  return SectionName.startswith(".rodata.str") ||
+         SectionName.startswith(".rodata.cst");
+}
+
+bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
+  return isELFImplicitMergeableSectionNamePrefix(SectionName) ||
+         ELFSeenGenericMergeableSections.count(SectionName);
+}
+
+Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
+                                                       unsigned Flags,
+                                                       unsigned EntrySize) {
+  auto I = ELFEntrySizeMap.find(
+      MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
+  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
@@ -500,13 +543,13 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   unsigned Characteristics = Sec->getCharacteristics();
   if (KeySym) {
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    return getCOFFSection(Sec->getSectionName(), Characteristics,
-                          Sec->getKind(), KeySym->getName(),
+    return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(),
+                          KeySym->getName(),
                           COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
   }
 
-  return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
-                        "", 0, UniqueID);
+  return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(), "", 0,
+                        UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,

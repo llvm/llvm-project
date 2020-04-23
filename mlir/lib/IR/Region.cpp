@@ -108,6 +108,20 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
     it->walk(remapOperands);
 }
 
+/// Returns 'block' if 'block' lies in this region, or otherwise finds the
+/// ancestor of 'block' that lies in this region. Returns nullptr if the latter
+/// fails.
+Block *Region::findAncestorBlockInRegion(Block &block) {
+  auto currBlock = &block;
+  while (currBlock->getParent() != this) {
+    Operation *parentOp = currBlock->getParentOp();
+    if (!parentOp || !parentOp->getBlock())
+      return nullptr;
+    currBlock = parentOp->getBlock();
+  }
+  return currBlock;
+}
+
 void Region::dropAllReferences() {
   for (Block &b : *this)
     b.dropAllReferences();
@@ -214,14 +228,14 @@ RegionRange::RegionRange(MutableArrayRef<Region> regions)
 RegionRange::RegionRange(ArrayRef<std::unique_ptr<Region>> regions)
     : RegionRange(regions.data(), regions.size()) {}
 
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
                                              ptrdiff_t index) {
   if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())
     return operand + index;
   return &owner.get<Region *>()[index];
 }
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
                                           ptrdiff_t index) {
   if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())

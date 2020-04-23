@@ -12,8 +12,8 @@ add_mlir_library(MLIRCallInterfaces
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRCallInterfaces
+
+  DEPENDS
   MLIRCallInterfacesIncGen
   )
 target_link_libraries(MLIRCallInterfaces
@@ -26,8 +26,8 @@ add_mlir_library(MLIRControlFlowInterfaces
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRControlFlowInterfaces
+
+  DEPENDS
   MLIRControlFlowInterfacesIncGen
   )
 target_link_libraries(MLIRControlFlowInterfaces
@@ -40,8 +40,8 @@ add_mlir_library(MLIRDerivedAttributeOpInterface
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRDerivedAttributeOpInterface
+
+  DEPENDS
   MLIRDerivedAttributeOpInterfaceIncGen
   )
 target_link_libraries(MLIRDerivedAttributeOpInterface
@@ -54,8 +54,8 @@ add_mlir_library(MLIRInferTypeOpInterface
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRInferTypeOpInterface
+
+  DEPENDS
   MLIRInferTypeOpInterfaceIncGen
   )
 target_link_libraries(MLIRInferTypeOpInterface
@@ -68,8 +68,8 @@ add_mlir_library(MLIRLoopLikeInterface
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRLoopLikeInterface
+
+  DEPENDS
   MLIRLoopLikeInterfaceIncGen
   )
 target_link_libraries(MLIRLoopLikeInterface
@@ -82,8 +82,8 @@ add_mlir_library(MLIRSideEffects
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-  )
-add_dependencies(MLIRSideEffects
+
+  DEPENDS
   MLIRSideEffectOpInterfacesIncGen
   )
 target_link_libraries(MLIRSideEffects

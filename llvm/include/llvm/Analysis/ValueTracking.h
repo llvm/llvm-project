@@ -17,10 +17,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <cstdint>
@@ -33,6 +32,7 @@ class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
+class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -210,7 +210,7 @@ class Value;
 
   /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
   /// intrinsics are treated as-if they were intrinsics.
-  Intrinsic::ID getIntrinsicForCallSite(ImmutableCallSite ICS,
+  Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
                                         const TargetLibraryInfo *TLI);
 
   /// Return true if we can prove that the specified FP value is never equal to
@@ -563,34 +563,35 @@ class Value;
                                               const Loop *L);
 
   /// Return true if this function can prove that I is guaranteed to yield
-  /// full-poison (all bits poison) if at least one of its operands are
-  /// full-poison (all bits poison).
-  ///
-  /// The exact rules for how poison propagates through instructions have
-  /// not been settled as of 2015-07-10, so this function is conservative
-  /// and only considers poison to be propagated in uncontroversial
-  /// cases. There is no attempt to track values that may be only partially
-  /// poison.
-  bool propagatesFullPoison(const Instruction *I);
+  /// poison if at least one of its operands is poison.
+  bool propagatesPoison(const Instruction *I);
 
   /// Return either nullptr or an operand of I such that I will trigger
-  /// undefined behavior if I is executed and that operand has a full-poison
-  /// value (all bits poison).
-  const Value *getGuaranteedNonFullPoisonOp(const Instruction *I);
+  /// undefined behavior if I is executed and that operand has a poison
+  /// value.
+  const Value *getGuaranteedNonPoisonOp(const Instruction *I);
 
   /// Return true if the given instruction must trigger undefined behavior.
   /// when I is executed with any operands which appear in KnownPoison holding
-  /// a full-poison value at the point of execution.
+  /// a poison value at the point of execution.
   bool mustTriggerUB(const Instruction *I,
                      const SmallSet<const Value *, 16>& KnownPoison);
 
   /// Return true if this function can prove that if PoisonI is executed
-  /// and yields a full-poison value (all bits poison), then that will
-  /// trigger undefined behavior.
+  /// and yields a poison value, then that will trigger undefined behavior.
   ///
   /// Note that this currently only considers the basic block that is
   /// the parent of I.
-  bool programUndefinedIfFullPoison(const Instruction *PoisonI);
+  bool programUndefinedIfPoison(const Instruction *PoisonI);
+
+  /// Return true if I can create poison from non-poison operands.
+  /// For vectors, canCreatePoison returns true if there is potential poison in
+  /// any element of the result when vectors without poison are given as
+  /// operands.
+  /// For example, given `I = shl <2 x i32> %x, <0, 32>`, this function returns
+  /// true. If I raises immediate UB but never creates poison (e.g. sdiv I, 0),
+  /// canCreatePoison returns false.
+  bool canCreatePoison(const Instruction *I);
 
   /// Return true if this function can prove that V is never undef value
   /// or poison value.

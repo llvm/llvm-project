@@ -4225,7 +4225,13 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
     return getDerived().template parseFloatingLiteral<double>();
   case 'e':
     ++First;
+#if defined(__powerpc__) || defined(__s390__)
+    // Handle cases where long doubles encoded with e have the same size
+    // and representation as doubles.
+    return getDerived().template parseFloatingLiteral<double>();
+#else
     return getDerived().template parseFloatingLiteral<long double>();
+#endif
   case '_':
     if (consumeIf("_Z")) {
       Node *R = getDerived().parseEncoding();

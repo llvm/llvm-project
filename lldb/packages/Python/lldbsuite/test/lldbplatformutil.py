@@ -166,19 +166,20 @@ def findMainThreadCheckerDylib():
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
 
-    def __init__(self, shlib_environment_var, shlib_prefix, shlib_extension):
+    def __init__(self, shlib_environment_var, shlib_path_separator, shlib_prefix, shlib_extension):
         self.shlib_environment_var = shlib_environment_var
+        self.shlib_path_separator = shlib_path_separator
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
 
 
 def createPlatformContext():
     if platformIsDarwin():
-        return _PlatformContext('DYLD_LIBRARY_PATH', 'lib', 'dylib')
+        return _PlatformContext('DYLD_LIBRARY_PATH', ':', 'lib', 'dylib')
     elif getPlatform() in ("freebsd", "linux", "netbsd"):
-        return _PlatformContext('LD_LIBRARY_PATH', 'lib', 'so')
+        return _PlatformContext('LD_LIBRARY_PATH', ':', 'lib', 'so')
     else:
-        return None
+        return _PlatformContext('PATH', ';', '', 'dll')
 
 
 def hasChattyStderr(test_case):

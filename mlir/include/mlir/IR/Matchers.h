@@ -140,18 +140,20 @@ using has_operation_or_value_matcher_t =
 
 /// Statically switch to a Value matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<is_detected<detail::has_operation_or_value_matcher_t,
-                                      MatcherClass, Value>::value,
-                          bool>
+typename std::enable_if_t<
+    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
+                      Value>::value,
+    bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   return matcher.match(op->getOperand(idx));
 }
 
 /// Statically switch to an Operation matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<is_detected<detail::has_operation_or_value_matcher_t,
-                                      MatcherClass, Operation *>::value,
-                          bool>
+typename std::enable_if_t<
+    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
+                      Operation *>::value,
+    bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   if (auto defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);

@@ -34,7 +34,7 @@ using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 /// needed for parsing.
 class MCExpr {
 public:
-  enum ExprKind {
+  enum ExprKind : uint8_t {
     Binary,    ///< Binary expressions.
     Constant,  ///< Constant expressions.
     SymbolRef, ///< References to labels and assigned expressions.
@@ -43,7 +43,14 @@ public:
   };
 
 private:
+  static const unsigned NumSubclassDataBits = 24;
+  static_assert(
+      NumSubclassDataBits == CHAR_BIT * (sizeof(unsigned) - sizeof(ExprKind)),
+      "ExprKind and SubclassData together should take up one word");
+
   ExprKind Kind;
+  /// Field reserved for use by MCExpr subclasses.
+  unsigned SubclassData : NumSubclassDataBits;
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
@@ -51,12 +58,18 @@ private:
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
-  explicit MCExpr(ExprKind Kind, SMLoc Loc) : Kind(Kind), Loc(Loc) {}
+  explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
+      : Kind(Kind), SubclassData(SubclassData), Loc(Loc) {
+    assert(SubclassData < (1 << NumSubclassDataBits) &&
+           "Subclass data too large");
+  }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCAsmLayout *Layout,
                                  const MCFixup *Fixup,
                                  const SectionAddrMap *Addrs, bool InSet) const;
+
+  unsigned getSubclassData() const { return SubclassData; }
 
 public:
   MCExpr(const MCExpr &) = delete;
@@ -130,19 +143,20 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
 ////  Represent a constant integer expression.
 class MCConstantExpr : public MCExpr {
   int64_t Value;
-  bool PrintInHex = false;
-  unsigned SizeInBytes = 0;
 
-  explicit MCConstantExpr(int64_t Value)
-      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value) {}
+  // Subclass data stores SizeInBytes in bits 0..7 and PrintInHex in bit 8.
+  static const unsigned SizeInBytesBits = 8;
+  static const unsigned SizeInBytesMask = (1 << SizeInBytesBits) - 1;
+  static const unsigned PrintInHexBit = 1 << SizeInBytesBits;
 
-  MCConstantExpr(int64_t Value, bool PrintInHex)
-      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value),
-        PrintInHex(PrintInHex) {}
+  static unsigned encodeSubclassData(bool PrintInHex, unsigned SizeInBytes) {
+    assert(SizeInBytes <= sizeof(int64_t) && "Excessive size");
+    return SizeInBytes | (PrintInHex ? PrintInHexBit : 0);
+  }
 
   MCConstantExpr(int64_t Value, bool PrintInHex, unsigned SizeInBytes)
-      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value), PrintInHex(PrintInHex),
-        SizeInBytes(SizeInBytes) {}
+      : MCExpr(MCExpr::Constant, SMLoc(),
+               encodeSubclassData(PrintInHex, SizeInBytes)), Value(Value) {}
 
 public:
   /// \name Construction
@@ -157,9 +171,11 @@ public:
   /// @{
 
   int64_t getValue() const { return Value; }
-  unsigned getSizeInBytes() const { return SizeInBytes; }
+  unsigned getSizeInBytes() const {
+    return getSubclassData() & SizeInBytesMask;
+  }
 
-  bool useHexFormat() const { return PrintInHex; }
+  bool useHexFormat() const { return (getSubclassData() & PrintInHexBit) != 0; }
 
   /// @}
 
@@ -194,9 +210,9 @@ public:
     VK_TLSLDM,
     VK_TPOFF,
     VK_DTPOFF,
-    VK_TLSCALL,   // symbol(tlscall)
-    VK_TLSDESC,   // symbol(tlsdesc)
-    VK_TLVP,      // Mach-O thread local variable relocations
+    VK_TLSCALL, // symbol(tlscall)
+    VK_TLSDESC, // symbol(tlsdesc)
+    VK_TLVP,    // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
     VK_PAGE,
@@ -204,8 +220,8 @@ public:
     VK_GOTPAGE,
     VK_GOTPAGEOFF,
     VK_SECREL,
-    VK_SIZE,      // symbol@SIZE
-    VK_WEAKREF,   // The link between the symbols in .weakref foo, bar
+    VK_SIZE,    // symbol@SIZE
+    VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 
     VK_X86_ABS8,
 
@@ -214,8 +230,8 @@ public:
     VK_ARM_TARGET1,
     VK_ARM_TARGET2,
     VK_ARM_PREL31,
-    VK_ARM_SBREL,          // symbol(sbrel)
-    VK_ARM_TLSLDO,         // symbol(tlsldo)
+    VK_ARM_SBREL,  // symbol(sbrel)
+    VK_ARM_TLSLDO, // symbol(tlsldo)
     VK_ARM_TLSDESCSEQ,
 
     VK_AVR_NONE,
@@ -226,65 +242,66 @@ public:
     VK_AVR_DIFF16,
     VK_AVR_DIFF32,
 
-    VK_PPC_LO,             // symbol@l
-    VK_PPC_HI,             // symbol@h
-    VK_PPC_HA,             // symbol@ha
-    VK_PPC_HIGH,           // symbol@high
-    VK_PPC_HIGHA,          // symbol@higha
-    VK_PPC_HIGHER,         // symbol@higher
-    VK_PPC_HIGHERA,        // symbol@highera
-    VK_PPC_HIGHEST,        // symbol@highest
-    VK_PPC_HIGHESTA,       // symbol@highesta
-    VK_PPC_GOT_LO,         // symbol@got@l
-    VK_PPC_GOT_HI,         // symbol@got@h
-    VK_PPC_GOT_HA,         // symbol@got@ha
-    VK_PPC_TOCBASE,        // symbol@tocbase
-    VK_PPC_TOC,            // symbol@toc
-    VK_PPC_TOC_LO,         // symbol@toc@l
-    VK_PPC_TOC_HI,         // symbol@toc@h
-    VK_PPC_TOC_HA,         // symbol@toc@ha
-    VK_PPC_U,              // symbol@u
-    VK_PPC_L,              // symbol@l
-    VK_PPC_DTPMOD,         // symbol@dtpmod
-    VK_PPC_TPREL_LO,       // symbol@tprel@l
-    VK_PPC_TPREL_HI,       // symbol@tprel@h
-    VK_PPC_TPREL_HA,       // symbol@tprel@ha
-    VK_PPC_TPREL_HIGH,     // symbol@tprel@high
-    VK_PPC_TPREL_HIGHA,    // symbol@tprel@higha
-    VK_PPC_TPREL_HIGHER,   // symbol@tprel@higher
-    VK_PPC_TPREL_HIGHERA,  // symbol@tprel@highera
-    VK_PPC_TPREL_HIGHEST,  // symbol@tprel@highest
-    VK_PPC_TPREL_HIGHESTA, // symbol@tprel@highesta
-    VK_PPC_DTPREL_LO,      // symbol@dtprel@l
-    VK_PPC_DTPREL_HI,      // symbol@dtprel@h
-    VK_PPC_DTPREL_HA,      // symbol@dtprel@ha
-    VK_PPC_DTPREL_HIGH,    // symbol@dtprel@high
-    VK_PPC_DTPREL_HIGHA,   // symbol@dtprel@higha
-    VK_PPC_DTPREL_HIGHER,  // symbol@dtprel@higher
-    VK_PPC_DTPREL_HIGHERA, // symbol@dtprel@highera
-    VK_PPC_DTPREL_HIGHEST, // symbol@dtprel@highest
-    VK_PPC_DTPREL_HIGHESTA,// symbol@dtprel@highesta
-    VK_PPC_GOT_TPREL,      // symbol@got@tprel
-    VK_PPC_GOT_TPREL_LO,   // symbol@got@tprel@l
-    VK_PPC_GOT_TPREL_HI,   // symbol@got@tprel@h
-    VK_PPC_GOT_TPREL_HA,   // symbol@got@tprel@ha
-    VK_PPC_GOT_DTPREL,     // symbol@got@dtprel
-    VK_PPC_GOT_DTPREL_LO,  // symbol@got@dtprel@l
-    VK_PPC_GOT_DTPREL_HI,  // symbol@got@dtprel@h
-    VK_PPC_GOT_DTPREL_HA,  // symbol@got@dtprel@ha
-    VK_PPC_TLS,            // symbol@tls
-    VK_PPC_GOT_TLSGD,      // symbol@got@tlsgd
-    VK_PPC_GOT_TLSGD_LO,   // symbol@got@tlsgd@l
-    VK_PPC_GOT_TLSGD_HI,   // symbol@got@tlsgd@h
-    VK_PPC_GOT_TLSGD_HA,   // symbol@got@tlsgd@ha
-    VK_PPC_TLSGD,          // symbol@tlsgd
-    VK_PPC_GOT_TLSLD,      // symbol@got@tlsld
-    VK_PPC_GOT_TLSLD_LO,   // symbol@got@tlsld@l
-    VK_PPC_GOT_TLSLD_HI,   // symbol@got@tlsld@h
-    VK_PPC_GOT_TLSLD_HA,   // symbol@got@tlsld@ha
-    VK_PPC_TLSLD,          // symbol@tlsld
-    VK_PPC_LOCAL,          // symbol@local
-    VK_PPC_NOTOC,          // symbol@notoc
+    VK_PPC_LO,              // symbol@l
+    VK_PPC_HI,              // symbol@h
+    VK_PPC_HA,              // symbol@ha
+    VK_PPC_HIGH,            // symbol@high
+    VK_PPC_HIGHA,           // symbol@higha
+    VK_PPC_HIGHER,          // symbol@higher
+    VK_PPC_HIGHERA,         // symbol@highera
+    VK_PPC_HIGHEST,         // symbol@highest
+    VK_PPC_HIGHESTA,        // symbol@highesta
+    VK_PPC_GOT_LO,          // symbol@got@l
+    VK_PPC_GOT_HI,          // symbol@got@h
+    VK_PPC_GOT_HA,          // symbol@got@ha
+    VK_PPC_TOCBASE,         // symbol@tocbase
+    VK_PPC_TOC,             // symbol@toc
+    VK_PPC_TOC_LO,          // symbol@toc@l
+    VK_PPC_TOC_HI,          // symbol@toc@h
+    VK_PPC_TOC_HA,          // symbol@toc@ha
+    VK_PPC_U,               // symbol@u
+    VK_PPC_L,               // symbol@l
+    VK_PPC_DTPMOD,          // symbol@dtpmod
+    VK_PPC_TPREL_LO,        // symbol@tprel@l
+    VK_PPC_TPREL_HI,        // symbol@tprel@h
+    VK_PPC_TPREL_HA,        // symbol@tprel@ha
+    VK_PPC_TPREL_HIGH,      // symbol@tprel@high
+    VK_PPC_TPREL_HIGHA,     // symbol@tprel@higha
+    VK_PPC_TPREL_HIGHER,    // symbol@tprel@higher
+    VK_PPC_TPREL_HIGHERA,   // symbol@tprel@highera
+    VK_PPC_TPREL_HIGHEST,   // symbol@tprel@highest
+    VK_PPC_TPREL_HIGHESTA,  // symbol@tprel@highesta
+    VK_PPC_DTPREL_LO,       // symbol@dtprel@l
+    VK_PPC_DTPREL_HI,       // symbol@dtprel@h
+    VK_PPC_DTPREL_HA,       // symbol@dtprel@ha
+    VK_PPC_DTPREL_HIGH,     // symbol@dtprel@high
+    VK_PPC_DTPREL_HIGHA,    // symbol@dtprel@higha
+    VK_PPC_DTPREL_HIGHER,   // symbol@dtprel@higher
+    VK_PPC_DTPREL_HIGHERA,  // symbol@dtprel@highera
+    VK_PPC_DTPREL_HIGHEST,  // symbol@dtprel@highest
+    VK_PPC_DTPREL_HIGHESTA, // symbol@dtprel@highesta
+    VK_PPC_GOT_TPREL,       // symbol@got@tprel
+    VK_PPC_GOT_TPREL_LO,    // symbol@got@tprel@l
+    VK_PPC_GOT_TPREL_HI,    // symbol@got@tprel@h
+    VK_PPC_GOT_TPREL_HA,    // symbol@got@tprel@ha
+    VK_PPC_GOT_DTPREL,      // symbol@got@dtprel
+    VK_PPC_GOT_DTPREL_LO,   // symbol@got@dtprel@l
+    VK_PPC_GOT_DTPREL_HI,   // symbol@got@dtprel@h
+    VK_PPC_GOT_DTPREL_HA,   // symbol@got@dtprel@ha
+    VK_PPC_TLS,             // symbol@tls
+    VK_PPC_GOT_TLSGD,       // symbol@got@tlsgd
+    VK_PPC_GOT_TLSGD_LO,    // symbol@got@tlsgd@l
+    VK_PPC_GOT_TLSGD_HI,    // symbol@got@tlsgd@h
+    VK_PPC_GOT_TLSGD_HA,    // symbol@got@tlsgd@ha
+    VK_PPC_TLSGD,           // symbol@tlsgd
+    VK_PPC_GOT_TLSLD,       // symbol@got@tlsld
+    VK_PPC_GOT_TLSLD_LO,    // symbol@got@tlsld@l
+    VK_PPC_GOT_TLSLD_HI,    // symbol@got@tlsld@h
+    VK_PPC_GOT_TLSLD_HA,    // symbol@got@tlsld@ha
+    VK_PPC_GOT_PCREL,       // symbol@got@pcrel
+    VK_PPC_TLSLD,           // symbol@tlsld
+    VK_PPC_LOCAL,           // symbol@local
+    VK_PPC_NOTOC,           // symbol@notoc
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
@@ -315,17 +332,32 @@ public:
   };
 
 private:
-  /// The symbol reference modifier.
-  const VariantKind Kind;
-
-  /// Specifies how the variant kind should be printed.
-  const unsigned UseParensForSymbolVariant : 1;
-
-  // FIXME: Remove this bit.
-  const unsigned HasSubsectionsViaSymbols : 1;
-
   /// The symbol being referenced.
   const MCSymbol *Symbol;
+
+  // Subclass data stores VariantKind in bits 0..15, UseParensForSymbolVariant
+  // in bit 16 and HasSubsectionsViaSymbols in bit 17.
+  static const unsigned VariantKindBits = 16;
+  static const unsigned VariantKindMask = (1 << VariantKindBits) - 1;
+
+  /// Specifies how the variant kind should be printed.
+  static const unsigned UseParensForSymbolVariantBit = 1 << VariantKindBits;
+
+  // FIXME: Remove this bit.
+  static const unsigned HasSubsectionsViaSymbolsBit =
+      1 << (VariantKindBits + 1);
+
+  static unsigned encodeSubclassData(VariantKind Kind,
+                              bool UseParensForSymbolVariant,
+                              bool HasSubsectionsViaSymbols) {
+    return (unsigned)Kind |
+           (UseParensForSymbolVariant ? UseParensForSymbolVariantBit : 0) |
+           (HasSubsectionsViaSymbols ? HasSubsectionsViaSymbolsBit : 0);
+  }
+
+  bool useParensForSymbolVariant() const {
+    return (getSubclassData() & UseParensForSymbolVariantBit) != 0;
+  }
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                            const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
@@ -349,11 +381,15 @@ public:
 
   const MCSymbol &getSymbol() const { return *Symbol; }
 
-  VariantKind getKind() const { return Kind; }
+  VariantKind getKind() const {
+    return (VariantKind)(getSubclassData() & VariantKindMask);
+  }
 
   void printVariantKind(raw_ostream &OS) const;
 
-  bool hasSubsectionsViaSymbols() const { return HasSubsectionsViaSymbols; }
+  bool hasSubsectionsViaSymbols() const {
+    return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
+  }
 
   /// @}
   /// \name Static Utility Functions
@@ -381,11 +417,10 @@ public:
   };
 
 private:
-  Opcode Op;
   const MCExpr *Expr;
 
   MCUnaryExpr(Opcode Op, const MCExpr *Expr, SMLoc Loc)
-      : MCExpr(MCExpr::Unary, Loc), Op(Op), Expr(Expr) {}
+      : MCExpr(MCExpr::Unary, Loc, Op), Expr(Expr) {}
 
 public:
   /// \name Construction
@@ -415,7 +450,7 @@ public:
   /// @{
 
   /// Get the kind of this unary expression.
-  Opcode getOpcode() const { return Op; }
+  Opcode getOpcode() const { return (Opcode)getSubclassData(); }
 
   /// Get the child of this unary expression.
   const MCExpr *getSubExpr() const { return Expr; }
@@ -457,12 +492,11 @@ public:
   };
 
 private:
-  Opcode Op;
   const MCExpr *LHS, *RHS;
 
   MCBinaryExpr(Opcode Op, const MCExpr *LHS, const MCExpr *RHS,
                SMLoc Loc = SMLoc())
-      : MCExpr(MCExpr::Binary, Loc), Op(Op), LHS(LHS), RHS(RHS) {}
+      : MCExpr(MCExpr::Binary, Loc, Op), LHS(LHS), RHS(RHS) {}
 
 public:
   /// \name Construction
@@ -572,7 +606,7 @@ public:
   /// @{
 
   /// Get the kind of this binary expression.
-  Opcode getOpcode() const { return Op; }
+  Opcode getOpcode() const { return (Opcode)getSubclassData(); }
 
   /// Get the left-hand side expression of the binary operator.
   const MCExpr *getLHS() const { return LHS; }

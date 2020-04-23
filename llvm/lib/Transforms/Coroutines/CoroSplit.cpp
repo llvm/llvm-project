@@ -32,7 +32,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1094,7 +1093,7 @@ static bool hasCallsInBlockBetween(Instruction *From, Instruction *To) {
     if (isa<IntrinsicInst>(I))
       continue;
 
-    if (CallSite(I))
+    if (isa<CallBase>(I))
       return true;
   }
   return false;
@@ -1164,13 +1163,11 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
     Prev = Pred->getTerminator();
   }
 
-  CallSite CS{Prev};
-  if (!CS)
+  CallBase *CB = dyn_cast<CallBase>(Prev);
+  if (!CB)
     return false;
 
-  auto *CallInstr = CS.getInstruction();
-
-  auto *Callee = CS.getCalledValue()->stripPointerCasts();
+  auto *Callee = CB->getCalledValue()->stripPointerCasts();
 
   // See if the callsite is for resumption or destruction of the coroutine.
   auto *SubFn = dyn_cast<CoroSubFnInst>(Callee);
@@ -1185,7 +1182,7 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
   // calls in between Save and CallInstr. They can potenitally resume the
   // coroutine rendering this optimization unsafe.
   auto *Save = Suspend->getCoroSave();
-  if (hasCallsBetween(Save, CallInstr))
+  if (hasCallsBetween(Save, CB))
     return false;
 
   // Replace llvm.coro.suspend with the value that results in resumption over
@@ -1195,13 +1192,13 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
   Save->eraseFromParent();
 
   // No longer need a call to coro.resume or coro.destroy.
-  if (auto *Invoke = dyn_cast<InvokeInst>(CallInstr)) {
+  if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
     BranchInst::Create(Invoke->getNormalDest(), Invoke);
   }
 
-  // Grab the CalledValue from CS before erasing the CallInstr.
-  auto *CalledValue = CS.getCalledValue();
-  CallInstr->eraseFromParent();
+  // Grab the CalledValue from CB before erasing the CallInstr.
+  auto *CalledValue = CB->getCalledValue();
+  CB->eraseFromParent();
 
   // If no more users remove it. Usually it is a bitcast of SubFn.
   if (CalledValue != SubFn && CalledValue->user_empty())

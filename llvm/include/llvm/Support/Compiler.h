@@ -289,6 +289,14 @@
 #define LLVM_REQUIRE_CONSTANT_INITIALIZATION
 #endif
 
+/// LLVM_GSL_POINTER - Apply this to non-owning classes like
+/// StringRef to enable lifetime warnings.
+#if LLVM_HAS_CPP_ATTRIBUTE(gsl::Pointer)
+#define LLVM_GSL_POINTER [[gsl::Pointer]]
+#else
+#define LLVM_GSL_POINTER
+#endif
+
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
 /// pedantic diagnostics.
 #ifdef __GNUC__

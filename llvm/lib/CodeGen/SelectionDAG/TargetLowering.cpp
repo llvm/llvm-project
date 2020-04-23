@@ -5671,10 +5671,10 @@ TargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
                                         ForCodeSize, Depth + 1);
     NegatibleCost V1 = getNegatibleCost(Op.getOperand(1), DAG, LegalOperations,
                                         ForCodeSize, Depth + 1);
-    NegatibleCost V01 = std::max(V0, V1);
+    NegatibleCost V01 = std::min(V0, V1);
     if (V01 == NegatibleCost::Expensive)
       return NegatibleCost::Expensive;
-    return std::max(V01, V2);
+    return std::min(V01, V2);
   }
 
   case ISD::FP_EXTEND:
@@ -5776,7 +5776,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     SDValue NegZ = getNegatedExpression(Z, DAG, LegalOps, OptForSize, Depth);
     NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
     NegatibleCost CostY = getNegatibleCost(Y, DAG, LegalOps, OptForSize, Depth);
-    if (CostX > CostY) {
+    if (CostX <= CostY) {
       // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
       SDValue NegX = getNegatedExpression(X, DAG, LegalOps, OptForSize, Depth);
       return DAG.getNode(Opcode, DL, VT, NegX, Y, NegZ, Flags);

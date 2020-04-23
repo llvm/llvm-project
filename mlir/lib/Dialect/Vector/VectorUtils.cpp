@@ -20,7 +20,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -177,7 +176,7 @@ static AffineMap makePermutationMap(
            "Vectorization prerequisite violated: at most 1 index may be "
            "invariant wrt a vectorized loop");
   }
-  return AffineMap::get(indices.size(), 0, perm);
+  return AffineMap::get(indices.size(), 0, perm, context);
 }
 
 /// Implementation detail that walks up the parents and records the ones with

@@ -23,5 +23,5 @@ C c;
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@G3AEXUNonTrivial@@@Z"(%class.C* %this, <{ %struct.NonTrivial }>* inalloca %0)
 // CHECK-NOT: invoke
 // CHECK: musttail call x86_thiscallcc void @"?f@C@@EAEXUNonTrivial@@@Z"(%class.C* %{{.*}}, <{ %struct.NonTrivial }>* inalloca %0)
-// CHECK-NEXT  ret void
+// CHECK-NEXT:  ret void
 

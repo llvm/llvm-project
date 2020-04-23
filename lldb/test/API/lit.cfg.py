@@ -60,6 +60,17 @@ if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
   config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
       'LLDB_CAPTURE_REPRODUCER']
 
+# Support running the test suite under the lldb-repro wrapper. This makes it
+# possible to capture a test suite run and then rerun all the test from the
+# just captured reproducer.
+lldb_repro_mode = lit_config.params.get('lldb-run-with-repro', None)
+if lldb_repro_mode:
+  lit_config.note("Running API tests in {} mode.".format(lldb_repro_mode))
+  if lldb_repro_mode == 'capture':
+    config.available_features.add('lldb-repro-capture')
+  elif lldb_repro_mode == 'replay':
+    config.available_features.add('lldb-repro-replay')
+
 # Clean the module caches in the test build directory. This is necessary in an
 # incremental build whenever clang changes underneath, so doing it once per
 # lit.py invocation is close enough.
@@ -115,6 +126,10 @@ if config.filecheck:
 
 if config.lldb_libs_dir:
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
+
+if config.enabled_plugins:
+  for plugin in config.enabled_plugins:
+    dotest_cmd += ['--enable-plugin', plugin]
 
 # We don't want to force users passing arguments to lit to use `;` as a
 # separator. We use Python's simple lexical analyzer to turn the args into a

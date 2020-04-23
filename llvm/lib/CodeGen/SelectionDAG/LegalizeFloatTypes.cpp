@@ -665,8 +665,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
     NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->getAlignment(), MMOFlags,
-                       L->getAAInfo());
+                       L->getPointerInfo(), NVT, L->getOriginalAlign(),
+                       MMOFlags, L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -676,8 +676,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   // Do a non-extending load followed by FP_EXTEND.
   NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD, L->getMemoryVT(),
                      dl, L->getChain(), L->getBasePtr(), L->getOffset(),
-                     L->getPointerInfo(), L->getMemoryVT(), L->getAlignment(),
-                     MMOFlags, L->getAAInfo());
+                     L->getPointerInfo(), L->getMemoryVT(),
+                     L->getOriginalAlign(), MMOFlags, L->getAAInfo());
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -1173,6 +1173,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOW:       ExpandFloatRes_FPOW(N, Lo, Hi); break;
   case ISD::STRICT_FPOWI:
   case ISD::FPOWI:      ExpandFloatRes_FPOWI(N, Lo, Hi); break;
+  case ISD::FREEZE:     ExpandFloatRes_FREEZE(N, Lo, Hi); break;
   case ISD::STRICT_FRINT:
   case ISD::FRINT:      ExpandFloatRes_FRINT(N, Lo, Hi); break;
   case ISD::STRICT_FROUND:
@@ -1464,6 +1465,17 @@ void DAGTypeLegalizer::ExpandFloatRes_FPOWI(SDNode *N,
                                         RTLIB::POWI_F32, RTLIB::POWI_F64,
                                         RTLIB::POWI_F80, RTLIB::POWI_F128,
                                         RTLIB::POWI_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FREEZE(SDNode *N,
+                                             SDValue &Lo, SDValue &Hi) {
+  assert(N->getValueType(0) == MVT::ppcf128 &&
+         "Logic only correct for ppcf128!");
+
+  SDLoc dl(N);
+  GetExpandedFloat(N->getOperand(0), Lo, Hi);
+  Lo = DAG.getNode(ISD::FREEZE, dl, Lo.getValueType(), Lo);
+  Hi = DAG.getNode(ISD::FREEZE, dl, Hi.getValueType(), Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FREM(SDNode *N,
@@ -2335,12 +2347,10 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
 
   // Load the value as an integer value with the same number of bits.
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  SDValue newL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), IVT,
-                             SDLoc(N), L->getChain(), L->getBasePtr(),
-                             L->getOffset(), L->getPointerInfo(), IVT,
-                             L->getAlignment(),
-                             L->getMemOperand()->getFlags(),
-                             L->getAAInfo());
+  SDValue newL = DAG.getLoad(
+      L->getAddressingMode(), L->getExtensionType(), IVT, SDLoc(N),
+      L->getChain(), L->getBasePtr(), L->getOffset(), L->getPointerInfo(), IVT,
+      L->getOriginalAlign(), L->getMemOperand()->getFlags(), L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));
@@ -2620,7 +2630,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_LOAD(SDNode *N) {
   SDValue NewL =
       DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), MVT::i16,
                   SDLoc(N), L->getChain(), L->getBasePtr(), L->getOffset(),
-                  L->getPointerInfo(), MVT::i16, L->getAlignment(),
+                  L->getPointerInfo(), MVT::i16, L->getOriginalAlign(),
                   L->getMemOperand()->getFlags(), L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one

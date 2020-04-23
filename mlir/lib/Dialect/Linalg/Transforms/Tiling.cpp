@@ -12,7 +12,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -22,7 +22,6 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -33,7 +32,7 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::loop;
 
-using folded_affine_min = folded::ValueBuilder<AffineMinOp>;
+using folded_affine_min = FoldedValueBuilder<AffineMinOp>;
 
 #define DEBUG_TYPE "linalg-tiling"
 
@@ -164,7 +163,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 // TODO(pifon, ntv): Investigate whether mixing implicit and explicit indices
 // does not lead to losing information.
 static void transformIndexedGenericOpIndices(
-    OpBuilder &b, LinalgOp op, ArrayRef<ValueHandle *> pivs,
+    OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
     const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   auto indexedGenericOp = dyn_cast<IndexedGenericOp>(op.getOperation());
@@ -194,7 +193,7 @@ static void transformIndexedGenericOpIndices(
     // Offset the index argument `i` by the value of the corresponding induction
     // variable and replace all uses of the previous value.
     Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
-                                      pivs[rangeIndex->second]->getValue());
+                                      ivs[rangeIndex->second]);
     for (auto &use : oldIndex.getUses()) {
       if (use.getOwner() == newIndex.getDefiningOp())
         continue;
@@ -295,7 +294,8 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
             /*dimCount=*/3, /*symbolCount=*/0,
             {getAffineDimExpr(/*position=*/0, b.getContext()),
              getAffineDimExpr(/*position=*/1, b.getContext()) -
-                 getAffineDimExpr(/*position=*/2, b.getContext())});
+                 getAffineDimExpr(/*position=*/2, b.getContext())},
+            b.getContext());
         auto d = folded_std_dim(folder, view, r);
         size = folded_affine_min(folder, b.getIndexType(), minMap,
                                  ValueRange{size, d, offset});
@@ -349,6 +349,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   if (!permutation.empty())
     invPermutationMap = inversePermutation(
         AffineMap::getPermutationMap(permutation, ScopedContext::getContext()));
+  if (!invPermutationMap)
+    return llvm::None;
 
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
@@ -361,7 +363,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   auto viewSizesToLoopsMap = inversePermutation(concatAffineMaps(maps));
-  assert(viewSizesToLoopsMap && "expected invertible map");
+  if (!viewSizesToLoopsMap)
+    return llvm::None;
 
   SmallVector<SubViewOp::Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
@@ -373,15 +376,14 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
 
   // 3. Create the tiled loops.
   LinalgOp res = op;
-  auto ivs = ValueHandle::makeIndexHandles(loopRanges.size());
-  auto pivs = makeHandlePointers(MutableArrayRef<ValueHandle>(ivs));
+  SmallVector<Value, 4> ivs(loopRanges.size());
   // Convert SubViewOp::Range to linalg_range.
   SmallVector<Value, 4> linalgRanges;
   for (auto &range : loopRanges) {
     linalgRanges.push_back(
         linalg_range(range.offset, range.size, range.stride));
   }
-  GenericLoopNestRangeBuilder<LoopTy>(pivs, linalgRanges)([&] {
+  GenericLoopNestRangeBuilder<LoopTy>(ivs, linalgRanges)([&] {
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
     SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
@@ -402,7 +404,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   });
 
   // 4. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
-  transformIndexedGenericOpIndices(b, res, pivs, loopIndexToRangeIndex);
+  transformIndexedGenericOpIndices(b, res, ivs, loopIndexToRangeIndex);
 
   // 5. Gather the newly created loops and return them with the new op.
   SmallVector<Operation *, 8> loops;

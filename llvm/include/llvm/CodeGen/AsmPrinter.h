@@ -48,7 +48,6 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineConstantPoolValue;
 class MachineDominatorTree;
 class MachineFunction;
@@ -69,7 +68,6 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
-class ProfileSummaryInfo;
 class raw_ostream;
 class StackMaps;
 class TargetLoweringObjectFile;
@@ -111,10 +109,6 @@ public:
 
   /// Optimization remark emitter.
   MachineOptimizationRemarkEmitter *ORE;
-
-  MachineBlockFrequencyInfo *MBFI;
-
-  ProfileSummaryInfo *PSI;
 
   /// The symbol for the entry in __patchable_function_entires.
   MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
@@ -286,7 +280,7 @@ public:
     const class Function *Fn;
     uint8_t Version;
 
-    void emit(int, MCStreamer *, const MCSymbol *) const;
+    void emit(int, MCStreamer *, const MCExpr *, const MCSymbol *) const;
   };
 
   // All the sleds to be emitted.
@@ -680,6 +674,9 @@ private:
 
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
+
+  /// This method emits a comment next to header for the current function.
+  virtual void emitFunctionHeaderComment();
 
   /// Emit a blob of inline asm to the output streamer.
   void

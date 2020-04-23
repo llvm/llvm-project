@@ -3,7 +3,7 @@
 # RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml -o %t
 
 # RUN: llvm-objcopy --strip-debug %t %t.stripped
-# RUN: llvm-readobj --sections %t.stripped | FileCheck /dev/null --check-prefix=NODWARF \
+# RUN: llvm-readobj --sections %t.stripped | FileCheck /dev/null \
 # RUN:   --implicit-check-not='Name: __debug' --implicit-check-not='Name: __apple'
 
 ## Make sure that all symbols are kept.

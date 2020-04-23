@@ -193,3 +193,7 @@ Additional Topics
 
 :doc:`AMDGPUUsage`
    This document describes using the AMDGPU backend to compile GPU kernels.
+
+:doc:`AMDGPUDwarfProposalForHeterogeneousDebugging`
+   This document describes a DWARF proposal to support heterogeneous debugging
+   for targets such as the AMDGPU backend.

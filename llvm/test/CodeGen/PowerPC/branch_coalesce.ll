@@ -7,8 +7,8 @@
 define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 
 ; CHECK-LABEL: @testBranchCoal
-; CHECK: cmplwi [[CMPR:[0-7]+]], 6, 0
-; CHECK: beq [[CMPR]], .LBB[[LAB1:[0-9_]+]]
+; CHECK: cmplwi 6, 0
+; CHECK: beq 0, .LBB[[LAB1:[0-9_]+]]
 ; CHECK-DAG: addis [[LD1REG:[0-9]+]], 2, .LCPI0_0@toc@ha
 ; CHECK-DAG: addis [[LD2REG:[0-9]+]], 2, .LCPI0_1@toc@ha
 ; CHECK-DAG: xxlxor 2, 2, 2
@@ -22,7 +22,7 @@ define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 
 ; CHECK-NOCOALESCE-LABEL: testBranchCoal:
 ; CHECK-NOCOALESCE:       # %bb.0: # %entry
-; CHECK-NOCOALESCE-NEXT:    cmplwi 0, 6, 0
+; CHECK-NOCOALESCE-NEXT:    cmplwi 6, 0
 ; CHECK-NOCOALESCE-NEXT:    bne 0, .LBB0_5
 ; CHECK-NOCOALESCE-NEXT:  # %bb.1: # %entry
 ; CHECK-NOCOALESCE-NEXT:    bne 0, .LBB0_6

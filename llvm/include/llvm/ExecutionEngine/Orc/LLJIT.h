@@ -85,8 +85,21 @@ public:
     return ES->createJITDylib(std::move(Name));
   }
 
-  /// Convenience method for defining an absolute symbol.
-  Error defineAbsolute(StringRef Name, JITEvaluatedSymbol Address);
+  /// A convenience method for defining MUs in LLJIT's Main JITDylib. This can
+  /// be useful for succinctly defining absolute symbols, aliases and
+  /// re-exports.
+  template <typename MUType>
+  Error define(std::unique_ptr<MUType> &&MU) {
+    return Main->define(std::move(MU));
+  }
+
+  /// A convenience method for defining MUs in LLJIT's Main JITDylib. This can
+  /// be usedful for succinctly defining absolute symbols, aliases and
+  /// re-exports.
+  template <typename MUType>
+  Error define(std::unique_ptr<MUType> &MU) {
+    return Main->define(MU);
+  }
 
   /// Adds an IR module to the given JITDylib.
   Error addIRModule(JITDylib &JD, ThreadSafeModule TSM);

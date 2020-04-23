@@ -49,13 +49,13 @@ public:
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
                        MLIRContext *context);
 
-  /// Returns an affine map with `dimCount` dimensions and `symbolCount` symbols
-  /// mapping to the given results. The array of results cannot be empty.
+  /// Returns an affine map with `dimCount` dimensions and `symbolCount` mapping
+  /// to a single output dimension
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
-                       ArrayRef<AffineExpr> results);
+                       AffineExpr result);
 
   /// Returns an affine map with `dimCount` dimensions and `symbolCount` mapping
-  /// to the given results, where the number of results can be zero.
+  /// to the given results.
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
                        ArrayRef<AffineExpr> results, MLIRContext *context);
 
@@ -224,9 +224,9 @@ AffineMap removeDuplicateExprs(AffineMap map);
 
 /// Returns a map of codomain to domain dimensions such that the first codomain
 /// dimension for a particular domain dimension is selected.
-/// Returns an empty map if the input map is empty or if `map` is not invertible
-/// (i.e. `map` does not contain a subset that is a permutation of full domain
-/// rank).
+/// Returns an empty map if the input map is empty.
+/// Returns null map (not empty map) if `map` is not invertible (i.e. `map` does
+/// not contain a subset that is a permutation of full domain rank).
 ///
 /// Prerequisites:
 ///   1. `map` has no symbols.

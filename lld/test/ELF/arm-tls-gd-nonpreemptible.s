@@ -6,9 +6,9 @@
 // RUN: ld.lld %t --shared -o %t3.so
 // RUN: llvm-objdump -s %t3.so | FileCheck --check-prefix=CHECK-SHARED %s
 
-// For an executable, we write the module index 1 and the offset into the TLS
-// directly into the GOT. For a shared library we can only write the offset
-// into the TLS directly if the symbol is non-preemptible
+/// For an executable, we write the module index 1 and the offset into the TLS
+/// directly into the GOT. For a shared library we can only write the offset
+/// into the TLS directly if the symbol is non-preemptible
 
  .text
  .syntax unified
@@ -30,9 +30,9 @@ func:
 .L3:
  nop
  .p2align        2
-// Generate R_ARM_TLS_GD32 relocations
-// These can be resolved at static link time for executables as 1 is always the
-// module index and the offset into tls is known at static link time
+/// Generate R_ARM_TLS_GD32 relocations
+/// These can be resolved at static link time for executables as 1 is always the
+/// module index and the offset into tls is known at static link time
 .Lt0: .word   x1(TLSGD) + (. - .L0 - 8)
 .Lt1: .word   x2(TLSGD) + (. - .L1 - 8)
 .Lt2: .word   x3(TLSGD) + (. - .L2 - 8)
@@ -64,9 +64,9 @@ x4:
  .space 4
 
 // CHECK: Contents of section .got:
-// CHECK-NEXT:  12140 01000000 00000000 01000000 04000000
-// CHECK-NEXT:  12150 01000000 08000000 01000000 0c000000
+// CHECK-NEXT:  30140 01000000 00000000 01000000 04000000
+// CHECK-NEXT:  30150 01000000 08000000 01000000 0c000000
 
 // CHECK-SHARED: Contents of section .got:
-// CHECK-SHARED-NEXT:  22a8 00000000 00000000 00000000 04000000
-// CHECK-SHARED-NEXT:  22b8 00000000 00000000 00000000 00000000
+// CHECK-SHARED-NEXT:  202a8 00000000 00000000 00000000 04000000
+// CHECK-SHARED-NEXT:  202b8 00000000 00000000 00000000 00000000

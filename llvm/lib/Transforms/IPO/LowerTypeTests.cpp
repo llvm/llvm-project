@@ -1712,8 +1712,8 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
 static bool isDirectCall(Use& U) {
   auto *Usr = dyn_cast<CallInst>(U.getUser());
   if (Usr) {
-    CallSite CS(Usr);
-    if (CS.isCallee(&U))
+    auto *CB = dyn_cast<CallBase>(Usr);
+    if (CB && CB->isCallee(&U))
       return true;
   }
   return false;

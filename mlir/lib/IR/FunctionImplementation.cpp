@@ -216,11 +216,12 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
       types.size() > 1 || types[0].isa<FunctionType>() || !attrs[0].empty();
   if (needsParens)
     os << '(';
-  interleaveComma(llvm::zip(types, attrs), os,
-                  [&](const std::tuple<Type, ArrayRef<NamedAttribute>> &t) {
-                    p.printType(std::get<0>(t));
-                    p.printOptionalAttrDict(std::get<1>(t));
-                  });
+  llvm::interleaveComma(
+      llvm::zip(types, attrs), os,
+      [&](const std::tuple<Type, ArrayRef<NamedAttribute>> &t) {
+        p.printType(std::get<0>(t));
+        p.printOptionalAttrDict(std::get<1>(t));
+      });
   if (needsParens)
     os << ')';
 }

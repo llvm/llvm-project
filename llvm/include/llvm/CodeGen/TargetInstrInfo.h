@@ -1310,11 +1310,9 @@ public:
   virtual bool isPredicated(const MachineInstr &MI) const { return false; }
 
   // Returns a MIRPrinter comment for this machine operand.
-  virtual std::string createMIROperandComment(const MachineInstr &MI,
-                                              const MachineOperand &Op,
-                                              unsigned OpIdx) const {
-    return std::string();
-  };
+  virtual std::string
+  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
+                          unsigned OpIdx, const TargetRegisterInfo *TRI) const;
 
   /// Returns true if the instruction is a
   /// terminator instruction that has not been predicated.

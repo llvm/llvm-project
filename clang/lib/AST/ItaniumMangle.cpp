@@ -658,8 +658,12 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
   else if (const IndirectFieldDecl *IFD =
                dyn_cast<IndirectFieldDecl>(GD.getDecl()))
     mangleName(IFD->getAnonField());
+  else if (const FieldDecl *FD = dyn_cast<FieldDecl>(GD.getDecl()))
+    mangleName(FD);
+  else if (const MSGuidDecl *GuidD = dyn_cast<MSGuidDecl>(GD.getDecl()))
+    mangleName(GuidD);
   else
-    mangleName(cast<FieldDecl>(GD.getDecl()));
+    llvm_unreachable("unexpected kind of global decl");
 }
 
 void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
@@ -1293,6 +1297,16 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
       break;
     }
 
+    if (auto *GD = dyn_cast<MSGuidDecl>(ND)) {
+      // We follow MSVC in mangling GUID declarations as if they were variables
+      // with a particular reserved name. Continue the pretense here.
+      SmallString<sizeof("_GUID_12345678_1234_1234_1234_1234567890ab")> GUID;
+      llvm::raw_svector_ostream GUIDOS(GUID);
+      Context.mangleMSGuidDecl(GD, GUIDOS);
+      Out << GUID.size() << GUID;
+      break;
+    }
+
     if (II) {
       // Match GCC's naming convention for internal linkage symbols, for
       // symbols that are not actually visible outside of this TU. GCC
@@ -1787,7 +1801,7 @@ static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
 
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   Mangler.mangleNumber(PLoc.getLine());
-  Out << "->";
+  Out << "_";
   Mangler.mangleNumber(PLoc.getColumn());
 
   while(Loc.isMacroID()) {
@@ -1796,9 +1810,9 @@ static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
       SLToPrint = SM.getImmediateExpansionRange(Loc).getBegin();
 
     PLoc = SM.getPresumedLoc(SM.getSpellingLoc(SLToPrint));
-    Out << "~";
+    Out << "m";
     Mangler.mangleNumber(PLoc.getLine());
-    Out << "->";
+    Out << "_";
     Mangler.mangleNumber(PLoc.getColumn());
 
     Loc = SM.getImmediateMacroCallerLoc(Loc);
@@ -2087,6 +2101,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Atomic:
   case Type::Pipe:
   case Type::MacroQualified:
+  case Type::ExtInt:
+  case Type::DependentExtInt:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -3543,6 +3559,28 @@ void CXXNameMangler::mangleType(const PipeType *T) {
   // A.1 Data types and A.3 Summary of changes
   // <type> ::= 8ocl_pipe
   Out << "8ocl_pipe";
+}
+
+void CXXNameMangler::mangleType(const ExtIntType *T) {
+  Out << "U7_ExtInt";
+  llvm::APSInt BW(32, true);
+  BW = T->getNumBits();
+  TemplateArgument TA(Context.getASTContext(), BW, getASTContext().IntTy);
+  mangleTemplateArgs(&TA, 1);
+  if (T->isUnsigned())
+    Out << "j";
+  else
+    Out << "i";
+}
+
+void CXXNameMangler::mangleType(const DependentExtIntType *T) {
+  Out << "U7_ExtInt";
+  TemplateArgument TA(T->getNumBitsExpr());
+  mangleTemplateArgs(&TA, 1);
+  if (T->isUnsigned())
+    Out << "j";
+  else
+    Out << "i";
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,

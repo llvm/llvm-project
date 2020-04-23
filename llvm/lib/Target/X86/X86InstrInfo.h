@@ -24,8 +24,6 @@
 #include "X86GenInstrInfo.inc"
 
 namespace llvm {
-class MachineInstrBuilder;
-class X86RegisterInfo;
 class X86Subtarget;
 
 namespace X86 {

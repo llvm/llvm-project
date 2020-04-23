@@ -847,7 +847,7 @@ defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
 // it. In other words, the register will not fix the clobbering of
 // RBX that will happen when setting the arguments for the instrucion.
 //
-// Unlike the actual related instuction, we mark that this one
+// Unlike the actual related instruction, we mark that this one
 // defines EBX (instead of using EBX).
 // The rationale is that we will define RBX during the expansion of
 // the pseudo. The argument feeding EBX is ebx_input.

@@ -111,7 +111,7 @@ def : Pattern<(FillOp:$op $_, $_),
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
-def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               [(VectorizeLinalgOp)],
               [(Constraint<And<[
                 HasLinalgTransformMarker<"VECTORIZE">,
@@ -122,7 +122,7 @@ def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.
 //===----------------------------------------------------------------------===//
-def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
               [(Constraint<And<[
                 HasNoLinalgTransformMarker,
@@ -130,7 +130,7 @@ def : Pat<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
                 PreconditionPermuteGenericLinalgOp<[1, 2, 0]>
               ]>>)]>;
 
-def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
+def : Pat<(IndexedGenericOp:$op $_, $_, $_, $_, $_, $_, $_),
               (PermuteGenericLinalgOp<[1, 2, 0], "PERMUTE"> $op),
               [(Constraint<And<[
                 HasNoLinalgTransformMarker,
@@ -147,6 +147,22 @@ def : Pat<(MatmulOp:$op $_, $_, $_),
               PreconditionPromoteSubviewsLinalgOp,
               HasOperandsOfType<"SubViewOp">,
               HasLinalgTransformMarker<"_promote_views_">]>>
+           )]>;
+
+def : Pat<(MatmulOp:$op $_, $_, $_),
+          (PromoteSelectedSubviewsLinalgOp<[0], "first_view_promotion">),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_first_view_">]>>
+           )]>;
+
+def : Pat<(FillOp:$op $_, $_),
+          (PromoteSelectedSubviewsLinalgOp<[0], "aligned_promotion", 32>),
+          [(Constraint<And<[
+              PreconditionPromoteSubviewsLinalgOp,
+              HasOperandsOfType<"SubViewOp">,
+              HasLinalgTransformMarker<"_promote_views_aligned_">]>>
            )]>;
 
 #endif // TEST_LINALG_TRANSFORMS_PATTERNS

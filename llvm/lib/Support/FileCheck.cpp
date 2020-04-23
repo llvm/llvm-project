@@ -25,6 +25,20 @@
 
 using namespace llvm;
 
+StringRef ExpressionFormat::toString() const {
+  switch (Value) {
+  case Kind::NoFormat:
+    return StringRef("<none>");
+  case Kind::Unsigned:
+    return StringRef("%u");
+  case Kind::HexUpper:
+    return StringRef("%X");
+  case Kind::HexLower:
+    return StringRef("%x");
+  }
+  llvm_unreachable("unknown expression format");
+}
+
 Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
   switch (Value) {
   case Kind::Unsigned:
@@ -71,7 +85,7 @@ Expected<uint64_t> NumericVariableUse::eval() const {
   if (Value)
     return *Value;
 
-  return make_error<UndefVarError>(Name);
+  return make_error<UndefVarError>(getExpressionStr());
 }
 
 Expected<uint64_t> BinaryOperation::eval() const {
@@ -92,18 +106,31 @@ Expected<uint64_t> BinaryOperation::eval() const {
   return EvalBinop(*LeftOp, *RightOp);
 }
 
-ExpressionFormat BinaryOperation::getImplicitFormat() const {
-  ExpressionFormat LeftFormat = LeftOperand->getImplicitFormat();
-  ExpressionFormat RightFormat = RightOperand->getImplicitFormat();
+Expected<ExpressionFormat>
+BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
+  Expected<ExpressionFormat> LeftFormat = LeftOperand->getImplicitFormat(SM);
+  Expected<ExpressionFormat> RightFormat = RightOperand->getImplicitFormat(SM);
+  if (!LeftFormat || !RightFormat) {
+    Error Err = Error::success();
+    if (!LeftFormat)
+      Err = joinErrors(std::move(Err), LeftFormat.takeError());
+    if (!RightFormat)
+      Err = joinErrors(std::move(Err), RightFormat.takeError());
+    return std::move(Err);
+  }
 
-  ExpressionFormat Format =
-      LeftFormat != ExpressionFormat::Kind::NoFormat ? LeftFormat : RightFormat;
-  if (LeftFormat != ExpressionFormat::Kind::NoFormat &&
-      RightFormat != ExpressionFormat::Kind::NoFormat &&
-      LeftFormat != RightFormat)
-    Format = ExpressionFormat(ExpressionFormat::Kind::Conflict);
+  if (*LeftFormat != ExpressionFormat::Kind::NoFormat &&
+      *RightFormat != ExpressionFormat::Kind::NoFormat &&
+      *LeftFormat != *RightFormat)
+    return ErrorDiagnostic::get(
+        SM, getExpressionStr(),
+        "implicit format conflict between '" + LeftOperand->getExpressionStr() +
+            "' (" + LeftFormat->toString() + ") and '" +
+            RightOperand->getExpressionStr() + "' (" + RightFormat->toString() +
+            "), need an explicit format specifier");
 
-  return Format;
+  return *LeftFormat != ExpressionFormat::Kind::NoFormat ? *LeftFormat
+                                                         : *RightFormat;
 }
 
 Expected<std::string> NumericSubstitution::getResult() const {
@@ -262,9 +289,12 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
 
   // Otherwise, parse it as a literal.
   uint64_t LiteralValue;
+  StringRef OperandExpr = Expr;
   if (!Expr.consumeInteger((AO == AllowedOperand::LegacyLiteral) ? 10 : 0,
-                           LiteralValue))
-    return std::make_unique<ExpressionLiteral>(LiteralValue);
+                           LiteralValue)) {
+    return std::make_unique<ExpressionLiteral>(
+        OperandExpr.drop_back(Expr.size()), LiteralValue);
+  }
 
   return ErrorDiagnostic::get(SM, Expr,
                               "invalid operand format '" + Expr + "'");
@@ -279,17 +309,18 @@ static uint64_t sub(uint64_t LeftOp, uint64_t RightOp) {
 }
 
 Expected<std::unique_ptr<ExpressionAST>>
-Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
+Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
+                    std::unique_ptr<ExpressionAST> LeftOp,
                     bool IsLegacyLineExpr, Optional<size_t> LineNumber,
                     FileCheckPatternContext *Context, const SourceMgr &SM) {
-  Expr = Expr.ltrim(SpaceChars);
-  if (Expr.empty())
+  RemainingExpr = RemainingExpr.ltrim(SpaceChars);
+  if (RemainingExpr.empty())
     return std::move(LeftOp);
 
   // Check if this is a supported operation and select a function to perform
   // it.
-  SMLoc OpLoc = SMLoc::getFromPointer(Expr.data());
-  char Operator = popFront(Expr);
+  SMLoc OpLoc = SMLoc::getFromPointer(RemainingExpr.data());
+  char Operator = popFront(RemainingExpr);
   binop_eval_t EvalBinop;
   switch (Operator) {
   case '+':
@@ -304,19 +335,20 @@ Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
   }
 
   // Parse right operand.
-  Expr = Expr.ltrim(SpaceChars);
-  if (Expr.empty())
-    return ErrorDiagnostic::get(SM, Expr, "missing operand in expression");
+  RemainingExpr = RemainingExpr.ltrim(SpaceChars);
+  if (RemainingExpr.empty())
+    return ErrorDiagnostic::get(SM, RemainingExpr,
+                                "missing operand in expression");
   // The second operand in a legacy @LINE expression is always a literal.
   AllowedOperand AO =
       IsLegacyLineExpr ? AllowedOperand::LegacyLiteral : AllowedOperand::Any;
   Expected<std::unique_ptr<ExpressionAST>> RightOpResult =
-      parseNumericOperand(Expr, AO, LineNumber, Context, SM);
+      parseNumericOperand(RemainingExpr, AO, LineNumber, Context, SM);
   if (!RightOpResult)
     return RightOpResult;
 
-  Expr = Expr.ltrim(SpaceChars);
-  return std::make_unique<BinaryOperation>(EvalBinop, std::move(LeftOp),
+  Expr = Expr.drop_back(RemainingExpr.size());
+  return std::make_unique<BinaryOperation>(Expr, EvalBinop, std::move(LeftOp),
                                            std::move(*RightOpResult));
 }
 
@@ -370,8 +402,9 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
-  StringRef UseExpr = Expr;
   if (!Expr.empty()) {
+    Expr = Expr.rtrim(SpaceChars);
+    StringRef OuterBinOpExpr = Expr;
     // The first operand in a legacy @LINE expression is always the @LINE
     // pseudo variable.
     AllowedOperand AO =
@@ -379,8 +412,8 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     Expected<std::unique_ptr<ExpressionAST>> ParseResult =
         parseNumericOperand(Expr, AO, LineNumber, Context, SM);
     while (ParseResult && !Expr.empty()) {
-      ParseResult = parseBinop(Expr, std::move(*ParseResult), IsLegacyLineExpr,
-                               LineNumber, Context, SM);
+      ParseResult = parseBinop(OuterBinOpExpr, Expr, std::move(*ParseResult),
+                               IsLegacyLineExpr, LineNumber, Context, SM);
       // Legacy @LINE expressions only allow 2 operands.
       if (ParseResult && IsLegacyLineExpr && !Expr.empty())
         return ErrorDiagnostic::get(
@@ -396,19 +429,17 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   // otherwise (ii) its implicit format, if any, otherwise (iii) the default
   // format (unsigned). Error out in case of conflicting implicit format
   // without explicit format.
-  ExpressionFormat Format,
-      ImplicitFormat = ExpressionASTPointer
-                           ? ExpressionASTPointer->getImplicitFormat()
-                           : ExpressionFormat(ExpressionFormat::Kind::NoFormat);
-  if (bool(ExplicitFormat))
+  ExpressionFormat Format;
+  if (ExplicitFormat)
     Format = ExplicitFormat;
-  else if (ImplicitFormat == ExpressionFormat::Kind::Conflict)
-    return ErrorDiagnostic::get(
-        SM, UseExpr,
-        "variables with conflicting format specifier: need an explicit one");
-  else if (bool(ImplicitFormat))
-    Format = ImplicitFormat;
-  else
+  else if (ExpressionASTPointer) {
+    Expected<ExpressionFormat> ImplicitFormat =
+        ExpressionASTPointer->getImplicitFormat(SM);
+    if (!ImplicitFormat)
+      return ImplicitFormat.takeError();
+    Format = *ImplicitFormat;
+  }
+  if (!Format)
     Format = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
 
   std::unique_ptr<Expression> ExpressionPointer =
@@ -1038,16 +1069,13 @@ FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
                              const Check::FileCheckType &CheckTy,
                              SMLoc CheckLoc, MatchType MatchTy,
                              SMRange InputRange)
-    : CheckTy(CheckTy), MatchTy(MatchTy) {
+    : CheckTy(CheckTy), CheckLoc(CheckLoc), MatchTy(MatchTy) {
   auto Start = SM.getLineAndColumn(InputRange.Start);
   auto End = SM.getLineAndColumn(InputRange.End);
   InputStartLine = Start.first;
   InputStartCol = Start.second;
   InputEndLine = End.first;
   InputEndCol = End.second;
-  Start = SM.getLineAndColumn(CheckLoc);
-  CheckLine = Start.first;
-  CheckCol = Start.second;
 }
 
 static bool IsPartOfWord(char c) {
@@ -1238,8 +1266,12 @@ FileCheck::FileCheck(FileCheckRequest Req)
 
 FileCheck::~FileCheck() = default;
 
-bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
-                              Regex &PrefixRE) {
+bool FileCheck::readCheckFile(
+    SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+    std::pair<unsigned, unsigned> *ImpPatBufferIDRange) {
+  if (ImpPatBufferIDRange)
+    ImpPatBufferIDRange->first = ImpPatBufferIDRange->second = 0;
+
   Error DefineError =
       PatternContext->defineCmdlineVariables(Req.GlobalDefines, SM);
   if (DefineError) {
@@ -1250,17 +1282,27 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
   PatternContext->createLineVariable();
 
   std::vector<Pattern> ImplicitNegativeChecks;
-  for (const auto &PatternString : Req.ImplicitCheckNot) {
+  for (StringRef PatternString : Req.ImplicitCheckNot) {
     // Create a buffer with fake command line content in order to display the
     // command line option responsible for the specific implicit CHECK-NOT.
     std::string Prefix = "-implicit-check-not='";
     std::string Suffix = "'";
     std::unique_ptr<MemoryBuffer> CmdLine = MemoryBuffer::getMemBufferCopy(
-        Prefix + PatternString + Suffix, "command line");
+        (Prefix + PatternString + Suffix).str(), "command line");
 
     StringRef PatternInBuffer =
         CmdLine->getBuffer().substr(Prefix.size(), PatternString.size());
-    SM.AddNewSourceBuffer(std::move(CmdLine), SMLoc());
+    unsigned BufferID = SM.AddNewSourceBuffer(std::move(CmdLine), SMLoc());
+    if (ImpPatBufferIDRange) {
+      if (ImpPatBufferIDRange->first == ImpPatBufferIDRange->second) {
+        ImpPatBufferIDRange->first = BufferID;
+        ImpPatBufferIDRange->second = BufferID + 1;
+      } else {
+        assert(BufferID == ImpPatBufferIDRange->second &&
+               "expected consecutive source buffer IDs");
+        ++ImpPatBufferIDRange->second;
+      }
+    }
 
     ImplicitNegativeChecks.push_back(
         Pattern(Check::CheckNot, PatternContext.get()));
@@ -1274,6 +1316,7 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
   // found.
   unsigned LineNumber = 1;
 
+  bool FoundUsedPrefix = false;
   while (1) {
     Check::FileCheckType CheckTy;
 
@@ -1284,6 +1327,8 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
         FindFirstMatchingPrefix(PrefixRE, Buffer, LineNumber, CheckTy);
     if (UsedPrefix.empty())
       break;
+    FoundUsedPrefix = true;
+
     assert(UsedPrefix.data() == Buffer.data() &&
            "Failed to move Buffer's start forward, or pointed prefix outside "
            "of the buffer!");
@@ -1367,29 +1412,28 @@ bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
     DagNotMatches = ImplicitNegativeChecks;
   }
 
-  // Add an EOF pattern for any trailing CHECK-DAG/-NOTs, and use the first
-  // prefix as a filler for the error message.
+  // When there are no used prefixes we report an error except in the case that
+  // no prefix is specified explicitly but -implicit-check-not is specified.
+  if (!FoundUsedPrefix &&
+      (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
+    errs() << "error: no check strings found with prefix"
+           << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
+    for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
+      if (I != 0)
+        errs() << ", ";
+      errs() << "\'" << Req.CheckPrefixes[I] << ":'";
+    }
+    errs() << '\n';
+    return true;
+  }
+
+  // Add an EOF pattern for any trailing --implicit-check-not/CHECK-DAG/-NOTs,
+  // and use the first prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
     CheckStrings->emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
         *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
     std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
-  }
-
-  if (CheckStrings->empty()) {
-    errs() << "error: no check strings found with prefix"
-           << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
-    auto I = Req.CheckPrefixes.begin();
-    auto E = Req.CheckPrefixes.end();
-    if (I != E) {
-      errs() << "\'" << *I << ":'";
-      ++I;
-    }
-    for (; I != E; ++I)
-      errs() << ", \'" << *I << ":'";
-
-    errs() << '\n';
-    return true;
   }
 
   return false;
@@ -1841,7 +1885,7 @@ bool FileCheck::ValidateCheckPrefixes() {
 
   for (StringRef Prefix : Req.CheckPrefixes) {
     // Reject empty prefixes.
-    if (Prefix == "")
+    if (Prefix.empty())
       return false;
 
     if (!PrefixSet.insert(Prefix).second)
@@ -1857,24 +1901,25 @@ bool FileCheck::ValidateCheckPrefixes() {
 Regex FileCheck::buildCheckPrefixRegex() {
   // I don't think there's a way to specify an initial value for cl::list,
   // so if nothing was specified, add the default
-  if (Req.CheckPrefixes.empty())
+  if (Req.CheckPrefixes.empty()) {
     Req.CheckPrefixes.push_back("CHECK");
+    Req.IsDefaultCheckPrefix = true;
+  }
 
   // We already validated the contents of CheckPrefixes so just concatenate
   // them as alternatives.
   SmallString<32> PrefixRegexStr;
-  for (StringRef Prefix : Req.CheckPrefixes) {
-    if (Prefix != Req.CheckPrefixes.front())
+  for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
+    if (I != 0)
       PrefixRegexStr.push_back('|');
-
-    PrefixRegexStr.append(Prefix);
+    PrefixRegexStr.append(Req.CheckPrefixes[I]);
   }
 
   return Regex(PrefixRegexStr);
 }
 
 Error FileCheckPatternContext::defineCmdlineVariables(
-    std::vector<std::string> &CmdlineDefines, SourceMgr &SM) {
+    ArrayRef<StringRef> CmdlineDefines, SourceMgr &SM) {
   assert(GlobalVariableTable.empty() && GlobalNumericVariableTable.empty() &&
          "Overriding defined variable with command-line variable definitions");
 

@@ -883,7 +883,7 @@ function(add_llvm_pass_plugin name)
     list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
     # process_llvm_pass_plugins takes care of the actual linking, just create an
     # object library as of now
-    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_component_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
     target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
     set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
     if (TARGET intrinsics_gen)
@@ -942,17 +942,18 @@ function(process_llvm_pass_plugins)
           DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
           COMPONENT cmake-exports)
 
-      file(WRITE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
+      set(ExtensionDef "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
+      file(WRITE "${ExtensionDef}.tmp" "//extension handlers\n")
       foreach(llvm_extension ${LLVM_STATIC_EXTENSIONS})
-        file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension})\n")
+          file(APPEND "${ExtensionDef}.tmp" "HANDLE_EXTENSION(${llvm_extension})\n")
       endforeach()
-      file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
+      file(APPEND "${ExtensionDef}.tmp" "#undef HANDLE_EXTENSION\n")
 
       # only replace if there's an actual change
       execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp"
-        "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
-      file(REMOVE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+          "${ExtensionDef}.tmp"
+          "${ExtensionDef}")
+      file(REMOVE "${ExtensionDef}.tmp")
   endif()
 endfunction()
 

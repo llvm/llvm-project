@@ -8,7 +8,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -20,7 +20,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
 
@@ -30,17 +29,16 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
 using edsc::op::operator+;
-using edsc::op::operator==;
-using mlir::edsc::intrinsics::detail::ValueHandleArray;
 
-static SmallVector<ValueHandle, 8>
-makeCanonicalAffineApplies(OpBuilder &b, Location loc, AffineMap map,
-                           ArrayRef<Value> vals) {
+static SmallVector<Value, 8> makeCanonicalAffineApplies(OpBuilder &b,
+                                                        Location loc,
+                                                        AffineMap map,
+                                                        ArrayRef<Value> vals) {
   if (map.isEmpty())
     return {};
   assert(map.getNumSymbols() == 0);
   assert(map.getNumInputs() == vals.size());
-  SmallVector<ValueHandle, 8> res;
+  SmallVector<Value, 8> res;
   res.reserve(map.getNumResults());
   auto dims = map.getNumDims();
   for (auto e : map.getResults()) {
@@ -81,10 +79,10 @@ SmallVector<Value, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 }
 
 template <typename OpType>
-static void inlineRegionAndEmitStdStore(OpType op,
-                                        ArrayRef<Value> indexedValues,
-                                        ArrayRef<ValueHandleArray> indexing,
-                                        ArrayRef<Value> outputBuffers) {
+static void
+inlineRegionAndEmitStdStore(OpType op, ArrayRef<Value> indexedValues,
+                            ArrayRef<SmallVector<Value, 8>> indexing,
+                            ArrayRef<Value> outputBuffers) {
   auto &b = ScopedContext::getBuilder();
   auto &block = op.region().front();
   BlockAndValueMapping map;
@@ -100,30 +98,46 @@ static void inlineRegionAndEmitStdStore(OpType op,
          "expected an yield op in the end of the region");
   for (unsigned i = 0, e = terminator.getNumOperands(); i < e; ++i) {
     std_store(map.lookupOrDefault(terminator.getOperand(i)), outputBuffers[i],
-              indexing[i]);
+              ArrayRef<Value>{indexing[i].begin(), indexing[i].end()});
   }
 }
 
 // Returns a pair that contains input indices and output indices of a
 // SingleInputPoolingOp `op`.
+struct InputAndOutputIndices {
+  SmallVector<Value, 8> inputs;
+  SmallVector<Value, 8> outputs;
+};
 template <typename SingleInputPoolingOp>
-static std::pair<SmallVector<ValueHandle, 8>, SmallVector<ValueHandle, 8>>
-getInputAndOutputIndices(ArrayRef<Value> allIvs, SingleInputPoolingOp op) {
+static InputAndOutputIndices getInputAndOutputIndices(ArrayRef<Value> allIvs,
+                                                      SingleInputPoolingOp op) {
   auto &b = ScopedContext::getBuilder();
   auto loc = ScopedContext::getLocation();
   auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  SmallVector<ValueHandle, 8> iIdx(
-      makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
-  SmallVector<ValueHandle, 8> oIdx(
-      makeCanonicalAffineApplies(b, loc, maps[2], allIvs));
-  return {iIdx, oIdx};
+  return InputAndOutputIndices{
+      makeCanonicalAffineApplies(b, loc, maps[0], allIvs),
+      makeCanonicalAffineApplies(b, loc, maps[2], allIvs)};
 }
 
 namespace {
+
+// Generic loop emitter, to be specialized on an op-per op basis.
+// TODO: Hook up to named ops interface and, later, retire when all named ops
+// are auto-generated.
 template <typename IndexedValueType, typename LinalgOpType>
-class LinalgScopedEmitter {};
+class LinalgScopedEmitter {
+public:
+  static void emitScalarImplementation(ArrayRef<Value> allIvs,
+                                       LinalgOpType linalgOp) {
+    assert(linalgOp.hasBufferSemantics() &&
+           "expected linalg op with buffer semantics");
+    llvm_unreachable("NYI");
+    linalgOp.emitScalarImplementation()(ScopedContext::getBuilder(),
+                                        ScopedContext::getLocation(), allIvs);
+  }
+};
 
 template <typename IndexedValueType>
 class LinalgScopedEmitter<IndexedValueType, CopyOp> {
@@ -137,8 +151,8 @@ public:
         permuteIvs(allIvs.take_front(nPar), copyOp.inputPermutation());
     auto outputIvs =
         permuteIvs(allIvs.take_front(nPar), copyOp.outputPermutation());
-    SmallVector<ValueHandle, 8> iivs(inputIvs.begin(), inputIvs.end());
-    SmallVector<ValueHandle, 8> oivs(outputIvs.begin(), outputIvs.end());
+    SmallVector<Value, 8> iivs(inputIvs.begin(), inputIvs.end());
+    SmallVector<Value, 8> oivs(outputIvs.begin(), outputIvs.end());
     IndexedValueType O(copyOp.getOutputBuffer(0)), I(copyOp.getInput(0));
     // Emit the proper scalar assignment, whether we are dealing with a 0-D or
     // an n-D loop nest; with or without permutations.
@@ -157,13 +171,11 @@ public:
            "expected linalg op with buffer semantics");
     auto nPar = fillOp.getNumParallelLoops();
     assert(nPar == allIvs.size());
-    auto ivs =
-        SmallVector<ValueHandle, 4>(allIvs.begin(), allIvs.begin() + nPar);
+    auto ivs = SmallVector<Value, 4>(allIvs.begin(), allIvs.begin() + nPar);
     IndexedValueType O(fillOp.getOutputBuffer(0));
     // Emit the proper scalar assignment, whether we are dealing with a 0-D or
     // an n-D loop nest; with or without permutations.
-    nPar > 0 ? O(ivs) = ValueHandle(fillOp.value())
-             : O() = ValueHandle(fillOp.value());
+    nPar > 0 ? O(ivs) = fillOp.value() : O() = fillOp.value();
   }
 };
 
@@ -174,7 +186,7 @@ public:
     assert(dotOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 1);
-    ValueHandle r_i(allIvs[0]);
+    Value r_i(allIvs[0]);
     IndexedValueType A(dotOp.getInput(0)), B(dotOp.getInput(1)),
         C(dotOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -190,7 +202,7 @@ public:
     assert(matvecOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 2);
-    ValueHandle i(allIvs[0]), r_j(allIvs[1]);
+    Value i(allIvs[0]), r_j(allIvs[1]);
     IndexedValueType A(matvecOp.getInput(0)), B(matvecOp.getInput(1)),
         C(matvecOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -206,7 +218,7 @@ public:
     assert(matmulOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 3);
-    ValueHandle i(allIvs[0]), j(allIvs[1]), r_k(allIvs[2]);
+    Value i(allIvs[0]), j(allIvs[1]), r_k(allIvs[2]);
     IndexedValueType A(matmulOp.getInput(0)), B(matmulOp.getInput(1)),
         C(matmulOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -219,16 +231,16 @@ class LinalgScopedEmitter<IndexedValueType, ConvOp> {
 public:
   /// Returns the input value of convOp. If the indices in `imIdx` is out of
   /// boundary, returns 0 instead.
-  static ValueHandle getConvOpInput(ConvOp convOp, IndexedValueType im,
-                                    ArrayRef<ValueHandle> imIdx) {
+  static Value getConvOpInput(ConvOp convOp, IndexedValueType im,
+                              MutableArrayRef<Value> imIdx) {
     // TODO(ntv): add a level of indirection to linalg.generic.
     if (!convOp.padding())
       return im(imIdx);
 
     auto *context = ScopedContext::getContext();
-    ValueHandle zeroIndex = std_constant_index(0);
-    SmallVector<ValueHandle, 8> conds;
-    SmallVector<ValueHandle, 8> clampedImIdx;
+    Value zeroIndex = std_constant_index(0);
+    SmallVector<Value, 8> conds;
+    SmallVector<Value, 8> clampedImIdx;
     for (auto iter : llvm::enumerate(imIdx)) {
       int idx = iter.index();
       auto dim = iter.value();
@@ -241,29 +253,30 @@ public:
       using edsc::op::operator<;
       using edsc::op::operator>=;
       using edsc::op::operator||;
-      ValueHandle leftOutOfBound = dim < zeroIndex;
+      Value leftOutOfBound = dim < zeroIndex;
       if (conds.empty())
         conds.push_back(leftOutOfBound);
       else
         conds.push_back(conds.back() || leftOutOfBound);
-      ValueHandle rightBound = std_dim(convOp.input(), idx);
+      Value rightBound = std_dim(convOp.input(), idx);
       conds.push_back(conds.back() || (dim >= rightBound));
 
       // When padding is involved, the indices will only be shifted to negative,
       // so having a max op is enough.
       auto maxMap = AffineMap::get(/*dimCount=*/1, 0,
                                    {getAffineDimExpr(/*position=*/0, context),
-                                    getAffineConstantExpr(0, context)});
+                                    getAffineConstantExpr(0, context)},
+                                   context);
       clampedImIdx.push_back(
           affine_max(dim.getType(), maxMap, ValueRange{dim}));
     }
 
     auto b = ScopedContext::getBuilder();
     Type type = convOp.input().getType().cast<MemRefType>().getElementType();
-    ValueHandle zero = std_constant(type, b.getZeroAttr(type));
-    ValueHandle readInput = im(clampedImIdx);
+    Value zero = std_constant(type, b.getZeroAttr(type));
+    Value readInput = im(clampedImIdx);
     return conds.empty() ? readInput
-                         : std_select(conds.back(), zero, readInput);
+                         : (Value)std_select(conds.back(), zero, readInput);
   }
 
   static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
@@ -274,16 +287,16 @@ public:
     auto mapsRange = convOp.indexing_maps().getAsRange<AffineMapAttr>();
     auto maps = llvm::to_vector<8>(llvm::map_range(
         mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-    SmallVector<ValueHandle, 8> fIdx(
+    SmallVector<Value, 8> fIdx(
         makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
-    SmallVector<ValueHandle, 8> imIdx(
+    SmallVector<Value, 8> imIdx(
         makeCanonicalAffineApplies(b, loc, maps[1], allIvs));
-    SmallVector<ValueHandle, 8> oIdx(
+    SmallVector<Value, 8> oIdx(
         makeCanonicalAffineApplies(b, loc, maps[2], allIvs));
     IndexedValueType F(convOp.filter()), I(convOp.input()), O(convOp.output());
 
     // Emit scalar form.
-    ValueHandle paddedInput = getConvOpInput(convOp, I, imIdx);
+    Value paddedInput = getConvOpInput(convOp, I, imIdx);
     O(oIdx) += F(fIdx) * paddedInput;
   }
 };
@@ -294,15 +307,12 @@ public:
   static void emitScalarImplementation(ArrayRef<Value> allIvs,
                                        PoolingMaxOp op) {
     auto indices = getInputAndOutputIndices(allIvs, op);
-    ValueHandleArray iIdx(indices.first);
-    ValueHandleArray oIdx(indices.second);
-
     // Emit scalar form.
-    ValueHandle lhs = std_load(op.output(), oIdx);
-    ValueHandle rhs = std_load(op.input(), iIdx);
+    Value lhs = std_load(op.output(), indices.outputs);
+    Value rhs = std_load(op.input(), indices.inputs);
     using edsc::op::operator>;
-    ValueHandle maxValue = std_select(lhs > rhs, lhs, rhs);
-    std_store(maxValue, op.output(), oIdx);
+    Value maxValue = std_select(lhs > rhs, lhs, rhs);
+    std_store(maxValue, op.output(), indices.outputs);
   }
 };
 
@@ -312,15 +322,12 @@ public:
   static void emitScalarImplementation(ArrayRef<Value> allIvs,
                                        PoolingMinOp op) {
     auto indices = getInputAndOutputIndices(allIvs, op);
-    ValueHandleArray iIdx(indices.first);
-    ValueHandleArray oIdx(indices.second);
-
     // Emit scalar form.
-    ValueHandle lhs = std_load(op.output(), oIdx);
-    ValueHandle rhs = std_load(op.input(), iIdx);
+    Value lhs = std_load(op.output(), indices.outputs);
+    Value rhs = std_load(op.input(), indices.inputs);
     using edsc::op::operator<;
-    ValueHandle minValue = std_select(lhs < rhs, lhs, rhs);
-    std_store(minValue, op.output(), oIdx);
+    Value minValue = std_select(lhs < rhs, lhs, rhs);
+    std_store(minValue, op.output(), indices.outputs);
   }
 };
 
@@ -330,12 +337,10 @@ public:
   static void emitScalarImplementation(ArrayRef<Value> allIvs,
                                        PoolingSumOp op) {
     auto indices = getInputAndOutputIndices(allIvs, op);
-    SmallVector<ValueHandle, 8> iIdx = indices.first;
-    SmallVector<ValueHandle, 8> oIdx = indices.second;
     IndexedValueType input(op.input()), output(op.output());
 
     // Emit scalar form.
-    output(oIdx) += input(iIdx);
+    output(indices.outputs) += input(indices.inputs);
   }
 };
 
@@ -378,15 +383,14 @@ public:
            "expected linalg op with buffer semantics");
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
-    using edsc::intrinsics::detail::ValueHandleArray;
     unsigned nInputs = genericOp.getNumInputs();
     unsigned nOutputs = genericOp.getNumOutputs();
     SmallVector<Value, 4> indexedValues(nInputs + nOutputs);
 
     // 1.a. Emit std_load from input views.
     for (unsigned i = 0; i < nInputs; ++i) {
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, genericOp.getInputIndexingMap(i), allIvs));
+      auto indexing = makeCanonicalAffineApplies(
+          b, loc, genericOp.getInputIndexingMap(i), allIvs);
       indexedValues[i] = std_load(genericOp.getInput(i), indexing);
     }
 
@@ -395,33 +399,18 @@ public:
     // region has no uses.
     for (unsigned i = 0; i < nOutputs; ++i) {
       Value output = genericOp.getOutputBuffer(i);
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, genericOp.getOutputIndexingMap(i), allIvs));
+      auto indexing = makeCanonicalAffineApplies(
+          b, loc, genericOp.getOutputIndexingMap(i), allIvs);
       indexedValues[nInputs + i] = std_load(output, indexing);
     }
 
-    auto funcOp = genericOp.getFunction();
-    if (funcOp) {
-      // 2. Emit call.
-      Operation *callOp = std_call(funcOp, indexedValues);
-      assert(callOp->getNumResults() == genericOp.getNumOutputs());
-
-      // 3. Emit std_store.
-      for (unsigned i = 0; i < nOutputs; ++i) {
-        Value output = genericOp.getOutputBuffer(i);
-        ValueHandleArray indexing(makeCanonicalAffineApplies(
-            b, loc, genericOp.getOutputIndexingMap(i), allIvs));
-        std_store(callOp->getResult(i), output, indexing);
-      }
-      return;
-    }
     // TODO(ntv): When a region inliner exists, use it.
     // 2. Inline region, currently only works for a single basic block.
     // 3. Emit std_store.
-    SmallVector<ValueHandleArray, 8> indexing;
+    SmallVector<SmallVector<Value, 8>, 8> indexing;
     SmallVector<Value, 8> outputBuffers;
     for (unsigned i = 0; i < nOutputs; ++i) {
-      indexing.emplace_back(makeCanonicalAffineApplies(
+      indexing.push_back(makeCanonicalAffineApplies(
           b, loc, genericOp.getOutputIndexingMap(i), allIvs));
       outputBuffers.push_back(genericOp.getOutputBuffer(i));
     }
@@ -469,7 +458,6 @@ public:
            "expected linalg op with buffer semantics");
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
-    using edsc::intrinsics::detail::ValueHandleArray;
     unsigned nInputs = indexedGenericOp.getNumInputs();
     unsigned nOutputs = indexedGenericOp.getNumOutputs();
     unsigned nLoops = allIvs.size();
@@ -482,40 +470,26 @@ public:
     // 1.a. Emit std_load from input views.
     for (unsigned i = 0; i < nInputs; ++i) {
       Value input = indexedGenericOp.getInput(i);
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, indexedGenericOp.getInputIndexingMap(i), allIvs));
+      auto indexing = makeCanonicalAffineApplies(
+          b, loc, indexedGenericOp.getInputIndexingMap(i), allIvs);
       indexedValues[nLoops + i] = std_load(input, indexing);
     }
 
     // 1.b. Emit std_load from output views.
     for (unsigned i = 0; i < nOutputs; ++i) {
       Value output = indexedGenericOp.getOutputBuffer(i);
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs));
+      auto indexing = makeCanonicalAffineApplies(
+          b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs);
       indexedValues[nLoops + nInputs + i] = std_load(output, indexing);
     }
 
-    if (auto funcOp = indexedGenericOp.getFunction()) {
-      // 2. Emit call.
-      Operation *callOp = std_call(funcOp, indexedValues);
-      assert(callOp->getNumResults() == indexedGenericOp.getNumOutputs());
-
-      // 3. Emit std_store.
-      for (unsigned i = 0; i < nOutputs; ++i) {
-        Value output = indexedGenericOp.getOutputBuffer(i);
-        ValueHandleArray indexing(makeCanonicalAffineApplies(
-            b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs));
-        std_store(callOp->getResult(i), output, indexing);
-      }
-      return;
-    }
     // TODO(ntv): When a region inliner exists, use it.
     // 2. Inline region, currently only works for a single basic block.
     // 3. Emit std_store.
-    SmallVector<ValueHandleArray, 8> indexing;
+    SmallVector<SmallVector<Value, 8>, 8> indexing;
     SmallVector<Value, 8> outputBuffers;
     for (unsigned i = 0; i < nOutputs; ++i) {
-      indexing.emplace_back(makeCanonicalAffineApplies(
+      indexing.push_back(makeCanonicalAffineApplies(
           b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs));
       outputBuffers.push_back(indexedGenericOp.getOutputBuffer(i));
     }
@@ -548,11 +522,8 @@ public:
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineIndexedValue, StdIndexedValue>::type;
   static void doit(ConcreteOpTy linalgOp, ArrayRef<Value> loopRanges,
-                   MutableArrayRef<ValueHandle> allIvs) {
-    SmallVector<ValueHandle *, 4> allPIvs =
-        makeHandlePointers(MutableArrayRef<ValueHandle>(allIvs));
-
-    GenericLoopNestRangeBuilder<LoopTy>(allPIvs, loopRanges)([&] {
+                   MutableArrayRef<Value> allIvs) {
+    GenericLoopNestRangeBuilder<LoopTy>(allIvs, loopRanges)([&] {
       SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
       LinalgScopedEmitter<IndexedValueTy,
                           ConcreteOpTy>::emitScalarImplementation(allIvValues,
@@ -570,7 +541,7 @@ public:
   using IndexedValueTy = StdIndexedValue;
 
   static void doit(ConcreteOpTy linalgOp, ArrayRef<Value> loopRanges,
-                   MutableArrayRef<ValueHandle> allIvs) {
+                   MutableArrayRef<Value> allIvs) {
     // Only generate loop.parallel for outer consecutive "parallel"
     // iterator_types.
     // TODO(ravishankarm): Generate loop.parallel for all "parallel" iterator
@@ -590,24 +561,18 @@ public:
     // If there are no outer parallel loops, then number of loop ops is same as
     // the number of loops, and they are all loop.for ops.
     auto nLoopOps = (nOuterPar ? nLoops - nOuterPar + 1 : nLoops);
-    SmallVector<ValueHandle *, 4> allPIvs =
-        makeHandlePointers(MutableArrayRef<ValueHandle>(allIvs));
-
     SmallVector<OperationHandle, 4> allLoops(nLoopOps, OperationHandle());
     SmallVector<OperationHandle *, 4> allPLoops;
     allPLoops.reserve(allLoops.size());
     for (OperationHandle &loop : allLoops)
       allPLoops.push_back(&loop);
-
-    ArrayRef<ValueHandle *> allPIvsRef(allPIvs);
     ArrayRef<OperationHandle *> allPLoopsRef(allPLoops);
 
     if (nOuterPar) {
       GenericLoopNestRangeBuilder<loop::ParallelOp>(
-          allPIvsRef.take_front(nOuterPar),
-          loopRanges.take_front(nOuterPar))([&] {
+          allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar))([&] {
         GenericLoopNestRangeBuilder<loop::ForOp>(
-            allPIvsRef.drop_front(nOuterPar),
+            allIvs.drop_front(nOuterPar),
             loopRanges.drop_front(nOuterPar))([&] {
           SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
           LinalgScopedEmitter<StdIndexedValue, ConcreteOpTy>::
@@ -617,7 +582,7 @@ public:
     } else {
       // If there are no parallel loops then fallback to generating all loop.for
       // operations.
-      GenericLoopNestRangeBuilder<loop::ForOp>(allPIvsRef, loopRanges)([&] {
+      GenericLoopNestRangeBuilder<loop::ForOp>(allIvs, loopRanges)([&] {
         SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
         LinalgScopedEmitter<StdIndexedValue,
                             ConcreteOpTy>::emitScalarImplementation(allIvValues,
@@ -652,14 +617,15 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   AffineMap invertedMap = inversePermutation(concatAffineMaps(maps));
+  if (!invertedMap)
+    return {};
   if (invertedMap.isEmpty()) {
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(
         {}, linalgOp);
     return LinalgLoops();
   }
 
-  SmallVector<ValueHandle, 4> allIvs(nLoops,
-                                     ValueHandle(rewriter.getIndexType()));
+  SmallVector<Value, 4> allIvs(nLoops);
   auto loopRanges =
       emitLoopRanges(scope.getBuilder(), scope.getLocation(), invertedMap,
                      getViewSizes(rewriter, linalgOp));
@@ -668,12 +634,12 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and loop.parallel have multiple ivs.
   llvm::SetVector<Operation *> loopSet;
-  for (ValueHandle &iv : allIvs) {
-    if (!iv.hasValue())
+  for (Value iv : allIvs) {
+    if (!iv)
       return {};
     // The induction variable is a block argument of the entry block of the
     // loop operation.
-    BlockArgument ivVal = iv.getValue().dyn_cast<BlockArgument>();
+    BlockArgument ivVal = iv.dyn_cast<BlockArgument>();
     if (!ivVal)
       return {};
     loopSet.insert(ivVal.getOwner()->getParentOp());

@@ -148,7 +148,7 @@ public:
     return {use_begin(value), use_end(value)};
   }
   bool hasOneUse(ValueType value) const {
-    return mlir::has_single_element(getUses(value));
+    return llvm::hasSingleElement(getUses(value));
   }
   bool use_empty(ValueType value) const {
     return use_begin(value) == use_end(value);

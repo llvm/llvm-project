@@ -155,10 +155,8 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
   if (ProcDesc.empty() || ProcFeatures.empty())
     return FeatureBitset();
 
-  assert(std::is_sorted(std::begin(ProcDesc), std::end(ProcDesc)) &&
-         "CPU table is not sorted");
-  assert(std::is_sorted(std::begin(ProcFeatures), std::end(ProcFeatures)) &&
-         "CPU features table is not sorted");
+  assert(llvm::is_sorted(ProcDesc) && "CPU table is not sorted");
+  assert(llvm::is_sorted(ProcFeatures) && "CPU features table is not sorted");
   // Resulting bits
   FeatureBitset Bits;
 
@@ -290,7 +288,7 @@ bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
 }
 
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
-  assert(std::is_sorted(ProcDesc.begin(), ProcDesc.end()) &&
+  assert(llvm::is_sorted(ProcDesc) &&
          "Processor machine model table is not sorted");
 
   // Find entry

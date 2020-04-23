@@ -1937,9 +1937,8 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
     return nullptr;
 
   unsigned NumElts = cast<VectorType>(CondVal->getType())->getNumElements();
-  SmallVector<Constant *, 16> Mask;
+  SmallVector<int, 16> Mask;
   Mask.reserve(NumElts);
-  Type *Int32Ty = Type::getInt32Ty(CondVal->getContext());
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *Elt = CondC->getAggregateElement(i);
     if (!Elt)
@@ -1947,10 +1946,10 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
 
     if (Elt->isOneValue()) {
       // If the select condition element is true, choose from the 1st vector.
-      Mask.push_back(ConstantInt::get(Int32Ty, i));
+      Mask.push_back(i);
     } else if (Elt->isNullValue()) {
       // If the select condition element is false, choose from the 2nd vector.
-      Mask.push_back(ConstantInt::get(Int32Ty, i + NumElts));
+      Mask.push_back(i + NumElts);
     } else if (isa<UndefValue>(Elt)) {
       // Undef in a select condition (choose one of the operands) does not mean
       // the same thing as undef in a shuffle mask (any value is acceptable), so
@@ -1962,8 +1961,7 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
     }
   }
 
-  return new ShuffleVectorInst(SI.getTrueValue(), SI.getFalseValue(),
-                               ConstantVector::get(Mask));
+  return new ShuffleVectorInst(SI.getTrueValue(), SI.getFalseValue(), Mask);
 }
 
 /// If we have a select of vectors with a scalar condition, try to convert that

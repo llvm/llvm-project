@@ -139,7 +139,7 @@ DominanceInfoNode *DominanceInfoBase<IsPostDom>::getNode(Block *a) {
 
 /// Return true if the specified block A properly dominates block B.
 template <bool IsPostDom>
-bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) {
+bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   // A block dominates itself but does not properly dominate itself.
   if (a == b)
     return false;
@@ -184,7 +184,7 @@ template class mlir::detail::DominanceInfoBase</*IsPostDom=*/false>;
 //===----------------------------------------------------------------------===//
 
 /// Return true if operation A properly dominates operation B.
-bool DominanceInfo::properlyDominates(Operation *a, Operation *b) {
+bool DominanceInfo::properlyDominates(Operation *a, Operation *b) const {
   auto *aBlock = a->getBlock(), *bBlock = b->getBlock();
 
   // If a or b are not within a block, then a does not dominate b.
@@ -208,7 +208,7 @@ bool DominanceInfo::properlyDominates(Operation *a, Operation *b) {
 }
 
 /// Return true if value A properly dominates operation B.
-bool DominanceInfo::properlyDominates(Value a, Operation *b) {
+bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
   if (auto *aOp = a.getDefiningOp()) {
     // The values defined by an operation do *not* dominate any nested
     // operations.

@@ -71,8 +71,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // Name                      Offset (bits) Size (bits)     Flags
       {"fixup_arm_ldst_pcrel_12", 0, 32, IsPCRelConstant},
       {"fixup_t2_ldst_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_10_unscaled", 0, 32, IsPCRelConstant},
       {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
       {"fixup_t2_pcrel_10", 0, 32,
@@ -82,12 +81,10 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_t2_pcrel_9", 0, 32,
        IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_thumb_adr_pcrel_10", 0, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_condbranch", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_uncondbranch", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -119,7 +116,8 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_bfcsel_else_target", 0, 32, 0},
       {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}};
+      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
+  };
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
@@ -328,9 +326,8 @@ bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
   return reasonForFixupRelaxation(Fixup, Value);
 }
 
-void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI,
-                                     MCInst &Res) const {
+void ARMAsmBackend::relaxInstruction(MCInst &Inst,
+                                     const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
 
   // Sanity check w/ diagnostic if we get here w/ a bogus instruction.
@@ -346,17 +343,18 @@ void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
   // have to change the operands too.
   if ((Inst.getOpcode() == ARM::tCBZ || Inst.getOpcode() == ARM::tCBNZ) &&
       RelaxedOp == ARM::tHINT) {
+    MCInst Res;
     Res.setOpcode(RelaxedOp);
     Res.addOperand(MCOperand::createImm(0));
     Res.addOperand(MCOperand::createImm(14));
     Res.addOperand(MCOperand::createReg(0));
+    Inst = std::move(Res);
     return;
   }
 
   // The rest of instructions we're relaxing have the same operands.
   // We just need to update to the proper opcode.
-  Res = Inst;
-  Res.setOpcode(RelaxedOp);
+  Inst.setOpcode(RelaxedOp);
 }
 
 bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {

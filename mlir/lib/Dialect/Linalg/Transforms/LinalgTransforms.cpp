@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
@@ -219,10 +220,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
 
 SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
                                                       Operation *op) {
-  using vector_contract = edsc::intrinsics::ValueBuilder<vector::ContractionOp>;
-  using vector_broadcast = edsc::intrinsics::ValueBuilder<vector::BroadcastOp>;
-  using vector_type_cast = edsc::intrinsics::ValueBuilder<vector::TypeCastOp>;
-
   assert(succeeded(vectorizeLinalgOpPrecondition(op)) &&
          "DRR failure case must be a precondition");
   auto linalgOp = cast<linalg::LinalgOp>(op);
@@ -242,8 +239,8 @@ SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
                          "]: Rewrite linalg.fill as vector.broadcast: "
                       << *op << ":\n");
     auto dstMemrefVec = vector_type_cast(fillOp.getOutputBuffer(0));
-    auto dstVec = std_load(dstMemrefVec);
-    auto resVec = vector_broadcast(dstVec, fillOp.value());
+    Value dstVec = std_load(dstMemrefVec);
+    auto resVec = vector_broadcast(dstVec.getType(), fillOp.value());
     std_store(resVec, dstMemrefVec);
   } else {
     // Vectorize other ops as vector contraction (currently only matmul).
@@ -291,11 +288,13 @@ mlir::linalg::permuteGenericLinalgOp(PatternRewriter &rewriter, Operation *op,
   auto linOp = cast<LinalgOp>(op);
   auto permutationMap = inversePermutation(
       AffineMap::getPermutationMap(permutation, rewriter.getContext()));
+  assert(permutationMap && "expected permutation to be invertible");
   SmallVector<AffineMap, 4> newIndexingMap;
   auto indexingMaps = linOp.indexing_maps().getValue();
   for (unsigned i = 0, e = linOp.getNumInputsAndOutputs(); i != e; ++i) {
-    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue().compose(
-        permutationMap);
+    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue();
+    if (!permutationMap.isEmpty())
+      m = m.compose(permutationMap);
     newIndexingMap.push_back(m);
   }
   auto itTypes = linOp.iterator_types().getValue();
@@ -336,6 +335,25 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
   assert(succeeded(promoteSubviewsLinalgOpPrecondition(op)) &&
          "DRR failure case must be a precondition");
 
+  LinalgOp linOp = cast<LinalgOp>(op);
+  SmallVector<int64_t, 4> toPromote;
+  int64_t nBuffers = linOp.getNumInputsAndOutputBuffers();
+  toPromote.reserve(nBuffers);
+  for (int64_t i = 0; i < nBuffers; ++i)
+    toPromote.push_back(i);
+  return promoteSelectedSubviewsLinalgOpAndSetMarker(rewriter, op, toPromote);
+}
+
+SmallVector<Value, 0> mlir::linalg::promoteSelectedSubviewsLinalgOpAndSetMarker(
+    PatternRewriter &rewriter, Operation *op,
+    ArrayRef<int64_t> operandIndicesToPromote, StringRef linalgMarker,
+    int64_t alignment) {
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: Promote subviews for linalg op: "
+                    << *op << ":\n");
+
+  assert(succeeded(promoteSubviewsLinalgOpPrecondition(op)) &&
+         "DRR failure case must be a precondition");
+
   if (auto convOp = dyn_cast<linalg::ConvOp>(op)) {
     // TODO(ntv): add a level of indirection to linalg.generic.
     if (convOp.padding())
@@ -346,11 +364,17 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
   assert(linOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SetVector<Value> subViews;
-  for (auto it : linOp.getInputsAndOutputBuffers())
-    if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
+  for (int64_t index : operandIndicesToPromote)
+    if (auto sv =
+            dyn_cast_or_null<SubViewOp>(linOp.getBuffer(index).getDefiningOp()))
       subViews.insert(sv);
+
   if (!subViews.empty()) {
-    promoteSubViewOperands(rewriter, linOp, subViews);
+    auto newOp =
+        promoteSubViewOperands(rewriter, linOp, subViews, false, alignment);
+    if (!linalgMarker.empty())
+      newOp.setAttr(LinalgTransforms::kLinalgTransformMarker,
+                    rewriter.getStringAttr(linalgMarker));
     return {};
   }
   llvm_unreachable("DRR failure case must be a precondition");

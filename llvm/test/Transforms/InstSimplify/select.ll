@@ -737,3 +737,16 @@ define i8 @and_cmps_wrong_type(i32 %x) {
   %r = select i1 %cmp1, i8 %s, i8 0
   ret i8 %r
 }
+
+define i1 @y_might_be_poison(float %x, float %y) {
+; CHECK-LABEL: @y_might_be_poison(
+; CHECK-NEXT:    [[C1:%.*]] = fcmp ord float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = fcmp ord float [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[C3:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    ret i1 [[C3]]
+;
+  %c1 = fcmp ord float 0.0, %x
+  %c2 = fcmp ord float %x, %y
+  %c3 = select i1 %c1, i1 %c2, i1 false
+  ret i1 %c3
+}

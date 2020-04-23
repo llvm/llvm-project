@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"
@@ -183,7 +182,7 @@ private:
 template <typename Range>
 void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
   os << '[';
-  mlir::interleaveComma(range, os);
+  llvm::interleaveComma(range, os);
   os << ']';
 }
 
@@ -213,7 +212,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   printBracketedRange(traits, os);
   os << ", " << (intr.getNumResults() == 0 ? 0 : 1) << ">, Arguments<(ins"
      << (operands.empty() ? "" : " ");
-  mlir::interleaveComma(operands, os);
+  llvm::interleaveComma(operands, os);
   os << ")>;\n\n";
 
   return false;

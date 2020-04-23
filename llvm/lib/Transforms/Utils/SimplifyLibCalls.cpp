@@ -1943,7 +1943,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
   LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(Arg, ArgLb);
+  TLI->getLibFunc(*Arg, ArgLb);
 
   // log(pow(x,y)) -> y*log(x)
   if (ArgLb == PowLb || ArgID == Intrinsic::pow) {

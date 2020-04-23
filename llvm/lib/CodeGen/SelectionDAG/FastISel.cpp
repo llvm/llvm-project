@@ -1282,7 +1282,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
   // Check if target-independent constraints permit a tail call here.
   // Target-dependent constraints are checked within fastLowerCall.
   bool IsTailCall = CI->isTailCall();
-  if (IsTailCall && !isInTailCallPosition(CI, TM))
+  if (IsTailCall && !isInTailCallPosition(*CI, TM))
     IsTailCall = false;
   if (IsTailCall && MF->getFunction()
                             .getFnAttribute("disable-tail-calls")

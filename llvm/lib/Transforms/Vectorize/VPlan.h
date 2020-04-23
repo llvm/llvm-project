@@ -48,8 +48,6 @@
 
 namespace llvm {
 
-class LoopVectorizationLegality;
-class LoopVectorizationCostModel;
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
@@ -59,6 +57,7 @@ class raw_ostream;
 class Value;
 class VPBasicBlock;
 class VPRegionBlock;
+class VPSlotTracker;
 class VPlan;
 class VPlanSlp;
 
@@ -768,8 +767,13 @@ class VPWidenRecipe : public VPRecipeBase {
   /// Hold the instruction to be widened.
   Instruction &Ingredient;
 
+  /// Hold VPValues for the operands of the ingredient.
+  VPUser User;
+
 public:
-  VPWidenRecipe(Instruction &I) : VPRecipeBase(VPWidenSC), Ingredient(I) {}
+  template <typename IterT>
+  VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
+      : VPRecipeBase(VPWidenSC), Ingredient(I), User(Operands) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -929,16 +933,16 @@ class VPBlendRecipe : public VPRecipeBase {
 
   /// The blend operation is a User of the incoming values and of their
   /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// would be incoming with a full mask for which there is no VPValue.
+  /// might be incoming with a full mask for which there is no VPValue.
   VPUser User;
 
 public:
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPRecipeBase(VPBlendSC), Phi(Phi), User(Operands) {
-    assert(((Operands.size() == 1) ||
-            (Operands.size() > 2 && Operands.size() % 2 == 0)) &&
-           "Expected either a single incoming value or a greater than two and "
-           "even number of operands");
+    assert(Operands.size() > 0 &&
+           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
+           "Expected either a single incoming value or a positive even number "
+           "of operands");
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1496,7 +1500,6 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
   }
 };
 
-class VPSlotTracker;
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a
@@ -1619,6 +1622,16 @@ public:
 
   /// Dump the plan to stderr (for debugging).
   void dump() const;
+
+  /// Returns a range mapping the values the range \p Operands to their
+  /// corresponding VPValues.
+  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
+  mapToVPValues(User::op_range Operands) {
+    std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
+      return getOrAddVPValue(Op);
+    };
+    return map_range(Operands, Fn);
+  }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block

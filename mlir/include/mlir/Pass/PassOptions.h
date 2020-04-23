@@ -16,7 +16,6 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -194,7 +193,7 @@ public:
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
       };
-      interleave(*this, os, printElementFn, ",");
+      llvm::interleave(*this, os, printElementFn, ",");
     }
 
     /// Copy the value from the given option into this one.

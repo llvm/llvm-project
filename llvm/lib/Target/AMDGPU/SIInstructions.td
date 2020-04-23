@@ -1,4 +1,4 @@
-//===-- SIInstructions.td - SI Instruction Defintions ---------------------===//
+//===-- SIInstructions.td - SI Instruction Definitions --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,7 +66,7 @@ def VINTRPDst : VINTRPDstOperand <VGPR_32>;
 
 let Uses = [M0, EXEC] in {
 
-// FIXME: Specify SchedRW for VINTRP insturctions.
+// FIXME: Specify SchedRW for VINTRP instructions.
 
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,
@@ -1255,7 +1255,7 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
-// FIXME: The implicit-def of scc from S_[X]OR_B32 is mishandled
+// FIXME: The implicit-def of scc from S_[X]OR/AND_B32 is mishandled
  // def : GCNPat <
 //   (fneg (f64 SReg_64:$src)),
 //   (REG_SEQUENCE SReg_64,
@@ -1273,6 +1273,17 @@ def : GCNPat <
 //     sub0,
 //     (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
 //               (S_MOV_B32 (i32 0x80000000))), // Set sign bit.
+//     sub1)
+// >;
+
+// FIXME: Use S_BITSET0_B32/B64?
+// def : GCNPat <
+//   (fabs (f64 SReg_64:$src)),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//                (i32 (S_MOV_B32 (i32 0x7fffffff)))),
 //     sub1)
 // >;
 
@@ -1867,7 +1878,9 @@ def : GCNPat <
 
 }
 
-let OtherPredicates = [NoFP16Denormals] in {
+
+// Prefer selecting to max when legal, but using mul is always valid.
+let AddedComplexity = -5 in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -1882,23 +1895,7 @@ def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
-}
 
-let OtherPredicates = [FP16Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)
->;
-
-let SubtargetPredicate = HasVOP3PInsts in {
-def : GCNPat<
-  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
-  (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)
->;
-}
-}
-
-let OtherPredicates = [NoFP32Denormals] in {
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
@@ -1908,28 +1905,68 @@ def : GCNPat<
   (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
-}
 
-let OtherPredicates = [FP32Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-  (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)
->;
-}
-
-let OtherPredicates = [NoFP64Denormals] in {
+// TODO: Handle fneg like other types.
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
   (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src)
 >;
+} // End AddedComplexity = -5
+
+multiclass SelectCanonicalizeAsMax<
+  list<Predicate> f32_preds = [],
+  list<Predicate> f64_preds = [],
+  list<Predicate> f16_preds = []> {
+  def : GCNPat<
+    (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+    (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = f32_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+    (V_MAX_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = f64_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+    (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    // FIXME: Should have 16-bit inst subtarget predicate
+    let OtherPredicates = f16_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
+    (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
+    // FIXME: Should have VOP3P subtarget predicate
+    let OtherPredicates = f16_preds;
+  }
 }
 
-let OtherPredicates = [FP64Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MAX_F64 $src_mods, $src, $src_mods, $src)
->;
-}
+// On pre-gfx9 targets, v_max_*/v_min_* did not respect the denormal
+// mode, and would never flush. For f64, it's faster to do implement
+// this with a max. For f16/f32 it's a wash, but prefer max when
+// valid.
+//
+// FIXME: Lowering f32/f16 with max is worse since we can use a
+// smaller encoding if the input is fneg'd. It also adds an extra
+// register use.
+let SubtargetPredicate = HasMinMaxDenormModes in {
+  defm : SelectCanonicalizeAsMax<[], [], []>;
+} // End SubtargetPredicate = HasMinMaxDenormModes
+
+let SubtargetPredicate = NotHasMinMaxDenormModes in {
+  // Use the max lowering if we don't need to flush.
+
+  // FIXME: We don't do use this for f32 as a workaround for the
+  // library being compiled with the default ieee mode, but
+  // potentially being called from flushing kernels. Really we should
+  // not be mixing code expecting different default FP modes, but mul
+  // works in any FP environment.
+  defm : SelectCanonicalizeAsMax<[FalsePredicate], [FP64Denormals], [FP16Denormals]>;
+} // End SubtargetPredicate = NotHasMinMaxDenormModes
+
 
 let OtherPredicates = [HasDLInsts] in {
 def : GCNPat <

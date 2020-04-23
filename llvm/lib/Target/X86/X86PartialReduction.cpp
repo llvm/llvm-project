@@ -89,7 +89,7 @@ static bool isVectorReductionOp(const BinaryOperator &BO) {
     return false;
   }
 
-  unsigned ElemNum = BO.getType()->getVectorNumElements();
+  unsigned ElemNum = cast<VectorType>(BO.getType())->getNumElements();
   // Ensure the reduction size is a power of 2.
   if (!isPowerOf2_32(ElemNum))
     return false;
@@ -141,7 +141,7 @@ static bool isVectorReductionOp(const BinaryOperator &BO) {
         // ElemNumToReduce / 2 elements, and store the result in
         // ElemNumToReduce / 2 elements in another vector.
 
-        unsigned ResultElements = ShufInst->getType()->getVectorNumElements();
+        unsigned ResultElements = ShufInst->getType()->getNumElements();
         if (ResultElements < ElemNum)
           return false;
 
@@ -236,14 +236,14 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
 
   IRBuilder<> Builder(Add);
 
-  Type *MulTy = Op->getType();
-  unsigned NumElts = MulTy->getVectorNumElements();
+  auto *MulTy = cast<VectorType>(Op->getType());
+  unsigned NumElts = MulTy->getNumElements();
 
   // Extract even elements and odd elements and add them together. This will
   // be pattern matched by SelectionDAG to pmaddwd. This instruction will be
   // half the original width.
-  SmallVector<uint32_t, 16> EvenMask(NumElts / 2);
-  SmallVector<uint32_t, 16> OddMask(NumElts / 2);
+  SmallVector<int, 16> EvenMask(NumElts / 2);
+  SmallVector<int, 16> OddMask(NumElts / 2);
   for (int i = 0, e = NumElts / 2; i != e; ++i) {
     EvenMask[i] = i * 2;
     OddMask[i] = i * 2 + 1;
@@ -253,7 +253,7 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
   Value *MAdd = Builder.CreateAdd(EvenElts, OddElts);
 
   // Concatenate zeroes to extend back to the original type.
-  SmallVector<uint32_t, 32> ConcatMask(NumElts);
+  SmallVector<int, 32> ConcatMask(NumElts);
   std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
   Value *Zero = Constant::getNullValue(MAdd->getType());
   Value *Concat = Builder.CreateShuffleVector(MAdd, Zero, ConcatMask);
@@ -272,11 +272,11 @@ bool X86PartialReduction::tryMAddPattern(BinaryOperator *BO) {
     return false;
 
   // Need at least 8 elements.
-  if (BO->getType()->getVectorNumElements() < 8)
+  if (cast<VectorType>(BO->getType())->getNumElements() < 8)
     return false;
 
   // Element type should be i32.
-  if (!BO->getType()->getVectorElementType()->isIntegerTy(32))
+  if (!cast<VectorType>(BO->getType())->getElementType()->isIntegerTy(32))
     return false;
 
   bool Changed = false;
@@ -305,7 +305,9 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   // Look for zero extend from i8.
   auto getZeroExtendedVal = [](Value *Op) -> Value * {
     if (auto *ZExt = dyn_cast<ZExtInst>(Op))
-      if (ZExt->getOperand(0)->getType()->getVectorElementType()->isIntegerTy(8))
+      if (cast<VectorType>(ZExt->getOperand(0)->getType())
+              ->getElementType()
+              ->isIntegerTy(8))
         return ZExt->getOperand(0);
 
     return nullptr;
@@ -319,8 +321,8 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
 
   IRBuilder<> Builder(Add);
 
-  Type *OpTy = Op->getType();
-  unsigned NumElts = OpTy->getVectorNumElements();
+  auto *OpTy = cast<VectorType>(Op->getType());
+  unsigned NumElts = OpTy->getNumElements();
 
   unsigned IntrinsicNumElts;
   Intrinsic::ID IID;
@@ -339,7 +341,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
 
   if (NumElts < 16) {
     // Pad input with zeroes.
-    SmallVector<uint32_t, 32> ConcatMask(16);
+    SmallVector<int, 32> ConcatMask(16);
     for (unsigned i = 0; i != NumElts; ++i)
       ConcatMask[i] = i;
     for (unsigned i = NumElts; i != 16; ++i)
@@ -360,7 +362,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   // First collect the pieces we need.
   SmallVector<Value *, 4> Ops(NumSplits);
   for (unsigned i = 0; i != NumSplits; ++i) {
-    SmallVector<uint32_t, 64> ExtractMask(IntrinsicNumElts);
+    SmallVector<int, 64> ExtractMask(IntrinsicNumElts);
     std::iota(ExtractMask.begin(), ExtractMask.end(), i * IntrinsicNumElts);
     Value *ExtractOp0 = Builder.CreateShuffleVector(Op0, Op0, ExtractMask);
     Value *ExtractOp1 = Builder.CreateShuffleVector(Op1, Op0, ExtractMask);
@@ -371,9 +373,10 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   assert(isPowerOf2_32(NumSplits) && "Expected power of 2 splits");
   unsigned Stages = Log2_32(NumSplits);
   for (unsigned s = Stages; s > 0; --s) {
-    unsigned NumConcatElts = Ops[0]->getType()->getVectorNumElements() * 2;
+    unsigned NumConcatElts =
+        cast<VectorType>(Ops[0]->getType())->getNumElements() * 2;
     for (unsigned i = 0; i != 1U << (s - 1); ++i) {
-      SmallVector<uint32_t, 64> ConcatMask(NumConcatElts);
+      SmallVector<int, 64> ConcatMask(NumConcatElts);
       std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
       Ops[i] = Builder.CreateShuffleVector(Ops[i*2], Ops[i*2+1], ConcatMask);
     }
@@ -381,13 +384,13 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
 
   // At this point the final value should be in Ops[0]. Now we need to adjust
   // it to the final original type.
-  NumElts = OpTy->getVectorNumElements();
+  NumElts = cast<VectorType>(OpTy)->getNumElements();
   if (NumElts == 2) {
     // Extract down to 2 elements.
     Ops[0] = Builder.CreateShuffleVector(Ops[0], Ops[0], ArrayRef<int>{0, 1});
   } else if (NumElts >= 8) {
-    SmallVector<uint32_t, 32> ConcatMask(NumElts);
-    unsigned SubElts = Ops[0]->getType()->getVectorNumElements();
+    SmallVector<int, 32> ConcatMask(NumElts);
+    unsigned SubElts = cast<VectorType>(Ops[0]->getType())->getNumElements();
     for (unsigned i = 0; i != SubElts; ++i)
       ConcatMask[i] = i;
     for (unsigned i = SubElts; i != NumElts; ++i)
@@ -411,7 +414,7 @@ bool X86PartialReduction::trySADPattern(BinaryOperator *BO) {
 
   // TODO: There's nothing special about i32, any integer type above i16 should
   // work just as well.
-  if (!BO->getType()->getVectorElementType()->isIntegerTy(32))
+  if (!cast<VectorType>(BO->getType())->getElementType()->isIntegerTy(32))
     return false;
 
   bool Changed = false;

@@ -156,10 +156,12 @@ define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
 ; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
 ; AVX512F-NEXT:    vmovdqa 64(%rsi), %ymm2
 ; AVX512F-NEXT:    vmovdqa 96(%rsi), %ymm3
-; AVX512F-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmaddubsw 32(%rdi), %ymm1, %ymm1
+; AVX512F-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmaddubsw 96(%rdi), %ymm3, %ymm1
 ; AVX512F-NEXT:    vpmaddubsw 64(%rdi), %ymm2, %ymm2
-; AVX512F-NEXT:    vpmaddubsw 96(%rdi), %ymm3, %ymm3
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: pmaddubsw_512:

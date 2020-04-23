@@ -2271,6 +2271,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral>
     imaginaryLiteral;
 
+/// Matches fixed point literals
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
+    fixedPointLiteral;
+
 /// Matches user defined literal operator call.
 ///
 /// Example match: "foo"_suffix

@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Symbol.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -50,9 +52,10 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym);
 
 // An #include directive that we found in the main file.
 struct Inclusion {
-  Range R;             // Inclusion range.
-  std::string Written; // Inclusion name as written e.g. <vector>.
-  Path Resolved;       // Resolved path of included file. Empty if not resolved.
+  Range R;                      // Inclusion range.
+  tok::PPKeywordKind Directive; // Directive used for inclusion, e.g. import
+  std::string Written;          // Inclusion name as written e.g. <vector>.
+  Path Resolved; // Resolved path of included file. Empty if not resolved.
   unsigned HashOffset = 0; // Byte offset from start of file to #.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
 };

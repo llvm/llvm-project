@@ -2359,7 +2359,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus2a;
+            << getLangOpts().CPlusPlus20;
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 
@@ -2878,6 +2878,25 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   ArgExprs.push_back(ArgExpr.get());
   Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1,
                ParsedAttr::AS_Keyword, EllipsisLoc);
+}
+
+ExprResult Parser::ParseExtIntegerArgument() {
+  assert(Tok.is(tok::kw__ExtInt) && "Not an extended int type");
+  ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  ExprResult ER = ParseConstantExpression();
+  if (ER.isInvalid()) {
+    T.skipToEnd();
+    return ExprError();
+  }
+
+  if(T.consumeClose())
+    return ExprError();
+  return ER;
 }
 
 /// Determine whether we're looking at something that might be a declarator
@@ -3693,8 +3712,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ConsumedEnd = ExplicitLoc;
       ConsumeToken(); // kw_explicit
       if (Tok.is(tok::l_paren)) {
-        if (getLangOpts().CPlusPlus2a || isExplicitBool() == TPResult::True) {
-          Diag(Tok.getLocation(), getLangOpts().CPlusPlus2a
+        if (getLangOpts().CPlusPlus20 || isExplicitBool() == TPResult::True) {
+          Diag(Tok.getLocation(), getLangOpts().CPlusPlus20
                                       ? diag::warn_cxx17_compat_explicit_bool
                                       : diag::ext_explicit_bool);
 
@@ -3711,7 +3730,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           } else
             Tracker.skipToEnd();
         } else {
-          Diag(Tok.getLocation(), diag::warn_cxx2a_compat_explicit_bool);
+          Diag(Tok.getLocation(), diag::warn_cxx20_compat_explicit_bool);
         }
       }
       isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
@@ -3807,6 +3826,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int, Loc, PrevSpec,
                                      DiagID, Policy);
       break;
+    case tok::kw__ExtInt: {
+      ExprResult ER = ParseExtIntegerArgument();
+      if (ER.isInvalid())
+        continue;
+      isInvalid = DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+      ConsumedEnd = PrevTokLocation;
+      break;
+    }
     case tok::kw___int128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int128, Loc, PrevSpec,
                                      DiagID, Policy);
@@ -4890,6 +4917,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
@@ -4969,6 +4997,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
@@ -5135,6 +5164,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_char32_t:
 
   case tok::kw_int:
+  case tok::kw__ExtInt:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:

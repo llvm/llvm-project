@@ -242,9 +242,9 @@ static cl::opt<bool> EnableCallGraphProfile(
     cl::desc("Enable call graph profile pass for the new PM (default = on)"));
 
 PipelineTuningOptions::PipelineTuningOptions() {
-  LoopInterleaving = EnableLoopInterleaving;
-  LoopVectorization = EnableLoopVectorization;
-  SLPVectorization = RunSLPVectorization;
+  LoopInterleaving = true;
+  LoopVectorization = true;
+  SLPVectorization = false;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   Coroutines = false;
@@ -258,7 +258,7 @@ extern cl::opt<bool> EnableOrderFileInstrumentation;
 
 extern cl::opt<bool> FlattenedProfileUsed;
 
-extern cl::opt<bool> DisableAttributor;
+extern cl::opt<AttributorRunOption> AttributorRun;
 
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
@@ -768,7 +768,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                            true /* SamplePGO */));
   }
 
-  if (!DisableAttributor)
+  if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
@@ -852,7 +852,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     IP.HotCallSiteThreshold = 0;
   MainCGPipeline.addPass(InlinerPass(IP));
 
-  if (!DisableAttributor)
+  if (AttributorRun & AttributorRunOption::CGSCC)
     MainCGPipeline.addPass(AttributorCGSCCPass());
 
   if (PTO.Coroutines)

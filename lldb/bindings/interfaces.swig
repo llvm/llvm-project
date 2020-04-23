@@ -54,6 +54,7 @@
 %include "./interface/SBProcessInfo.i"
 %include "./interface/SBQueue.i"
 %include "./interface/SBQueueItem.i"
+%include "./interface/SBReproducer.i"
 %include "./interface/SBSection.i"
 %include "./interface/SBSourceManager.i"
 %include "./interface/SBStream.i"

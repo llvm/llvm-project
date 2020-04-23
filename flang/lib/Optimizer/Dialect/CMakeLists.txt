@@ -1,13 +1,17 @@
-add_llvm_library(FIRDialect
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
+add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
-)
 
-add_dependencies(FIRDialect FIROpsIncGen)
+  DEPENDS
+  FIROpsIncGen
+  ${dialect_libs}
 
-target_link_libraries(FIRDialect
+  LINK_LIBS
+  FIRSupport
   MLIRTargetLLVMIR
   MLIRTargetLLVMIRModuleTranslation
   MLIREDSC
@@ -16,12 +20,9 @@ target_link_libraries(FIRDialect
   MLIRSupport
   MLIRStandardToLLVM
   MLIRTransforms
-  LLVMAsmParser
-  LLVMAsmPrinter
-  LLVMRemarks
-)
 
-install (TARGETS FIRDialect
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
+  LINK_COMPONENTS
+  AsmParser
+  AsmPrinter
+  Remarks
 )

@@ -4,7 +4,7 @@
 ; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp \
 ; RUN:   -mcpu=pwr4 -mattr=-altivec -verify-machineinstrs 2>&1 < %s | FileCheck  %s
 
-; CHECK: LLVM ERROR: Pass-by-value arguments are only supported in registers.
+; CHECK: LLVM ERROR: Passing ByVals split between registers and stack not yet implemented.
 
 %struct.Spill = type { [12 x i64 ] }
 @GS = external global %struct.Spill, align 4

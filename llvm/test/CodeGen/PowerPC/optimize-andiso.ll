@@ -15,8 +15,8 @@ define float @floatundisf(i64 %a) {
 ; CHECK-NEXT:    li r4, 3
 ; CHECK-NEXT:    isel r4, r5, r4, eq
 ; CHECK-NEXT:    srd r3, r3, r4
-; CHECK-NEXT:    rlwinm r3, r3, 0, 9, 31
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    clrlwi r3, r3, 9
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    xxsldwi vs0, vs0, vs0, 1
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    blr

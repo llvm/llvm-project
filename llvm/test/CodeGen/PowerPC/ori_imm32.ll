@@ -16,9 +16,8 @@ entry:
 define i64 @ori_test_b(i64 %a) {
 ; CHECK-LABEL: ori_test_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    sldi 4, 4, 32
-; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    rldimi 3, 4, 32, 31
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %a, 4294967296

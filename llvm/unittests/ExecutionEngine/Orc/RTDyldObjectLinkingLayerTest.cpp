@@ -74,10 +74,12 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   LLVMContext Context;
   auto M = std::make_unique<Module>("", Context);
   M->setTargetTriple("x86_64-unknown-linux-gnu");
-  Type *Int32Ty = IntegerType::get(Context, 32);
-  GlobalVariable *GV =
-      new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
-                         ConstantInt::get(Int32Ty, 42), "foo");
+  Constant *StrConstant = ConstantDataArray::getString(Context, "forty-two");
+  auto *GV =
+      new GlobalVariable(*M, StrConstant->getType(), true,
+                         GlobalValue::ExternalLinkage, StrConstant, "foo");
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(Align(1));
 
   GV->setSection(".debug_str");
 

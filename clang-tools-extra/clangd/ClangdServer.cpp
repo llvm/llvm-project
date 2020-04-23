@@ -280,11 +280,8 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                              Pos, FS, Index));
   };
 
-  // Unlike code completion, we wait for an up-to-date preamble here.
-  // Signature help is often triggered after code completion. If the code
-  // completion inserted a header to make the symbol available, then using
-  // the old preamble would yield useless results.
-  WorkScheduler.runWithPreamble("SignatureHelp", File, TUScheduler::Consistent,
+  // Unlike code completion, we wait for a preamble here.
+  WorkScheduler.runWithPreamble("SignatureHelp", File, TUScheduler::Stale,
                                 std::move(Action));
 }
 
@@ -703,9 +700,8 @@ void ClangdServer::semanticHighlights(
                            TUScheduler::InvalidateOnUpdate);
 }
 
-std::vector<std::pair<Path, std::size_t>>
-ClangdServer::getUsedBytesPerFile() const {
-  return WorkScheduler.getUsedBytesPerFile();
+llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
+  return WorkScheduler.fileStats();
 }
 
 LLVM_NODISCARD bool

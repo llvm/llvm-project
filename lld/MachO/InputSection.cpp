@@ -8,6 +8,7 @@
 
 #include "InputSection.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
@@ -24,12 +25,17 @@ void InputSection::writeTo(uint8_t *buf) {
 
   for (Reloc &r : relocs) {
     uint64_t va = 0;
-    if (auto *s = r.target.dyn_cast<Symbol *>())
-      va = s->getVA();
-    else if (auto *isec = r.target.dyn_cast<InputSection *>())
+    if (auto *s = r.target.dyn_cast<Symbol *>()) {
+      if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s)) {
+        va = in.got->addr - ImageBase + dylibSymbol->gotIndex * WordSize;
+      } else {
+        va = s->getVA();
+      }
+    } else if (auto *isec = r.target.dyn_cast<InputSection *>()) {
       va = isec->addr;
-    else
+    } else {
       llvm_unreachable("Unknown relocation target");
+    }
 
     uint64_t val = va + r.addend;
     if (1) // TODO: handle non-pcrel relocations

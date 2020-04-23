@@ -168,7 +168,7 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
   // The length of scalable vectors is unknown at compile time, thus we
   // cannot check their values
-  if (Shuf->getType()->isScalable())
+  if (isa<ScalableVectorType>(Shuf->getType()))
     return false;
 
   int NumElts =
@@ -3074,9 +3074,9 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
   return false;
 }
 
-Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
+Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
                                             const TargetLibraryInfo *TLI) {
-  const Function *F = ICS.getCalledFunction();
+  const Function *F = CB.getCalledFunction();
   if (!F)
     return Intrinsic::not_intrinsic;
 
@@ -3093,7 +3093,7 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(*F, Func))
     return Intrinsic::not_intrinsic;
 
-  if (!ICS.onlyReadsMemory())
+  if (!CB.onlyReadsMemory())
     return Intrinsic::not_intrinsic;
 
   // Otherwise check if we have a call to a function that can be turned into a
@@ -3214,7 +3214,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
     return true;
 
   if (auto *Call = dyn_cast<CallInst>(Op)) {
-    Intrinsic::ID IID = getIntrinsicForCallSite(Call, TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(*Call, TLI);
     switch (IID) {
     default:
       break;
@@ -3311,7 +3311,7 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
                                            Depth + 1);
   case Instruction::Call:
     const auto *CI = cast<CallInst>(I);
-    Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(*CI, TLI);
     switch (IID) {
     default:
       break;
@@ -4592,6 +4592,91 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
+bool llvm::canCreatePoison(const Instruction *I) {
+  // See whether I has flags that may create poison
+  if (isa<OverflowingBinaryOperator>(I) &&
+      (I->hasNoSignedWrap() || I->hasNoUnsignedWrap()))
+    return true;
+  if (isa<PossiblyExactOperator>(I) && I->isExact())
+    return true;
+  if (auto *FP = dyn_cast<FPMathOperator>(I)) {
+    auto FMF = FP->getFastMathFlags();
+    if (FMF.noNaNs() || FMF.noInfs())
+      return true;
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    if (GEP->isInBounds())
+      return true;
+
+  unsigned Opcode = I->getOpcode();
+
+  // Check whether opcode is a poison-generating operation
+  switch (Opcode) {
+  case Instruction::Shl:
+  case Instruction::AShr:
+  case Instruction::LShr: {
+    // Shifts return poison if shiftwidth is larger than the bitwidth.
+    if (auto *C = dyn_cast<Constant>(I->getOperand(1))) {
+      SmallVector<Constant *, 4> ShiftAmounts;
+      if (C->getType()->isVectorTy()) {
+        unsigned NumElts = cast<VectorType>(C->getType())->getNumElements();
+        for (unsigned i = 0; i < NumElts; ++i)
+          ShiftAmounts.push_back(C->getAggregateElement(i));
+      } else
+        ShiftAmounts.push_back(C);
+
+      bool Safe = llvm::all_of(ShiftAmounts, [](Constant *C) {
+        auto *CI = dyn_cast<ConstantInt>(C);
+        return CI && CI->getZExtValue() < C->getType()->getIntegerBitWidth();
+      });
+      return !Safe;
+    }
+    return true;
+  }
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    // fptosi/ui yields poison if the resulting value does not fit in the
+    // destination type.
+    return true;
+  case Instruction::Call:
+  case Instruction::CallBr:
+  case Instruction::Invoke:
+    // Function calls can return a poison value even if args are non-poison
+    // values. CallBr returns poison when jumping to indirect labels.
+    return true;
+  case Instruction::InsertElement:
+  case Instruction::ExtractElement: {
+    // If index exceeds the length of the vector, it returns poison
+    auto *VTy = cast<VectorType>(I->getOperand(0)->getType());
+    unsigned IdxOp = I->getOpcode() == Instruction::InsertElement ? 2 : 1;
+    auto *Idx = dyn_cast<ConstantInt>(I->getOperand(IdxOp));
+    if (!Idx || Idx->getZExtValue() >= VTy->getElementCount().Min)
+      return true;
+    return false;
+  }
+  case Instruction::FNeg:
+  case Instruction::PHI:
+  case Instruction::Select:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::ShuffleVector:
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+  case Instruction::Freeze:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::GetElementPtr:
+    return false;
+  default:
+    if (isa<CastInst>(I))
+      return false;
+    else if (isa<BinaryOperator>(I))
+      return false;
+    // Be conservative and return true.
+    return true;
+  }
+}
+
 bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                             const Instruction *CtxI,
                                             const DominatorTree *DT) {
@@ -4608,8 +4693,9 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     if (isa<UndefValue>(C) || isa<ConstantExpr>(C))
       return false;
 
-    // TODO: Add ConstantFP and pointers.
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) )
+    // TODO: Add ConstantFP.
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) ||
+        isa<ConstantPointerNull>(C))
       return true;
 
     if (C->getType()->isVectorTy())
@@ -4634,7 +4720,7 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   }
 
   if (auto I = dyn_cast<Instruction>(V)) {
-    if (programUndefinedIfFullPoison(I) && I->getType()->isIntegerTy(1))
+    if (programUndefinedIfPoison(I) && I->getType()->isIntegerTy(1))
       // Note: once we have an agreement that poison is a value-wise concept,
       // we can remove the isIntegerTy(1) constraint.
       return true;
@@ -4760,7 +4846,7 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesFullPoison(const Instruction *I) {
+bool llvm::propagatesPoison(const Instruction *I) {
   // TODO: This should include all instructions apart from phis, selects and
   // call-like instructions.
   switch (I->getOpcode()) {
@@ -4794,7 +4880,7 @@ bool llvm::propagatesFullPoison(const Instruction *I) {
   }
 }
 
-const Value *llvm::getGuaranteedNonFullPoisonOp(const Instruction *I) {
+const Value *llvm::getGuaranteedNonPoisonOp(const Instruction *I) {
   switch (I->getOpcode()) {
     case Instruction::Store:
       return cast<StoreInst>(I)->getPointerOperand();
@@ -4832,12 +4918,12 @@ const Value *llvm::getGuaranteedNonFullPoisonOp(const Instruction *I) {
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallSet<const Value *, 16>& KnownPoison) {
-  auto *NotPoison = getGuaranteedNonFullPoisonOp(I);
+  auto *NotPoison = getGuaranteedNonPoisonOp(I);
   return (NotPoison && KnownPoison.count(NotPoison));
 }
 
 
-bool llvm::programUndefinedIfFullPoison(const Instruction *PoisonI) {
+bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
   // We currently only look for uses of poison values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
   // executed given that PoisonI is executed.
@@ -4870,7 +4956,7 @@ bool llvm::programUndefinedIfFullPoison(const Instruction *PoisonI) {
       if (YieldsPoison.count(&I)) {
         for (const User *User : I.users()) {
           const Instruction *UserI = cast<Instruction>(User);
-          if (propagatesFullPoison(UserI))
+          if (propagatesPoison(UserI))
             YieldsPoison.insert(User);
         }
       }

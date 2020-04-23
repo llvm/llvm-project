@@ -173,7 +173,7 @@ shortcut in the BBEdit preferences, under Menus & Shortcuts.
 
 
 CLion Integration
-==================
+=================
 
 :program:`clang-format` is integrated into `CLion <https://www.jetbrains
 .com/clion/>`_ as an alternative code formatter. It is disabled by default and
@@ -190,6 +190,12 @@ Visual Studio Integration
 
 Download the latest Visual Studio extension from the `alpha build site
 <https://llvm.org/builds/>`_. The default key-binding is Ctrl-R,Ctrl-F.
+
+
+Visual Studio Code Integration
+==============================
+
+Get the latest Visual Studio Code extension from the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=xaver.clang-format>`_. The default key-binding is Alt-Shift-F.
 
 
 Script for patch reformatting

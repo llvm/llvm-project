@@ -18,6 +18,7 @@ class MCSymbolWasm : public MCSymbol {
   bool IsWeak = false;
   bool IsHidden = false;
   bool IsComdat = false;
+  mutable bool IsUsedInInitArray = false;
   mutable bool IsUsedInGOT = false;
   Optional<StringRef> ImportModule;
   Optional<StringRef> ImportName;
@@ -95,6 +96,9 @@ public:
 
   void setUsedInGOT() const { IsUsedInGOT = true; }
   bool isUsedInGOT() const { return IsUsedInGOT; }
+
+  void setUsedInInitArray() const { IsUsedInInitArray = true; }
+  bool isUsedInInitArray() const { return IsUsedInInitArray; }
 
   const wasm::WasmSignature *getSignature() const { return Signature; }
   void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }

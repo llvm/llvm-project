@@ -7484,10 +7484,10 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
       DeclRefExpr *DRE = new (Context)
           DeclRefExpr(*Context, NewVD, false, Context->UnsignedLongTy,
                       VK_LValue, SourceLocation());
-      BinaryOperator *addExpr =
-        new (Context) BinaryOperator(castExpr, DRE, BO_Add,
-                                     Context->getPointerType(Context->CharTy),
-                                     VK_RValue, OK_Ordinary, SourceLocation(), FPOptions());
+      BinaryOperator *addExpr = BinaryOperator::Create(
+          *Context, castExpr, DRE, BO_Add,
+          Context->getPointerType(Context->CharTy), VK_RValue, OK_Ordinary,
+          SourceLocation(), FPOptions(Context->getLangOpts()));
       // Don't forget the parens to enforce the proper binding.
       ParenExpr *PE = new (Context) ParenExpr(SourceLocation(),
                                               SourceLocation(),

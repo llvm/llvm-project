@@ -135,6 +135,8 @@ public:
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
+  bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
+                              unsigned PhysReg) const override;
 
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,

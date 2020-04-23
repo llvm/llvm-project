@@ -69,6 +69,9 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
         OS << " - lineno: " << E.Line;
         OS << " filenum: " << E.File;
         break;
+      case DW_MACRO_import:
+        OS << format(" - import offset: 0x%08" PRIx64, E.ImportOffset);
+        break;
       case DW_MACRO_end_file:
         break;
       case DW_MACINFO_vendor_ext:
@@ -145,6 +148,10 @@ Error DWARFDebugMacro::parse(DataExtractor StringExtractor,
       E.File = Data.getULEB128(&Offset);
       break;
     case DW_MACRO_end_file:
+      break;
+    case DW_MACRO_import:
+      // FIXME: Add support for DWARF64
+      E.ImportOffset = Data.getRelocatedValue(/*OffsetSize=*/4, &Offset);
       break;
     case DW_MACINFO_vendor_ext:
       // 2. Vendor extension constant

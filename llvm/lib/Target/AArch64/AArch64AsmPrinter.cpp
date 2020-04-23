@@ -114,6 +114,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  void emitFunctionHeaderComment() override;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AsmPrinter::getAnalysisUsage(AU);
     AU.setPreservesAll();
@@ -239,6 +241,13 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
 
   OutStreamer->endSection(Nt);
   OutStreamer->SwitchSection(Cur);
+}
+
+void AArch64AsmPrinter::emitFunctionHeaderComment() {
+  const AArch64FunctionInfo *FI = MF->getInfo<AArch64FunctionInfo>();
+  Optional<std::string> OutlinerString = FI->getOutliningStyle();
+  if (OutlinerString != None)
+    OutStreamer->GetCommentOS() << ' ' << OutlinerString;
 }
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)

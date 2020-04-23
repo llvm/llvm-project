@@ -1,5 +1,5 @@
 
-add_library(FortranEvaluate
+add_flang_library(FortranEvaluate
   call.cpp
   characteristics.cpp
   check-expression.cpp
@@ -25,21 +25,12 @@ add_library(FortranEvaluate
   tools.cpp
   type.cpp
   variable.cpp
-)
 
-target_compile_features(FortranEvaluate PUBLIC cxx_std_17)
-
-target_link_libraries(FortranEvaluate
+  LINK_LIBS
   FortranCommon
   FortranDecimal
   FortranSemantics
   FortranParser
-)
-
-install (TARGETS FortranEvaluate
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
 )
 
 if (LIBPGMATH_DIR)

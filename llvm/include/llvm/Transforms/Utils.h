@@ -26,6 +26,12 @@ class Pass;
 ModulePass *createMetaRenamerPass();
 
 //===----------------------------------------------------------------------===//
+// createUniqueInternalLinkageNamesPass - Make internal linkage symbol names
+// unique.
+//
+ModulePass *createUniqueInternalLinkageNamesPass();
+
+//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
@@ -134,6 +140,13 @@ FunctionPass *createInjectTLIMappingsLegacyPass();
 // exit blocks.
 //
 FunctionPass *createUnifyLoopExitsPass();
+
+//===----------------------------------------------------------------------===//
+//
+// FixIrreducible - Convert each SCC with irreducible control-flow
+// into a natural loop.
+//
+FunctionPass *createFixIrreduciblePass();
 }
 
 #endif

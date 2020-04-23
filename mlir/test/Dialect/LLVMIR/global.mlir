@@ -1,5 +1,11 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
+// CHECK: llvm.mlir.global external @default_external
+llvm.mlir.global @default_external() : !llvm.i64
+
+// CHECK: llvm.mlir.global external constant @default_external_constant
+llvm.mlir.global constant @default_external_constant(42) : !llvm.i64
+
 // CHECK: llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 

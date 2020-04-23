@@ -83,7 +83,6 @@ func @add_transpose_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : tensor<?x?xf32>, 
 
 // CHECK-DAG: [[MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: [[MAP1:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0)>
-// CHECK-DAG: [[MAP2:#[a-zA-Z0-9_]*]] = affine_map<(d0) -> (d0)>
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 #map1 = affine_map<(d0, d1) -> (d0)>
 #map2 = affine_map<(d0) -> (d0)>
@@ -119,7 +118,7 @@ func @add_mul_scalar_fusion(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tenso
       %1 = addf %arg3, %arg4 : f32
       linalg.yield %1 : f32
   }: tensor<f32>, tensor<f32> -> tensor<f32>
-  // CHECK: linalg.generic {args_in = 2 : i64, args_out = 1 : i64
+  // CHECK: linalg.generic {args_in = 3 : i64, args_out = 1 : i64
   // CHECK: addf
   // CHECK: mulf
   %1 = linalg.generic {args_in = 2 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0, #map0], iterator_types = []} %0, %arg2 {

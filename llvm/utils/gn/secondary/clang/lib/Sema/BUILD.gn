@@ -13,6 +13,7 @@ static_library("Sema") {
     "//clang/include/clang/Basic:arm_cde_builtin_sema",
     "//clang/include/clang/Basic:arm_mve_builtin_aliases",
     "//clang/include/clang/Basic:arm_mve_builtin_sema",
+    "//clang/include/clang/Basic:arm_sve_sema_rangechecks",
     "//clang/include/clang/Sema:AttrParsedAttrImpl",
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrParsedAttrList",

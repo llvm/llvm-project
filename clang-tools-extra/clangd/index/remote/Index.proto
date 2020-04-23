@@ -1,0 +1,19 @@
+//===--- Index.proto - Remote index Protocol Buffers definition -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto3";
+
+package clang.clangd.remote;
+
+service Index {
+  rpc Lookup(LookupRequest) returns (stream LookupReply) {}
+}
+
+message LookupRequest { string id = 1; }
+
+message LookupReply { string symbol_yaml = 1; }

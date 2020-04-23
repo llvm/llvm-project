@@ -143,6 +143,36 @@ SourceLocation getHighlightableSpellingToken(SourceLocation L,
   return getHighlightableSpellingToken(SM.getImmediateSpellingLoc(L), SM);
 }
 
+unsigned evaluateHighlightPriority(HighlightingKind Kind) {
+  enum HighlightPriority { Dependent = 0, Resolved = 1 };
+  return Kind == HighlightingKind::DependentType ||
+                 Kind == HighlightingKind::DependentName
+             ? Dependent
+             : Resolved;
+}
+
+// Sometimes we get conflicts between findExplicitReferences() returning
+// a heuristic result for a dependent name (e.g. Method) and
+// CollectExtraHighlighting returning a fallback dependent highlighting (e.g.
+// DependentName). In such cases, resolve the conflict in favour of the
+// resolved (non-dependent) highlighting.
+// With macros we can get other conflicts (if a spelled token has multiple
+// expansions with different token types) which we can't usefully resolve.
+llvm::Optional<HighlightingToken>
+resolveConflict(ArrayRef<HighlightingToken> Tokens) {
+  if (Tokens.size() == 1)
+    return Tokens[0];
+
+  if (Tokens.size() != 2)
+    return llvm::None;
+
+  unsigned Priority1 = evaluateHighlightPriority(Tokens[0].Kind);
+  unsigned Priority2 = evaluateHighlightPriority(Tokens[1].Kind);
+  if (Priority1 == Priority2)
+    return llvm::None;
+  return Priority1 > Priority2 ? Tokens[0] : Tokens[1];
+}
+
 /// Consumes source locations and maps them to text ranges for highlightings.
 class HighlightingsBuilder {
 public:
@@ -183,10 +213,8 @@ public:
             // this predicate would never fire.
             return T.R == TokRef.front().R;
           });
-      // If there is exactly one token with this range it's non conflicting and
-      // should be in the highlightings.
-      if (Conflicting.size() == 1)
-        NonConflicting.push_back(TokRef.front());
+      if (auto Resolved = resolveConflict(Conflicting))
+        NonConflicting.push_back(*Resolved);
       // TokRef[Conflicting.size()] is the next token with a different range (or
       // the end of the Tokens).
       TokRef = TokRef.drop_front(Conflicting.size());

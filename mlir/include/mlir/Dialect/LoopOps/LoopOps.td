@@ -13,6 +13,7 @@
 #ifndef LOOP_OPS
 #define LOOP_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
@@ -37,6 +38,7 @@ class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
 
 def ForOp : Loop_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"YieldOp">,
        RecursiveSideEffects]> {
   let summary = "for operation";
@@ -169,11 +171,18 @@ def ForOp : Loop_Op<"for",
     unsigned getNumIterOperands() {
       return getOperation()->getNumOperands() - getNumControlOperands();
     }
+
+    /// Return operands used when entering the region at 'index'. These operands
+    /// correspond to the loop iterator operands, i.e., those exclusing the
+    /// induction variable. LoopOp only has one region, so 0 is the only valid
+    /// value for `index`.
+    OperandRange getSuccessorEntryOperands(unsigned index);
   }];
 }
 
 def IfOp : Loop_Op<"if",
-      [SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
   let summary = "if-then-else operation";
   let description = [{
     The `loop.if` operation represents an if-then-else construct for
@@ -285,9 +294,10 @@ def ParallelOp : Loop_Op<"parallel",
     Example:
 
     ```mlir
-    loop.parallel (%iv) = (%lb) to (%ub) step (%step) -> f32 {
-      %zero = constant 0.0 : f32
-      loop.reduce(%zero) : f32 {
+    %init = constant 0.0 : f32
+    loop.parallel (%iv) = (%lb) to (%ub) step (%step) init (%init) -> f32 {
+      %elem_to_reduce = load %buffer[%iv] : memref<100xf32>
+      loop.reduce(%elem_to_reduce) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
@@ -385,7 +395,7 @@ def ReduceReturnOp :
   let assemblyFormat = "$result attr-dict `:` type($result)";
 }
 
-def YieldOp : Loop_Op<"yield", [NoSideEffect, Terminator]> {
+def YieldOp : Loop_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "loop.yield" yields an SSA value from a loop dialect op region and

@@ -41,9 +41,6 @@ public:
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
   bool operator!=(const DWARFDebugInfoEntry &rhs) const;
 
-  void BuildAddressRangeTable(const DWARFUnit *cu,
-                              DWARFDebugAranges *debug_aranges) const;
-
   void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
@@ -167,7 +164,10 @@ public:
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
-  bool IsGlobalOrStaticVariable() const;
+  // This function returns true if the variable scope is either
+  // global or (file-static). It will return false for static variables
+  // that are local to a function, as they have local scope.
+  bool IsGlobalOrStaticScopeVariable() const;
 
 protected:
   static DWARFDeclContext

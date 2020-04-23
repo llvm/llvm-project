@@ -243,19 +243,19 @@
 //
 //===--------------------------------------------------------------------===//
 
-#include "clang/Lex/LexDiagnostic.h"
 #include "PreprocessorTracker.h"
+#include "ModularizeUtilities.h"
+#include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/StringPool.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ModularizeUtilities.h"
 
 namespace Modularize {
 
 // Some handle types
-typedef llvm::PooledStringPtr StringHandle;
+typedef llvm::StringRef StringHandle;
 
 typedef int HeaderHandle;
 const HeaderHandle HeaderHandleInvalid = -1;
@@ -462,19 +462,6 @@ const char *
 ConditionValueKindStrings[] = {
   "(not evaluated)", "false", "true"
 };
-
-bool operator<(const StringHandle &H1, const StringHandle &H2) {
-  const char *S1 = (H1 ? *H1 : "");
-  const char *S2 = (H2 ? *H2 : "");
-  int Diff = strcmp(S1, S2);
-  return Diff < 0;
-}
-bool operator>(const StringHandle &H1, const StringHandle &H2) {
-  const char *S1 = (H1 ? *H1 : "");
-  const char *S2 = (H2 ? *H2 : "");
-  int Diff = strcmp(S1, S2);
-  return Diff > 0;
-}
 
 // Preprocessor item key.
 //
@@ -922,7 +909,9 @@ public:
   }
 
   // Lookup/add string.
-  StringHandle addString(llvm::StringRef Str) { return Strings.intern(Str); }
+  StringHandle addString(llvm::StringRef Str) {
+    return Strings.insert(Str).first->first();
+  }
 
   // Convert to a canonical path.
   std::string getCanonicalPath(llvm::StringRef path) const {
@@ -950,7 +939,7 @@ public:
     HeaderHandle H = 0;
     for (auto I = HeaderPaths.begin(), E = HeaderPaths.end(); I != E;
          ++I, ++H) {
-      if (**I == CanonicalPath)
+      if (*I == CanonicalPath)
         return H;
     }
     return HeaderHandleInvalid;
@@ -1143,10 +1132,10 @@ public:
       // Tell caller we found one or more errors.
       ReturnValue = true;
       // Start the error message.
-      OS << *MacroExpTracker.InstanceSourceLine;
+      OS << MacroExpTracker.InstanceSourceLine;
       if (ItemKey.Column > 0)
         OS << std::string(ItemKey.Column - 1, ' ') << "^\n";
-      OS << "error: Macro instance '" << *MacroExpTracker.MacroUnexpanded
+      OS << "error: Macro instance '" << MacroExpTracker.MacroUnexpanded
          << "' has different values in this header, depending on how it was "
             "included.\n";
       // Walk all the instances.
@@ -1154,8 +1143,8 @@ public:
                 EMT = MacroExpTracker.MacroExpansionInstances.end();
            IMT != EMT; ++IMT) {
         MacroExpansionInstance &MacroInfo = *IMT;
-        OS << "  '" << *MacroExpTracker.MacroUnexpanded << "' expanded to: '"
-           << *MacroInfo.MacroExpanded
+        OS << "  '" << MacroExpTracker.MacroUnexpanded << "' expanded to: '"
+           << MacroInfo.MacroExpanded
            << "' with respect to these inclusion paths:\n";
         // Walk all the inclusion path hierarchies.
         for (auto IIP = MacroInfo.InclusionPathHandles.begin(),
@@ -1165,7 +1154,7 @@ public:
           auto Count = (int)ip.size();
           for (int Index = 0; Index < Count; ++Index) {
             HeaderHandle H = ip[Index];
-            OS << std::string((Index * 2) + 4, ' ') << *getHeaderFilePath(H)
+            OS << std::string((Index * 2) + 4, ' ') << getHeaderFilePath(H)
                << "\n";
           }
         }
@@ -1173,7 +1162,7 @@ public:
         // instance location.
         // If there is a definition...
         if (MacroInfo.DefinitionLocation.Line != ItemKey.Line) {
-          OS << *MacroInfo.DefinitionSourceLine;
+          OS << MacroInfo.DefinitionSourceLine;
           if (MacroInfo.DefinitionLocation.Column > 0)
             OS << std::string(MacroInfo.DefinitionLocation.Column - 1, ' ')
                << "^\n";
@@ -1201,13 +1190,13 @@ public:
       // Tell caller we found one or more errors.
       ReturnValue = true;
       // Start the error message.
-      OS << *HeaderPaths[ItemKey.File] << ":" << ItemKey.Line << ":"
+      OS << HeaderPaths[ItemKey.File] << ":" << ItemKey.Line << ":"
          << ItemKey.Column << "\n";
       OS << "#" << getDirectiveSpelling(CondTracker.DirectiveKind) << " "
-         << *CondTracker.ConditionUnexpanded << "\n";
+         << CondTracker.ConditionUnexpanded << "\n";
       OS << "^\n";
       OS << "error: Conditional expression instance '"
-         << *CondTracker.ConditionUnexpanded
+         << CondTracker.ConditionUnexpanded
          << "' has different values in this header, depending on how it was "
             "included.\n";
       // Walk all the instances.
@@ -1215,7 +1204,7 @@ public:
                 EMT = CondTracker.ConditionalExpansionInstances.end();
            IMT != EMT; ++IMT) {
         ConditionalExpansionInstance &MacroInfo = *IMT;
-        OS << "  '" << *CondTracker.ConditionUnexpanded << "' expanded to: '"
+        OS << "  '" << CondTracker.ConditionUnexpanded << "' expanded to: '"
            << ConditionValueKindStrings[MacroInfo.ConditionValue]
            << "' with respect to these inclusion paths:\n";
         // Walk all the inclusion path hierarchies.
@@ -1226,7 +1215,7 @@ public:
           auto Count = (int)ip.size();
           for (int Index = 0; Index < Count; ++Index) {
             HeaderHandle H = ip[Index];
-            OS << std::string((Index * 2) + 4, ' ') << *getHeaderFilePath(H)
+            OS << std::string((Index * 2) + 4, ' ') << getHeaderFilePath(H)
                << "\n";
           }
         }
@@ -1255,7 +1244,7 @@ private:
   llvm::SmallVector<std::string, 32> HeaderList;
   // Only do extern, namespace check for headers in HeaderList.
   bool BlockCheckHeaderListOnly;
-  llvm::StringPool Strings;
+  llvm::StringSet<> Strings;
   std::vector<StringHandle> HeaderPaths;
   std::vector<HeaderHandle> HeaderStack;
   std::vector<HeaderInclusionPath> InclusionPaths;

@@ -12,9 +12,10 @@
 # CHECK-NEXT:    DW_MACRO_define_strp - lineno: 1 macro: FOO 5
 # CHECK-NEXT:  DW_MACRO_end_file
 # CHECK-NEXT:  DW_MACRO_undef_strp - lineno: 8 macro: WORLD1
+# CHECK-NEXT:  DW_MACRO_import - import offset: 0x[[OFFSET:[0-9]+]]
 # CHECK-NEXT:DW_MACRO_end_file
 
-#      CHECK:0x{{.*}}:
+#      CHECK:0x[[OFFSET]]:
 # CHECK-NEXT:macro header: version = 0x0005, flags = 0x00
 # CHECK-NEXT:DW_MACRO_define_strp - lineno: 0 macro: WORLD 2
 
@@ -36,8 +37,12 @@
 	.byte	6                       # DW_MACRO_undef_strp
 	.byte	8                       # Line Number
 	.long	.Linfo_string1          # Macro String
+	.byte	7                       # DW_MACRO_import
+	.long	.Lmacro1                # Macro Unit Offset
 	.byte	4                       # DW_MACRO_end_file
 	.byte	0                       # End Of Macro List Mark
+
+.Lmacro1:
 	.short	5                      # Macro information version
 	.byte	0                       # Flags: 32 bit
 	.byte	5                       # DW_MACRO_define_strp

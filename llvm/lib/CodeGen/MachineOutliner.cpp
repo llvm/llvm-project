@@ -1160,9 +1160,17 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
+  MachineFunction *OriginalMF = FirstCand.front()->getMF();
+  const std::vector<MCCFIInstruction> &Instrs =
+      OriginalMF->getFrameInstructions();
   for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
        ++I) {
     MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+    if (I->isCFIInstruction()) {
+      unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = Instrs[CFIIndex];
+      (void)MF.addFrameInst(CFI);
+    }
     NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
@@ -1170,11 +1178,34 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.buildOutlinedFrame(MBB, MF, OF);
-
-  // Outlined functions shouldn't preserve liveness.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
+  // Set normal properties for a late MachineFunction.
+  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
+  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MF.getRegInfo().freezeReservedRegs(MF);
+
+  // Compute live-in set for outlined fn
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  LivePhysRegs LiveIns(TRI);
+  for (auto &Cand : OF.Candidates) {
+    // Figure out live-ins at the first instruction.
+    MachineBasicBlock &OutlineBB = *Cand.front()->getParent();
+    LivePhysRegs CandLiveIns(TRI);
+    CandLiveIns.addLiveOuts(OutlineBB);
+    for (const MachineInstr &MI :
+         reverse(make_range(Cand.front(), OutlineBB.end())))
+      CandLiveIns.stepBackward(MI);
+
+    // The live-in set for the outlined function is the union of the live-ins
+    // from all the outlining points.
+    for (MCPhysReg Reg : make_range(CandLiveIns.begin(), CandLiveIns.end()))
+      LiveIns.addReg(Reg);
+  }
+  addLiveIns(MBB, LiveIns);
+
+  TII.buildOutlinedFrame(MBB, MF, OF);
 
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
@@ -1331,7 +1362,6 @@ bool MachineOutliner::outline(Module &M,
   }
 
   LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
-
   return OutlinedSomething;
 }
 

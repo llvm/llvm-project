@@ -198,20 +198,35 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   return true;
 }
 
+static void reportGISelDiagnostic(DiagnosticSeverity Severity,
+                                  MachineFunction &MF,
+                                  const TargetPassConfig &TPC,
+                                  MachineOptimizationRemarkEmitter &MORE,
+                                  MachineOptimizationRemarkMissed &R) {
+  bool IsFatal = Severity == DS_Error &&
+                 TPC.isGlobalISelAbortEnabled();
+  // Print the function name explicitly if we don't have a debug location (which
+  // makes the diagnostic less useful) or if we're going to emit a raw error.
+  if (!R.getLocation().isValid() || IsFatal)
+    R << (" (in function: " + MF.getName() + ")").str();
+
+  if (IsFatal)
+    report_fatal_error(R.getMsg());
+  else
+    MORE.emit(R);
+}
+
+void llvm::reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
+                              MachineOptimizationRemarkEmitter &MORE,
+                              MachineOptimizationRemarkMissed &R) {
+  reportGISelDiagnostic(DS_Warning, MF, TPC, MORE, R);
+}
+
 void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
   MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
-
-  // Print the function name explicitly if we don't have a debug location (which
-  // makes the diagnostic less useful) or if we're going to emit a raw error.
-  if (!R.getLocation().isValid() || TPC.isGlobalISelAbortEnabled())
-    R << (" (in function: " + MF.getName() + ")").str();
-
-  if (TPC.isGlobalISelAbortEnabled())
-    report_fatal_error(R.getMsg());
-  else
-    MORE.emit(R);
+  reportGISelDiagnostic(DS_Error, MF, TPC, MORE, R);
 }
 
 void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,

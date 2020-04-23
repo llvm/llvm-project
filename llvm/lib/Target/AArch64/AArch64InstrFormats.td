@@ -483,6 +483,19 @@ def uimm6s16 : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm6s16Operand;
 }
 
+def SImmS2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N), MVT::i64);
+}]>;
+def SImmS3XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 3, SDLoc(N), MVT::i64);
+}]>;
+def SImmS4XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 4, SDLoc(N), MVT::i64);
+}]>;
+def SImmS16XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 16, SDLoc(N), MVT::i64);
+}]>;
+
 // simm6sN predicate - True if the immediate is a multiple of N in the range
 // [-32 * N, 31 * N].
 def SImm6s1Operand : SImmScaledMemoryIndexed<6, 1>;
@@ -506,27 +519,27 @@ def simm4s1 : Operand<i64>, ImmLeaf<i64,
 }
 
 def simm4s2 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-16  && Imm <= 14 && (Imm % 2) == 0x0; }]> {
+[{ return Imm >=-16  && Imm <= 14 && (Imm % 2) == 0x0; }], SImmS2XForm> {
   let PrintMethod = "printImmScale<2>";
   let ParserMatchClass = SImm4s2Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 
 def simm4s3 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-24  && Imm <= 21 && (Imm % 3) == 0x0; }]> {
+[{ return Imm >=-24  && Imm <= 21 && (Imm % 3) == 0x0; }], SImmS3XForm> {
   let PrintMethod = "printImmScale<3>";
   let ParserMatchClass = SImm4s3Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 
 def simm4s4 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-32  && Imm <= 28 && (Imm % 4) == 0x0; }]> {
+[{ return Imm >=-32  && Imm <= 28 && (Imm % 4) == 0x0; }], SImmS4XForm> {
   let PrintMethod = "printImmScale<4>";
   let ParserMatchClass = SImm4s4Operand;
   let DecoderMethod = "DecodeSImm<4>";
 }
 def simm4s16 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }]> {
+[{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }], SImmS16XForm> {
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = SImm4s16Operand;
   let DecoderMethod = "DecodeSImm<4>";
@@ -870,7 +883,7 @@ def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
 }
 
 // timm0_31 predicate - same ass imm0_31, but use TargetConstant (TimmLeaf)
-// instead of Contant (ImmLeaf)
+// instead of Constant (ImmLeaf)
 def timm0_31 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;
 }]> {
@@ -8052,6 +8065,34 @@ multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
 }
 
 multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
+  let Predicates = [HasNEON, HasFullFP16] in {
+  // Patterns for f16: DUPLANE, DUP scalar and vector_extract.
+  def : Pat<(v8f16 (OpNode (v8f16 V128:$Rd), (v8f16 V128:$Rn),
+                           (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                           VectorIndexH:$idx))),
+            (!cast<Instruction>(INST # "v8i16_indexed")
+                V128:$Rd, V128:$Rn, V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v8f16 (OpNode (v8f16 V128:$Rd), (v8f16 V128:$Rn),
+                           (AArch64dup (f16 FPR16Op:$Rm)))),
+            (!cast<Instruction>(INST # "v8i16_indexed") V128:$Rd, V128:$Rn,
+                (SUBREG_TO_REG (i32 0), FPR16Op:$Rm, hsub), (i64 0))>;
+
+  def : Pat<(v4f16 (OpNode (v4f16 V64:$Rd), (v4f16 V64:$Rn),
+                           (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                           VectorIndexH:$idx))),
+            (!cast<Instruction>(INST # "v4i16_indexed")
+                V64:$Rd, V64:$Rn, V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v4f16 (OpNode (v4f16 V64:$Rd), (v4f16 V64:$Rn),
+                           (AArch64dup (f16 FPR16Op:$Rm)))),
+            (!cast<Instruction>(INST # "v4i16_indexed") V64:$Rd, V64:$Rn,
+                (SUBREG_TO_REG (i32 0), FPR16Op:$Rm, hsub), (i64 0))>;
+
+  def : Pat<(f16 (OpNode (f16 FPR16:$Rd), (f16 FPR16:$Rn),
+                         (vector_extract (v8f16 V128_lo:$Rm), VectorIndexH:$idx))),
+            (!cast<Instruction>(INST # "v1i16_indexed") FPR16:$Rd, FPR16:$Rn,
+                V128_lo:$Rm, VectorIndexH:$idx)>;
+  } // Predicates = [HasNEON, HasFullFP16]
+
   // 2 variants for the .2s version: DUPLANE from 128-bit and DUP scalar.
   def : Pat<(v2f32 (OpNode (v2f32 V64:$Rd), (v2f32 V64:$Rn),
                            (AArch64duplane32 (v4f32 V128:$Rm),
@@ -8086,15 +8127,11 @@ multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
             (!cast<Instruction>(INST # "v2i64_indexed") V128:$Rd, V128:$Rn,
                 (SUBREG_TO_REG (i32 0), FPR64Op:$Rm, dsub), (i64 0))>;
 
-  // 2 variants for 32-bit scalar version: extract from .2s or from .4s
+  // Covers 2 variants for 32-bit scalar version: extract from .2s or from .4s
   def : Pat<(f32 (OpNode (f32 FPR32:$Rd), (f32 FPR32:$Rn),
                          (vector_extract (v4f32 V128:$Rm), VectorIndexS:$idx))),
             (!cast<Instruction>(INST # "v1i32_indexed") FPR32:$Rd, FPR32:$Rn,
                 V128:$Rm, VectorIndexS:$idx)>;
-  def : Pat<(f32 (OpNode (f32 FPR32:$Rd), (f32 FPR32:$Rn),
-                         (vector_extract (v2f32 V64:$Rm), VectorIndexS:$idx))),
-            (!cast<Instruction>(INST # "v1i32_indexed") FPR32:$Rd, FPR32:$Rn,
-                (SUBREG_TO_REG (i32 0), V64:$Rm, dsub), VectorIndexS:$idx)>;
 
   // 1 variant for 64-bit scalar version: extract from .1d or from .2d
   def : Pat<(f64 (OpNode (f64 FPR64:$Rd), (f64 FPR64:$Rn),

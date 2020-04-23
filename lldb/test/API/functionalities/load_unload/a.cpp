@@ -1,4 +1,4 @@
-extern int b_function ();
+extern LLDB_DYLIB_IMPORT int b_function();
 
 int a_init()
 {

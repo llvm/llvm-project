@@ -1214,13 +1214,13 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
 
   // Add I to DominatingExprs if it's an add/sub that can't sign overflow.
   if (match(I, m_NSWAdd(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfFullPoison(I)) {
+    if (programUndefinedIfPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
       DominatingAdds[Key].push_back(I);
     }
   } else if (match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfFullPoison(I)) {
+    if (programUndefinedIfPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
       DominatingSubs[Key].push_back(I);

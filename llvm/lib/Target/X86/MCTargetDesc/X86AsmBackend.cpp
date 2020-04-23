@@ -192,8 +192,8 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override;
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
 
   bool padInstructionViaRelaxation(MCRelaxableFragment &RF,
                                    MCCodeEmitter &Emitter,
@@ -566,6 +566,10 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
     return false;
   assert(allowAutoPadding() && "incorrect initialization!");
 
+  // We only pad in text section.
+  if (!OS.getCurrentSectionOnly()->getKind().isText())
+    return false;
+
   // To be Done: Currently don't deal with Bundle cases.
   if (OS.getAssembler().isBundlingEnabled())
     return false;
@@ -821,9 +825,8 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
 // we can relax?
-void X86AsmBackend::relaxInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI,
-                                     MCInst &Res) const {
+void X86AsmBackend::relaxInstruction(MCInst &Inst,
+                                     const MCSubtargetInfo &STI) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
   bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
@@ -836,8 +839,7 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
     report_fatal_error("unexpected instruction to relax: " + OS.str());
   }
 
-  Res = Inst;
-  Res.setOpcode(RelaxedOp);
+  Inst.setOpcode(RelaxedOp);
 }
 
 /// Return true if this instruction has been fully relaxed into it's most
@@ -911,8 +913,8 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
     // encoding size without impacting performance.
     return false;
 
-  MCInst Relaxed;
-  relaxInstruction(RF.getInst(), *RF.getSubtargetInfo(), Relaxed);
+  MCInst Relaxed = RF.getInst();
+  relaxInstruction(Relaxed, *RF.getSubtargetInfo());
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<15> Code;

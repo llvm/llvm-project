@@ -264,14 +264,12 @@ public:
         CacheFI(MF.getFrameInfo(), TRI) {}
 
   bool process(MachineInstr &MI) {
-    unsigned VarIdx = StatepointOpers(&MI).getVarIdx();
-    uint64_t Flags =
-        MI.getOperand(VarIdx + StatepointOpers::FlagsOffset).getImm();
+    StatepointOpers SO(&MI);
+    uint64_t Flags = SO.getFlags();
     // Do nothing for LiveIn, it supports all registers.
     if (Flags & (uint64_t)StatepointFlags::DeoptLiveIn)
       return false;
-    CallingConv::ID CC =
-        MI.getOperand(VarIdx + StatepointOpers::CCOffset).getImm();
+    CallingConv::ID CC = SO.getCallingConv();
     const uint32_t *Mask = TRI.getCallPreservedMask(MF, CC);
     CacheFI.reset();
     StatepointState SS(MI, Mask, CacheFI);

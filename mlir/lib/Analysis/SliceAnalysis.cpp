@@ -16,7 +16,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
 ///

@@ -755,13 +755,13 @@ typedef __char32_t char32_t;
 #endif
 
 #ifndef _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
-# ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
-# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
-#else
-// TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
-// And we should consider defaulting to OFF.
-# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
-#endif
+#  ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
+#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
+#  else
+     // TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
+     // And we should consider defaulting to OFF.
+#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
+#  endif
 #endif
 
 #ifndef _LIBCPP_HIDE_FROM_ABI
@@ -1106,12 +1106,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Try to find out if RTTI is disabled.
 // g++ and cl.exe have RTTI on by default and define a macro when it is.
-// g++ only defines the macro in 4.3.2 and onwards.
 #if !defined(_LIBCPP_NO_RTTI)
-#  if defined(__GNUC__) && \
-      ((__GNUC__ >= 5) || \
-       (__GNUC__ == 4 && (__GNUC_MINOR__ >= 3 || __GNUC_PATCHLEVEL__ >= 2))) && \
-      !defined(__GXX_RTTI)
+#  if defined(__GNUC__) && !defined(__GXX_RTTI)
 #    define _LIBCPP_NO_RTTI
 #  elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
 #    define _LIBCPP_NO_RTTI
@@ -1543,6 +1539,13 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
 #else
 #define _LIBCPP_BUILTIN_CONSTANT_P(x) false
+#endif
+
+// Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set
+// of functions used in cstdio may not be available for low API levels when
+// using 64-bit file offsets on LP32.
+#if defined(__BIONIC__) && defined(__USE_FILE_OFFSET64) && __ANDROID_API__ < 24
+#define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #endif
 
 #endif // __cplusplus
