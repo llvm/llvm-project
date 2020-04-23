@@ -248,6 +248,10 @@ public:
   /// destinations) is not considered to be a single predecessor.
   Block *getSinglePredecessor();
 
+  /// If this block has a unique predecessor, i.e., all incoming edges originate
+  /// from one block, return it. Otherwise, return null.
+  Block *getUniquePredecessor();
+
   // Indexed successor access.
   unsigned getNumSuccessors();
   Block *getSuccessor(unsigned i);
