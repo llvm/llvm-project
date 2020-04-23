@@ -675,7 +675,7 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   if (Amount > 31)
     return true; // This will have to remain a register variant.
   assert(MRI.getType(AmtReg).getSizeInBits() == 32);
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
   auto ExtCst = MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
   return true;
@@ -704,7 +704,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     return false;
   }
 
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
   unsigned PtrSize = ValTy.getElementType().getSizeInBits();
   const LLT NewTy = LLT::vector(ValTy.getNumElements(), PtrSize);
   auto &MMO = **MI.memoperands_begin();
@@ -722,7 +722,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
 bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &MIRBuilder) const {
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
   MachineFunction &MF = MIRBuilder.getMF();
   Align Alignment(MI.getOperand(2).getImm());
   Register Dst = MI.getOperand(0).getReg();
