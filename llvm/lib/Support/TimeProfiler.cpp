@@ -16,6 +16,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <cassert>
@@ -75,7 +76,10 @@ struct Entry {
 struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
       : StartTime(steady_clock::now()), ProcName(ProcName),
-        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {}
+        Pid(sys::Process::getProcessId()), Tid(llvm::get_threadid()),
+        TimeTraceGranularity(TimeTraceGranularity) {
+    llvm::get_thread_name(ThreadName);
+  }
 
   void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
     Stack.emplace_back(steady_clock::now(), TimePointType(), std::move(Name),
@@ -138,8 +142,8 @@ struct llvm::TimeTraceProfiler {
       auto StartUs = E.getFlameGraphStartUs(StartTime);
       auto DurUs = E.getFlameGraphDurUs();
 
-      J.object([&]{
-        J.attribute("pid", 1);
+      J.object([&] {
+        J.attribute("pid", Pid);
         J.attribute("tid", int64_t(Tid));
         J.attribute("ph", "X");
         J.attribute("ts", StartUs);
@@ -194,8 +198,8 @@ struct llvm::TimeTraceProfiler {
       auto DurUs = duration_cast<microseconds>(Total.second.second).count();
       auto Count = AllCountAndTotalPerName[Total.first].first;
 
-      J.object([&]{
-        J.attribute("pid", 1);
+      J.object([&] {
+        J.attribute("pid", Pid);
         J.attribute("tid", int64_t(TotalTid));
         J.attribute("ph", "X");
         J.attribute("ts", 0);
@@ -210,16 +214,23 @@ struct llvm::TimeTraceProfiler {
       ++TotalTid;
     }
 
-    // Emit metadata event with process name.
-    J.object([&] {
-      J.attribute("cat", "");
-      J.attribute("pid", 1);
-      J.attribute("tid", 0);
-      J.attribute("ts", 0);
-      J.attribute("ph", "M");
-      J.attribute("name", "process_name");
-      J.attributeObject("args", [&] { J.attribute("name", ProcName); });
-    });
+    auto writeMetadataEvent = [&](const char *Name, uint64_t Tid,
+                                  StringRef arg) {
+      J.object([&] {
+        J.attribute("cat", "");
+        J.attribute("pid", Pid);
+        J.attribute("tid", int64_t(Tid));
+        J.attribute("ts", 0);
+        J.attribute("ph", "M");
+        J.attribute("name", Name);
+        J.attributeObject("args", [&] { J.attribute("name", arg); });
+      });
+    };
+
+    writeMetadataEvent("process_name", Tid, ProcName);
+    writeMetadataEvent("thread_name", Tid, ThreadName);
+    for (const TimeTraceProfiler *TTP : ThreadTimeTraceProfilerInstances)
+      writeMetadataEvent("thread_name", TTP->Tid, TTP->ThreadName);
 
     J.arrayEnd();
     J.attributeEnd();
@@ -231,6 +242,8 @@ struct llvm::TimeTraceProfiler {
   StringMap<CountAndDurationType> CountAndTotalPerName;
   const TimePointType StartTime;
   const std::string ProcName;
+  const sys::Process::Pid Pid;
+  SmallString<0> ThreadName;
   const uint64_t Tid;
 
   // Minimum time granularity (in microseconds)
