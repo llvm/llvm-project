@@ -684,23 +684,15 @@ void CallIndirectOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 // Return the type of the same shape (scalar, vector or tensor) containing i1.
-static Type getCheckedI1SameShape(Type type) {
+static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(1, type.getContext());
-  if (type.isSignlessIntOrIndexOrFloat())
-    return i1Type;
   if (auto tensorType = type.dyn_cast<RankedTensorType>())
     return RankedTensorType::get(tensorType.getShape(), i1Type);
   if (type.isa<UnrankedTensorType>())
     return UnrankedTensorType::get(i1Type);
   if (auto vectorType = type.dyn_cast<VectorType>())
     return VectorType::get(vectorType.getShape(), i1Type);
-  return Type();
-}
-
-static Type getI1SameShape(Type type) {
-  Type res = getCheckedI1SameShape(type);
-  assert(res && "expected type with valid i1 shape");
-  return res;
+  return i1Type;
 }
 
 //===----------------------------------------------------------------------===//
@@ -840,8 +832,10 @@ OpFoldResult CmpFOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// cond_br true, ^bb1, ^bb2 -> br ^bb1
-/// cond_br false, ^bb1, ^bb2 -> br ^bb2
+/// cond_br true, ^bb1, ^bb2
+///  -> br ^bb1
+/// cond_br false, ^bb1, ^bb2
+///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
   using OpRewritePattern<CondBranchOp>::OpRewritePattern;
@@ -869,7 +863,7 @@ struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
 /// ^bb2
 ///   br ^bbK(...)
 ///
-///   cond_br %cond, ^bbN(...), ^bbK(...)
+///  -> cond_br %cond, ^bbN(...), ^bbK(...)
 ///
 struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
   using OpRewritePattern<CondBranchOp>::OpRewritePattern;
@@ -943,12 +937,70 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
     return success();
   }
 };
+
+/// cond_br %cond, ^bb1(A, ..., N), ^bb1(A, ..., N)
+///  -> br ^bb1(A, ..., N)
+///
+/// cond_br %cond, ^bb1(A), ^bb1(B)
+///  -> %select = select %cond, A, B
+///     br ^bb1(%select)
+///
+struct SimplifyCondBranchIdenticalSuccessors
+    : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    // Check that the true and false destinations are the same and have the same
+    // operands.
+    Block *trueDest = condbr.trueDest();
+    if (trueDest != condbr.falseDest())
+      return failure();
+
+    // If all of the operands match, no selects need to be generated.
+    OperandRange trueOperands = condbr.getTrueOperands();
+    OperandRange falseOperands = condbr.getFalseOperands();
+    if (trueOperands == falseOperands) {
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, trueOperands);
+      return success();
+    }
+
+    // Otherwise, if the current block is the only predecessor insert selects
+    // for any mismatched branch operands.
+    if (trueDest->getUniquePredecessor() != condbr.getOperation()->getBlock())
+      return failure();
+
+    // TODO: ATM Tensor/Vector SelectOp requires that the condition has the same
+    // shape as the operands. We should relax that to allow an i1 to signify
+    // that everything is selected.
+    auto doesntSupportsScalarI1 = [](Type type) {
+      return type.isa<TensorType>() || type.isa<VectorType>();
+    };
+    if (llvm::any_of(trueOperands.getTypes(), doesntSupportsScalarI1))
+      return failure();
+
+    // Generate a select for any operands that differ between the two.
+    SmallVector<Value, 8> mergedOperands;
+    mergedOperands.reserve(trueOperands.size());
+    Value condition = condbr.getCondition();
+    for (auto it : llvm::zip(trueOperands, falseOperands)) {
+      if (std::get<0>(it) == std::get<1>(it))
+        mergedOperands.push_back(std::get<0>(it));
+      else
+        mergedOperands.push_back(rewriter.create<SelectOp>(
+            condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
+    }
+
+    rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, mergedOperands);
+    return success();
+  }
+};
 } // end anonymous namespace
 
 void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch>(
-      context);
+  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
+                 SimplifyCondBranchIdenticalSuccessors>(context);
 }
 
 Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
