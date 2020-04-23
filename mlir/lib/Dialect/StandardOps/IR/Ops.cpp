@@ -999,15 +999,6 @@ struct SimplifyCondBranchIdenticalSuccessors
     if (trueDest->getUniquePredecessor() != condbr.getOperation()->getBlock())
       return failure();
 
-    // TODO: ATM Tensor/Vector SelectOp requires that the condition has the same
-    // shape as the operands. We should relax that to allow an i1 to signify
-    // that everything is selected.
-    auto doesntSupportsScalarI1 = [](Type type) {
-      return type.isa<TensorType>() || type.isa<VectorType>();
-    };
-    if (llvm::any_of(trueOperands.getTypes(), doesntSupportsScalarI1))
-      return failure();
-
     // Generate a select for any operands that differ between the two.
     SmallVector<Value, 8> mergedOperands;
     mergedOperands.reserve(trueOperands.size());
@@ -1923,6 +1914,59 @@ OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(condition, m_Zero()))
     return getFalseValue();
   return nullptr;
+}
+
+static void print(OpAsmPrinter &p, SelectOp op) {
+  p << "select " << op.getOperands();
+  p.printOptionalAttrDict(op.getAttrs());
+  p << " : ";
+  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
+    p << condType << ", ";
+  p << op.getType();
+}
+
+static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
+  Type conditionType, resultType;
+  SmallVector<OpAsmParser::OperandType, 3> operands;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
+    return failure();
+
+  // Check for the explicit condition type if this is a masked tensor or vector.
+  if (succeeded(parser.parseOptionalComma())) {
+    conditionType = resultType;
+    if (parser.parseType(resultType))
+      return failure();
+  } else {
+    conditionType = parser.getBuilder().getI1Type();
+  }
+
+  result.addTypes(resultType);
+  return parser.resolveOperands(operands,
+                                {conditionType, resultType, resultType},
+                                parser.getNameLoc(), result.operands);
+}
+
+static LogicalResult verify(SelectOp op) {
+  Type conditionType = op.getCondition().getType();
+  if (conditionType.isSignlessInteger(1))
+    return success();
+
+  // If the result type is a vector or tensor, the type can be a mask with the
+  // same elements.
+  Type resultType = op.getType();
+  if (!resultType.isa<TensorType>() && !resultType.isa<VectorType>())
+    return op.emitOpError()
+           << "expected condition to be a signless i1, but got "
+           << conditionType;
+  Type shapedConditionType = getI1SameShape(resultType);
+  if (conditionType != shapedConditionType)
+    return op.emitOpError()
+           << "expected condition type to have the same shape "
+              "as the result type, expected "
+           << shapedConditionType << ", but got " << conditionType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
