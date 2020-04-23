@@ -778,6 +778,8 @@ void RISCVInstrInfo::buildOutlinedFrame(
     }
   }
 
+  MBB.addLiveIn(RISCV::X5);
+
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))
       .addReg(RISCV::X0, RegState::Define)
