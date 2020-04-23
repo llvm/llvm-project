@@ -237,6 +237,8 @@ namespace clang {
     bool isOverloadWhile() const { return Flags & IsOverloadWhile; }
     bool isOverloadDefault() const { return !(Flags & OverloadKindMask); }
     bool isOverloadWhileRW() const { return Flags & IsOverloadWhileRW; }
+    bool isOverloadCvt() const { return Flags & IsOverloadCvt; }
+    bool isFPConvert() const { return Flags & IsFPConvert; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
