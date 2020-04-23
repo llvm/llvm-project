@@ -224,7 +224,8 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   // Strip out the module-level Debug Info Version metadata.
   // FIXME: There must be an easier way to remove an operand from a NamedMDNode.
   NamedMDNode *NMD = M.getModuleFlagsMetadata();
-  assert(NMD && "debugify metadata present without Debug Info Version set?");
+  if (!NMD)
+    return Changed;
   SmallVector<MDNode *, 4> Flags;
   for (MDNode *Flag : NMD->operands())
     Flags.push_back(Flag);
