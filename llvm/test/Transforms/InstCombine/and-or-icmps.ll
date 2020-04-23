@@ -461,6 +461,40 @@ define i1 @substitute_constant_and_eq_sgt_use2(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; X == MAX && X < Y --> false
+
+define i1 @slt_and_max(i8 %x, i8 %y)  {
+; CHECK-LABEL: @slt_and_max(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %c1 = icmp eq i8 %x, 127
+  %c2 = icmp slt i8 %x, %y
+  call void @use(i1 %c2)
+  %r = and i1 %c2, %c1
+  ret i1 %r
+}
+
+; X == MAX && X >= Y --> X == MAX
+
+define i1 @sge_and_max(i8 %x, i8 %y)  {
+; CHECK-LABEL: @sge_and_max(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %c1 = icmp eq i8 %x, 127
+  %c2 = icmp sge i8 %x, %y
+  call void @use(i1 %c2)
+  %r = and i1 %c2, %c1
+  ret i1 %r
+}
+
 define i1 @substitute_constant_and_ne_ugt_swap(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_ne_ugt_swap(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X:%.*]], 42
