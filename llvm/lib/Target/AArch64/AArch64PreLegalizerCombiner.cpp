@@ -40,7 +40,7 @@ static bool matchFConstantToConstant(MachineInstr &MI,
   // When we're storing a value, it doesn't matter what register bank it's on.
   // Since not all floating point constants can be materialized using a fmov,
   // it makes more sense to just use a GPR.
-  return all_of(MRI.use_instructions(DstReg),
+  return all_of(MRI.use_nodbg_instructions(DstReg),
                 [](const MachineInstr &Use) { return Use.mayStore(); });
 }
 
