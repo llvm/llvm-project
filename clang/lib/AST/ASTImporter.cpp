@@ -8176,15 +8176,22 @@ Expected<DeclContext *> ASTImporter::ImportContext(DeclContext *FromDC) {
   // need it to have a definition.
   if (auto *ToRecord = dyn_cast<RecordDecl>(ToDC)) {
     auto *FromRecord = cast<RecordDecl>(FromDC);
-    if (ToRecord->isCompleteDefinition()) {
-      // Do nothing.
-    } else if (FromRecord->isCompleteDefinition()) {
+    if (ToRecord->isCompleteDefinition())
+      return ToDC;
+
+    // If FromRecord is not defined we need to force it to be.
+    // Simply calling CompleteDecl(...) for a RecordDecl will break some cases
+    // it will start the definition but we never finish it.
+    // If there are base classes they won't be imported and we will
+    // be missing anything that we inherit from those bases.
+    if (FromRecord->getASTContext().getExternalSource() &&
+        !FromRecord->isCompleteDefinition())
+      FromRecord->getASTContext().getExternalSource()->CompleteType(FromRecord);
+
+    if (FromRecord->isCompleteDefinition())
       if (Error Err = ASTNodeImporter(*this).ImportDefinition(
           FromRecord, ToRecord, ASTNodeImporter::IDK_Basic))
         return std::move(Err);
-    } else {
-      CompleteDecl(ToRecord);
-    }
   } else if (auto *ToEnum = dyn_cast<EnumDecl>(ToDC)) {
     auto *FromEnum = cast<EnumDecl>(FromDC);
     if (ToEnum->isCompleteDefinition()) {
