@@ -28,7 +28,6 @@
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -99,7 +98,7 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
     if (!Visited.insert(U).second)
       continue;
 
-    ImmutableCallSite CS(U);
+    const auto *CB = dyn_cast<CallBase>(U);
 
     for (const auto &OI : U->operands()) {
       const User *Operand = dyn_cast<User>(OI);
@@ -113,7 +112,7 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
-        if (!(CS && CS.isCallee(&OI)))
+        if (!(CB && CB->isCallee(&OI)))
           RefEdges.insert(Index.getOrInsertValueInfo(GV));
         continue;
       }
@@ -145,7 +144,7 @@ static void addVCallToSet(DevirtCallSite Call, GlobalValue::GUID Guid,
                           SetVector<FunctionSummary::ConstVCall> &ConstVCalls) {
   std::vector<uint64_t> Args;
   // Start from the second argument to skip the "this" pointer.
-  for (auto &Arg : make_range(Call.CS.arg_begin() + 1, Call.CS.arg_end())) {
+  for (auto &Arg : make_range(Call.CB.arg_begin() + 1, Call.CB.arg_end())) {
     auto *CI = dyn_cast<ConstantInt>(Arg);
     if (!CI || CI->getBitWidth() > 64) {
       VCalls.insert({Guid, Call.Offset});
@@ -304,8 +303,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         }
       }
       findRefEdges(Index, &I, RefEdges, Visited);
-      auto CS = ImmutableCallSite(&I);
-      if (!CS)
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
         continue;
 
       const auto *CI = dyn_cast<CallInst>(&I);
@@ -317,8 +316,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       if (HasLocalsInUsedOrAsm && CI && CI->isInlineAsm())
         HasInlineAsmMaybeReferencingInternal = true;
 
-      auto *CalledValue = CS.getCalledValue();
-      auto *CalledFunction = CS.getCalledFunction();
+      auto *CalledValue = CB->getCalledValue();
+      auto *CalledFunction = CB->getCalledFunction();
       if (CalledValue && !CalledFunction) {
         CalledValue = CalledValue->stripPointerCasts();
         // Stripping pointer casts can reveal a called function.
