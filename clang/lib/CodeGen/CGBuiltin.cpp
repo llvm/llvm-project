@@ -7940,18 +7940,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // Predicates must match the main datatype.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
       if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
-        if (PredTy->getElementType()->isIntegerTy(1)) {
-          // The special case for `isFPConvert` is because the predicates of the
-          // ACLE IR intrinsics for FP converts are always of type <vscale x 16 x i1>.
-          // This special-case will be removed in a follow-up patch that updates
-          // the FP conversion intrinsics with predicates that match the
-          // default type.
-          llvm::VectorType *NewPredTy =
-              TypeFlags.isFPConvert()
-                  ? llvm::VectorType::get(Builder.getInt1Ty(), {16, true})
-                  : getSVEType(TypeFlags);
-          Ops[i] = EmitSVEPredicateCast(Ops[i], NewPredTy);
-        }
+        if (PredTy->getElementType()->isIntegerTy(1))
+          Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (TypeFlags.hasSplatOperand()) {

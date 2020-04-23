@@ -564,6 +564,16 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
+  case 't':
+    Signed = true;
+    Float = false;
+    ElementBitwidth = 32;
+    break;
+  case 'z':
+    Signed = false;
+    Float = false;
+    ElementBitwidth = 32;
+    break;
   case 'O':
     Predicate = false;
     Float = true;
