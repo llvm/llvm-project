@@ -810,14 +810,14 @@ void SCCPSolver::visitCastInst(CastInst &I) {
 }
 
 void SCCPSolver::visitExtractValueInst(ExtractValueInst &EVI) {
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
-  // discover a concrete value later.
-  if (isOverdefined(ValueState[&EVI]))
-    return (void)markOverdefined(&EVI);
-
   // If this returns a struct, mark all elements over defined, we don't track
   // structs in structs.
   if (EVI.getType()->isStructTy())
+    return (void)markOverdefined(&EVI);
+
+  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // discover a concrete value later.
+  if (ValueState[&EVI].isOverdefined())
     return (void)markOverdefined(&EVI);
 
   // If this is extracting from more than one level of struct, we don't know.
