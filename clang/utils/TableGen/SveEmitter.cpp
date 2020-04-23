@@ -564,6 +564,21 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
+  case 'O':
+    Predicate = false;
+    Float = true;
+    ElementBitwidth = 16;
+    break;
+  case 'M':
+    Predicate = false;
+    Float = true;
+    ElementBitwidth = 32;
+    break;
+  case 'N':
+    Predicate = false;
+    Float = true;
+    ElementBitwidth = 64;
+    break;
   case 'S':
     Constant = true;
     Pointer = true;
@@ -1019,6 +1034,17 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 
   if (!InGuard.empty())
     OS << "#endif  //" << InGuard << "\n";
+
+  OS << "#if defined(__ARM_FEATURE_SVE2)\n";
+  OS << "#define svcvtnt_f16_x      svcvtnt_f16_m\n";
+  OS << "#define svcvtnt_f16_f32_x  svcvtnt_f16_f32_m\n";
+  OS << "#define svcvtnt_f32_x      svcvtnt_f32_m\n";
+  OS << "#define svcvtnt_f32_f64_x  svcvtnt_f32_f64_m\n\n";
+
+  OS << "#define svcvtxnt_f32_x     svcvtxnt_f32_m\n";
+  OS << "#define svcvtxnt_f32_f64_x svcvtxnt_f32_f64_m\n\n";
+
+  OS << "#endif /*__ARM_FEATURE_SVE2 */\n\n";
 
   OS << "#ifdef __cplusplus\n";
   OS << "} // extern \"C\"\n";
