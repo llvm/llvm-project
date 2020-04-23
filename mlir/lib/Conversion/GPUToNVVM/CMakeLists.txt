@@ -12,7 +12,6 @@ add_mlir_conversion_library(MLIRGPUtoNVVMTransforms
 
 target_link_libraries(MLIRGPUtoNVVMTransforms
   PUBLIC
-  LLVMSupport
   MLIRGPU
   MLIRLLVMIR
   MLIRNVVMIR

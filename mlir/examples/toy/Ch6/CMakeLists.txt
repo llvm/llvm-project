@@ -4,6 +4,8 @@ add_subdirectory(include)
 set(LLVM_LINK_COMPONENTS
   Core
   Support
+  nativecodegen
+  OrcJIT
   )
 
 set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
