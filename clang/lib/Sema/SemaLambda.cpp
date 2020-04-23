@@ -1054,7 +1054,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
         Diag(C->Loc, !getLangOpts().CPlusPlus20
-                         ? diag::ext_equals_this_lambda_capture_cxx2a
+                         ? diag::ext_equals_this_lambda_capture_cxx20
                          : diag::warn_cxx17_compat_equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:

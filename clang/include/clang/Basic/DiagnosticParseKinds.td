@@ -676,7 +676,7 @@ def err_ms_property_expected_comma_or_rparen : Error<
 def err_ms_property_initializer : Error<
   "property declaration cannot have an in-class initializer">;
 
-def warn_cxx2a_compat_explicit_bool : Warning<
+def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
 def warn_cxx17_compat_explicit_bool : Warning<
