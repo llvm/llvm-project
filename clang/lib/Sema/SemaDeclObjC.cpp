@@ -938,8 +938,7 @@ static bool checkTypeParamListConsistency(Sema &S,
 
       // Override the new type parameter's bound type with the previous type,
       // so that it's consistent.
-      newTypeParam->setTypeSourceInfo(
-        S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+      S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
       continue;
     }
 
@@ -966,8 +965,7 @@ static bool checkTypeParamListConsistency(Sema &S,
     }
 
     // Update the new type parameter's bound to match the previous one.
-    newTypeParam->setTypeSourceInfo(
-      S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+    S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
   }
 
   return false;
