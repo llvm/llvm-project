@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
 
