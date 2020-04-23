@@ -871,11 +871,11 @@ public:
 
   /// Returns true if this declaration is lexically inside a function or inside
   /// a variable initializer. It recognizes non-defining declarations as well
-  /// as members of local classes:
+  /// as members of local classes and lambdas:
   /// \code
   ///     void foo() { void bar(); }
   ///     void foo2() { class ABC { void bar(); }; }
-  ///     inline int x = [](){ return 0; };
+  ///     inline int x = [](){ return 0; }();
   /// \endcode
   bool isInLocalScope() const;
 
