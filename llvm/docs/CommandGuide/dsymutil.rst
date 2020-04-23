@@ -18,6 +18,11 @@ its symbol table. By default, the linked debug information is placed in a
 
 OPTIONS
 -------
+.. option:: --accelerator=<accelerator type>
+
+ Specify the desired type of accelerator table. Valid options are 'Apple',
+ 'Dwarf' and 'Default'.
+
 .. option:: --arch=<arch>
 
  Link DWARF debug information only for specified CPU architecture types.
@@ -35,15 +40,16 @@ OPTIONS
 .. option:: -f, --flat
 
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
- executable name unless the output file is specified using the -o option.
+ executable name unless the output file is specified using the ``-o`` option.
 
-.. option:: -z, --minimize
+.. option:: -h, --help
 
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with --update option, this option will cause redundant
- accelerator tables to be removed.
+ Print this help output.
+
+.. option:: -j <n>, --num-threads=<n>
+
+ Specifies the maximum number (``n``) of simultaneous threads to use when
+ linking multiple architectures.
 
 .. option:: --no-odr
 
@@ -57,25 +63,20 @@ OPTIONS
 
  Don't check the timestamp for swiftmodule files.
 
-.. option:: -j <n>, --num-threads=<n>
-
- Specifies the maximum number (``n``) of simultaneous threads to use when
- linking multiple architectures.
-
-.. option:: -o <filename>
-
- Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
- bundle path is created by appending ``.dSYM`` to the executable name.
-
-.. option:: --oso-prepend-path=<path>
-
- Specifies a ``path`` to prepend to all debug symbol object file paths.
-
 .. option:: --object-prefix-map=<prefix=remapped>
 
  Remap object file paths (but no source paths) before processing.  Use
  this for Clang objects where the module cache location was remapped using
  ``-fdebug-prefix-map``; to help dsymutil find the Clang module cache.
+
+.. option:: --oso-prepend-path=<path>
+
+ Specifies a ``path`` to prepend to all debug symbol object file paths.
+
+.. option:: -o <filename>, --out <filename>
+
+ Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
+ bundle path is created by appending ``.dSYM`` to the executable name.
  
 .. option:: --papertrail
 
@@ -84,11 +85,27 @@ OPTIONS
  output stream. When enabled warnings are embedded in the linked DWARF debug
  information.
 
+.. option:: --remarks-output-format <format>
+
+ Specify the format to be used when serializing the linked remarks.
+
+.. option:: --remarks-prepend-path <path>
+
+ Specify a directory to prepend the paths of the external remark files.
+
+.. option:: --symbol-map <bcsymbolmap>
+
+ Update the existing dSYMs inplace using symbol map specified.
+
 .. option:: -s, --symtab
 
  Dumps the symbol table found in *executable* or object file(s) and exits.
 
-.. option:: --toolchain
+.. option:: -S
+
+ Output textual assembly instead of a binary dSYM companion file.
+
+.. option:: --toolchain <toolchain>
 
  Embed the toolchain in the dSYM bundle's property list.
 
@@ -98,17 +115,29 @@ OPTIONS
  other DWARF optimizations. This option will rebuild the '.apple_names' and
  '.apple_types' hashed accelerator tables.
 
-.. option:: -v, --verbose
+.. option:: --verbose
 
  Display verbose information when linking.
 
-.. option:: --version
+.. option:: --verify
+
+ Run the DWARF verifier on the linked DWARF debug info.
+
+.. option:: -v, --version
 
  Display the version of the tool.
 
 .. option:: -y
 
  Treat *executable* as a YAML debug-map rather than an executable.
+
+.. option:: -z, --minimize
+
+ When used when creating a dSYM file, this option will suppress the emission of
+ the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
+ dsymutil currently has better equivalents: .apple_names and .apple_types. When
+ used in conjunction with ``--update`` option, this option will cause redundant
+ accelerator tables to be removed.
 
 EXIT STATUS
 -----------
