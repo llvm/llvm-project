@@ -18,7 +18,8 @@
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 
-# CHECK: "traceEvents": [
+# CHECK:      "beginningOfTime": {{[0-9]{16},}}
+# CHECK-NEXT: "traceEvents": [
 
 # Check one event has correct fields
 # CHECK:      "dur":
