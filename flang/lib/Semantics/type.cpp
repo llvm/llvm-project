@@ -338,7 +338,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
     return &FindOrInstantiateDerivedType(scope_,
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
         context_, type->category());
-  } else if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
+  } else if (type->AsIntrinsic()) {
     return &InstantiateIntrinsicType(*type);
   } else if (type->category() == DeclTypeSpec::ClassStar) {
     return type;
