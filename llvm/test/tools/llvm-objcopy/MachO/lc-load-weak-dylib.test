@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t.copy
+# RUN: cmp %t %t.copy
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      80
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+ - cmd:             LC_LOAD_WEAK_DYLIB
+   cmdsize:         80
+   dylib:
+     name:            24
+     timestamp:       2
+     current_version: 65536
+     compatibility_version: 65536
+   PayloadString:   '/System/Library/Frameworks/Network.framework/Network'
+   ZeroPadBytes:    4
+...

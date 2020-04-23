@@ -340,6 +340,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_BUILD_VERSION:
     case MachO::LC_ID_DYLIB:
     case MachO::LC_LOAD_DYLIB:
+    case MachO::LC_LOAD_WEAK_DYLIB:
     case MachO::LC_UUID:
     case MachO::LC_SOURCE_VERSION:
       // Nothing to update.
