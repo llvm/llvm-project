@@ -570,7 +570,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   }
   const char *Name = TLI.getLibcallName(RTLibcall);
 
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
@@ -3610,7 +3610,7 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy) {
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_IMPLICIT_DEF:
