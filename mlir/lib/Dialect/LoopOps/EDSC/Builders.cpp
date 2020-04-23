@@ -79,14 +79,11 @@ mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
 }
 
 LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
-                                                ArrayRef<Value> lbHandles,
-                                                ArrayRef<Value> ubHandles,
+                                                ArrayRef<Value> lbs,
+                                                ArrayRef<Value> ubs,
                                                 ArrayRef<Value> steps) {
   LoopBuilder result;
-  auto opHandle = OperationHandle::create<loop::ParallelOp>(
-      SmallVector<Value, 4>(lbHandles.begin(), lbHandles.end()),
-      SmallVector<Value, 4>(ubHandles.begin(), ubHandles.end()),
-      SmallVector<Value, 4>(steps.begin(), steps.end()));
+  auto opHandle = OperationHandle::create<loop::ParallelOp>(lbs, ubs, steps);
 
   loop::ParallelOp parallelOp =
       cast<loop::ParallelOp>(*opHandle.getOperation());
@@ -96,12 +93,13 @@ LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
   return result;
 }
 
-mlir::edsc::LoopBuilder mlir::edsc::makeLoopBuilder(
-    Value *iv, Value lbHandle, Value ubHandle, Value stepHandle,
-    MutableArrayRef<Value> iterArgsHandles, ValueRange iterArgsInitValues) {
+mlir::edsc::LoopBuilder
+mlir::edsc::makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
+                            MutableArrayRef<Value> iterArgsHandles,
+                            ValueRange iterArgsInitValues) {
   mlir::edsc::LoopBuilder result;
-  auto forOp = OperationHandle::createOp<loop::ForOp>(
-      lbHandle, ubHandle, stepHandle, iterArgsInitValues);
+  auto forOp =
+      OperationHandle::createOp<loop::ForOp>(lb, ub, step, iterArgsInitValues);
   *iv = forOp.getInductionVar();
   auto *body = loop::getForInductionVarOwner(*iv).getBody();
   for (size_t i = 0, e = iterArgsHandles.size(); i < e; ++i) {
