@@ -401,33 +401,33 @@ static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
 }
 
 /// Helper class to compose two generic deduction
-template <typename AAType, typename Base, typename StateType,
+template <typename AAType, typename BaseType, typename StateType,
           template <typename...> class F, template <typename...> class G>
 struct AAComposeTwoGenericDeduction
-    : public F<AAType, G<AAType, Base, StateType>, StateType> {
+    : public F<AAType, G<AAType, BaseType, StateType>, StateType> {
   AAComposeTwoGenericDeduction(const IRPosition &IRP, Attributor &A)
-      : F<AAType, G<AAType, Base, StateType>, StateType>(IRP, A) {}
+      : F<AAType, G<AAType, BaseType, StateType>, StateType>(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    F<AAType, G<AAType, Base, StateType>, StateType>::initialize(A);
-    G<AAType, Base, StateType>::initialize(A);
+    F<AAType, G<AAType, BaseType, StateType>, StateType>::initialize(A);
+    G<AAType, BaseType, StateType>::initialize(A);
   }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus ChangedF =
-        F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A);
-    ChangeStatus ChangedG = G<AAType, Base, StateType>::updateImpl(A);
+        F<AAType, G<AAType, BaseType, StateType>, StateType>::updateImpl(A);
+    ChangeStatus ChangedG = G<AAType, BaseType, StateType>::updateImpl(A);
     return ChangedF | ChangedG;
   }
 };
 
 /// Helper class for generic deduction: return value -> returned position.
-template <typename AAType, typename Base,
-          typename StateType = typename Base::StateType>
-struct AAReturnedFromReturnedValues : public Base {
+template <typename AAType, typename BaseType,
+          typename StateType = typename BaseType::StateType>
+struct AAReturnedFromReturnedValues : public BaseType {
   AAReturnedFromReturnedValues(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : BaseType(IRP, A) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -487,11 +487,11 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
 }
 
 /// Helper class for generic deduction: call site argument -> argument position.
-template <typename AAType, typename Base,
+template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType>
-struct AAArgumentFromCallSiteArguments : public Base {
+struct AAArgumentFromCallSiteArguments : public BaseType {
   AAArgumentFromCallSiteArguments(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : BaseType(IRP, A) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -504,11 +504,11 @@ struct AAArgumentFromCallSiteArguments : public Base {
 };
 
 /// Helper class for generic replication: function returned -> cs returned.
-template <typename AAType, typename Base,
-          typename StateType = typename Base::StateType>
-struct AACallSiteReturnedFromReturned : public Base {
+template <typename AAType, typename BaseType,
+          typename StateType = typename BaseType::StateType>
+struct AACallSiteReturnedFromReturned : public BaseType {
   AACallSiteReturnedFromReturned(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : BaseType(IRP, A) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -531,21 +531,21 @@ struct AACallSiteReturnedFromReturned : public Base {
 };
 
 /// Helper class for generic deduction using must-be-executed-context
-/// Base class is required to have `followUse` method.
+/// BaseType class is required to have `followUse` method.
 
 /// bool followUse(Attributor &A, const Use *U, const Instruction *I)
 /// U - Underlying use.
 /// I - The user of the \p U.
 /// `followUse` returns true if the value should be tracked transitively.
 
-template <typename AAType, typename Base,
+template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType>
-struct AAFromMustBeExecutedContext : public Base {
+struct AAFromMustBeExecutedContext : public BaseType {
   AAFromMustBeExecutedContext(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : BaseType(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    Base::initialize(A);
+    BaseType::initialize(A);
     const IRPosition &IRP = this->getIRPosition();
     Instruction *CtxI = IRP.getCtxI();
 
@@ -566,7 +566,7 @@ struct AAFromMustBeExecutedContext : public Base {
       const Use *U = Uses[u];
       if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
         bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
-        if (Found && Base::followUse(A, U, UserI, State))
+        if (Found && BaseType::followUse(A, U, UserI, State))
           for (const Use &Us : UserI->uses())
             Uses.insert(&Us);
       }
@@ -662,17 +662,17 @@ private:
   SetVector<const Use *> Uses;
 };
 
-template <typename AAType, typename Base,
+template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType>
 using AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext =
-    AAComposeTwoGenericDeduction<AAType, Base, StateType,
+    AAComposeTwoGenericDeduction<AAType, BaseType, StateType,
                                  AAFromMustBeExecutedContext,
                                  AAArgumentFromCallSiteArguments>;
 
-template <typename AAType, typename Base,
+template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType>
 using AACallSiteReturnedFromReturnedAndMustBeExecutedContext =
-    AAComposeTwoGenericDeduction<AAType, Base, StateType,
+    AAComposeTwoGenericDeduction<AAType, BaseType, StateType,
                                  AAFromMustBeExecutedContext,
                                  AACallSiteReturnedFromReturned>;
 
