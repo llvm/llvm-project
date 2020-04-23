@@ -195,7 +195,7 @@ Download the latest Visual Studio extension from the `alpha build site
 Visual Studio Code Integration
 ==============================
 
-Get the latest Visual Studio Code extension from the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=xaver.clang-format>_`. The default key-binding is Alt-Shift-F.
+Get the latest Visual Studio Code extension from the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=xaver.clang-format>`_. The default key-binding is Alt-Shift-F.
 
 
 Script for patch reformatting
