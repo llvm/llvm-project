@@ -35,7 +35,7 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
-using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
+using folded_std_constant_index = FoldedValueBuilder<ConstantIndexOp>;
 
 using llvm::dbgs;
 

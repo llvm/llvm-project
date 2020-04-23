@@ -14,11 +14,11 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 
-static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
+static SmallVector<Value, 8> getMemRefSizes(Value memRef) {
   MemRefType memRefType = memRef.getType().cast<MemRefType>();
   assert(isStrided(memRefType) && "Expected strided MemRef type");
 
-  SmallVector<ValueHandle, 8> res;
+  SmallVector<Value, 8> res;
   res.reserve(memRefType.getShape().size());
   const auto &shape = memRefType.getShape();
   for (unsigned idx = 0, n = shape.size(); idx < n; ++idx) {

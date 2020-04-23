@@ -531,9 +531,9 @@ llvm::Optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
 void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
   using namespace edsc;
   using namespace intrinsics;
-  ValueHandle _0(args[0]), _1(args[1]), _2(args[2]);
-  ValueHandle _4 = std_mulf(_0, _1);
-  ValueHandle _5 = std_addf(_2, _4);
+  Value _0(args[0]), _1(args[1]), _2(args[2]);
+  Value _4 = std_mulf(_0, _1);
+  Value _5 = std_addf(_2, _4);
   (linalg_yield(ValueRange{ _5 }));
 }
 ```

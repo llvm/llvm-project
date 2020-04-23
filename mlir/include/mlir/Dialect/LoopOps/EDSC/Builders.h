@@ -23,27 +23,30 @@ namespace mlir {
 namespace edsc {
 
 /// Constructs a new loop::ParallelOp and captures the associated induction
-/// variables. An array of ValueHandle pointers is passed as the first
+/// variables. An array of Value pointers is passed as the first
 /// argument and is the *only* way to capture loop induction variables.
-LoopBuilder makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
-                                    ArrayRef<ValueHandle> lbHandles,
-                                    ArrayRef<ValueHandle> ubHandles,
-                                    ArrayRef<ValueHandle> steps);
+LoopBuilder makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
+                                    ArrayRef<Value> lbs, ArrayRef<Value> ubs,
+                                    ArrayRef<Value> steps);
 /// Constructs a new loop::ForOp and captures the associated induction
-/// variable. A ValueHandle pointer is passed as the first argument and is the
+/// variable. A Value pointer is passed as the first argument and is the
 /// *only* way to capture the loop induction variable.
-LoopBuilder makeLoopBuilder(ValueHandle *iv, ValueHandle lbHandle,
-                            ValueHandle ubHandle, ValueHandle stepHandle,
-                            ArrayRef<ValueHandle *> iter_args_handles = {},
-                            ValueRange iter_args_init_values = {});
+LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
+                            MutableArrayRef<Value> iterArgsHandles,
+                            ValueRange iterArgsInitValues);
+LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
+                            MutableArrayRef<Value> iterArgsHandles,
+                            ValueRange iterArgsInitValues);
+inline LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step) {
+  return makeLoopBuilder(iv, lb, ub, step, MutableArrayRef<Value>{}, {});
+}
 
 /// Helper class to sugar building loop.parallel loop nests from lower/upper
 /// bounds and step sizes.
 class ParallelLoopNestBuilder {
 public:
-  ParallelLoopNestBuilder(ArrayRef<ValueHandle *> ivs,
-                          ArrayRef<ValueHandle> lbs, ArrayRef<ValueHandle> ubs,
-                          ArrayRef<ValueHandle> steps);
+  ParallelLoopNestBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> lbs,
+                          ArrayRef<Value> ubs, ArrayRef<Value> steps);
 
   void operator()(function_ref<void(void)> fun = nullptr);
 
@@ -56,12 +59,12 @@ private:
 /// loop.for.
 class LoopNestBuilder {
 public:
-  LoopNestBuilder(ValueHandle *iv, ValueHandle lb, ValueHandle ub,
-                  ValueHandle step,
-                  ArrayRef<ValueHandle *> iter_args_handles = {},
-                  ValueRange iter_args_init_values = {});
-  LoopNestBuilder(ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
-                  ArrayRef<ValueHandle> ubs, ArrayRef<ValueHandle> steps);
+  LoopNestBuilder(Value *iv, Value lb, Value ub, Value step);
+  LoopNestBuilder(Value *iv, Value lb, Value ub, Value step,
+                  MutableArrayRef<Value> iterArgsHandles,
+                  ValueRange iterArgsInitValues);
+  LoopNestBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> lbs,
+                  ArrayRef<Value> ubs, ArrayRef<Value> steps);
   Operation::result_range operator()(std::function<void(void)> fun = nullptr);
 
 private:

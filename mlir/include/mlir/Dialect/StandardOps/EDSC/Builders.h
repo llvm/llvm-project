@@ -20,27 +20,27 @@ namespace edsc {
 class BoundsCapture {
 public:
   unsigned rank() const { return lbs.size(); }
-  ValueHandle lb(unsigned idx) { return lbs[idx]; }
-  ValueHandle ub(unsigned idx) { return ubs[idx]; }
+  Value lb(unsigned idx) { return lbs[idx]; }
+  Value ub(unsigned idx) { return ubs[idx]; }
   int64_t step(unsigned idx) { return steps[idx]; }
-  std::tuple<ValueHandle, ValueHandle, int64_t> range(unsigned idx) {
+  std::tuple<Value, Value, int64_t> range(unsigned idx) {
     return std::make_tuple(lbs[idx], ubs[idx], steps[idx]);
   }
   void swapRanges(unsigned i, unsigned j) {
     if (i == j)
       return;
-    lbs[i].swap(lbs[j]);
-    ubs[i].swap(ubs[j]);
+    std::swap(lbs[i], lbs[j]);
+    std::swap(ubs[i], ubs[j]);
     std::swap(steps[i], steps[j]);
   }
 
-  ArrayRef<ValueHandle> getLbs() { return lbs; }
-  ArrayRef<ValueHandle> getUbs() { return ubs; }
+  ArrayRef<Value> getLbs() { return lbs; }
+  ArrayRef<Value> getUbs() { return ubs; }
   ArrayRef<int64_t> getSteps() { return steps; }
 
 protected:
-  SmallVector<ValueHandle, 8> lbs;
-  SmallVector<ValueHandle, 8> ubs;
+  SmallVector<Value, 8> lbs;
+  SmallVector<Value, 8> ubs;
   SmallVector<int64_t, 8> steps;
 };
 
@@ -58,7 +58,7 @@ public:
   unsigned fastestVarying() const { return rank() - 1; }
 
 private:
-  ValueHandle base;
+  Value base;
 };
 
 /// A VectorBoundsCapture represents the information required to step through a
@@ -72,7 +72,7 @@ public:
   VectorBoundsCapture &operator=(const VectorBoundsCapture &) = default;
 
 private:
-  ValueHandle base;
+  Value base;
 };
 
 } // namespace edsc

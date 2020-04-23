@@ -14,40 +14,6 @@
 namespace mlir {
 namespace edsc {
 namespace intrinsics {
-namespace folded {
-/// Helper variadic abstraction to allow extending to any MLIR op without
-/// boilerplate or Tablegen.
-/// Arguably a builder is not a ValueHandle but in practice it is only used as
-/// an alias to a notional ValueHandle<Op>.
-/// Implementing it as a subclass allows it to compose all the way to Value.
-/// Without subclassing, implicit conversion to Value would fail when composing
-/// in patterns such as: `select(a, b, select(c, d, e))`.
-template <typename Op>
-struct ValueBuilder : public ValueHandle {
-  /// Folder-based
-  template <typename... Args>
-  ValueBuilder(OperationFolder *folder, Args... args)
-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(args)...)) {}
-  ValueBuilder(OperationFolder *folder, ArrayRef<ValueHandle> vs)
-      : ValueBuilder(ValueBuilder::create<Op>(folder, detail::unpack(vs))) {}
-  template <typename... Args>
-  ValueBuilder(OperationFolder *folder, ArrayRef<ValueHandle> vs, Args... args)
-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(vs),
-                                            detail::unpack(args)...)) {}
-  template <typename T, typename... Args>
-  ValueBuilder(OperationFolder *folder, T t, ArrayRef<ValueHandle> vs,
-               Args... args)
-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(t),
-                                            detail::unpack(vs),
-                                            detail::unpack(args)...)) {}
-  template <typename T1, typename T2, typename... Args>
-  ValueBuilder(OperationFolder *folder, T1 t1, T2 t2, ArrayRef<ValueHandle> vs,
-               Args... args)
-      : ValueHandle(ValueHandle::create<Op>(
-            folder, detail::unpack(t1), detail::unpack(t2), detail::unpack(vs),
-            detail::unpack(args)...)) {}
-};
-} // namespace folded
 
 using std_addf = ValueBuilder<AddFOp>;
 using std_alloc = ValueBuilder<AllocOp>;
@@ -80,7 +46,7 @@ using std_sign_extendi = ValueBuilder<SignExtendIOp>;
 ///
 /// Prerequisites:
 ///   All Handles have already captured previously constructed IR objects.
-OperationHandle std_br(BlockHandle bh, ArrayRef<ValueHandle> operands);
+OperationHandle std_br(BlockHandle bh, ArrayRef<Value> operands);
 
 /// Creates a new mlir::Block* and branches to it from the current block.
 /// Argument types are specified by `operands`.
@@ -95,8 +61,9 @@ OperationHandle std_br(BlockHandle bh, ArrayRef<ValueHandle> operands);
 ///   All `operands` have already captured an mlir::Value
 ///   captures.size() == operands.size()
 ///   captures and operands are pairwise of the same type.
-OperationHandle std_br(BlockHandle *bh, ArrayRef<ValueHandle *> captures,
-                       ArrayRef<ValueHandle> operands);
+OperationHandle std_br(BlockHandle *bh, ArrayRef<Type> types,
+                       MutableArrayRef<Value> captures,
+                       ArrayRef<Value> operands);
 
 /// Branches into the mlir::Block* captured by BlockHandle `trueBranch` with
 /// `trueOperands` if `cond` evaluates to `true` (resp. `falseBranch` and
@@ -104,10 +71,10 @@ OperationHandle std_br(BlockHandle *bh, ArrayRef<ValueHandle *> captures,
 ///
 /// Prerequisites:
 ///   All Handles have captured previously constructed IR objects.
-OperationHandle std_cond_br(ValueHandle cond, BlockHandle trueBranch,
-                            ArrayRef<ValueHandle> trueOperands,
+OperationHandle std_cond_br(Value cond, BlockHandle trueBranch,
+                            ArrayRef<Value> trueOperands,
                             BlockHandle falseBranch,
-                            ArrayRef<ValueHandle> falseOperands);
+                            ArrayRef<Value> falseOperands);
 
 /// Eagerly creates new mlir::Block* with argument types specified by
 /// `trueOperands`/`falseOperands`.
@@ -125,45 +92,17 @@ OperationHandle std_cond_br(ValueHandle cond, BlockHandle trueBranch,
 ///   `falseCaptures`.size() == `falseOperands`.size()
 ///   `trueCaptures` and `trueOperands` are pairwise of the same type
 ///   `falseCaptures` and `falseOperands` are pairwise of the same type.
-OperationHandle std_cond_br(ValueHandle cond, BlockHandle *trueBranch,
-                            ArrayRef<ValueHandle *> trueCaptures,
-                            ArrayRef<ValueHandle> trueOperands,
-                            BlockHandle *falseBranch,
-                            ArrayRef<ValueHandle *> falseCaptures,
-                            ArrayRef<ValueHandle> falseOperands);
+OperationHandle std_cond_br(Value cond, BlockHandle *trueBranch,
+                            ArrayRef<Type> trueTypes,
+                            MutableArrayRef<Value> trueCaptures,
+                            ArrayRef<Value> trueOperands,
+                            BlockHandle *falseBranch, ArrayRef<Type> falseTypes,
+                            MutableArrayRef<Value> falseCaptures,
+                            ArrayRef<Value> falseOperands);
 
 /// Provide an index notation around sdt_load and std_store.
 using StdIndexedValue =
     TemplatedIndexedValue<intrinsics::std_load, intrinsics::std_store>;
-
-using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
-using folded_std_constant_float = folded::ValueBuilder<ConstantFloatOp>;
-using folded_std_constant_int = folded::ValueBuilder<ConstantIntOp>;
-using folded_std_constant = folded::ValueBuilder<ConstantOp>;
-using folded_std_dim = folded::ValueBuilder<DimOp>;
-using folded_std_muli = folded::ValueBuilder<MulIOp>;
-using folded_std_addi = folded::ValueBuilder<AddIOp>;
-using folded_std_addf = folded::ValueBuilder<AddFOp>;
-using folded_std_alloc = folded::ValueBuilder<AllocOp>;
-using folded_std_constant = folded::ValueBuilder<ConstantOp>;
-using folded_std_constant_float = folded::ValueBuilder<ConstantFloatOp>;
-using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
-using folded_std_constant_int = folded::ValueBuilder<ConstantIntOp>;
-using folded_std_dim = folded::ValueBuilder<DimOp>;
-using folded_std_extract_element = folded::ValueBuilder<ExtractElementOp>;
-using folded_std_index_cast = folded::ValueBuilder<IndexCastOp>;
-using folded_std_muli = folded::ValueBuilder<MulIOp>;
-using folded_std_mulf = folded::ValueBuilder<MulFOp>;
-using folded_std_memref_cast = folded::ValueBuilder<MemRefCastOp>;
-using folded_std_select = folded::ValueBuilder<SelectOp>;
-using folded_std_load = folded::ValueBuilder<LoadOp>;
-using folded_std_subi = folded::ValueBuilder<SubIOp>;
-using folded_std_sub_view = folded::ValueBuilder<SubViewOp>;
-using folded_std_tanh = folded::ValueBuilder<TanhOp>;
-using folded_std_tensor_load = folded::ValueBuilder<TensorLoadOp>;
-using folded_std_view = folded::ValueBuilder<ViewOp>;
-using folded_std_zero_extendi = folded::ValueBuilder<ZeroExtendIOp>;
-using folded_std_sign_extendi = folded::ValueBuilder<SignExtendIOp>;
 } // namespace intrinsics
 } // namespace edsc
 } // namespace mlir
