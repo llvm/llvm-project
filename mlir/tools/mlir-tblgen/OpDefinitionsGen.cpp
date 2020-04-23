@@ -743,7 +743,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // TODO(jpienaar): Expand to handle regions.
       body << formatv(R"(
         SmallVector<Type, 2> inferredReturnTypes;
-        if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+        if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                       {1}.location, {1}.operands, {1}.attributes,
                       /*regions=*/{{}, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
@@ -800,7 +800,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
   // Signature
   std::string params =
-      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
+      std::string("OpBuilder &odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   if (op.getNumVariadicRegions())
     params += ", unsigned numRegions";
@@ -830,7 +830,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // TODO(jpienaar): Expand to support regions.
   const char *params =
-      "Builder *odsBuilder, OperationState &{0}, "
+      "OpBuilder &odsBuilder, OperationState &{0}, "
       "ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m =
       opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
@@ -838,7 +838,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   auto &body = m.body();
   body << formatv(R"(
     SmallVector<Type, 2> inferredReturnTypes;
-    if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+    if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                   {1}.location, operands, attributes,
                   /*regions=*/{{}, inferredReturnTypes)))
       build(odsBuilder, odsState, inferredReturnTypes, operands, attributes);
@@ -871,7 +871,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
 
 void OpEmitter::genUseAttrAsResultTypeBuilder() {
   std::string params =
-      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
+      std::string("OpBuilder &odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
@@ -961,7 +961,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   int numVariadicOperands = op.getNumVariableLengthOperands();
   int numNonVariadicOperands = numOperands - numVariadicOperands;
   // Signature
-  std::string params = std::string("Builder *, OperationState &") +
+  std::string params = std::string("OpBuilder &, OperationState &") +
                        builderOpState +
                        ", ArrayRef<Type> resultTypes, ValueRange operands, "
                        "ArrayRef<NamedAttribute> attributes";
@@ -1013,7 +1013,7 @@ void OpEmitter::buildParamList(std::string &paramList,
   auto numResults = op.getNumResults();
   resultTypeNames.reserve(numResults);
 
-  paramList = "Builder *odsBuilder, OperationState &";
+  paramList = "OpBuilder &odsBuilder, OperationState &";
   paramList.append(builderOpState);
 
   switch (typeParamKind) {
@@ -1151,7 +1151,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
   if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
     body << "  " << builderOpState
          << ".addAttribute(\"operand_segment_sizes\", "
-            "odsBuilder->getI32VectorAttr({";
+            "odsBuilder.getI32VectorAttr({";
     interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
       if (op.getOperand(i).isOptional())
         body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
@@ -1175,7 +1175,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // If this is a raw value, then we need to wrap it in an Attribute
         // instance.
         FmtContext fctx;
-        fctx.withBuilder("(*odsBuilder)");
+        fctx.withBuilder("odsBuilder");
 
         std::string builderTemplate =
             std::string(attr.getConstBuilderTemplate());

@@ -194,7 +194,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     if (argType.value().cast<spirv::SPIRVType>().isScalarOrVector()) {
       auto indexType = SPIRVTypeConverter::getIndexType(funcOp.getContext());
       auto zero =
-          spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
+          spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
           funcOp.getLoc(), replacement, zero.constant());
       replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);

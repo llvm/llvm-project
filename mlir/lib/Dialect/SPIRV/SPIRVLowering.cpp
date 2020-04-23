@@ -596,7 +596,7 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
   }
   SmallVector<Value, 2> linearizedIndices;
   // Add a '0' at the start to index into the struct.
-  auto zero = spirv::ConstantOp::getZero(indexType, loc, &builder);
+  auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
   linearizedIndices.push_back(zero);
   // If it is a zero-rank memref type, extract the element directly.
   if (!ptrLoc) {

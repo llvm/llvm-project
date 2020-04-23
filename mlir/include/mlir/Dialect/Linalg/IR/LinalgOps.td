@@ -49,10 +49,10 @@ def Linalg_RangeOp :
     ````
   }];
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value min, Value max, "
+    "OpBuilder &builder, OperationState &result, Value min, Value max, "
     "Value step",
     [{
-      auto rangeType = RangeType::get(builder->getContext());
+      auto rangeType = RangeType::get(builder.getContext());
       build(builder, result, rangeType, min, max, step);
     }]>];
 
@@ -66,12 +66,12 @@ class Linalg_ReshapeLikeOp<string mnemonic> :
   let builders = [
     // Builder for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
-    OpBuilder<"Builder *b, OperationState &result, Value src, "
+    OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
     "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
     "ArrayRef<NamedAttribute> attrs = {}">,
     // Builder for a reshape whose result type is passed explicitly. This may be
     // either a contracting or expanding reshape.
-    OpBuilder<"Builder *b, OperationState &result, Type resultType, Value src,"
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, Value src,"
     "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
     "ArrayRef<NamedAttribute> attrs = {}">];
 
@@ -227,7 +227,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [
   }];
 
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value base, "
+    "OpBuilder &b, OperationState &result, Value base, "
     "ValueRange indexings">];
 
   let extraClassDeclaration = [{
@@ -271,7 +271,7 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
   }];
 
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value view, "
+    "OpBuilder &b, OperationState &result, Value view, "
     "AffineMapAttr permutation, ArrayRef<NamedAttribute> attrs = {}">];
 
   let verifier = [{

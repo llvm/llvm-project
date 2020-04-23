@@ -265,10 +265,10 @@ private:
     // prevent manual building of Ops with symbols in code using SymbolTables
     // and then this needs to use the OpBuilder.
     auto context = getOperation().getContext();
-    Builder builder(context);
+    OpBuilder builder(context);
     OperationState state(kernelFunc.getLoc(),
                          gpu::GPUModuleOp::getOperationName());
-    gpu::GPUModuleOp::build(&builder, state, kernelFunc.getName());
+    gpu::GPUModuleOp::build(builder, state, kernelFunc.getName());
     auto kernelModule = cast<gpu::GPUModuleOp>(Operation::create(state));
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);

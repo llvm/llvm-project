@@ -74,7 +74,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      void AOp::build(
 // DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
-// DEF:        odsState.addAttribute("aAttr", some-const-builder-call((*odsBuilder), aAttr));
+// DEF:        odsState.addAttribute("aAttr", some-const-builder-call(odsBuilder, aAttr));
 
 // DEF:      void AOp::build(
 // DEF:        ArrayRef<NamedAttribute> attributes
@@ -198,8 +198,8 @@ def DOp : NS_Op<"d_op", []> {
 // DECL: static void build({{.*}}, APInt i32_attr, APFloat f64_attr, StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, APInt dv_i32_attr, APFloat dv_f64_attr, StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // DEF-LABEL: DOp definitions
-// DEF: odsState.addAttribute("str_attr", (*odsBuilder).getStringAttr(str_attr));
-// DEF: odsState.addAttribute("dv_str_attr", (*odsBuilder).getStringAttr(dv_str_attr));
+// DEF: odsState.addAttribute("str_attr", odsBuilder.getStringAttr(str_attr));
+// DEF: odsState.addAttribute("dv_str_attr", odsBuilder.getStringAttr(dv_str_attr));
 
 // Test derived type attr.
 // ---
@@ -249,7 +249,7 @@ def MixOperandsAndAttrs : NS_Op<"mix_operands_and_attrs", []> {
 // DEF-LABEL: MixOperandsAndAttrs definitions
 // DEF-DAG: Value MixOperandsAndAttrs::operand()
 // DEF-DAG: Value MixOperandsAndAttrs::otherArg()
-// DEF-DAG: void MixOperandsAndAttrs::build(Builder *odsBuilder, OperationState &odsState, FloatAttr attr, Value operand, FloatAttr otherAttr, Value otherArg)
+// DEF-DAG: void MixOperandsAndAttrs::build(OpBuilder &odsBuilder, OperationState &odsState, FloatAttr attr, Value operand, FloatAttr otherAttr, Value otherArg)
 // DEF-DAG: APFloat MixOperandsAndAttrs::attr()
 // DEF-DAG: APFloat MixOperandsAndAttrs::otherAttr()
 
@@ -264,7 +264,7 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF: bool UnitAttrOp::attr() {
 // DEF:   return {{.*}} != nullptr
 
-// DEF: build(Builder *odsBuilder, OperationState &odsState, /*optional*/UnitAttr attr)
+// DEF: build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/UnitAttr attr)
 
 
 // Test elementAttr field of TypedArrayAttr.
