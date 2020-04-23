@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @fold_static_stride_subview_with_load
 // CHECK-SAME: [[ARG0:%.*]]: memref<12x32xf32>, [[ARG1:%.*]]: index, [[ARG2:%.*]]: index, [[ARG3:%.*]]: index, [[ARG4:%.*]]: index
-func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) {
+func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
   // CHECK-NOT: subview
   // CHECK: [[C2:%.*]] = constant 2 : index
   // CHECK: [[C3:%.*]] = constant 3 : index
@@ -13,12 +13,12 @@ func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : in
   // CHECK: load [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
   %0 = subview %arg0[%arg1, %arg2][][] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   %1 = load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
-  return
+  return %1 : f32
 }
 
 // CHECK-LABEL: @fold_dynamic_stride_subview_with_load
 // CHECK-SAME: [[ARG0:%.*]]: memref<12x32xf32>, [[ARG1:%.*]]: index, [[ARG2:%.*]]: index, [[ARG3:%.*]]: index, [[ARG4:%.*]]: index, [[ARG5:%.*]]: index, [[ARG6:%.*]]: index
-func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) {
+func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> f32 {
   // CHECK-NOT: subview
   // CHECK: [[STRIDE1:%.*]] = muli [[ARG3]], [[ARG5]] : index
   // CHECK: [[INDEX1:%.*]] = addi [[ARG1]], [[STRIDE1]] : index
@@ -27,7 +27,7 @@ func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : i
   // CHECK: load [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
   %0 = subview %arg0[%arg1, %arg2][][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   %1 = load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [?, ?]>
-  return
+  return %1 : f32
 }
 
 // CHECK-LABEL: @fold_static_stride_subview_with_store

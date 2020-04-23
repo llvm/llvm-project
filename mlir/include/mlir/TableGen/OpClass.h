@@ -26,6 +26,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 
 #include <string>
 
@@ -157,7 +158,8 @@ public:
 
 private:
   StringRef extraClassDeclaration;
-  SmallVector<std::string, 4> traits;
+  SmallVector<std::string, 4> traitsVec;
+  StringSet<> traitsSet;
   bool hasOperandAdaptor;
 };
 
