@@ -13,9 +13,8 @@
 svint64_t test_svld1uw_s64(svbool_t pg, const uint32_t *base)
 {
   // CHECK-LABEL: test_svld1uw_s64
-  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
-  // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
-  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32>* %[[BASE]], i32 1, <vscale x 2 x i1> %[[PG]], <vscale x 2 x i32> zeroinitializer)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> %[[PG]], i32* %base)
   // CHECK: %[[ZEXT:.*]] = zext <vscale x 2 x i32> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[ZEXT]]
   return svld1uw_s64(pg, base);
@@ -24,9 +23,8 @@ svint64_t test_svld1uw_s64(svbool_t pg, const uint32_t *base)
 svuint64_t test_svld1uw_u64(svbool_t pg, const uint32_t *base)
 {
   // CHECK-LABEL: test_svld1uw_u64
-  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
-  // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
-  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32>* %[[BASE]], i32 1, <vscale x 2 x i1> %[[PG]], <vscale x 2 x i32> zeroinitializer)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> %[[PG]], i32* %base)
   // CHECK: %[[ZEXT:.*]] = zext <vscale x 2 x i32> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[ZEXT]]
   return svld1uw_u64(pg, base);
@@ -37,8 +35,8 @@ svint64_t test_svld1uw_vnum_s64(svbool_t pg, const uint32_t *base, int64_t vnum)
   // CHECK-LABEL: test_svld1uw_vnum_s64
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
-  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum
-  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32>* %[[GEP]], i32 1, <vscale x 2 x i1> %[[PG]], <vscale x 2 x i32> zeroinitializer)
+  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum, i64 0
+  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> %[[PG]], i32* %[[GEP]])
   // CHECK: %[[ZEXT:.*]] = zext <vscale x 2 x i32> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[ZEXT]]
   return svld1uw_vnum_s64(pg, base, vnum);
@@ -49,8 +47,8 @@ svuint64_t test_svld1uw_vnum_u64(svbool_t pg, const uint32_t *base, int64_t vnum
   // CHECK-LABEL: test_svld1uw_vnum_u64
   // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK-DAG: %[[BASE:.*]] = bitcast i32* %base to <vscale x 2 x i32>*
-  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum
-  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32>* %[[GEP]], i32 1, <vscale x 2 x i1> %[[PG]], <vscale x 2 x i32> zeroinitializer)
+  // CHECK-DAG: %[[GEP:.*]] = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %[[BASE]], i64 %vnum, i64 0
+  // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> %[[PG]], i32* %[[GEP]])
   // CHECK: %[[ZEXT:.*]] = zext <vscale x 2 x i32> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[ZEXT]]
   return svld1uw_vnum_u64(pg, base, vnum);
