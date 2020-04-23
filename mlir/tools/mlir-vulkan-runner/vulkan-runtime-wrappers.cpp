@@ -135,6 +135,41 @@ void bindMemRef3DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
       ->setResourceData(setIndex, bindIndex, memBuffer);
 }
 
+/// Binds the given 1D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef1DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 1> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 2D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef2DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 2> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated,
+      static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 3D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef3DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 3> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] *
+                                            ptr->sizes[2] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
 /// Fills the given 1D float memref with the given float value.
 void _mlir_ciface_fillResource1DFloat(MemRefDescriptor<float, 1> *ptr, // NOLINT
                                       float value) {
@@ -150,6 +185,25 @@ void _mlir_ciface_fillResource2DFloat(MemRefDescriptor<float, 2> *ptr, // NOLINT
 /// Fills the given 3D float memref with the given float value.
 void _mlir_ciface_fillResource3DFloat(MemRefDescriptor<float, 3> *ptr, // NOLINT
                                       float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1] * ptr->sizes[2],
+              value);
+}
+
+/// Fills the given 1D int memref with the given int value.
+void _mlir_ciface_fillResource1DInt(MemRefDescriptor<int32_t, 1> *ptr, // NOLINT
+                                    int32_t value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0], value);
+}
+
+/// Fills the given 2D int memref with the given int value.
+void _mlir_ciface_fillResource2DInt(MemRefDescriptor<int32_t, 2> *ptr, // NOLINT
+                                    int32_t value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1], value);
+}
+
+/// Fills the given 3D int memref with the given int value.
+void _mlir_ciface_fillResource3DInt(MemRefDescriptor<int32_t, 3> *ptr, // NOLINT
+                                    int32_t value) {
   std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1] * ptr->sizes[2],
               value);
 }
