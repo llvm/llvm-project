@@ -4720,7 +4720,7 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   }
 
   if (auto I = dyn_cast<Instruction>(V)) {
-    if (programUndefinedIfPoison(I) && I->getType()->isIntegerTy(1))
+    if (programUndefinedIfFullPoison(I) && I->getType()->isIntegerTy(1))
       // Note: once we have an agreement that poison is a value-wise concept,
       // we can remove the isIntegerTy(1) constraint.
       return true;
@@ -4846,7 +4846,7 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesPoison(const Instruction *I) {
+bool llvm::propagatesFullPoison(const Instruction *I) {
   // TODO: This should include all instructions apart from phis, selects and
   // call-like instructions.
   switch (I->getOpcode()) {
@@ -4880,7 +4880,7 @@ bool llvm::propagatesPoison(const Instruction *I) {
   }
 }
 
-const Value *llvm::getGuaranteedNonPoisonOp(const Instruction *I) {
+const Value *llvm::getGuaranteedNonFullPoisonOp(const Instruction *I) {
   switch (I->getOpcode()) {
     case Instruction::Store:
       return cast<StoreInst>(I)->getPointerOperand();
@@ -4918,12 +4918,12 @@ const Value *llvm::getGuaranteedNonPoisonOp(const Instruction *I) {
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallSet<const Value *, 16>& KnownPoison) {
-  auto *NotPoison = getGuaranteedNonPoisonOp(I);
+  auto *NotPoison = getGuaranteedNonFullPoisonOp(I);
   return (NotPoison && KnownPoison.count(NotPoison));
 }
 
 
-bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
+bool llvm::programUndefinedIfFullPoison(const Instruction *PoisonI) {
   // We currently only look for uses of poison values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
   // executed given that PoisonI is executed.
@@ -4956,7 +4956,7 @@ bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
       if (YieldsPoison.count(&I)) {
         for (const User *User : I.users()) {
           const Instruction *UserI = cast<Instruction>(User);
-          if (propagatesPoison(UserI))
+          if (propagatesFullPoison(UserI))
             YieldsPoison.insert(User);
         }
       }
