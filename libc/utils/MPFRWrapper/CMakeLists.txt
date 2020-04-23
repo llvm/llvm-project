@@ -12,6 +12,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     MPFRUtils.cpp
     MPFRUtils.h
   )
+  target_link_libraries(libcMPFRWrapper -lmpfr -lgmp)
 else()
   message(WARNING "Math tests using MPFR will be skipped.")
 endif()

@@ -145,11 +145,11 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
 // instructions.
 MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     MachineBasicBlock *MBB) {
-  MachineBasicBlock::iterator I = MBB->getFirstTerminator();
-  if (I == MBB->end())
+  MachineBasicBlock::iterator Term = MBB->getFirstTerminator();
+  if (Term == MBB->end())
     return nullptr;
 
-  if (I->getOpcode() != AArch64::Bcc)
+  if (Term->getOpcode() != AArch64::Bcc)
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.
@@ -159,8 +159,8 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
 
   // Now find the instruction controlling the terminator.
   auto B = MBB->begin();
-  for (MachineInstr &I :
-       reversedInstructionsWithoutDebug(I == B ? I : std::prev(I), B)) {
+  for (MachineInstr &I : reversedInstructionsWithoutDebug(
+           Term == B ? Term : std::prev(Term), B)) {
     assert(!I.isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
     if (I.readsRegister(AArch64::NZCV))

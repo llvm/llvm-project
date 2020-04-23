@@ -16,9 +16,9 @@
 //  IMPL-NEXT:  AffineMap::get(2, 0, {d0}, context) };
 //
 //       IMPL:  Test1Op::regionBuilder(Block &block) {
-//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
 //       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
 //
 ods_def<Test1Op> :
@@ -41,9 +41,9 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 //  IMPL-NEXT:  AffineMap::get(3, 0, {d0, d1}, context) };
 //
 //       IMPL:  Test2Op::regionBuilder(Block &block) {
-//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
 //       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
 //
 ods_def<Test2Op> :
@@ -66,9 +66,9 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 //  IMPL-NEXT:  AffineMap::get(4, 0, {d0, d1, d2}, context) };
 //
 //       IMPL:  Test3Op::regionBuilder(Block &block) {
-//       IMPL:  ValueHandle [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  ValueHandle [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  ValueHandle [[e:.*]] = std_addf([[c]], [[d]]);
+//       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
+//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
 //       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
 //
 ods_def<Test3Op> :

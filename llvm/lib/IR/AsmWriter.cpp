@@ -464,7 +464,7 @@ static void PrintLLVMName(raw_ostream &OS, const Value *V) {
 
 static void PrintShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   Out << ", <";
-  if (cast<VectorType>(Ty)->isScalable())
+  if (isa<ScalableVectorType>(Ty))
     Out << "vscale x ";
   Out << Mask.size() << " x i32> ";
   bool FirstElt = true;
@@ -653,10 +653,11 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     VectorType *PTy = cast<VectorType>(Ty);
+    ElementCount EC = PTy->getElementCount();
     OS << "<";
-    if (PTy->isScalable())
+    if (EC.Scalable)
       OS << "vscale x ";
-    OS << PTy->getNumElements() << " x ";
+    OS << EC.Min << " x ";
     print(PTy->getElementType(), OS);
     OS << '>';
     return;

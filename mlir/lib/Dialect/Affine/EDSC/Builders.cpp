@@ -14,65 +14,61 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-static Optional<ValueHandle> emitStaticFor(ArrayRef<ValueHandle> lbs,
-                                           ArrayRef<ValueHandle> ubs,
-                                           int64_t step) {
+static Optional<Value> emitStaticFor(ArrayRef<Value> lbs, ArrayRef<Value> ubs,
+                                     int64_t step) {
   if (lbs.size() != 1 || ubs.size() != 1)
-    return Optional<ValueHandle>();
+    return Optional<Value>();
 
-  auto *lbDef = lbs.front().getValue().getDefiningOp();
-  auto *ubDef = ubs.front().getValue().getDefiningOp();
+  auto *lbDef = lbs.front().getDefiningOp();
+  auto *ubDef = ubs.front().getDefiningOp();
   if (!lbDef || !ubDef)
-    return Optional<ValueHandle>();
+    return Optional<Value>();
 
   auto lbConst = dyn_cast<ConstantIndexOp>(lbDef);
   auto ubConst = dyn_cast<ConstantIndexOp>(ubDef);
   if (!lbConst || !ubConst)
-    return Optional<ValueHandle>();
-
-  return ValueHandle(ScopedContext::getBuilder()
-                         .create<AffineForOp>(ScopedContext::getLocation(),
-                                              lbConst.getValue(),
-                                              ubConst.getValue(), step)
-                         .getInductionVar());
+    return Optional<Value>();
+  return ScopedContext::getBuilder()
+      .create<AffineForOp>(ScopedContext::getLocation(), lbConst.getValue(),
+                           ubConst.getValue(), step)
+      .getInductionVar();
 }
 
-LoopBuilder mlir::edsc::makeAffineLoopBuilder(ValueHandle *iv,
-                                              ArrayRef<ValueHandle> lbHandles,
-                                              ArrayRef<ValueHandle> ubHandles,
+LoopBuilder mlir::edsc::makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
+                                              ArrayRef<Value> ubs,
                                               int64_t step) {
   mlir::edsc::LoopBuilder result;
-  if (auto staticFor = emitStaticFor(lbHandles, ubHandles, step)) {
-    *iv = staticFor.getValue();
+  if (auto staticForIv = emitStaticFor(lbs, ubs, step)) {
+    *iv = staticForIv.getValue();
   } else {
-    SmallVector<Value, 4> lbs(lbHandles.begin(), lbHandles.end());
-    SmallVector<Value, 4> ubs(ubHandles.begin(), ubHandles.end());
     auto b = ScopedContext::getBuilder();
-    *iv = ValueHandle(
-        b.create<AffineForOp>(ScopedContext::getLocation(), lbs,
-                              b.getMultiDimIdentityMap(lbs.size()), ubs,
-                              b.getMultiDimIdentityMap(ubs.size()), step)
-            .getInductionVar());
+    *iv =
+        Value(b.create<AffineForOp>(ScopedContext::getLocation(), lbs,
+                                    b.getMultiDimIdentityMap(lbs.size()), ubs,
+                                    b.getMultiDimIdentityMap(ubs.size()), step)
+                  .getInductionVar());
   }
-  auto *body = getForInductionVarOwner(iv->getValue()).getBody();
+
+  auto *body = getForInductionVarOwner(*iv).getBody();
   result.enter(body, /*prev=*/1);
   return result;
 }
 
-mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(
-    ValueHandle *iv, ArrayRef<ValueHandle> lbs, ArrayRef<ValueHandle> ubs,
-    int64_t step) {
+mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(Value *iv,
+                                                         ArrayRef<Value> lbs,
+                                                         ArrayRef<Value> ubs,
+                                                         int64_t step) {
   loops.emplace_back(makeAffineLoopBuilder(iv, lbs, ubs, step));
 }
 
 mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(
-    ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
-    ArrayRef<ValueHandle> ubs, ArrayRef<int64_t> steps) {
+    MutableArrayRef<Value> ivs, ArrayRef<Value> lbs, ArrayRef<Value> ubs,
+    ArrayRef<int64_t> steps) {
   assert(ivs.size() == lbs.size() && "Mismatch in number of arguments");
   assert(ivs.size() == ubs.size() && "Mismatch in number of arguments");
   assert(ivs.size() == steps.size() && "Mismatch in number of arguments");
   for (auto it : llvm::zip(ivs, lbs, ubs, steps))
-    loops.emplace_back(makeAffineLoopBuilder(std::get<0>(it), std::get<1>(it),
+    loops.emplace_back(makeAffineLoopBuilder(&std::get<0>(it), std::get<1>(it),
                                              std::get<2>(it), std::get<3>(it)));
 }
 
@@ -87,11 +83,6 @@ void mlir::edsc::AffineLoopNestBuilder::operator()(
   // nesting imperfectly nested regions (see LoopBuilder::operator()).
   for (auto lit = loops.rbegin(), eit = loops.rend(); lit != eit; ++lit)
     (*lit)();
-}
-
-template <typename Op>
-static ValueHandle createBinaryHandle(ValueHandle lhs, ValueHandle rhs) {
-  return ValueHandle::create<Op>(lhs.getValue(), rhs.getValue());
 }
 
 static std::pair<AffineExpr, Value>
@@ -111,115 +102,114 @@ categorizeValueByAffineType(MLIRContext *context, Value val, unsigned &numDims,
   return std::make_pair(d, resultVal);
 }
 
-static ValueHandle createBinaryIndexHandle(
-    ValueHandle lhs, ValueHandle rhs,
+static Value createBinaryIndexHandle(
+    Value lhs, Value rhs,
     function_ref<AffineExpr(AffineExpr, AffineExpr)> affCombiner) {
   MLIRContext *context = ScopedContext::getContext();
   unsigned numDims = 0, numSymbols = 0;
   AffineExpr d0, d1;
   Value v0, v1;
   std::tie(d0, v0) =
-      categorizeValueByAffineType(context, lhs.getValue(), numDims, numSymbols);
+      categorizeValueByAffineType(context, lhs, numDims, numSymbols);
   std::tie(d1, v1) =
-      categorizeValueByAffineType(context, rhs.getValue(), numDims, numSymbols);
+      categorizeValueByAffineType(context, rhs, numDims, numSymbols);
   SmallVector<Value, 2> operands;
-  if (v0) {
+  if (v0)
     operands.push_back(v0);
-  }
-  if (v1) {
+  if (v1)
     operands.push_back(v1);
-  }
   auto map = AffineMap::get(numDims, numSymbols, affCombiner(d0, d1));
+
   // TODO: createOrFold when available.
   Operation *op =
       makeComposedAffineApply(ScopedContext::getBuilder(),
                               ScopedContext::getLocation(), map, operands)
           .getOperation();
   assert(op->getNumResults() == 1 && "Expected single result AffineApply");
-  return ValueHandle(op->getResult(0));
+  return op->getResult(0);
 }
 
 template <typename IOp, typename FOp>
-static ValueHandle createBinaryHandle(
-    ValueHandle lhs, ValueHandle rhs,
+static Value createBinaryHandle(
+    Value lhs, Value rhs,
     function_ref<AffineExpr(AffineExpr, AffineExpr)> affCombiner) {
-  auto thisType = lhs.getValue().getType();
-  auto thatType = rhs.getValue().getType();
+  auto thisType = lhs.getType();
+  auto thatType = rhs.getType();
   assert(thisType == thatType && "cannot mix types in operators");
   (void)thisType;
   (void)thatType;
   if (thisType.isIndex()) {
     return createBinaryIndexHandle(lhs, rhs, affCombiner);
   } else if (thisType.isSignlessInteger()) {
-    return createBinaryHandle<IOp>(lhs, rhs);
+    return ValueBuilder<IOp>(lhs, rhs);
   } else if (thisType.isa<FloatType>()) {
-    return createBinaryHandle<FOp>(lhs, rhs);
+    return ValueBuilder<FOp>(lhs, rhs);
   } else if (thisType.isa<VectorType>() || thisType.isa<TensorType>()) {
     auto aggregateType = thisType.cast<ShapedType>();
     if (aggregateType.getElementType().isSignlessInteger())
-      return createBinaryHandle<IOp>(lhs, rhs);
+      return ValueBuilder<IOp>(lhs, rhs);
     else if (aggregateType.getElementType().isa<FloatType>())
-      return createBinaryHandle<FOp>(lhs, rhs);
+      return ValueBuilder<FOp>(lhs, rhs);
   }
-  llvm_unreachable("failed to create a ValueHandle");
+  llvm_unreachable("failed to create a Value");
 }
 
-ValueHandle mlir::edsc::op::operator+(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator+(Value lhs, Value rhs) {
   return createBinaryHandle<AddIOp, AddFOp>(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0 + d1; });
 }
 
-ValueHandle mlir::edsc::op::operator-(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator-(Value lhs, Value rhs) {
   return createBinaryHandle<SubIOp, SubFOp>(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0 - d1; });
 }
 
-ValueHandle mlir::edsc::op::operator*(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator*(Value lhs, Value rhs) {
   return createBinaryHandle<MulIOp, MulFOp>(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0 * d1; });
 }
 
-ValueHandle mlir::edsc::op::operator/(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator/(Value lhs, Value rhs) {
   return createBinaryHandle<SignedDivIOp, DivFOp>(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) -> AffineExpr {
         llvm_unreachable("only exprs of non-index type support operator/");
       });
 }
 
-ValueHandle mlir::edsc::op::operator%(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator%(Value lhs, Value rhs) {
   return createBinaryHandle<SignedRemIOp, RemFOp>(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0 % d1; });
 }
 
-ValueHandle mlir::edsc::op::floorDiv(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::floorDiv(Value lhs, Value rhs) {
   return createBinaryIndexHandle(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0.floorDiv(d1); });
 }
 
-ValueHandle mlir::edsc::op::ceilDiv(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::ceilDiv(Value lhs, Value rhs) {
   return createBinaryIndexHandle(
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0.ceilDiv(d1); });
 }
 
-ValueHandle mlir::edsc::op::operator!(ValueHandle value) {
+Value mlir::edsc::op::negate(Value value) {
   assert(value.getType().isInteger(1) && "expected boolean expression");
-  return ValueHandle::create<ConstantIntOp>(1, 1) - value;
+  return ValueBuilder<ConstantIntOp>(1, 1) - value;
 }
 
-ValueHandle mlir::edsc::op::operator&&(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator&&(Value lhs, Value rhs) {
   assert(lhs.getType().isInteger(1) && "expected boolean expression on LHS");
   assert(rhs.getType().isInteger(1) && "expected boolean expression on RHS");
-  return ValueHandle::create<AndOp>(lhs, rhs);
+  return ValueBuilder<AndOp>(lhs, rhs);
 }
 
-ValueHandle mlir::edsc::op::operator||(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator||(Value lhs, Value rhs) {
   assert(lhs.getType().isInteger(1) && "expected boolean expression on LHS");
   assert(rhs.getType().isInteger(1) && "expected boolean expression on RHS");
-  return ValueHandle::create<OrOp>(lhs, rhs);
+  return ValueBuilder<OrOp>(lhs, rhs);
 }
 
-static ValueHandle createIComparisonExpr(CmpIPredicate predicate,
-                                         ValueHandle lhs, ValueHandle rhs) {
+static Value createIComparisonExpr(CmpIPredicate predicate, Value lhs,
+                                   Value rhs) {
   auto lhsType = lhs.getType();
   auto rhsType = rhs.getType();
   (void)lhsType;
@@ -228,13 +218,12 @@ static ValueHandle createIComparisonExpr(CmpIPredicate predicate,
   assert((lhsType.isa<IndexType>() || lhsType.isSignlessInteger()) &&
          "only integer comparisons are supported");
 
-  auto op = ScopedContext::getBuilder().create<CmpIOp>(
-      ScopedContext::getLocation(), predicate, lhs.getValue(), rhs.getValue());
-  return ValueHandle(op.getResult());
+  return ScopedContext::getBuilder().create<CmpIOp>(
+      ScopedContext::getLocation(), predicate, lhs, rhs);
 }
 
-static ValueHandle createFComparisonExpr(CmpFPredicate predicate,
-                                         ValueHandle lhs, ValueHandle rhs) {
+static Value createFComparisonExpr(CmpFPredicate predicate, Value lhs,
+                                   Value rhs) {
   auto lhsType = lhs.getType();
   auto rhsType = rhs.getType();
   (void)lhsType;
@@ -242,25 +231,24 @@ static ValueHandle createFComparisonExpr(CmpFPredicate predicate,
   assert(lhsType == rhsType && "cannot mix types in operators");
   assert(lhsType.isa<FloatType>() && "only float comparisons are supported");
 
-  auto op = ScopedContext::getBuilder().create<CmpFOp>(
-      ScopedContext::getLocation(), predicate, lhs.getValue(), rhs.getValue());
-  return ValueHandle(op.getResult());
+  return ScopedContext::getBuilder().create<CmpFOp>(
+      ScopedContext::getLocation(), predicate, lhs, rhs);
 }
 
 // All floating point comparison are ordered through EDSL
-ValueHandle mlir::edsc::op::operator==(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::eq(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OEQ, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::eq, lhs, rhs);
 }
-ValueHandle mlir::edsc::op::operator!=(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::ne(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::ONE, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::ne, lhs, rhs);
 }
-ValueHandle mlir::edsc::op::operator<(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator<(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OLT, lhs, rhs)
@@ -268,19 +256,19 @@ ValueHandle mlir::edsc::op::operator<(ValueHandle lhs, ValueHandle rhs) {
              // TODO(ntv,zinenko): signed by default, how about unsigned?
              createIComparisonExpr(CmpIPredicate::slt, lhs, rhs);
 }
-ValueHandle mlir::edsc::op::operator<=(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator<=(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OLE, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::sle, lhs, rhs);
 }
-ValueHandle mlir::edsc::op::operator>(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator>(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OGT, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::sgt, lhs, rhs);
 }
-ValueHandle mlir::edsc::op::operator>=(ValueHandle lhs, ValueHandle rhs) {
+Value mlir::edsc::op::operator>=(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OGE, lhs, rhs)

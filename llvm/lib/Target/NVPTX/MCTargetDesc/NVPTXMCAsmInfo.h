@@ -16,7 +16,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
-class Target;
 class Triple;
 
 class NVPTXMCAsmInfo : public MCAsmInfo {

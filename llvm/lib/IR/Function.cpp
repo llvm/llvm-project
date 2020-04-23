@@ -644,10 +644,10 @@ static std::string getMangledTypeStr(Type* Ty) {
     // Ensure nested function types are distinguishable.
     Result += "f";
   } else if (VectorType* VTy = dyn_cast<VectorType>(Ty)) {
-    if (VTy->isScalable())
+    ElementCount EC = VTy->getElementCount();
+    if (EC.Scalable)
       Result += "nx";
-    Result += "v" + utostr(VTy->getNumElements()) +
-              getMangledTypeStr(VTy->getElementType());
+    Result += "v" + utostr(EC.Min) + getMangledTypeStr(VTy->getElementType());
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -1354,10 +1354,9 @@ static bool matchIntrinsicType(
       return true;
     }
     case IITDescriptor::ScalableVecArgument: {
-      VectorType *VTy = dyn_cast<VectorType>(Ty);
-      if (!VTy || !VTy->isScalable())
+      if (!isa<ScalableVectorType>(Ty))
         return true;
-      return matchIntrinsicType(VTy, Infos, ArgTys, DeferredChecks,
+      return matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks,
                                 IsDeferredCheck);
     }
     case IITDescriptor::VecOfBitcastsToInt: {

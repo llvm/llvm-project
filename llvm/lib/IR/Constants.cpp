@@ -241,7 +241,7 @@ bool Constant::isFiniteNonZeroFP() const {
 bool Constant::isNormalFP() const {
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return CFP->getValueAPF().isNormal();
-  auto *VTy = dyn_cast<VectorType>(getType());
+  auto *VTy = dyn_cast<FixedVectorType>(getType());
   if (!VTy)
     return false;
   for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
@@ -255,7 +255,7 @@ bool Constant::isNormalFP() const {
 bool Constant::hasExactInverseFP() const {
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return CFP->getValueAPF().getExactInverse(nullptr);
-  auto *VTy = dyn_cast<VectorType>(getType());
+  auto *VTy = dyn_cast<FixedVectorType>(getType());
   if (!VTy)
     return false;
   for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
@@ -269,7 +269,7 @@ bool Constant::hasExactInverseFP() const {
 bool Constant::isNaN() const {
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return CFP->isNaN();
-  auto *VTy = dyn_cast<VectorType>(getType());
+  auto *VTy = dyn_cast<FixedVectorType>(getType());
   if (!VTy)
     return false;
   for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
@@ -644,7 +644,7 @@ Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
   }
 
   // Don't know how to deal with this constant.
-  auto *VTy = dyn_cast<VectorType>(Ty);
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
   if (!VTy)
     return C;
 
@@ -2287,7 +2287,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   unsigned NElts = Mask.size();
   auto V1VTy = cast<VectorType>(V1->getType());
   Type *EltTy = V1VTy->getElementType();
-  bool TypeIsScalable = V1VTy->isScalable();
+  bool TypeIsScalable = isa<ScalableVectorType>(V1VTy);
   Type *ShufTy = VectorType::get(EltTy, NElts, TypeIsScalable);
 
   if (OnlyIfReducedTy == ShufTy)

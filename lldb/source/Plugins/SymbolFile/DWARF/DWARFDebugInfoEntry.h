@@ -41,9 +41,6 @@ public:
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
   bool operator!=(const DWARFDebugInfoEntry &rhs) const;
 
-  void BuildAddressRangeTable(const DWARFUnit *cu,
-                              DWARFDebugAranges *debug_aranges) const;
-
   void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 

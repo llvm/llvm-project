@@ -168,7 +168,7 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
   // The length of scalable vectors is unknown at compile time, thus we
   // cannot check their values
-  if (Shuf->getType()->isScalable())
+  if (isa<ScalableVectorType>(Shuf->getType()))
     return false;
 
   int NumElts =

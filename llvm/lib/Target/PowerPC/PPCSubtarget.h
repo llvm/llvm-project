@@ -63,7 +63,6 @@ namespace PPC {
 }
 
 class GlobalValue;
-class TargetMachine;
 
 class PPCSubtarget : public PPCGenSubtargetInfo {
 public:

@@ -126,16 +126,16 @@ struct AllocaDerivedValueTracker {
       switch (I->getOpcode()) {
       case Instruction::Call:
       case Instruction::Invoke: {
-        CallSite CS(I);
+        auto &CB = cast<CallBase>(*I);
         // If the alloca-derived argument is passed byval it is not an escape
         // point, or a use of an alloca. Calling with byval copies the contents
         // of the alloca into argument registers or stack slots, which exist
         // beyond the lifetime of the current frame.
-        if (CS.isArgOperand(U) && CS.isByValArgument(CS.getArgumentNo(U)))
+        if (CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U)))
           continue;
         bool IsNocapture =
-            CS.isDataOperand(U) && CS.doesNotCapture(CS.getDataOperandNo(U));
-        callUsesLocalStack(CS, IsNocapture);
+            CB.isDataOperand(U) && CB.doesNotCapture(CB.getDataOperandNo(U));
+        callUsesLocalStack(CB, IsNocapture);
         if (IsNocapture) {
           // If the alloca-derived argument is passed in as nocapture, then it
           // can't propagate to the call's return. That would be capturing.
@@ -168,17 +168,17 @@ struct AllocaDerivedValueTracker {
     }
   }
 
-  void callUsesLocalStack(CallSite CS, bool IsNocapture) {
+  void callUsesLocalStack(CallBase &CB, bool IsNocapture) {
     // Add it to the list of alloca users.
-    AllocaUsers.insert(CS.getInstruction());
+    AllocaUsers.insert(&CB);
 
     // If it's nocapture then it can't capture this alloca.
     if (IsNocapture)
       return;
 
     // If it can write to memory, it can leak the alloca value.
-    if (!CS.onlyReadsMemory())
-      EscapePoints.insert(CS.getInstruction());
+    if (!CB.onlyReadsMemory())
+      EscapePoints.insert(&CB);
   }
 
   SmallPtrSet<Instruction *, 32> AllocaUsers;
@@ -484,8 +484,7 @@ static CallInst *findTRECandidate(Instruction *TI,
       !TTI->isLoweredToCall(CI->getCalledFunction())) {
     // A single-block function with just a call and a return. Check that
     // the arguments match.
-    CallSite::arg_iterator I = CallSite(CI).arg_begin(),
-                           E = CallSite(CI).arg_end();
+    auto I = CI->arg_begin(), E = CI->arg_end();
     Function::arg_iterator FI = F->arg_begin(),
                            FE = F->arg_end();
     for (; I != E && FI != FE; ++I, ++FI)

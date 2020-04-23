@@ -68,12 +68,11 @@ TEST_FUNC(builder_dynamic_for_func_args) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle i(indexType), j(indexType), lb(f.getArgument(0)),
-      ub(f.getArgument(1));
-  ValueHandle f7(std_constant_float(llvm::APFloat(7.0f), f32Type));
-  ValueHandle f13(std_constant_float(llvm::APFloat(13.0f), f32Type));
-  ValueHandle i7(std_constant_int(7, 32));
-  ValueHandle i13(std_constant_int(13, 32));
+  Value i, j, lb(f.getArgument(0)), ub(f.getArgument(1));
+  Value f7(std_constant_float(llvm::APFloat(7.0f), f32Type));
+  Value f13(std_constant_float(llvm::APFloat(13.0f), f32Type));
+  Value i7(std_constant_int(7, 32));
+  Value i13(std_constant_int(13, 32));
   AffineLoopNestBuilder(&i, lb, ub, 3)([&] {
     using namespace edsc::op;
     lb *std_constant_index(3) + ub;
@@ -119,8 +118,8 @@ TEST_FUNC(builder_dynamic_for) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle i(indexType), a(f.getArgument(0)), b(f.getArgument(1)),
-      c(f.getArgument(2)), d(f.getArgument(3));
+  Value i, a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
+      d(f.getArgument(3));
   using namespace edsc::op;
   AffineLoopNestBuilder(&i, a - b, c + d, 2)();
 
@@ -141,8 +140,8 @@ TEST_FUNC(builder_loop_for) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle i(indexType), a(f.getArgument(0)), b(f.getArgument(1)),
-      c(f.getArgument(2)), d(f.getArgument(3));
+  Value i, a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
+      d(f.getArgument(3));
   using namespace edsc::op;
   LoopNestBuilder(&i, a - b, c + d, a)();
 
@@ -163,8 +162,8 @@ TEST_FUNC(builder_max_min_for) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle i(indexType), lb1(f.getArgument(0)), lb2(f.getArgument(1)),
-      ub1(f.getArgument(2)), ub2(f.getArgument(3));
+  Value i, lb1(f.getArgument(0)), lb2(f.getArgument(1)), ub1(f.getArgument(2)),
+      ub2(f.getArgument(3));
   AffineLoopNestBuilder(&i, {lb1, lb2}, {ub1, ub2}, 1)();
   std_ret();
 
@@ -183,17 +182,20 @@ TEST_FUNC(builder_blocks) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle c1(ValueHandle::create<ConstantIntOp>(42, 32)),
-      c2(ValueHandle::create<ConstantIntOp>(1234, 32));
-  ValueHandle arg1(c1.getType()), arg2(c1.getType()), arg3(c1.getType()),
-      arg4(c1.getType()), r(c1.getType());
-
+  Value c1(std_constant_int(42, 32)), c2(std_constant_int(1234, 32));
+  Value r;
+  Value args12[2];
+  Value &arg1 = args12[0], &arg2 = args12[1];
+  Value args34[2];
+  Value &arg3 = args34[0], &arg4 = args34[1];
   BlockHandle b1, b2, functionBlock(&f.front());
-  BlockBuilder(&b1, {&arg1, &arg2})(
+  BlockBuilder(&b1, {c1.getType(), c1.getType()}, args12)(
       // b2 has not yet been constructed, need to come back later.
       // This is a byproduct of non-structured control-flow.
   );
-  BlockBuilder(&b2, {&arg3, &arg4})([&] { std_br(b1, {arg3, arg4}); });
+  BlockBuilder(&b2, {c1.getType(), c1.getType()}, args34)([&] {
+    std_br(b1, {arg3, arg4});
+  });
   // The insertion point within the toplevel function is now past b2, we will
   // need to get back the entry block.
   // This is what happens with unstructured control-flow..
@@ -226,24 +228,25 @@ TEST_FUNC(builder_blocks_eager) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle c1(ValueHandle::create<ConstantIntOp>(42, 32)),
-      c2(ValueHandle::create<ConstantIntOp>(1234, 32));
-  ValueHandle arg1(c1.getType()), arg2(c1.getType()), arg3(c1.getType()),
-      arg4(c1.getType()), r(c1.getType());
+  Value c1(std_constant_int(42, 32)), c2(std_constant_int(1234, 32));
+  Value res;
+  Value args1And2[2], args3And4[2];
+  Value &arg1 = args1And2[0], &arg2 = args1And2[1], &arg3 = args3And4[0],
+        &arg4 = args3And4[1];
 
   // clang-format off
   BlockHandle b1, b2;
   { // Toplevel function scope.
     // Build a new block for b1 eagerly.
-    std_br(&b1, {&arg1, &arg2}, {c1, c2});
+    std_br(&b1, {c1.getType(), c1.getType()}, args1And2, {c1, c2});
     // Construct a new block b2 explicitly with a branch into b1.
-    BlockBuilder(&b2, {&arg3, &arg4})([&]{
+    BlockBuilder(&b2, {c1.getType(), c1.getType()}, args3And4)([&]{
         std_br(b1, {arg3, arg4});
     });
     /// And come back to append into b1 once b2 exists.
     BlockBuilder(b1, Append())([&]{
-        r = arg1 + arg2;
-        std_br(b2, {arg1, r});
+        res = arg1 + arg2;
+        std_br(b2, {arg1, res});
     });
   }
 
@@ -268,15 +271,14 @@ TEST_FUNC(builder_cond_branch) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle funcArg(f.getArgument(0));
-  ValueHandle c32(ValueHandle::create<ConstantIntOp>(32, 32)),
-      c64(ValueHandle::create<ConstantIntOp>(64, 64)),
-      c42(ValueHandle::create<ConstantIntOp>(42, 32));
-  ValueHandle arg1(c32.getType()), arg2(c64.getType()), arg3(c32.getType());
-
+  Value funcArg(f.getArgument(0));
+  Value c32(std_constant_int(32, 32)), c64(std_constant_int(64, 64)),
+      c42(std_constant_int(42, 32));
+  Value arg1;
+  Value args23[2];
   BlockHandle b1, b2, functionBlock(&f.front());
-  BlockBuilder(&b1, {&arg1})([&] { std_ret(); });
-  BlockBuilder(&b2, {&arg2, &arg3})([&] { std_ret(); });
+  BlockBuilder(&b1, c32.getType(), arg1)([&] { std_ret(); });
+  BlockBuilder(&b2, {c64.getType(), c32.getType()}, args23)([&] { std_ret(); });
   // Get back to entry block and add a conditional branch
   BlockBuilder(functionBlock, Append())([&] {
     std_cond_br(funcArg, b1, {c32}, b2, {c64, c42});
@@ -304,15 +306,16 @@ TEST_FUNC(builder_cond_branch_eager) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle funcArg(f.getArgument(0));
-  ValueHandle c32(ValueHandle::create<ConstantIntOp>(32, 32)),
-      c64(ValueHandle::create<ConstantIntOp>(64, 64)),
-      c42(ValueHandle::create<ConstantIntOp>(42, 32));
-  ValueHandle arg1(c32.getType()), arg2(c64.getType()), arg3(c32.getType());
+  Value arg0(f.getArgument(0));
+  Value c32(std_constant_int(32, 32)), c64(std_constant_int(64, 64)),
+      c42(std_constant_int(42, 32));
 
   // clang-format off
   BlockHandle b1, b2;
-  std_cond_br(funcArg, &b1, {&arg1}, {c32}, &b2, {&arg2, &arg3}, {c64, c42});
+  Value arg1[1], args2And3[2];
+  std_cond_br(arg0,
+              &b1, c32.getType(), arg1, c32,
+              &b2, {c64.getType(), c32.getType()}, args2And3, {c64, c42});
   BlockBuilder(b1, Append())([]{
       std_ret();
   });
@@ -336,7 +339,6 @@ TEST_FUNC(builder_cond_branch_eager) {
 
 TEST_FUNC(builder_helpers) {
   using namespace edsc::op;
-  auto indexType = IndexType::get(&globalContext());
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType =
       MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize,
@@ -348,21 +350,20 @@ TEST_FUNC(builder_helpers) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   // clang-format off
-  ValueHandle f7(
-      ValueHandle::create<ConstantFloatOp>(llvm::APFloat(7.0f), f32Type));
+  Value f7 = std_constant_float(llvm::APFloat(7.0f), f32Type);
   MemRefBoundsCapture vA(f.getArgument(0)), vB(f.getArgument(1)),
       vC(f.getArgument(2));
   AffineIndexedValue A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
-  ValueHandle i(indexType), j(indexType), k1(indexType), k2(indexType),
-      lb0(indexType), lb1(indexType), lb2(indexType),
-      ub0(indexType), ub1(indexType), ub2(indexType);
+  Value ivs[2];
+  Value &i = ivs[0], &j = ivs[1];
+  Value k1, k2, lb0, lb1, lb2, ub0, ub1, ub2;
   int64_t step0, step1, step2;
   std::tie(lb0, ub0, step0) = vA.range(0);
   std::tie(lb1, ub1, step1) = vA.range(1);
   lb2 = vA.lb(2);
   ub2 = vA.ub(2);
   step2 = vA.step(2);
-  AffineLoopNestBuilder({&i, &j}, {lb0, lb1}, {ub0, ub1}, {step0, step1})([&]{
+  AffineLoopNestBuilder(ivs, {lb0, lb1}, {ub0, ub1}, {step0, step1})([&]{
     AffineLoopNestBuilder(&k1, lb2, ub2, step2)([&]{
       C(i, j, k1) = f7 + A(i, j, k1) + B(i, j, k1);
     });
@@ -393,45 +394,6 @@ TEST_FUNC(builder_helpers) {
   f.erase();
 }
 
-TEST_FUNC(custom_ops) {
-  using namespace edsc::op;
-  auto indexType = IndexType::get(&globalContext());
-  auto f = makeFunction("custom_ops", {}, {indexType, indexType});
-
-  OpBuilder builder(f.getBody());
-  ScopedContext scope(builder, f.getLoc());
-  CustomOperation<ValueHandle> MY_CUSTOM_OP("my_custom_op");
-  CustomOperation<OperationHandle> MY_CUSTOM_OP_0("my_custom_op_0");
-  CustomOperation<OperationHandle> MY_CUSTOM_OP_2("my_custom_op_2");
-
-  // clang-format off
-  ValueHandle vh(indexType), vh20(indexType), vh21(indexType);
-  OperationHandle ih0, ih2;
-  ValueHandle m(indexType), n(indexType);
-  ValueHandle M(f.getArgument(0)), N(f.getArgument(1));
-  ValueHandle ten(std_constant_index(10)), twenty(std_constant_index(20));
-  AffineLoopNestBuilder({&m, &n}, {M, N}, {M + ten, N + twenty}, {1, 1})([&]{
-    vh = MY_CUSTOM_OP({m, m + n}, {indexType}, {});
-    ih0 = MY_CUSTOM_OP_0({m, m + n}, {});
-    ih2 = MY_CUSTOM_OP_2({m, m + n}, {indexType, indexType});
-    // These captures are verbose for now, can improve when used in practice.
-    vh20 = ValueHandle(ih2.getOperation()->getResult(0));
-    vh21 = ValueHandle(ih2.getOperation()->getResult(1));
-    MY_CUSTOM_OP({vh20, vh21}, {indexType}, {});
-  });
-
-  // CHECK-LABEL: @custom_ops
-  // CHECK: affine.for %{{.*}} {{.*}}
-  // CHECK:   affine.for %{{.*}} {{.*}}
-  // CHECK:     {{.*}} = "my_custom_op"{{.*}} : (index, index) -> index
-  // CHECK:     "my_custom_op_0"{{.*}} : (index, index) -> ()
-  // CHECK:     [[TWO:%[a-z0-9]+]]:2 = "my_custom_op_2"{{.*}} : (index, index) -> (index, index)
-  // CHECK:     {{.*}} = "my_custom_op"([[TWO]]#0, [[TWO]]#1) : (index, index) -> index
-  // clang-format on
-  f.print(llvm::outs());
-  f.erase();
-}
-
 TEST_FUNC(insertion_in_block) {
   using namespace edsc::op;
   auto indexType = IndexType::get(&globalContext());
@@ -441,11 +403,11 @@ TEST_FUNC(insertion_in_block) {
   ScopedContext scope(builder, f.getLoc());
   BlockHandle b1;
   // clang-format off
-  ValueHandle::create<ConstantIntOp>(0, 32);
-  BlockBuilder(&b1, {})([]{
-    ValueHandle::create<ConstantIntOp>(1, 32);
+  std_constant_int(0, 32);
+  (BlockBuilder(&b1))([]{
+    std_constant_int(1, 32);
   });
-  ValueHandle::create<ConstantIntOp>(2, 32);
+  std_constant_int(2, 32);
   // CHECK-LABEL: @insertion_in_block
   // CHECK: {{.*}} = constant 0 : i32
   // CHECK: {{.*}} = constant 2 : i32
@@ -469,8 +431,8 @@ TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
   AffineIndexedValue A(f.getArgument(0));
   AffineIndexedValue B(f.getArgument(1));
   // clang-format off
-  edsc::intrinsics::std_zero_extendi(*A, i8Type);
-  edsc::intrinsics::std_sign_extendi(*B, i8Type);
+  edsc::intrinsics::std_zero_extendi(A, i8Type);
+  edsc::intrinsics::std_sign_extendi(B, i8Type);
   // CHECK-LABEL: @zero_and_std_sign_extendi_op
   //      CHECK:     %[[SRC1:.*]] = affine.load
   //      CHECK:     zexti %[[SRC1]] : i1 to i8
@@ -489,8 +451,8 @@ TEST_FUNC(operator_or) {
   ScopedContext scope(builder, f.getLoc());
 
   using op::operator||;
-  ValueHandle lhs(f.getArgument(0));
-  ValueHandle rhs(f.getArgument(1));
+  Value lhs(f.getArgument(0));
+  Value rhs(f.getArgument(1));
   lhs || rhs;
 
   // CHECK-LABEL: @operator_or
@@ -508,20 +470,22 @@ TEST_FUNC(operator_and) {
   ScopedContext scope(builder, f.getLoc());
 
   using op::operator&&;
-  ValueHandle lhs(f.getArgument(0));
-  ValueHandle rhs(f.getArgument(1));
-  lhs &&rhs;
+  using op::negate;
+  Value lhs(f.getArgument(0));
+  Value rhs(f.getArgument(1));
+  negate(lhs && rhs);
 
   // CHECK-LABEL: @operator_and
   //       CHECK: [[ARG0:%.*]]: i1, [[ARG1:%.*]]: i1
-  //       CHECK: and [[ARG0]], [[ARG1]]
+  //       CHECK: [[AND:%.*]] = and [[ARG0]], [[ARG1]]
+  //       CHECK: [[TRUE:%.*]] = constant 1 : i1
+  //       CHECK: subi [[TRUE]], [[AND]] : i1
   f.print(llvm::outs());
   f.erase();
 }
 
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
-  auto indexType = IndexType::get(&globalContext());
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
@@ -530,17 +494,13 @@ TEST_FUNC(select_op_i32) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   // clang-format off
-  ValueHandle zero = std_constant_index(0), one = std_constant_index(1);
+  Value zero = std_constant_index(0), one = std_constant_index(1);
   MemRefBoundsCapture vA(f.getArgument(0));
   AffineIndexedValue A(f.getArgument(0));
-  ValueHandle i(indexType), j(indexType);
-  AffineLoopNestBuilder({&i, &j}, {zero, zero}, {one, one}, {1, 1})([&]{
-    // This test exercises AffineIndexedValue::operator Value.
-    // Without it, one must force conversion to ValueHandle as such:
-    //   std_select(
-    //      i == zero, ValueHandle(A(zero, zero)), ValueHandle(ValueA(i, j)))
-    using edsc::op::operator==;
-    std_select(i == zero, *A(zero, zero), *A(i, j));
+  Value ivs[2];
+  Value &i = ivs[0], &j = ivs[1];
+  AffineLoopNestBuilder(ivs, {zero, zero}, {one, one}, {1, 1})([&]{
+    std_select(eq(i, zero), A(zero, zero), A(i, j));
   });
 
   // CHECK-LABEL: @select_op
@@ -556,7 +516,6 @@ TEST_FUNC(select_op_i32) {
 }
 
 TEST_FUNC(select_op_f32) {
-  auto indexType = IndexType::get(&globalContext());
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
@@ -565,18 +524,19 @@ TEST_FUNC(select_op_f32) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   // clang-format off
-  ValueHandle zero = std_constant_index(0), one = std_constant_index(1);
+  Value zero = std_constant_index(0), one = std_constant_index(1);
   MemRefBoundsCapture vA(f.getArgument(0)), vB(f.getArgument(1));
   AffineIndexedValue A(f.getArgument(0)), B(f.getArgument(1));
-  ValueHandle i(indexType), j(indexType);
-  AffineLoopNestBuilder({&i, &j}, {zero, zero}, {one, one}, {1, 1})([&]{
+  Value ivs[2];
+  Value &i = ivs[0], &j = ivs[1];
+  AffineLoopNestBuilder(ivs, {zero, zero}, {one, one}, {1, 1})([&]{
     using namespace edsc::op;
-    std_select(B(i, j) == B(i + one, j), *A(zero, zero), *A(i, j));
-    std_select(B(i, j) != B(i + one, j), *A(zero, zero), *A(i, j));
-    std_select(B(i, j) >= B(i + one, j), *A(zero, zero), *A(i, j));
-    std_select(B(i, j) <= B(i + one, j), *A(zero, zero), *A(i, j));
-    std_select(B(i, j) < B(i + one, j), *A(zero, zero), *A(i, j));
-    std_select(B(i, j) > B(i + one, j), *A(zero, zero), *A(i, j));
+    std_select(eq(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(ne(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(B(i, j) >= B(i + one, j), A(zero, zero), A(i, j));
+    std_select(B(i, j) <= B(i + one, j), A(zero, zero), A(i, j));
+    std_select(B(i, j) < B(i + one, j), A(zero, zero), A(i, j));
+    std_select(B(i, j) > B(i + one, j), A(zero, zero), A(i, j));
   });
 
   // CHECK-LABEL: @select_op
@@ -632,7 +592,6 @@ TEST_FUNC(select_op_f32) {
 // Inject an EDSC-constructed computation to exercise imperfectly nested 2-d
 // tiling.
 TEST_FUNC(tile_2d) {
-  auto indexType = IndexType::get(&globalContext());
   auto memrefType =
       MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize,
                        ShapedType::kDynamicSize},
@@ -641,17 +600,19 @@ TEST_FUNC(tile_2d) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle zero = std_constant_index(0);
+  Value zero = std_constant_index(0);
   MemRefBoundsCapture vA(f.getArgument(0)), vB(f.getArgument(1)),
       vC(f.getArgument(2));
   AffineIndexedValue A(f.getArgument(0)), B(f.getArgument(1)),
       C(f.getArgument(2));
-  ValueHandle i(indexType), j(indexType), k1(indexType), k2(indexType);
-  ValueHandle M(vC.ub(0)), N(vC.ub(1)), O(vC.ub(2));
+  Value ivs[2];
+  Value &i = ivs[0], &j = ivs[1];
+  Value k1, k2;
+  Value M(vC.ub(0)), N(vC.ub(1)), O(vC.ub(2));
 
   // clang-format off
   using namespace edsc::op;
-  AffineLoopNestBuilder({&i, &j}, {zero, zero}, {M, N}, {1, 1})([&]{
+  AffineLoopNestBuilder(ivs, {zero, zero}, {M, N}, {1, 1})([&]{
     AffineLoopNestBuilder(&k1, zero, O, 1)([&]{
       C(i, j, k1) = A(i, j, k1) + B(i, j, k1);
     });
@@ -661,10 +622,8 @@ TEST_FUNC(tile_2d) {
   });
   // clang-format on
 
-  auto li = getForInductionVarOwner(i.getValue()),
-       lj = getForInductionVarOwner(j.getValue()),
-       lk1 = getForInductionVarOwner(k1.getValue()),
-       lk2 = getForInductionVarOwner(k2.getValue());
+  auto li = getForInductionVarOwner(i), lj = getForInductionVarOwner(j),
+       lk1 = getForInductionVarOwner(k1), lk2 = getForInductionVarOwner(k2);
   auto indicesL1 = mlir::tile({li, lj}, {512, 1024}, {lk1, lk2});
   auto lii1 = indicesL1[0][0], ljj1 = indicesL1[1][0];
   mlir::tile({ljj1, lii1}, {32, 16}, ljj1);
@@ -713,15 +672,15 @@ TEST_FUNC(indirect_access) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle zero = std_constant_index(0);
+  Value zero = std_constant_index(0);
   MemRefBoundsCapture vC(f.getArgument(2));
   AffineIndexedValue B(f.getArgument(1)), D(f.getArgument(3));
   StdIndexedValue A(f.getArgument(0)), C(f.getArgument(2));
-  ValueHandle i(builder.getIndexType()), N(vC.ub(0));
+  Value i, N(vC.ub(0));
 
   // clang-format off
   AffineLoopNestBuilder(&i, zero, N, 1)([&]{
-      C((ValueHandle)D(i)) = A((ValueHandle)B(i));
+      C((Value)D(i)) = A((Value)B(i));
   });
   // clang-format on
 
@@ -747,12 +706,12 @@ TEST_FUNC(empty_map_load_store) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle zero = std_constant_index(0);
-  ValueHandle one = std_constant_index(1);
+  Value zero = std_constant_index(0);
+  Value one = std_constant_index(1);
   AffineIndexedValue input(f.getArgument(0)), res(f.getArgument(1));
-  ValueHandle iv(builder.getIndexType());
 
   // clang-format off
+  Value iv;
   AffineLoopNestBuilder(&iv, zero, one, 1)([&]{
       res() = input();
   });
@@ -784,7 +743,7 @@ TEST_FUNC(affine_if_op) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
 
-  ValueHandle zero = std_constant_index(0), ten = std_constant_index(10);
+  Value zero = std_constant_index(0), ten = std_constant_index(10);
 
   SmallVector<bool, 4> isEq = {false, false, false, false};
   SmallVector<AffineExpr, 4> affineExprs = {
@@ -834,7 +793,7 @@ TEST_FUNC(linalg_generic_pointwise_test) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
+  Value A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
   StructuredIndexed SA(A), SB(B), SC(C);
@@ -864,12 +823,12 @@ TEST_FUNC(linalg_generic_matmul_test) {
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
-  auto f =
-      makeFunction("linalg_generic_matmul", {}, {memrefType, memrefType, memrefType});
+  auto f = makeFunction("linalg_generic_matmul", {},
+                        {memrefType, memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_generic_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())));
+  linalg_generic_matmul(f.getArguments());
 
   f.print(llvm::outs());
   f.erase();
@@ -902,8 +861,8 @@ TEST_FUNC(linalg_generic_conv_nhwc) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_generic_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
-                   /*strides=*/{3, 4}, /*dilations=*/{5, 6});
+  linalg_generic_conv_nhwc(f.getArguments(),
+                           /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
   f.erase();
@@ -936,9 +895,9 @@ TEST_FUNC(linalg_generic_dilated_conv_nhwc) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_generic_dilated_conv_nhwc(makeValueHandles(f.getArguments()),
-                           /*depth_multiplier=*/7,
-                           /*strides=*/{3, 4}, /*dilations=*/{5, 6});
+  linalg_generic_dilated_conv_nhwc(f.getArguments(),
+                                   /*depth_multiplier=*/7,
+                                   /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
   f.erase();
@@ -958,7 +917,7 @@ TEST_FUNC(linalg_metadata_ops) {
   ScopedContext scope(builder, f.getLoc());
   AffineExpr i, j, k;
   bindDims(&globalContext(), i, j, k);
-  ValueHandle v(f.getArgument(0));
+  Value v(f.getArgument(0));
   auto reshaped = linalg_reshape(v, ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
   linalg_reshape(memrefType, reshaped,
                  ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
@@ -1015,7 +974,7 @@ TEST_FUNC(linalg_tensors_test) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle A(f.getArgument(0)), B(f.getArgument(1));
+  Value A(f.getArgument(0)), B(f.getArgument(1));
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
   StructuredIndexed SA(A), SB(B), SC(tensorType);
@@ -1023,7 +982,7 @@ TEST_FUNC(linalg_tensors_test) {
   linalg_generic_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
   linalg_generic_pointwise_tanh(SA({i, j}), SC({i, j}));
   Value o1 = linalg_generic_matmul(A, B, tensorType)->getResult(0);
-  linalg_generic_matmul(A, B, ValueHandle(o1), tensorType);
+  linalg_generic_matmul(A, B, o1, tensorType);
 
   f.print(llvm::outs());
   f.erase();
@@ -1064,7 +1023,7 @@ TEST_FUNC(memref_vector_matmul_test) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
+  Value A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
   auto contractionBuilder = [](ArrayRef<BlockArgument> args) {
     assert(args.size() == 3 && "expected 3 block arguments");
     (linalg_yield(vector_contraction_matmul(args[0], args[1], args[2])));
@@ -1083,19 +1042,19 @@ TEST_FUNC(builder_loop_for_yield) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  ValueHandle init0 = std_constant_float(llvm::APFloat(1.0f), f32Type);
-  ValueHandle init1 = std_constant_float(llvm::APFloat(2.0f), f32Type);
-  ValueHandle i(indexType), a(f.getArgument(0)), b(f.getArgument(1)),
-      c(f.getArgument(2)), d(f.getArgument(3));
-  ValueHandle arg0(f32Type);
-  ValueHandle arg1(f32Type);
+  Value init0 = std_constant_float(llvm::APFloat(1.0f), f32Type);
+  Value init1 = std_constant_float(llvm::APFloat(2.0f), f32Type);
+  Value i, a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
+      d(f.getArgument(3));
+  Value args01[2];
+  Value &arg0 = args01[0], &arg1 = args01[1];
   using namespace edsc::op;
   auto results =
-      LoopNestBuilder(&i, a - b, c + d, a, {&arg0, &arg1}, {init0, init1})([&] {
+      LoopNestBuilder(&i, a - b, c + d, a, args01, {init0, init1})([&] {
         auto sum = arg0 + arg1;
-        loop_yield(ArrayRef<ValueHandle>{arg1, sum});
+        loop_yield(ArrayRef<Value>{arg1, sum});
       });
-  ValueHandle(results[0]) + ValueHandle(results[1]);
+  results[0] + results[1];
 
   // clang-format off
   // CHECK-LABEL: func @builder_loop_for_yield(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
