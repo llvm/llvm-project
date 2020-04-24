@@ -1,11 +1,12 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 !Testing data constraints : C874 - C875, C878 - C881 
 module m
+    integer, target :: modarray(1)
   contains
     function f(i)
-      integer ::i
-      integer ::result
-      result = i *1024 
+      integer, intent(in) :: i
+      integer, pointer :: f
+      f => modarray(i)
     end
     subroutine CheckObject 
       type specialNumbers
@@ -43,13 +44,13 @@ module m
       !ERROR: Data object variable must not be a function reference
       DATA f(1) / 1 / 
       !C875
-      !ERROR: Data object must have constant bounds
+      !ERROR: Data object must have constant subscripts
       DATA b(ind) / 1 /
       !C875
-      !ERROR: Data object must have constant bounds
+      !ERROR: Data object must have constant subscripts
       DATA name( : ind) / 'Ancd' /
       !C875
-      !ERROR: Data object must have constant bounds
+      !ERROR: Data object must have constant subscripts
       DATA name(ind:) / 'Ancd' /
       !C878
       !ERROR: Data implied do object must be a variable
@@ -59,7 +60,7 @@ module m
       DATA(newNumsArray(i), i = 1, 2) &
               / specialNumbers(1, 2 * (/ 1, 2, 3, 4, 5 /)) /
       !C880
-      !ERROR: Data implied do object must be subscripted
+      !ERROR: Data implied do structure component must be subscripted
       DATA(nums % one, i = 1, 5) / 5 * 1 /
       !C880
       !OK: Correct use
@@ -68,7 +69,7 @@ module m
       !OK: Correct use
       DATA(largeNumber % numsArray(j) % one, j = 1, 10) / 10 * 1 /
       !C881
-      !ERROR: Data object must have constant bounds
+      !ERROR: Data object must have constant subscripts
       DATA(b(x), i = 1, 5) / 5 * 1 /
       !C881 
       !OK: Correct use
