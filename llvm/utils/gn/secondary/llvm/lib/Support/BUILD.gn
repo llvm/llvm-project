@@ -94,6 +94,7 @@ static_library("Support") {
     "MD5.cpp",
     "ManagedStatic.cpp",
     "MathExtras.cpp",
+    "MemAlloc.cpp",
     "MemoryBuffer.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
