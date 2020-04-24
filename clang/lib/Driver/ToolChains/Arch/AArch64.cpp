@@ -65,7 +65,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  std::vector<StringRef> &Features) {
+                                  std::vector<StringRef> &Features,
+                                  llvm::AArch64::ArchKind ArchKind) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -77,6 +78,11 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
     else
       return false;
+
+    // +sve implies +f32mm if the base architecture is v8.6A
+    // it isn't the case in general that sve implies both f64mm and f32mm
+    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A) && Feature == "sve")
+      Features.push_back("+f32mm");
   }
   return true;
 }
@@ -87,6 +93,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -94,7 +101,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    ArchKind = llvm::AArch64::parseCPUArch(CPU);
     if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
       return false;
 
@@ -103,10 +110,11 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
       return false;
    }
 
-  if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
-    return false;
+   if (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind))
+     return false;
 
-  return true;
+   return true;
 }
 
 static bool
@@ -119,7 +127,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
+      (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
   return true;
