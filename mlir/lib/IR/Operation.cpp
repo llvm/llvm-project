@@ -103,14 +103,16 @@ Operation *Operation::create(Location location, OperationName name,
                              bool resizableOperandList) {
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
+  unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
 
   // Compute the byte size for the operation and the operand storage.
-  auto byteSize = totalSizeToAlloc<detail::TrailingOpResult, BlockOperand,
-                                   Region, detail::OperandStorage>(
-      numTrailingResults, numSuccessors, numRegions,
-      /*detail::OperandStorage*/ 1);
+  auto byteSize =
+      totalSizeToAlloc<detail::InLineOpResult, detail::TrailingOpResult,
+                       BlockOperand, Region, detail::OperandStorage>(
+          numInlineResults, numTrailingResults, numSuccessors, numRegions,
+          /*detail::OperandStorage*/ 1);
   byteSize += llvm::alignTo(detail::OperandStorage::additionalAllocSize(
                                 numOperands, resizableOperandList),
                             alignof(Operation));
@@ -123,16 +125,11 @@ Operation *Operation::create(Location location, OperationName name,
   assert((numSuccessors == 0 || !op->isKnownNonTerminator()) &&
          "unexpected successors in a non-terminator operation");
 
-  // Initialize the trailing results.
-  if (LLVM_UNLIKELY(numTrailingResults > 0)) {
-    // We initialize the trailing results with their result number. This makes
-    // 'getResultNumber' checks much more efficient. The main purpose for these
-    // results is to give an anchor to the main operation anyways, so this is
-    // purely an optimization.
-    auto *trailingResultIt = op->getTrailingObjects<detail::TrailingOpResult>();
-    for (unsigned i = 0; i != numTrailingResults; ++i, ++trailingResultIt)
-      trailingResultIt->trailingResultNumber = i;
-  }
+  // Initialize the results.
+  for (unsigned i = 0; i < numInlineResults; ++i)
+    new (op->getInlineResult(i)) detail::InLineOpResult();
+  for (unsigned i = 0; i < numTrailingResults; ++i)
+    new (op->getTrailingResult(i)) detail::TrailingOpResult(i);
 
   // Initialize the regions.
   for (unsigned i = 0; i != numRegions; ++i)
@@ -1071,4 +1068,39 @@ void impl::ensureRegionTerminator(
     return;
 
   block.push_back(buildTerminatorOp());
+}
+
+//===----------------------------------------------------------------------===//
+// UseIterator
+//===----------------------------------------------------------------------===//
+
+Operation::UseIterator::UseIterator(Operation *op, bool end)
+    : op(op), res(end ? op->result_end() : op->result_begin()) {
+  // Only initialize current use if there are results/can be uses.
+  if (op->getNumResults())
+    skipOverResultsWithNoUsers();
+}
+
+Operation::UseIterator &Operation::UseIterator::operator++() {
+  // We increment over uses, if we reach the last use then move to next
+  // result.
+  if (use != (*res).use_end())
+    ++use;
+  if (use == (*res).use_end()) {
+    ++res;
+    skipOverResultsWithNoUsers();
+  }
+  return *this;
+}
+
+void Operation::UseIterator::skipOverResultsWithNoUsers() {
+  while (res != op->result_end() && (*res).use_empty())
+    ++res;
+
+  // If we are at the last result, then set use to first use of
+  // first result (sentinel value used for end).
+  if (res == op->result_end())
+    use = {};
+  else
+    use = (*res).use_begin();
 }

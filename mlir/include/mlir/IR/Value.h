@@ -149,7 +149,7 @@ public:
   // Uses
 
   /// This class implements an iterator over the uses of a value.
-  using use_iterator = FilteredValueUseIterator<OpOperand>;
+  using use_iterator = ValueUseIterator<OpOperand>;
   using use_range = iterator_range<use_iterator>;
 
   use_iterator use_begin() const;
@@ -300,12 +300,21 @@ public:
   /// Returns the number of this result.
   unsigned getResultNumber() const;
 
+  /// Returns the maximum number of results that can be stored inline.
+  static unsigned getMaxInlineResults() {
+    return static_cast<unsigned>(Kind::TrailingOpResult);
+  }
+
 private:
+  /// Given a number of operation results, returns the number that need to be
+  /// stored inline.
+  static unsigned getNumInline(unsigned numResults);
+
   /// Given a number of operation results, returns the number that need to be
   /// stored as trailing.
   static unsigned getNumTrailing(unsigned numResults);
 
-  /// Allow access to `create` and `destroy`.
+  /// Allow access to constructor.
   friend Operation;
 };
 
