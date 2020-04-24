@@ -24,7 +24,6 @@ namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
-class MachineRegisterInfo;
 class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
