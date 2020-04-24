@@ -114,6 +114,23 @@ void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   }
 }
 
+void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
+  const size_t RangesOffset = OS.tell();
+  for (auto Ranges : DI.Ranges) {
+    const size_t CurrOffset = OS.tell() - RangesOffset;
+    assert(Ranges.Offset <= CurrOffset);
+    if (Ranges.Offset > CurrOffset)
+      ZeroFillBytes(OS, Ranges.Offset - CurrOffset);
+    for (auto Entry : Ranges.Entries) {
+      writeVariableSizedInteger(Entry.LowOffset, Ranges.AddrSize, OS,
+                                DI.IsLittleEndian);
+      writeVariableSizedInteger(Entry.HighOffset, Ranges.AddrSize, OS,
+                                DI.IsLittleEndian);
+    }
+    ZeroFillBytes(OS, Ranges.AddrSize * 2);
+  }
+}
+
 void DWARFYAML::EmitPubSection(raw_ostream &OS,
                                const DWARFYAML::PubSection &Sect,
                                bool IsLittleEndian) {
@@ -376,6 +393,8 @@ DWARFYAML::EmitDebugSections(StringRef YAMLString, bool ApplyFixups,
   EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAbbrev, "debug_abbrev",
                        DebugSections);
   EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAranges, "debug_aranges",
+                       DebugSections);
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugRanges, "debug_ranges",
                        DebugSections);
   return std::move(DebugSections);
 }

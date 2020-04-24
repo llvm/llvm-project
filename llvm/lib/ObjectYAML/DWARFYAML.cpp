@@ -28,6 +28,8 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
   if (!DWARF.ARanges.empty() || !IO.outputting())
     IO.mapOptional("debug_aranges", DWARF.ARanges);
+  if (!DWARF.Ranges.empty() || !IO.outputting())
+    IO.mapOptional("debug_ranges", DWARF.Ranges);
   if (!DWARF.PubNames.Entries.empty() || !IO.outputting())
     IO.mapOptional("debug_pubnames", DWARF.PubNames);
   if (!DWARF.PubTypes.Entries.empty() || !IO.outputting())
@@ -71,6 +73,19 @@ void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
   IO.mapRequired("AddrSize", Range.AddrSize);
   IO.mapRequired("SegSize", Range.SegSize);
   IO.mapRequired("Descriptors", Range.Descriptors);
+}
+
+void MappingTraits<DWARFYAML::RangeEntry>::mapping(
+    IO &IO, DWARFYAML::RangeEntry &Descriptor) {
+  IO.mapRequired("LowOffset", Descriptor.LowOffset);
+  IO.mapRequired("HighOffset", Descriptor.HighOffset);
+}
+
+void MappingTraits<DWARFYAML::Ranges>::mapping(IO &IO,
+                                               DWARFYAML::Ranges &Ranges) {
+  IO.mapRequired("Offset", Ranges.Offset);
+  IO.mapRequired("AddrSize", Ranges.AddrSize);
+  IO.mapRequired("Entries", Ranges.Entries);
 }
 
 void MappingTraits<DWARFYAML::PubEntry>::mapping(IO &IO,
