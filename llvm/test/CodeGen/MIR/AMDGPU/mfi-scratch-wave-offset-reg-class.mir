@@ -1,11 +1,10 @@
 # RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
-# CHECK: :8:33: incorrect register class for field
-# CHECK: scratchWaveOffsetReg:  '$vgpr0'
 
 ---
 name: wrong_reg_class_scratch_wave_offset_reg
 machineFunctionInfo:
   scratchWaveOffsetReg:  '$vgpr0'
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: incorrect register class for field
 body:             |
   bb.0:
 
