@@ -20,7 +20,6 @@
 
 #include "Pass.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -30,6 +29,7 @@ namespace llvm {
 class Function;
 class Pass;
 class PMDataManager;
+class StringRef;
 
 //===----------------------------------------------------------------------===//
 /// Represent the analysis usage information of a pass.  This tracks analyses
