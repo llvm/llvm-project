@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s 
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 
 // CHECK: define void @_Z6BoundsRA10_KiU7_ExtIntILi15EEi
@@ -56,9 +56,11 @@ void UIntTruncation(unsigned _ExtInt(35) E, unsigned int i, unsigned long long l
 
   i = E;
   // CHECK: %[[LOADE:.+]] = load i35
-  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE]] to i32
+  // CHECK: store i35 %[[LOADE]], i35* %[[EADDR:.+]]
+  // CHECK: %[[LOADE2:.+]] = load i35, i35* %[[EADDR]]
+  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE2]] to i32
   // CHECK: %[[EXT:.+]] = zext i32 %[[CONV]] to i35
-  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE2]]
   // CHECK: br i1 %[[CHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
@@ -76,9 +78,11 @@ void IntTruncation(_ExtInt(35) E, unsigned _ExtInt(42) UE, int i, unsigned j) {
 
   j = E;
   // CHECK: %[[LOADE:.+]] = load i35
-  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE]] to i32
+  // CHECK: store i35 %[[LOADE]], i35* %[[EADDR:.+]]
+  // CHECK: %[[LOADE2:.+]] = load i35, i35* %[[EADDR]]
+  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE2]] to i32
   // CHECK: %[[EXT:.+]] = zext i32 %[[CONV]] to i35
-  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE2]]
   // CHECK: br i1 %[[CHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
@@ -118,16 +122,19 @@ void IntTruncation(_ExtInt(35) E, unsigned _ExtInt(42) UE, int i, unsigned j) {
 // CHECK: define void @_Z15SignChangeCheckU7_ExtIntILi39EEjU7_ExtIntILi39EEi
 void SignChangeCheck(unsigned _ExtInt(39) UE, _ExtInt(39) E) {
   UE = E;
+  // CHECK: %[[LOADEU:.+]] = load i39
   // CHECK: %[[LOADE:.+]] = load i39
-  // CHECK: %[[NEG:.+]] = icmp slt i39 %[[LOADE]], 0
+  // CHECK: store i39 %[[LOADE]], i39* %[[EADDR:.+]]
+  // CHECK: %[[LOADE2:.+]] = load i39, i39* %[[EADDR]]
+  // CHECK: %[[NEG:.+]] = icmp slt i39 %[[LOADE2]], 0
   // CHECK: %[[SIGNCHECK:.+]] = icmp eq i1 %[[NEG]], false
   // CHECK: br i1 %[[SIGNCHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
-
   E = UE;
-  // CHECK: %[[LOADUE:.+]] = load i39
-  // CHECK: %[[NEG:.+]] = icmp slt i39 %[[LOADUE]], 0
+  // CHECK: store i39 %[[LOADE2]], i39* %[[UEADDR:.+]]
+  // CHECK: %[[LOADUE2:.+]] = load i39, i39* %[[UEADDR]]
+  // CHECK: %[[NEG:.+]] = icmp slt i39 %[[LOADUE2]], 0
   // CHECK: %[[SIGNCHECK:.+]] = icmp eq i1 false, %[[NEG]]
   // CHECK: br i1 %[[SIGNCHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
@@ -138,8 +145,10 @@ void DivByZero(_ExtInt(11) E, int i) {
 
   // Also triggers signed integer overflow.
   E / E;
-  // CHECK: %[[E:.+]] = load i11, i11*
-  // CHECK: %[[E2:.+]] = load i11, i11*
+  // CHECK: %[[E1LOAD:.+]] = load i11
+  // CHECK: store i11 %[[E1LOAD]], i11* %[[EADDR:.+]]
+  // CHECK: %[[E:.+]] = load i11, i11* %[[EADDR]]
+  // CHECK: %[[E2:.+]] = load i11, i11* %[[EADDR]]
   // CHECK: %[[NEZERO:.+]] = icmp ne i11 %[[E2]], 0
   // CHECK: %[[NEMIN:.+]] = icmp ne i11 %[[E]], -1024
   // CHECK: %[[NENEG1:.+]] = icmp ne i11 %[[E2]], -1
@@ -154,8 +163,10 @@ void DivByZero(_ExtInt(11) E, int i) {
 // CHECK: define void @_Z6ShiftsU7_ExtIntILi9EEi
 void Shifts(_ExtInt(9) E) {
   E >> E;
-  // CHECK: %[[LHSE:.+]] = load i9, i9*
-  // CHECK: %[[RHSE:.+]] = load i9, i9*
+  // CHECK: %[[E1LOAD:.+]] = load i9, i9*
+  // CHECK: store i9 %[[E1LOAD]], i9* %[[EADDR:.+]]
+  // CHECK: %[[LHSE:.+]] = load i9, i9* %[[EADDR]]
+  // CHECK: %[[RHSE:.+]] = load i9, i9* %[[EADDR]]
   // CHECK: %[[CMP:.+]] = icmp ule i9 %[[RHSE]], 8
   // CHECK: br i1 %[[CMP]]
   // CHECK: call void @__ubsan_handle_shift_out_of_bounds_abort
@@ -179,8 +190,10 @@ void SignedIntegerOverflow(_ExtInt(93) BiggestE,
                            _ExtInt(4) SmallestE,
                            _ExtInt(31) JustRightE) {
   BiggestE + BiggestE;
-  // CHECK: %[[LOAD1:.+]] = load i93, i93*
-  // CHECK: %[[LOAD2:.+]] = load i93, i93*
+  // CHECK: %[[LOADBIGGESTE2:.+]] = load i93
+  // CHECK: store i93 %[[LOADBIGGESTE2]], i93* %[[BIGGESTEADDR:.+]]
+  // CHECK: %[[LOAD1:.+]] = load i93, i93* %[[BIGGESTEADDR]]
+  // CHECK: %[[LOAD2:.+]] = load i93, i93* %[[BIGGESTEADDR]]
   // CHECK: %[[OFCALL:.+]] = call { i93, i1 } @llvm.sadd.with.overflow.i93(i93 %[[LOAD1]], i93 %[[LOAD2]])
   // CHECK: %[[EXRESULT:.+]] = extractvalue { i93, i1 } %[[OFCALL]], 0
   // CHECK: %[[OFRESULT:.+]] = extractvalue { i93, i1 } %[[OFCALL]], 1
@@ -214,8 +227,10 @@ void UnsignedIntegerOverflow(unsigned u,
                              unsigned _ExtInt(23) SmallE,
                              unsigned _ExtInt(35) BigE) {
   u = SmallE + SmallE;
-  // CHECK: %[[LOADE1:.+]] = load i23, i23*
-  // CHECK: %[[LOADE2:.+]] = load i23, i23*
+  // CHECK: %[[LOADBIGGESTE2:.+]] = load i23
+  // CHECK: store i23 %[[LOADBIGGESTE2]], i23* %[[BIGGESTEADDR:.+]]
+  // CHECK: %[[LOADE1:.+]] = load i23, i23* %[[BIGGESTEADDR]]
+  // CHECK: %[[LOADE2:.+]] = load i23, i23* %[[BIGGESTEADDR]]
   // CHECK: %[[OFCALL:.+]] = call { i23, i1 } @llvm.uadd.with.overflow.i23(i23 %[[LOADE1]], i23 %[[LOADE2]])
   // CHECK: %[[EXRESULT:.+]] = extractvalue { i23, i1 } %[[OFCALL]], 0
   // CHECK: %[[OFRESULT:.+]] = extractvalue { i23, i1 } %[[OFCALL]], 1
