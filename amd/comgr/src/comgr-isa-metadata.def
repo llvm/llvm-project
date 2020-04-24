@@ -80,5 +80,6 @@ HANDLE_ISA("amdgcn-amd-amdhsa--gfx1012", false, 65536, 4, 40, 2048, 106, 800, 10
 HANDLE_ISA("amdgcn-amd-amdhsa--gfx1012+xnack", false, 65536, 4, 40, 2048, 106, 800, 106, 8, 256, 256, 32)
 HANDLE_ISA("amdgcn-amd-amdhsa--gfx1030", false, 65536, 4, 40, 2048, 106, 800, 106, 8, 256, 256, 32)
 HANDLE_ISA("amdgcn-amd-amdhsa--gfx1031", false, 65536, 4, 40, 2048, 106, 800, 106, 8, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx1032", false, 65536, 4, 40, 2048, 106, 800, 106, 8, 256, 256, 32)
 
 #undef HANDLE_ISA
