@@ -148,6 +148,9 @@ protected:
 
   // Armv8.6-A Extensions
   bool HasBF16 = false;
+  bool HasMatMulInt8 = false;
+  bool HasMatMulFP32 = false;
+  bool HasMatMulFP64 = false;
   bool HasAMVS = false;
   bool HasFineGrainedTraps = false;
   bool HasEnhancedCounterVirtualization = false;
@@ -417,6 +420,9 @@ public:
   bool hasSVE2SM4() const { return HasSVE2SM4; }
   bool hasSVE2SHA3() const { return HasSVE2SHA3; }
   bool hasSVE2BitPerm() const { return HasSVE2BitPerm; }
+  bool hasMatMulInt8() const { return HasMatMulInt8; }
+  bool hasMatMulFP32() const { return HasMatMulFP32; }
+  bool hasMatMulFP64() const { return HasMatMulFP64; }
 
   // Armv8.6-A Extensions
   bool hasBF16() const { return HasBF16; }
