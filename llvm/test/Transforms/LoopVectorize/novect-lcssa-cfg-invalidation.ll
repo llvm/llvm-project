@@ -11,8 +11,8 @@ define i32 @novect(i32* %p) {
 ; CHECK:           Invalidating all non-preserved analyses for: novect
 ; CHECK:           Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK:           Invalidating analysis: ScalarEvolutionAnalysis on novect
-; CHECK:           Invalidating analysis: BranchProbabilityAnalysis on novect
-; CHECK:           Invalidating analysis: BlockFrequencyAnalysis on novect
+; CHECK-NOT:       Invalidating analysis: BranchProbabilityAnalysis on novect
+; CHECK-NOT:       Invalidating analysis: BlockFrequencyAnalysis on novect
 ; CHECK:           Invalidating analysis: DemandedBitsAnalysis on novect
 ; CHECK:           Invalidating analysis: MemorySSAAnalysis on novect
 ; CHECK:           Running pass: JumpThreadingPass on novect
