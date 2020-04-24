@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -verify
-// RUN: %clang_cc1 %s -verify -Wno-implicit-int-float-conversion -Wimplicit-const-int-float-conversion
-// RUN: %clang_cc1 %s -DNONCONST=1 -verify -Wimplicit-int-float-conversion
+// RUN: %clang_cc1 %s -verify -Wno-constant-conversion
+// RUN: %clang_cc1 %s -verify -Wno-constant-conversion -Wno-implicit-int-float-conversion -Wimplicit-const-int-float-conversion
+// RUN: %clang_cc1 %s -DNONCONST=1 -verify -Wno-constant-conversion -Wimplicit-int-float-conversion
 
 #ifdef NONCONST
 long testReturn(long a, float b) {
