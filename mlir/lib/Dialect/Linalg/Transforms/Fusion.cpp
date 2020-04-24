@@ -559,6 +559,187 @@ private:
 };
 } // namespace
 
+/// Linearize the expressions in `sourceMap` based on the `reassociationMaps`
+/// provided, given the shape of the source tensor that corresponds to the
+/// `sourceMap`. Note that this implicitly assumes that the tensors dimensions
+/// are "row-major" ordered logically.
+///
+/// For example:
+///
+/// %0 = op ... : tensor<?x?x4x5xf32>
+/// with output index_map `affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>`
+///
+/// and reshape:
+/// %1 = linalg.tensor_reshape %0 [affine_map<(i, j, k, l) -> (i)>,
+///                                affine_map<(i, j, k, l) -> (j, k, l)>] :
+///        tensor<?x?x4x5xf32> into tensor<?x?xf32>
+///
+/// would be rewritten into:
+/// %0 = op ... : tensor<?x?x4x5xf32>
+/// with output index_map
+///   `affine_map<(d0, d1, d2, d3) -> (d0, d1 * 20 + d2 * 5 + d3)>`
+static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
+                                        ArrayRef<int64_t> sourceShape,
+                                        ArrayRef<AffineMap> reassociationMaps) {
+  SmallVector<AffineExpr, 4> resultExprs;
+  resultExprs.reserve(reassociationMaps.size());
+  ArrayRef<AffineExpr> sourceExprs = sourceMap.getResults();
+  MLIRContext *context = sourceMap.getContext();
+
+  // Compute the result exprs based on the reassociation maps.
+  for (AffineMap map : reassociationMaps) {
+    ArrayRef<AffineExpr> collapsedDims = map.getResults();
+    // Assume that they are in-order and contiguous (already checked in
+    // verifier).
+    assert(!collapsedDims.empty());
+    unsigned startDim =
+        collapsedDims.front().cast<AffineDimExpr>().getPosition();
+    AffineExpr linearizedExpr = makeCanonicalStridedLayoutExpr(
+        sourceShape.slice(startDim, collapsedDims.size()),
+        sourceExprs.slice(startDim, collapsedDims.size()), context);
+    resultExprs.push_back(linearizedExpr);
+  }
+  return AffineMap::get(sourceMap.getNumDims(), sourceMap.getNumSymbols(),
+                        resultExprs, context);
+}
+
+/// Checks if the `reshapeOp` can be fused with it consumer (if `asProducer` is
+/// true) or its producer (if `asProducer` is false) given the indexing map at
+/// its use.
+static bool isTensorReshapeOpFusible(TensorReshapeOp reshapeOp,
+                                     AffineMap useIndexMap, bool asProducer) {
+  RankedTensorType returnType = reshapeOp.getResultType();
+  RankedTensorType operandType = reshapeOp.getSrcType();
+  // Reshape is fusible with its consumer (i.e. reshape as a producer) when its
+  // operand is of lesser rank than the result. Fusing when operand has higher
+  // rank will require use of mods and divs in the indexing maps of the fused op
+  // which would make it non-invertible. Similarly reshape is fused with its
+  // producer (i.e. reshape as consumer) only if the return type has lesser
+  // rank.
+  if ((asProducer && returnType.getRank() < operandType.getRank()) ||
+      (!asProducer && operandType.getRank() < returnType.getRank()))
+    return false;
+  return useIndexMap.isIdentity();
+}
+
+namespace {
+/// Implementation of fusion on tensor ops when producer is a TensorReshapeOp.
+template <typename LinalgOpTy> struct FuseTensorReshapeOpAsProducer {
+  static bool isFusible(TensorReshapeOp producer, LinalgOpTy consumer,
+                        unsigned consumerIdx) {
+    return isTensorReshapeOpFusible(
+        producer, consumer.getInputIndexingMap(consumerIdx), true);
+  }
+
+  static Operation *fuse(TensorReshapeOp producer, LinalgOpTy consumer,
+                         unsigned consumerIdx, PatternRewriter &rewriter,
+                         OperationFolder *folder = nullptr) {
+    if (!isFusible(producer, consumer, consumerIdx))
+      return nullptr;
+
+    // Compute the fused operands list,
+    SmallVector<Value, 2> fusedOperands(consumer.operand_begin(),
+                                        consumer.operand_end());
+    fusedOperands[consumerIdx] = producer.src();
+
+    // Compute indexing_maps for the fused operation. The indexing_maps for the
+    // operands of the consumers that arent fused are the same.
+    SmallVector<AffineMap, 4> fusedIndexMaps =
+        llvm::to_vector<4>(llvm::map_range(
+            consumer.indexing_maps(), [](Attribute attr) -> AffineMap {
+              return attr.cast<AffineMapAttr>().getValue();
+            }));
+
+    // Compute the indexing map to use for the operand of the producer.
+    AffineMap modifiedMap = linearizeCollapsedDims(
+        fusedIndexMaps[consumerIdx], producer.getResultType().getShape(),
+        producer.getReassociationMaps());
+    for (AffineExpr expr : modifiedMap.getResults()) {
+      if (!expr.isPureAffine())
+        return nullptr;
+    }
+    fusedIndexMaps[consumerIdx] = modifiedMap;
+
+    // Further check that the resulting index maps can be fused and
+    // inverted. Without this the resultant op is not legal.
+    if (!inversePermutation(concatAffineMaps(fusedIndexMaps)))
+      return nullptr;
+
+    SmallVector<Attribute, 4> indexMapAttrs = llvm::to_vector<4>(
+        llvm::map_range(fusedIndexMaps, [](AffineMap map) -> Attribute {
+          return AffineMapAttr::get(map);
+        }));
+    auto fusedOp = rewriter.create<LinalgOpTy>(
+        rewriter.getUnknownLoc(), consumer.getResultTypes(), fusedOperands,
+        rewriter.getI64IntegerAttr(fusedOperands.size()),
+        rewriter.getI64IntegerAttr(consumer.getNumResults()),
+        rewriter.getArrayAttr(indexMapAttrs), consumer.iterator_types(),
+        /*doc=*/nullptr,
+        /*library_call=*/nullptr);
+    auto &fusedRegion = fusedOp.region();
+    rewriter.cloneRegionBefore(consumer.region(), fusedRegion,
+                               fusedRegion.begin());
+    return fusedOp;
+  }
+};
+
+/// Implementation of fusion on tensor ops when consumer is a TensorReshapeOp.
+template <typename LinalgOpTy> struct FuseTensorReshapeOpAsConsumer {
+  static bool isFusible(LinalgOpTy producer, TensorReshapeOp consumer,
+                        unsigned consumerIdx) {
+    return isTensorReshapeOpFusible(consumer, producer.getOutputIndexingMap(0),
+                                    false);
+  }
+
+  static Operation *fuse(LinalgOpTy producer, TensorReshapeOp consumer,
+                         unsigned consumerIdx, PatternRewriter &rewriter,
+                         OperationFolder *folder = nullptr) {
+    if (!isFusible(producer, consumer, consumerIdx))
+      return nullptr;
+
+    // The indexing_maps for the operands of the fused operation are same as
+    // those for the operands of the producer.
+    SmallVector<AffineMap, 4> fusedIndexMaps =
+        llvm::to_vector<4>(llvm::map_range(
+            producer.indexing_maps(), [](Attribute attr) -> AffineMap {
+              return attr.cast<AffineMapAttr>().getValue();
+            }));
+    // Compute the indexing map to use for the operand of the producer.
+    AffineMap modifiedMap = linearizeCollapsedDims(
+        producer.getOutputIndexingMap(0), consumer.getSrcType().getShape(),
+        consumer.getReassociationMaps());
+    for (AffineExpr expr : modifiedMap.getResults()) {
+      if (!expr.isPureAffine())
+        return nullptr;
+    }
+    fusedIndexMaps.back() = modifiedMap;
+
+    // Further check that the resulting index maps can be fused and
+    // inverted. Without this the resultant op is not legal.
+    if (!inversePermutation(concatAffineMaps(fusedIndexMaps)))
+      return nullptr;
+
+    SmallVector<Attribute, 4> indexMapAttrs = llvm::to_vector<4>(
+        llvm::map_range(fusedIndexMaps, [](AffineMap map) -> Attribute {
+          return AffineMapAttr::get(map);
+        }));
+
+    auto fusedOp = rewriter.create<LinalgOpTy>(
+        rewriter.getUnknownLoc(), consumer.getResultType(),
+        producer.getOperands(),
+        rewriter.getI64IntegerAttr(producer.getNumOperands()),
+        rewriter.getI64IntegerAttr(1), rewriter.getArrayAttr(indexMapAttrs),
+        producer.iterator_types(),
+        /*doc=*/nullptr,
+        /*library_call=*/nullptr);
+    auto &fusedRegion = fusedOp.region();
+    rewriter.cloneRegionBefore(producer.region(), fusedRegion,
+                               fusedRegion.begin());
+    return fusedOp;
+  }
+};
+} // namespace
+
 Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
                                        Operation *consumer,
                                        unsigned consumerIdx,
@@ -569,6 +750,7 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
   if (!producer || producer->getNumResults() != 1)
     return nullptr;
 
+  // Fuse when consumer is GenericOp.
   if (GenericOp genericOp = dyn_cast<GenericOp>(consumer)) {
     if (!genericOp.hasTensorSemantics())
       return nullptr;
@@ -576,7 +758,21 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
       if (genericOpProducer.hasTensorSemantics())
         return FuseGenericOpsOnTensors::fuse(genericOpProducer, genericOp,
                                              consumerIdx, rewriter, folder);
+    } else if (auto reshapeOpProducer = dyn_cast<TensorReshapeOp>(producer)) {
+      return FuseTensorReshapeOpAsProducer<GenericOp>::fuse(
+          reshapeOpProducer, genericOp, consumerIdx, rewriter, folder);
     }
+    return nullptr;
+  }
+
+  // Fuse when consumer is a TensorReshapeOp.
+  if (TensorReshapeOp reshapeOp = dyn_cast<TensorReshapeOp>(consumer)) {
+    if (auto genericOpProducer = dyn_cast<GenericOp>(producer)) {
+      if (genericOpProducer.hasTensorSemantics())
+        return FuseTensorReshapeOpAsConsumer<GenericOp>::fuse(
+            genericOpProducer, reshapeOp, consumerIdx, rewriter, folder);
+    }
+    return nullptr;
   }
   return nullptr;
 }
@@ -612,7 +808,7 @@ struct FusionOfTensorOpsPass
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
-    patterns.insert<FuseTensorOps<GenericOp>>(op->getContext());
+    populateLinalgTensorOpsFusionPatterns(op->getContext(), patterns);
     applyPatternsAndFoldGreedily(op->getRegions(), patterns);
   };
 };
@@ -621,6 +817,12 @@ struct LinalgFusionPass : public LinalgFusionBase<LinalgFusionPass> {
   void runOnFunction() override { fuseLinalgOpsGreedily(getFunction()); }
 };
 } // namespace
+
+void mlir::populateLinalgTensorOpsFusionPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns) {
+  patterns.insert<FuseTensorOps<GenericOp>, FuseTensorOps<TensorReshapeOp>>(
+      context);
+}
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgFusionPass() {
   return std::make_unique<LinalgFusionPass>();
