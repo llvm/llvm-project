@@ -896,7 +896,7 @@ public:
 
   /// Return true if this property has an explicitly specified getter name.
   bool hasExplicitGetterName() const {
-    return (PropertyAttributes & OBJC_PR_getter);
+    return (PropertyAttributes & ObjCPropertyAttribute::kind_getter);
   }
 
   Selector getGetterName() const { return GetterName; }
@@ -909,7 +909,7 @@ public:
 
   /// Return true if this property has an explicitly specified setter name.
   bool hasExplicitSetterName() const {
-    return (PropertyAttributes & OBJC_PR_setter);
+    return (PropertyAttributes & ObjCPropertyAttribute::kind_setter);
   }
 
   Selector getSetterName() const { return SetterName; }

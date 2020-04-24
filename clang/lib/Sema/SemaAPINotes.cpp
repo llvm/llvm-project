@@ -114,7 +114,7 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
     // Make it a property attribute if we can.
     if (!isMultiLevelPointerType(type)) {
       property->setPropertyAttributes(
-        ObjCPropertyDecl::OBJC_PR_null_resettable);
+        ObjCPropertyAttribute::kind_null_resettable);
     }
   } else {
     llvm_unreachable("cannot handle nullability here");
@@ -957,7 +957,7 @@ void Sema::ProcessAPINotes(Decl *D) {
         if (auto Context = GetContext(Reader)) {
           bool isInstanceProperty =
             (Property->getPropertyAttributesAsWritten() &
-               ObjCPropertyDecl::OBJC_PR_class) == 0;
+               ObjCPropertyAttribute::kind_class) == 0;
           auto Info = Reader->lookupObjCProperty(*Context, Property->getName(),
                                                  isInstanceProperty);
           ProcessVersionedAPINotes(*this, Property, Info);
