@@ -34,7 +34,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -1618,7 +1617,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (MDNode *MD =
             Q.IIQ.getMetadata(cast<Instruction>(I), LLVMContext::MD_range))
       computeKnownBitsFromRangeMetadata(*MD, Known);
-    if (const Value *RV = ImmutableCallSite(I).getReturnedArgOperand()) {
+    if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
       computeKnownBits(RV, Known2, Depth + 1, Q);
       Known.Zero |= Known2.Zero;
       Known.One |= Known2.One;
@@ -2169,11 +2168,11 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     // If the value is used as an argument to a call or invoke, then argument
     // attributes may provide an answer about null-ness.
-    if (auto CS = ImmutableCallSite(U))
-      if (auto *CalledFunc = CS.getCalledFunction())
+    if (const auto *CB = dyn_cast<CallBase>(U))
+      if (auto *CalledFunc = CB->getCalledFunction())
         for (const Argument &Arg : CalledFunc->args())
-          if (CS.getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
+          if (CB->getArgOperand(Arg.getArgNo()) == V &&
+              Arg.hasNonNullAttr() && DT->dominates(CB, CtxI))
             return true;
 
     // If the value is used as a load/store, then the pointer must be non null.
@@ -4789,14 +4788,14 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     return false;
 
   // Calls can throw, or contain an infinite loop, or kill the process.
-  if (auto CS = ImmutableCallSite(I)) {
+  if (const auto *CB = dyn_cast<CallBase>(I)) {
     // Call sites that throw have implicit non-local control flow.
-    if (!CS.doesNotThrow())
+    if (!CB->doesNotThrow())
       return false;
 
     // A function which doens't throw and has "willreturn" attribute will
     // always return.
-    if (CS.hasFnAttr(Attribute::WillReturn))
+    if (CB->hasFnAttr(Attribute::WillReturn))
       return true;
 
     // Non-throwing call sites can loop infinitely, call exit/pthread_exit
@@ -4815,7 +4814,7 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
 
     // FIXME: This isn't aggressive enough; a call which only writes to a global
     // is guaranteed to return.
-    return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory();
+    return CB->onlyReadsMemory() || CB->onlyAccessesArgMemory();
   }
 
   // Other instructions return normally.
