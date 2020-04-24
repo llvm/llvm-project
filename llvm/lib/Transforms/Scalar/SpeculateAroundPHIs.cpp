@@ -14,7 +14,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -68,8 +67,8 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
       return false;
     }
 
-    if (auto CS = ImmutableCallSite(UI)) {
-      if (CS.isConvergent() || CS.cannotDuplicate()) {
+    if (const auto *CS = dyn_cast<CallBase>(UI)) {
+      if (CS->isConvergent() || CS->cannotDuplicate()) {
         LLVM_DEBUG(dbgs() << "  Unsafe: convergent "
                    "callsite cannot de duplicated: " << *UI << '\n');
         return false;
