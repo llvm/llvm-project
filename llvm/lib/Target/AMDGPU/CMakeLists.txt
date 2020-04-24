@@ -147,9 +147,3 @@ install(
     DESTINATION include/llvm/Target/AMDGPU
     COMPONENT llvm-headers
 )
-
-install(
-    FILES ${CMAKE_CURRENT_SOURCE_DIR}/Disassembler/CodeObjectDisassembler.h
-    DESTINATION include/llvm/Target/AMDGPU/Disassembler
-    COMPONENT llvm-headers
-)
