@@ -614,6 +614,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), FuncInfo->SGPRForFPSaveRestoreCopy)
       .addReg(FramePtrReg)
       .setMIFlag(MachineInstr::FrameSetup);
+    // Make the register live throughout the function.
+    for (MachineBasicBlock &MBB : MF)
+      MBB.addLiveIn(FuncInfo->SGPRForFPSaveRestoreCopy);
   }
 
   for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
