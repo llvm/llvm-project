@@ -391,6 +391,40 @@ func @correct_type_pass() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Test StringElementsAttr
+//===----------------------------------------------------------------------===//
+
+func @simple_scalar_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<"example">
+    scalar_string_attr = dense<"example"> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @escape_string_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<"new\0Aline">
+    scalar_string_attr = dense<"new\nline"> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @simple_scalar_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<["example1", "example2"]>
+    scalar_string_attr = dense<["example1", "example2"]> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Test SymbolRefAttr
 //===----------------------------------------------------------------------===//
 

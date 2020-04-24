@@ -22,10 +22,5 @@
 
 // -----
 
-// expected-error@+1 {{expected floating-point or integer element type, got '!unknown<"">'}}
-"foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2x!unknown<"">>} : () -> ()
-
-// -----
-
 // expected-error@+1 {{elements hex data size is invalid for provided type}}
 "foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<4xf64>} : () -> ()

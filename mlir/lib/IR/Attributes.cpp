@@ -411,7 +411,7 @@ int64_t ElementsAttr::getNumElements() const {
 /// element, then a null attribute is returned.
 Attribute ElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   switch (getKind()) {
-  case StandardAttributes::DenseElements:
+  case StandardAttributes::DenseIntOrFPElements:
     return cast<DenseElementsAttr>().getValue(index);
   case StandardAttributes::OpaqueElements:
     return cast<OpaqueElementsAttr>().getValue(index);
@@ -442,7 +442,7 @@ ElementsAttr
 ElementsAttr::mapValues(Type newElementType,
                         function_ref<APInt(const APInt &)> mapping) const {
   switch (getKind()) {
-  case StandardAttributes::DenseElements:
+  case StandardAttributes::DenseIntOrFPElements:
     return cast<DenseElementsAttr>().mapValues(newElementType, mapping);
   default:
     llvm_unreachable("unsupported ElementsAttr subtype");
@@ -453,7 +453,7 @@ ElementsAttr
 ElementsAttr::mapValues(Type newElementType,
                         function_ref<APInt(const APFloat &)> mapping) const {
   switch (getKind()) {
-  case StandardAttributes::DenseElements:
+  case StandardAttributes::DenseIntOrFPElements:
     return cast<DenseElementsAttr>().mapValues(newElementType, mapping);
   default:
     llvm_unreachable("unsupported ElementsAttr subtype");
@@ -643,7 +643,8 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
            "expected value to have same bitwidth as element type");
     writeBits(data.data(), i * storageBitWidth, intVal);
   }
-  return getRaw(type, data, /*isSplat=*/(values.size() == 1));
+  return DenseIntOrFPElementsAttr::getRaw(type, data,
+                                          /*isSplat=*/(values.size() == 1));
 }
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
@@ -654,7 +655,14 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   std::vector<char> buff(llvm::divideCeil(values.size(), CHAR_BIT));
   for (int i = 0, e = values.size(); i != e; ++i)
     setBit(buff.data(), i, values[i]);
-  return getRaw(type, buff, /*isSplat=*/(values.size() == 1));
+  return DenseIntOrFPElementsAttr::getRaw(type, buff,
+                                          /*isSplat=*/(values.size() == 1));
+}
+
+DenseElementsAttr DenseElementsAttr::get(ShapedType type,
+                                         ArrayRef<StringRef> values) {
+  assert(!type.getElementType().isIntOrFloat());
+  return DenseStringElementsAttr::get(type, values);
 }
 
 /// Constructs a dense integer elements attribute from an array of APInt
@@ -663,7 +671,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<APInt> values) {
   assert(type.getElementType().isIntOrIndex());
-  return getRaw(type, values);
+  return DenseIntOrFPElementsAttr::getRaw(type, values);
 }
 
 // Constructs a dense float elements attribute from an array of APFloat
@@ -677,7 +685,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   std::vector<APInt> intValues(values.size());
   for (unsigned i = 0, e = values.size(); i != e; ++i)
     intValues[i] = values[i].bitcastToAPInt();
-  return getRaw(type, intValues);
+  return DenseIntOrFPElementsAttr::getRaw(type, intValues);
 }
 
 /// Construct a dense elements attribute from a raw buffer representing the
@@ -686,34 +694,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 DenseElementsAttr DenseElementsAttr::getFromRawBuffer(ShapedType type,
                                                       ArrayRef<char> rawBuffer,
                                                       bool isSplatBuffer) {
-  return getRaw(type, rawBuffer, isSplatBuffer);
-}
-
-/// Constructs a dense elements attribute from an array of raw APInt values.
-/// Each APInt value is expected to have the same bitwidth as the element type
-/// of 'type'.
-DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
-                                            ArrayRef<APInt> values) {
-  assert(hasSameElementsOrSplat(type, values));
-
-  size_t bitWidth = getDenseElementBitWidth(type.getElementType());
-  size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
-  std::vector<char> elementData(llvm::divideCeil(storageBitWidth, CHAR_BIT) *
-                                values.size());
-  for (unsigned i = 0, e = values.size(); i != e; ++i) {
-    assert(values[i].getBitWidth() == bitWidth);
-    writeBits(elementData.data(), i * storageBitWidth, values[i]);
-  }
-  return getRaw(type, elementData, /*isSplat=*/(values.size() == 1));
-}
-
-DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
-                                            ArrayRef<char> data, bool isSplat) {
-  assert((type.isa<RankedTensorType>() || type.isa<VectorType>()) &&
-         "type must be ranked tensor or vector");
-  assert(type.hasStaticShape() && "type must have static shape");
-  return Base::get(type.getContext(), StandardAttributes::DenseElements, type,
-                   data, isSplat);
+  return DenseIntOrFPElementsAttr::getRaw(type, rawBuffer, isSplatBuffer);
 }
 
 /// Check the information for a C++ data type, check if this type is valid for
@@ -743,19 +724,14 @@ static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
   return intType.isSigned() ? isSigned : !isSigned;
 }
 
-/// Overload of the 'getRaw' method that asserts that the given type is of
-/// integer type. This method is used to verify type invariants that the
-/// templatized 'get' method cannot.
+/// Defaults down the subclass implementation.
 DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                       ArrayRef<char> data,
                                                       int64_t dataEltSize,
                                                       bool isInt,
                                                       bool isSigned) {
-  assert(::isValidIntOrFloat(type, dataEltSize, isInt, isSigned));
-
-  int64_t numElements = data.size() / dataEltSize;
-  assert(numElements == 1 || numElements == type.getNumElements());
-  return getRaw(type, data, /*isSplat=*/numElements == 1);
+  return DenseIntOrFPElementsAttr::getRawIntOrFloat(type, data, dataEltSize,
+                                                    isInt, isSigned);
 }
 
 /// A method used to verify specific type invariants that the templatized 'get'
@@ -767,7 +743,9 @@ bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
 
 /// Returns if this attribute corresponds to a splat, i.e. if all element
 /// values are the same.
-bool DenseElementsAttr::isSplat() const { return getImpl()->isSplat; }
+bool DenseElementsAttr::isSplat() const {
+  return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;
+}
 
 /// Return the held element values as a range of Attributes.
 auto DenseElementsAttr::getAttributeValues() const
@@ -827,7 +805,11 @@ auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
 
 /// Return the raw storage data held by this attribute.
 ArrayRef<char> DenseElementsAttr::getRawData() const {
-  return static_cast<ImplType *>(impl)->data;
+  return static_cast<DenseIntOrFPElementsAttributeStorage *>(impl)->data;
+}
+
+ArrayRef<StringRef> DenseElementsAttr::getRawStringData() const {
+  return static_cast<DenseStringElementsAttributeStorage *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current
@@ -843,7 +825,7 @@ DenseElementsAttr DenseElementsAttr::reshape(ShapedType newType) {
          "expected the same element type");
   assert(newType.getNumElements() == curType.getNumElements() &&
          "expected the same number of elements");
-  return getRaw(newType, getRawData(), isSplat());
+  return DenseIntOrFPElementsAttr::getRaw(newType, getRawData(), isSplat());
 }
 
 DenseElementsAttr
@@ -855,6 +837,63 @@ DenseElementsAttr::mapValues(Type newElementType,
 DenseElementsAttr DenseElementsAttr::mapValues(
     Type newElementType, function_ref<APInt(const APFloat &)> mapping) const {
   return cast<DenseFPElementsAttr>().mapValues(newElementType, mapping);
+}
+
+//===----------------------------------------------------------------------===//
+// DenseStringElementsAttr
+//===----------------------------------------------------------------------===//
+
+DenseStringElementsAttr
+DenseStringElementsAttr::get(ShapedType type, ArrayRef<StringRef> values) {
+  return Base::get(type.getContext(), StandardAttributes::DenseStringElements,
+                   type, values, (values.size() == 1));
+}
+
+//===----------------------------------------------------------------------===//
+// DenseIntOrFPElementsAttr
+//===----------------------------------------------------------------------===//
+
+/// Constructs a dense elements attribute from an array of raw APInt values.
+/// Each APInt value is expected to have the same bitwidth as the element type
+/// of 'type'.
+DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
+                                                   ArrayRef<APInt> values) {
+  assert(hasSameElementsOrSplat(type, values));
+
+  size_t bitWidth = getDenseElementBitWidth(type.getElementType());
+  size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
+  std::vector<char> elementData(llvm::divideCeil(storageBitWidth, CHAR_BIT) *
+                                values.size());
+  for (unsigned i = 0, e = values.size(); i != e; ++i) {
+    assert(values[i].getBitWidth() == bitWidth);
+    writeBits(elementData.data(), i * storageBitWidth, values[i]);
+  }
+  return DenseIntOrFPElementsAttr::getRaw(type, elementData,
+                                          /*isSplat=*/(values.size() == 1));
+}
+
+DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
+                                                   ArrayRef<char> data,
+                                                   bool isSplat) {
+  assert((type.isa<RankedTensorType>() || type.isa<VectorType>()) &&
+         "type must be ranked tensor or vector");
+  assert(type.hasStaticShape() && "type must have static shape");
+  return Base::get(type.getContext(), StandardAttributes::DenseIntOrFPElements,
+                   type, data, isSplat);
+}
+
+/// Overload of the 'getRaw' method that asserts that the given type is of
+/// integer type. This method is used to verify type invariants that the
+/// templatized 'get' method cannot.
+DenseElementsAttr
+DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
+                                           int64_t dataEltSize, bool isInt,
+                                           bool isSigned) {
+  assert(::isValidIntOrFloat(type, dataEltSize, isInt, isSigned));
+
+  int64_t numElements = data.size() / dataEltSize;
+  assert(numElements == 1 || numElements == type.getNumElements());
+  return getRaw(type, data, /*isSplat=*/numElements == 1);
 }
 
 //===----------------------------------------------------------------------===//
