@@ -160,6 +160,16 @@ void DerivedTypeSpec::AddParamValue(SourceName name, ParamValue &&value) {
   CHECK(pair.second); // name was not already present
 }
 
+int DerivedTypeSpec::NumLengthParameters() const {
+  int result{0};
+  for (const auto &pair : parameters_) {
+    if (pair.second.isLen()) {
+      ++result;
+    }
+  }
+  return result;
+}
+
 bool DerivedTypeSpec::MightBeParameterized() const {
   return !cooked_ || !parameters_.empty();
 }
