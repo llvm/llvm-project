@@ -2,6 +2,7 @@ executable("dexp") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd/index/remote",
     "//clang/lib/Basic",
     "//llvm/lib/LineEditor",
     "//llvm/lib/Support",
