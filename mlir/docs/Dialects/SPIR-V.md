@@ -1072,9 +1072,8 @@ Using the above infrastructure, conversions are implemented from
 
 *   [Standard Dialect][MlirStandardDialect] : Only arithmetic and logical
     operations conversions are implemented.
-*   [GPU Dialect][MlirGpuDialect] : A module with the attribute
-    `gpu.kernel_module` is converted to a `spv.module`. A function within this
-    module with the attribute `gpu.kernel` is lowered as an entry function.
+*   [GPU Dialect][MlirGpuDialect] : A gpu.module is converted to a `spv.module`.
+    A gpu.function within this module is lowered as an entry function.
 
 ## Code organization
 
