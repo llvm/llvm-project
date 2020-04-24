@@ -1621,19 +1621,15 @@ private:
     if (const auto *details =
             sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
       if (details->init()) {
-        if (details->IsArray()) {
-          TODO();
-          return;
-        } else if (!sym.GetType()->AsIntrinsic()) {
+        if (!sym.GetType()->AsIntrinsic()) {
           TODO(); // Derived type / polymorphic
-          return;
-        } else
-          global = builder->createGlobal(
-              toLocation(), genType(sym), globalName, isConst,
-              [&](Fortran::lower::FirOpBuilder &builder) {
-                auto initVal = genExprValue(details->init().value());
-                builder.create<fir::HasValueOp>(toLocation(), initVal);
-              });
+        }
+        global = builder->createGlobal(
+            toLocation(), genType(sym), globalName, isConst,
+            [&](Fortran::lower::FirOpBuilder &builder) {
+              auto initVal = genExprValue(details->init().value());
+              builder.create<fir::HasValueOp>(toLocation(), initVal);
+            });
       } else {
         global = builder->createGlobal(toLocation(), genType(sym), globalName);
       }
