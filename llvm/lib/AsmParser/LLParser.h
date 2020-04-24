@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
