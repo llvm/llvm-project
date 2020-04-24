@@ -1562,7 +1562,7 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     assert(Words.size() % 2 == 0);
     for (unsigned i = 0, e = Words.size(); i < e; i += 2) {
       SDValue C = DAG.getNode(
-          HexagonISD::COMBINE, dl, MVT::i64, {Words[i], Words[i+1]});
+          HexagonISD::COMBINE, dl, MVT::i64, {Words[i+1], Words[i]});
       Combines.push_back(C);
     }
 
