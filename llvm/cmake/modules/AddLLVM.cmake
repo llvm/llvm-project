@@ -964,7 +964,7 @@ function(process_llvm_pass_plugins)
           "#include <array>\n\
            struct ExtensionDescriptor {\n\
               const char* Name;\n\
-              const char* const RequiredLibraries[1 + 1 + ${llvm_plugin_max_deps_length}];\n\
+              const char* RequiredLibraries[1 + 1 + ${llvm_plugin_max_deps_length}];\n\
            };\n\
            std::array<ExtensionDescriptor, ${llvm_static_extension_count}>  AvailableExtensions{\n")
 
