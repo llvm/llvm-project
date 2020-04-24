@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -158,12 +157,11 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
     assert(new_func_type &&
            "failed to clone functionType for Renderscript ABI fixup");
 
-    llvm::CallSite call_site(call_inst);
     llvm::Function *func = call_inst->getCalledFunction();
     assert(func && "cannot resolve function in RenderScriptRuntime");
     // Copy the original call arguments
-    std::vector<llvm::Value *> new_call_args(call_site.arg_begin(),
-                                             call_site.arg_end());
+    std::vector<llvm::Value *> new_call_args(call_inst->arg_begin(),
+                                             call_inst->arg_end());
 
     // Allocate enough space to store the return value of the original function
     // we pass a pointer to this allocation as the StructRet param, and then
