@@ -259,6 +259,7 @@ def IfOp : Loop_Op<"if",
 def ParallelOp : Loop_Op<"parallel",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     RecursiveSideEffects,
      SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
