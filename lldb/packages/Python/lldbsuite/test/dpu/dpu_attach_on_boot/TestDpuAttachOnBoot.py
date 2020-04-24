@@ -37,7 +37,7 @@ class DpuAttachOnBootTestCase(TestBase):
         breakpoint_main = \
             target.BreakpointCreateByName("main")
 
-        env = ["%s=%s" % (k, v) for k, v in os.environ.iteritems()]
+        env = ["%s=%s" % (k, v) for k, v in os.environ.items()]
         process = target.LaunchSimple(
             None, env, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)

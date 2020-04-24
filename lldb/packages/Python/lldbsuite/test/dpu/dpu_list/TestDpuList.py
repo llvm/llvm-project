@@ -38,7 +38,7 @@ class DpuListTestCase(TestBase):
         breakpoint_launch = \
             target.BreakpointCreateByName("dpu_launch_thread_on_rank")
 
-        env = ["%s=%s" % (k, v) for k, v in os.environ.iteritems()]
+        env = ["%s=%s" % (k, v) for k, v in os.environ.items()]
         process = target.LaunchSimple(
             None, env, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
