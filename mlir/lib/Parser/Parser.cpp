@@ -1953,7 +1953,7 @@ public:
   ArrayRef<int64_t> getShape() const { return shape; }
 
 private:
-  enum class ElementKind { Boolean, Integer, Float };
+  enum class ElementKind { Boolean, Integer, Float, String };
 
   /// Return a string to represent the given element kind.
   const char *getElementKindStr(ElementKind kind) {
@@ -1964,6 +1964,8 @@ private:
       return "'integer'";
     case ElementKind::Float:
       return "'float'";
+    case ElementKind::String:
+      return "'string'";
     }
     llvm_unreachable("unknown element kind");
   }
@@ -1974,6 +1976,9 @@ private:
   /// Build a Dense Float attribute for the given type.
   DenseElementsAttr getFloatAttr(llvm::SMLoc loc, ShapedType type,
                                  FloatType eltTy);
+
+  /// Build a Dense String attribute for the given type.
+  DenseElementsAttr getStringAttr(llvm::SMLoc loc, ShapedType type, Type eltTy);
 
   /// Build a Dense attribute with hex data for the given type.
   DenseElementsAttr getHexAttr(llvm::SMLoc loc, ShapedType type);
@@ -2030,8 +2035,10 @@ ParseResult TensorLiteralParser::parse(bool allowHex) {
 /// shaped type.
 DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
                                                ShapedType type) {
-  // Check to see if we parsed the literal from a hex string.
-  if (hexStorage.hasValue())
+  Type eltType = type.getElementType();
+
+  // Check to see if we parse the literal from a hex string.
+  if (hexStorage.hasValue() && eltType.isIntOrFloat())
     return getHexAttr(loc, type);
 
   // Check that the parsed storage size has the same number of elements to the
@@ -2044,20 +2051,17 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
 
   // If the type is an integer, build a set of APInt values from the storage
   // with the correct bitwidth.
-  Type eltType = type.getElementType();
   if (auto intTy = eltType.dyn_cast<IntegerType>())
     return getIntAttr(loc, type, intTy);
   if (auto indexTy = eltType.dyn_cast<IndexType>())
     return getIntAttr(loc, type, indexTy);
 
-  // Otherwise, this must be a floating point type.
-  auto floatTy = eltType.dyn_cast<FloatType>();
-  if (!floatTy) {
-    p.emitError(loc) << "expected floating-point or integer element type, got "
-                     << eltType;
-    return nullptr;
-  }
-  return getFloatAttr(loc, type, floatTy);
+  // If parsing a floating point type.
+  if (auto floatTy = eltType.dyn_cast<FloatType>())
+    return getFloatAttr(loc, type, floatTy);
+
+  // Other types are assumed to be string representations.
+  return getStringAttr(loc, type, type.getElementType());
 }
 
 /// Build a Dense Integer attribute for the given type.
@@ -2163,6 +2167,28 @@ DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
   return DenseElementsAttr::get(type, floatValues);
 }
 
+/// Build a Dense String attribute for the given type.
+DenseElementsAttr TensorLiteralParser::getStringAttr(llvm::SMLoc loc,
+                                                     ShapedType type,
+                                                     Type eltTy) {
+  if (hexStorage.hasValue()) {
+    auto stringValue = hexStorage.getValue().getStringValue();
+    return DenseStringElementsAttr::get(type, {stringValue});
+  }
+
+  std::vector<std::string> stringValues;
+  std::vector<StringRef> stringRefValues;
+  stringValues.reserve(storage.size());
+  stringRefValues.reserve(storage.size());
+
+  for (auto val : storage) {
+    stringValues.push_back(val.second.getStringValue());
+    stringRefValues.push_back(stringValues.back());
+  }
+
+  return DenseStringElementsAttr::get(type, stringRefValues);
+}
+
 /// Build a Dense attribute with hex data for the given type.
 DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
                                                   ShapedType type) {
@@ -2214,6 +2240,10 @@ ParseResult TensorLiteralParser::parseElement() {
     p.consumeToken();
     break;
 
+  case Token::string:
+    storage.emplace_back(/*isNegative=*/ false, p.getToken());
+    p.consumeToken();
+    break;
   default:
     return p.emitError("expected element literal of primitive type");
   }

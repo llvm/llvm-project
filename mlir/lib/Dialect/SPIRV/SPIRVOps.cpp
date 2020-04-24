@@ -1316,7 +1316,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   } break;
-  case StandardAttributes::DenseElements:
+  case StandardAttributes::DenseIntOrFPElements:
   case StandardAttributes::SparseElements: {
     if (valueType == opType)
       break;
