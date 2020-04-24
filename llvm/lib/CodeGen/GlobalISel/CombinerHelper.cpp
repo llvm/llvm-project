@@ -429,7 +429,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
                                        ? TargetOpcode::G_SEXT
                                        : TargetOpcode::G_ZEXT;
   Preferred = {LLT(), PreferredOpcode, nullptr};
-  for (auto &UseMI : MRI.use_nodbg_instructions(LoadValue.getReg())) {
+  for (auto &UseMI : MRI.use_instructions(LoadValue.getReg())) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ANYEXT) {
@@ -560,10 +560,7 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
-bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
-                                   const MachineInstr &UseMI) {
-  assert(!DefMI.isDebugInstr() && !UseMI.isDebugInstr() &&
-         "shouldn't consider debug uses");
+bool CombinerHelper::isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI) {
   assert(DefMI.getParent() == UseMI.getParent());
   if (&DefMI == &UseMI)
     return false;
@@ -576,10 +573,7 @@ bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
   llvm_unreachable("Block must contain instructions");
 }
 
-bool CombinerHelper::dominates(const MachineInstr &DefMI,
-                               const MachineInstr &UseMI) {
-  assert(!DefMI.isDebugInstr() && !UseMI.isDebugInstr() &&
-         "shouldn't consider debug uses");
+bool CombinerHelper::dominates(MachineInstr &DefMI, MachineInstr &UseMI) {
   if (MDT)
     return MDT->dominates(&DefMI, &UseMI);
   else if (DefMI.getParent() != UseMI.getParent())
@@ -606,7 +600,7 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
 
   LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
 
-  for (auto &Use : MRI.use_nodbg_instructions(Base)) {
+  for (auto &Use : MRI.use_instructions(Base)) {
     if (Use.getOpcode() != TargetOpcode::G_PTR_ADD)
       continue;
 
@@ -633,8 +627,7 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
     // forming an indexed one.
 
     bool MemOpDominatesAddrUses = true;
-    for (auto &PtrAddUse :
-         MRI.use_nodbg_instructions(Use.getOperand(0).getReg())) {
+    for (auto &PtrAddUse : MRI.use_instructions(Use.getOperand(0).getReg())) {
       if (!dominates(MI, PtrAddUse)) {
         MemOpDominatesAddrUses = false;
         break;
@@ -707,7 +700,7 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
   // FIXME: check whether all uses of the base pointer are constant PtrAdds.
   // That might allow us to end base's liveness here by adjusting the constant.
 
-  for (auto &UseMI : MRI.use_nodbg_instructions(Addr)) {
+  for (auto &UseMI : MRI.use_instructions(Addr)) {
     if (!dominates(MI, UseMI)) {
       LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses.");
       return false;
