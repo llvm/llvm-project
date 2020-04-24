@@ -1,7 +1,16 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-objcopy -O binary %t %t2
-# RUN: od -t x2 -v %t2 | FileCheck %s --ignore-case
-# RUN: wc -c < %t2 | FileCheck %s --check-prefix=SIZE
+# RUN: yaml2obj -D PADDR=1 %s -o %t1
+# RUN: llvm-objcopy -O binary %t1 %t1.out
+# RUN: od -t x2 -v %t1.out | FileCheck %s --ignore-case
+# RUN: wc -c < %t1.out | FileCheck %s --check-prefix=SIZE
+
+## When all p_paddr fields are 0, GNU objcopy resets LMA to VMA
+## and gives a different output.
+## https://sourceware.org/git/?p=binutils-gdb.git;a=commit;h=6ffd79000b45e77b3625143932ffbf781b6aecab
+## We don't implement this special rule. The p_paddr=0 output is the same as
+## the p_paddr=1 case.
+# RUN: yaml2obj -D PADDR=0 %s -o %t0
+# RUN: llvm-objcopy -O binary %t0 %t0.out
+# RUN: cmp %t1.out %t0.out
 
 !ELF
 FileHeader:
@@ -26,17 +35,15 @@ ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_X, PF_R ]
     VAddr: 0x1000
-    PAddr: 0x0000
-    Align: 0x1000
+    PAddr: [[PADDR]]
     Sections:
       - Section: .text
   - Type: PT_LOAD
     Flags: [ PF_R, PF_W ]
     VAddr: 0x1004
-    PAddr: 0x0000
-    Align: 0x1000
+    PAddr: [[PADDR]]
     Sections:
       - Section: .data
 
-# CHECK: 0000000 c3c3 c3c3 3232
-# SIZE:  6
+# CHECK: 0000000 3232 c3c3
+# SIZE:  4

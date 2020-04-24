@@ -1101,14 +1101,6 @@ static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
-static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
-  if (A->PAddr < B->PAddr)
-    return true;
-  if (A->PAddr > B->PAddr)
-    return false;
-  return A->Index < B->Index;
-}
-
 void BasicELFBuilder::initFileHeader() {
   Obj->Flags = 0x0;
   Obj->Type = ET_REL;
@@ -2224,34 +2216,6 @@ Error BinaryWriter::write() {
 }
 
 Error BinaryWriter::finalize() {
-  // We need a temporary list of segments that has a special order to it
-  // so that we know that anytime ->ParentSegment is set that segment has
-  // already had it's offset properly set. We only want to consider the segments
-  // that will affect layout of allocated sections so we only add those.
-  std::vector<Segment *> OrderedSegments;
-  for (const SectionBase &Sec : Obj.allocSections())
-    if (Sec.ParentSegment != nullptr)
-      OrderedSegments.push_back(Sec.ParentSegment);
-
-  // For binary output, we're going to use physical addresses instead of
-  // virtual addresses, since a binary output is used for cases like ROM
-  // loading and physical addresses are intended for ROM loading.
-  // However, if no segment has a physical address, we'll fallback to using
-  // virtual addresses for all.
-  if (all_of(OrderedSegments,
-             [](const Segment *Seg) { return Seg->PAddr == 0; }))
-    for (Segment *Seg : OrderedSegments)
-      Seg->PAddr = Seg->VAddr;
-
-  llvm::stable_sort(OrderedSegments, compareSegmentsByPAddr);
-
-  // Because we add a ParentSegment for each section we might have duplicate
-  // segments in OrderedSegments. If there were duplicates then layoutSegments
-  // would do very strange things.
-  auto End =
-      std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
-  OrderedSegments.erase(End, std::end(OrderedSegments));
-
   // Compute the section LMA based on its sh_offset and the containing segment's
   // p_offset and p_paddr. Also compute the minimum LMA of all sections as
   // MinAddr. In the output, the contents between address 0 and MinAddr will be
