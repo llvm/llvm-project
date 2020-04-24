@@ -286,9 +286,9 @@ public:
   void run() {
     using namespace clang::clangd;
     // Read input file (as specified in global option)
-    auto Buffer = llvm::MemoryBuffer::getFile(IndexPath);
+    auto Buffer = llvm::MemoryBuffer::getFile(IndexLocation);
     if (!Buffer) {
-      llvm::errs() << llvm::formatv("Can't open {0}", IndexPath) << "\n";
+      llvm::errs() << llvm::formatv("Can't open {0}", IndexLocation) << "\n";
       return;
     }
 
