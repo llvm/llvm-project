@@ -1082,14 +1082,6 @@ inline auto instructionsWithoutDebug(IterT It, IterT End) {
   });
 }
 
-/// Construct a range iterator which begins at \p It and moves backwards until
-/// \p Begin is reached, skipping any debug instructions.
-template <typename IterT>
-inline auto reversedInstructionsWithoutDebug(IterT It, IterT Begin) {
-  return instructionsWithoutDebug(make_reverse_iterator(It),
-                                  make_reverse_iterator(Begin));
-}
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEBASICBLOCK_H

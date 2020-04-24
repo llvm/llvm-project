@@ -1185,7 +1185,7 @@ static bool areCFlagsAccessedBetweenInstrs(
 
   // We iterate backward starting at \p To until we hit \p From.
   for (const MachineInstr &Instr :
-       reversedInstructionsWithoutDebug(std::prev(To), From)) {
+       instructionsWithoutDebug(++To.getReverse(), From.getReverse())) {
     if (((AccessToCheck & AK_Write) &&
          Instr.modifiesRegister(AArch64::NZCV, TRI)) ||
         ((AccessToCheck & AK_Read) && Instr.readsRegister(AArch64::NZCV, TRI)))
