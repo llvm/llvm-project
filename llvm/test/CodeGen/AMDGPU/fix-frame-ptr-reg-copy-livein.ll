@@ -11,8 +11,8 @@ define i32 @fp_save_restore_in_temp_sgpr(%struct.Data addrspace(5)* nocapture re
   ; GCN-LABEL: name: fp_save_restore_in_temp_sgpr
   ; GCN: bb.0.begin:
   ; GCN:   liveins: $sgpr30_sgpr31, $sgpr7
-  ; GCN:   $sgpr7 = frame-setup COPY $sgpr33
-  ; GCN:   $sgpr33 = frame-setup COPY $sgpr32
+  ; GCN:   $sgpr7 = frame-setup COPY $sgpr34
+  ; GCN:   $sgpr34 = frame-setup COPY $sgpr32
   ; GCN: bb.1.lp_end:
   ; GCN:   liveins: $sgpr6, $vgpr1, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31, $sgpr7
   ; GCN: bb.2.lp_begin:
@@ -21,7 +21,7 @@ define i32 @fp_save_restore_in_temp_sgpr(%struct.Data addrspace(5)* nocapture re
   ; GCN:   liveins: $sgpr6, $vgpr0, $vgpr1, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31, $sgpr7
   ; GCN: bb.4.end:
   ; GCN:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr30_sgpr31, $sgpr7
-  ; GCN:   $sgpr33 = frame-setup COPY $sgpr7
+  ; GCN:   $sgpr34 = frame-setup COPY $sgpr7
 begin:
   br label %lp_begin
 
