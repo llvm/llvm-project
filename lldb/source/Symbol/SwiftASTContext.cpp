@@ -1099,7 +1099,9 @@ static std::string GetCurrentCLToolsPath() {
 StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
                                                const llvm::Triple &host) {
   auto sdk = GetSDKType(target, host);
-  llvm::StringRef sdk_name = XcodeSDK::GetSDKNameForType(sdk.sdk_type);
+  XcodeSDK::Info sdk_info;
+  sdk_info.type = sdk.sdk_type;
+  llvm::StringRef sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
   if (!sdk_name.empty())
     return sdk_name;
   return target.getOSName();
@@ -1768,17 +1770,21 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       set_triple = true;
     }
 
+    // SDK path setup.
     llvm::StringRef serialized_sdk_path =
         swift_ast_sp->GetCompilerInvocation().getSDKPath();
-    if (serialized_sdk_path.empty()) {
+    if (serialized_sdk_path.empty())
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "No serialized SDK path.");
-    } else {
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Got serialized SDK path %s.",
+    else
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized SDK path is %s.",
                  serialized_sdk_path.str().c_str());
-      FileSpec sdk_spec(serialized_sdk_path.str().c_str());
-      if (FileSystem::Instance().Exists(sdk_spec)) {
-        swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path);
-      }
+    XcodeSDK sdk = module.GetXcodeSDK();
+    PlatformSP platform =
+      Platform::GetPlatformForArchitecture(module.GetArchitecture(), nullptr);
+    std::string sdk_path = platform->GetSDKPath(sdk);
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
+    if (FileSystem::Instance().Exists(sdk_path)) {
+      swift_ast_sp->SetPlatformSDKPath(sdk_path);
     }
   }
 
@@ -2750,14 +2756,6 @@ void SwiftASTContext::InitializeSearchPathOptions(
 
       set_sdk = true;
     }
-  } else if (!m_platform_sdk_path.empty()) {
-    FileSpec platform_sdk(m_platform_sdk_path.c_str());
-
-    if (FileSystem::Instance().Exists(platform_sdk) &&
-        SDKSupportsSwift(platform_sdk, XcodeSDK::unknown)) {
-      invocation.setSDKPath(m_platform_sdk_path.c_str());
-      set_sdk = true;
-    }
   }
 
   llvm::Triple triple(GetTriple());
@@ -2774,13 +2772,19 @@ void SwiftASTContext::InitializeSearchPathOptions(
     auto sdk = GetSDKType(triple, HostInfo::GetArchitecture().GetTriple());
     // Explicitly leave the SDKPath blank on other platforms.
     if (sdk.sdk_type != XcodeSDK::Type::unknown) {
-      auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
-                                 sdk.min_version_minor);
+      std::string sdk_path = m_platform_sdk_path;
+      if (sdk_path.empty() || !FileSystem::Instance().Exists(sdk_path) ||
+          !SDKSupportsSwift(FileSpec(sdk_path), sdk.sdk_type)) {
+        sdk_path = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
+                                   sdk.min_version_minor)
+                       .GetStringRef()
+                       .str();
+      }
       // Note that calling setSDKPath() also recomputes all paths that
       // depend on the SDK path including the
       // RuntimeLibraryImportPaths, which are *only* initialized
       // through this mechanism.
-      invocation.setSDKPath(dir.AsCString(""));
+      invocation.setSDKPath(sdk_path);
     }
 
     std::vector<std::string> &lpaths =
