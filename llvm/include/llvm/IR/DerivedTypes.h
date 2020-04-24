@@ -525,10 +525,6 @@ public:
   /// number of elements in the vector.
   ElementCount getElementCount() const { return EC; }
 
-  /// Returns whether or not this is a scalable vector (meaning the total
-  /// element count is a multiple of the minimum).
-  bool isScalable() const { return EC.Scalable; }
-
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
     return T->getTypeID() == FixedVectorTyID ||
