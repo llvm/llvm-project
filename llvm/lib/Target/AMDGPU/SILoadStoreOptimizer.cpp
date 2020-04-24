@@ -201,7 +201,6 @@ private:
   const GCNSubtarget *STM = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
-  const MCSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   bool OptimizeAgain;
@@ -209,9 +208,9 @@ private:
   static bool dmasksCanBeCombined(const CombineInfo &CI,
                                   const SIInstrInfo &TII,
                                   const CombineInfo &Paired);
-  static bool offsetsCanBeCombined(CombineInfo &CI, const MCSubtargetInfo &STI,
+  static bool offsetsCanBeCombined(CombineInfo &CI, const GCNSubtarget &STI,
                                    CombineInfo &Paired, bool Modify = false);
-  static bool widthsFit(const GCNSubtarget &STM, const CombineInfo &CI,
+  static bool widthsFit(const GCNSubtarget &STI, const CombineInfo &CI,
                         const CombineInfo &Paired);
   static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
@@ -711,7 +710,7 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
 
 static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
                                        unsigned ComponentCount,
-                                       const MCSubtargetInfo &STI) {
+                                       const GCNSubtarget &STI) {
   if (ComponentCount > 4)
     return 0;
 
@@ -735,7 +734,7 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
-                                                const MCSubtargetInfo &STI,
+                                                const GCNSubtarget &STI,
                                                 CombineInfo &Paired,
                                                 bool Modify) {
   assert(CI.InstClass != MIMG);
@@ -861,7 +860,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
     return false;
 
   if (CI.InstClass != MIMG &&
-      (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STI, Paired)))
+      (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired)))
     return false;
 
   const unsigned Opc = CI.I->getOpcode();
@@ -960,7 +959,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
         // this function should only be called on CombineInfo objects that
         // have already been confirmed to be mergeable.
         if (CI.InstClass != MIMG)
-          offsetsCanBeCombined(CI, *STI, Paired, true);
+          offsetsCanBeCombined(CI, *STM, Paired, true);
         return true;
       }
       return false;
@@ -1350,7 +1349,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STI);
+      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1430,7 +1429,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STI);
+      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -2152,7 +2151,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   TII = STM->getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  STI = &MF.getSubtarget<MCSubtargetInfo>();
 
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
