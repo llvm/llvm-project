@@ -1879,8 +1879,7 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                                      Instruction *InsertBefore)
     : Instruction(
           VectorType::get(cast<VectorType>(V1->getType())->getElementType(),
-                          Mask.size(),
-                          cast<VectorType>(V1->getType())->isScalable()),
+                          Mask.size(), isa<ScalableVectorType>(V1->getType())),
           ShuffleVector, OperandTraits<ShuffleVectorInst>::op_begin(this),
           OperandTraits<ShuffleVectorInst>::operands(this), InsertBefore) {
   assert(isValidOperands(V1, V2, Mask) &&
@@ -1895,8 +1894,7 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                                      const Twine &Name, BasicBlock *InsertAtEnd)
     : Instruction(
           VectorType::get(cast<VectorType>(V1->getType())->getElementType(),
-                          Mask.size(),
-                          cast<VectorType>(V1->getType())->isScalable()),
+                          Mask.size(), isa<ScalableVectorType>(V1->getType())),
           ShuffleVector, OperandTraits<ShuffleVectorInst>::op_begin(this),
           OperandTraits<ShuffleVectorInst>::operands(this), InsertAtEnd) {
   assert(isValidOperands(V1, V2, Mask) &&
@@ -1938,7 +1936,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     if (Elem != UndefMaskElem && Elem >= V1Size * 2)
       return false;
 
-  if (cast<VectorType>(V1->getType())->isScalable())
+  if (isa<ScalableVectorType>(V1->getType()))
     if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !is_splat(Mask))
       return false;
 
@@ -1951,10 +1949,11 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!V1->getType()->isVectorTy() || V1->getType() != V2->getType())
     return false;
 
-  // Mask must be vector of i32.
+  // Mask must be vector of i32, and must be the same kind of vector as the
+  // input vectors
   auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
   if (!MaskTy || !MaskTy->getElementType()->isIntegerTy(32) ||
-      MaskTy->isScalable() != cast<VectorType>(V1->getType())->isScalable())
+      isa<ScalableVectorType>(MaskTy) != isa<ScalableVectorType>(V1->getType()))
     return false;
 
   // Check to see if Mask is valid.
@@ -2012,7 +2011,7 @@ void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
 Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
                                                           Type *ResultTy) {
   Type *Int32Ty = Type::getInt32Ty(ResultTy->getContext());
-  if (cast<VectorType>(ResultTy)->isScalable()) {
+  if (isa<ScalableVectorType>(ResultTy)) {
     assert(is_splat(Mask) && "Unexpected shuffle");
     Type *VecTy = VectorType::get(Int32Ty, Mask.size(), true);
     if (Mask[0] == 0)
