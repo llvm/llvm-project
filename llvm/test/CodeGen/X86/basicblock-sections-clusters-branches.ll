@@ -50,7 +50,7 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS1:		.section        .text.foo,"ax",@progbits,unique,1
 ; LINUX-SECTIONS1-LABEL:	a.BB.foo:
 ; LINUX-SECTIONS1:		jmp raa.BB.foo
-; LINUX-SECTIONS1:		.section        .text.foo.unlikely,"ax",@progbits
+; LINUX-SECTIONS1:		.section        .text.unlikely.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	raa.BB.foo:
 
 ; LINUX-SECTIONS2:		.section        .text.foo,"ax",@progbits

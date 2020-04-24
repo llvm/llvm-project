@@ -48,7 +48,7 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS1-LABEL:	.Ltmp0:
 ; LINUX-SECTIONS1-NEXT:		.size a.BB.foo, .Ltmp0-a.BB.foo
 ; LINUX-SECTIONS1-NOT:  	.section
-; LINUX-SECTIONS1:		.section        .text.foo.unlikely,"ax",@progbits
+; LINUX-SECTIONS1:		.section        .text.unlikely.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	raa.BB.foo:
 ; LINUX-SECTIONS1:	   	.section	.text.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	.Lfunc_end0:
