@@ -83,7 +83,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     // CHECK:       workgroup
     // CHECK:       private

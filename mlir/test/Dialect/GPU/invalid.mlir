@@ -88,6 +88,17 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels {
+    // expected-error@+1 {{'gpu.func' op expects parent op 'gpu.module'}}
+    gpu.func @kernel_1(%arg1 : !llvm<"float*">) {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  module @kernels {
   }
 
   func @launch_func_missing_module_attribute(%sz : index) {
@@ -336,7 +347,7 @@ module {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{requires 'type' attribute of function type}}
     "gpu.func"() ({
       gpu.return
@@ -347,7 +358,7 @@ module {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{expected memref type in attribution}}
     gpu.func @kernel() workgroup(%0: i32) {
       gpu.return
@@ -358,7 +369,7 @@ module {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{expected memory space 3 in attribution}}
     gpu.func @kernel() workgroup(%0: memref<4xf32>) {
       gpu.return
@@ -369,7 +380,7 @@ module {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{expected memory space 5 in attribution}}
     gpu.func @kernel() private(%0: memref<4xf32>) {
       gpu.return
@@ -380,7 +391,7 @@ module {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{expected memory space 5 in attribution}}
     gpu.func @kernel() private(%0: memref<4xf32>) {
       gpu.return
