@@ -18,6 +18,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
@@ -1005,6 +1006,21 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   }
 }
 
+/// Recreate a module with its parents in \p to_source and return its id.
+static OptionalClangModuleID
+RemapModule(OptionalClangModuleID from_id,
+            ClangExternalASTSourceCallbacks &from_source,
+            ClangExternalASTSourceCallbacks &to_source) {
+  if (!from_id.HasValue())
+    return {};
+  clang::Module *module = from_source.getModule(from_id.GetValue());
+  OptionalClangModuleID parent = RemapModule(
+      from_source.GetIDForModule(module->Parent), from_source, to_source);
+  TypeSystemClang &to_ts = to_source.GetTypeSystem();
+  return to_ts.GetOrCreateClangModule(module->Name, parent, module->IsFramework,
+                                      module->IsExplicit);
+}
+
 /// Takes a CXXMethodDecl and completes the return type if necessary. This
 /// is currently only necessary for virtual functions with covariant return
 /// types where Clang's CodeGen expects that the underlying records are already
@@ -1034,6 +1050,20 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   // copying 'from' to 'to'. Just exit early for those.
   if (m_decls_to_ignore.find(to) != m_decls_to_ignore.end())
     return clang::ASTImporter::Imported(from, to);
+
+  // Transfer module ownership information.
+  auto *from_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
+      getFromContext().getExternalSource());
+  // Can also be a ClangASTSourceProxy.
+  auto *to_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
+      getToContext().getExternalSource());
+  if (from_source && to_source) {
+    OptionalClangModuleID from_id(from->getOwningModuleID());
+    OptionalClangModuleID to_id =
+        RemapModule(from_id, *from_source, *to_source);
+    TypeSystemClang &to_ts = to_source->GetTypeSystem();
+    to_ts.SetOwningModule(to, to_id);
+  }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
   ClangASTMetadata *metadata = m_master.GetDeclMetadata(from);
