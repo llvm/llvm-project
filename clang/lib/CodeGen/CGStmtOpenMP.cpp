@@ -1186,15 +1186,15 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       std::advance(IRHS, 1);
     }
   }
-  ReductionCodeGen RedCG(Shareds, Privates, ReductionOps);
+  ReductionCodeGen RedCG(Shareds, Shareds, Privates, ReductionOps);
   unsigned Count = 0;
-  auto ILHS = LHSs.begin();
-  auto IRHS = RHSs.begin();
-  auto IPriv = Privates.begin();
+  auto *ILHS = LHSs.begin();
+  auto *IRHS = RHSs.begin();
+  auto *IPriv = Privates.begin();
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
     // Emit private VarDecl with reduction init.
-    RedCG.emitSharedLValue(*this, Count);
+    RedCG.emitSharedOrigLValue(*this, Count);
     RedCG.emitAggregateType(*this, Count);
     AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
     RedCG.emitInitialization(*this, Count, Emission.getAllocatedAddress(),
@@ -3478,12 +3478,12 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       }
       (void)FirstprivateScope.Privatize();
       OMPLexicalScope LexScope(CGF, S, CapturedRegion);
-      ReductionCodeGen RedCG(Data.ReductionVars, Data.ReductionCopies,
-                             Data.ReductionOps);
+      ReductionCodeGen RedCG(Data.ReductionVars, Data.ReductionVars,
+                             Data.ReductionCopies, Data.ReductionOps);
       llvm::Value *ReductionsPtr = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(9)));
       for (unsigned Cnt = 0, E = Data.ReductionVars.size(); Cnt < E; ++Cnt) {
-        RedCG.emitSharedLValue(CGF, Cnt);
+        RedCG.emitSharedOrigLValue(CGF, Cnt);
         RedCG.emitAggregateType(CGF, Cnt);
         // FIXME: This must removed once the runtime library is fixed.
         // Emit required threadprivate variables for
@@ -3528,9 +3528,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     // privatized earlier.
     OMPPrivateScope InRedScope(CGF);
     if (!InRedVars.empty()) {
-      ReductionCodeGen RedCG(InRedVars, InRedPrivs, InRedOps);
+      ReductionCodeGen RedCG(InRedVars, InRedVars, InRedPrivs, InRedOps);
       for (unsigned Cnt = 0, E = InRedVars.size(); Cnt < E; ++Cnt) {
-        RedCG.emitSharedLValue(CGF, Cnt);
+        RedCG.emitSharedOrigLValue(CGF, Cnt);
         RedCG.emitAggregateType(CGF, Cnt);
         // The taskgroup descriptor variable is always implicit firstprivate and
         // privatized already during processing of the firstprivates.

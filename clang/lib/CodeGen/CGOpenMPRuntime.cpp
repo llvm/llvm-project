@@ -705,9 +705,8 @@ enum OpenMPRTLFunction {
   // Call to void __kmpc_doacross_wait(ident_t *loc, kmp_int32 gtid, kmp_int64
   // *vec);
   OMPRTL__kmpc_doacross_wait,
-  // Call to void *__kmpc_task_reduction_init(int gtid, int num_data, void
-  // *data);
-  OMPRTL__kmpc_task_reduction_init,
+  // Call to void *__kmpc_taskred_init(int gtid, int num_data, void *data);
+  OMPRTL__kmpc_taskred_init,
   // Call to void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void
   // *d);
   OMPRTL__kmpc_task_reduction_get_th_data,
@@ -981,27 +980,37 @@ void ReductionCodeGen::emitAggregateInitialization(
 }
 
 ReductionCodeGen::ReductionCodeGen(ArrayRef<const Expr *> Shareds,
+                                   ArrayRef<const Expr *> Origs,
                                    ArrayRef<const Expr *> Privates,
                                    ArrayRef<const Expr *> ReductionOps) {
   ClausesData.reserve(Shareds.size());
   SharedAddresses.reserve(Shareds.size());
   Sizes.reserve(Shareds.size());
   BaseDecls.reserve(Shareds.size());
-  auto IPriv = Privates.begin();
-  auto IRed = ReductionOps.begin();
+  const auto *IOrig = Origs.begin();
+  const auto *IPriv = Privates.begin();
+  const auto *IRed = ReductionOps.begin();
   for (const Expr *Ref : Shareds) {
-    ClausesData.emplace_back(Ref, *IPriv, *IRed);
+    ClausesData.emplace_back(Ref, *IOrig, *IPriv, *IRed);
+    std::advance(IOrig, 1);
     std::advance(IPriv, 1);
     std::advance(IRed, 1);
   }
 }
 
-void ReductionCodeGen::emitSharedLValue(CodeGenFunction &CGF, unsigned N) {
-  assert(SharedAddresses.size() == N &&
+void ReductionCodeGen::emitSharedOrigLValue(CodeGenFunction &CGF, unsigned N) {
+  assert(SharedAddresses.size() == N && OrigAddresses.size() == N &&
          "Number of generated lvalues must be exactly N.");
-  LValue First = emitSharedLValue(CGF, ClausesData[N].Ref);
-  LValue Second = emitSharedLValueUB(CGF, ClausesData[N].Ref);
+  LValue First = emitSharedLValue(CGF, ClausesData[N].Shared);
+  LValue Second = emitSharedLValueUB(CGF, ClausesData[N].Shared);
   SharedAddresses.emplace_back(First, Second);
+  if (ClausesData[N].Shared == ClausesData[N].Ref) {
+    OrigAddresses.emplace_back(First, Second);
+  } else {
+    LValue First = emitSharedLValue(CGF, ClausesData[N].Ref);
+    LValue Second = emitSharedLValueUB(CGF, ClausesData[N].Ref);
+    OrigAddresses.emplace_back(First, Second);
+  }
 }
 
 void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
@@ -2318,14 +2327,12 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_doacross_wait");
     break;
   }
-  case OMPRTL__kmpc_task_reduction_init: {
-    // Build void *__kmpc_task_reduction_init(int gtid, int num_data, void
-    // *data);
+  case OMPRTL__kmpc_taskred_init: {
+    // Build void *__kmpc_taskred_init(int gtid, int num_data, void *data);
     llvm::Type *TypeParams[] = {CGM.IntTy, CGM.IntTy, CGM.VoidPtrTy};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
-    RTLFn =
-        CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_task_reduction_init");
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_taskred_init");
     break;
   }
   case OMPRTL__kmpc_task_reduction_get_th_data: {
@@ -6546,7 +6553,7 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
 
 /// Emits reduction initializer function:
 /// \code
-/// void @.red_init(void* %arg) {
+/// void @.red_init(void* %arg, void* %orig) {
 /// %0 = bitcast void* %arg to <type>*
 /// store <type> <init>, <type>* %0
 /// ret void
@@ -6556,10 +6563,15 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
                                            SourceLocation Loc,
                                            ReductionCodeGen &RCG, unsigned N) {
   ASTContext &C = CGM.getContext();
+  QualType VoidPtrTy = C.VoidPtrTy;
+  VoidPtrTy.addRestrict();
   FunctionArgList Args;
-  ImplicitParamDecl Param(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.VoidPtrTy,
+  ImplicitParamDecl Param(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, VoidPtrTy,
                           ImplicitParamDecl::Other);
+  ImplicitParamDecl ParamOrig(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, VoidPtrTy,
+                              ImplicitParamDecl::Other);
   Args.emplace_back(&Param);
+  Args.emplace_back(&ParamOrig);
   const auto &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
@@ -6584,28 +6596,25 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
                                 CGM.getContext().getSizeType(), Loc);
   }
   RCG.emitAggregateType(CGF, N, Size);
-  LValue SharedLVal;
+  LValue OrigLVal;
   // If initializer uses initializer from declare reduction construct, emit a
   // pointer to the address of the original reduction item (reuired by reduction
   // initializer)
   if (RCG.usesReductionInitializer(N)) {
-    Address SharedAddr =
-        CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
-            CGF, CGM.getContext().VoidPtrTy,
-            generateUniqueName(CGM, "reduction", RCG.getRefExpr(N)));
+    Address SharedAddr = CGF.GetAddrOfLocalVar(&ParamOrig);
     SharedAddr = CGF.EmitLoadOfPointer(
         SharedAddr,
         CGM.getContext().VoidPtrTy.castAs<PointerType>()->getTypePtr());
-    SharedLVal = CGF.MakeAddrLValue(SharedAddr, CGM.getContext().VoidPtrTy);
+    OrigLVal = CGF.MakeAddrLValue(SharedAddr, CGM.getContext().VoidPtrTy);
   } else {
-    SharedLVal = CGF.MakeNaturalAlignAddrLValue(
+    OrigLVal = CGF.MakeNaturalAlignAddrLValue(
         llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
         CGM.getContext().VoidPtrTy);
   }
   // Emit the initializer:
   // %0 = bitcast void* %arg to <type>*
   // store <type> <init>, <type>* %0
-  RCG.emitInitialization(CGF, N, PrivateAddr, SharedLVal,
+  RCG.emitInitialization(CGF, N, PrivateAddr, OrigLVal,
                          [](CodeGenFunction &) { return false; });
   CGF.FinishFunction();
   return Fn;
@@ -6745,18 +6754,20 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     return nullptr;
 
   // Build typedef struct:
-  // kmp_task_red_input {
+  // kmp_taskred_input {
   //   void *reduce_shar; // shared reduction item
+  //   void *reduce_orig; // original reduction item used for initialization
   //   size_t reduce_size; // size of data item
   //   void *reduce_init; // data initialization routine
   //   void *reduce_fini; // data finalization routine
   //   void *reduce_comb; // data combiner routine
   //   kmp_task_red_flags_t flags; // flags for additional info from compiler
-  // } kmp_task_red_input_t;
+  // } kmp_taskred_input_t;
   ASTContext &C = CGM.getContext();
-  RecordDecl *RD = C.buildImplicitRecord("kmp_task_red_input_t");
+  RecordDecl *RD = C.buildImplicitRecord("kmp_taskred_input_t");
   RD->startDefinition();
   const FieldDecl *SharedFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
+  const FieldDecl *OrigFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *SizeFD = addFieldToRecordDecl(C, RD, C.getSizeType());
   const FieldDecl *InitFD  = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *FiniFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
@@ -6771,8 +6782,8 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
       RDType, ArraySize, nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
   // kmp_task_red_input_t .rd_input.[Size];
   Address TaskRedInput = CGF.CreateMemTemp(ArrayRDType, ".rd_input.");
-  ReductionCodeGen RCG(Data.ReductionVars, Data.ReductionCopies,
-                       Data.ReductionOps);
+  ReductionCodeGen RCG(Data.ReductionVars, Data.ReductionVars,
+                       Data.ReductionCopies, Data.ReductionOps);
   for (unsigned Cnt = 0; Cnt < Size; ++Cnt) {
     // kmp_task_red_input_t &ElemLVal = .rd_input.[Cnt];
     llvm::Value *Idxs[] = {llvm::ConstantInt::get(CGM.SizeTy, /*V=*/0),
@@ -6784,20 +6795,24 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     LValue ElemLVal = CGF.MakeNaturalAlignAddrLValue(GEP, RDType);
     // ElemLVal.reduce_shar = &Shareds[Cnt];
     LValue SharedLVal = CGF.EmitLValueForField(ElemLVal, SharedFD);
-    RCG.emitSharedLValue(CGF, Cnt);
+    RCG.emitSharedOrigLValue(CGF, Cnt);
     llvm::Value *CastedShared =
         CGF.EmitCastToVoidPtr(RCG.getSharedLValue(Cnt).getPointer(CGF));
     CGF.EmitStoreOfScalar(CastedShared, SharedLVal);
+    // ElemLVal.reduce_orig = &Origs[Cnt];
+    LValue OrigLVal = CGF.EmitLValueForField(ElemLVal, OrigFD);
+    llvm::Value *CastedOrig =
+        CGF.EmitCastToVoidPtr(RCG.getOrigLValue(Cnt).getPointer(CGF));
+    CGF.EmitStoreOfScalar(CastedOrig, OrigLVal);
     RCG.emitAggregateType(CGF, Cnt);
     llvm::Value *SizeValInChars;
     llvm::Value *SizeVal;
     std::tie(SizeValInChars, SizeVal) = RCG.getSizes(Cnt);
-    // We use delayed creation/initialization for VLAs, array sections and
-    // custom reduction initializations. It is required because runtime does not
-    // provide the way to pass the sizes of VLAs/array sections to
-    // initializer/combiner/finalizer functions and does not pass the pointer to
-    // original reduction item to the initializer. Instead threadprivate global
-    // variables are used to store these values and use them in the functions.
+    // We use delayed creation/initialization for VLAs and array sections. It is
+    // required because runtime does not provide the way to pass the sizes of
+    // VLAs/array sections to initializer/combiner/finalizer functions. Instead
+    // threadprivate global variables are used to store these values and use
+    // them in the functions.
     bool DelayedCreation = !!SizeVal;
     SizeValInChars = CGF.Builder.CreateIntCast(SizeValInChars, CGM.SizeTy,
                                                /*isSigned=*/false);
@@ -6808,7 +6823,6 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     llvm::Value *InitAddr =
         CGF.EmitCastToVoidPtr(emitReduceInitFunction(CGM, Loc, RCG, Cnt));
     CGF.EmitStoreOfScalar(InitAddr, InitLVal);
-    DelayedCreation = DelayedCreation || RCG.usesReductionInitializer(Cnt);
     // ElemLVal.reduce_fini = fini;
     LValue FiniLVal = CGF.EmitLValueForField(ElemLVal, FiniFD);
     llvm::Value *Fini = emitReduceFiniFunction(CGM, Loc, RCG, Cnt);
@@ -6832,16 +6846,15 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
       CGF.EmitNullInitialization(FlagsLVal.getAddress(CGF),
                                  FlagsLVal.getType());
   }
-  // Build call void *__kmpc_task_reduction_init(int gtid, int num_data, void
-  // *data);
+  // Build call void *__kmpc_taskred_init(int gtid, int num_data, void *data);
   llvm::Value *Args[] = {
       CGF.Builder.CreateIntCast(getThreadID(CGF, Loc), CGM.IntTy,
                                 /*isSigned=*/true),
       llvm::ConstantInt::get(CGM.IntTy, Size, /*isSigned=*/true),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TaskRedInput.getPointer(),
                                                       CGM.VoidPtrTy)};
-  return CGF.EmitRuntimeCall(
-      createRuntimeFunction(OMPRTL__kmpc_task_reduction_init), Args);
+  return CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_taskred_init),
+                             Args);
 }
 
 void CGOpenMPRuntime::emitTaskReductionFixups(CodeGenFunction &CGF,
@@ -6858,16 +6871,6 @@ void CGOpenMPRuntime::emitTaskReductionFixups(CodeGenFunction &CGF,
         CGF, CGM.getContext().getSizeType(),
         generateUniqueName(CGM, "reduction_size", RCG.getRefExpr(N)));
     CGF.Builder.CreateStore(SizeVal, SizeAddr, /*IsVolatile=*/false);
-  }
-  // Store address of the original reduction item if custom initializer is used.
-  if (RCG.usesReductionInitializer(N)) {
-    Address SharedAddr = getAddrOfArtificialThreadPrivate(
-        CGF, CGM.getContext().VoidPtrTy,
-        generateUniqueName(CGM, "reduction", RCG.getRefExpr(N)));
-    CGF.Builder.CreateStore(
-        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            RCG.getSharedLValue(N).getPointer(CGF), CGM.VoidPtrTy),
-        SharedAddr, /*IsVolatile=*/false);
   }
 }
 
