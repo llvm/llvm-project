@@ -16,6 +16,7 @@
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
 class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :
@@ -179,7 +180,8 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
   }];
 }
 
-def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
+def Linalg_SliceOp : Linalg_Op<"slice", [
+      DeclareOpInterfaceMethods<ViewLikeOpInterface>, NoSideEffect]>,
     Arguments<(ins AnyStridedMemRef:$view,
                    Variadic<AnyTypeOf<[Range, Index]>>:$indexings)>,
     Results<(outs AnyStridedMemRef)> {

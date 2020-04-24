@@ -17,6 +17,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 def StandardOps_Dialect : Dialect {
   let name = "std";
@@ -2315,7 +2316,11 @@ def SubIOp : IntArithmeticOp<"subi"> {
 // SubViewOp
 //===----------------------------------------------------------------------===//
 
-def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
+def SubViewOp : Std_Op<"subview", [
+    AttrSizedOperandSegments, 
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+    NoSideEffect,
+  ]> {
   let summary = "memref subview operation";
   let description = [{
     The "subview" operation converts a memref type to another memref type
@@ -2785,7 +2790,8 @@ def UnsignedShiftRightOp : IntArithmeticOp<"shift_right_unsigned"> {
 // ViewOp
 //===----------------------------------------------------------------------===//
 
-def ViewOp : Std_Op<"view", [NoSideEffect]> {
+def ViewOp : Std_Op<"view", [
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>, NoSideEffect]> {
   let summary = "memref view operation";
   let description = [{
     The "view" operation converts a 1-D memref with i8 element type,
