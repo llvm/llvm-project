@@ -65,6 +65,15 @@ buildCompilerInvocation(const ParseInputs &Inputs,
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts()->CommentOpts.ParseAllComments = true;
   CI->getLangOpts()->RetainCommentsFromSystemHeaders = true;
+
+  // Disable any dependency outputting, we don't want to generate files or write
+  // to stdout/stderr.
+  CI->getDependencyOutputOpts().ShowIncludesDest =
+      ShowIncludesDestination::None;
+  CI->getDependencyOutputOpts().OutputFile.clear();
+  CI->getDependencyOutputOpts().HeaderIncludeOutputFile.clear();
+  CI->getDependencyOutputOpts().DOTOutputFile.clear();
+  CI->getDependencyOutputOpts().ModuleDependencyOutputDir.clear();
   return CI;
 }
 
