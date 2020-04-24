@@ -1307,6 +1307,16 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
 class RankedF32ElementsAttr<list<int> dims> : RankedFloatElementsAttr<32, dims>;
 class RankedF64ElementsAttr<list<int> dims> : RankedFloatElementsAttr<64, dims>;
 
+def StringElementsAttr : ElementsAttrBase<
+  CPred<"$_self.isa<DenseStringElementsAttr>()" >,
+  "string elements attribute"> {
+
+  let storageType = [{ DenseElementsAttr }];
+  let returnType = [{ DenseElementsAttr }];
+
+  let convertFromStorage = "$_self";
+}
+
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string description> :
     Attr<condition, description> {

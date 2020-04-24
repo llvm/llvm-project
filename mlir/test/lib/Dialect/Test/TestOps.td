@@ -245,6 +245,12 @@ def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
     "$_builder.getI32IntegerAttr($_self)">;
 }
 
+def StringElementsAttrOp : TEST_Op<"string_elements_attr"> {
+  let arguments = (ins
+      StringElementsAttr:$scalar_string_attr
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // Test Attribute Constraints
 //===----------------------------------------------------------------------===//
