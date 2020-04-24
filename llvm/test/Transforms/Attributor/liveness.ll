@@ -1546,17 +1546,17 @@ define void @useless_arg_ext_int_ext(i32* %a) {
 ; FIXME: We should fold terminators.
 
 define internal i32 @switch_default(i64 %i) nounwind {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@switch_default()
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; IS__TUNIT____-NEXT:    i64 3, label [[RETURN:%.*]]
-; IS__TUNIT____-NEXT:    i64 10, label [[RETURN]]
-; IS__TUNIT____-NEXT:    ]
-; IS__TUNIT____:       sw.default:
-; IS__TUNIT____-NEXT:    call void @sink()
-; IS__TUNIT____-NEXT:    ret i32 undef
-; IS__TUNIT____:       return:
-; IS__TUNIT____-NEXT:    unreachable
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@switch_default()
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
+; NOT_CGSCC_NPM-NEXT:    i64 3, label [[RETURN:%.*]]
+; NOT_CGSCC_NPM-NEXT:    i64 10, label [[RETURN]]
+; NOT_CGSCC_NPM-NEXT:    ]
+; NOT_CGSCC_NPM:       sw.default:
+; NOT_CGSCC_NPM-NEXT:    call void @sink()
+; NOT_CGSCC_NPM-NEXT:    ret i32 undef
+; NOT_CGSCC_NPM:       return:
+; NOT_CGSCC_NPM-NEXT:    unreachable
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@switch_default()
 ; IS__CGSCC____-NEXT:  entry:
@@ -1637,10 +1637,10 @@ define void @call_via_pointer_with_dead_args(i32* %a, i32* %b, void (i32*, i32*,
 }
 ; FIXME: We have to prevent the propagation of %fp in the new pm CGSCC pass until the CallGraphUpdater can handle the new call edge.
 define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
-; IS__TUNIT____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
-; IS__TUNIT____-NEXT:    call void @called_via_pointer(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
-; IS__TUNIT____-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; NOT_CGSCC_NPM-NEXT:    call void @called_via_pointer(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
@@ -1651,10 +1651,10 @@ define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %
   ret void
 }
 define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; IS__TUNIT____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
-; IS__TUNIT____-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
-; IS__TUNIT____-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; NOT_CGSCC_NPM-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
 ; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
