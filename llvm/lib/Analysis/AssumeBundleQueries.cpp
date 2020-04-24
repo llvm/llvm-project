@@ -29,8 +29,7 @@ static Value *getValueFromBundleOpInfo(CallInst &Assume,
 }
 
 bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
-                                StringRef AttrName, uint64_t *ArgVal,
-                                AssumeQuery AQR) {
+                                StringRef AttrName, uint64_t *ArgVal) {
   assert(isa<IntrinsicInst>(AssumeCI) &&
          "this function is intended to be used on llvm.assume");
   IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
@@ -44,27 +43,21 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
   if (Assume.bundle_op_infos().empty())
     return false;
 
-  auto Loop = [&](auto &&Range) {
-    for (auto &BOI : Range) {
-      if (BOI.Tag->getKey() != AttrName)
-        continue;
-      if (IsOn && (BOI.End - BOI.Begin <= ABA_WasOn ||
-                   IsOn != getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn)))
-        continue;
-      if (ArgVal) {
-        assert(BOI.End - BOI.Begin > ABA_Argument);
-        *ArgVal = cast<ConstantInt>(
-                      getValueFromBundleOpInfo(Assume, BOI, ABA_Argument))
-                      ->getZExtValue();
-      }
-      return true;
+  for (auto &BOI : Assume.bundle_op_infos()) {
+    if (BOI.Tag->getKey() != AttrName)
+      continue;
+    if (IsOn && (BOI.End - BOI.Begin <= ABA_WasOn ||
+                 IsOn != getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn)))
+      continue;
+    if (ArgVal) {
+      assert(BOI.End - BOI.Begin > ABA_Argument);
+      *ArgVal =
+          cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, ABA_Argument))
+              ->getZExtValue();
     }
-    return false;
-  };
-
-  if (AQR == AssumeQuery::Lowest)
-    return Loop(Assume.bundle_op_infos());
-  return Loop(reverse(Assume.bundle_op_infos()));
+    return true;
+  }
+  return false;
 }
 
 void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
