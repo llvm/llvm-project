@@ -117,16 +117,7 @@ private:
 SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
                                 uint64_t *Idx = nullptr);
 
-Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
-                                  const object::RelocationRef &Rel,
-                                  llvm::SmallVectorImpl<char> &Result);
-
-uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
-
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
-void printELFFileHeader(const object::ObjectFile *O);
-void printELFDynamicSection(const object::ObjectFile *Obj);
-void printELFSymbolVersionInfo(const object::ObjectFile *Obj);
 void printRawClangAST(const object::ObjectFile *O);
 void printRelocations(const object::ObjectFile *O);
 void printDynamicRelocations(const object::ObjectFile *O);
