@@ -1197,34 +1197,6 @@ define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
 ; IS__CGSCC_NPM-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[ADD4]]
 ;
-; ____CGSCC_NPM-LABEL: define {{[^@]+}}@exact
-; ____CGSCC_NPM-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]])
-; ____CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; ____CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 1)
-; ____CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 2)
-; ____CGSCC_NPM-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
-; ____CGSCC_NPM-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
-; ____CGSCC_NPM-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
-; ____CGSCC_NPM-NEXT:    [[C4L:%.*]] = load i32, i32* [[C4]], align 16
-; ____CGSCC_NPM-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; ____CGSCC_NPM-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 2
-; ____CGSCC_NPM-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; ____CGSCC_NPM-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; ____CGSCC_NPM-NEXT:    ret i32 [[ADD4]]
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-LABEL: define {{[^@]+}}@exact
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]])
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 1)
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 2)
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[C4L:%.*]] = load i32, i32* [[C4]], align 16
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 2
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; CGSCC_NPM,CHECK_MODULE,CHECK_CGSCC-NEXT:    ret i32 [[ADD4]]
   %c0 = call i32 @non_exact_0()
   %c1 = call i32 @non_exact_1(i32 1)
   %c2 = call i32 @non_exact_2(i32 2)
