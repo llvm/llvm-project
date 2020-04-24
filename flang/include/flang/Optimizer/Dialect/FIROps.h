@@ -10,6 +10,8 @@
 #define OPTIMIZER_DIALECT_FIROPS_H
 
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffects.h"
 
 using namespace mlir;
 

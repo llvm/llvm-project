@@ -13,20 +13,6 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 
-namespace llvm {
-class raw_ostream;
-class StringRef;
-} // namespace llvm
-
-namespace mlir {
-class Attribute;
-class DialectAsmParser;
-class DialectAsmPrinter;
-class Location;
-class MLIRContext;
-class Type;
-} // namespace mlir
-
 namespace fir {
 
 /// FIR dialect
