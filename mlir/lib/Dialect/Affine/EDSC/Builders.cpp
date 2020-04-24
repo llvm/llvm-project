@@ -191,6 +191,11 @@ Value mlir::edsc::op::ceilDiv(Value lhs, Value rhs) {
       lhs, rhs, [](AffineExpr d0, AffineExpr d1) { return d0.ceilDiv(d1); });
 }
 
+Value mlir::edsc::op::negate(Value value) {
+  assert(value.getType().isInteger(1) && "expected boolean expression");
+  return ValueBuilder<ConstantIntOp>(1, 1) - value;
+}
+
 Value mlir::edsc::op::operator&&(Value lhs, Value rhs) {
   assert(lhs.getType().isInteger(1) && "expected boolean expression on LHS");
   assert(rhs.getType().isInteger(1) && "expected boolean expression on RHS");
