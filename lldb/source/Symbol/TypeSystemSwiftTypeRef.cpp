@@ -772,16 +772,17 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 }
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
     void *type, bool print_help_if_available,
-    bool print_extensions_if_available) {
+    bool print_extensions_if_available, lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(
-      ReconstructType(type), print_help_if_available, print_help_if_available);
+      ReconstructType(type), print_help_if_available, print_help_if_available,
+      level);
 }
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
     void *type, Stream *s, bool print_help_if_available,
-    bool print_extensions_if_available) {
+    bool print_extensions_if_available, lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(
       ReconstructType(type), s, print_help_if_available,
-      print_extensions_if_available);
+      print_extensions_if_available, level);
 }
 
 // Dumping types
@@ -815,11 +816,14 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
 }
 
-void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type) {
-  return m_swift_ast_context->DumpTypeDescription(ReconstructType(type));
+void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type,
+                                                 lldb::DescriptionLevel level) {
+  return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), level);
 }
-void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type, Stream *s) {
-  return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), s);
+void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type, Stream *s,
+                                                 lldb::DescriptionLevel level) {
+  return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), s,
+                                                  level);
 }
 void TypeSystemSwiftTypeRef::DumpSummary(void *type, ExecutionContext *exe_ctx,
                                          Stream *s, const DataExtractor &data,
