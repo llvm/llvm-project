@@ -183,8 +183,8 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
   };
 
   struct BaseRegisters {
-    unsigned LoReg = 0;
-    unsigned HiReg = 0;
+    Register LoReg;
+    Register HiReg;
 
     unsigned LoSubReg = 0;
     unsigned HiSubReg = 0;
@@ -252,9 +252,9 @@ private:
   mergeTBufferStorePair(CombineInfo &CI, CombineInfo &Paired,
                         const SmallVectorImpl<MachineInstr *> &InstsToMove);
 
-  void updateBaseAndOffset(MachineInstr &I, unsigned NewBase,
+  void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
-  unsigned computeBase(MachineInstr &MI, const MemAddress &Addr) const;
+  Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
   Optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
@@ -593,8 +593,8 @@ static void moveInstsAfter(MachineBasicBlock::iterator I,
 }
 
 static void addDefsUsesToList(const MachineInstr &MI,
-                              DenseSet<unsigned> &RegDefs,
-                              DenseSet<unsigned> &PhysRegUses) {
+                              DenseSet<Register> &RegDefs,
+                              DenseSet<Register> &PhysRegUses) {
   for (const MachineOperand &Op : MI.operands()) {
     if (Op.isReg()) {
       if (Op.isDef())
@@ -616,8 +616,8 @@ static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
 
 // Add MI and its defs to the lists if MI reads one of the defs that are
 // already in the list. Returns true in that case.
-static bool addToListsIfDependent(MachineInstr &MI, DenseSet<unsigned> &RegDefs,
-                                  DenseSet<unsigned> &PhysRegUses,
+static bool addToListsIfDependent(MachineInstr &MI, DenseSet<Register> &RegDefs,
+                                  DenseSet<Register> &PhysRegUses,
                                   SmallVectorImpl<MachineInstr *> &Insts) {
   for (MachineOperand &Use : MI.operands()) {
     // If one of the defs is read, then there is a use of Def between I and the
@@ -878,8 +878,8 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   if (Swizzled != -1 && CI.I->getOperand(Swizzled).getImm())
     return false;
 
-  DenseSet<unsigned> RegDefsToMove;
-  DenseSet<unsigned> PhysRegUsesToMove;
+  DenseSet<Register> RegDefsToMove;
+  DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
   MachineBasicBlock::iterator E = std::next(Paired.I);
@@ -1636,7 +1636,7 @@ SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) const {
 }
 
 // Compute base address using Addr and return the final register.
-unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
+Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
                                            const MemAddress &Addr) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
@@ -1695,7 +1695,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 
 // Update base and offset with the NewBase and NewOffset in MI.
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
-                                               unsigned NewBase,
+                                               Register NewBase,
                                                int32_t NewOffset) const {
   auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   Base->setReg(NewBase);
@@ -1907,7 +1907,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
                <<  AnchorAddr.Offset << "\n\n");
 
     // Instead of moving up, just re-compute anchor-instruction's base address.
-    unsigned Base = computeBase(MI, AnchorAddr);
+    Register Base = computeBase(MI, AnchorAddr);
 
     updateBaseAndOffset(MI, Base, MAddr.Offset - AnchorAddr.Offset);
     LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
@@ -1986,7 +1986,7 @@ bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
   // list try to find an instruction that can be merged with I.  If an instruction
   // is found, it is stored in the Paired field.  If no instructions are found, then
   // the CombineInfo object is deleted from the list.
-  
+
   for (std::list<std::list<CombineInfo>>::iterator I = MergeableInsts.begin(),
                                                    E = MergeableInsts.end(); I != E;) {
 
