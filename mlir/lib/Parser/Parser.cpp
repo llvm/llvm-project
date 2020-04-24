@@ -1797,7 +1797,8 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
     return llvm::None;
 
   // Extend or truncate the bitwidth to the right size.
-  unsigned width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
+  unsigned width = type.isIndex() ? IndexType::kInternalStorageBitWidth
+                                  : type.getIntOrFloatBitWidth();
   if (width > result.getBitWidth()) {
     result = result.zext(width);
   } else if (width < result.getBitWidth()) {
@@ -1968,8 +1969,7 @@ private:
   }
 
   /// Build a Dense Integer attribute for the given type.
-  DenseElementsAttr getIntAttr(llvm::SMLoc loc, ShapedType type,
-                               IntegerType eltTy);
+  DenseElementsAttr getIntAttr(llvm::SMLoc loc, ShapedType type, Type eltTy);
 
   /// Build a Dense Float attribute for the given type.
   DenseElementsAttr getFloatAttr(llvm::SMLoc loc, ShapedType type,
@@ -2044,14 +2044,17 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
 
   // If the type is an integer, build a set of APInt values from the storage
   // with the correct bitwidth.
-  if (auto intTy = type.getElementType().dyn_cast<IntegerType>())
+  Type eltType = type.getElementType();
+  if (auto intTy = eltType.dyn_cast<IntegerType>())
     return getIntAttr(loc, type, intTy);
+  if (auto indexTy = eltType.dyn_cast<IndexType>())
+    return getIntAttr(loc, type, indexTy);
 
   // Otherwise, this must be a floating point type.
-  auto floatTy = type.getElementType().dyn_cast<FloatType>();
+  auto floatTy = eltType.dyn_cast<FloatType>();
   if (!floatTy) {
     p.emitError(loc) << "expected floating-point or integer element type, got "
-                     << type.getElementType();
+                     << eltType;
     return nullptr;
   }
   return getFloatAttr(loc, type, floatTy);
@@ -2059,8 +2062,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
 
 /// Build a Dense Integer attribute for the given type.
 DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
-                                                  ShapedType type,
-                                                  IntegerType eltTy) {
+                                                  ShapedType type, Type eltTy) {
   std::vector<APInt> intElements;
   intElements.reserve(storage.size());
   auto isUintType = type.getElementType().isUnsignedInteger();
@@ -2085,11 +2087,12 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
     assert(token.isAny(Token::integer, Token::kw_true, Token::kw_false) &&
            "unexpected token type");
     if (token.isAny(Token::kw_true, Token::kw_false)) {
-      if (!eltTy.isInteger(1))
+      if (!eltTy.isInteger(1)) {
         p.emitError(tokenLoc)
             << "expected i1 type for 'true' or 'false' values";
-      APInt apInt(eltTy.getWidth(), token.is(Token::kw_true),
-                  /*isSigned=*/false);
+        return nullptr;
+      }
+      APInt apInt(1, token.is(Token::kw_true), /*isSigned=*/false);
       intElements.push_back(apInt);
       continue;
     }

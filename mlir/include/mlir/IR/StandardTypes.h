@@ -76,6 +76,9 @@ public:
 
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) { return kind == StandardTypes::Index; }
+
+  /// Storage bit width used for IndexType by internal compiler data structures.
+  static constexpr unsigned kInternalStorageBitWidth = 64;
 };
 
 /// Integer types can have arbitrary bitwidth up to a large fixed limit.

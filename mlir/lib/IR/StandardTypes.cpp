@@ -83,6 +83,8 @@ bool Type::isSignlessIntOrFloat() {
   return isSignlessInteger() || isa<FloatType>();
 }
 
+bool Type::isIntOrIndex() { return isa<IntegerType>() || isIndex(); }
+
 bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
 
 bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
