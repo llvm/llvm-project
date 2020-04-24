@@ -98,7 +98,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}v_test_no_denormals_canonicalize_fneg_var_f16:
-; GFX89: v_mul_f16_e32 [[REG:v[0-9]+]], -1.0, v{{[0-9]+}}
+; VI: v_mul_f16_e32 [[REG:v[0-9]+]], -1.0, v{{[0-9]+}}
+; GFX9: v_max_f16_e64 [[REG:v[0-9]+]], -v{{[0-9]+}}, -v{{[0-9]+}}
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half addrspace(1)* %out) #2 {
   %val = load half, half addrspace(1)* %out
@@ -109,7 +110,9 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half ad
 }
 
 ; GCN-LABEL: {{^}}v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
-; GFX89: v_mul_f16_e64 [[REG:v[0-9]+]], -1.0, |v{{[0-9]+}}|
+; VI: v_mul_f16_e64 [[REG:v[0-9]+]], -1.0, |v{{[0-9]+}}|
+; GFX9: v_max_f16_e64 [[REG:v[0-9]+]], -|v{{[0-9]+}}|, -|v{{[0-9]+}}|
+
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 
 ; CI: v_cvt_f32_f16_e64 {{v[0-9]+}}, -|{{v[0-9]+}}|

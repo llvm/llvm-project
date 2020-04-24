@@ -1878,7 +1878,9 @@ def : GCNPat <
 
 }
 
-let OtherPredicates = [NoFP16Denormals] in {
+
+// Prefer selecting to max when legal, but using mul is always valid.
+let AddedComplexity = -5 in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -1893,23 +1895,7 @@ def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
-}
 
-let OtherPredicates = [FP16Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)
->;
-
-let SubtargetPredicate = HasVOP3PInsts in {
-def : GCNPat<
-  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
-  (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)
->;
-}
-}
-
-let OtherPredicates = [NoFP32Denormals] in {
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
@@ -1919,28 +1905,68 @@ def : GCNPat<
   (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
-}
 
-let OtherPredicates = [FP32Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-  (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)
->;
-}
-
-let OtherPredicates = [NoFP64Denormals] in {
+// TODO: Handle fneg like other types.
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
   (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src)
 >;
+} // End AddedComplexity = -5
+
+multiclass SelectCanonicalizeAsMax<
+  list<Predicate> f32_preds = [],
+  list<Predicate> f64_preds = [],
+  list<Predicate> f16_preds = []> {
+  def : GCNPat<
+    (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+    (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = f32_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+    (V_MAX_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = f64_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+    (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    // FIXME: Should have 16-bit inst subtarget predicate
+    let OtherPredicates = f16_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
+    (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
+    // FIXME: Should have VOP3P subtarget predicate
+    let OtherPredicates = f16_preds;
+  }
 }
 
-let OtherPredicates = [FP64Denormals] in {
-def : GCNPat<
-  (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MAX_F64 $src_mods, $src, $src_mods, $src)
->;
-}
+// On pre-gfx9 targets, v_max_*/v_min_* did not respect the denormal
+// mode, and would never flush. For f64, it's faster to do implement
+// this with a max. For f16/f32 it's a wash, but prefer max when
+// valid.
+//
+// FIXME: Lowering f32/f16 with max is worse since we can use a
+// smaller encoding if the input is fneg'd. It also adds an extra
+// register use.
+let SubtargetPredicate = HasMinMaxDenormModes in {
+  defm : SelectCanonicalizeAsMax<[], [], []>;
+} // End SubtargetPredicate = HasMinMaxDenormModes
+
+let SubtargetPredicate = NotHasMinMaxDenormModes in {
+  // Use the max lowering if we don't need to flush.
+
+  // FIXME: We don't do use this for f32 as a workaround for the
+  // library being compiled with the default ieee mode, but
+  // potentially being called from flushing kernels. Really we should
+  // not be mixing code expecting different default FP modes, but mul
+  // works in any FP environment.
+  defm : SelectCanonicalizeAsMax<[FalsePredicate], [FP64Denormals], [FP16Denormals]>;
+} // End SubtargetPredicate = NotHasMinMaxDenormModes
+
 
 let OtherPredicates = [HasDLInsts] in {
 def : GCNPat <
