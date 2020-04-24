@@ -2906,7 +2906,11 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
       // element referenced by the shuffle.
-      auto *Shuf = cast<ShuffleVectorInst>(U);
+      auto *Shuf = dyn_cast<ShuffleVectorInst>(U);
+      if (!Shuf) {
+        // FIXME: Add support for shufflevector constant expressions.
+        return 1;
+      }
       APInt DemandedLHS, DemandedRHS;
       // For undef elements, we don't know anything about the common state of
       // the shuffle result.
