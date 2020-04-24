@@ -197,3 +197,17 @@ func @create_illegal_block() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: @undo_block_arg_replace
+func @undo_block_arg_replace() {
+  "test.undo_block_arg_replace"() ({
+  ^bb0(%arg0: i32):
+    // CHECK: ^bb0(%[[ARG:.*]]: i32):
+    // CHECK-NEXT: "test.return"(%[[ARG]]) : (i32)
+
+    "test.return"(%arg0) : (i32) -> ()
+  }) : () -> ()
+  return
+}

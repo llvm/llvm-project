@@ -8,6 +8,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 declare nonnull i8* @ret_nonnull()
+declare void @llvm.assume(i1)
 
 ; Return a pointer trivially nonnull (call return attribute)
 define i8* @test1() {
@@ -26,6 +27,28 @@ define i8* @test2(i8* nonnull %p) {
 ; CHECK-NEXT:    ret i8* [[P]]
 ;
   ret i8* %p
+}
+
+define i8* @test2A(i1 %c, i8* %ret) {
+; ATTRIBUTOR: define nonnull i8* @test2A(i1 %c, i8* nofree nonnull readnone returned %ret)
+  br i1 %c, label %A, label %B
+A:
+  call void @llvm.assume(i1 true) [ "nonnull"(i8* %ret) ]
+  ret i8* %ret
+B:
+  call void @llvm.assume(i1 true) [ "nonnull"(i8* %ret) ]
+  ret i8* %ret
+}
+
+define i8* @test2B(i1 %c, i8* %ret) {
+; ATTRIBUTOR: define nonnull dereferenceable(4) i8* @test2B(i1 %c, i8* nofree nonnull readnone returned dereferenceable(4) %ret)
+  br i1 %c, label %A, label %B
+A:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(i8* %ret, i32 4) ]
+  ret i8* %ret
+B:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(i8* %ret, i32 4) ]
+  ret i8* %ret
 }
 
 ; Given an SCC where one of the functions can not be marked nonnull,
@@ -181,7 +204,8 @@ define i8* @test9(i8* %a, i64 %n) {
   ret i8* %b
 }
 
-declare void @llvm.assume(i1)
+; ATTRIBUTOR_OPM: define i8* @test10
+; ATTRIBUTOR_NPM: define nonnull i8* @test10
 define i8* @test10(i8* %a, i64 %n) {
 ; CHECK-LABEL: define {{[^@]+}}@test10
 ; CHECK-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]])
@@ -664,7 +688,7 @@ declare i32 @esfp(...)
 
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@parent8
-; NOT_CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #4 personality i8* bitcast (i32 (...)* @esfp to i8*)
+; NOT_CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) {{#[0-9]+}} personality i8* bitcast (i32 (...)* @esfp to i8*)
 ; NOT_CGSCC_OPM-NEXT:  entry:
 ; NOT_CGSCC_OPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
 ; NOT_CGSCC_OPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -677,7 +701,7 @@ define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (..
 ; NOT_CGSCC_OPM-NEXT:    unreachable
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@parent8
-; IS__CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #5 personality i8* bitcast (i32 (...)* @esfp to i8*)
+; IS__CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) {{#[0-9]+}} personality i8* bitcast (i32 (...)* @esfp to i8*)
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
 ; IS__CGSCC_OPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]

@@ -145,6 +145,11 @@ public:
   replaceAllUsesExcept(Value newValue,
                        const SmallPtrSetImpl<Operation *> &exceptions) const;
 
+  /// Replace all uses of 'this' value with 'newValue' if the given callback
+  /// returns true.
+  void replaceUsesWithIf(Value newValue,
+                         function_ref<bool(OpOperand &)> shouldReplace);
+
   //===--------------------------------------------------------------------===//
   // Uses
 

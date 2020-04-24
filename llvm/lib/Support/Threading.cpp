@@ -84,14 +84,15 @@ void llvm::llvm_execute_on_thread_async(
 int computeHostNumHardwareThreads();
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
-  if (ThreadsRequested > 0)
-    return ThreadsRequested;
-
   int MaxThreadCount = UseHyperThreads ? computeHostNumHardwareThreads()
                                        : sys::getHostNumPhysicalCores();
   if (MaxThreadCount <= 0)
     MaxThreadCount = 1;
-  return MaxThreadCount;
+  if (ThreadsRequested == 0)
+    return MaxThreadCount;
+  if (!Limit)
+    return ThreadsRequested;
+  return std::min((unsigned)MaxThreadCount, ThreadsRequested);
 }
 
 namespace {

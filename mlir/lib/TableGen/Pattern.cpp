@@ -345,7 +345,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
   case Kind::Value: {
     assert(index < 0 && "only allowed for symbol bound to result");
     assert(op == nullptr);
-    auto repl = formatv(fmt, formatv("ValueRange{{{0}}", name));
+    auto repl = formatv(fmt, formatv("{{{0}}", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
     return std::string(repl);
   }
