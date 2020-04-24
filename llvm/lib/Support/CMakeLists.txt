@@ -115,6 +115,7 @@ add_llvm_component_library(LLVMSupport
   LowLevelType.cpp
   ManagedStatic.cpp
   MathExtras.cpp
+  MemAlloc.cpp
   MemoryBuffer.cpp
   MD5.cpp
   NativeFormatting.cpp

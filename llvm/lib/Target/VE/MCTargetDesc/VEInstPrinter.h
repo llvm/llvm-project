@@ -51,6 +51,8 @@ public:
                         raw_ostream &OS);
   void printCCOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                       raw_ostream &OS);
+  void printRDOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                      raw_ostream &OS);
 };
 } // namespace llvm
 

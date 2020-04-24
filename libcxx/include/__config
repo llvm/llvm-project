@@ -474,6 +474,10 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_HAS_EXTENSION_BLOCKS
 #endif
 
+#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && defined(__APPLE__)
+#  define _LIBCPP_HAS_BLOCKS_RUNTIME
+#endif
+
 #if !(__has_feature(cxx_relaxed_constexpr))
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #endif
