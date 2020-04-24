@@ -3336,6 +3336,9 @@ Clang supports the following match rules:
 - ``variable(is_global)``: Can be used to apply attributes to global variables
   only.
 
+- ``variable(is_local)``: Can be used to apply attributes to local variables
+  only.
+
 - ``variable(is_parameter)``: Can be used to apply attributes to parameters
   only.
 

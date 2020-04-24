@@ -8073,9 +8073,9 @@ multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
             (!cast<Instruction>(INST # "v8i16_indexed")
                 V128:$Rd, V128:$Rn, V128_lo:$Rm, VectorIndexH:$idx)>;
   def : Pat<(v8f16 (OpNode (v8f16 V128:$Rd), (v8f16 V128:$Rn),
-                           (AArch64dup (f16 FPR16Op:$Rm)))),
+                           (AArch64dup (f16 FPR16Op_lo:$Rm)))),
             (!cast<Instruction>(INST # "v8i16_indexed") V128:$Rd, V128:$Rn,
-                (SUBREG_TO_REG (i32 0), FPR16Op:$Rm, hsub), (i64 0))>;
+                (SUBREG_TO_REG (i32 0), FPR16Op_lo:$Rm, hsub), (i64 0))>;
 
   def : Pat<(v4f16 (OpNode (v4f16 V64:$Rd), (v4f16 V64:$Rn),
                            (AArch64duplane16 (v8f16 V128_lo:$Rm),
@@ -8083,9 +8083,9 @@ multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
             (!cast<Instruction>(INST # "v4i16_indexed")
                 V64:$Rd, V64:$Rn, V128_lo:$Rm, VectorIndexH:$idx)>;
   def : Pat<(v4f16 (OpNode (v4f16 V64:$Rd), (v4f16 V64:$Rn),
-                           (AArch64dup (f16 FPR16Op:$Rm)))),
+                           (AArch64dup (f16 FPR16Op_lo:$Rm)))),
             (!cast<Instruction>(INST # "v4i16_indexed") V64:$Rd, V64:$Rn,
-                (SUBREG_TO_REG (i32 0), FPR16Op:$Rm, hsub), (i64 0))>;
+                (SUBREG_TO_REG (i32 0), FPR16Op_lo:$Rm, hsub), (i64 0))>;
 
   def : Pat<(f16 (OpNode (f16 FPR16:$Rd), (f16 FPR16:$Rn),
                          (vector_extract (v8f16 V128_lo:$Rm), VectorIndexH:$idx))),

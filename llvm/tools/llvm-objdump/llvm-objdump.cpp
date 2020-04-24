@@ -17,6 +17,7 @@
 
 #include "llvm-objdump.h"
 #include "COFFDump.h"
+#include "ELFDump.h"
 #include "MachODump.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"

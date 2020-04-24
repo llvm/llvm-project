@@ -76,6 +76,9 @@ public:
 
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) { return kind == StandardTypes::Index; }
+
+  /// Storage bit width used for IndexType by internal compiler data structures.
+  static constexpr unsigned kInternalStorageBitWidth = 64;
 };
 
 /// Integer types can have arbitrary bitwidth up to a large fixed limit.
@@ -672,9 +675,18 @@ MemRefType canonicalizeStridedLayout(MemRefType t);
 /// varying stride is always `1`.
 ///
 /// Examples:
-///   - memref<3x4x5xf32> has canonical stride expression `20*d0 + 5*d1 + d2`.
-///   - memref<3x?x5xf32> has canonical stride expression `s0*d0 + 5*d1 + d2`.
-///   - memref<3x4x?xf32> has canonical stride expression `s1*d0 + s0*d1 + d2`.
+///   - memref<3x4x5xf32> has canonical stride expression
+///         `20*exprs[0] + 5*exprs[1] + exprs[2]`.
+///   - memref<3x?x5xf32> has canonical stride expression
+///         `s0*exprs[0] + 5*exprs[1] + exprs[2]`.
+///   - memref<3x4x?xf32> has canonical stride expression
+///         `s1*exprs[0] + s0*exprs[1] + exprs[2]`.
+AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
+                                          ArrayRef<AffineExpr> exprs,
+                                          MLIRContext *context);
+
+/// Return the result of makeCanonicalStrudedLayoutExpr for the common case
+/// where `exprs` is {d0, d1, .., d_(sizes.size()-1)}
 AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                           MLIRContext *context);
 

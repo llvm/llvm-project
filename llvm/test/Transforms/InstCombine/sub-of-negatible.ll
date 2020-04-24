@@ -169,10 +169,10 @@ define i8 @t9(i8 %x, i8 %y) {
 }
 define i8 @n10(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @n10(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    ret i8 [[T0_NEG]]
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 0, [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = sub i8 %y, %x
   call void @use8(i8 %t0)

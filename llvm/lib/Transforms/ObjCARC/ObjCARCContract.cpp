@@ -115,8 +115,7 @@ namespace {
 /// return value. We do this late so we do not disrupt the dataflow analysis in
 /// ObjCARCOpt.
 bool ObjCARCContract::optimizeRetainCall(Function &F, Instruction *Retain) {
-  ImmutableCallSite CS(GetArgRCIdentityRoot(Retain));
-  const Instruction *Call = CS.getInstruction();
+  const auto *Call = dyn_cast<CallBase>(GetArgRCIdentityRoot(Retain));
   if (!Call)
     return false;
   if (Call->getParent() != Retain->getParent())

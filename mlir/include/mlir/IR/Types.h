@@ -169,6 +169,8 @@ public:
   /// Return true of this is a signless integer or a float type.
   bool isSignlessIntOrFloat();
 
+  /// Return true if this is an integer (of any signedness) or an index type.
+  bool isIntOrIndex();
   /// Return true if this is an integer (of any signedness) or a float type.
   bool isIntOrFloat();
   /// Return true if this is an integer (of any signedness), index, or float

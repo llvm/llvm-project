@@ -85,7 +85,9 @@ def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
                                      [ObjCSignedCharBoolImplicitIntConversion]>;
-def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion">;
+def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
+def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
+ [ImplicitConstIntFloatConversion]>;
 def ObjCSignedCharBoolImplicitFloatConversion :
   DiagGroup<"objc-signed-char-bool-implicit-float-conversion">;
 def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion",

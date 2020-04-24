@@ -45,7 +45,7 @@ bool HexagonTTIImpl::useHVX() const {
 
 bool HexagonTTIImpl::isTypeForHVX(Type *VecTy) const {
   assert(VecTy->isVectorTy());
-  if (cast<VectorType>(VecTy)->isScalable())
+  if (isa<ScalableVectorType>(VecTy))
     return false;
   // Avoid types like <2 x i32*>.
   if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())

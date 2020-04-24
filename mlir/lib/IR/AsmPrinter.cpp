@@ -973,6 +973,9 @@ protected:
   /// used instead of individual elements when the elements attr is large.
   void printDenseElementsAttr(DenseElementsAttr attr, bool allowHex);
 
+  /// Print a dense string elements attribute.
+  void printDenseStringElementsAttr(DenseStringElementsAttr attr);
+
   void printDialectAttribute(Attribute attr);
   void printDialectType(Type type);
 
@@ -1392,7 +1395,7 @@ void ModulePrinter::printAttribute(Attribute attr,
     os << '"' << "0x" << llvm::toHex(eltsAttr.getValue()) << "\">";
     break;
   }
-  case StandardAttributes::DenseElements: {
+  case StandardAttributes::DenseIntOrFPElements: {
     auto eltsAttr = attr.cast<DenseElementsAttr>();
     if (printerFlags.shouldElideElementsAttr(eltsAttr)) {
       printElidedElementsAttr(os);
@@ -1400,6 +1403,17 @@ void ModulePrinter::printAttribute(Attribute attr,
     }
     os << "dense<";
     printDenseElementsAttr(eltsAttr, /*allowHex=*/true);
+    os << '>';
+    break;
+  }
+  case StandardAttributes::DenseStringElements: {
+    auto eltsAttr = attr.cast<DenseStringElementsAttr>();
+    if (printerFlags.shouldElideElementsAttr(eltsAttr)) {
+      printElidedElementsAttr(os);
+      break;
+    }
+    os << "dense<";
+    printDenseStringElementsAttr(eltsAttr);
     os << '>';
     break;
   }
@@ -1454,6 +1468,13 @@ static void printDenseFloatElement(DenseElementsAttr attr, raw_ostream &os,
   printFloatValue(value, os);
 }
 
+static void printDenseStringElement(DenseStringElementsAttr attr,
+                                    raw_ostream &os, unsigned index) {
+  os << "\"";
+  printEscapedString(attr.getRawStringData()[index], os);
+  os << "\"";
+}
+
 void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
                                            bool allowHex) {
   auto type = attr.getType();
@@ -1462,7 +1483,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
   bool isSigned = !type.getElementType().isUnsignedInteger();
 
   // The function used to print elements of this attribute.
-  auto printEltFn = type.getElementType().isa<IntegerType>()
+  auto printEltFn = type.getElementType().isIntOrIndex()
                         ? printDenseIntElement
                         : printDenseFloatElement;
 
@@ -1520,6 +1541,63 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
       os << '[';
     openBrackets = rank;
     printEltFn(attr, os, idx, isSigned);
+    bumpCounter();
+  }
+  while (openBrackets-- > 0)
+    os << ']';
+}
+
+void ModulePrinter::printDenseStringElementsAttr(DenseStringElementsAttr attr) {
+  auto type = attr.getType();
+  auto shape = type.getShape();
+  auto rank = type.getRank();
+
+  // Special case for 0-d and splat tensors.
+  if (attr.isSplat()) {
+    printDenseStringElement(attr, os, 0);
+    return;
+  }
+
+  // Special case for degenerate tensors.
+  auto numElements = type.getNumElements();
+  if (numElements == 0) {
+    for (int i = 0; i < rank; ++i)
+      os << '[';
+    for (int i = 0; i < rank; ++i)
+      os << ']';
+    return;
+  }
+
+  // We use a mixed-radix counter to iterate through the shape. When we bump a
+  // non-least-significant digit, we emit a close bracket. When we next emit an
+  // element we re-open all closed brackets.
+
+  // The mixed-radix counter, with radices in 'shape'.
+  SmallVector<unsigned, 4> counter(rank, 0);
+  // The number of brackets that have been opened and not closed.
+  unsigned openBrackets = 0;
+
+  auto bumpCounter = [&]() {
+    // Bump the least significant digit.
+    ++counter[rank - 1];
+    // Iterate backwards bubbling back the increment.
+    for (unsigned i = rank - 1; i > 0; --i)
+      if (counter[i] >= shape[i]) {
+        // Index 'i' is rolled over. Bump (i-1) and close a bracket.
+        counter[i] = 0;
+        ++counter[i - 1];
+        --openBrackets;
+        os << ']';
+      }
+  };
+
+  for (unsigned idx = 0, e = numElements; idx != e; ++idx) {
+    if (idx != 0)
+      os << ", ";
+    while (openBrackets++ < rank)
+      os << '[';
+    openBrackets = rank;
+    printDenseStringElement(attr, os, idx);
     bumpCounter();
   }
   while (openBrackets-- > 0)

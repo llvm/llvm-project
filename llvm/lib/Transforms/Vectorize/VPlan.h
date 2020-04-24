@@ -767,13 +767,8 @@ class VPWidenRecipe : public VPRecipeBase {
   /// Hold the instruction to be widened.
   Instruction &Ingredient;
 
-  /// Hold VPValues for the operands of the ingredient.
-  VPUser User;
-
 public:
-  template <typename IterT>
-  VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenSC), Ingredient(I), User(Operands) {}
+  VPWidenRecipe(Instruction &I) : VPRecipeBase(VPWidenSC), Ingredient(I) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -1622,16 +1617,6 @@ public:
 
   /// Dump the plan to stderr (for debugging).
   void dump() const;
-
-  /// Returns a range mapping the values the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands) {
-    std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-      return getOrAddVPValue(Op);
-    };
-    return map_range(Operands, Fn);
-  }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block

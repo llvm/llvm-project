@@ -3549,7 +3549,7 @@ def warn_impcast_integer_float_precision : Warning<
   InGroup<ImplicitIntFloatConversion>, DefaultIgnore;
 def warn_impcast_integer_float_precision_constant : Warning<
   "implicit conversion from %2 to %3 changes value from %0 to %1">,
-  InGroup<ImplicitIntFloatConversion>;
+  InGroup<ImplicitConstIntFloatConversion>;
 
 def warn_impcast_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
