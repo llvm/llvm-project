@@ -4,7 +4,12 @@ source_set("remote") {
     "//clang-tools-extra/clangd",
     "//llvm/lib/Support",
   ]
-  public_deps = [ "//clang-tools-extra/clangd:features" ]
   include_dirs = [ "../.." ]
-  sources = [ "unimplemented/UnimplementedClient.cpp" ]
+  sources = []
+  if (false) {
+    sources += [
+      # FIXME comment
+      "Client.cpp",
+    ]
+  }
 }
