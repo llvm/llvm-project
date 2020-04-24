@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Coroutines
   Coverage
+  Extensions
   FrontendOpenMP
   IPO
   IRReader
@@ -96,8 +97,6 @@ add_clang_library(clangCodeGen
   SwiftCallingConv.cpp
   TargetInfo.cpp
   VarBypassDetector.cpp
-
-  ENABLE_PLUGINS
 
   DEPENDS
   ${codegen_deps}
