@@ -250,6 +250,7 @@ public:
   void ReplaceScope(const Scope &);
   RawParameters &rawParameters() { return rawParameters_; }
   const ParameterMapType &parameters() const { return parameters_; }
+  int NumLengthParameters() const;
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;

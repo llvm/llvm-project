@@ -499,6 +499,10 @@ public:
   Scope *scope() { return scope_; }
   const Scope *scope() const { return scope_; }
   void set_scope(Scope *scope) { scope_ = scope; }
+  std::size_t size() const { return size_; }
+  void set_size(std::size_t size) { size_ = size; }
+  std::size_t offset() const { return offset_; }
+  void set_offset(std::size_t offset) { offset_ = offset; }
   // Give the symbol a name with a different source location but same chars.
   void ReplaceName(const SourceName &);
 
@@ -665,6 +669,8 @@ private:
   Attrs attrs_;
   Flags flags_;
   Scope *scope_{nullptr};
+  std::size_t size_{0}; // size in bytes
+  std::size_t offset_{0}; // byte offset in enclosing scope
   Details details_;
 
   Symbol() {} // only created in class Symbols
@@ -730,6 +736,10 @@ inline bool ProcEntityDetails::HasExplicitInterface() const {
 }
 
 inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
+inline bool operator<(
+    common::Reference<Symbol> x, common::Reference<Symbol> y) {
+  return *x < *y;
+}
 using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics

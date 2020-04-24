@@ -431,28 +431,8 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
 }
 
 bool DynamicType::RequiresDescriptor() const {
-  if (IsPolymorphic() || IsUnknownLengthCharacter()) {
-    return true;
-  }
-  if (derived_) {
-    // Any length type parameter?
-    if (const auto *scope{derived_->scope()}) {
-      if (const auto *symbol{scope->symbol()}) {
-        if (const auto *details{
-                symbol->detailsIf<semantics::DerivedTypeDetails>()}) {
-          for (const Symbol &param : details->paramDecls()) {
-            if (const auto *details{
-                    param.detailsIf<semantics::TypeParamDetails>()}) {
-              if (details->attr() == common::TypeParamAttr::Len) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return false;
+  return IsPolymorphic() || IsUnknownLengthCharacter() ||
+      (derived_ && derived_->NumLengthParameters() > 0);
 }
 
 bool DynamicType::HasDeferredTypeParameter() const {

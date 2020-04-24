@@ -21,6 +21,7 @@ add_flang_library(FortranSemantics
   check-purity.cpp
   check-return.cpp
   check-stop.cpp
+  compute-offsets.cpp
   expression.cpp
   mod-file.cpp
   pointer-assignment.cpp

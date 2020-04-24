@@ -482,6 +482,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Symbol &symbol) {
   if (!symbol.flags().empty()) {
     os << " (" << symbol.flags() << ')';
   }
+  if (symbol.size_) {
+    os << " size=" << symbol.size_ << " offset=" << symbol.offset_;
+  }
   os << ": " << symbol.details_;
   return os;
 }
