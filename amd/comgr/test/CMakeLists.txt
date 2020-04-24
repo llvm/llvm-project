@@ -32,6 +32,7 @@ configure_file("source2.hip" "source2.hip" COPYONLY)
 # Create executable ${name} and accompanying test ${name} built from
 # test/${name}.cl
 macro(add_comgr_test name)
+  set(test_name "comgr_${name}")
   add_executable("${name}" "${name}.c")
   set_target_properties("${name}" PROPERTIES
     C_STANDARD 99
@@ -43,12 +44,12 @@ macro(add_comgr_test name)
     amd_comgr)
   add_dependencies("${name}"
     ${TEST_INPUT_BINARIES})
-  add_test(NAME "comgr_${name}"
+  add_test(NAME ${test_name}
     COMMAND "${name}")
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
   if (NOT(UNIX))
-    set_tests_properties("${name}"
+    set_tests_properties(${test_name}
       PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
   endif()
 endmacro()
